@@ -1,0 +1,71 @@
+import { Button, Typography } from "@mui/material";
+import { useRouter } from "next/router";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Container, TitleContainer, Description, ActionsContainer } from "./styles";
+
+type ActionVariant = "contained" | "outlined" | "text";
+type ActionColor = "primary" | "secondary" | "error" | "warning" | "info" | "success";
+
+export interface TitleAction {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  variant?: ActionVariant;
+  color?: ActionColor;
+  permission?: string;
+}
+
+interface TitleProps {
+  title: string;
+  description?: string;
+  actions?: TitleAction[];
+}
+
+export function Title({ title, description, actions }: TitleProps) {
+  const router = useRouter();
+  const { hasPermission } = usePermissions();
+
+  const handleAction = (action: TitleAction) => {
+    if (action.href) {
+      router.push(action.href);
+    } else if (action.onClick) {
+      action.onClick();
+    }
+  };
+
+  const visibleActions = actions?.filter((action) => {
+    if (!action.permission) return true;
+    return hasPermission(action.permission);
+  });
+
+  return (
+    <Container>
+      <TitleContainer>
+        <Typography variant="h2">{title}</Typography>
+        {description && (
+          <Description variant="body2" color="text.secondary">
+            {description}
+          </Description>
+        )}
+      </TitleContainer>
+
+      {visibleActions && visibleActions.length > 0 && (
+        <ActionsContainer>
+          {visibleActions.map((action) => (
+            <Button
+              key={action.id}
+              variant={action.variant || "contained"}
+              color={action.color || "primary"}
+              onClick={() => handleAction(action)}
+              startIcon={action.icon}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </ActionsContainer>
+      )}
+    </Container>
+  );
+}

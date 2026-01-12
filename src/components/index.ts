@@ -1,6 +1,8 @@
 export { Sidebar } from "./Sidebar";
 export { MainLayout } from "./Layout";
 export { Title } from "./Title";
+export { Breadcrumbs } from "./Breadcrumbs";
+export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";
 export type { TitleAction } from "./Title";
 export { TabFilters } from "./TabFilters";
 export type { TabOption, SelectFilterOption } from "./TabFilters";
@@ -9,7 +11,11 @@ export type { Column, RowAction, ChipStyleConfig } from "./TableCrud";
 export { StatsCard, StatsCardGroup } from "./StatsCard";
 export type { StatsCardData } from "./StatsCard";
 export { RuleCard, RulesList } from "./RuleCard";
-export type { CollectionRuleData, SelectOption } from "./RuleCard";
+export type { CollectionRuleData, SelectOption as RuleSelectOption } from "./RuleCard";
 export { ChipGroup } from "./ChipGroup";
 export type { ChipGroupProps } from "./ChipGroup";
+export { Form, FormTextField, FormSelect } from "./Form";
+export type { FormProps, FormFieldConfig, FieldType, FieldValidation, SelectOption, FormTextFieldProps, FormSelectProps } from "./Form";
+export { ModalForm } from "./ModalForm";
+export type { ModalFormProps } from "./ModalForm";
 

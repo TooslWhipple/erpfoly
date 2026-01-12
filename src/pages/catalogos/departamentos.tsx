@@ -9,7 +9,7 @@ import {
   SearchInput,
   CreateButton,
   SearchIconStyled,
-} from "./departamentos.styledComponents";
+} from "./catalogos.styledComponents";
 
 // ============================================================================
 // TYPES & INTERFACES

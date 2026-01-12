@@ -49,8 +49,12 @@ export const StyledHeaderCell = styled(TableCell)(({ theme }) => ({
 }));
 
 export const StyledTableRow = styled(TableRow)({
+  transition: "background-color 0.15s ease",
   "&:hover": {
-    backgroundColor: "rgba(0, 0, 0, 0.02)",
+    backgroundColor: colors.background.main,
+    "& td": {
+      backgroundColor: colors.background.main,
+    },
   },
   "&:last-child td": {
     borderBottom: "none",
@@ -85,9 +89,10 @@ export const ActionsHeaderCell = styled(StyledHeaderCell)({
   zIndex: 3,
   backgroundColor: colors.background.main,
   boxShadow: "-4px 0 8px rgba(0, 0, 0, 0.04)",
-  width: 48,
-  minWidth: 48,
-  padding: "12px 8px",
+  width: 56,
+  minWidth: 56,
+  maxWidth: 56,
+  padding: "12px",
 });
 
 export const ActionsCell = styled(TableCell)({
@@ -96,10 +101,12 @@ export const ActionsCell = styled(TableCell)({
   zIndex: 1,
   backgroundColor: colors.background.sidebar,
   boxShadow: "-4px 0 8px rgba(0, 0, 0, 0.04)",
-  width: 48,
-  minWidth: 48,
-  padding: "8px",
+  width: 56,
+  minWidth: 56,
+  maxWidth: 56,
+  padding: "8px 12px",
   borderBottom: `1px solid ${colors.border}`,
+  transition: "background-color 0.15s ease",
 });
 
 export const ActionsButton = styled(IconButton)({

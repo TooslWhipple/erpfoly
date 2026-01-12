@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Chip, CircularProgress, Table, TableBody, Typography } from "@mui/material";
+import { Button, Chip, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import {
   StyledTableContainer,
@@ -17,7 +17,6 @@ import {
   StyledMenuItem,
   StyledTablePagination,
   EmptyStateContainer,
-  LoadingContainer,
 } from "./styles";
 import { ChipGroup } from "../ChipGroup";
 
@@ -86,6 +85,8 @@ interface TableCrudProps<T> {
   onPageChange?: (page: number) => void;
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   rowsPerPageOptions?: number[];
+  /** Callback when a row is clicked */
+  onRowClick?: (row: T) => void;
 }
 
 export function TableCrud<T>({
@@ -101,6 +102,7 @@ export function TableCrud<T>({
   onPageChange,
   onRowsPerPageChange,
   rowsPerPageOptions = [10, 25, 50],
+  onRowClick,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -269,12 +271,14 @@ export function TableCrud<T>({
     }
     
     const width = getColumnWidth(column);
+    // Use minWidth to allow columns to expand and fill available space
+    const cellStyle = { minWidth: width };
 
     return (
       <CellComponent
         key={String(column.id)}
         align={column.align || (isNumericType ? "right" : "left")}
-        style={{ width, minWidth: column.truncate ? undefined : width }}
+        style={cellStyle}
         title={column.truncate ? String(value ?? "") : undefined}
       >
         {formattedValue}
@@ -285,39 +289,72 @@ export function TableCrud<T>({
   const total = totalRows ?? rows.length;
   const hasActions = actions && actions.length > 0;
 
-  if (loading) {
-    return (
-      <StyledTableContainer component={StyledPaper}>
-        <LoadingContainer>
-          <CircularProgress size={40} />
-        </LoadingContainer>
-      </StyledTableContainer>
-    );
-  }
+  // Render skeleton rows for loading state
+  const renderSkeletonRows = () => {
+    const skeletonRows = Array.from({ length: rowsPerPage }, (_, index) => index);
+
+    return skeletonRows.map((index) => (
+      <StyledTableRow key={`skeleton-${index}`}>
+        {columns.map((column) => {
+          const width = getColumnWidth(column);
+          const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
+          const cellStyle = { minWidth: width };
+
+          return (
+            <StyledTableCell
+              key={`skeleton-${index}-${String(column.id)}`}
+              align={column.align || (isNumericType ? "right" : "left")}
+              style={cellStyle}
+            >
+              <Skeleton
+                variant="text"
+                width={column.type === "id" ? 30 : "80%"}
+                height={24}
+                animation="wave"
+              />
+            </StyledTableCell>
+          );
+        })}
+        {hasActions && (
+          <ActionsCell align="center">
+            <Skeleton variant="circular" width={24} height={24} animation="wave" />
+          </ActionsCell>
+        )}
+      </StyledTableRow>
+    ));
+  };
+
+  // Render table header
+  const renderTableHeader = () => (
+    <StyledTableHead>
+      <StyledTableRow>
+        {columns.map((column) => {
+          const width = getColumnWidth(column);
+          const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
+          const headerStyle = { minWidth: width };
+          return (
+            <StyledHeaderCell
+              key={String(column.id)}
+              align={column.align || (isNumericType ? "right" : "left")}
+              style={headerStyle}
+            >
+              {column.label}
+            </StyledHeaderCell>
+          );
+        })}
+        {hasActions && <ActionsHeaderCell align="center" />}
+      </StyledTableRow>
+    </StyledTableHead>
+  );
 
   return (
     <StyledTableContainer component={StyledPaper}>
-      <Table style={{ minWidth: 650 }}>
-        <StyledTableHead>
-          <StyledTableRow>
-            {columns.map((column) => {
-              const width = getColumnWidth(column);
-              const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
-              return (
-                <StyledHeaderCell
-                  key={String(column.id)}
-                  align={column.align || (isNumericType ? "right" : "left")}
-                  style={{ width, minWidth: width }}
-                >
-                  {column.label}
-                </StyledHeaderCell>
-              );
-            })}
-            {hasActions && <ActionsHeaderCell align="center" />}
-          </StyledTableRow>
-        </StyledTableHead>
+      <Table style={{ width: "100%", minWidth: 650 }}>
+        {renderTableHeader()}
         <TableBody>
-          {rows.length === 0 ? (
+          {loading ? (
+            renderSkeletonRows()
+          ) : rows.length === 0 ? (
             <StyledTableRow>
               <StyledTableCell colSpan={columns.length + (hasActions ? 1 : 0)}>
                 <EmptyStateContainer>
@@ -329,13 +366,20 @@ export function TableCrud<T>({
             </StyledTableRow>
           ) : (
             rows.map((row) => (
-              <StyledTableRow key={String(row[rowKey])}>
+              <StyledTableRow
+                key={String(row[rowKey])}
+                onClick={() => onRowClick?.(row)}
+                sx={onRowClick ? { cursor: "pointer" } : undefined}
+              >
                 {columns.map((column) => {
                   const value = getValue(row, column.id);
                   return renderCell(value, column, row);
                 })}
                 {hasActions && (
-                  <ActionsCell align="center">
+                  <ActionsCell
+                    align="center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
                       <MoreVertIcon />
                     </ActionsButton>

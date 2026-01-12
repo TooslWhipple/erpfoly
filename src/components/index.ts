@@ -5,5 +5,5 @@ export type { TitleAction } from "./Title";
 export { TabFilters } from "./TabFilters";
 export type { TabOption } from "./TabFilters";
 export { TableCrud } from "./TableCrud";
-export type { Column, RowAction } from "./TableCrud";
+export type { Column, RowAction, ChipStyleConfig } from "./TableCrud";
 

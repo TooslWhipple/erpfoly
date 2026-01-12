@@ -68,6 +68,13 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
+export const TruncatedCell = styled(StyledTableCell)({
+  maxWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
 export const NumberCell = styled(StyledTableCell)({
   fontVariantNumeric: "tabular-nums",
 });

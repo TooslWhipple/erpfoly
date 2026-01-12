@@ -15,24 +15,25 @@ import {
   TableCrud,
   Column,
   RowAction,
+  ChipStyleConfig,
 } from "@/components";
 import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
 
 interface Cliente {
   id: number;
-  nombre: string;
+  fullName: string;
   email: string;
-  telefono: string;
+  cellphone: string;
   estatus: string;
-  saldo: number;
+  address: string;
 }
 
 const mockClientes: Cliente[] = [
-  { id: 1, nombre: "Juan Pérez", email: "juan@email.com", telefono: "555-1234", estatus: "Al corriente", saldo: 0 },
-  { id: 2, nombre: "María García", email: "maria@email.com", telefono: "555-5678", estatus: "En retraso", saldo: 1500 },
-  { id: 3, nombre: "Carlos López", email: "carlos@email.com", telefono: "555-9012", estatus: "Al corriente", saldo: 0 },
-  { id: 4, nombre: "Ana Martínez", email: "ana@email.com", telefono: "555-3456", estatus: "En retraso", saldo: 3200 },
-  { id: 5, nombre: "Pedro Sánchez", email: "pedro@email.com", telefono: "555-7890", estatus: "Al corriente", saldo: 0 },
+  { id: 1, fullName: "Juan Pérez Solís", email: "juan@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
+  { id: 2, fullName: "María García Robles", email: "maria@email.com", cellphone: "667 123 4567", estatus: "En retraso", address: "Circuito Universitario 2322. Colonia Universitarios" },
+  { id: 3, fullName: "Carlos López Montañez", email: "carlos@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
+  { id: 4, fullName: "Ana Martínez Hernández", email: "ana@email.com", cellphone: "667 123 4567", estatus: "En retraso", address: "Circuito Universitario 2322. Colonia Universitarios" },
+  { id: 5, fullName: "Pedro Sánchez Estrada", email: "pedro@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
 ];
 
 const tabs: TabOption[] = [
@@ -41,44 +42,48 @@ const tabs: TabOption[] = [
   { label: "En retraso", value: "delayed", count: 30 },
 ];
 
+const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
+  "Al corriente": { label: "Al corriente", bgColor: "#DCFCE7", textColor: "#1B8854" },
+  "En retraso": { label: "En retraso", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+};
+
 const columns: Column<Cliente>[] = [
-  { 
-    id: "id", 
-    label: "ID", 
+  {
+    id: "id",
+    label: "ID",
     type: "number",
     size: "xs",
   },
-  { 
-    id: "nombre", 
-    label: "Nombre", 
+  {
+    id: "fullName",
+    label: "Nombre",
     type: "text",
     size: "lg",
   },
-  { 
-    id: "email", 
-    label: "Email", 
+  {
+    id: "cellphone",
+    label: "Teléfono",
     type: "text",
-    size: "xl",
-  },
-  { 
-    id: "telefono", 
-    label: "Teléfono", 
-    type: "text",
-    size: "sm",
-  },
-  { 
-    id: "estatus", 
-    label: "Estatus", 
-    type: "chip",
-    size: "sm",
-    chipColor: "default",
+    size: "md",
   },
   {
-    id: "saldo",
-    label: "Saldo",
-    type: "currency",
+    id: "email",
+    label: "Correo electrónico",
+    type: "text",
+    size: "lg",
+  },
+  {
+    id: "estatus",
+    label: "Estatus",
+    type: "chip",
     size: "sm",
-    align: "right",
+    chipConfig: ESTATUS_CHIP_CONFIG,
+  },
+  {
+    id: "address",
+    label: "Domicilio",
+    size: "xl",
+    truncate: true,
   },
 ];
 

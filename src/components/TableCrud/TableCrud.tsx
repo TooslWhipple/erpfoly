@@ -8,6 +8,7 @@ import {
   StyledHeaderCell,
   StyledTableRow,
   StyledTableCell,
+  TruncatedCell,
   NumberCell,
   ActionsHeaderCell,
   ActionsCell,
@@ -31,18 +32,26 @@ const COLUMN_SIZES: Record<ColumnSize, number> = {
   xl: 280,
 };
 
+export interface ChipStyleConfig {
+  label?: string;
+  bgColor: string;
+  textColor: string;
+}
+
 export interface Column<T> {
   id: keyof T | string;
   label: string;
   type?: ColumnType;
   size?: ColumnSize;
   align?: "left" | "center" | "right";
+  truncate?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
   buttonLabel?: string;
   buttonVariant?: "text" | "outlined" | "contained";
   buttonColor?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
   onButtonClick?: (row: T) => void;
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
+  chipConfig?: Record<string, ChipStyleConfig>;
   currencySymbol?: string;
 }
 
@@ -150,16 +159,16 @@ export function TableCrud<T>({
 
     switch (column.type) {
       case "number":
-        return typeof rawValue === "number" ? rawValue.toLocaleString() : rawValue;
+        return typeof rawValue === "number" ? rawValue.toLocaleString() : String(rawValue ?? "");
       
       case "currency":
         const symbol = column.currencySymbol || "$";
         return typeof rawValue === "number" 
           ? `${symbol}${rawValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : rawValue;
+          : String(rawValue ?? "");
       
       case "percentage":
-        return typeof rawValue === "number" ? `${rawValue.toFixed(2)}%` : rawValue;
+        return typeof rawValue === "number" ? `${rawValue.toFixed(2)}%` : String(rawValue ?? "");
       
       case "date":
         if (rawValue instanceof Date) {
@@ -168,15 +177,34 @@ export function TableCrud<T>({
         if (typeof rawValue === "string") {
           return new Date(rawValue).toLocaleDateString();
         }
-        return rawValue;
+        return String(rawValue ?? "");
       
       case "boolean":
         return rawValue ? "Sí" : "No";
       
       case "chip":
+        const chipKey = String(rawValue);
+        const chipStyle = column.chipConfig?.[chipKey];
+        
+        if (chipStyle) {
+          return (
+            <Chip
+              label={chipStyle.label ?? chipKey}
+              size="small"
+              sx={{
+                backgroundColor: chipStyle.bgColor,
+                color: chipStyle.textColor,
+                borderRadius: "6px",
+                fontWeight: 500,
+                fontSize: "13px",
+              }}
+            />
+          );
+        }
+        
         return (
           <Chip
-            label={String(rawValue)}
+            label={chipKey}
             size="small"
             color={column.chipColor || "default"}
           />
@@ -202,14 +230,22 @@ export function TableCrud<T>({
   const renderCell = (value: T[keyof T], column: Column<T>, row: T) => {
     const formattedValue = formatValue(value, column, row);
     const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
-    const CellComponent = isNumericType ? NumberCell : StyledTableCell;
+    
+    let CellComponent = StyledTableCell;
+    if (isNumericType) {
+      CellComponent = NumberCell;
+    } else if (column.truncate) {
+      CellComponent = TruncatedCell;
+    }
+    
     const width = getColumnWidth(column);
 
     return (
       <CellComponent
         key={String(column.id)}
         align={column.align || (isNumericType ? "right" : "left")}
-        style={{ width, minWidth: width }}
+        style={{ width, minWidth: column.truncate ? undefined : width }}
+        title={column.truncate ? String(value ?? "") : undefined}
       >
         {formattedValue}
       </CellComponent>

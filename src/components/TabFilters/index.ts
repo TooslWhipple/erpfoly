@@ -1,3 +1,3 @@
 export { TabFilters } from "./TabFilters";
-export type { TabOption } from "./TabFilters";
+export type { TabOption, SelectFilterOption } from "./TabFilters";
 

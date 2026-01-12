@@ -13,6 +13,11 @@ export const colors = {
     itemSelected: "#F0F6FF",
     textSelected: "#2663EB",
   },
+  chip: {
+    background: "#F1F5F9",
+    border: "#F9FAFC",
+    text: "#475569",
+  },
 };
 
 export const theme = createTheme({

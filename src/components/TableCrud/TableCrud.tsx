@@ -19,8 +19,9 @@ import {
   EmptyStateContainer,
   LoadingContainer,
 } from "./styles";
+import { ChipGroup } from "../ChipGroup";
 
-export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "boolean" | "chip" | "button";
+export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "boolean" | "chip" | "chipGroup" | "button" | "id";
 
 export type ColumnSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -46,13 +47,21 @@ export interface Column<T> {
   align?: "left" | "center" | "right";
   truncate?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
+  // Button type options
   buttonLabel?: string;
   buttonVariant?: "text" | "outlined" | "contained";
   buttonColor?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
   onButtonClick?: (row: T) => void;
+  // Chip type options
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
   chipConfig?: Record<string, ChipStyleConfig>;
+  // Currency type options
   currencySymbol?: string;
+  // ChipGroup type options
+  chipGroupKey?: string;
+  chipGroupMaxVisible?: number;
+  // ID type options
+  idPadding?: number;
 }
 
 export interface RowAction<T> {
@@ -102,6 +111,8 @@ export function TableCrud<T>({
     }
     // Default sizes based on type
     switch (column.type) {
+      case "id":
+        return COLUMN_SIZES.xs;
       case "number":
       case "percentage":
         return COLUMN_SIZES.sm;
@@ -113,6 +124,8 @@ export function TableCrud<T>({
         return COLUMN_SIZES.xs;
       case "chip":
         return COLUMN_SIZES.sm;
+      case "chipGroup":
+        return COLUMN_SIZES.xl;
       case "button":
         return COLUMN_SIZES.md;
       default:
@@ -158,6 +171,12 @@ export function TableCrud<T>({
     const rawValue = value;
 
     switch (column.type) {
+      case "id":
+        const padding = column.idPadding ?? 2;
+        return typeof rawValue === "number" 
+          ? String(rawValue).padStart(padding, "0")
+          : String(rawValue ?? "");
+
       case "number":
         return typeof rawValue === "number" ? rawValue.toLocaleString() : String(rawValue ?? "");
       
@@ -168,7 +187,7 @@ export function TableCrud<T>({
           : String(rawValue ?? "");
       
       case "percentage":
-        return typeof rawValue === "number" ? `${rawValue.toFixed(2)}%` : String(rawValue ?? "");
+        return typeof rawValue === "number" ? `${rawValue}%` : String(rawValue ?? "");
       
       case "date":
         if (rawValue instanceof Date) {
@@ -209,6 +228,17 @@ export function TableCrud<T>({
             color={column.chipColor || "default"}
           />
         );
+
+      case "chipGroup":
+        if (Array.isArray(rawValue)) {
+          const key = column.chipGroupKey || "name";
+          const maxVisible = column.chipGroupMaxVisible ?? 6;
+          const items = rawValue.map((item) => 
+            typeof item === "object" && item !== null ? String(item[key] ?? "") : String(item)
+          );
+          return <ChipGroup items={items} maxVisible={maxVisible} />;
+        }
+        return null;
       
       case "button":
         return (

@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box, Tab, Tabs, TextField } from "@mui/material";
+import { Box, Select, Tab, Tabs, TextField } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 
@@ -99,3 +99,31 @@ export const SearchIconStyled = styled(SearchIcon)({
   color: "#71717A",
 });
 
+export const FiltersRightSection = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1.5),
+  paddingBottom: theme.spacing(1),
+  [theme.breakpoints.down("md")]: {
+    paddingBottom: 0,
+    width: "100%",
+    flexDirection: "column",
+  },
+}));
+
+export const StyledSelect = styled(Select)(({ theme }) => ({
+  minWidth: 140,
+  backgroundColor: colors.background.sidebar,
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: colors.border,
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: colors.border,
+  },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: colors.sidebar.textSelected,
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
+}));

@@ -1,4 +1,4 @@
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, MenuItem, Select, SelectChangeEvent } from "@mui/material";
 import {
   Container,
   TabsWrapper,
@@ -7,12 +7,19 @@ import {
   SearchContainer,
   SearchInput,
   SearchIconStyled,
+  FiltersRightSection,
+  StyledSelect,
 } from "./styles";
 
 export interface TabOption {
   label: string;
   value: string;
   count?: number;
+}
+
+export interface SelectFilterOption {
+  label: string;
+  value: string;
 }
 
 interface TabFiltersProps {
@@ -23,6 +30,12 @@ interface TabFiltersProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
+  selectFilter?: {
+    options: SelectFilterOption[];
+    value: string;
+    onChange: (value: string) => void;
+    label?: string;
+  };
 }
 
 export function TabFilters({
@@ -33,6 +46,7 @@ export function TabFilters({
   searchValue = "",
   onSearchChange,
   searchPlaceholder = "Buscar...",
+  selectFilter,
 }: TabFiltersProps) {
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     onTabChange(newValue);
@@ -41,6 +55,12 @@ export function TabFilters({
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearchChange?.(event.target.value);
   };
+
+  const handleSelectChange = (event: SelectChangeEvent<string>) => {
+    selectFilter?.onChange(event.target.value);
+  };
+
+  const showRightSection = showSearch || selectFilter;
 
   return (
     <Container>
@@ -65,23 +85,41 @@ export function TabFilters({
         </StyledTabs>
       </TabsWrapper>
 
-      {showSearch && (
-        <SearchContainer>
-          <SearchInput
-            size="small"
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={handleSearchChange}
-            fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </SearchContainer>
+      {showRightSection && (
+        <FiltersRightSection>
+          {selectFilter && (
+            <StyledSelect
+              size="small"
+              value={selectFilter.value}
+              onChange={handleSelectChange}
+              displayEmpty
+            >
+              {selectFilter.options.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </StyledSelect>
+          )}
+          {showSearch && (
+            <SearchContainer>
+              <SearchInput
+                size="small"
+                placeholder={searchPlaceholder}
+                value={searchValue}
+                onChange={handleSearchChange}
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIconStyled />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </SearchContainer>
+          )}
+        </FiltersRightSection>
       )}
     </Container>
   );

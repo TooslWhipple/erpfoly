@@ -80,6 +80,7 @@ const FormCard = styled(Paper)(({ theme }) => ({
     borderRadius: 8,
     padding: theme.spacing(3),
     width: "100%",
+    boxShadow: "none",
 }));
 
 const SectionTitle = styled(Typography)(({ theme }) => ({

@@ -211,7 +211,8 @@ export default function Roles() {
             id: "id",
             label: "ID",
             type: "id",
-            size: "sm",
+            size: "xs",
+            maxSize: "xs",
             idPadding: 4,
         },
         {

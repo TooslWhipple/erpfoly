@@ -376,7 +376,7 @@ export default function SolicitudesCredito() {
         showSearch
         searchValue={searchValue}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por fullName"
+        searchPlaceholder="Buscar por nombre"
       />
 
       <TableCrud

@@ -242,6 +242,7 @@ export default function Sucursales() {
       label: "ID",
       type: "id",
       size: "xs",
+      maxSize: "xs",
       idPadding: 2,
     },
     {

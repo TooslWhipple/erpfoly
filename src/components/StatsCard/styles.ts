@@ -2,10 +2,16 @@ import { styled } from "@mui/material/styles";
 import { Box, Paper, Typography } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const CardContainer = styled(Paper)(({ theme }) => ({
+interface CardContainerProps {
+  borderColor?: string;
+}
+
+export const CardContainer = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== "borderColor",
+})<CardContainerProps>(({ theme, borderColor }) => ({
   padding: theme.spacing(2.5),
   borderRadius: 8,
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${borderColor || colors.border}`,
   boxShadow: "none",
   display: "flex",
   flexDirection: "column",
@@ -26,19 +32,32 @@ export const CardLabel = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const IconWrapper = styled(Box)(({ theme }) => ({
-  color: theme.palette.text.secondary,
+export const IconWrapper = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+  backgroundColor: colors.border,
+  borderRadius: 4,
+  color: "#71717A",
   "& svg": {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
   },
-}));
+});
 
-export const CardValue = styled(Typography)(({ theme }) => ({
+interface CardValueProps {
+  valueColor?: string;
+}
+
+export const CardValue = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "valueColor",
+})<CardValueProps>(({ theme, valueColor }) => ({
   fontSize: 36,
   fontWeight: 700,
   lineHeight: 1.2,
-  color: theme.palette.text.primary,
+  color: valueColor || theme.palette.text.primary,
 }));
 
 interface ComparisonTextProps {
@@ -57,13 +76,19 @@ export const ComparisonText = styled(Typography, {
       : theme.palette.text.secondary,
 }));
 
-export const StatsCardGroupContainer = styled(Box)(({ theme }) => ({
+interface StatsCardGroupContainerProps {
+  columns?: number;
+}
+
+export const StatsCardGroupContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "columns",
+})<StatsCardGroupContainerProps>(({ theme, columns = 4 }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
+  gridTemplateColumns: `repeat(${columns}, 1fr)`,
   gap: theme.spacing(2),
   marginBottom: theme.spacing(3),
   [theme.breakpoints.down("lg")]: {
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: columns >= 3 ? "repeat(2, 1fr)" : `repeat(${columns}, 1fr)`,
   },
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "1fr",

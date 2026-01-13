@@ -299,6 +299,7 @@ export default function Mensajes() {
             label: "ID",
             type: "id",
             size: "xs",
+            maxSize: "xs",
             idPadding: 2,
         },
         {

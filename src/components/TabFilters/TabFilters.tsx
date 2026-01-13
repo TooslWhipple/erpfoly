@@ -36,6 +36,8 @@ interface TabFiltersProps {
     onChange: (value: string) => void;
     label?: string;
   };
+  /** Additional actions to render on the right side (e.g., buttons) */
+  actions?: React.ReactNode;
 }
 
 export function TabFilters({
@@ -47,6 +49,7 @@ export function TabFilters({
   onSearchChange,
   searchPlaceholder = "Buscar...",
   selectFilter,
+  actions,
 }: TabFiltersProps) {
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     onTabChange(newValue);
@@ -60,7 +63,7 @@ export function TabFilters({
     selectFilter?.onChange(event.target.value);
   };
 
-  const showRightSection = showSearch || selectFilter;
+  const showRightSection = showSearch || selectFilter || actions;
 
   return (
     <Container>
@@ -119,6 +122,7 @@ export function TabFilters({
               />
             </SearchContainer>
           )}
+          {actions}
         </FiltersRightSection>
       )}
     </Container>

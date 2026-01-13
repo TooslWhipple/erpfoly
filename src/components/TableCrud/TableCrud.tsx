@@ -43,6 +43,8 @@ export interface Column<T> {
   label: string;
   type?: ColumnType;
   size?: ColumnSize;
+  /** Maximum size for the column (limits expansion) */
+  maxSize?: ColumnSize;
   align?: "left" | "center" | "right";
   truncate?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
@@ -133,6 +135,13 @@ export function TableCrud<T>({
       default:
         return COLUMN_SIZES.md;
     }
+  };
+
+  const getColumnMaxWidth = (column: Column<T>): number | undefined => {
+    if (column.maxSize) {
+      return COLUMN_SIZES[column.maxSize];
+    }
+    return undefined;
   };
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, row: T) => {
@@ -271,8 +280,14 @@ export function TableCrud<T>({
     }
     
     const width = getColumnWidth(column);
+    const maxWidth = getColumnMaxWidth(column);
     // Use minWidth to allow columns to expand and fill available space
-    const cellStyle = { minWidth: width };
+    // Use maxWidth to limit expansion when maxSize is specified
+    const cellStyle: React.CSSProperties = { minWidth: width };
+    if (maxWidth !== undefined) {
+      cellStyle.maxWidth = maxWidth;
+      cellStyle.width = maxWidth;
+    }
 
     return (
       <CellComponent
@@ -297,8 +312,13 @@ export function TableCrud<T>({
       <StyledTableRow key={`skeleton-${index}`}>
         {columns.map((column) => {
           const width = getColumnWidth(column);
+          const maxWidth = getColumnMaxWidth(column);
           const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
-          const cellStyle = { minWidth: width };
+          const cellStyle: React.CSSProperties = { minWidth: width };
+          if (maxWidth !== undefined) {
+            cellStyle.maxWidth = maxWidth;
+            cellStyle.width = maxWidth;
+          }
 
           return (
             <StyledTableCell
@@ -330,8 +350,13 @@ export function TableCrud<T>({
       <StyledTableRow>
         {columns.map((column) => {
           const width = getColumnWidth(column);
+          const maxWidth = getColumnMaxWidth(column);
           const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
-          const headerStyle = { minWidth: width };
+          const headerStyle: React.CSSProperties = { minWidth: width };
+          if (maxWidth !== undefined) {
+            headerStyle.maxWidth = maxWidth;
+            headerStyle.width = maxWidth;
+          }
           return (
             <StyledHeaderCell
               key={String(column.id)}

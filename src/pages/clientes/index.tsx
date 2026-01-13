@@ -147,7 +147,7 @@ export default function Clientes() {
         showSearch
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar cliente..."
+        searchPlaceholder="Buscar por nombre"
       />
       <TableCrud
         columns={columns}

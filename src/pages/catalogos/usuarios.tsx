@@ -231,6 +231,7 @@ export default function Usuarios() {
             label: "ID",
             type: "id",
             size: "sm",
+            maxSize: "xs",
             idPadding: 4,
         },
         {

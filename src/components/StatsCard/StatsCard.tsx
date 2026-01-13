@@ -19,6 +19,12 @@ export interface StatsCardData {
     period: string;
   };
   icon?: React.ReactNode;
+  /** Custom border color for the card */
+  borderColor?: string;
+  /** Custom color for the value */
+  valueColor?: string;
+  /** Format value as currency */
+  isCurrency?: boolean;
 }
 
 interface StatsCardProps {
@@ -30,6 +36,12 @@ interface StatsCardProps {
     period: string;
   };
   icon?: React.ReactNode;
+  /** Custom border color for the card */
+  borderColor?: string;
+  /** Custom color for the value */
+  valueColor?: string;
+  /** Format value as currency */
+  isCurrency?: boolean;
 }
 
 export function StatsCard({
@@ -37,15 +49,34 @@ export function StatsCard({
   value,
   comparison,
   icon = <CalendarIcon />,
+  borderColor,
+  valueColor,
+  isCurrency = false,
 }: StatsCardProps) {
   const formatValue = (val: number): string => {
+    if (isCurrency) {
+      return `$${val.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+    return val.toLocaleString();
+  };
+
+  const formatComparisonValue = (val: number): string => {
+    if (isCurrency) {
+      return `$${val.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
     return val.toLocaleString();
   };
 
   const getComparisonText = (): string => {
     if (!comparison) return "";
     const prefix = comparison.type === "increase" ? "más" : "menos";
-    return `${comparison.value} ${prefix} que ${comparison.period}`;
+    return `${formatComparisonValue(comparison.value)} ${prefix} que ${comparison.period}`;
   };
 
   const getTrend = (): "positive" | "negative" | "neutral" => {
@@ -55,12 +86,12 @@ export function StatsCard({
   };
 
   return (
-    <CardContainer>
+    <CardContainer borderColor={borderColor}>
       <CardHeader>
         <CardLabel>{label}</CardLabel>
         <IconWrapper>{icon}</IconWrapper>
       </CardHeader>
-      <CardValue>{formatValue(value)}</CardValue>
+      <CardValue valueColor={valueColor}>{formatValue(value)}</CardValue>
       {comparison && (
         <ComparisonText trend={getTrend()}>{getComparisonText()}</ComparisonText>
       )}
@@ -70,11 +101,16 @@ export function StatsCard({
 
 interface StatsCardGroupProps {
   cards: StatsCardData[];
+  /** Number of columns in the grid. Defaults to the number of cards (auto-fit) */
+  columns?: number;
 }
 
-export function StatsCardGroup({ cards }: StatsCardGroupProps) {
+export function StatsCardGroup({ cards, columns }: StatsCardGroupProps) {
+  // Use provided columns or default to number of cards for auto-fit behavior
+  const gridColumns = columns ?? cards.length;
+  
   return (
-    <StatsCardGroupContainer>
+    <StatsCardGroupContainer columns={gridColumns}>
       {cards.map((card) => (
         <StatsCard
           key={card.id}
@@ -82,6 +118,9 @@ export function StatsCardGroup({ cards }: StatsCardGroupProps) {
           value={card.value}
           comparison={card.comparison}
           icon={card.icon}
+          borderColor={card.borderColor}
+          valueColor={card.valueColor}
+          isCurrency={card.isCurrency}
         />
       ))}
     </StatsCardGroupContainer>

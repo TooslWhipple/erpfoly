@@ -14,8 +14,12 @@ export { RuleCard, RulesList } from "./RuleCard";
 export type { CollectionRuleData, SelectOption as RuleSelectOption } from "./RuleCard";
 export { ChipGroup } from "./ChipGroup";
 export type { ChipGroupProps } from "./ChipGroup";
+export { PermissionsTable } from "./PermissionsTable";
+export type { PermissionsTableProps, ModulePermission, Permission } from "./PermissionsTable";
 export { Form, FormTextField, FormSelect } from "./Form";
 export type { FormProps, FormFieldConfig, FieldType, FieldValidation, SelectOption, FormTextFieldProps, FormSelectProps } from "./Form";
 export { ModalForm } from "./ModalForm";
 export type { ModalFormProps } from "./ModalForm";
+export { MultiSelectChips } from "./MultiSelectChips";
+export type { MultiSelectChipsProps, SelectableItem } from "./MultiSelectChips";
 

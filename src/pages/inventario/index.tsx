@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { styled } from "@mui/material/styles";
-import { Box, InputAdornment, Tabs, Tab } from "@mui/material";
+import { Box } from "@mui/material";
 import {
     GridView as GridViewIcon,
     Sync as SyncIcon,
     LocalShipping as ShippingIcon,
     Build as BuildIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, StatsCardGroup } from "@/components";
+import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
 import type { Column } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
-import { colors } from "@/styles/theme";
+import type { TabOption } from "@/components/TabFilters";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -56,81 +56,6 @@ interface InventoryStats {
 const StatsSection = styled(Box)(({ theme }) => ({
     marginBottom: theme.spacing(3),
 }));
-
-const FiltersRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing(2),
-    gap: theme.spacing(2),
-    flexWrap: "wrap",
-}));
-
-const TabsContainer = styled(Box)({
-    borderBottom: `1px solid ${colors.border}`,
-});
-
-const StyledTabs = styled(Tabs)({
-    minHeight: 40,
-    "& .MuiTabs-indicator": {
-        backgroundColor: "#232325",
-        height: 2,
-    },
-});
-
-const StyledTab = styled(Tab)({
-    textTransform: "none",
-    fontSize: "0.9375rem",
-    fontWeight: 500,
-    color: "#71717A",
-    minWidth: 80,
-    minHeight: 40,
-    padding: "8px 16px",
-    "&.Mui-selected": {
-        color: "#232325",
-    },
-});
-
-const SearchContainer = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-});
-
-const SearchInput = styled("input")(({ theme }) => ({
-    height: 40,
-    width: 240,
-    padding: "0 12px 0 40px",
-    fontSize: "0.875rem",
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    outline: "none",
-    backgroundColor: "transparent",
-    "&:focus": {
-        borderColor: theme.palette.primary.main,
-    },
-    "&::placeholder": {
-        color: "#9CA3AF",
-    },
-}));
-
-const SearchWrapper = styled(Box)({
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-});
-
-const SearchIconWrapper = styled(Box)({
-    position: "absolute",
-    left: 12,
-    color: "#9CA3AF",
-    display: "flex",
-    alignItems: "center",
-    "& svg": {
-        width: 20,
-        height: 20,
-    },
-});
 
 // Colors for inventory
 const COLORS = {
@@ -318,21 +243,21 @@ export default function Inventario() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState("all");
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
+    // Tab options
+    const tabs: TabOption[] = [
+        { label: "Todos", value: "all" },
+        { label: "Activos", value: "active" },
+        { label: "Inactivos", value: "inactive" },
+    ];
+
     // Get status filter from tab
     const getStatusFilter = (): "all" | "active" | "inactive" => {
-        switch (activeTab) {
-            case 1:
-                return "active";
-            case 2:
-                return "inactive";
-            default:
-                return "all";
-        }
+        return activeTab as "all" | "active" | "inactive";
     };
 
     // Fetch stats
@@ -376,12 +301,12 @@ export default function Inventario() {
     }, [searchValue, activeTab]);
 
     // Event handlers
-    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-        setActiveTab(newValue);
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
     };
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchValue(event.target.value);
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
     };
 
     const handlePageChange = (newPage: number) => {
@@ -511,40 +436,15 @@ export default function Inventario() {
                 <StatsCardGroup cards={statsCards} />
             </StatsSection>
 
-            <FiltersRow>
-                <TabsContainer>
-                    <StyledTabs value={activeTab} onChange={handleTabChange}>
-                        <StyledTab label="Todos" />
-                        <StyledTab label="Activos" />
-                        <StyledTab label="Inactivos" />
-                    </StyledTabs>
-                </TabsContainer>
-
-                <SearchContainer>
-                    <SearchWrapper>
-                        <SearchIconWrapper>
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                                />
-                            </svg>
-                        </SearchIconWrapper>
-                        <SearchInput
-                            placeholder="Buscar"
-                            value={searchValue}
-                            onChange={handleSearchChange}
-                        />
-                    </SearchWrapper>
-                </SearchContainer>
-            </FiltersRow>
+            <TabFilters
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                showSearch
+                searchValue={searchValue}
+                onSearchChange={handleSearchChange}
+                searchPlaceholder="Buscar por código"
+            />
 
             <TableCrud
                 columns={columns}

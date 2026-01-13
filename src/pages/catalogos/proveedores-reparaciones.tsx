@@ -4,16 +4,15 @@ import { styled } from "@mui/material/styles";
 import {
     Box,
     InputAdornment,
-    Tabs,
-    Tab,
     Paper,
     Typography,
     Button,
     CircularProgress,
 } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, FormTextField } from "@/components";
+import { MainLayout, Title, TableCrud, FormTextField, Tabs } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
+import type { TabItem } from "@/components/Tabs";
 import {
     HeaderContainer,
     ControlsContainer,
@@ -56,28 +55,9 @@ interface GetRepairSuppliersResponse {
 // STYLED COMPONENTS
 // ============================================================================
 
-const TabsContainer = styled(Box)(({ theme }) => ({
-    borderBottom: `1px solid ${colors.border}`,
+const TabsWrapper = styled(Box)(({ theme }) => ({
     marginBottom: theme.spacing(3),
 }));
-
-const StyledTabs = styled(Tabs)({
-    "& .MuiTabs-indicator": {
-        backgroundColor: "#232325",
-        height: 2,
-    },
-});
-
-const StyledTab = styled(Tab)({
-    textTransform: "none",
-    fontSize: "0.9375rem",
-    fontWeight: 500,
-    color: "#71717A",
-    minWidth: 120,
-    "&.Mui-selected": {
-        color: "#232325",
-    },
-});
 
 const SettingsCard = styled(Paper)(({ theme }) => ({
     backgroundColor: colors.background.sidebar,
@@ -268,7 +248,7 @@ export default function ProveedoresReparaciones() {
     const router = useRouter();
 
     // State management
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState("suppliers");
     const [suppliers, setSuppliers] = useState<RepairSupplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -279,6 +259,12 @@ export default function ProveedoresReparaciones() {
     // Settings tab state
     const [hourlyCost, setHourlyCost] = useState("720.00");
     const [savingSettings, setSavingSettings] = useState(false);
+
+    // Tab options
+    const tabItems: TabItem[] = [
+        { value: "suppliers", label: "Proveedores" },
+        { value: "settings", label: "Ajustes" },
+    ];
 
     // Fetch suppliers
     const fetchSuppliers = useCallback(async () => {
@@ -307,8 +293,8 @@ export default function ProveedoresReparaciones() {
     }, [searchValue]);
 
     // Event handlers
-    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-        setActiveTab(newValue);
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
     };
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,14 +387,15 @@ export default function ProveedoresReparaciones() {
         <MainLayout>
             <Title title="Proveedores de reparaciones" />
 
-            <TabsContainer>
-                <StyledTabs value={activeTab} onChange={handleTabChange}>
-                    <StyledTab label="Proveedores" />
-                    <StyledTab label="Ajustes" />
-                </StyledTabs>
-            </TabsContainer>
+            <TabsWrapper>
+                <Tabs
+                    tabs={tabItems}
+                    value={activeTab}
+                    onChange={handleTabChange}
+                />
+            </TabsWrapper>
 
-            {activeTab === 0 && (
+            {activeTab === "suppliers" && (
                 <>
                     <HeaderContainer>
                         <Box /> {/* Empty box for spacing */}
@@ -454,7 +441,7 @@ export default function ProveedoresReparaciones() {
                 </>
             )}
 
-            {activeTab === 1 && (
+            {activeTab === "settings" && (
                 <SettingsCard>
                     <SectionTitle>Costos por hora</SectionTitle>
                     <FieldContainer>

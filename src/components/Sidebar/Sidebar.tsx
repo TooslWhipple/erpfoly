@@ -124,11 +124,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     const newOpenMenus = getInitialOpenMenus(router.pathname);
     setOpenMenus((prev) => {
       const hasNewMenus = Object.keys(newOpenMenus).some((key) => !prev[key]);
-      if (hasNewMenus) {
-        return { ...prev, ...newOpenMenus };
+      if (!hasNewMenus) {
+        return prev;
       }
-      return prev;
+      return { ...prev, ...newOpenMenus };
     });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [router.pathname]);
 
   const isParentActive = (item: NavItem) => {

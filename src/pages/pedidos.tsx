@@ -170,7 +170,7 @@ export default function Pedidos() {
         } finally {
             setLoading(false);
         }
-    }, [activeTab]);
+    }, [activeTab, getStatusFilter]);
 
     useEffect(() => {
         fetchOrders();

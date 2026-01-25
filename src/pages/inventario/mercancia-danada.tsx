@@ -297,7 +297,7 @@ export default function MercanciaDanada() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab]);
+    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
 
     useEffect(() => {
         fetchItems();

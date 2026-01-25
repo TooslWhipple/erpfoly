@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { TabOption, ActionButtonConfig } from "@/components/TabFilters";
+import type { TabOption } from "@/components/TabFilters";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -248,7 +248,7 @@ export default function PedidosSucursales() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab]);
+    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
 
     useEffect(() => {
         fetchOrders();

@@ -274,7 +274,7 @@ export default function SolicitudesCredito() {
   };
 
   const handleVerDetalle = async (solicitud: SolicitudCredito) => {
-    const detalle = await getSolicitudById(solicitud.id);
+    await getSolicitudById(solicitud.id);
   };
 
   const handleAprobar = async (solicitud: SolicitudCredito) => {

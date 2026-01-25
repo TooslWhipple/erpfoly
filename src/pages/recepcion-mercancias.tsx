@@ -240,7 +240,7 @@ export default function RecepcionMercancias() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab]);
+    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
 
     useEffect(() => {
         fetchReceptions();

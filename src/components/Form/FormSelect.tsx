@@ -56,7 +56,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
         display: "flex",
         alignItems: "center",
     },
-})) as typeof Select;
+})) as unknown as typeof Select;
 
 const StyledFormHelperText = styled(FormHelperText)(({ theme }) => ({
     marginLeft: 0,

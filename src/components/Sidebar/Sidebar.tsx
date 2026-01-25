@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Box, Collapse, List, ListItemText, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
@@ -119,17 +119,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
     getInitialOpenMenus(router.pathname)
   );
+  const previousPathname = useRef(router.pathname);
 
   useEffect(() => {
-    const newOpenMenus = getInitialOpenMenus(router.pathname);
-    setOpenMenus((prev) => {
-      const hasNewMenus = Object.keys(newOpenMenus).some((key) => !prev[key]);
-      if (!hasNewMenus) {
-        return prev;
-      }
-      return { ...prev, ...newOpenMenus };
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (previousPathname.current !== router.pathname) {
+      previousPathname.current = router.pathname;
+      const newOpenMenus = getInitialOpenMenus(router.pathname);
+      // We need to update state when pathname changes to open relevant menus
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenMenus((prev) => {
+        const hasNewMenus = Object.keys(newOpenMenus).some((key) => !prev[key]);
+        if (!hasNewMenus) {
+          return prev;
+        }
+        return { ...prev, ...newOpenMenus };
+      });
+    }
   }, [router.pathname]);
 
   const isParentActive = (item: NavItem) => {

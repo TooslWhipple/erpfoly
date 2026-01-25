@@ -1,4 +1,4 @@
-import { styled } from "@mui/material/styles";
+import { styled, Theme } from "@mui/material/styles";
 import { Box, Paper, Select, Chip, IconButton } from "@mui/material";
 import { colors } from "@/styles/theme";
 
@@ -32,7 +32,7 @@ export const RuleLabel = styled("span")(({ theme }) => ({
   whiteSpace: "nowrap",
 }));
 
-const baseSelectStyles = (theme: ReturnType<typeof import("@mui/material/styles").useTheme>) => ({
+const baseSelectStyles = (theme: Theme) => ({
   backgroundColor: colors.background.sidebar,
   borderRadius: 6,
   "& .MuiOutlinedInput-notchedOutline": {

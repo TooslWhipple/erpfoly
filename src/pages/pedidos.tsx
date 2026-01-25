@@ -151,9 +151,9 @@ export default function Pedidos() {
     ];
 
     // Get status filter from tab
-    const getStatusFilter = (): "all" | OrderStatus => {
+    const getStatusFilter = useCallback((): "all" | OrderStatus => {
         return activeTab as "all" | OrderStatus;
-    };
+    }, [activeTab]);
 
     // Fetch orders
     const fetchOrders = useCallback(async () => {
@@ -170,7 +170,7 @@ export default function Pedidos() {
         } finally {
             setLoading(false);
         }
-    }, [activeTab, getStatusFilter]);
+    }, [getStatusFilter]);
 
     useEffect(() => {
         fetchOrders();

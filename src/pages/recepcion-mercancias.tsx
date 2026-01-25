@@ -219,9 +219,9 @@ export default function RecepcionMercancias() {
     ];
 
     // Get status filter from tab
-    const getStatusFilter = (): "all" | ReceptionStatus => {
+    const getStatusFilter = useCallback((): "all" | ReceptionStatus => {
         return activeTab as "all" | ReceptionStatus;
-    };
+    }, [activeTab]);
 
     // Fetch receptions
     const fetchReceptions = useCallback(async () => {
@@ -240,7 +240,7 @@ export default function RecepcionMercancias() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
+    }, [page, rowsPerPage, searchValue, getStatusFilter]);
 
     useEffect(() => {
         fetchReceptions();

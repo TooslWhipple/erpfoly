@@ -237,9 +237,9 @@ export default function Inventario() {
     ];
 
     // Get status filter from tab
-    const getStatusFilter = (): "all" | "active" | "inactive" => {
+    const getStatusFilter = useCallback((): "all" | "active" | "inactive" => {
         return activeTab as "all" | "active" | "inactive";
-    };
+    }, [activeTab]);
 
     // Fetch stats
     useEffect(() => {
@@ -271,7 +271,7 @@ export default function Inventario() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab]);
+    }, [page, rowsPerPage, searchValue, getStatusFilter]);
 
     useEffect(() => {
         fetchInventory();

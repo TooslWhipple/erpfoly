@@ -227,9 +227,9 @@ export default function PedidosSucursales() {
     ];
 
     // Get status filter from tab
-    const getStatusFilter = (): "all" | OrderStatus => {
+    const getStatusFilter = useCallback((): "all" | OrderStatus => {
         return activeTab as "all" | OrderStatus;
-    };
+    }, [activeTab]);
 
     // Fetch orders
     const fetchOrders = useCallback(async () => {
@@ -248,7 +248,7 @@ export default function PedidosSucursales() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
+    }, [page, rowsPerPage, searchValue, getStatusFilter]);
 
     useEffect(() => {
         fetchOrders();

@@ -263,9 +263,9 @@ export default function MercanciaDanada() {
     ];
 
     // Get status filter from tab
-    const getStatusFilter = (): "all" | DamageStatus => {
+    const getStatusFilter = useCallback((): "all" | DamageStatus => {
         return activeTab as "all" | DamageStatus;
-    };
+    }, [activeTab]);
 
     // Fetch stats
     useEffect(() => {
@@ -297,7 +297,7 @@ export default function MercanciaDanada() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, activeTab, getStatusFilter]);
+    }, [page, rowsPerPage, searchValue, getStatusFilter]);
 
     useEffect(() => {
         fetchItems();

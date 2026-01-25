@@ -24,4 +24,6 @@ export { MultiSelectChips } from "./MultiSelectChips";
 export type { MultiSelectChipsProps, SelectableItem } from "./MultiSelectChips";
 export { Tabs } from "./Tabs";
 export type { TabItem, TabsProps } from "./Tabs";
+export { OrderCard, OrderList } from "./OrderCard";
+export type { OrderCardData, OrderStatus as OrderCardStatus } from "./OrderCard";
 

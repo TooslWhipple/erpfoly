@@ -4,7 +4,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Paper,
   TableCell,
   TableContainer,
   TableHead,
@@ -13,19 +12,17 @@ import {
 } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+export const TableWrapper = styled(Box)({
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
+  overflow: "hidden",
+});
+
+export const StyledTableContainer = styled(TableContainer)({
   overflow: "auto",
   position: "relative",
   maxWidth: "100%",
-  [theme.breakpoints.down("sm")]: {
-    borderRadius: 6,
-  },
-}));
-
-export const StyledPaper = styled(Paper)({
   backgroundColor: "transparent",
   boxShadow: "none",
 });
@@ -135,10 +132,14 @@ export const StyledMenuItem = styled(MenuItem)({
 
 export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
   borderTop: `1px solid ${colors.border}`,
+  overflow: "hidden",
+  display: "flex",
+  justifyContent: "flex-end",
   "& .MuiTablePagination-toolbar": {
     minHeight: 52,
     flexWrap: "wrap",
     justifyContent: "flex-end",
+    padding: "0 16px",
     [theme.breakpoints.down("sm")]: {
       minHeight: 48,
       padding: "8px",
@@ -157,14 +158,13 @@ export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
   },
   "& .MuiTablePagination-actions": {
     marginLeft: 8,
+    flexShrink: 0,
     [theme.breakpoints.down("sm")]: {
       marginLeft: 4,
     },
   },
   "& .MuiTablePagination-spacer": {
-    [theme.breakpoints.down("sm")]: {
-      display: "none",
-    },
+    display: "none",
   },
 }));
 

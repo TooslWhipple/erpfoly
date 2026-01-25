@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { styled } from "@mui/material/styles";
-import { Box } from "@mui/material";
 import {
     GridView as GridViewIcon,
     Sync as SyncIcon,
@@ -11,6 +9,7 @@ import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/comp
 import type { Column } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
+import { StatsSection, INVENTORY_COLORS } from "./styles";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -48,24 +47,6 @@ interface InventoryStats {
     inTransit: number;
     damaged: number;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const StatsSection = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
-}));
-
-// Colors for inventory
-const COLORS = {
-    green: "#16a34a",
-    greenBorder: "#86efac",
-    yellow: "#ca8a04",
-    yellowBorder: "#fde047",
-    red: "#dc2626",
-    redBorder: "#fca5a5",
-};
 
 // ============================================================================
 // MOCK DATA
@@ -397,7 +378,7 @@ export default function Inventario() {
             size: "sm",
             align: "left",
             format: (value) => (
-                <span style={{ color: COLORS.green, fontWeight: 500 }}>
+                <span style={{ color: INVENTORY_COLORS.green, fontWeight: 500 }}>
                     {String(value)}
                 </span>
             ),
@@ -409,7 +390,7 @@ export default function Inventario() {
             size: "sm",
             align: "left",
             format: (value) => (
-                <span style={{ color: COLORS.yellow, fontWeight: 500 }}>
+                <span style={{ color: INVENTORY_COLORS.yellow, fontWeight: 500 }}>
                     {String(value)}
                 </span>
             ),
@@ -421,7 +402,7 @@ export default function Inventario() {
             size: "sm",
             align: "left",
             format: (value) => (
-                <span style={{ color: COLORS.red, fontWeight: 500 }}>
+                <span style={{ color: INVENTORY_COLORS.red, fontWeight: 500 }}>
                     {String(value)}
                 </span>
             ),

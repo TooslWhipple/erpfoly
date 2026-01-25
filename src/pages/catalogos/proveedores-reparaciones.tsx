@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { styled } from "@mui/material/styles";
 import {
     Box,
     InputAdornment,
-    Paper,
-    Typography,
-    Button,
     CircularProgress,
 } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
@@ -19,8 +15,15 @@ import {
     SearchInput,
     CreateButton,
     SearchIconStyled,
-} from "./catalogos.styledComponents";
-import { colors } from "@/styles/theme";
+} from "@/styles/catalogos/catalogos.styledComponents";
+import {
+    TabsWrapper,
+    SettingsCard,
+    SectionTitle,
+    FieldContainer,
+    SaveButton,
+    HelperNote,
+} from "./proveedores-reparaciones.styles";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -50,48 +53,6 @@ interface GetRepairSuppliersResponse {
     page: number;
     limit: number;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const TabsWrapper = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
-}));
-
-const SettingsCard = styled(Paper)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    padding: theme.spacing(3),
-    width: "100%",
-    boxShadow: "none",
-}));
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1.125rem",
-    fontWeight: 600,
-    color: "#232325",
-    marginBottom: theme.spacing(2),
-}));
-
-const FieldContainer = styled(Box)({
-    maxWidth: 420,
-});
-
-const SaveButton = styled(Button)(({ theme }) => ({
-    marginTop: theme.spacing(2),
-    height: 40,
-    minWidth: 160,
-}));
-
-const HelperNote = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: "#71717A",
-    marginTop: theme.spacing(2),
-    maxWidth: 600,
-    lineHeight: 1.5,
-}));
 
 // ============================================================================
 // MOCK DATA - Repair suppliers for furniture store

@@ -1,4 +1,5 @@
-import { InputAdornment, MenuItem, Select, SelectChangeEvent } from "@mui/material";
+import { InputAdornment, MenuItem, Select, SelectChangeEvent, Button } from "@mui/material";
+import { Add as AddIcon } from "@mui/icons-material";
 import {
   Container,
   TabsWrapper,
@@ -9,6 +10,7 @@ import {
   SearchIconStyled,
   FiltersRightSection,
   StyledSelect,
+  ActionButton,
 } from "./styles";
 
 export interface TabOption {
@@ -20,6 +22,21 @@ export interface TabOption {
 export interface SelectFilterOption {
   label: string;
   value: string;
+}
+
+export interface ActionButtonConfig {
+  /** Button label text */
+  label: string;
+  /** Click handler */
+  onClick: () => void;
+  /** Button variant */
+  variant?: "text" | "outlined" | "contained";
+  /** Button color */
+  color?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
+  /** Show add icon */
+  showIcon?: boolean;
+  /** Disabled state */
+  disabled?: boolean;
 }
 
 interface TabFiltersProps {
@@ -36,8 +53,8 @@ interface TabFiltersProps {
     onChange: (value: string) => void;
     label?: string;
   };
-  /** Additional actions to render on the right side (e.g., buttons) */
-  actions?: React.ReactNode;
+  /** Action buttons configuration */
+  actions?: ActionButtonConfig[];
 }
 
 export function TabFilters({
@@ -63,7 +80,8 @@ export function TabFilters({
     selectFilter?.onChange(event.target.value);
   };
 
-  const showRightSection = showSearch || selectFilter || actions;
+  const hasActions = actions && actions.length > 0;
+  const showRightSection = showSearch || selectFilter || hasActions;
 
   return (
     <Container>
@@ -122,7 +140,18 @@ export function TabFilters({
               />
             </SearchContainer>
           )}
-          {actions}
+          {hasActions && actions.map((action, index) => (
+            <ActionButton
+              key={index}
+              variant={action.variant ?? "contained"}
+              color={action.color ?? "primary"}
+              onClick={action.onClick}
+              disabled={action.disabled}
+              startIcon={action.showIcon ? <AddIcon /> : undefined}
+            >
+              {action.label}
+            </ActionButton>
+          ))}
         </FiltersRightSection>
       )}
     </Container>

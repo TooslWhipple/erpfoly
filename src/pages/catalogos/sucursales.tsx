@@ -11,7 +11,7 @@ import {
   SearchInput,
   CreateButton,
   SearchIconStyled,
-} from "./catalogos.styledComponents";
+} from "@/styles/catalogos/catalogos.styledComponents";
 
 // ============================================================================
 // TYPES & INTERFACES

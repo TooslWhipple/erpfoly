@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button, Chip, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import {
+  TableWrapper,
   StyledTableContainer,
-  StyledPaper,
   StyledTableHead,
   StyledHeaderCell,
   StyledTableRow,
@@ -373,53 +373,54 @@ export function TableCrud<T>({
   );
 
   return (
-    <StyledTableContainer component={StyledPaper}>
-      <Table style={{ width: "100%", minWidth: 650 }}>
-        {renderTableHeader()}
-        <TableBody>
-          {loading ? (
-            renderSkeletonRows()
-          ) : rows.length === 0 ? (
-            <StyledTableRow>
-              <StyledTableCell colSpan={columns.length + (hasActions ? 1 : 0)}>
-                <EmptyStateContainer>
-                  <Typography variant="body2" color="text.secondary">
-                    {emptyMessage}
-                  </Typography>
-                </EmptyStateContainer>
-              </StyledTableCell>
-            </StyledTableRow>
-          ) : (
-            rows.map((row) => (
-              <StyledTableRow
-                key={String(row[rowKey])}
-                onClick={() => onRowClick?.(row)}
-                sx={onRowClick ? { cursor: "pointer" } : undefined}
-              >
-                {columns.map((column) => {
-                  const value = getValue(row, column.id);
-                  return renderCell(value, column, row);
-                })}
-                {hasActions && (
-                  <ActionsCell
-                    align="center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
-                      <MoreVertIcon />
-                    </ActionsButton>
-                  </ActionsCell>
-                )}
+    <TableWrapper>
+      <StyledTableContainer>
+        <Table style={{ width: "100%", minWidth: 650 }}>
+          {renderTableHeader()}
+          <TableBody>
+            {loading ? (
+              renderSkeletonRows()
+            ) : rows.length === 0 ? (
+              <StyledTableRow>
+                <StyledTableCell colSpan={columns.length + (hasActions ? 1 : 0)}>
+                  <EmptyStateContainer>
+                    <Typography variant="body2" color="text.secondary">
+                      {emptyMessage}
+                    </Typography>
+                  </EmptyStateContainer>
+                </StyledTableCell>
               </StyledTableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              rows.map((row) => (
+                <StyledTableRow
+                  key={String(row[rowKey])}
+                  onClick={() => onRowClick?.(row)}
+                  sx={onRowClick ? { cursor: "pointer" } : undefined}
+                >
+                  {columns.map((column) => {
+                    const value = getValue(row, column.id);
+                    return renderCell(value, column, row);
+                  })}
+                  {hasActions && (
+                    <ActionsCell
+                      align="center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
+                        <MoreVertIcon />
+                      </ActionsButton>
+                    </ActionsCell>
+                  )}
+                </StyledTableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
 
       {total > 0 && (
         <StyledTablePagination
           rowsPerPageOptions={rowsPerPageOptions}
-          component="div"
           count={total}
           rowsPerPage={rowsPerPage}
           page={page}
@@ -456,6 +457,6 @@ export function TableCrud<T>({
           </StyledMenuItem>
         ))}
       </StyledMenu>
-    </StyledTableContainer>
+    </TableWrapper>
   );
 }

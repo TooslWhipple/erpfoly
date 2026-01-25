@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { styled } from "@mui/material/styles";
-import { Box, Paper, Typography, Button, CircularProgress } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
@@ -10,7 +9,17 @@ import {
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
-import { colors } from "@/styles/theme";
+import {
+    BreadcrumbsContainer,
+    PageHeader,
+    HeaderLeft,
+    PageTitle,
+    SaveButton,
+    FormCard,
+    SectionTitle,
+    Section,
+    FieldContainer,
+} from "./styles";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -21,66 +30,6 @@ interface Role {
     name: string;
     permissions: ModulePermission[];
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const BreadcrumbsContainer = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(2),
-}));
-
-const PageHeader = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: theme.spacing(3),
-    gap: theme.spacing(2),
-}));
-
-const HeaderLeft = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-});
-
-const PageTitle = styled(Typography)({
-    fontSize: "1.75rem",
-    fontWeight: 700,
-    color: "#232325",
-});
-
-const SaveButton = styled(Button)({
-    height: 40,
-    minWidth: 120,
-});
-
-const FormCard = styled(Paper)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    padding: theme.spacing(3),
-    width: "100%",
-    boxShadow: "none",
-}));
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1rem",
-    fontWeight: 600,
-    color: "#232325",
-    marginBottom: theme.spacing(2),
-}));
-
-const Section = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(4),
-    "&:last-child": {
-        marginBottom: 0,
-    },
-}));
-
-const FieldContainer = styled(Box)({
-    maxWidth: 600,
-});
 
 // ============================================================================
 // MOCK DATA - System modules for permissions

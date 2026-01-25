@@ -59,8 +59,8 @@ const navItems: NavItem[] = [
   },
   { label: "Pedidos", path: "/pedidos", icon: <ShoppingCartIcon /> },
   { label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
-  { label: "Pedidos (Sucursales)", path: "/pedidos-sucursales", icon: <StoreIcon /> },
-  { label: "Solicitudes (Sucursales)", path: "/solicitudes-sucursales", icon: <AssignmentIcon /> },
+  { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <StoreIcon /> },
+  { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <AssignmentIcon /> },
   {
     label: "Inventario",
     path: "/inventario",

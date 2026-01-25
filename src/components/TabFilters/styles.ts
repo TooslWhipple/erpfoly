@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box, Select, Tab, Tabs, TextField } from "@mui/material";
+import { Box, Button, Select, Tab, Tabs, TextField } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 
@@ -102,12 +102,25 @@ export const SearchIconStyled = styled(SearchIcon)({
 export const FiltersRightSection = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
   gap: theme.spacing(1.5),
   paddingBottom: theme.spacing(1),
   [theme.breakpoints.down("md")]: {
     paddingBottom: 0,
     width: "100%",
     flexDirection: "column",
+  },
+}));
+
+export const ActionButton = styled(Button)(({ theme }) => ({
+  height: 40,
+  minWidth: 100,
+  textTransform: "none",
+  fontWeight: 500,
+  flexShrink: 0,
+  marginBottom: theme.spacing(1),
+  [theme.breakpoints.down("md")]: {
+    marginBottom: 0,
   },
 }));
 

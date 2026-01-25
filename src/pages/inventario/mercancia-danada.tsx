@@ -1,22 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { styled } from "@mui/material/styles";
-import { Box, Button } from "@mui/material";
 import {
     TrendingUp as TrendingUpIcon,
-    Warning as WarningIcon,
     Edit as EditIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
+import {
+    StatsSection,
+    StatusText,
+    TimeCell,
+    WarningIconStyled,
+    DamageStatus,
+} from "./styles";
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
-
-type DamageStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
 interface DamagedItem {
     id: number;
@@ -54,45 +56,6 @@ interface DamagedStats {
     costChange: number;
     valueChange: number;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const StatsSection = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
-}));
-
-const CreateButton = styled(Button)({
-    height: 40,
-    minWidth: 120,
-    textTransform: "none",
-    fontWeight: 500,
-});
-
-const StatusText = styled("span")<{ status: DamageStatus }>(({ status }) => {
-    const statusColors: Record<DamageStatus, string> = {
-        pending: "#ea580c",
-        in_progress: "#2563eb",
-        completed: "#16a34a",
-        cancelled: "#71717A",
-    };
-    return {
-        color: statusColors[status],
-        fontWeight: 500,
-    };
-});
-
-const TimeCell = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-});
-
-const WarningIconStyled = styled(WarningIcon)({
-    color: "#ca8a04",
-    fontSize: 18,
-});
 
 // ============================================================================
 // MOCK DATA
@@ -500,15 +463,14 @@ export default function MercanciaDanada() {
                 searchValue={searchValue}
                 onSearchChange={handleSearchChange}
                 searchPlaceholder="Buscar"
-                actions={
-                    <CreateButton
-                        variant="contained"
-                        color="primary"
-                        onClick={handleCreate}
-                    >
-                        Ingresar
-                    </CreateButton>
-                }
+                actions={[
+                    {
+                        label: "Ingresar",
+                        onClick: handleCreate,
+                        variant: "contained",
+                        color: "primary",
+                    },
+                ]}
             />
 
             <TableCrud

@@ -43,7 +43,7 @@ import {
     InternetPriceTag,
     ComparisonLink,
     OrderStatus,
-} from "./styles";
+} from "@/styles/pedidos/styles";
 
 // ============================================================================
 // TYPES & INTERFACES

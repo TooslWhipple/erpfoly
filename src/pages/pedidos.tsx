@@ -4,7 +4,7 @@ import { MainLayout, Title, Tabs, OrderList } from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
-import { PageContent, MainContent, TabsWrapper } from "./pedidos.styles";
+import { PageContent, MainContent, TabsWrapper } from "@/styles/pedidos.styles";
 
 // ============================================================================
 // TYPES & INTERFACES

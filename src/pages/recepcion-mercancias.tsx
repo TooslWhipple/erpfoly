@@ -4,7 +4,7 @@ import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-import { StatusChip, ReceptionStatus } from "./recepcion-mercancias.styles";
+import { StatusChip, ReceptionStatus } from "@/styles/recepcion-mercancias.styles";
 
 // ============================================================================
 // TYPES & INTERFACES

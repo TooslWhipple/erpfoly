@@ -23,7 +23,7 @@ import {
     FieldContainer,
     SaveButton,
     HelperNote,
-} from "./proveedores-reparaciones.styles";
+} from "@/styles/catalogos/proveedores-reparaciones.styles";
 
 // ============================================================================
 // TYPES & INTERFACES

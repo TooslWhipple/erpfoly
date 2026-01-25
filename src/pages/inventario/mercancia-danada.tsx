@@ -14,7 +14,7 @@ import {
     TimeCell,
     WarningIconStyled,
     DamageStatus,
-} from "./styles";
+} from "@/styles/inventario/styles";
 
 // ============================================================================
 // TYPES & INTERFACES

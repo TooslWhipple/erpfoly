@@ -22,7 +22,7 @@ import {
 	ForgotLink,
 	BackLink,
 	AlertContainer,
-} from "./styles";
+} from "@/styles/login/styles";
 
 type View = "login" | "forgot";
 

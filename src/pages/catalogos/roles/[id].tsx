@@ -19,7 +19,7 @@ import {
     SectionTitle,
     Section,
     FieldContainer,
-} from "./styles";
+} from "@/styles/catalogos/roles.styles";
 
 // ============================================================================
 // TYPES & INTERFACES

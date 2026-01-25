@@ -21,7 +21,7 @@ import {
     Section,
     FieldsRow,
     HelperTextLink,
-} from "./styles";
+} from "@/styles/catalogos/usuarios.styles";
 
 // ============================================================================
 // TYPES & INTERFACES

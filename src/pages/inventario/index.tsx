@@ -9,7 +9,7 @@ import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/comp
 import type { Column } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import { StatsSection, INVENTORY_COLORS } from "./styles";
+import { StatsSection, INVENTORY_COLORS } from "@/styles/inventario/styles";
 
 // ============================================================================
 // TYPES & INTERFACES

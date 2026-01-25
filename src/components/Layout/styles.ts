@@ -15,7 +15,7 @@ export const MainContent = styled(Box)({
   minHeight: "100vh",
   width: "100%",
   overflow: "hidden",
-});
+}) as unknown as typeof Box;
 
 export const ContentWrapper = styled(Box)(({ theme }) => ({
   flex: 1,

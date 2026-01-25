@@ -139,4 +139,4 @@ export const StyledSelect = styled(Select)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
-}));
+})) as unknown as typeof Select;

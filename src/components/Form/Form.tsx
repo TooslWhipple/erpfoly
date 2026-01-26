@@ -5,6 +5,7 @@ import {
     FormControl,
     FormHelperText,
     Checkbox,
+    Switch,
     FormControlLabel,
     CircularProgress,
 } from "@mui/material";
@@ -32,6 +33,7 @@ export type FieldType =
     | "datetime"
     | "select"
     | "checkbox"
+    | "switch"
     | "textarea"
     | "email"
     | "password"
@@ -112,6 +114,8 @@ export interface FormProps {
     showHeader?: boolean;
     /** Show footer actions */
     showActions?: boolean;
+    /** Callback fired when form values change */
+    onValuesChange?: (values: Record<string, unknown>) => void;
 }
 
 type FormErrors = Record<string, string>;
@@ -138,7 +142,7 @@ function validateField(
         if (value === undefined || value === null || stringValue.trim() === "") {
             return `${label} es requerido`;
         }
-        if (field.type === "checkbox" && value === false) {
+        if ((field.type === "checkbox" || field.type === "switch") && value === false) {
             return `${label} es requerido`;
         }
     }
@@ -202,11 +206,12 @@ export function Form({
     onConfirm,
     confirmLabel = "Guardar",
     cancelLabel = "Cancelar",
-    loading = false,
-    initialValues = {},
-    spacing = 2,
-    showHeader = true,
-    showActions = true,
+  loading = false,
+  initialValues = {},
+  spacing = 2,
+  showHeader = true,
+  showActions = true,
+  onValuesChange,
 }: FormProps) {
     // Initialize form values with defaults
     const defaultValues = useMemo(() => {
@@ -216,7 +221,7 @@ export function Form({
                 values[field.name] = initialValues[field.name];
             } else if (field.defaultValue !== undefined) {
                 values[field.name] = field.defaultValue;
-            } else if (field.type === "checkbox") {
+            } else if (field.type === "checkbox" || field.type === "switch") {
                 values[field.name] = false;
             } else if (field.type === "number" || field.type === "currency") {
                 values[field.name] = "";
@@ -236,6 +241,12 @@ export function Form({
         (fieldName: string, newValue: unknown) => {
             setValues((prev) => {
                 const updated = { ...prev, [fieldName]: newValue };
+                
+                // Notify parent of value changes
+                if (onValuesChange) {
+                    onValuesChange(updated);
+                }
+                
                 return updated;
             });
 
@@ -254,7 +265,7 @@ export function Form({
                 }
             }
         },
-        [touched, errors, fields, values]
+        [touched, errors, fields, values, onValuesChange]
     );
 
     // Handle field blur
@@ -356,6 +367,26 @@ export function Form({
                                     checked={Boolean(value)}
                                     onChange={(e) => handleChange(name, e.target.checked)}
                                     disabled={disabled || loading}
+                                />
+                            }
+                            label={label}
+                        />
+                        {(error || helperText) && (
+                            <FormHelperText>{error || helperText}</FormHelperText>
+                        )}
+                    </FormControl>
+                );
+
+            case "switch":
+                return (
+                    <FormControl error={hasError}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={Boolean(value)}
+                                    onChange={(e) => handleChange(name, e.target.checked)}
+                                    disabled={disabled || loading}
+                                    color="primary"
                                 />
                             }
                             label={label}

@@ -1,5 +1,6 @@
-import { Dialog, IconButton } from "@mui/material";
+import { Dialog, IconButton, Box, Button, CircularProgress } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
+import { useRef } from "react";
 import { Form } from "../Form";
 import type { FormProps, FormFieldConfig } from "../Form";
 import {
@@ -9,6 +10,11 @@ import {
   ModalDescription,
   CloseButton,
 } from "./styles";
+import {
+  FormActions,
+  CancelButton,
+  ConfirmButton,
+} from "../Form/styles";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -27,6 +33,10 @@ export interface ModalFormProps extends Omit<FormProps, "showHeader"> {
   disableEscapeKeyDown?: boolean;
   /** Full width modal */
   fullWidth?: boolean;
+  /** Additional content to render after the form */
+  children?: React.ReactNode;
+  /** Callback fired when form values change */
+  onValuesChange?: (values: Record<string, unknown>) => void;
 }
 
 // ============================================================================
@@ -51,7 +61,11 @@ export function ModalForm({
   initialValues,
   spacing,
   showActions = true,
+  children,
+  onValuesChange,
 }: ModalFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+
   // Handle modal close
   const handleClose = (_event: object, reason: "backdropClick" | "escapeKeyDown") => {
     if (reason === "backdropClick" && disableBackdropClick) {
@@ -79,6 +93,13 @@ export function ModalForm({
     await onConfirm(data);
   };
 
+  // Handle form submit trigger
+  const handleSubmitClick = () => {
+    if (formRef.current) {
+      formRef.current.requestSubmit();
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -104,19 +125,63 @@ export function ModalForm({
           </CloseButton>
         </ModalHeader>
 
-        {/* Form without its own header */}
-        <Form
-          fields={fields}
-          onCancel={handleCancel}
-          onConfirm={handleConfirm}
-          confirmLabel={confirmLabel}
-          cancelLabel={cancelLabel}
-          loading={loading}
-          initialValues={initialValues}
-          spacing={spacing}
-          showHeader={false}
-          showActions={showActions}
-        />
+        {/* Form without its own header and actions */}
+        <Box
+          component="div"
+          ref={(node: HTMLDivElement | null) => {
+            if (node) {
+              const form = node.querySelector('form') as HTMLFormElement | null;
+              if (form) {
+                formRef.current = form;
+              }
+            }
+          }}
+        >
+          <Form
+            fields={fields}
+            onCancel={handleCancel}
+            onConfirm={handleConfirm}
+            confirmLabel={confirmLabel}
+            cancelLabel={cancelLabel}
+            loading={loading}
+            initialValues={initialValues}
+            spacing={spacing}
+            showHeader={false}
+            showActions={false}
+            onValuesChange={onValuesChange}
+          />
+        </Box>
+
+        {/* Additional content (e.g., info messages) */}
+        {children}
+
+        {/* Actions at the bottom, after children */}
+        {showActions && (
+          <FormActions>
+            {onCancel && (
+              <CancelButton
+                type="button"
+                variant="outlined"
+                onClick={handleCancel}
+                disabled={loading}
+              >
+                {cancelLabel}
+              </CancelButton>
+            )}
+            <ConfirmButton
+              type="button"
+              variant="contained"
+              onClick={handleSubmitClick}
+              disabled={loading}
+            >
+              {loading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                confirmLabel
+              )}
+            </ConfirmButton>
+          </FormActions>
+        )}
       </StyledDialogContent>
     </Dialog>
   );

@@ -39,12 +39,12 @@ const Container = styled(Box)({
     gap: 8,
 });
 
-const Label = styled(Typography)({
+const Label = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",
     fontWeight: 500,
-    color: "#232325",
+    color: theme.palette.text.primary,
     marginBottom: 4,
-});
+}));
 
 const SelectedContainer = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -69,39 +69,44 @@ const SelectedChip = styled(Chip)(({ theme }) => ({
     borderRadius: 6,
     fontSize: "0.875rem",
     fontWeight: 400,
-    color: "#232325",
+    color: theme.palette.text.primary,
     height: 32,
     "& .MuiChip-deleteIcon": {
-        color: "#71717A",
+        color: theme.palette.text.secondary,
         fontSize: 16,
         "&:hover": {
-            color: "#232325",
+            color: theme.palette.text.primary,
         },
     },
 }));
 
 const AvailableChip = styled(Chip)(({ theme }) => ({
-    backgroundColor: "transparent",
-    border: `1px solid ${colors.border}`,
+    backgroundColor: colors.chip.background,
+    border: "none",
     borderRadius: 6,
     fontSize: "0.875rem",
     fontWeight: 400,
-    color: "#71717A",
+    color: theme.palette.text.secondary,
     height: 32,
     cursor: "pointer",
     transition: "all 0.15s ease",
-    "& .MuiChip-icon": {
-        color: "#71717A",
+    paddingRight: 8,
+    "& .MuiChip-label": {
+        paddingLeft: 12,
+        paddingRight: 8,
+    },
+    "& .MuiChip-deleteIcon": {
+        color: theme.palette.text.secondary,
         fontSize: 16,
-        marginLeft: 8,
+        marginLeft: 4,
+        marginRight: 0,
+        "&:hover": {
+            color: theme.palette.text.secondary,
+        },
     },
     "&:hover": {
-        backgroundColor: colors.background.main,
-        borderColor: theme.palette.primary.main,
-        color: theme.palette.primary.main,
-        "& .MuiChip-icon": {
-            color: theme.palette.primary.main,
-        },
+        backgroundColor: colors.chip.background,
+        opacity: 0.8,
     },
 }));
 
@@ -115,11 +120,12 @@ const ErrorText = styled(HelperText)(({ theme }) => ({
     color: theme.palette.error.main,
 }));
 
-const EmptyText = styled(Typography)({
+const EmptyText = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",
-    color: "#9CA3AF",
+    color: theme.palette.text.secondary,
     fontStyle: "italic",
-});
+    opacity: 0.7,
+}));
 
 // ============================================================================
 // COMPONENT
@@ -182,8 +188,8 @@ export function MultiSelectChips({
                         <AvailableChip
                             key={item.id}
                             label={item.label}
-                            icon={<AddIcon />}
-                            onClick={() => handleAdd(item.id)}
+                            deleteIcon={<AddIcon />}
+                            onDelete={() => handleAdd(item.id)}
                             disabled={disabled}
                         />
                     ))}

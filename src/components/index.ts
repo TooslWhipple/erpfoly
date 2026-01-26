@@ -26,4 +26,6 @@ export { Tabs } from "./Tabs";
 export type { TabItem, TabsProps } from "./Tabs";
 export { OrderCard, OrderList } from "./OrderCard";
 export type { OrderCardData, OrderStatus as OrderCardStatus } from "./OrderCard";
+export { FilterMenu } from "./FilterMenu";
+export type { FilterMenuProps, FilterOption } from "./FilterMenu";
 

@@ -11,8 +11,7 @@ export const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
 export const ModalHeader = styled("div")(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "flex-start",
-  marginBottom: theme.spacing(3),
+  alignItems: "flex-start"
 }));
 
 export const ModalTitle = styled(Typography)(({ theme }) => ({

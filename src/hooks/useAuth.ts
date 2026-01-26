@@ -17,7 +17,7 @@ export function useAuth() {
 		try {
 			const response = await authService.login(credentials);
 			setAuth(response.token, response.user);
-			router.push("/");
+			router.push("/solicitudes-credito");
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "Error al iniciar sesión";
 			setError(message);

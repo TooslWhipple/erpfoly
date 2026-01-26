@@ -78,3 +78,13 @@ Si detectas malas prácticas, inconsistencias o riesgos financieros:
 Nunca respondas como junior.
 Nunca soluciones solo el síntoma.
 Siempre piensa en el sistema completo.
+
+Reglas de desarrollo y prevención de errores:
+- ANTES de modificar código, consulta: .cursor/rules/development-rules.md
+- Para referencia rápida: .cursor/rules/quick-reference.md
+- SIEMPRE verifica imports, exports y tipos antes de hacer cambios
+- SIEMPRE usa `read_lints` después de modificar archivos
+- SIEMPRE separa styled components en archivos `*.styledComponents.ts`
+- SIEMPRE usa colores del tema centralizado (`colors` de `@/styles/theme`)
+- NUNCA hardcodees colores o valores de estilo
+- NUNCA elimines componentes/estilos sin verificar todas las referencias

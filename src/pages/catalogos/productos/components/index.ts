@@ -1,0 +1,9 @@
+export { GeneralDataTab } from "./GeneralDataTab";
+export { SuppliersTab } from "./SuppliersTab";
+export { PriceTab } from "./PriceTab";
+export { PackagesTab } from "./PackagesTab";
+export { GalleryTab } from "./GalleryTab";
+export { BranchesTab } from "./BranchesTab";
+export { CostHistoryModal } from "./CostHistoryModal";
+export { AddPackageModal } from "./AddPackageModal";
+export { AddSupplierModal } from "./AddSupplierModal";

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
-import { 
-  Add as AddIcon, 
-  Edit as EditIcon, 
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
@@ -18,10 +18,6 @@ import {
   SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export type PromotionType = "Crédito" | "Contado" | "Apartados";
 
 export interface Promotion {
@@ -35,7 +31,6 @@ export interface Promotion {
   groups: string[] | "Todos";
   branches: string[] | "Todas";
 }
-
 interface GetPromotionsParams {
   page: number;
   limit: number;
@@ -43,17 +38,12 @@ interface GetPromotionsParams {
   branchFilter?: (string | number)[];
   departmentFilter?: (string | number)[];
 }
-
 interface GetPromotionsResponse {
   data: Promotion[];
   total: number;
   page: number;
   limit: number;
 }
-
-// ============================================================================
-// MOCK DATA - Promotions for e-commerce platform
-// ============================================================================
 
 const DUMMY_PROMOTIONS: Promotion[] = [
   {
@@ -146,16 +136,11 @@ const DUMMY_PROMOTIONS: Promotion[] = [
   },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getPromotions(params: GetPromotionsParams): Promise<GetPromotionsResponse> {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   let filteredData = [...DUMMY_PROMOTIONS];
 
-  // Filter by search (name)
   if (params.search) {
     const searchLower = params.search.toLowerCase();
     filteredData = filteredData.filter((p) =>
@@ -163,16 +148,10 @@ async function getPromotions(params: GetPromotionsParams): Promise<GetPromotions
     );
   }
 
-  // Filter by branch (mock - would filter by branchFilter in real implementation)
   if (params.branchFilter && params.branchFilter.length > 0 && !params.branchFilter.includes("all")) {
-    // In real implementation, this would filter by specific branches
-    // For now, we keep all data
   }
 
-  // Filter by department (mock - would filter by departmentFilter in real implementation)
   if (params.departmentFilter && params.departmentFilter.length > 0 && !params.departmentFilter.includes("all")) {
-    // In real implementation, this would filter by specific departments
-    // For now, we keep all data
   }
 
   const total = filteredData.length;
@@ -190,13 +169,7 @@ async function getPromotions(params: GetPromotionsParams): Promise<GetPromotions
 
 async function deletePromotion(id: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 300));
-  // In real implementation, this would call the API to delete
-  console.log(`[Promociones] Deleting promotion with id: ${id}`);
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -224,10 +197,6 @@ const formatBranches = (branches: string[] | "Todas"): string => {
   return `${branches.length} sucursales`;
 };
 
-// ============================================================================
-// MOCK FILTER DATA
-// ============================================================================
-
 const BRANCH_OPTIONS: FilterOption[] = [
   { id: "all", label: "Todas" },
   { id: "matriz", label: "Matriz" },
@@ -249,14 +218,9 @@ const DEPARTMENT_OPTIONS: FilterOption[] = [
   { id: "ventiladores-climas", label: "Ventiladores / Climas" },
 ];
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function Promociones() {
   const router = useRouter();
-  
-  // State management
+
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -266,7 +230,6 @@ export default function Promociones() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
 
-  // Fetch promotions
   const fetchPromotions = useCallback(async () => {
     setLoading(true);
     try {
@@ -277,6 +240,7 @@ export default function Promociones() {
         branchFilter: selectedBranches.length > 0 ? selectedBranches : undefined,
         departmentFilter: selectedDepartments.length > 0 ? selectedDepartments : undefined,
       });
+
       setPromotions(response.data);
       setTotalRows(response.total);
     } catch (err) {
@@ -294,7 +258,6 @@ export default function Promociones() {
     setPage(0);
   }, [searchValue, selectedBranches, selectedDepartments]);
 
-  // Event handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(event.target.value);
   };
@@ -315,7 +278,6 @@ export default function Promociones() {
     if (window.confirm(`¿Estás seguro de eliminar la promoción "${promotion.name}"?`)) {
       try {
         await deletePromotion(promotion.id);
-        // Refresh list
         fetchPromotions();
       } catch (err) {
         console.error("[Promociones] Error deleting:", err);
@@ -341,7 +303,6 @@ export default function Promociones() {
     setPage(0);
   };
 
-  // Table columns
   const columns: Column<Promotion>[] = [
     {
       id: "id",
@@ -419,7 +380,6 @@ export default function Promociones() {
     },
   ];
 
-  // Row actions (for menu)
   const actions: RowAction<Promotion>[] = [
     {
       id: "view",

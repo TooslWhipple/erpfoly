@@ -85,6 +85,11 @@ export function CashWithdrawalModal({
     setWithdrawalAmount(numValue.toFixed(2));
   };
 
+  const handleBankChange = (event: React.ChangeEvent<HTMLInputElement> | (Event & { target: { value: unknown; name: string } })) => {
+    const value = typeof event.target.value === 'string' ? event.target.value : String(event.target.value || '');
+    setSelectedBank(value);
+  };
+
   return (
     <Dialog
       open={open}
@@ -154,7 +159,7 @@ export function CashWithdrawalModal({
               <FormSelect
                 label="Banco"
                 value={selectedBank}
-                onChange={(e) => setSelectedBank(e.target.value)}
+                onChange={handleBankChange}
                 options={banks}
                 placeholder="Seleccione un banco"
               />

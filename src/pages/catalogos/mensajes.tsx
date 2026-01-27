@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
+import { MainLayout, Title, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
 import {
     HeaderContainer,
     ControlsContainer,
@@ -11,6 +10,7 @@ import {
     CreateButton,
     SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
+import { MessageFormModal, type MessageFormData } from "./mensajes/components/MessageFormModal";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -183,48 +183,6 @@ export default function Mensajes() {
         setPage(0);
     }, [searchValue]);
 
-    // Form fields configuration
-    const messageFormFields: FormFieldConfig[] = [
-        {
-            name: "name",
-            label: "Nombre del mensaje",
-            type: "text",
-            placeholder: "Ej. Mensaje recordatorio de pago",
-            validation: {
-                required: true,
-                minLength: 3,
-                maxLength: 100,
-            },
-            autoFocus: true,
-        },
-        {
-            name: "content",
-            label: "Contenido del mensaje",
-            type: "textarea",
-            placeholder: "Escribe el contenido del mensaje. Usa *variable* para incluir variables dinámicas.",
-            rows: 4,
-            validation: {
-                required: true,
-                minLength: 10,
-                maxLength: 500,
-            },
-            helperText: "Variables disponibles: *fecha_limite*, *monto_pendiente*, *factura_descripcion*",
-        },
-        {
-            name: "status",
-            label: "Estatus",
-            type: "select",
-            options: [
-                { value: "active", label: "En uso" },
-                { value: "inactive", label: "Sin uso" },
-            ],
-            defaultValue: "active",
-            validation: {
-                required: true,
-            },
-        },
-    ];
-
     // Event handlers
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
@@ -245,7 +203,7 @@ export default function Mensajes() {
         setEditingMessage(null);
     };
 
-    const handleSaveMessage = async (data: Record<string, unknown>) => {
+    const handleSaveMessage = async (data: MessageFormData) => {
         setSaving(true);
         try {
             if (editingMessage) {
@@ -255,9 +213,9 @@ export default function Mensajes() {
             } else {
                 // Create new message
                 await createMessage({
-                    name: data.name as string,
-                    content: data.content as string,
-                    status: data.status as Message["status"],
+                    name: data.name,
+                    content: data.content,
+                    status: data.status,
                 });
             }
             handleCloseModal();
@@ -377,7 +335,6 @@ export default function Mensajes() {
                     </CreateButton>
                 </ControlsContainer>
             </HeaderContainer>
-
             <TableCrud
                 columns={columns}
                 rows={messages}
@@ -393,27 +350,20 @@ export default function Mensajes() {
                 emptyMessage="No hay mensajes registrados"
             />
 
-            {/* Create/Edit Message Modal */}
-            <ModalForm
+            <MessageFormModal
                 open={modalOpen}
                 onClose={handleCloseModal}
-                title={editingMessage ? "Editar mensaje" : "Nuevo mensaje"}
-                description="Configura el mensaje para las notificaciones de cobranza."
-                fields={messageFormFields}
                 onConfirm={handleSaveMessage}
-                loading={saving}
                 initialValues={
                     editingMessage
                         ? {
-                            name: editingMessage.name,
-                            content: editingMessage.content,
-                            status: editingMessage.status,
-                        }
+                              name: editingMessage.name,
+                              content: editingMessage.content,
+                              status: editingMessage.status,
+                          }
                         : undefined
                 }
-                confirmLabel="Guardar"
-                cancelLabel="Cancelar"
-                maxWidth="sm"
+                loading={saving}
             />
         </MainLayout>
     );

@@ -35,6 +35,8 @@ export interface ModalFormProps extends Omit<FormProps, "showHeader"> {
   fullWidth?: boolean;
   /** Additional content to render after the form */
   children?: React.ReactNode;
+  /** Additional content to render in the header, next to the title */
+  headerContent?: React.ReactNode;
   /** Callback fired when form values change */
   onValuesChange?: (values: Record<string, unknown>) => void;
 }
@@ -62,6 +64,7 @@ export function ModalForm({
   spacing,
   showActions = true,
   children,
+  headerContent,
   onValuesChange,
 }: ModalFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -116,9 +119,12 @@ export function ModalForm({
       <StyledDialogContent>
         {/* Header */}
         <ModalHeader>
-          <div>
-            {title && <ModalTitle>{title}</ModalTitle>}
-            {description && <ModalDescription>{description}</ModalDescription>}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+            <div>
+              {title && <ModalTitle>{title}</ModalTitle>}
+              {description && <ModalDescription>{description}</ModalDescription>}
+            </div>
+            {headerContent}
           </div>
           <CloseButton onClick={onClose} disabled={loading} size="small">
             <CloseIcon />

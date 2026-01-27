@@ -6,9 +6,11 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, FormTextField, Tabs } from "@/components";
+import { MainLayout, Title, TableCrud, FormTextField, Tabs, ModalForm, MultiSelectChips } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabItem } from "@/components/Tabs";
+import type { FormFieldConfig } from "@/components/Form";
+import type { SelectableItem } from "@/components/MultiSelectChips";
 import {
     HeaderContainer,
     ControlsContainer,
@@ -37,6 +39,9 @@ interface Department {
 interface RepairSupplier {
     id: number;
     name: string;
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
     hoursThisMonth: number;
     departments: Department[];
 }
@@ -71,6 +76,9 @@ const DUMMY_REPAIR_SUPPLIERS: RepairSupplier[] = [
     {
         id: 1,
         name: "Ebanista Armendariz",
+        contactPerson: "Julio Armendariz",
+        phone: "667 123 4567",
+        email: "julio.armendariz@gmail.com",
         hoursThisMonth: 12,
         departments: [
             { id: 1, name: "Muebles" },
@@ -201,6 +209,23 @@ async function getRepairSuppliers(
     };
 }
 
+async function saveRepairSupplier(
+    supplier: Omit<RepairSupplier, "id" | "hoursThisMonth"> & { id?: number }
+): Promise<RepairSupplier> {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const savedSupplier: RepairSupplier = {
+        id: supplier.id || Date.now(),
+        name: supplier.name,
+        contactPerson: supplier.contactPerson,
+        phone: supplier.phone,
+        email: supplier.email,
+        hoursThisMonth: 0,
+        departments: supplier.departments,
+    };
+    console.log("[API] Saved repair supplier:", savedSupplier);
+    return savedSupplier;
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -216,6 +241,12 @@ export default function ProveedoresReparaciones() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingSupplier, setEditingSupplier] = useState<RepairSupplier | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<(string | number)[]>([]);
 
     // Settings tab state
     const [hourlyCost, setHourlyCost] = useState("720.00");
@@ -263,11 +294,54 @@ export default function ProveedoresReparaciones() {
     };
 
     const handleCreateSupplier = () => {
-        router.push("/catalogos/proveedores-reparaciones/nuevo");
+        setEditingSupplier(null);
+        setSelectedDepartmentIds([]);
+        setModalOpen(true);
     };
 
     const handleEditSupplier = (supplier: RepairSupplier) => {
-        router.push(`/catalogos/proveedores-reparaciones/${supplier.id}`);
+        setEditingSupplier(supplier);
+        setSelectedDepartmentIds(supplier.departments.map((d) => d.id));
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        if (!saving) {
+            setModalOpen(false);
+            setEditingSupplier(null);
+            setSelectedDepartmentIds([]);
+        }
+    };
+
+    const handleSaveSupplier = async (data: Record<string, unknown>) => {
+        setSaving(true);
+        try {
+            const selectedDepartments = DUMMY_DEPARTMENTS.filter((d) =>
+                selectedDepartmentIds.includes(d.id)
+            );
+
+            const supplierData = {
+                id: editingSupplier?.id,
+                name: String(data.name || ""),
+                contactPerson: String(data.contactPerson || ""),
+                phone: String(data.phone || ""),
+                email: String(data.email || ""),
+                departments: selectedDepartments,
+            };
+
+            await saveRepairSupplier(supplierData);
+            
+            // Refresh suppliers list
+            await fetchSuppliers();
+            
+            setModalOpen(false);
+            setEditingSupplier(null);
+            setSelectedDepartmentIds([]);
+        } catch (err) {
+            console.error("[ProveedoresReparaciones] Error saving supplier:", err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handlePageChange = (newPage: number) => {
@@ -344,6 +418,51 @@ export default function ProveedoresReparaciones() {
         },
     ];
 
+    // Form fields configuration
+    const formFields: FormFieldConfig[] = [
+        {
+            name: "name",
+            label: "Nombre del proveedor",
+            type: "text",
+            placeholder: "Ingresa el nombre del proveedor",
+            validation: {
+                required: true,
+            },
+            xs: 12,
+        },
+        {
+            name: "contactPerson",
+            label: "Persona de contacto",
+            type: "text",
+            placeholder: "Ingresa el nombre de la persona de contacto",
+            xs: 12,
+        },
+        {
+            name: "phone",
+            label: "Número de teléfono",
+            type: "phone",
+            placeholder: "Ingresa el número de teléfono",
+            xs: 12,
+        },
+        {
+            name: "email",
+            label: "Correo electrónico",
+            type: "email",
+            placeholder: "Ingresa el correo electrónico",
+            validation: {
+                pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                patternMessage: "El correo electrónico tiene un formato inválido",
+            },
+            xs: 12,
+        },
+    ];
+
+    // Convert departments to SelectableItem format
+    const departmentItems: SelectableItem[] = DUMMY_DEPARTMENTS.map((d) => ({
+        id: d.id,
+        label: d.name,
+    }));
+
     return (
         <MainLayout>
             <Title title="Proveedores de reparaciones" />
@@ -401,6 +520,41 @@ export default function ProveedoresReparaciones() {
                     />
                 </>
             )}
+
+            {/* Supplier Form Modal */}
+            <ModalForm
+                open={modalOpen}
+                onClose={handleCloseModal}
+                title={editingSupplier ? editingSupplier.name : "Nuevo proveedor de reparaciones"}
+                fields={formFields}
+                onConfirm={handleSaveSupplier}
+                loading={saving}
+                initialValues={
+                    editingSupplier
+                        ? {
+                              name: editingSupplier.name,
+                              contactPerson: editingSupplier.contactPerson || "",
+                              phone: editingSupplier.phone || "",
+                              email: editingSupplier.email || "",
+                          }
+                        : undefined
+                }
+                confirmLabel="Guardar cambios"
+                cancelLabel="Cancelar"
+                maxWidth="sm"
+                fullWidth
+            >
+                <Box sx={{ mt: 2 }}>
+                    <MultiSelectChips
+                        label="Departamentos que puede atender"
+                        items={departmentItems}
+                        selectedIds={selectedDepartmentIds}
+                        onChange={setSelectedDepartmentIds}
+                        disabled={saving}
+                        emptyText="No hay departamentos seleccionados"
+                    />
+                </Box>
+            </ModalForm>
 
             {activeTab === "settings" && (
                 <SettingsCard>

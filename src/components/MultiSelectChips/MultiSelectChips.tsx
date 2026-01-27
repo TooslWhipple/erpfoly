@@ -27,6 +27,8 @@ export interface MultiSelectChipsProps {
     error?: boolean;
     /** Helper text below component */
     helperText?: string;
+    /** Empty state text when no items are selected */
+    emptyText?: string;
 }
 
 // ============================================================================
@@ -139,6 +141,7 @@ export function MultiSelectChips({
     disabled = false,
     error = false,
     helperText,
+    emptyText = "No hay elementos seleccionados",
 }: MultiSelectChipsProps) {
     // Separate selected and available items
     const selectedItems = items.filter((item) => selectedIds.includes(item.id));
@@ -168,7 +171,7 @@ export function MultiSelectChips({
                 }}
             >
                 {selectedItems.length === 0 ? (
-                    <EmptyText>No hay sucursales seleccionadas</EmptyText>
+                    <EmptyText>{emptyText}</EmptyText>
                 ) : (
                     selectedItems.map((item) => (
                         <SelectedChip

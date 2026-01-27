@@ -16,13 +16,13 @@ import {
     TabsContainer,
     FormCard,
 } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, FormErrors } from "./types";
-import { getPromotion, savePromotion } from "./api";
-import { MOCK_DEPARTMENTS, MOCK_ARTICLES, MOCK_BRANCHES } from "./mockData";
-import { ConfigurationTab } from "./components/ConfigurationTab";
-import { DepartmentsTab } from "./components/DepartmentsTab";
-import { BranchesTab } from "./components/BranchesTab";
-import { SuppliersTab } from "./components/SuppliersTab";
+import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
+import { getPromotion, savePromotion } from "@/services/promociones.service";
+import { MOCK_DEPARTMENTS, MOCK_ARTICLES, MOCK_BRANCHES } from "@/data/promociones.mockData";
+import { ConfigurationTab } from "@/components/Promotions/ConfigurationTab";
+import { DepartmentsTab } from "@/components/Promotions/DepartmentsTab";
+import { BranchesTab } from "@/components/Promotions/BranchesTab";
+import { SuppliersTab } from "@/components/Promotions/SuppliersTab";
 
 // ============================================================================
 // MAIN COMPONENT

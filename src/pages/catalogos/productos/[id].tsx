@@ -16,15 +16,15 @@ import {
     TabsContainer,
     FormCard,
 } from "@/styles/catalogos/productos.styles";
-import type { GeneralDataFormState, PriceFormState, FormErrors, ProductSupplier, ProductBranch, ProductPackage, PackageFormData } from "./types";
-import { getProduct, saveProduct } from "./api";
-import { MOCK_DEPARTMENTS, MOCK_LINES, CURRENCIES, MOCK_COST_HISTORY, getInitialBranches, MOCK_ARTICLES, MOCK_PACKAGE_BRANCHES, MOCK_SUPPLIERS_FOR_SELECTION } from "./mockData";
-import { GeneralDataTab } from "./components/GeneralDataTab";
-import { SuppliersTab } from "./components/SuppliersTab";
-import { PriceTab } from "./components/PriceTab";
-import { PackagesTab } from "./components/PackagesTab";
-import { GalleryTab } from "./components/GalleryTab";
-import { BranchesTab } from "./components/BranchesTab";
+import type { GeneralDataFormState, PriceFormState, FormErrors, ProductSupplier, ProductBranch, ProductPackage, PackageFormData } from "@/types/productos.types";
+import { getProduct, saveProduct } from "@/services/productos.service";
+import { MOCK_DEPARTMENTS, MOCK_LINES, CURRENCIES, MOCK_COST_HISTORY, getInitialBranches, MOCK_ARTICLES, MOCK_PACKAGE_BRANCHES, MOCK_SUPPLIERS_FOR_SELECTION } from "@/data/productos.mockData";
+import { GeneralDataTab } from "@/components/Products/GeneralDataTab";
+import { SuppliersTab } from "@/components/Products/SuppliersTab";
+import { PriceTab } from "@/components/Products/PriceTab";
+import { PackagesTab } from "@/components/Products/PackagesTab";
+import { GalleryTab } from "@/components/Products/GalleryTab";
+import { BranchesTab } from "@/components/Products/BranchesTab";
 
 // ============================================================================
 // MAIN COMPONENT

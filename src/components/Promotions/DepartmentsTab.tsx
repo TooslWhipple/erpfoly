@@ -5,8 +5,8 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
 import { Section, SectionTitle, SectionDescription } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, PromotionDepartment, PromotionArticle } from "../types";
-import { MOCK_DEPARTMENTS, MOCK_ARTICLES } from "../mockData";
+import type { PromotionFormState, PromotionDepartment, PromotionArticle } from "@/types/promociones.types";
+import { MOCK_DEPARTMENTS, MOCK_ARTICLES } from "@/data/promociones.mockData";
 
 // ============================================================================
 // TYPES

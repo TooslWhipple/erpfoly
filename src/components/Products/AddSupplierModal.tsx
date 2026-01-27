@@ -21,7 +21,7 @@ import {
     SupplierAddButton,
     SupplierNewButton,
 } from "@/styles/catalogos/productos.styles";
-import type { SupplierForSelection } from "../mockData";
+import type { SupplierForSelection } from "@/data/productos.mockData";
 
 // ============================================================================
 // TYPES

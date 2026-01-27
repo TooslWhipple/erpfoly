@@ -1,4 +1,4 @@
-import type { Product, CostHistoryEntry, ProductBranch } from "./types";
+import type { Product, CostHistoryEntry, ProductBranch } from "@/types/productos.types";
 
 // ============================================================================
 // MOCK DATA

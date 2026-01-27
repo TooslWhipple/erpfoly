@@ -12,7 +12,7 @@ import {
     InventoryInput,
     InventoryButton,
 } from "@/styles/catalogos/productos.styles";
-import type { ProductBranch } from "../types";
+import type { ProductBranch } from "@/types/productos.types";
 
 // ============================================================================
 // TYPES

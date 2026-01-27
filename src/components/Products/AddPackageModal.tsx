@@ -21,8 +21,8 @@ import {
     SectionTitle,
     SectionDescription,
 } from "@/styles/catalogos/productos.styles";
-import type { PackageType, PackageFormData, SelectableItem } from "../types";
-import type { ArticleForPackage } from "../mockData";
+import type { PackageType, PackageFormData, SelectableItem } from "@/types/productos.types";
+import type { ArticleForPackage } from "@/data/productos.mockData";
 
 // ============================================================================
 // TYPES

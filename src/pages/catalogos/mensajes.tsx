@@ -10,7 +10,7 @@ import {
     CreateButton,
     SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
-import { MessageFormModal, type MessageFormData } from "./mensajes/components/MessageFormModal";
+import { MessageFormModal, type MessageFormData } from "@/components/Messages";
 
 // ============================================================================
 // TYPES & INTERFACES

@@ -10,7 +10,7 @@ import {
     TimelinePrice,
     TimelineChange,
 } from "@/styles/catalogos/productos.styles";
-import type { CostHistoryEntry } from "../types";
+import type { CostHistoryEntry } from "@/types/productos.types";
 
 // ============================================================================
 // TYPES

@@ -8,7 +8,7 @@ import {
     StyledRadioGroup,
     StyledFormControlLabel,
 } from "@/styles/catalogos/productos.styles";
-import type { GeneralDataFormState, WarrantyType, FormErrors } from "../types";
+import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 import { Radio } from "@mui/material";
 import { Box } from "@mui/material";
 

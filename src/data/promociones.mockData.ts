@@ -8,7 +8,7 @@ import type {
     PromotionBranch,
     PromotionSupplier,
     Promotion,
-} from "./types";
+} from "@/types/promociones.types";
 
 export const MOCK_DEPARTMENTS: PromotionDepartment[] = [
     { id: "01", code: "01", name: "Muebles" },

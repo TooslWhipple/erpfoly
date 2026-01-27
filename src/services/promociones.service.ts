@@ -2,8 +2,8 @@
 // API FUNCTIONS
 // ============================================================================
 
-import type { Promotion, PromotionFormState } from "./types";
-import { MOCK_PROMOTION } from "./mockData";
+import type { Promotion, PromotionFormState } from "@/types/promociones.types";
+import { MOCK_PROMOTION } from "@/data/promociones.mockData";
 
 export async function getPromotion(id: number): Promise<Promotion | null> {
     await new Promise((resolve) => setTimeout(resolve, 500));

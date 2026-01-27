@@ -4,8 +4,8 @@ import { Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, Ta
 import { Add as AddIcon } from "@mui/icons-material";
 import { AddSupplierModal } from "@/components/Products/AddSupplierModal";
 import { Section, SectionTitle, SectionDescription, SupplierTableContainer, SupplierTableHeader, SupplierTableRow, SupplierTableCell, SupplierAddButton } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, PromotionSupplier } from "../types";
-import { MOCK_SUPPLIERS_FOR_SELECTION } from "../mockData";
+import type { PromotionFormState, PromotionSupplier } from "@/types/promociones.types";
+import { MOCK_SUPPLIERS_FOR_SELECTION } from "@/data/promociones.mockData";
 
 // ============================================================================
 // TYPES

@@ -10,8 +10,8 @@ import {
     SaveButton,
 } from "@/styles/catalogos/productos.styles";
 import { AddSupplierModal } from "./AddSupplierModal";
-import type { ProductSupplier } from "../types";
-import type { SupplierForSelection } from "../mockData";
+import type { ProductSupplier } from "@/types/productos.types";
+import type { SupplierForSelection } from "@/data/productos.mockData";
 
 // ============================================================================
 // TYPES

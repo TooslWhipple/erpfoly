@@ -1,8 +1,8 @@
 import { Box, Grid } from "@mui/material";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
 import { Section, SectionTitle, SectionDescription } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState } from "../types";
-import { MOCK_BRANCHES } from "../mockData";
+import type { PromotionFormState } from "@/types/promociones.types";
+import { MOCK_BRANCHES } from "@/data/promociones.mockData";
 
 // ============================================================================
 // TYPES

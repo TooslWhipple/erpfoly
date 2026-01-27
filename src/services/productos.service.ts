@@ -1,5 +1,5 @@
-import type { Product } from "./types";
-import { MOCK_BRANCHES } from "./mockData";
+import type { Product } from "@/types/productos.types";
+import { MOCK_BRANCHES } from "@/data/productos.mockData";
 
 // ============================================================================
 // MOCK API FUNCTIONS

@@ -10,6 +10,7 @@ import {
   ListItemButton,
   ListItemText,
   Divider,
+  useTheme,
 } from "@mui/material";
 import { FilterList as FilterIcon } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
@@ -61,24 +62,24 @@ const MenuHeader = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${colors.border}`,
 }));
 
-const MenuTitle = styled(Typography)({
+const MenuTitle = styled(Typography)(({ theme }) => ({
   fontSize: "0.875rem",
   fontWeight: 600,
-  color: colors.text?.primary || "#232325",
-});
+  color: theme.palette.text.primary,
+}));
 
-const ClearButton = styled(Button)({
+const ClearButton = styled(Button)(({ theme }) => ({
   minWidth: "auto",
   padding: "4px 8px",
   fontSize: "0.875rem",
   fontWeight: 400,
-  color: colors.text?.secondary || "#71717A",
+  color: theme.palette.text.secondary,
   textTransform: "none",
   "&:hover": {
     backgroundColor: "transparent",
     color: colors.sidebar.textSelected,
   },
-});
+}));
 
 const OptionsList = styled(List)({
   padding: 0,
@@ -105,13 +106,13 @@ const StyledCheckbox = styled(Checkbox)({
   },
 });
 
-const OptionLabel = styled(ListItemText)({
+const OptionLabel = styled(ListItemText)(({ theme }) => ({
   "& .MuiListItemText-primary": {
     fontSize: "0.875rem",
     fontWeight: 400,
-    color: colors.text?.primary || "#232325",
+    color: theme.palette.text.primary,
   },
-});
+}));
 
 // ============================================================================
 // COMPONENT
@@ -127,6 +128,7 @@ export function FilterMenu({
   allOptionLabel = "Todos",
   disabled = false,
 }: FilterMenuProps) {
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -253,7 +255,7 @@ export function FilterMenu({
           whiteSpace: "nowrap",
           textTransform: "none",
           backgroundColor: showingAll ? colors.background.sidebar : "transparent",
-          color: showingAll ? colors.text?.secondary || "#71717A" : colors.text?.primary || "#232325",
+          color: showingAll ? theme.palette.text.secondary : theme.palette.text.primary,
           borderColor: colors.border,
           "&:hover": {
             borderColor: colors.sidebar.textSelected,

@@ -10,8 +10,8 @@ import {
     SaveButton,
 } from "@/styles/catalogos/productos.styles";
 import { AddPackageModal } from "./AddPackageModal";
-import type { PackageFormData, SelectableItem } from "../types";
-import type { ArticleForPackage } from "../mockData";
+import type { PackageFormData, SelectableItem } from "@/types/productos.types";
+import type { ArticleForPackage } from "@/data/productos.mockData";
 
 // ============================================================================
 // TYPES

@@ -2,7 +2,7 @@ import { styled } from "@mui/material/styles";
 import { Box, Grid, Radio, Switch, Button, Divider } from "@mui/material";
 import { FormTextField } from "@/components";
 import { Section, SectionTitle, SectionDescription, StyledRadioGroup, StyledFormControlLabel } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, FormErrors, PromotionApplicationType, PromotionMonth, PromotionDay } from "../types";
+import type { PromotionFormState, FormErrors, PromotionApplicationType, PromotionMonth, PromotionDay } from "@/types/promociones.types";
 
 // ============================================================================
 // TYPES

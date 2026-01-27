@@ -10,9 +10,8 @@ import {
     CostValue,
     SaveButton,
 } from "@/styles/catalogos/productos.styles";
-import type { PriceFormState } from "../types";
+import type { PriceFormState, CostHistoryEntry } from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
-import type { CostHistoryEntry } from "../types";
 
 // ============================================================================
 // TYPES

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
 import { 
   Add as AddIcon, 
@@ -253,6 +254,8 @@ const DEPARTMENT_OPTIONS: FilterOption[] = [
 // ============================================================================
 
 export default function Promociones() {
+  const router = useRouter();
+  
   // State management
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,18 +300,15 @@ export default function Promociones() {
   };
 
   const handleCreatePromotion = () => {
-    // TODO: Implement form modal/page
-    console.log("[Promociones] Create promotion clicked");
+    router.push("/catalogos/promociones/nuevo");
   };
 
   const handleViewDetails = (promotion: Promotion) => {
-    // TODO: Implement details view
-    console.log("[Promociones] View details for:", promotion);
+    router.push(`/catalogos/promociones/${promotion.id}`);
   };
 
   const handleEditPromotion = (promotion: Promotion) => {
-    // TODO: Navigate to edit page or open edit modal
-    console.log("[Promociones] Edit promotion:", promotion);
+    router.push(`/catalogos/promociones/${promotion.id}`);
   };
 
   const handleDeletePromotion = async (promotion: Promotion) => {

@@ -13,15 +13,10 @@ import { colors } from "@/styles/theme";
 import {
     PageContainer,
     PageHeader,
-    PageTitle,
-    SupplierSelector,
     SuggestionsSection,
-    SuggestionsTitle,
     SuggestionsList,
     ArticlesSection,
     ArticlesHeader,
-    ArticlesTitle,
-    SearchInput,
     MainContent,
     StockCell,
     DrawerContent,
@@ -317,8 +312,8 @@ export default function NuevoPedido() {
             }}>
                 <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                     <PageHeader>
-                        <PageTitle>Nuevo pedido</PageTitle>
-                        <SupplierSelector
+                        <Typography variant="h1">Nuevo pedido</Typography>
+                        <Select
                             size="small"
                             value={supplier.id}
                             displayEmpty
@@ -328,14 +323,30 @@ export default function NuevoPedido() {
                             }}
                             IconComponent={ArrowDropDownIcon}
                             disabled
+                            sx={{
+                                maxWidth: 400,
+                                backgroundColor: colors.background.sidebar,
+                                "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: colors.border,
+                                },
+                                "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: colors.border,
+                                },
+                                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#2663EB",
+                                },
+                                "&.Mui-disabled": {
+                                    backgroundColor: colors.background.main,
+                                },
+                            }}
                         >
                             <MenuItem value={supplier.id}>{supplier.name}</MenuItem>
-                        </SupplierSelector>
+                        </Select>
                     </PageHeader>
 
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                         <SuggestionsSection>
-                            <SuggestionsTitle>Sugerencias</SuggestionsTitle>
+                            <Typography variant="h4">Sugerencias</Typography>
                             {suggestionsLoading ? (
                                 <Box sx={{ display: "flex", justifyContent: "center", padding: 4 }}>
                                     <CircularProgress size={24} />
@@ -355,12 +366,28 @@ export default function NuevoPedido() {
 
                         <ArticlesSection>
                             <ArticlesHeader>
-                                <ArticlesTitle>Todos los artículos</ArticlesTitle>
-                                <SearchInput
+                                <Typography variant="h4">Todos los artículos</Typography>
+                                <TextField
                                     placeholder="Buscar en artículos"
                                     value={searchQuery}
                                     onChange={handleSearchChange}
                                     size="small"
+                                    sx={{
+                                        maxWidth: 400,
+                                        "& .MuiOutlinedInput-root": {
+                                            borderRadius: 2,
+                                            backgroundColor: colors.background.sidebar,
+                                            "& fieldset": {
+                                                borderColor: colors.border,
+                                            },
+                                            "&:hover fieldset": {
+                                                borderColor: colors.border,
+                                            },
+                                            "&.Mui-focused fieldset": {
+                                                borderColor: "#2663EB",
+                                            },
+                                        },
+                                    }}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">

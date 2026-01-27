@@ -26,18 +26,8 @@ export const SummaryHeader = styled(Box)(({ theme }) => ({
     marginBottom: theme.spacing(3),
 }));
 
-export const SummaryTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 24,
-    fontWeight: 700,
-    color: theme.palette.text.primary,
-    textAlign: "center",
-}));
-
-export const SummarySubtitle = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-    textAlign: "center",
-}));
+// SummaryTitle uses Typography variant="h3" (24px, 600) - using h3 with fontWeight 700 override
+// SummarySubtitle uses Typography variant="body2" with textAlign center
 
 // ============================================================================
 // CONTENT
@@ -49,12 +39,7 @@ export const SummaryContent = styled(Box)(({ theme }) => ({
     marginBottom: theme.spacing(2),
 }));
 
-export const EmptyStateMessage = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-    textAlign: "center",
-    padding: theme.spacing(4, 2),
-}));
+// EmptyStateMessage uses Typography variant="body2" with textAlign center and padding
 
 export const ItemsList = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -81,23 +66,9 @@ export const ItemCardContent = styled(Box)(({ theme }) => ({
     paddingRight: theme.spacing(2),
 }));
 
-export const ItemName = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    lineHeight: 1.4,
-}));
-
-export const ItemModel = styled(Typography)(({ theme }) => ({
-    fontSize: 12,
-    color: theme.palette.text.secondary,
-}));
-
-export const ItemSku = styled(Typography)(({ theme }) => ({
-    fontSize: 12,
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(1.5),
-}));
+// ItemName uses Typography variant="body2" with fontWeight 600
+// ItemModel uses Typography variant="caption"
+// ItemSku uses Typography variant="caption" with marginBottom
 
 export const ItemFooter = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -125,20 +96,8 @@ export const QuantityButton = styled(IconButton)(({ theme }) => ({
     },
 }));
 
-export const QuantityValue = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-    minWidth: 24,
-    textAlign: "center",
-    padding: `0 ${theme.spacing(1)}`,
-}));
-
-export const ItemPrice = styled(Typography)(({ theme }) => ({
-    fontSize: 16,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
+// QuantityValue uses Typography variant="body2" with fontWeight 500
+// ItemPrice uses Typography variant="subtitle1" with fontWeight 600
 
 export const RemoveButton = styled(IconButton)(({ theme }) => ({
     padding: theme.spacing(0.5),
@@ -158,13 +117,7 @@ export const SummaryFooter = styled(Box)(({ theme }) => ({
     borderTop: `1px solid ${colors.border}`,
 }));
 
-export const ContinueButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontWeight: 600,
-    borderRadius: 8,
-    padding: theme.spacing(1.5, 2),
-    width: "100%",
-}));
+// ContinueButton uses Button with fullWidth prop and variant="continue" from theme
 
 export const ContinueButtonContent = styled(Box)({
     display: "flex",

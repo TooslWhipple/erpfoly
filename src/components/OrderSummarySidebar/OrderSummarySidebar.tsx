@@ -5,25 +5,16 @@ import type { OrderItem } from "@/types/pedidos.types";
 import {
     SummaryContainer,
     SummaryHeader,
-    SummaryTitle,
-    SummarySubtitle,
     SummaryContent,
-    EmptyStateMessage,
     ItemsList,
     ItemCard,
     ItemCardHeader,
     ItemCardContent,
-    ItemName,
-    ItemModel,
-    ItemSku,
     ItemFooter,
     QuantityControls,
     QuantityButton,
-    QuantityValue,
-    ItemPrice,
     RemoveButton,
     SummaryFooter,
-    ContinueButton,
     ContinueButtonContent,
 } from "./styles";
 
@@ -87,19 +78,28 @@ export function OrderSummarySidebar({
     return (
         <SummaryContainer>
             <SummaryHeader>
-                <SummaryTitle>Artículos</SummaryTitle>
+                <Typography variant="h3" sx={{ textAlign: "center", fontWeight: 700 }}>
+                    Artículos
+                </Typography>
                 {hasItems && (
-                    <SummarySubtitle>
+                    <Typography variant="body2" sx={{ textAlign: "center", color: "text.secondary" }}>
                         {itemCount} {itemCount === 1 ? "artículo" : "artículos"} en tu pedido
-                    </SummarySubtitle>
+                    </Typography>
                 )}
             </SummaryHeader>
 
             <SummaryContent>
                 {!hasItems ? (
-                    <EmptyStateMessage>
+                    <Typography 
+                        variant="body2" 
+                        sx={{ 
+                            textAlign: "center", 
+                            color: "text.secondary",
+                            padding: (theme) => theme.spacing(4, 2)
+                        }}
+                    >
                         Comienza a agregar artículos a tu pedido
-                    </EmptyStateMessage>
+                    </Typography>
                 ) : (
                     <ItemsList>
                         {items.map((item, index) => {
@@ -115,11 +115,17 @@ export function OrderSummarySidebar({
                                         </RemoveButton>
                                     </ItemCardHeader>
                                     <ItemCardContent>
-                                        <ItemName>{productInfo.name}</ItemName>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
+                                            {productInfo.name}
+                                        </Typography>
                                         {productInfo.model && (
-                                            <ItemModel>({productInfo.model})</ItemModel>
+                                            <Typography variant="caption">
+                                                ({productInfo.model})
+                                            </Typography>
                                         )}
-                                        <ItemSku>{item.folio}</ItemSku>
+                                        <Typography variant="caption" sx={{ marginBottom: (theme) => theme.spacing(1.5) }}>
+                                            {item.folio}
+                                        </Typography>
                                         <ItemFooter>
                                             <QuantityControls>
                                                 <QuantityButton
@@ -129,7 +135,17 @@ export function OrderSummarySidebar({
                                                 >
                                                     <RemoveIcon fontSize="small" />
                                                 </QuantityButton>
-                                                <QuantityValue>{item.quantity}</QuantityValue>
+                                                <Typography 
+                                                    variant="body2" 
+                                                    sx={{ 
+                                                        fontWeight: 500,
+                                                        minWidth: 24,
+                                                        textAlign: "center",
+                                                        padding: (theme) => `0 ${theme.spacing(1)}`
+                                                    }}
+                                                >
+                                                    {item.quantity}
+                                                </Typography>
                                                 <QuantityButton
                                                     size="small"
                                                     onClick={() => handleIncrement(item.articleId, item.quantity)}
@@ -137,7 +153,9 @@ export function OrderSummarySidebar({
                                                     <AddIcon fontSize="small" />
                                                 </QuantityButton>
                                             </QuantityControls>
-                                            <ItemPrice>{formatCurrency(item.totalPrice)}</ItemPrice>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                                {formatCurrency(item.totalPrice)}
+                                            </Typography>
                                         </ItemFooter>
                                     </ItemCardContent>
                                 </ItemCard>
@@ -148,18 +166,24 @@ export function OrderSummarySidebar({
             </SummaryContent>
 
             <SummaryFooter>
-                <ContinueButton
+                <Button
                     variant="contained"
                     color="primary"
                     fullWidth
                     disabled={!hasItems}
                     onClick={onContinue}
+                    sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        padding: (theme) => theme.spacing(1.5, 2),
+                    }}
                 >
                     <ContinueButtonContent>
                         <Typography component="span">Continuar</Typography>
                         <Typography component="span">{formatCurrency(total)}</Typography>
                     </ContinueButtonContent>
-                </ContinueButton>
+                </Button>
             </SummaryFooter>
         </SummaryContainer>
     );

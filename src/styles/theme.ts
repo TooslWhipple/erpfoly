@@ -132,6 +132,96 @@ export const theme = createTheme({
         root: {
           textTransform: "none",
           fontWeight: 600,
+          borderRadius: 8,
+          boxShadow: "none"
+        },
+      },
+      variants: [
+        {
+          props: { variant: "search" },
+          style: {
+            height: 40,
+            minWidth: 100,
+            fontWeight: 600,
+          },
+        },
+        {
+          props: { variant: "action" },
+          style: {
+            height: 40,
+            fontWeight: 600,
+          },
+        },
+        {
+          props: { variant: "save" },
+          style: {
+            height: 40,
+            minWidth: 100,
+            fontWeight: 600,
+          },
+        },
+        {
+          props: { variant: "continue" },
+          style: {
+            width: "100%",
+            fontWeight: 600,
+            borderRadius: 8,
+            padding: "12px 16px",
+          },
+        },
+      ],
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          "& .MuiOutlinedInput-root": {
+            backgroundColor: colors.background.sidebar,
+            "& fieldset": {
+              borderColor: colors.border,
+            },
+            "&:hover fieldset": {
+              borderColor: colors.border,
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: "#2663EB",
+            },
+          },
+        },
+      },
+      variants: [
+        {
+          props: { variant: "search" },
+          style: {
+            "& .MuiOutlinedInput-root": {
+              backgroundColor: colors.background.sidebar,
+              borderRadius: 8,
+              "& fieldset": {
+                borderColor: colors.border,
+              },
+              "&:hover fieldset": {
+                borderColor: colors.border,
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: "#2663EB",
+              },
+            },
+          },
+        },
+      ],
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          backgroundColor: colors.background.sidebar,
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: colors.border,
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: colors.border,
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#2663EB",
+          },
         },
       },
     },

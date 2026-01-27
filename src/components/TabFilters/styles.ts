@@ -75,25 +75,7 @@ export const SearchContainer = styled(Box)<{ singleAction?: boolean }>(({ theme,
   },
 }));
 
-export const SearchInput = styled(TextField)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
-  width: 280,
-  [theme.breakpoints.down("md")]: {
-    width: singleAction ? "auto" : "100%",
-    minWidth: singleAction ? 200 : "auto",
-  },
-  "& .MuiOutlinedInput-root": {
-    backgroundColor: colors.background.sidebar,
-    "& fieldset": {
-      borderColor: colors.border,
-    },
-    "&:hover fieldset": {
-      borderColor: colors.border,
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: colors.sidebar.textSelected,
-    },
-  },
-}));
+// SearchInput uses TextField with inline styles from theme
 
 export const SearchIconStyled = styled(SearchIcon)({
   width: 18,
@@ -115,39 +97,6 @@ export const FiltersRightSection = styled(Box)<{ singleAction?: boolean }>(({ th
   },
 }));
 
-export const ActionButton = styled(Button)<{ singleAction?: boolean; multipleActions?: boolean }>(({ theme, singleAction, multipleActions }) => ({
-  height: 40,
-  minWidth: 100,
-  textTransform: "none",
-  fontWeight: 500,
-  flexShrink: 0,
-  marginBottom: theme.spacing(1),
-  [theme.breakpoints.down("md")]: {
-    marginBottom: 0,
-    ...(singleAction && {
-      flexShrink: 0,
-      marginLeft: theme.spacing(1.5),
-    }),
-    ...(multipleActions && {
-      flex: "1 1 calc(50% - 8px)",
-      minWidth: "calc(50% - 8px)",
-    }),
-  },
-}));
+// ActionButton uses Button with inline styles from theme
 
-export const StyledSelect = styled(Select)(({ theme }) => ({
-  minWidth: 140,
-  backgroundColor: colors.background.sidebar,
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.border,
-  },
-  "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.border,
-  },
-  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.sidebar.textSelected,
-  },
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-  },
-})) as unknown as typeof Select;
+// StyledSelect uses Select with inline styles from theme

@@ -1,16 +1,14 @@
-import { InputAdornment, MenuItem, Select, SelectChangeEvent, Button } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { InputAdornment, MenuItem, Select, SelectChangeEvent, Button, TextField } from "@mui/material";
+import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material";
+import { colors } from "@/styles/theme";
 import {
   Container,
   TabsWrapper,
   StyledTabs,
   StyledTab,
   SearchContainer,
-  SearchInput,
   SearchIconStyled,
   FiltersRightSection,
-  StyledSelect,
-  ActionButton,
 } from "./styles";
 
 export interface TabOption {
@@ -111,32 +109,66 @@ export function TabFilters({
       {showRightSection && (
         <FiltersRightSection singleAction={singleAction}>
           {selectFilter && (
-            <StyledSelect
+            <Select
               size="small"
               value={selectFilter.value}
               onChange={handleSelectChange}
               displayEmpty
+              sx={{
+                minWidth: 140,
+                backgroundColor: colors.background.sidebar,
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: colors.border,
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: colors.border,
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: colors.sidebar.textSelected,
+                },
+                "@media (max-width: 899px)": {
+                  width: "100%",
+                },
+              }}
             >
               {selectFilter.options.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuItem>
               ))}
-            </StyledSelect>
+            </Select>
           )}
           {showSearch && (
             <SearchContainer singleAction={singleAction}>
-              <SearchInput
+              <TextField
                 size="small"
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={handleSearchChange}
                 fullWidth={!singleAction}
-                singleAction={singleAction}
+                sx={{
+                  width: 280,
+                  "@media (max-width: 899px)": {
+                    width: singleAction ? "auto" : "100%",
+                    minWidth: singleAction ? 200 : "auto",
+                  },
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: colors.background.sidebar,
+                    "& fieldset": {
+                      borderColor: colors.border,
+                    },
+                    "&:hover fieldset": {
+                      borderColor: colors.border,
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: colors.sidebar.textSelected,
+                    },
+                  },
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIconStyled />
+                      <SearchIcon sx={{ width: 18, height: 18, color: "#71717A" }} />
                     </InputAdornment>
                   ),
                 }}
@@ -144,18 +176,35 @@ export function TabFilters({
             </SearchContainer>
           )}
           {hasActions && actions.map((action, index) => (
-            <ActionButton
+            <Button
               key={index}
               variant={action.variant ?? "contained"}
               color={action.color ?? "primary"}
               onClick={action.onClick}
               disabled={action.disabled}
               startIcon={action.showIcon ? <AddIcon /> : undefined}
-              singleAction={singleAction}
-              multipleActions={multipleActions}
+              sx={{
+                height: 40,
+                minWidth: 100,
+                textTransform: "none",
+                fontWeight: 500,
+                flexShrink: 0,
+                marginBottom: (theme) => theme.spacing(1),
+                "@media (max-width: 899px)": {
+                  marginBottom: 0,
+                  ...(singleAction && {
+                    flexShrink: 0,
+                    marginLeft: (theme) => theme.spacing(1.5),
+                  }),
+                  ...(multipleActions && {
+                    flex: "1 1 calc(50% - 8px)",
+                    minWidth: "calc(50% - 8px)",
+                  }),
+                },
+              }}
             >
               {action.label}
-            </ActionButton>
+            </Button>
           ))}
         </FiltersRightSection>
       )}

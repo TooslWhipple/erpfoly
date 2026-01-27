@@ -30,22 +30,8 @@ export const ProductInfo = styled(Box)({
     minWidth: 0,
 });
 
-export const ProductName = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-    lineHeight: 1.4,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-}));
-
-export const ProductSku = styled(Typography)(({ theme }) => ({
-    fontSize: 12,
-    color: theme.palette.text.secondary,
-}));
+// ProductName uses Typography variant="body2" with fontWeight 500
+// ProductSku uses Typography variant="caption"
 
 export const QuantityBadge = styled(Box)(({ theme }) => ({
     fontSize: 16,
@@ -67,16 +53,8 @@ export const DemandStatItem = styled(Box)({
     flex: 1,
 });
 
-export const DemandStatLabel = styled(Typography)(({ theme }) => ({
-    fontSize: 11,
-    color: theme.palette.text.secondary,
-}));
-
-export const DemandStatValue = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
+// DemandStatLabel uses Typography variant="caption" with fontSize 11
+// DemandStatValue uses Typography variant="body2" with fontWeight 600
 
 export const TrendChartContainer = styled(Box)(({ theme }) => ({
     marginBottom: theme.spacing(1.5),
@@ -104,7 +82,4 @@ export const TrendAxis = styled(Box)({
     width: "100%",
 });
 
-export const TrendMonth = styled(Typography)(({ theme }) => ({
-    fontSize: 10,
-    color: theme.palette.text.secondary,
-}));
+// TrendMonth uses Typography variant="caption" with fontSize 10

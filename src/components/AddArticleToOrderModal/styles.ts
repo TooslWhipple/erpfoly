@@ -32,17 +32,8 @@ export const ProductImage = styled(Box)(({ theme }) => ({
     flexShrink: 0,
 }));
 
-export const ProductName = styled(Typography)(({ theme }) => ({
-    fontSize: 18,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    lineHeight: 1.4,
-}));
-
-export const ProductSku = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-}));
+// ProductName uses Typography variant="h5"
+// ProductSku uses Typography variant="caption"
 
 // ============================================================================
 // COST INPUT SECTION
@@ -54,13 +45,7 @@ export const CostInputSection = styled(Box)(({ theme }) => ({
     alignItems: "center",
 }));
 
-export const AddCostButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontWeight: 600,
-    borderRadius: 6,
-    padding: theme.spacing(1.25, 2.5),
-    whiteSpace: "nowrap",
-}));
+// AddCostButton uses Button with inline styles
 
 // ============================================================================
 // HISTORY SECTION
@@ -72,11 +57,7 @@ export const HistorySection = styled(Box)(({ theme }) => ({
     gap: theme.spacing(2),
 }));
 
-export const HistoryTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 16,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
+// HistoryTitle uses Typography variant="h6"
 
 export const HistoryTimeline = styled(Box)(({ theme }) => ({
     position: "relative",
@@ -125,25 +106,8 @@ export const TimelineContent = styled(Box)(({ theme }) => ({
     width: "100%",
 }));
 
-export const TimelineDate = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    color: "#71717A",
-    fontWeight: 400,
-}));
-
-export const TimelinePriceRow = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-});
-
-export const TimelinePrice = styled(Typography)(({ theme }) => ({
-    fontSize: 18,
-    fontWeight: 600,
-    color: "#232325",
-    lineHeight: 1.2,
-}));
+// TimelineDate uses Typography variant="body2" with color #71717A
+// TimelinePrice uses Typography variant="h5"
 
 export const TimelineChange = styled(Box)(({ theme }) => ({
     display: "flex",

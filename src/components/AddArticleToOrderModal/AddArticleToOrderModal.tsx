@@ -13,20 +13,13 @@ import {
     AddArticleModalContainer,
     ProductInfo,
     ProductImage,
-    ProductName,
-    ProductSku,
     CostInputSection,
-    AddCostButton,
     HistorySection,
-    HistoryTitle,
     HistoryTimeline,
     TimelineLine,
     TimelineItem,
     TimelineDot,
     TimelineContent,
-    TimelineDate,
-    TimelinePrice,
-    TimelinePriceRow,
     TimelineChange,
     TimelineOrderLink,
 } from "./styles";
@@ -155,8 +148,12 @@ export function AddArticleToOrderModal({
                     <ProductInfo>
                         <ProductImage />
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                            <ProductName>{article.name}</ProductName>
-                            <ProductSku>{article.folio}</ProductSku>
+                            <Typography variant="h5" sx={{ lineHeight: 1.4 }}>
+                                {article.name}
+                            </Typography>
+                            <Typography variant="caption">
+                                {article.folio}
+                            </Typography>
                         </Box>
                     </ProductInfo>
 
@@ -182,18 +179,27 @@ export function AddArticleToOrderModal({
                                 inputMode: "decimal",
                             }}
                         />
-                        <AddCostButton
+                        <Button
                             variant="contained"
                             color="primary"
                             onClick={handleAddToOrder}
                             disabled={unitPrice <= 0}
+                            sx={{
+                                textTransform: "none",
+                                fontWeight: 600,
+                                borderRadius: 1.5,
+                                padding: (theme) => theme.spacing(1.25, 2.5),
+                                whiteSpace: "nowrap",
+                            }}
                         >
                             Agregar
-                        </AddCostButton>
+                        </Button>
                     </CostInputSection>
 
                     <HistorySection>
-                        <HistoryTitle>Historial de costos de este artículo</HistoryTitle>
+                        <Typography variant="h6">
+                            Historial de costos de este artículo
+                        </Typography>
                         <HistoryTimeline>
                             <TimelineLine />
                             {costHistory.map((entry, index) => (
@@ -203,20 +209,24 @@ export function AddArticleToOrderModal({
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
                                             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: 1 }}>
                                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}>
-                                                    <TimelineDate>{formatDate(entry.date)}</TimelineDate>
+                                                    <Typography variant="body2" sx={{ color: "#71717A" }}>
+                                                        {formatDate(entry.date)}
+                                                    </Typography>
                                                     {entry.orderId && (
                                                         <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
                                                             Pedido {entry.orderId}
                                                         </TimelineOrderLink>
                                                     )}
                                                 </Box>
-                                                <TimelinePriceRow>
-                                                    <TimelinePrice>{formatCurrency(entry.price)}</TimelinePrice>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                                    <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
+                                                        {formatCurrency(entry.price)}
+                                                    </Typography>
                                                     <TimelineChange>
                                                         <ArrowUpIcon sx={{ fontSize: 14 }} />
                                                         {numeral(entry.changePercentage).format("0.00")}%
                                                     </TimelineChange>
-                                                </TimelinePriceRow>
+                                                </Box>
                                             </Box>
                                         </Box>
                                     </TimelineContent>

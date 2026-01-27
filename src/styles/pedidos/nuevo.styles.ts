@@ -57,28 +57,8 @@ export const PageHeader = styled(Box)(({ theme }) => ({
     gap: theme.spacing(2),
 }));
 
-export const PageTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 32,
-    fontWeight: 700,
-    color: theme.palette.text.primary,
-    lineHeight: 1.2,
-}));
-
-export const SupplierSelector = styled(Select)(({ theme }) => ({
-    maxWidth: 400,
-    "& .MuiOutlinedInput-notchedOutline": {
-        borderColor: colors.border,
-    },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-        borderColor: colors.border,
-    },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-        borderColor: theme.palette.primary.main,
-    },
-    "&.Mui-disabled": {
-        backgroundColor: colors.background.main,
-    },
-}));
+// PageTitle uses Typography variant="h1"
+// SupplierSelector uses Select with inline styles from theme
 
 // ============================================================================
 // SUGGESTIONS SECTION
@@ -90,11 +70,7 @@ export const SuggestionsSection = styled(Box)(({ theme }) => ({
     gap: theme.spacing(2),
 }));
 
-export const SuggestionsTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 20,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
+// SuggestionsTitle uses Typography variant="h4"
 
 export const SuggestionsList = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -138,28 +114,8 @@ export const ArticlesHeader = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const ArticlesTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 20,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
-
-export const SearchInput = styled(TextField)(({ theme }) => ({
-    maxWidth: 400,
-    "& .MuiOutlinedInput-root": {
-        borderRadius: 8,
-        backgroundColor: colors.background.sidebar,
-        "& fieldset": {
-            borderColor: colors.border,
-        },
-        "&:hover fieldset": {
-            borderColor: colors.border,
-        },
-        "&.Mui-focused fieldset": {
-            borderColor: theme.palette.primary.main,
-        },
-    },
-}));
+// ArticlesTitle uses Typography variant="h4"
+// SearchInput uses TextField with inline styles from theme
 
 // ============================================================================
 // TABLE CELLS

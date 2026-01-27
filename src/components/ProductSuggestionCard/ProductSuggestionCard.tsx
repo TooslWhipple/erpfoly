@@ -1,22 +1,17 @@
-import { Box, Button } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import type { ProductSuggestion } from "@/types/suggestions.types";
 import {
     SuggestionCardContainer,
     ProductImage,
     ProductInfo,
-    ProductName,
-    ProductSku,
     QuantityBadge,
     DemandStats,
     DemandStatItem,
-    DemandStatLabel,
-    DemandStatValue,
     TrendChartContainer,
     TrendChart,
     TrendLine,
     TrendArea,
     TrendAxis,
-    TrendMonth
 } from "./styles";
 
 export interface ProductSuggestionCardProps {
@@ -47,8 +42,12 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
             <Box sx={{ display: "flex", gap: 1.5, marginBottom: 1.5 }}>
                 <ProductImage />
                 <ProductInfo>
-                    <ProductName>{product.name}</ProductName>
-                    <ProductSku>{product.sku}</ProductSku>
+                    <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        {product.name}
+                    </Typography>
+                    <Typography variant="caption">
+                        {product.sku}
+                    </Typography>
                 </ProductInfo>
             </Box>
 
@@ -56,16 +55,28 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
 
             <DemandStats>
                 <DemandStatItem>
-                    <DemandStatLabel>Últ. año</DemandStatLabel>
-                    <DemandStatValue>{product.demandData.lastYear}</DemandStatValue>
+                    <Typography variant="caption" sx={{ fontSize: 11 }}>
+                        Últ. año
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {product.demandData.lastYear}
+                    </Typography>
                 </DemandStatItem>
                 <DemandStatItem>
-                    <DemandStatLabel>Últ. mes</DemandStatLabel>
-                    <DemandStatValue>{product.demandData.lastMonth}</DemandStatValue>
+                    <Typography variant="caption" sx={{ fontSize: 11 }}>
+                        Últ. mes
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {product.demandData.lastMonth}
+                    </Typography>
                 </DemandStatItem>
                 <DemandStatItem>
-                    <DemandStatLabel>Mes act.</DemandStatLabel>
-                    <DemandStatValue>{product.demandData.currentMonth}</DemandStatValue>
+                    <Typography variant="caption" sx={{ fontSize: 11 }}>
+                        Mes act.
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {product.demandData.currentMonth}
+                    </Typography>
                 </DemandStatItem>
             </DemandStats>
 
@@ -112,7 +123,9 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
                 </TrendChart>
                 <TrendAxis>
                     {product.trendData.map((point, index) => (
-                        <TrendMonth key={index}>{point.month}</TrendMonth>
+                        <Typography key={index} variant="caption" sx={{ fontSize: 10 }}>
+                            {point.month}
+                        </Typography>
                     ))}
                 </TrendAxis>
             </TrendChartContainer>

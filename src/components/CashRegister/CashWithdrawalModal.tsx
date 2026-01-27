@@ -8,7 +8,6 @@ import {
   ModalHeader,
   ModalTitle,
   CloseButton,
-  WithdrawalSection,
   CurrentCashCard,
   CurrentCashLabel,
   CurrentCashValue,

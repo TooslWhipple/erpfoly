@@ -1,25 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { MainLayout, Title, TabFilters, TableCrud, ReceptionOrdersModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-import { StatusChip, ReceptionStatus } from "@/styles/recepcion-mercancias.styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-interface MerchandiseReception {
-    id: number;
-    warehouse: string;
-    orderNumber: string;
-    date: string;
-    supplier: string;
-    total: number;
-    status: ReceptionStatus;
-    receptionDate: string;
-}
+import { StatusChip } from "@/styles/recepcion-mercancias.styles";
+import type { MerchandiseReception, ReceptionStatus } from "@/types/recepcion-mercancias.types";
 
 interface GetReceptionsParams {
     page: number;
@@ -210,6 +196,8 @@ export default function RecepcionMercancias() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     // Tab options
     const tabs: TabOption[] = [
@@ -260,7 +248,26 @@ export default function RecepcionMercancias() {
     };
 
     const handleCreate = () => {
-        router.push("/recepcion-mercancias/nuevo");
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        if (!submitting) {
+            setModalOpen(false);
+        }
+    };
+
+    const handleConfirmOrders = async (orderIds: string[]) => {
+        setSubmitting(true);
+        try {
+            // Close modal and redirect to new reception page
+            setModalOpen(false);
+            router.push(`/recepcion-mercancias/nuevo?orderIds=${orderIds.join(",")}`);
+        } catch (err) {
+            console.error("[RecepcionMercancias] Error creating receptions:", err);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleViewReception = (reception: MerchandiseReception) => {
@@ -370,6 +377,13 @@ export default function RecepcionMercancias() {
                 onRowsPerPageChange={handleRowsPerPageChange}
                 onRowClick={handleViewReception}
                 emptyMessage="No hay recepciones de mercancía"
+            />
+
+            <ReceptionOrdersModal
+                open={modalOpen}
+                onClose={handleCloseModal}
+                onConfirm={handleConfirmOrders}
+                loading={submitting}
             />
         </MainLayout>
     );

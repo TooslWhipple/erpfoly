@@ -1,4 +1,3 @@
-import { Box, IconButton, TextField } from "@mui/material";
 import { Remove as RemoveIcon, Add as AddIcon } from "@mui/icons-material";
 import {
     NumberInputWrapper,
@@ -27,6 +26,8 @@ export interface NumberInputProps {
     placeholder?: string;
     /** Width of the input */
     width?: number;
+    /** Size of the input */
+    size?: "small" | "medium";
 }
 
 // ============================================================================
@@ -42,6 +43,7 @@ export function NumberInput({
     disabled = false,
     placeholder = "0",
     width = 80,
+    size = "medium",
 }: NumberInputProps) {
     const handleIncrement = () => {
         const newValue = value + step;
@@ -88,14 +90,18 @@ export function NumberInput({
         }
     };
 
+    const iconSize = size === "small" ? "small" : "small";
+    const buttonSize = size === "small" ? "small" : "small";
+
     return (
-        <NumberInputWrapper>
+        <NumberInputWrapper size={size}>
             <NumberInputButton
                 onClick={handleDecrement}
                 disabled={disabled || value <= min}
-                size="small"
+                size={buttonSize}
+                inputSize={size}
             >
-                <RemoveIcon fontSize="small" />
+                <RemoveIcon fontSize={iconSize} />
             </NumberInputButton>
             <NumberInputField
                 value={value}
@@ -109,13 +115,15 @@ export function NumberInput({
                     pattern: "[0-9]*",
                 }}
                 sx={{ width, flex: 1 }}
+                inputSize={size}
             />
             <NumberInputButton
                 onClick={handleIncrement}
                 disabled={disabled || value >= max}
-                size="small"
+                size={buttonSize}
+                inputSize={size}
             >
-                <AddIcon fontSize="small" />
+                <AddIcon fontSize={iconSize} />
             </NumberInputButton>
         </NumberInputWrapper>
     );

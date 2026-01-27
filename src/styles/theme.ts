@@ -133,6 +133,19 @@ export const theme = createTheme({
           textTransform: "none",
           fontWeight: 600,
           borderRadius: 8,
+          minHeight: 36,
+          height: 36,
+          maxHeight: 36,
+          boxShadow: "none",
+          "&:hover": {
+            boxShadow: "none",
+          },
+          "&:active": {
+            boxShadow: "none",
+          },
+          "&:focus": {
+            boxShadow: "none",
+          },
         },
       },
     },

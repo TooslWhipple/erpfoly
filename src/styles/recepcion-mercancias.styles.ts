@@ -1,11 +1,9 @@
 import { styled } from "@mui/material/styles";
 import { Chip } from "@mui/material";
+import type { ReceptionStatus } from "@/types/recepcion-mercancias.types";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type ReceptionStatus = "pre_captured" | "captured" | "costed";
+// Re-export for backward compatibility
+export type { ReceptionStatus };
 
 // ============================================================================
 // STATUS CHIP COMPONENT

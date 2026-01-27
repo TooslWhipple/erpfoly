@@ -4,7 +4,6 @@ import { ContentCopy as CopyIcon } from "@mui/icons-material";
 import { ModalForm } from "@/components/ModalForm";
 import type { FormFieldConfig } from "@/components/Form";
 import {
-  MessageFormTopRow,
   StatusIndicator,
   VariablesSection,
   VariablesInstruction,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, Box, Typography, IconButton, Button, TextField, InputAdornment } from "@mui/material";
+import { Dialog, Box, Typography, Button, TextField, InputAdornment } from "@mui/material";
 import { Close as CloseIcon, ArrowUpward as ArrowUpIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
@@ -202,7 +202,7 @@ export function AddArticleToOrderModal({
                         </Typography>
                         <HistoryTimeline>
                             <TimelineLine />
-                            {costHistory.map((entry, index) => (
+                            {costHistory.map((entry) => (
                                 <TimelineItem key={entry.id}>
                                     <TimelineDot />
                                     <TimelineContent>

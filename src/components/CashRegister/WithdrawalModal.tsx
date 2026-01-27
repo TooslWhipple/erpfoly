@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Dialog, IconButton, Box, Button, Typography } from "@mui/material";
+import { Dialog, Box } from "@mui/material";
 import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { NumberInput } from "@/components/Folypuntos";

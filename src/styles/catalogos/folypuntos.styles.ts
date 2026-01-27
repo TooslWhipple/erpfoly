@@ -91,23 +91,23 @@ export const NumberInputContainer = styled(Box)(({ theme }) => ({
     flexWrap: "wrap",
 }));
 
-export const NumberInputWrapper = styled(Box)(({ theme }) => ({
+export const NumberInputWrapper = styled(Box)<{ size?: "small" | "medium" }>(({ theme, size = "medium" }) => ({
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(0.5),
-    borderRadius: 8,
-    padding: theme.spacing(0.5),
+    gap: size === "small" ? theme.spacing(0.25) : theme.spacing(0.5),
+    borderRadius: size === "small" ? 6 : 8,
+    padding: size === "small" ? theme.spacing(0.25) : theme.spacing(0.5),
     boxShadow: "none",
 }));
 
-export const NumberInputButton = styled(IconButton)(({ theme }) => ({
-    width: 36,
-    height: 36,
-    minWidth: 36,
+export const NumberInputButton = styled(IconButton)<{ inputSize?: "small" | "medium" }>(({ theme, inputSize = "medium" }) => ({
+    width: inputSize === "small" ? 28 : 36,
+    height: inputSize === "small" ? 28 : 36,
+    minWidth: inputSize === "small" ? 28 : 36,
     padding: 0,
     backgroundColor: "#FFFFFF", // White background
     border: `1px solid ${colors.border}`,
-    borderRadius: 6,
+    borderRadius: inputSize === "small" ? 4 : 6,
     color: theme.palette.text.secondary,
     "&:hover": {
         backgroundColor: "#F9F9F9",
@@ -122,21 +122,24 @@ export const NumberInputButton = styled(IconButton)(({ theme }) => ({
         borderColor: colors.border,
     },
     transition: "all 0.2s ease",
+    "& .MuiSvgIcon-root": {
+        fontSize: inputSize === "small" ? "1rem" : "1.25rem",
+    },
 }));
 
-export const NumberInputField = styled(TextField)(({ theme }) => ({
-    width: 80,
-    minWidth: 80,
+export const NumberInputField = styled(TextField)<{ inputSize?: "small" | "medium" }>(({ theme, inputSize = "medium" }) => ({
+    width: inputSize === "small" ? 60 : 80,
+    minWidth: inputSize === "small" ? 60 : 80,
     "& .MuiOutlinedInput-root": {
-        height: 36,
+        height: inputSize === "small" ? 28 : 36,
         backgroundColor: "transparent",
         "& fieldset": {
             border: "none",
         },
         "& input": {
-            padding: theme.spacing(0.5, 1),
+            padding: inputSize === "small" ? theme.spacing(0.25, 0.5) : theme.spacing(0.5, 1),
             textAlign: "center",
-            fontSize: "0.9375rem",
+            fontSize: inputSize === "small" ? "0.8125rem" : "0.9375rem",
             fontWeight: 700, // Bold number
             color: "#232325",
         },

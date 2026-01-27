@@ -133,7 +133,6 @@ export function FilterMenu({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const open = Boolean(anchorEl);
-  const allOption: FilterOption = { id: allOptionId, label: allOptionLabel };
 
   // Check if "All" is selected
   const isAllSelected = selectedIds.includes(allOptionId);

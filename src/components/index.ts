@@ -38,4 +38,5 @@ export { OrderSummarySidebar } from "./OrderSummarySidebar";
 export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
 export { AddArticleToOrderModal } from "./AddArticleToOrderModal";
 export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticleToOrderModal";
+export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal";
 

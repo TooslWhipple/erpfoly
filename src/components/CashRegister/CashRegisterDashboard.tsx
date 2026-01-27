@@ -12,8 +12,6 @@ import {
     ProgressBarLabels,
     ProgressBarLabel,
     StyledProgressBar,
-    BalanceInfoContainer,
-    BalanceInfoItem,
     BalanceLabel,
     BalanceValue,
     ActionsContainer,

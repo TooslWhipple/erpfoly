@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box, TextField, Button, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 // ============================================================================
@@ -23,14 +23,14 @@ export const ProductInfo = styled(Box)(({ theme }) => ({
     alignItems: "flex-start",
 }));
 
-export const ProductImage = styled(Box)(({ theme }) => ({
+export const ProductImage = styled(Box)({
     width: 64,
     height: 64,
     borderRadius: 8,
     backgroundColor: colors.background.main,
     border: `1px solid ${colors.border}`,
     flexShrink: 0,
-}));
+});
 
 // ProductName uses Typography variant="h5"
 // ProductSku uses Typography variant="caption"
@@ -67,14 +67,14 @@ export const HistoryTimeline = styled(Box)(({ theme }) => ({
     gap: 0,
 }));
 
-export const TimelineLine = styled(Box)(({ theme }) => ({
+export const TimelineLine = styled(Box)({
     position: "absolute",
     left: 11,
     top: 0,
     bottom: 0,
     width: 1,
     backgroundColor: "#E4E4E7",
-}));
+});
 
 export const TimelineItem = styled(Box)(({ theme }) => ({
     position: "relative",
@@ -87,7 +87,7 @@ export const TimelineItem = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const TimelineDot = styled(Box)(({ theme }) => ({
+export const TimelineDot = styled(Box)({
     width: 12,
     height: 12,
     borderRadius: "50%",
@@ -96,7 +96,7 @@ export const TimelineDot = styled(Box)(({ theme }) => ({
     flexShrink: 0,
     zIndex: 1,
     marginTop: 4,
-}));
+});
 
 export const TimelineContent = styled(Box)(({ theme }) => ({
     flex: 1,
@@ -109,7 +109,7 @@ export const TimelineContent = styled(Box)(({ theme }) => ({
 // TimelineDate uses Typography variant="body2" with color #71717A
 // TimelinePrice uses Typography variant="h5"
 
-export const TimelineChange = styled(Box)(({ theme }) => ({
+export const TimelineChange = styled(Box)({
     display: "flex",
     alignItems: "center",
     gap: 4,
@@ -119,7 +119,7 @@ export const TimelineChange = styled(Box)(({ theme }) => ({
     "& svg": {
         fontSize: 14,
     },
-}));
+});
 
 export const TimelineOrderLink = styled("a")(({ theme }) => ({
     fontSize: 14,

@@ -141,7 +141,29 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (item.subItems) {
       return item.subItems.some((sub) => router.pathname === sub.path);
     }
-    return router.pathname === item.path || router.pathname.startsWith(item.path + "/");
+    
+    // Check if current path matches this item
+    const pathMatches = router.pathname === item.path || router.pathname.startsWith(item.path + "/");
+    
+    if (!pathMatches) {
+      return false;
+    }
+    
+    // If path matches, check if there's a more specific item that also matches
+    // This prevents shorter paths from being active when a longer path is active
+    const hasMoreSpecificMatch = navItems.some((otherItem) => {
+      if (otherItem === item) return false;
+      if (otherItem.subItems) return false;
+      
+      const otherPathMatches = router.pathname === otherItem.path || router.pathname.startsWith(otherItem.path + "/");
+      if (!otherPathMatches) return false;
+      
+      // Check if the other item's path is longer (more specific)
+      return otherItem.path.length > item.path.length;
+    });
+    
+    // Only active if no more specific match exists
+    return !hasMoreSpecificMatch;
   };
 
   const handleNavigation = (path: string) => {

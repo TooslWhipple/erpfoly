@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import {
     GridView as GridViewIcon,
     Sync as SyncIcon,
     LocalShipping as ShippingIcon,
     Build as BuildIcon,
+    Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import type { Column } from "@/components/TableCrud";
+import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { StatsSection, INVENTORY_COLORS } from "@/styles/inventario/styles";
@@ -219,6 +221,8 @@ async function getInventory(params: GetInventoryParams): Promise<GetInventoryRes
 // ============================================================================
 
 export default function Inventario() {
+    const router = useRouter();
+
     // State
     const [stats, setStats] = useState<InventoryStats | null>(null);
     const [items, setItems] = useState<InventoryItem[]>([]);
@@ -297,6 +301,17 @@ export default function Inventario() {
     const handleRowsPerPageChange = (newRowsPerPage: number) => {
         setRowsPerPage(newRowsPerPage);
         setPage(0);
+    };
+
+    // Navigation handlers
+    const handleViewDetail = (item: InventoryItem) => {
+        // Convert code to SKU format (remove spaces)
+        const sku = item.code.replace(/\s+/g, "");
+        router.push(`/inventario/${sku}`);
+    };
+
+    const handleRowClick = (item: InventoryItem) => {
+        handleViewDetail(item);
     };
 
     // Stats cards data
@@ -409,6 +424,16 @@ export default function Inventario() {
         },
     ];
 
+    // Row actions
+    const rowActions: RowAction<InventoryItem>[] = [
+        {
+            id: "view-detail",
+            label: "Ver detalle",
+            icon: <VisibilityIcon fontSize="small" />,
+            onClick: handleViewDetail,
+        },
+    ];
+
     return (
         <MainLayout>
             <Title title="Inventario" />
@@ -437,6 +462,8 @@ export default function Inventario() {
                 totalRows={totalRows}
                 onPageChange={handlePageChange}
                 onRowsPerPageChange={handleRowsPerPageChange}
+                onRowClick={handleRowClick}
+                actions={rowActions}
                 emptyMessage="No hay artículos en inventario"
             />
         </MainLayout>

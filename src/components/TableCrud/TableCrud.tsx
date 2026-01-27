@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Chip, Skeleton, Table, TableBody, Typography } from "@mui/material";
+import { Button, Chip, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
@@ -440,6 +440,7 @@ export function TableCrud<T>({
 
       {total > 0 && (
         <StyledTablePagination
+          component="div"
           rowsPerPageOptions={rowsPerPageOptions}
           count={total}
           rowsPerPage={rowsPerPage}

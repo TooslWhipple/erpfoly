@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, Box, Typography, IconButton } from "@mui/material";
 import { Close as CloseIcon, ArrowUpward as ArrowUpIcon, ArrowDownward as ArrowDownIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import {
     CostHistoryTimeline,
     TimelineLine,
@@ -67,7 +68,7 @@ export function CostHistoryModal({ open, onClose, history }: CostHistoryModalPro
                             <TimelineContent>
                                 <TimelineDate>{entry.date}</TimelineDate>
                                 <TimelinePrice>
-                                    ${entry.price.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                    {numeral(entry.price).format("$0,0.00")}
                                 </TimelinePrice>
                                 <TimelineChange>
                                     {entry.changeType === "increase" ? (
@@ -75,7 +76,7 @@ export function CostHistoryModal({ open, onClose, history }: CostHistoryModalPro
                                     ) : (
                                         <ArrowDownIcon fontSize="small" />
                                     )}
-                                    {entry.changePercentage}%
+                                    {numeral(entry.changePercentage).format("0.00")}%
                                 </TimelineChange>
                             </TimelineContent>
                         </TimelineItem>

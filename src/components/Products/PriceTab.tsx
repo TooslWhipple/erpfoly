@@ -1,4 +1,5 @@
 import { Box, Typography, Grid, Switch } from "@mui/material";
+import numeral from "numeral";
 import { FormTextField, FormSelect, Tabs } from "@/components";
 import {
     Section,
@@ -101,13 +102,13 @@ export function PriceTab({
                                 <CostItem>
                                     <CostLabel>Costo promedio</CostLabel>
                                     <CostValue>
-                                        ${listCostNumber.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                        {numeral(listCostNumber).format("$0,0.00")}
                                     </CostValue>
                                 </CostItem>
                                 <CostItem>
                                     <CostLabel>Último costo</CostLabel>
                                     <CostValue>
-                                        ${listCostNumber.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                        {numeral(listCostNumber).format("$0,0.00")}
                                     </CostValue>
                                 </CostItem>
                                 <Box sx={{ ml: "auto" }}>
@@ -163,7 +164,7 @@ export function PriceTab({
                                 Margen: 35.75%
                             </Typography>
                             <Typography variant="h6">
-                                ${listCostNumber.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                {numeral(listCostNumber).format("$0,0.00")}
                             </Typography>
                         </Box>
                     </Grid>

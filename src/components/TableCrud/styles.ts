@@ -52,6 +52,9 @@ export const StyledTableRow = styled(TableRow)({
     "& td": {
       backgroundColor: colors.background.main,
     },
+    "& .sticky-cell": {
+      backgroundColor: `${colors.background.main} !important`,
+    },
   },
   "&:last-child td": {
     borderBottom: "none",
@@ -105,6 +108,26 @@ export const ActionsCell = styled(TableCell)({
   borderBottom: `1px solid ${colors.border}`,
   transition: "background-color 0.15s ease",
 });
+
+export const StickyHeaderCell = styled(StyledHeaderCell)<{ position?: "left" | "right" }>(({ position = "right" }) => ({
+  position: "sticky",
+  [position]: 0,
+  zIndex: 3,
+  backgroundColor: `${colors.background.main} !important`,
+  boxShadow: position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
+}));
+
+export const StickyCell = styled(StyledTableCell)<{ position?: "left" | "right" }>(({ position = "right" }) => ({
+  position: "sticky",
+  [position]: 0,
+  zIndex: 1,
+  backgroundColor: colors.background.sidebar,
+  boxShadow: position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
+  transition: "background-color 0.15s ease",
+  "&.sticky-cell": {
+    backgroundColor: colors.background.sidebar,
+  },
+}));
 
 export const ActionsButton = styled(IconButton)({
   width: 32,

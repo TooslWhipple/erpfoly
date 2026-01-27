@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { MainLayout, Title, Tabs, OrderList } from "@/components";
+import { MainLayout, Title, Tabs, OrderList, SuggestionsCard, SupplierSelectionModal } from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
-import { PageContent, MainContent, TabsWrapper } from "@/styles/pedidos.styles";
+import type { ProductSuggestion } from "@/types/suggestions.types";
+import type { Supplier } from "@/types/pedidos.types";
+import { getSuggestions } from "@/data/suggestions.mockData";
+import { PageContent, MainContent, SidebarPanel, TabsWrapper } from "@/styles/pedidos.styles";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -141,6 +144,9 @@ export default function Pedidos() {
     const [orders, setOrders] = useState<OrderCardData[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("all");
+    const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+    const [supplierModalOpen, setSupplierModalOpen] = useState(false);
 
     // Tab options
     const tabs: TabItem[] = [
@@ -172,9 +178,23 @@ export default function Pedidos() {
         }
     }, [getStatusFilter]);
 
+    // Fetch suggestions
+    const fetchSuggestions = useCallback(async () => {
+        setSuggestionsLoading(true);
+        try {
+            const data = await getSuggestions();
+            setSuggestions(data);
+        } catch (err) {
+            console.error("[Pedidos] Error fetching suggestions:", err);
+        } finally {
+            setSuggestionsLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         fetchOrders();
-    }, [fetchOrders]);
+        fetchSuggestions();
+    }, [fetchOrders, fetchSuggestions]);
 
     // Event handlers
     const handleTabChange = (value: string) => {
@@ -182,7 +202,21 @@ export default function Pedidos() {
     };
 
     const handleCreateOrder = () => {
-        router.push("/pedidos/nuevo");
+        setSupplierModalOpen(true);
+    };
+
+    const handleSupplierSelect = (supplier: Supplier) => {
+        router.push({
+            pathname: "/pedidos/nuevo",
+            query: {
+                supplierId: supplier.id,
+                supplierName: supplier.name,
+            },
+        });
+    };
+
+    const handleCloseSupplierModal = () => {
+        setSupplierModalOpen(false);
     };
 
     const handleOrderClick = (order: OrderCardData) => {
@@ -221,7 +255,17 @@ export default function Pedidos() {
                         emptyMessage="No hay pedidos"
                     />
                 </MainContent>
+
+                <SidebarPanel>
+                    <SuggestionsCard products={suggestions} loading={suggestionsLoading} />
+                </SidebarPanel>
             </PageContent>
+
+            <SupplierSelectionModal
+                open={supplierModalOpen}
+                onClose={handleCloseSupplierModal}
+                onSelect={handleSupplierSelect}
+            />
         </MainLayout>
     );
 }

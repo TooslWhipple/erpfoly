@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Dialog, Box } from "@mui/material";
 import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
 import { NumberInput } from "@/components/Folypuntos";
 import {
@@ -165,10 +166,7 @@ export function CutModal({
                             <CurrentCashCard>
                                 <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
                                 <CurrentCashValue>
-                                    ${currentCash.toLocaleString("es-MX", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
+                                    {numeral(currentCash).format("$0,0.00")}
                                 </CurrentCashValue>
                             </CurrentCashCard>
 
@@ -207,10 +205,7 @@ export function CutModal({
                                                     width={60}
                                                 />
                                                 <DenominationSubtotal>
-                                                    ${subtotal.toLocaleString("es-MX", {
-                                                        minimumFractionDigits: 2,
-                                                        maximumFractionDigits: 2,
-                                                    })}
+                                                    {numeral(subtotal).format("$0,0.00")}
                                                 </DenominationSubtotal>
                                             </DenominationControls>
                                         </DenominationItem>
@@ -221,10 +216,7 @@ export function CutModal({
                             <WithdrawalTotalCard>
                                 <WithdrawalTotalLabel>Total:</WithdrawalTotalLabel>
                                 <WithdrawalTotalValue>
-                                    ${withdrawalTotal.toLocaleString("es-MX", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
+                                    {numeral(withdrawalTotal).format("$0,0.00")}
                                 </WithdrawalTotalValue>
                             </WithdrawalTotalCard>
                         </WithdrawalSection>
@@ -238,10 +230,7 @@ export function CutModal({
                                 <TotalIncomeCard>
                                     <TotalIncomeLabel>Total de ingresos</TotalIncomeLabel>
                                     <TotalIncomeValue>
-                                        ${totalIncome.toLocaleString("es-MX", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })}
+                                        {numeral(totalIncome).format("$0,0.00")}
                                     </TotalIncomeValue>
                                 </TotalIncomeCard>
                             </CutSection>
@@ -252,46 +241,31 @@ export function CutModal({
                                     <BreakdownItem>
                                         <BreakdownLabel>Fondo inicial</BreakdownLabel>
                                         <BreakdownValue>
-                                            ${initialFund.toLocaleString("es-MX", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {numeral(initialFund).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <BreakdownLabel>Efectivo</BreakdownLabel>
                                         <BreakdownValue>
-                                            ${cash.toLocaleString("es-MX", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {numeral(cash).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <BreakdownLabel>Tarjeta de crédito</BreakdownLabel>
                                         <BreakdownValue>
-                                            ${creditCard.toLocaleString("es-MX", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {numeral(creditCard).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <BreakdownLabel>Depósitos en efectivo</BreakdownLabel>
                                         <BreakdownValue>
-                                            ${cashDeposits.toLocaleString("es-MX", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {numeral(cashDeposits).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <BreakdownLabel>Retiros de caja ({withdrawals})</BreakdownLabel>
                                         <BreakdownValue sx={{ color: "error.main" }}>
-                                            -${Math.abs(withdrawals).toLocaleString("es-MX", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            -{numeral(Math.abs(withdrawals)).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                 </BreakdownList>
@@ -300,10 +274,7 @@ export function CutModal({
                             <ShortageCard>
                                 <ShortageLabel>Faltante</ShortageLabel>
                                 <ShortageValue>
-                                    ${shortage.toLocaleString("es-MX", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
+                                    {numeral(shortage).format("$0,0.00")}
                                 </ShortageValue>
                             </ShortageCard>
                         </>

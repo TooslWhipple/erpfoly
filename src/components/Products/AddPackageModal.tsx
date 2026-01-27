@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Dialog, Box, CircularProgress, Radio, Grid, InputAdornment } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { FormTextField, FormSelect, MultiSelectChips } from "@/components";
 import {
     StyledDialogContent,
@@ -242,10 +243,7 @@ export function AddPackageModal({
                                         <Grid size={{ xs: 12, md: 6 }}>
                                             <FormTextField
                                                 label="Último precio"
-                                                value={selectedArticle.lastPrice.toLocaleString("es-MX", {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                value={numeral(selectedArticle.lastPrice).format("0,0.00")}
                                                 disabled
                                                 InputProps={{
                                                     startAdornment: (
@@ -273,10 +271,7 @@ export function AddPackageModal({
                                         <Grid size={{ xs: 12 }}>
                                             <FormTextField
                                                 label="Total"
-                                                value={total.toLocaleString("es-MX", {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                value={numeral(total).format("0,0.00")}
                                                 disabled
                                                 InputProps={{
                                                     startAdornment: (

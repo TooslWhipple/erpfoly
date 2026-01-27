@@ -65,19 +65,21 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
   },
 }));
 
-export const SearchContainer = styled(Box)(({ theme }) => ({
+export const SearchContainer = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
   paddingBottom: theme.spacing(1),
   flexShrink: 0,
   [theme.breakpoints.down("md")]: {
     paddingBottom: 0,
-    width: "100%",
+    width: singleAction ? "auto" : "100%",
+    flex: singleAction ? "1 1 auto" : "none",
   },
 }));
 
-export const SearchInput = styled(TextField)(({ theme }) => ({
+export const SearchInput = styled(TextField)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
   width: 280,
   [theme.breakpoints.down("md")]: {
-    width: "100%",
+    width: singleAction ? "auto" : "100%",
+    minWidth: singleAction ? 200 : "auto",
   },
   "& .MuiOutlinedInput-root": {
     backgroundColor: colors.background.sidebar,
@@ -99,7 +101,7 @@ export const SearchIconStyled = styled(SearchIcon)({
   color: "#71717A",
 });
 
-export const FiltersRightSection = styled(Box)(({ theme }) => ({
+export const FiltersRightSection = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -108,11 +110,12 @@ export const FiltersRightSection = styled(Box)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     paddingBottom: 0,
     width: "100%",
-    flexDirection: "column",
+    flexDirection: singleAction ? "row" : "column",
+    flexWrap: singleAction ? "nowrap" : "wrap",
   },
 }));
 
-export const ActionButton = styled(Button)(({ theme }) => ({
+export const ActionButton = styled(Button)<{ singleAction?: boolean; multipleActions?: boolean }>(({ theme, singleAction, multipleActions }) => ({
   height: 40,
   minWidth: 100,
   textTransform: "none",
@@ -121,6 +124,14 @@ export const ActionButton = styled(Button)(({ theme }) => ({
   marginBottom: theme.spacing(1),
   [theme.breakpoints.down("md")]: {
     marginBottom: 0,
+    ...(singleAction && {
+      flexShrink: 0,
+      marginLeft: theme.spacing(1.5),
+    }),
+    ...(multipleActions && {
+      flex: "1 1 calc(50% - 8px)",
+      minWidth: "calc(50% - 8px)",
+    }),
   },
 }));
 

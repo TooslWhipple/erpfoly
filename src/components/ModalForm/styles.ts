@@ -18,19 +18,15 @@ export const ModalHeader = styled("div")(({ theme }) => ({
 export const ModalTitle = styled(Typography)(({ theme }) => ({
   fontSize: "1.25rem",
   fontWeight: 600,
-  color: theme.palette.text.primary,
-  lineHeight: 1.3,
+  color: theme.palette.text.primary
 }));
 
 export const ModalDescription = styled(Typography)(({ theme }) => ({
   fontSize: "0.875rem",
-  color: theme.palette.text.secondary,
-  marginTop: theme.spacing(0.5),
+  color: theme.palette.text.secondary
 }));
 
 export const CloseButton = styled(IconButton)(({ theme }) => ({
-  marginTop: -4,
-  marginRight: -8,
   color: theme.palette.text.secondary,
   "&:hover": {
     backgroundColor: theme.palette.action.hover,

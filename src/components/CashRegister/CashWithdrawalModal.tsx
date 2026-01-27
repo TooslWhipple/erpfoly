@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Dialog, Box, Typography } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { FormSelect, FormTextField } from "@/components/Form";
 import {
   StyledDialogContent,
@@ -121,10 +122,7 @@ export function CashWithdrawalModal({
           <CurrentCashCard>
             <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
             <CurrentCashValue>
-              ${currentCash.toLocaleString("es-MX", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {numeral(currentCash).format("$0,0.00")}
             </CurrentCashValue>
           </CurrentCashCard>
 
@@ -179,10 +177,7 @@ export function CashWithdrawalModal({
               Monto disponible despues del retiro:
             </AvailableAfterWithdrawalLabel>
             <AvailableAfterWithdrawalValue>
-              ${availableAfterWithdrawal.toLocaleString("es-MX", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {numeral(availableAfterWithdrawal).format("$0,0.00")}
             </AvailableAfterWithdrawalValue>
           </AvailableAfterWithdrawalCard>
         </Box>

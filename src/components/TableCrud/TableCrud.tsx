@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Chip, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import {
   TableWrapper,
   StyledTableContainer,
@@ -17,6 +18,8 @@ import {
   StyledMenuItem,
   StyledTablePagination,
   EmptyStateContainer,
+  StickyHeaderCell,
+  StickyCell,
 } from "./styles";
 import { ChipGroup } from "../ChipGroup";
 
@@ -48,6 +51,10 @@ export interface Column<T> {
   align?: "left" | "center" | "right";
   truncate?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
+  /** Make column sticky (useful for action buttons) */
+  sticky?: boolean;
+  /** Position for sticky column (left or right) */
+  stickyPosition?: "left" | "right";
   // Button type options
   buttonLabel?: string;
   buttonVariant?: "text" | "outlined" | "contained";
@@ -189,16 +196,16 @@ export function TableCrud<T>({
           : String(rawValue ?? "");
 
       case "number":
-        return typeof rawValue === "number" ? rawValue.toLocaleString() : String(rawValue ?? "");
+        return typeof rawValue === "number" ? numeral(rawValue).format("0,0") : String(rawValue ?? "");
       
       case "currency":
         const symbol = column.currencySymbol || "$";
         return typeof rawValue === "number" 
-          ? `${symbol}${rawValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          ? `${symbol}${numeral(rawValue).format("0,0.00")}`
           : String(rawValue ?? "");
       
       case "percentage":
-        return typeof rawValue === "number" ? `${rawValue}%` : String(rawValue ?? "");
+        return typeof rawValue === "number" ? numeral(rawValue).format("0.00") + "%" : String(rawValue ?? "");
       
       case "date":
         if (rawValue instanceof Date) {
@@ -273,7 +280,9 @@ export function TableCrud<T>({
     const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
     
     let CellComponent = StyledTableCell;
-    if (isNumericType) {
+    if (column.sticky) {
+      CellComponent = StickyCell;
+    } else if (isNumericType) {
       CellComponent = NumberCell;
     } else if (column.truncate) {
       CellComponent = TruncatedCell;
@@ -289,13 +298,20 @@ export function TableCrud<T>({
       cellStyle.width = maxWidth;
     }
 
+    const cellProps: any = {
+        key: String(column.id),
+        align: column.align || (isNumericType ? "right" : "left"),
+        style: cellStyle,
+        title: column.truncate ? String(value ?? "") : undefined,
+        className: column.sticky ? "sticky-cell" : undefined,
+    };
+
+    if (column.sticky && CellComponent === StickyCell) {
+        cellProps.position = column.stickyPosition;
+    }
+
     return (
-      <CellComponent
-        key={String(column.id)}
-        align={column.align || (isNumericType ? "right" : "left")}
-        style={cellStyle}
-        title={column.truncate ? String(value ?? "") : undefined}
-      >
+      <CellComponent {...cellProps}>
         {formattedValue}
       </CellComponent>
     );
@@ -357,14 +373,18 @@ export function TableCrud<T>({
             headerStyle.maxWidth = maxWidth;
             headerStyle.width = maxWidth;
           }
+          
+          const HeaderCellComponent = column.sticky ? StickyHeaderCell : StyledHeaderCell;
+          
           return (
-            <StyledHeaderCell
+            <HeaderCellComponent
               key={String(column.id)}
               align={column.align || (isNumericType ? "right" : "left")}
               style={headerStyle}
+              position={column.stickyPosition}
             >
               {column.label}
-            </StyledHeaderCell>
+            </HeaderCellComponent>
           );
         })}
         {hasActions && <ActionsHeaderCell align="center" />}

@@ -7,6 +7,7 @@ import {
     OpenInNew as OpenInNewIcon,
     Public as PublicIcon,
 } from "@mui/icons-material";
+import numeral from "numeral";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
@@ -137,7 +138,7 @@ async function getOrderDetail(id: string): Promise<OrderDetail> {
 // ============================================================================
 
 function formatCurrency(value: number): string {
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return numeral(value).format("$0,0.00");
 }
 
 function getStatusLabel(status: OrderStatus): string {

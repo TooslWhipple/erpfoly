@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { styled } from "@mui/material/styles";
 import { Box, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, InputAdornment, Chip } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { FormTextField } from "@/components";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
 import { Section, SectionTitle, SectionDescription } from "@/styles/catalogos/productos.styles";
@@ -262,10 +263,7 @@ export function DepartmentsTab({
                                             <ArticleTableCell>{article.line}</ArticleTableCell>
                                             <ArticleTableCell>{article.supplier}</ArticleTableCell>
                                             <ArticleTableCell align="right">
-                                                ${article.price.toLocaleString("es-MX", {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                {numeral(article.price).format("$0,0.00")}
                                             </ArticleTableCell>
                                         </StyledTableRow>
                                     );

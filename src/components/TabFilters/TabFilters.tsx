@@ -82,6 +82,8 @@ export function TabFilters({
 
   const hasActions = actions && actions.length > 0;
   const showRightSection = showSearch || selectFilter || hasActions;
+  const singleAction = hasActions && actions.length === 1;
+  const multipleActions = hasActions && actions.length > 1;
 
   return (
     <Container>
@@ -107,7 +109,7 @@ export function TabFilters({
       </TabsWrapper>
 
       {showRightSection && (
-        <FiltersRightSection>
+        <FiltersRightSection singleAction={singleAction}>
           {selectFilter && (
             <StyledSelect
               size="small"
@@ -123,13 +125,14 @@ export function TabFilters({
             </StyledSelect>
           )}
           {showSearch && (
-            <SearchContainer>
+            <SearchContainer singleAction={singleAction}>
               <SearchInput
                 size="small"
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={handleSearchChange}
-                fullWidth
+                fullWidth={!singleAction}
+                singleAction={singleAction}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -148,6 +151,8 @@ export function TabFilters({
               onClick={action.onClick}
               disabled={action.disabled}
               startIcon={action.showIcon ? <AddIcon /> : undefined}
+              singleAction={singleAction}
+              multipleActions={multipleActions}
             >
               {action.label}
             </ActionButton>

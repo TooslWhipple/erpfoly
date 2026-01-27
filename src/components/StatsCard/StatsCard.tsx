@@ -1,4 +1,5 @@
 import { CalendarToday as CalendarIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import {
   CardContainer,
   CardHeader,
@@ -55,22 +56,16 @@ export function StatsCard({
 }: StatsCardProps) {
   const formatValue = (val: number): string => {
     if (isCurrency) {
-      return `$${val.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
+      return numeral(val).format("$0,0.00");
     }
-    return val.toLocaleString();
+    return numeral(val).format("0,0");
   };
 
   const formatComparisonValue = (val: number): string => {
     if (isCurrency) {
-      return `$${val.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
+      return numeral(val).format("$0,0.00");
     }
-    return val.toLocaleString();
+    return numeral(val).format("0,0");
   };
 
   const getComparisonText = (): string => {

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Dialog, IconButton, Box, Button, Typography } from "@mui/material";
 import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { NumberInput } from "@/components/Folypuntos";
 import {
   StyledDialogContent,
@@ -127,10 +128,7 @@ export function WithdrawalModal({
             <CurrentCashCard>
               <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
               <CurrentCashValue>
-                ${currentCash.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {numeral(currentCash).format("$0,0.00")}
               </CurrentCashValue>
             </CurrentCashCard>
 
@@ -169,10 +167,7 @@ export function WithdrawalModal({
                         width={60}
                       />
                       <DenominationSubtotal>
-                        ${subtotal.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {numeral(subtotal).format("$0,0.00")}
                       </DenominationSubtotal>
                     </DenominationControls>
                   </DenominationItem>
@@ -183,10 +178,7 @@ export function WithdrawalModal({
             <WithdrawalTotalCard>
               <WithdrawalTotalLabel>Total:</WithdrawalTotalLabel>
               <WithdrawalTotalValue>
-                ${total.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {numeral(total).format("$0,0.00")}
               </WithdrawalTotalValue>
             </WithdrawalTotalCard>
           </WithdrawalSection>

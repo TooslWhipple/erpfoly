@@ -1,5 +1,6 @@
 import { Grid, InputAdornment } from "@mui/material";
 import { Search as SearchIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import {
     DashboardContainer,
     SearchBarContainer,
@@ -78,10 +79,7 @@ export function CashRegisterDashboard({
                     <ProgressBarLabels>
                         <ProgressBarLabel>$0</ProgressBarLabel>
                         <ProgressBarLabel>
-                            ${cashRegister.limit.toLocaleString("es-MX", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
+                            {numeral(cashRegister.limit).format("$0,0.00")}
                         </ProgressBarLabel>
                     </ProgressBarLabels>
                     <StyledProgressBar variant="determinate" value={progressPercentage} />
@@ -91,20 +89,14 @@ export function CashRegisterDashboard({
                     <Grid>
                         <BalanceLabel>Efectivo actual</BalanceLabel>
                         <BalanceValue>
-                            ${cashRegister.currentCash.toLocaleString("es-MX", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
+                            {numeral(cashRegister.currentCash).format("$0,0.00")}
                         </BalanceValue>
                     </Grid>
 
                     <Grid>
                         <BalanceLabel>Límite restante</BalanceLabel>
                         <BalanceValue sx={{ textAlign: 'right' }}>
-                            ${remainingLimit.toLocaleString("es-MX", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
+                            {numeral(remainingLimit).format("$0,0.00")}
                         </BalanceValue>
                     </Grid>
                 </Grid>

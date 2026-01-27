@@ -1,9 +1,176 @@
-import { MainLayout, Title } from "@/components";
+import { useState } from "react";
+import { Typography } from "@mui/material";
+import { MainLayout } from "@/components";
+import {
+  OpenCashRegisterForm,
+  CashRegisterDashboard,
+  CutModal,
+  CashWithdrawalModal,
+  type CashRegisterState,
+  type CutType,
+  type Denomination,
+} from "@/components/CashRegister";
+import {
+  StatusChip,
+  CenteredTitleContainer,
+  CenteredTitleContent,
+  type CashRegisterStatus,
+} from "@/styles/cajas.styles";
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export default function Cajas() {
+  const [cashRegister, setCashRegister] = useState<CashRegisterState>({
+    id: "1",
+    name: "Caja 1",
+    status: "closed",
+    initialFund: 1500.0,
+    exchangeRate: 17.6,
+    currentCash: 1500.0,
+    limit: 20000.0,
+  });
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rememberDevice, setRememberDevice] = useState(true);
+  const [cutModalOpen, setCutModalOpen] = useState(false);
+  const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
+
+  const handleOpenCashRegister = () => {
+    setCashRegister((prev) => ({
+      ...prev,
+      status: "open",
+    }));
+  };
+
+  const handleInitialFundChange = (value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setCashRegister((prev) => ({
+      ...prev,
+      initialFund: numValue,
+      currentCash: numValue,
+    }));
+  };
+
+  const handleExchangeRateChange = (value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setCashRegister((prev) => ({
+      ...prev,
+      exchangeRate: numValue,
+    }));
+  };
+
+  const getStatusLabel = (status: CashRegisterStatus) => {
+    return status === "open" ? "Abierta" : "Cerrada";
+  };
+
+  const handleCut = () => {
+    setCutModalOpen(true);
+  };
+
+  const handleCutConfirm = (cutType: CutType, withdrawalData?: Record<number, number>) => {
+    // TODO: Implement cut functionality with cutType
+    if (cutType === "partial" && withdrawalData) {
+      // Handle partial cut with withdrawal data
+    }
+  };
+
+  const cutModalData = {
+    cash: 0,
+    creditCard: 0,
+    cashDeposits: 0,
+    withdrawals: 0,
+    totalIncome: 0,
+    shortage: 0,
+  };
+
+  const handleWithdrawal = () => {
+    setCashWithdrawalModalOpen(true);
+  };
+
+  const handleCashWithdrawalConfirm = (amount: number, bank: string, checkNumber: string) => {
+    // TODO: Implement cash withdrawal functionality
+  };
+
+  const banks = [
+    { value: "banamex", label: "Banamex" },
+    { value: "banorte", label: "Banorte" },
+    { value: "hsbc", label: "HSBC" },
+    { value: "santander", label: "Santander" },
+    { value: "bbva", label: "BBVA" },
+  ];
+
+  const denominations: Denomination[] = [
+    { value: 100, label: "$100", type: "bill", color: "#F97316" },
+    { value: 50, label: "$50", type: "bill", color: "#A855F7" },
+    { value: 20, label: "$20", type: "bill", color: "#3B82F6" },
+    { value: 10, label: "$10", type: "coin", color: "#EAB308" },
+    { value: 5, label: "$5", type: "coin", color: "#EC4899" },
+  ];
+
+  const handleViewAllHistory = () => {
+    // TODO: Implement view all history functionality
+  };
+
   return (
     <MainLayout>
-      <Title title="Cajas" />
+      <CenteredTitleContainer>
+        <CenteredTitleContent>
+          <Typography variant="h2">{cashRegister.name}</Typography>
+          <StatusChip
+            statusType={cashRegister.status}
+            label={getStatusLabel(cashRegister.status)}
+            size="small"
+          />
+        </CenteredTitleContent>
+      </CenteredTitleContainer>
+
+      {cashRegister.status === "closed" ? (
+        <OpenCashRegisterForm
+          initialFund={cashRegister.initialFund}
+          exchangeRate={cashRegister.exchangeRate}
+          rememberDevice={rememberDevice}
+          onInitialFundChange={handleInitialFundChange}
+          onExchangeRateChange={handleExchangeRateChange}
+          onRememberDeviceChange={setRememberDevice}
+          onOpen={handleOpenCashRegister}
+        />
+      ) : (
+        <CashRegisterDashboard
+          cashRegister={cashRegister}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onCut={handleCut}
+          onWithdrawal={handleWithdrawal}
+          onViewAllHistory={handleViewAllHistory}
+        />
+      )}
+
+      <CutModal
+        open={cutModalOpen}
+        onClose={() => setCutModalOpen(false)}
+        onConfirm={handleCutConfirm}
+        cashRegisterName={cashRegister.name}
+        initialFund={cashRegister.initialFund}
+        currentCash={cashRegister.currentCash}
+        cash={cutModalData.cash}
+        creditCard={cutModalData.creditCard}
+        cashDeposits={cutModalData.cashDeposits}
+        withdrawals={cutModalData.withdrawals}
+        totalIncome={cutModalData.totalIncome}
+        shortage={cutModalData.shortage}
+        denominations={denominations}
+      />
+
+      <CashWithdrawalModal
+        open={cashWithdrawalModalOpen}
+        onClose={() => setCashWithdrawalModalOpen(false)}
+        onConfirm={handleCashWithdrawalConfirm}
+        cashRegisterName={cashRegister.name}
+        currentCash={cashRegister.currentCash}
+        banks={banks}
+      />
     </MainLayout>
   );
 }

@@ -26,7 +26,7 @@ Stack principal:
 - NextJS
 - React
 - TypeScript
-- Material UI (MUI v5/v7)
+- Material UI (MUI v7)
 - Axios
 - TanStack Query
 - Zustand
@@ -79,12 +79,126 @@ Nunca respondas como junior.
 Nunca soluciones solo el síntoma.
 Siempre piensa en el sistema completo.
 
-Reglas de desarrollo y prevención de errores:
-- ANTES de modificar código, consulta: .cursor/rules/development-rules.md
-- Para referencia rápida: .cursor/rules/quick-reference.md
+## Estructura del Proyecto y Organización
+
+### Arquitectura de Directorios (`/src`)
+
+El proyecto sigue una arquitectura modular y escalable con separación clara de responsabilidades:
+
+1. **`/components`** - Componentes reutilizables
+   - Cada componente tiene su propia carpeta con:
+     - `ComponentName.tsx` - Lógica y UI del componente
+     - `index.ts` - Exports públicos (barrel export pattern)
+     - `styles.ts` o `*.styledComponents.ts` - Estilos separados (cuando aplica)
+   - Ejemplos: `Sidebar`, `TableCrud`, `Form`, `ModalForm`, `Tabs`, `StatsCard`
+   - Componentes específicos de dominio: `Folypuntos`, `Products`, `Promotions`, `Messages`
+
+2. **`/pages`** - Rutas de Next.js (Pages Router)
+   - Estructura basada en archivos para routing automático
+   - `/api` - API routes de Next.js
+   - `/catalogos` - Módulos de catálogos (productos, promociones, usuarios, roles, etc.)
+   - `/clientes` - Gestión de clientes
+   - `/inventario` - Gestión de inventario
+   - `/pedidos` - Gestión de pedidos
+   - `/login` - Autenticación
+   - Rutas dinámicas con `[id].tsx` para páginas de detalle
+
+3. **`/services`** - Capa de servicios API
+   - Un archivo por dominio (ej: `auth.service.ts`, `productos.service.ts`)
+   - Funciones que encapsulan llamadas API usando helpers de `@/lib/axios`
+   - Retornan tipos TypeScript definidos
+
+4. **`/lib`** - Utilidades y configuraciones
+   - `axios.ts` - Cliente Axios configurado con interceptores (auth, manejo de errores)
+   - `permissions.ts` - Lógica de permisos y autorización
+   - Funciones helper reutilizables
+
+5. **`/store`** - Estado global (Zustand)
+   - Un store por dominio (ej: `useAuthStore.ts`)
+   - Estado persistente cuando es necesario (localStorage)
+   - Actions y selectors bien definidos
+
+6. **`/hooks`** - Custom hooks
+   - Hooks reutilizables para lógica compartida
+   - Ejemplos: `useAuth.ts`, `usePermissions.ts`, `useUsers.ts`
+   - Separar lógica de negocio de componentes UI
+
+7. **`/styles`** - Estilos globales y temáticos
+   - `theme.ts` - Tema centralizado de MUI (colores, tipografía, componentes)
+   - `globals.css` - Estilos globales CSS
+   - Subdirectorios por módulo: `/catalogos`, `/inventario`, `/login`, `/pedidos`
+   - Archivos de estilos específicos: `productos.styles.ts`, `folypuntos.styles.ts`
+
+8. **`/types`** - Definiciones TypeScript
+   - Tipos e interfaces por dominio
+   - Ejemplos: `productos.types.ts`, `promociones.types.ts`, `folypuntos.types.ts`
+   - Exportar tipos para uso en componentes y servicios
+
+9. **`/data`** - Datos mock (solo desarrollo/testing)
+   - Archivos de datos mock para desarrollo
+   - Ejemplos: `productos.mockData.ts`, `promociones.mockData.ts`
+
+### Patrones y Convenciones
+
+#### Estructura de Componentes
+```
+ComponentName/
+├── ComponentName.tsx    # Componente principal con lógica y UI
+├── index.ts             # Barrel export (exports públicos)
+└── styles.ts            # Estilos separados (o *.styledComponents.ts)
+```
+
+#### Separación de Estilos
+- **SIEMPRE** separar styled components en archivos `*.styledComponents.ts` o `styles.ts`
+- **SIEMPRE** usar colores del tema centralizado (`colors` de `@/styles/theme`)
+- **NUNCA** hardcodear colores o valores de estilo directamente en componentes
+- Importar colores: `import { colors } from "@/styles/theme"`
+
+#### Barrel Exports (index.ts)
+- Cada carpeta de componente debe tener un `index.ts` que exporte:
+  - El componente principal
+  - Tipos e interfaces relacionados
+  - Componentes relacionados si aplica
+- Esto permite imports limpios: `import { ComponentName } from "@/components"`
+
+#### Gestión de Estado
+- **Zustand** para estado global (auth, configuración)
+- **TanStack Query** para estado del servidor (caching, refetching)
+- No usar useState para datos que vienen del servidor (usar TanStack Query)
+
+#### Servicios API
+- Un servicio por dominio de negocio
+- Usar helpers de `@/lib/axios` (`get`, `post`, `put`, `patch`, `del`)
+- Definir interfaces TypeScript para requests y responses
+- Manejar errores de forma explícita
+
+#### TypeScript
+- **SIEMPRE** definir tipos e interfaces claros
+- Usar path alias `@/*` configurado en `tsconfig.json`
+- No usar `any`, preferir `unknown` si es necesario
+- Tipar props de componentes, funciones y hooks
+
+#### Organización de Páginas
+- Rutas estáticas: `nombre-pagina.tsx`
+- Rutas dinámicas: `[id].tsx` para páginas de detalle
+- Subcarpetas para componentes específicos de página si es necesario
+- Usar `MainLayout` para layout consistente
+
+#### Imports
+- Usar path alias `@/` para imports absolutos
+- Ordenar imports: externos → internos → relativos
+- Agrupar imports por tipo (React, MUI, servicios, componentes, estilos)
+
+### Reglas de Desarrollo y Prevención de Errores
+
+- ANTES de modificar código, consulta: `.cursor/rules/development-rules.md`
+- Para referencia rápida: `.cursor/rules/quick-reference.md`
 - SIEMPRE verifica imports, exports y tipos antes de hacer cambios
 - SIEMPRE usa `read_lints` después de modificar archivos
 - SIEMPRE separa styled components en archivos `*.styledComponents.ts`
 - SIEMPRE usa colores del tema centralizado (`colors` de `@/styles/theme`)
 - NUNCA hardcodees colores o valores de estilo
 - NUNCA elimines componentes/estilos sin verificar todas las referencias
+- SIEMPRE sigue la estructura de carpetas establecida
+- SIEMPRE crea `index.ts` para exports en carpetas de componentes
+- SIEMPRE separa lógica de negocio de componentes UI (usar hooks o servicios)

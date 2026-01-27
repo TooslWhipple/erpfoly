@@ -1,4 +1,4 @@
-import { Button, Typography } from "@mui/material";
+import { Button, Typography, Box } from "@mui/material";
 import { useRouter } from "next/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Container, TitleContainer, Description, ActionsContainer } from "./styles";
@@ -18,8 +18,8 @@ export interface TitleAction {
 }
 
 interface TitleProps {
-  title: string;
-  description?: string;
+  title: string | React.ReactNode;
+  description?: string | React.ReactNode;
   actions?: TitleAction[];
 }
 
@@ -43,11 +43,23 @@ export function Title({ title, description, actions }: TitleProps) {
   return (
     <Container>
       <TitleContainer>
-        <Typography variant="h2">{title}</Typography>
+        {typeof title === "string" ? (
+          <Typography variant="h2">{title}</Typography>
+        ) : (
+          <Box sx={{ "& .MuiTypography-h2": { margin: 0 } }}>
+            <Typography variant="h2" component="div" sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {title}
+            </Typography>
+          </Box>
+        )}
         {description && (
-          <Description variant="body2" color="text.secondary">
-            {description}
-          </Description>
+          typeof description === "string" ? (
+            <Description variant="body2" color="text.secondary">
+              {description}
+            </Description>
+          ) : (
+            <Box sx={{ mt: 0.5 }}>{description}</Box>
+          )
         )}
       </TitleContainer>
 

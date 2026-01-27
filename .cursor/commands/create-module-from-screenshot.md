@@ -31,6 +31,7 @@ Datos y lógica:
   - servicios mock
   - hooks personalizados
   - funciones fake async
+
 - Implementa estados:
   - loading
   - success

@@ -95,9 +95,7 @@ export const NumberInputWrapper = styled(Box)(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(0.5),
-    border: `1px solid ${colors.border}`,
     borderRadius: 8,
-    backgroundColor: "#F5F5F5", // Light grey background
     padding: theme.spacing(0.5),
     boxShadow: "none",
 }));

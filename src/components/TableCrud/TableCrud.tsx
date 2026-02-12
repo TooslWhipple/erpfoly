@@ -300,7 +300,7 @@ export function TableCrud<T>({
 
     const cellProps: any = {
         key: String(column.id),
-        align: column.align || (isNumericType ? "right" : "left"),
+        align: column.align ?? "left",
         style: cellStyle,
         title: column.truncate ? String(value ?? "") : undefined,
         className: column.sticky ? "sticky-cell" : undefined,
@@ -339,7 +339,7 @@ export function TableCrud<T>({
           return (
             <StyledTableCell
               key={`skeleton-${index}-${String(column.id)}`}
-              align={column.align || (isNumericType ? "right" : "left")}
+              align={column.align ?? "left"}
               style={cellStyle}
             >
               <Skeleton
@@ -379,7 +379,7 @@ export function TableCrud<T>({
           return (
             <HeaderCellComponent
               key={String(column.id)}
-              align={column.align || (isNumericType ? "right" : "left")}
+              align={column.align ?? "left"}
               style={headerStyle}
               position={column.stickyPosition}
             >

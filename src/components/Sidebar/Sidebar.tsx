@@ -85,6 +85,7 @@ const navItems: NavItem[] = [
       { label: "Sucursales", path: "/catalogos/sucursales" },
       { label: "Proveedores", path: "/catalogos/proveedores" },
       { label: "Mensajes", path: "/catalogos/mensajes" },
+      { label: "Metas", path: "/catalogos/metas" },
       { label: "Costo de envío", path: "/catalogos/costos-envio" },
       { label: "Folypuntos", path: "/catalogos/folypuntos" },
       { label: "Roles", path: "/catalogos/roles" },

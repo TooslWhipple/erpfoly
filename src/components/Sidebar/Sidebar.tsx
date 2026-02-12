@@ -9,6 +9,7 @@ import {
   LocalShipping as LocalShippingIcon,
   Store as StoreIcon,
   Assignment as AssignmentIcon,
+  AttachMoney as AttachMoneyIcon,
   Inventory as InventoryIcon,
   Support as SupportIcon,
   Route as RouteIcon,
@@ -61,6 +62,7 @@ const navItems: NavItem[] = [
   { label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
   { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <StoreIcon /> },
   { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <AssignmentIcon /> },
+  { label: "Solicitudes de descuentos", path: "/solicitudes-descuento", icon: <AttachMoneyIcon /> },
   {
     label: "Inventario",
     path: "/inventario",

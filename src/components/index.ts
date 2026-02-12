@@ -39,4 +39,6 @@ export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
 export { AddArticleToOrderModal } from "./AddArticleToOrderModal";
 export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticleToOrderModal";
 export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal";
+export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
+export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 

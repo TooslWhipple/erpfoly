@@ -21,7 +21,14 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-	(response) => response,
+	(response) => {
+		const body = response.data as { success?: boolean; data?: unknown };
+		if (body?.success === true && body.data !== undefined) {
+			response.data = body.data;
+		}
+		
+		return response;
+	},
 	(error: AxiosError) => {
 		if (error.response?.status === 401) {
 			useAuthStore.getState().logout();

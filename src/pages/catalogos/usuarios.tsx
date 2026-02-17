@@ -11,155 +11,13 @@ import {
     CreateButton,
     SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
+import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    roleId: number;
-    roleName: string;
-}
-
-interface GetUsersParams {
-    page: number;
-    limit: number;
-    search?: string;
-}
-
-interface GetUsersResponse {
-    data: User[];
-    total: number;
-    page: number;
-    limit: number;
-}
-
-// ============================================================================
-// MOCK DATA - Users for e-commerce platform
-// ============================================================================
-
-const DUMMY_USERS: User[] = [
-    {
-        id: 1,
-        name: "Julio Armando López Inzunza",
-        email: "julio.lopez@foly.com",
-        roleId: 1,
-        roleName: "Administrador",
-    },
-    {
-        id: 2,
-        name: "Emiliano Zapata Salazar",
-        email: "emiliano@foly.com",
-        roleId: 2,
-        roleName: "Cajas",
-    },
-    {
-        id: 3,
-        name: "Frida Kahlo Calderón",
-        email: "frida.khalo@foly.com",
-        roleId: 3,
-        roleName: "Gestor de rutas",
-    },
-    {
-        id: 4,
-        name: "Diego Rivera Barrientos",
-        email: "diego.rivera@foly.com",
-        roleId: 4,
-        roleName: "Inventarios",
-    },
-    {
-        id: 5,
-        name: "Octavio Paz Lozano",
-        email: "ocatvio.paz@foly.com",
-        roleId: 1,
-        roleName: "Administrador",
-    },
-    {
-        id: 6,
-        name: "María Félix Gutiérrez",
-        email: "maria.felix@foly.com",
-        roleId: 5,
-        roleName: "Vendedor",
-    },
-    {
-        id: 7,
-        name: "Carlos Fuentes Macías",
-        email: "carlos.fuentes@foly.com",
-        roleId: 6,
-        roleName: "Analista de crédito",
-    },
-    {
-        id: 8,
-        name: "Elena Poniatowska Amor",
-        email: "elena.poniatowska@foly.com",
-        roleId: 7,
-        roleName: "Cobranza",
-    },
-    {
-        id: 9,
-        name: "Alfonso Cuarón Orozco",
-        email: "alfonso.cuaron@foly.com",
-        roleId: 8,
-        roleName: "Supervisor",
-    },
-    {
-        id: 10,
-        name: "Guillermo del Toro Gómez",
-        email: "guillermo.deltoro@foly.com",
-        roleId: 4,
-        roleName: "Inventarios",
-    },
-    {
-        id: 11,
-        name: "Salma Hayek Pinault",
-        email: "salma.hayek@foly.com",
-        roleId: 5,
-        roleName: "Vendedor",
-    },
-    {
-        id: 12,
-        name: "Gael García Bernal",
-        email: "gael.garcia@foly.com",
-        roleId: 2,
-        roleName: "Cajas",
-    },
-];
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getUsers(params: GetUsersParams): Promise<GetUsersResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    let filteredData = [...DUMMY_USERS];
-
-    // Filter by search (name or email)
-    if (params.search) {
-        const searchLower = params.search.toLowerCase();
-        filteredData = filteredData.filter(
-            (u) =>
-                u.name.toLowerCase().includes(searchLower) ||
-                u.email.toLowerCase().includes(searchLower) ||
-                u.roleName.toLowerCase().includes(searchLower)
-        );
-    }
-
-    const total = filteredData.length;
-    const start = params.page * params.limit;
-    const end = start + params.limit;
-    const paginatedData = filteredData.slice(start, end);
-
-    return {
-        data: paginatedData,
-        total,
-        page: params.page,
-        limit: params.limit,
-    };
-}
+type User = UserListItem;
 
 // ============================================================================
 // MAIN COMPONENT
@@ -180,10 +38,10 @@ export default function Usuarios() {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await getUsers({
-                page,
+            const response = await getUsersApi({
+                page: page + 1,
                 limit: rowsPerPage,
-                search: searchValue,
+                search: searchValue || undefined,
             });
             setUsers(response.data);
             setTotalRows(response.total);

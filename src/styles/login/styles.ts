@@ -23,35 +23,27 @@ export const LoginCard = styled(Paper)(({ theme }) => ({
 	},
 }));
 
-export const LogoContainer = styled(Box)({
+export const LogoContainer = styled(Box)(({ theme }) => ({
 	display: "flex",
+	flexDirection: "column",
 	alignItems: "center",
 	justifyContent: "center",
-	gap: 8,
-	marginBottom: 32,
-});
+	gap: theme.spacing(1),
+	marginBottom: theme.spacing(3),
+}));
 
-export const LogoBox = styled(Box)({
-	width: 40,
-	height: 40,
-	borderRadius: 6,
-	backgroundColor: "#EF4444",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-});
-
-export const LogoText = styled(Typography)({
-	color: "white",
-	fontWeight: 700,
-	fontSize: 14,
-});
-
-export const BrandName = styled(Typography)({
+export const BrandName = styled(Typography)(({ theme }) => ({
 	fontSize: 24,
 	fontWeight: 700,
-	color: "#232325",
-});
+	color: theme.palette.text.primary,
+}));
+
+export const WelcomeText = styled(Typography)(({ theme }) => ({
+	textAlign: "center",
+	color: theme.palette.text.secondary,
+	fontSize: 14,
+	marginBottom: theme.spacing(3),
+}));
 
 export const Title = styled(Typography)(({ theme }) => ({
 	textAlign: "center",
@@ -101,6 +93,19 @@ export const ForgotLink = styled(Link)({
 	},
 });
 
+/** Button styled as link for "Forgot password" action (avoids Link component prop typing issues) */
+export const ForgotButton = styled(Button)({
+	fontSize: 14,
+	textTransform: "none",
+	color: colors.sidebar.textSelected,
+	display: "block",
+	textAlign: "center",
+	"&:hover": {
+		backgroundColor: "transparent",
+		textDecoration: "underline",
+	},
+});
+
 export const BackLink = styled(Link)(({ theme }) => ({
 	display: "flex",
 	alignItems: "center",
@@ -108,10 +113,10 @@ export const BackLink = styled(Link)(({ theme }) => ({
 	fontSize: 14,
 	cursor: "pointer",
 	textDecoration: "none",
-	color: "#71717A",
+	color: theme.palette.text.secondary,
 	marginBottom: theme.spacing(2),
 	"&:hover": {
-		color: "#232325",
+		color: theme.palette.text.primary,
 	},
 }));
 

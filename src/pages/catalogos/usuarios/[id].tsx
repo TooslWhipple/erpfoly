@@ -22,116 +22,28 @@ import {
     FieldsRow,
     HelperTextLink,
 } from "@/styles/catalogos/usuarios.styles";
+import {
+    getUser as getUserApi,
+    getRoles,
+    getBranches,
+    createUser,
+    updateUser,
+    type RoleItem,
+    type BranchItem,
+} from "@/services/users.service";
 
 // ============================================================================
-// TYPES & INTERFACES
+// HELPERS
 // ============================================================================
 
-interface User {
-    id: number;
-    name: string;
-    username: string;
-    roleId: number;
-    branchIds: number[];
-}
-
-interface Role {
-    id: number;
-    name: string;
-}
-
-interface Branch {
-    id: number;
-    name: string;
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const DUMMY_ROLES: Role[] = [
-    { id: 1, name: "Administrador" },
-    { id: 2, name: "Cajas" },
-    { id: 3, name: "Gestor de rutas" },
-    { id: 4, name: "Inventarios" },
-    { id: 5, name: "Vendedor" },
-    { id: 6, name: "Analista de crédito" },
-    { id: 7, name: "Cobranza" },
-    { id: 8, name: "Supervisor" },
-];
-
-const DUMMY_BRANCHES: Branch[] = [
-    { id: 1, name: "Foly Muebles Tampico Centro" },
-    { id: 2, name: "Foly Muebles Altamira" },
-    { id: 3, name: "Foly Muebles Matriz" },
-    { id: 4, name: "Foly Muebles Tampico Aeropuerto" },
-    { id: 5, name: "Foly Muebles Avenida Monterrey" },
-    { id: 6, name: "Foly Muebles Ejército Mexicano" },
-    { id: 7, name: "Foly Muebles Bodega Tampico" },
-    { id: 8, name: "Foly Muebles San Luis Potosí Carranza" },
-    { id: 9, name: "Foly Muebles San Luis Potosí Soledad" },
-    { id: 10, name: "Foly Muebles Poza Rica" },
-    { id: 11, name: "Foly Muebles Pánuco" },
-    { id: 12, name: "Foly Muebles Veracruz Puerto" },
-    { id: 13, name: "Foly Muebles Coatzacualcos" },
-];
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getUser(id: number): Promise<User | null> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Simulate existing user data
-    if (id === 1) {
-        return {
-            id: 1,
-            name: "Julio Armando López Inzunza",
-            username: "julio.lopez",
-            roleId: 1,
-            branchIds: [1, 2, 3],
-        };
-    }
-
-    if (id === 7) {
-        return {
-            id: 7,
-            name: "Carlos Fuentes Macías",
-            username: "carlos.fuentes",
-            roleId: 6,
-            branchIds: [1, 2],
-        };
-    }
-
-    // For other IDs, return generic user
+function nameToFirstLast(name: string): { firstName: string; lastName: string } {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0) return { firstName: "", lastName: "" };
+    if (parts.length === 1) return { firstName: parts[0], lastName: "" };
     return {
-        id,
-        name: `Usuario ${id}`,
-        username: `usuario.${id}`,
-        roleId: 5,
-        branchIds: [1],
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" "),
     };
-}
-
-async function saveUser(
-    user: Omit<User, "id"> & { id?: number }
-): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const savedUser: User = {
-        id: user.id || Date.now(),
-        name: user.name,
-        username: user.username,
-        roleId: user.roleId,
-        branchIds: user.branchIds,
-    };
-    console.log("[API] Saved user:", savedUser);
-    return savedUser;
-}
-
-async function sendInvitation(userId: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log("[API] Sent invitation to user:", userId);
 }
 
 // ============================================================================
@@ -147,21 +59,51 @@ export default function UserFormPage() {
     const userId = isNew ? null : Number(id);
 
     // State
-    const [loading, setLoading] = useState(!isNew);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [sendingInvite, setSendingInvite] = useState(false);
+
+    // Catalog data
+    const [roles, setRoles] = useState<RoleItem[]>([]);
+    const [branches, setBranches] = useState<BranchItem[]>([]);
 
     // Form state
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
+    const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
     const [roleId, setRoleId] = useState<number | "">("");
     const [branchIds, setBranchIds] = useState<number[]>([]);
 
     // Errors
     const [nameError, setNameError] = useState<string | undefined>();
     const [usernameError, setUsernameError] = useState<string | undefined>();
+    const [phoneError, setPhoneError] = useState<string | undefined>();
+    const [passwordError, setPasswordError] = useState<string | undefined>();
     const [roleError, setRoleError] = useState<string | undefined>();
     const [branchError, setBranchError] = useState<string | undefined>();
+
+    // Load roles and branches
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const [rolesRes, branchesRes] = await Promise.all([
+                    getRoles(),
+                    getBranches(),
+                ]);
+                if (!cancelled) {
+                    setRoles(rolesRes);
+                    setBranches(branchesRes);
+                    if (isNew) setLoading(false);
+                }
+            } catch (err) {
+                console.error("[UserForm] Error loading catalog:", err);
+                if (!cancelled && isNew) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isNew]);
 
     // Fetch user data if editing
     useEffect(() => {
@@ -170,24 +112,25 @@ export default function UserFormPage() {
             return;
         }
 
-        async function loadUser() {
+        let cancelled = false;
+        (async () => {
             setLoading(true);
             try {
-                const user = await getUser(userId!);
-                if (user) {
+                const user = await getUserApi(userId!);
+                if (!cancelled && user) {
                     setName(user.name);
                     setUsername(user.username);
+                    setPhone(user.phone ?? "");
                     setRoleId(user.roleId);
                     setBranchIds(user.branchIds);
                 }
             } catch (err) {
                 console.error("[UserForm] Error loading user:", err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
-        }
-
-        loadUser();
+        })();
+        return () => { cancelled = true; };
     }, [isNew, userId]);
 
     // Auto-generate username from name
@@ -229,6 +172,15 @@ export default function UserFormPage() {
             isValid = false;
         }
 
+        const trimmedPhone = phone.trim();
+        if (!trimmedPhone) {
+            setPhoneError("El celular es requerido");
+            isValid = false;
+        } else if (trimmedPhone.length < 10) {
+            setPhoneError("Ingresa un número válido (mín. 10 dígitos)");
+            isValid = false;
+        }
+
         if (!roleId) {
             setRoleError("Selecciona un rol");
             isValid = false;
@@ -239,6 +191,16 @@ export default function UserFormPage() {
             isValid = false;
         }
 
+        if (isNew) {
+            if (!password.trim()) {
+                setPasswordError("La contraseña es requerida");
+                isValid = false;
+            } else if (password.trim().length < 10) {
+                setPasswordError("Mínimo 10 caracteres");
+                isValid = false;
+            }
+        }
+
         return isValid;
     };
 
@@ -246,15 +208,29 @@ export default function UserFormPage() {
     const handleSave = async () => {
         if (!validateForm()) return;
 
+        const { firstName, lastName } = nameToFirstLast(name);
         setSaving(true);
         try {
-            await saveUser({
-                id: userId || undefined,
-                name: name.trim(),
-                username: username.trim(),
-                roleId: roleId as number,
-                branchIds,
-            });
+            if (isNew) {
+                await createUser({
+                    firstName,
+                    lastName,
+                    username: username.trim(),
+                    phone: phone.trim(),
+                    password: password.trim(),
+                    roleId: roleId as number,
+                    branchIds,
+                });
+            } else {
+                await updateUser(userId!, {
+                    firstName,
+                    lastName,
+                    username: username.trim(),
+                    phone: phone.trim(),
+                    roleId: roleId as number,
+                    branchIds,
+                });
+            }
             router.push("/catalogos/usuarios");
         } catch (err) {
             console.error("[UserForm] Error saving:", err);
@@ -263,21 +239,33 @@ export default function UserFormPage() {
         }
     };
 
-    // Handle send invitation
+    // Handle send invitation (save then redirect)
     const handleSendInvitation = async () => {
         if (!validateForm()) return;
 
+        const { firstName, lastName } = nameToFirstLast(name);
         setSendingInvite(true);
         try {
-            // First save, then send invite
-            const savedUser = await saveUser({
-                id: userId || undefined,
-                name: name.trim(),
-                username: username.trim(),
-                roleId: roleId as number,
-                branchIds,
-            });
-            await sendInvitation(savedUser.id);
+            if (isNew) {
+                await createUser({
+                    firstName,
+                    lastName,
+                    username: username.trim(),
+                    phone: phone.trim(),
+                    password: password.trim(),
+                    roleId: roleId as number,
+                    branchIds,
+                });
+            } else {
+                await updateUser(userId!, {
+                    firstName,
+                    lastName,
+                    username: username.trim(),
+                    phone: phone.trim(),
+                    roleId: roleId as number,
+                    branchIds,
+                });
+            }
             router.push("/catalogos/usuarios");
         } catch (err) {
             console.error("[UserForm] Error sending invitation:", err);
@@ -295,7 +283,7 @@ export default function UserFormPage() {
     };
 
     // Transform branches to selectable items
-    const branchItems: SelectableItem[] = DUMMY_BRANCHES.map((branch) => ({
+    const branchItems: SelectableItem[] = branches.map((branch) => ({
         id: branch.id,
         label: branch.name,
     }));
@@ -310,8 +298,10 @@ export default function UserFormPage() {
     const canSendInvite =
         name.trim().length >= 3 &&
         username.trim().length >= 3 &&
+        phone.trim().length >= 10 &&
         roleId !== "" &&
-        branchIds.length > 0;
+        branchIds.length > 0 &&
+        (isNew ? password.trim().length >= 10 : true);
 
     if (loading) {
         return (
@@ -376,27 +366,57 @@ export default function UserFormPage() {
                             error={Boolean(usernameError)}
                             helperText={usernameError}
                         />
+                        {isNew && (
+                            <FormTextField
+                                label="Contraseña"
+                                placeholder="Mínimo 10 caracteres"
+                                type="password"
+                                value={password}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    if (passwordError) setPasswordError(undefined);
+                                }}
+                                error={Boolean(passwordError)}
+                                helperText={passwordError}
+                            />
+                        )}
                     </FieldsRow>
                 </Section>
 
-                {/* Role Section */}
+                {/* Role and phone Section */}
                 <Section>
-                    <SectionTitle>Rol</SectionTitle>
-                    <FormSelect
-                        label="Selecciona un rol"
-                        placeholder="Selecciona un rol"
-                        value={roleId}
-                        onChange={(e) => {
-                            setRoleId(e.target.value as number);
-                            if (roleError) setRoleError(undefined);
-                        }}
-                        options={DUMMY_ROLES.map((role) => ({
-                            value: role.id,
-                            label: role.name,
-                        }))}
-                        error={Boolean(roleError)}
-                        helperText={roleError}
-                    />
+                    <SectionTitle>Rol y contacto</SectionTitle>
+                    <FieldsRow>
+                        <FormTextField
+                            label="Celular"
+                            placeholder="Ej. 8341234567"
+                            required
+                            value={phone}
+                            onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, "").slice(0, 15);
+                                setPhone(value);
+                                if (phoneError) setPhoneError(undefined);
+                            }}
+                            error={Boolean(phoneError)}
+                            helperText={phoneError}
+                            inputProps={{ inputMode: "tel", maxLength: 15 }}
+                        />
+                        <FormSelect
+                            label="Selecciona un rol"
+                            placeholder="Selecciona un rol"
+                            value={roleId}
+                            onChange={(e) => {
+                                setRoleId(e.target.value as number);
+                                if (roleError) setRoleError(undefined);
+                            }}
+                            options={roles.map((role) => ({
+                                value: role.id,
+                                label: role.name,
+                            }))}
+                            error={Boolean(roleError)}
+                            helperText={roleError}
+                        />
+                    </FieldsRow>
                     <HelperTextLink>
                         Si deseas crear un rol nuevo, ve hacia el módulo{" "}
                         <Link href="/catalogos/roles">Roles</Link>

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Alert, CircularProgress, InputAdornment, IconButton } from "@mui/material";
+import { Alert, CircularProgress, InputAdornment, IconButton, Typography } from "@mui/material";
 import {
 	Visibility,
 	VisibilityOff,
 	ArrowBack as ArrowBackIcon,
+	Badge as BadgeIcon,
+	Lock as LockIcon,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/auth.service";
@@ -11,15 +13,12 @@ import {
 	PageContainer,
 	LoginCard,
 	LogoContainer,
-	LogoBox,
-	LogoText,
 	BrandName,
-	Title,
-	Subtitle,
+	WelcomeText,
 	Form,
 	StyledTextField,
 	SubmitButton,
-	ForgotLink,
+	ForgotButton,
 	BackLink,
 	AlertContainer,
 } from "@/styles/login/styles";
@@ -32,7 +31,7 @@ export default function LoginPage() {
 	const [showPassword, setShowPassword] = useState(false);
 
 	// Login form
-	const [email, setEmail] = useState("");
+	const [employeeNumber, setEmployeeNumber] = useState("");
 	const [password, setPassword] = useState("");
 	const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -43,15 +42,17 @@ export default function LoginPage() {
 	const [forgotSuccess, setForgotSuccess] = useState(false);
 
 	// Validations
-	const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+	const isValidEmployeeNumber = (value: string) => /^\d+$/.test(value.trim()) && parseInt(value.trim(), 10) >= 1;
 	const isValidPassword = (value: string) => value.length >= 8;
 
-	const emailError = email && !isValidEmail(email) ? "Ingresa un email válido" : "";
+	const employeeNumberError = employeeNumber && !isValidEmployeeNumber(employeeNumber)
+		? "Ingresa un número de empleado válido"
+		: "";
 	const passwordError = password && !isValidPassword(password) ? "La contraseña debe tener al menos 8 caracteres" : "";
-	const forgotEmailError = forgotEmail && !isValidEmail(forgotEmail) ? "Ingresa un email válido" : "";
+	const forgotEmailError = forgotEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail) ? "Ingresa un email válido" : "";
 
-	const canSubmitLogin = email && password && isValidEmail(email) && isValidPassword(password);
-	const canSubmitForgot = forgotEmail && isValidEmail(forgotEmail);
+	const canSubmitLogin = employeeNumber.trim() && password && isValidEmployeeNumber(employeeNumber) && isValidPassword(password);
+	const canSubmitForgot = forgotEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -59,7 +60,7 @@ export default function LoginPage() {
 
 		setLoginError(null);
 		try {
-			await login({ email, password });
+			await login({ employeeNumber: employeeNumber.trim(), password });
 		} catch {
 			setLoginError("Credenciales incorrectas");
 		}
@@ -93,19 +94,14 @@ export default function LoginPage() {
 		<PageContainer>
 			<LoginCard elevation={0}>
 				<LogoContainer>
-					<LogoBox>
-						<LogoText>Foly</LogoText>
-					</LogoBox>
 					<BrandName>Folysoft</BrandName>
+					<WelcomeText variant="body2">
+						Bienvenido/a al sistema backoffice de Folysoft
+					</WelcomeText>
 				</LogoContainer>
 
 				{view === "login" ? (
 					<>
-						<Title variant="h5">Iniciar sesión</Title>
-						<Subtitle variant="body2" color="text.secondary">
-							Ingresa tus credenciales para continuar
-						</Subtitle>
-
 						{loginError && (
 							<AlertContainer>
 								<Alert severity="error" onClose={() => setLoginError(null)}>
@@ -116,19 +112,29 @@ export default function LoginPage() {
 
 						<Form onSubmit={handleLogin}>
 							<StyledTextField
-								label="Email"
-								type="email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								error={!!emailError}
-								helperText={emailError}
+								label="Número de empleado *"
+								placeholder="Ingresa tu número de empleado"
+								type="text"
+								inputMode="numeric"
+								value={employeeNumber}
+								onChange={(e) => setEmployeeNumber(e.target.value.replace(/\D/g, ""))}
+								error={!!employeeNumberError}
+								helperText={employeeNumberError}
 								fullWidth
-								autoComplete="email"
+								autoComplete="username"
 								autoFocus
+								InputProps={{
+									startAdornment: (
+										<InputAdornment position="start">
+											<BadgeIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+										</InputAdornment>
+									),
+								}}
 							/>
 
 							<StyledTextField
-								label="Contraseña"
+								label="Contraseña *"
+								placeholder="Ingresa tu contraseña"
 								type={showPassword ? "text" : "password"}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
@@ -137,12 +143,18 @@ export default function LoginPage() {
 								fullWidth
 								autoComplete="current-password"
 								InputProps={{
+									startAdornment: (
+										<InputAdornment position="start">
+											<LockIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+										</InputAdornment>
+									),
 									endAdornment: (
 										<InputAdornment position="end">
 											<IconButton
 												onClick={() => setShowPassword(!showPassword)}
 												edge="end"
 												size="small"
+												aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 											>
 												{showPassword ? <VisibilityOff /> : <Visibility />}
 											</IconButton>
@@ -151,18 +163,21 @@ export default function LoginPage() {
 								}}
 							/>
 
-							<ForgotLink onClick={() => setView("forgot")}>
-								¿Olvidaste tu contraseña?
-							</ForgotLink>
-
 							<SubmitButton
 								type="submit"
 								variant="contained"
 								fullWidth
 								disabled={!canSubmitLogin || isLoading}
 							>
-								{isLoading ? <CircularProgress size={24} color="inherit" /> : "Iniciar sesión"}
+								{isLoading ? <CircularProgress size={24} color="inherit" /> : "Ingresar"}
 							</SubmitButton>
+
+							<ForgotButton
+								type="button"
+								onClick={() => setView("forgot")}
+							>
+								¿Olvidaste tu contraseña? Recupérala aquí
+							</ForgotButton>
 						</Form>
 					</>
 				) : (
@@ -172,10 +187,10 @@ export default function LoginPage() {
 							Volver al inicio de sesión
 						</BackLink>
 
-						<Title variant="h5">Recuperar contraseña</Title>
-						<Subtitle variant="body2" color="text.secondary">
+						<Typography variant="h5">Recuperar contraseña</Typography>
+						<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
 							Ingresa tu email y te enviaremos instrucciones
-						</Subtitle>
+						</Typography>
 
 						{forgotError && (
 							<AlertContainer>

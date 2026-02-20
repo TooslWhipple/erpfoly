@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/axios";
+import { getUsers } from "@/services/users.service";
+import { unwrapOrThrow } from "@/lib/axios";
 
 export interface User {
   id: number;
@@ -10,8 +11,9 @@ export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const { data } = await api.get<User[]>("/users");
-      return data;
+      const result = await getUsers({});
+      const response = unwrapOrThrow(result);
+      return response.data as User[];
     },
   });
 }

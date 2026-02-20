@@ -26,14 +26,13 @@ import {
 type View = "login" | "forgot";
 
 export default function LoginPage() {
-	const { login, isLoading } = useAuth();
+	const { login, isLoading, error: loginError, clearError: clearLoginError } = useAuth();
 	const [view, setView] = useState<View>("login");
 	const [showPassword, setShowPassword] = useState(false);
 
 	// Login form
 	const [employeeNumber, setEmployeeNumber] = useState("");
 	const [password, setPassword] = useState("");
-	const [loginError, setLoginError] = useState<string | null>(null);
 
 	// Forgot password form
 	const [forgotEmail, setForgotEmail] = useState("");
@@ -57,13 +56,7 @@ export default function LoginPage() {
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!canSubmitLogin) return;
-
-		setLoginError(null);
-		try {
-			await login({ employeeNumber: employeeNumber.trim(), password });
-		} catch {
-			setLoginError("Credenciales incorrectas");
-		}
+		await login({ employeeNumber: employeeNumber.trim(), password });
 	};
 
 	const handleForgotPassword = async (e: React.FormEvent) => {
@@ -72,15 +65,13 @@ export default function LoginPage() {
 
 		setForgotError(null);
 		setForgotLoading(true);
-
-		try {
-			await authService.forgotPassword({ email: forgotEmail });
+		const result = await authService.forgotPassword({ email: forgotEmail });
+		if (result.error) {
+			setForgotError(result.error.message || "No se pudo enviar el correo. Intenta de nuevo.");
+		} else {
 			setForgotSuccess(true);
-		} catch {
-			setForgotError("No se pudo enviar el correo. Intenta de nuevo.");
-		} finally {
-			setForgotLoading(false);
 		}
+		setForgotLoading(false);
 	};
 
 	const handleBackToLogin = () => {
@@ -104,7 +95,7 @@ export default function LoginPage() {
 					<>
 						{loginError && (
 							<AlertContainer>
-								<Alert severity="error" onClose={() => setLoginError(null)}>
+								<Alert severity="error" onClose={clearLoginError}>
 									{loginError}
 								</Alert>
 							</AlertContainer>

@@ -20,13 +20,22 @@ api.interceptors.request.use(
 	(error) => Promise.reject(error)
 );
 
+/** Backend can send { data } on success or { error: { message } } on failure (even with 200) */
+type BackendBody<T> =
+	| { data: T; error?: never }
+	| { error: { message: string; [k: string]: unknown }; data?: never };
+
 api.interceptors.response.use(
 	(response) => {
-		const body = response.data as { success?: boolean; data?: unknown };
+		const body = response.data as BackendBody<unknown> & { success?: boolean; data?: unknown };
+		// Backend error shape: do not unwrap
+		if (body?.error != null && typeof body.error === "object" && "message" in body.error) {
+			return response;
+		}
+		// Success with optional unwrap: { success: true, data: X } -> response.data = X
 		if (body?.success === true && body.data !== undefined) {
 			response.data = body.data;
 		}
-		
 		return response;
 	},
 	(error: AxiosError) => {
@@ -47,6 +56,12 @@ export interface ApiError {
 	errors?: Record<string, string[]>;
 }
 
+/** Successful POST etc. can return data with success and message */
+export interface ApiSuccessPayload {
+	success: true;
+	message?: string;
+}
+
 export interface PaginatedResponse<T> {
 	data: T[];
 	total: number;
@@ -55,19 +70,78 @@ export interface PaginatedResponse<T> {
 	totalPages: number;
 }
 
+/** Result of a safe API call: either data or error, never throws */
+export interface ApiResult<T> {
+	data: T | null;
+	error: ApiError | null;
+}
+
+function isBackendErrorBody(
+	value: unknown
+): value is { error: { message: string } } {
+	return (
+		value != null &&
+		typeof value === "object" &&
+		"error" in value &&
+		value.error != null &&
+		typeof (value as { error: unknown }).error === "object" &&
+		"message" in (value as { error: Record<string, unknown> }).error
+	);
+}
+
+function apiErrorFromAxios(error: AxiosError): ApiError {
+	const data = error.response?.data;
+	if (data != null && typeof data === "object" && "error" in data) {
+		const err = (data as { error: { message?: string } }).error;
+		if (err?.message) return { message: err.message };
+	}
+	if (data != null && typeof data === "object" && "message" in data) {
+		const msg = (data as { message: string }).message;
+		if (typeof msg === "string") return { message: msg };
+	}
+	return {
+		message: error.message || "Network or server error",
+	};
+}
+
+/**
+ * Safe request: never throws. Returns { data, error }.
+ * - Success: data is set, error is null (for POST, data may include success and message).
+ * - Failure: error is set (with message), data is null.
+ */
 export async function request<T>(
 	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 	url: string,
-	data?: unknown,
+	payload?: unknown,
 	config?: AxiosRequestConfig
-): Promise<T> {
-	const response = await api.request<T>({
-		method,
-		url,
-		data,
-		...config,
-	});
-	return response.data;
+): Promise<ApiResult<T>> {
+	try {
+		const response = await api.request<BackendBody<T> | T>({
+			method,
+			url,
+			data: payload,
+			...config,
+		});
+		const body = response.data;
+
+		if (isBackendErrorBody(body)) {
+			return {
+				data: null,
+				error: { message: body.error.message },
+			};
+		}
+		// Unwrapped or raw success payload
+		const data = (body as BackendBody<T>).data ?? (body as T);
+		return { data, error: null };
+	} catch (err) {
+		if (err instanceof AxiosError) {
+			return { data: null, error: apiErrorFromAxios(err) };
+		}
+		return {
+			data: null,
+			error: { message: err instanceof Error ? err.message : "Unknown error" },
+		};
+	}
 }
 
 export const get = <T>(url: string, config?: AxiosRequestConfig) =>
@@ -84,3 +158,19 @@ export const patch = <T>(url: string, data?: unknown, config?: AxiosRequestConfi
 
 export const del = <T>(url: string, config?: AxiosRequestConfig) =>
 	request<T>("DELETE", url, undefined, config);
+
+/**
+ * Throws if result has error; use when you want to propagate to TanStack Query or callers.
+ * Use after request/get/post/etc. when you need the old "throw on error" behavior.
+ */
+export function unwrapOrThrow<T>(result: ApiResult<T>): T {
+	if (result.error) {
+		const e = new Error(result.error.message) as Error & { apiError?: ApiError };
+		e.apiError = result.error;
+		throw e;
+	}
+	if (result.data === null) {
+		throw new Error("Unexpected null data");
+	}
+	return result.data;
+}

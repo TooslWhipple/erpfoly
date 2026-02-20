@@ -1,4 +1,4 @@
-import { get, post } from "@/lib/axios";
+import { get, post, type ApiResult } from "@/lib/axios";
 
 export interface User {
 	id: string;
@@ -56,22 +56,31 @@ interface BackendLoginResponse {
 }
 
 export const authService = {
-	async login(credentials: LoginCredentials): Promise<LoginResponse> {
-		const res = await post<BackendLoginResponse>("/auth/login", credentials);
+	async login(credentials: LoginCredentials): Promise<ApiResult<LoginResponse>> {
+		const result = await post<BackendLoginResponse>("/auth/login", credentials);
+		if (result.error) return { data: null, error: result.error };
+		const res = result.data!;
 		return {
-			token: res.accessToken,
-			user: mapBackendUserToFrontend(res.user),
+			data: {
+				token: res.accessToken,
+				user: mapBackendUserToFrontend(res.user),
+			},
+			error: null,
 		};
 	},
 
-	logout: () => post<void>("/auth/logout").catch(() => {}),
-
-	async me(): Promise<User> {
-		const res = await get<BackendUser>("/auth/me");
-		return mapBackendUserToFrontend(res);
+	async logout(): Promise<ApiResult<void>> {
+		return post<void>("/auth/logout");
 	},
 
-	forgotPassword: (data: ForgotPasswordRequest) =>
-		post<void>("/auth/password/recovery", data),
+	async me(): Promise<ApiResult<User>> {
+		const result = await get<BackendUser>("/auth/me");
+		if (result.error) return { data: null, error: result.error };
+		return { data: mapBackendUserToFrontend(result.data!), error: null };
+	},
+
+	async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResult<void | { success: true; message?: string }>> {
+		return post<void | { success: true; message?: string }>("/auth/password/recovery", data);
+	},
 };
 

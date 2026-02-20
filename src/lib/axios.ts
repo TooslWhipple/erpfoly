@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export const api = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -20,18 +21,38 @@ api.interceptors.request.use(
 	(error) => Promise.reject(error)
 );
 
+const DEFAULT_ERROR_MESSAGE = "Ha ocurrido un error. Intenta de nuevo.";
+
+function getErrorMessage(error: AxiosError): string {
+	const data = error.response?.data;
+	if (data && typeof data === "object" && "message" in data) {
+		const msg = (data as { message?: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || DEFAULT_ERROR_MESSAGE;
+	}
+	if (data && typeof data === "object" && "errors" in data) {
+		const errors = (data as { errors?: Record<string, string[]> }).errors;
+		if (errors && typeof errors === "object") {
+			const lines = Object.entries(errors).flatMap(([, arr]) => arr ?? []);
+			if (lines.length) return lines.join(". ");
+		}
+	}
+	return DEFAULT_ERROR_MESSAGE;
+}
+
 api.interceptors.response.use(
 	(response) => {
 		const body = response.data as { success?: boolean; data?: unknown };
 		if (body?.success === true && body.data !== undefined) {
 			response.data = body.data;
 		}
-		
 		return response;
 	},
 	(error: AxiosError) => {
 		if (error.response?.status === 401) {
 			useAuthStore.getState().logout();
+		} else {
+			useSnackbarStore.getState().showError(getErrorMessage(error));
 		}
 		return Promise.reject(error);
 	}

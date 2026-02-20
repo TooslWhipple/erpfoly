@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export const api = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_URL,
+	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -20,12 +21,10 @@ api.interceptors.request.use(
 	(error) => Promise.reject(error)
 );
 
-/** Backend can send { data } on success or { error: { message } } on failure (even with 200) */
 type BackendBody<T> =
 	| { data: T; error?: never }
-	| { error: { message: string; [k: string]: unknown }; data?: never };
+	| { error: { message: string;[k: string]: unknown }; data?: never };
 
-/** True when the failed request was the refresh call (avoid retry loop). */
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
 	const url = config?.url ?? "";
 	return typeof url === "string" && url.includes("/auth/refresh");
@@ -42,28 +41,52 @@ function processQueue(err: AxiosError | null, token: string | null) {
 	failedQueue.length = 0;
 }
 
+const DEFAULT_ERROR_MESSAGE = "Ha ocurrido un error. Intenta de nuevo.";
+
+function getErrorMessage(error: AxiosError): string {
+	const data = error.response?.data;
+	if (data && typeof data === "object" && "message" in data) {
+		const msg = (data as { message?: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || DEFAULT_ERROR_MESSAGE;
+	}
+	if (data && typeof data === "object" && "errors" in data) {
+		const errors = (data as { errors?: Record<string, string[]> }).errors;
+		if (errors && typeof errors === "object") {
+			const lines = Object.entries(errors).flatMap(([, arr]) => arr ?? []);
+			if (lines.length) return lines.join(". ");
+		}
+	}
+	return DEFAULT_ERROR_MESSAGE;
+}
+
 api.interceptors.response.use(
 	(response) => {
 		const body = response.data as BackendBody<unknown> & { success?: boolean; data?: unknown };
-		// Backend error shape: do not unwrap
 		if (body?.error != null && typeof body.error === "object" && "message" in body.error) {
 			return response;
 		}
-		// Success with optional unwrap: { success: true, data: X } -> response.data = X
+
 		if (body?.success === true && body.data !== undefined) {
 			response.data = body.data;
 		}
+
 		return response;
 	},
 	async (error: AxiosError) => {
-		const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+		const originalRequest = error.config;
 
 		if (error.response?.status !== 401) {
+			useSnackbarStore.getState().showError(getErrorMessage(error));
 			return Promise.reject(error);
 		}
 
-		// Refresh failed or this was the refresh request → session expired
-		if (isRefreshRequest(originalRequest) || originalRequest._retry) {
+		if (!originalRequest) {
+			useAuthStore.getState().logout();
+			return Promise.reject(error);
+		}
+
+		if (isRefreshRequest(originalRequest) || (originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry) {
 			useAuthStore.getState().logout();
 			if (typeof window !== "undefined") {
 				window.location.href = "/login";
@@ -72,7 +95,6 @@ api.interceptors.response.use(
 		}
 
 		if (isRefreshing) {
-			// Wait for the in-flight refresh to finish, then retry or reject
 			return new Promise<string>((resolve, reject) => {
 				failedQueue.push({
 					resolve: (token: string) => {
@@ -88,30 +110,32 @@ api.interceptors.response.use(
 				.catch((e) => Promise.reject(e));
 		}
 
-		originalRequest._retry = true;
+		(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry = true;
 		isRefreshing = true;
 
-		const { authService } = await import("@/services/auth.service");
-		const result = await authService.refresh();
-		if (result.error || !result.data?.accessToken) {
-			processQueue(error, null);
-			useAuthStore.getState().logout();
-			if (typeof window !== "undefined") {
-				window.location.href = "/login";
+		try {
+			const { authService } = await import("@/services/auth.service");
+			const result = await authService.refresh();
+			if (result.error || !result.data?.accessToken) {
+				processQueue(error, null);
+				useAuthStore.getState().logout();
+				if (typeof window !== "undefined") {
+					window.location.href = "/login";
+				}
+				return Promise.reject(error);
 			}
+
+			const newToken = result.data.accessToken;
+			useAuthStore.getState().setToken(newToken);
+			processQueue(null, newToken);
+
+			if (originalRequest.headers) {
+				originalRequest.headers.Authorization = `Bearer ${newToken}`;
+			}
+			return api.request(originalRequest);
+		} finally {
 			isRefreshing = false;
-			return Promise.reject(error);
 		}
-
-		const newToken = result.data.accessToken;
-		useAuthStore.getState().setToken(newToken);
-		processQueue(null, newToken);
-		isRefreshing = false;
-
-		if (originalRequest.headers) {
-			originalRequest.headers.Authorization = `Bearer ${newToken}`;
-		}
-		return api.request(originalRequest);
 	}
 );
 
@@ -125,7 +149,6 @@ export interface ApiError {
 	errors?: Record<string, string[]>;
 }
 
-/** Successful POST etc. can return data with success and message */
 export interface ApiSuccessPayload {
 	success: true;
 	message?: string;
@@ -139,7 +162,6 @@ export interface PaginatedResponse<T> {
 	totalPages: number;
 }
 
-/** Result of a safe API call: either data or error, never throws */
 export interface ApiResult<T> {
 	data: T | null;
 	error: ApiError | null;
@@ -173,11 +195,6 @@ function apiErrorFromAxios(error: AxiosError): ApiError {
 	};
 }
 
-/**
- * Safe request: never throws. Returns { data, error }.
- * - Success: data is set, error is null (for POST, data may include success and message).
- * - Failure: error is set (with message), data is null.
- */
 export async function request<T>(
 	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 	url: string,
@@ -199,7 +216,7 @@ export async function request<T>(
 				error: { message: body.error.message },
 			};
 		}
-		// Unwrapped or raw success payload
+		
 		const data = (body as BackendBody<T>).data ?? (body as T);
 		return { data, error: null };
 	} catch (err) {
@@ -228,10 +245,6 @@ export const patch = <T>(url: string, data?: unknown, config?: AxiosRequestConfi
 export const del = <T>(url: string, config?: AxiosRequestConfig) =>
 	request<T>("DELETE", url, undefined, config);
 
-/**
- * Throws if result has error; use when you want to propagate to TanStack Query or callers.
- * Use after request/get/post/etc. when you need the old "throw on error" behavior.
- */
 export function unwrapOrThrow<T>(result: ApiResult<T>): T {
 	if (result.error) {
 		const e = new Error(result.error.message) as Error & { apiError?: ApiError };

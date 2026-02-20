@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { MainLayout, Title, TableCrud, ChipStyleConfig } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import {
     HeaderContainer,
@@ -14,6 +14,11 @@ import {
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
 
 type User = UserListItem;
+
+const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
+    "ACTIVE": { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
+    "INACTIVE": { label: "Inactivo", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+};
 
 export default function Usuarios() {
     const router = useRouter();
@@ -88,7 +93,7 @@ export default function Usuarios() {
         {
             id: "fullName",
             label: "Nombre",
-            size: "lg",
+            size: "xl",
         },
         {
             id: "roleName",
@@ -105,8 +110,15 @@ export default function Usuarios() {
             label: "Sucursales",
             type: "chipGroup",
             chipGroupKey: "name",
-            chipGroupMaxVisible: 3,
-            size: "lg"
+            chipGroupMaxVisible: 2,
+            size: "xl"
+        },
+        {
+            id: "status",
+            label: "Estatus",
+            type: "chip",
+            size: "sm",
+            chipConfig: ESTATUS_CHIP_CONFIG,
         },
         {
             id: "createdAt",
@@ -122,7 +134,6 @@ export default function Usuarios() {
         }
     ];
 
-    // Row actions (for menu)
     const actions: RowAction<User>[] = [
         {
             id: "edit",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import { Box, CircularProgress } from "@mui/material";
 import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
@@ -22,47 +22,12 @@ import {
   updateRole,
   updateRolePermissions,
 } from "@/services/roles.service";
+import {
+  apiModulesToTableModules,
+  tableModulesToPayload,
+  areModulesEqual,
+} from "@/utils/role";
 import type { PermissionsTemplateResponse } from "@/types/roles.types";
-
-const PERMISSION_KEYS: Array<keyof Permission> = ["view", "create", "edit", "delete"];
-
-function apiModulesToTableModules(
-  modules: PermissionsTemplateResponse,
-): ModulePermission[] {
-  return modules.map((m) => {
-    const byCode = Object.fromEntries(
-      m.permissions.map((p) => [p.name, p.assigned]),
-    ) as Record<string, boolean>;
-    return {
-      id: m.screenCode,
-      name: m.module,
-      permissions: {
-        view: byCode["view"] ?? false,
-        create: byCode["create"] ?? false,
-        edit: byCode["edit"] ?? false,
-        delete: byCode["delete"] ?? false,
-      },
-    };
-  });
-}
-
-function tableModulesToPayload(
-  modules: PermissionsTemplateResponse,
-  tableModules: ModulePermission[],
-): Array<{ screenId: number; actionIds: number[] }> {
-  return modules.map((apiMod) => {
-    const tableMod = tableModules.find((t) => t.id === apiMod.screenCode);
-    const actionIds = tableMod
-      ? apiMod.permissions
-          .filter((p) => {
-            const key = p.name as keyof Permission;
-            return PERMISSION_KEYS.includes(key) && tableMod.permissions[key];
-          })
-          .map((p) => p.id)
-      : [];
-    return { screenId: apiMod.screenId, actionIds };
-  });
-}
 
 export default function RoleFormPage() {
   const router = useRouter();
@@ -78,6 +43,12 @@ export default function RoleFormPage() {
   const [nameError, setNameError] = useState<string | undefined>();
   const [apiModules, setApiModules] = useState<PermissionsTemplateResponse>([]);
   const [tableModules, setTableModules] = useState<ModulePermission[]>([]);
+
+  const initialDataRef = useRef<{
+    name: string;
+    description: string;
+    tableModules: ModulePermission[];
+  } | null>(null);
 
   useEffect(() => {
     if (isNew) {
@@ -98,10 +69,18 @@ export default function RoleFormPage() {
     }
     getRoleDetail(roleId)
       .then((res) => {
-        setName(res.role.name);
-        setDescription(res.role.description ?? "");
+        const roleName = res.role.name;
+        const roleDescription = res.role.description ?? "";
+        const modules = apiModulesToTableModules(res.modules);
+        setName(roleName);
+        setDescription(roleDescription);
         setApiModules(res.modules);
-        setTableModules(apiModulesToTableModules(res.modules));
+        setTableModules(modules);
+        initialDataRef.current = {
+          name: roleName,
+          description: roleDescription,
+          tableModules: modules,
+        };
       })
       .catch((err) => console.error("[RoleForm] Error loading role:", err))
       .finally(() => setLoading(false));
@@ -150,20 +129,34 @@ export default function RoleFormPage() {
   const handleSave = async () => {
     if (!validateForm()) return;
 
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+
+    if (!isNew && roleId && initialDataRef.current) {
+      const initial = initialDataRef.current;
+      const nameUnchanged = trimmedName === initial.name;
+      const descriptionUnchanged = trimmedDescription === initial.description;
+      const permissionsUnchanged = areModulesEqual(tableModules, initial.tableModules);
+      if (nameUnchanged && descriptionUnchanged && permissionsUnchanged) {
+        router.push("/catalogos/roles");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (isNew) {
         const created = await createRole({
-          name: name.trim(),
-          description: description.trim() || undefined,
+          name: trimmedName,
+          description: trimmedDescription || undefined,
         });
         const payload = tableModulesToPayload(apiModules, tableModules);
         await updateRolePermissions(created.id, { permissions: payload });
         router.push("/catalogos/roles");
       } else if (roleId) {
         await updateRole(roleId, {
-          name: name.trim(),
-          description: description.trim() || undefined,
+          name: trimmedName,
+          description: trimmedDescription || undefined,
         });
         const payload = tableModulesToPayload(apiModules, tableModules);
         await updateRolePermissions(roleId, { permissions: payload });

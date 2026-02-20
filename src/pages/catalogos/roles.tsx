@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
@@ -11,45 +12,12 @@ import {
   SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getRolesList } from "@/services/roles.service";
+import { formatDateTime } from "@/utils/date";
 import type { RoleListItem } from "@/types/roles.types";
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatDateTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  const months = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
-
-  const dayName = days[date.getDay()];
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = months[date.getMonth()];
-  const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const ampm = hours >= 12 ? "pm" : "am";
-  const hour12 = hours % 12 || 12;
-
-  return `${dayName} ${day} de ${month}. ${hour12}:${minutes} ${ampm}`;
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Roles() {
   const router = useRouter();
@@ -61,8 +29,18 @@ export default function Roles() {
     initialRowsPerPage: 10,
   });
 
+  const { setSearch } = list;
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    list.search,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    list.setSearch(event.target.value);
+    setSearchInput(event.target.value);
   };
 
   const handleCreateRole = () => {
@@ -91,7 +69,7 @@ export default function Roles() {
       id: "updatedAt",
       label: "Últ. Actualización",
       size: "xl",
-      format: (value) => (value ? formatDateTime(value as string) : "—"),
+      format: (value) => formatDateTime(value as string | null | undefined),
     },
   ];
 
@@ -112,7 +90,7 @@ export default function Roles() {
           <SearchInput
             size="small"
             placeholder="Buscar"
-            value={list.search}
+            value={searchInput}
             onChange={handleSearchChange}
             InputProps={{
               startAdornment: (

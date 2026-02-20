@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, ChipStyleConfig } from "@/components/TableCrud";
@@ -10,6 +10,7 @@ import type {
   DiscountRequestStatus,
   DiscountRequestType,
 } from "@/types/discount-requests.types";
+import { formatDateTimeShort } from "@/utils/date";
 
 // ============================================================================
 // CONSTANTS
@@ -37,25 +38,6 @@ const TYPE_CHIP_CONFIG: Record<DiscountRequestType, ChipStyleConfig> = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-const SHORT_MONTHS_ES = [
-  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
-
-function formatDateTime(isoString: string): string {
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return isoString;
-  const day = d.getDate();
-  const month = SHORT_MONTHS_ES[d.getMonth()];
-  const year = d.getFullYear();
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  const ampm = hours >= 12 ? "pm" : "am";
-  const h = hours % 12 || 12;
-  const min = minutes < 10 ? `0${minutes}` : minutes;
-  return `${day} ${month}, ${year} ${h}:${min} ${ampm}`;
-}
 
 function formatArticleCount(count: number): string {
   return count === 1 ? "1 artículo" : `${count} artículos`;
@@ -126,7 +108,7 @@ export default function SolicitudesDescuentoPage() {
       id: "createdAt",
       label: "FECHA Y HORA",
       size: "md",
-      format: (value) => formatDateTime(String(value ?? "")),
+      format: (value) => formatDateTimeShort(value != null ? String(value) : null),
     },
     {
       id: "type",

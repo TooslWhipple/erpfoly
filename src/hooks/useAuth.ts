@@ -21,8 +21,12 @@ export function useAuth() {
 			setLoading(false);
 			return;
 		}
-		setAuth(result.data!.token, result.data!.user);
-		router.push("/solicitudes-credito");
+		// Step 1 success: OTP sent → go to OTP screen (pass identifier for resend)
+		const query: Record<string, string> = {};
+		if (credentials.username?.trim()) query.username = credentials.username.trim();
+		if (credentials.cellphone?.trim()) query.cellphone = credentials.cellphone.trim();
+		const search = new URLSearchParams(query).toString();
+		router.push(search ? `/login/validate-otp?${search}` : "/login/validate-otp");
 		setIsLoading(false);
 		setLoading(false);
 	};

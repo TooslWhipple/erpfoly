@@ -25,6 +25,23 @@ type BackendBody<T> =
 	| { data: T; error?: never }
 	| { error: { message: string; [k: string]: unknown }; data?: never };
 
+/** True when the failed request was the refresh call (avoid retry loop). */
+function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
+	const url = config?.url ?? "";
+	return typeof url === "string" && url.includes("/auth/refresh");
+}
+
+let isRefreshing = false;
+const failedQueue: Array<{ resolve: (token: string) => void; reject: (err: AxiosError) => void }> = [];
+
+function processQueue(err: AxiosError | null, token: string | null) {
+	failedQueue.forEach((prom) => {
+		if (err) prom.reject(err);
+		else if (token) prom.resolve(token);
+	});
+	failedQueue.length = 0;
+}
+
 api.interceptors.response.use(
 	(response) => {
 		const body = response.data as BackendBody<unknown> & { success?: boolean; data?: unknown };
@@ -38,11 +55,63 @@ api.interceptors.response.use(
 		}
 		return response;
 	},
-	(error: AxiosError) => {
-		if (error.response?.status === 401) {
-			useAuthStore.getState().logout();
+	async (error: AxiosError) => {
+		const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+		if (error.response?.status !== 401) {
+			return Promise.reject(error);
 		}
-		return Promise.reject(error);
+
+		// Refresh failed or this was the refresh request → session expired
+		if (isRefreshRequest(originalRequest) || originalRequest._retry) {
+			useAuthStore.getState().logout();
+			if (typeof window !== "undefined") {
+				window.location.href = "/login";
+			}
+			return Promise.reject(error);
+		}
+
+		if (isRefreshing) {
+			// Wait for the in-flight refresh to finish, then retry or reject
+			return new Promise<string>((resolve, reject) => {
+				failedQueue.push({
+					resolve: (token: string) => {
+						if (originalRequest.headers) {
+							originalRequest.headers.Authorization = `Bearer ${token}`;
+						}
+						resolve(token);
+					},
+					reject,
+				});
+			})
+				.then((token) => api.request({ ...originalRequest, headers: { ...originalRequest.headers, Authorization: `Bearer ${token}` } }))
+				.catch((e) => Promise.reject(e));
+		}
+
+		originalRequest._retry = true;
+		isRefreshing = true;
+
+		const { authService } = await import("@/services/auth.service");
+		const result = await authService.refresh();
+		if (result.error || !result.data?.accessToken) {
+			processQueue(error, null);
+			useAuthStore.getState().logout();
+			if (typeof window !== "undefined") {
+				window.location.href = "/login";
+			}
+			isRefreshing = false;
+			return Promise.reject(error);
+		}
+
+		const newToken = result.data.accessToken;
+		useAuthStore.getState().setToken(newToken);
+		processQueue(null, newToken);
+		isRefreshing = false;
+
+		if (originalRequest.headers) {
+			originalRequest.headers.Authorization = `Bearer ${newToken}`;
+		}
+		return api.request(originalRequest);
 	}
 );
 

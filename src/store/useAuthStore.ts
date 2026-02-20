@@ -16,6 +16,7 @@ interface AuthState {
 	isLoading: boolean;
 	isAuthenticated: boolean;
 	setAuth: (token: string, user: User) => void;
+	setToken: (token: string) => void;
 	logout: () => void;
 	setUser: (user: User) => void;
 	setLoading: (loading: boolean) => void;
@@ -38,6 +39,10 @@ export const useAuthStore = create<AuthState>()(
 				});
 			},
 
+			setToken: (token: string) => {
+				set({ token });
+			},
+
 			logout: () => {
 				set({
 					token: null,
@@ -52,6 +57,14 @@ export const useAuthStore = create<AuthState>()(
 		}),
 		{
 			name: "auth-storage",
+			storage:
+				typeof window !== "undefined"
+					? {
+							getItem: (name: string) => sessionStorage.getItem(name),
+							setItem: (name: string, value: string) => sessionStorage.setItem(name, value),
+							removeItem: (name: string) => sessionStorage.removeItem(name),
+						}
+					: undefined,
 			partialize: (state) => ({
 				token: state.token,
 				user: state.user,

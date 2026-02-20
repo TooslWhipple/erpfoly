@@ -76,35 +76,9 @@ export const StyledTextField = styled(TextField)({
 	},
 });
 
-export const SubmitButton = styled(Button)(({ theme }) => ({
-	marginTop: theme.spacing(1),
-	height: 44,
-	fontSize: 15,
-	fontWeight: 600,
+export const AlertContainer = styled(Box)(({ theme }) => ({
+	marginBottom: theme.spacing(2),
 }));
-
-export const ForgotLink = styled(Link)({
-	fontSize: 14,
-	cursor: "pointer",
-	textDecoration: "none",
-	color: colors.sidebar.textSelected,
-	"&:hover": {
-		textDecoration: "underline",
-	},
-});
-
-/** Button styled as link for "Forgot password" action (avoids Link component prop typing issues) */
-export const ForgotButton = styled(Button)({
-	fontSize: 14,
-	textTransform: "none",
-	color: colors.sidebar.textSelected,
-	display: "block",
-	textAlign: "center",
-	"&:hover": {
-		backgroundColor: "transparent",
-		textDecoration: "underline",
-	},
-});
 
 export const BackLink = styled(Link)(({ theme }) => ({
 	display: "flex",
@@ -118,9 +92,5 @@ export const BackLink = styled(Link)(({ theme }) => ({
 	"&:hover": {
 		color: theme.palette.text.primary,
 	},
-}));
-
-export const AlertContainer = styled(Box)(({ theme }) => ({
-	marginBottom: theme.spacing(2),
 }));
 

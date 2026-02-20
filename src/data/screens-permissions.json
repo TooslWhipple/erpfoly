@@ -1,0 +1,263 @@
+{
+  "actions": ["view", "create", "edit", "delete"],
+  "screens": [
+    {
+      "code": "dashboard",
+      "name": "Dashboard",
+      "path": "/",
+      "actions": ["view"]
+    },
+    {
+      "code": "login",
+      "name": "Inicio de sesión",
+      "path": "/login",
+      "actions": ["view"]
+    },
+    {
+      "code": "login-validate-otp",
+      "name": "Validar OTP",
+      "path": "/login/validate-otp",
+      "actions": ["view"]
+    },
+    {
+      "code": "clientes",
+      "name": "Clientes",
+      "path": "/clientes",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "clientes-morosidad",
+      "name": "Morosidad",
+      "path": "/clientes/morosidad",
+      "actions": ["view"]
+    },
+    {
+      "code": "clientes-cobranza",
+      "name": "Cobranza",
+      "path": "/clientes/cobranza",
+      "actions": ["view"]
+    },
+    {
+      "code": "pedidos",
+      "name": "Pedidos",
+      "path": "/pedidos",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "pedidos-nuevo",
+      "name": "Nuevo pedido",
+      "path": "/pedidos/nuevo",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "pedidos-detalle",
+      "name": "Detalle de pedido",
+      "path": "/pedidos/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "pedidos-sucursales",
+      "name": "Pedidos por sucursal",
+      "path": "/pedidos/sucursales",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "pedidos-sucursales-nuevo",
+      "name": "Nuevo pedido sucursal",
+      "path": "/pedidos/sucursales/nuevo",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "solicitudes-sucursales",
+      "name": "Pedidos (solicitudes sucursales)",
+      "path": "/solicitudes/sucursales",
+      "actions": ["view"]
+    },
+    {
+      "code": "inventario",
+      "name": "Inventario",
+      "path": "/inventario",
+      "actions": ["view", "create", "edit"]
+    },
+    {
+      "code": "inventario-detalle",
+      "name": "Detalle de artículo",
+      "path": "/inventario/[sku]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "inventario-mercancia-danada",
+      "name": "Mercancía dañada",
+      "path": "/inventario/mercancia-danada",
+      "actions": ["view"]
+    },
+    {
+      "code": "inventario-liquidaciones",
+      "name": "Liquidaciones",
+      "path": "/inventario/liquidaciones",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "catalogos-productos",
+      "name": "Catálogo de productos",
+      "path": "/catalogos/productos",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-productos-detalle",
+      "name": "Detalle de producto",
+      "path": "/catalogos/productos/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-departamentos",
+      "name": "Departamentos",
+      "path": "/catalogos/departamentos",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-promociones",
+      "name": "Promociones",
+      "path": "/catalogos/promociones",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-promociones-detalle",
+      "name": "Detalle de promoción",
+      "path": "/catalogos/promociones/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-sucursales",
+      "name": "Sucursales",
+      "path": "/catalogos/sucursales",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-sucursales-detalle",
+      "name": "Detalle de sucursal",
+      "path": "/catalogos/sucursales/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-proveedores",
+      "name": "Proveedores",
+      "path": "/catalogos/proveedores",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-proveedores-detalle",
+      "name": "Detalle de proveedor",
+      "path": "/catalogos/proveedores/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-usuarios",
+      "name": "Usuarios",
+      "path": "/catalogos/usuarios",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-usuarios-detalle",
+      "name": "Detalle de usuario",
+      "path": "/catalogos/usuarios/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-roles",
+      "name": "Roles",
+      "path": "/catalogos/roles",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-roles-detalle",
+      "name": "Detalle de rol",
+      "path": "/catalogos/roles/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-folypuntos",
+      "name": "Folypuntos",
+      "path": "/catalogos/folypuntos",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-mensajes",
+      "name": "Mensajes",
+      "path": "/catalogos/mensajes",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-metas",
+      "name": "Metas",
+      "path": "/catalogos/metas",
+      "actions": ["view"]
+    },
+    {
+      "code": "catalogos-costos-envio",
+      "name": "Costos de envío",
+      "path": "/catalogos/costos-envio",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "catalogos-proveedores-reparaciones",
+      "name": "Proveedores de reparaciones",
+      "path": "/catalogos/proveedores-reparaciones",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "cajas",
+      "name": "Cajas",
+      "path": "/cajas",
+      "actions": ["view", "create", "edit"]
+    },
+    {
+      "code": "solicitudes-credito",
+      "name": "Solicitudes de crédito",
+      "path": "/solicitudes-credito",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "solicitudes-descuento",
+      "name": "Solicitudes de descuentos",
+      "path": "/solicitudes-descuento",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "solicitudes-descuento-nuevo",
+      "name": "Nueva solicitud de descuento",
+      "path": "/solicitudes-descuento/nuevo",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "atencion-cliente",
+      "name": "Atención al cliente",
+      "path": "/atencion-cliente",
+      "actions": ["view"]
+    },
+    {
+      "code": "atencion-cliente-detalle",
+      "name": "Detalle atención al cliente",
+      "path": "/atencion-cliente/[id]",
+      "actions": ["view"]
+    },
+    {
+      "code": "recepcion-mercancias",
+      "name": "Recepción de mercancía",
+      "path": "/recepcion-mercancias",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "recepcion-mercancias-nuevo",
+      "name": "Nueva recepción de mercancía",
+      "path": "/recepcion-mercancias/nuevo",
+      "actions": ["view", "create"]
+    },
+    {
+      "code": "rutas",
+      "name": "Rutas",
+      "path": "/rutas",
+      "actions": ["view"]
+    }
+  ]
+}

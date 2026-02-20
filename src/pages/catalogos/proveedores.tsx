@@ -164,6 +164,21 @@ export default function Proveedores() {
             label: "Nombre",
             size: "xl",
         },
+        {
+            id: "rfc",
+            label: "RFC",
+            size: "sm"
+        },
+        {
+            id: "email",
+            label: "Email",
+            size: "lg"
+        },
+        {
+            id: "tipo",
+            label: "Tipo",
+            size: "sm"
+        }
     ];
 
     // Row actions (for menu)

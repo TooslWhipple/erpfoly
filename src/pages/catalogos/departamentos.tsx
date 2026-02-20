@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import { InputAdornment, Box, Alert } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { Add as AddIcon, Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { FormFieldConfig } from "@/components/Form";
@@ -16,12 +17,17 @@ import {
 // TYPES & INTERFACES
 // ============================================================================
 
-interface ProductGroup {
+export interface ProductGroup {
   id: string;
   name: string;
+  promotion?: {
+    percentage: number;
+    startDate: string;
+    endDate: string;
+  };
 }
 
-interface Department {
+export interface Department {
   id: number;
   name: string;
   margin: number;
@@ -255,11 +261,21 @@ async function deleteDepartment(id: number): Promise<{ success: boolean }> {
   return { success: true };
 }
 
+export async function getDepartmentById(id: number): Promise<Department | null> {
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  return DUMMY_DEPARTMENTS.find((d) => d.id === id) ?? null;
+}
+
+export { deleteDepartment, updateDepartment, createDepartment };
+export type { GetDepartmentsParams, GetDepartmentsResponse };
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 export default function Departamentos() {
+  const router = useRouter();
+
   // State management
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -418,23 +434,6 @@ export default function Departamentos() {
     setModalOpen(true);
   };
 
-  const handleOpenEditModal = (department: Department) => {
-    setEditingDepartment(department);
-    const hasPromo = Boolean(department.promotion);
-    setHasPromotion(hasPromo);
-    setAffectedItemsCount(null);
-    setFormValues({
-      id: String(department.id).padStart(2, "0"),
-      name: department.name,
-      margin: department.margin,
-      hasPromotion: hasPromo,
-      promotionPercentage: department.promotion?.percentage,
-      promotionStartDate: department.promotion?.startDate,
-      promotionEndDate: department.promotion?.endDate,
-    });
-    setModalOpen(true);
-  };
-
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingDepartment(null);
@@ -485,6 +484,14 @@ export default function Departamentos() {
       setHasPromotion(promotionEnabled);
     }
   }, [hasPromotion]);
+
+  const handleViewDetail = (department: Department) => {
+    router.push(`/catalogos/departamentos/${department.id}`);
+  };
+
+  const handleEditDepartment = (department: Department) => {
+    router.push(`/catalogos/departamentos/${department.id}`);
+  };
 
   const handleDeleteDepartment = async (department: Department) => {
     const confirmed = window.confirm(
@@ -540,16 +547,24 @@ export default function Departamentos() {
     },
   ];
 
-  // Row actions
+  // Row actions (detail from row click or menu; edit goes to detail page; delete from list)
   const actions: RowAction<Department>[] = [
+    {
+      id: "view",
+      label: "Ver detalle",
+      icon: <VisibilityIcon fontSize="small" />,
+      onClick: handleViewDetail,
+    },
     {
       id: "edit",
       label: "Editar",
-      onClick: handleOpenEditModal,
+      icon: <EditIcon fontSize="small" />,
+      onClick: handleEditDepartment,
     },
     {
       id: "delete",
       label: "Eliminar",
+      icon: <DeleteIcon fontSize="small" />,
       onClick: handleDeleteDepartment,
       color: "error",
     },
@@ -595,6 +610,7 @@ export default function Departamentos() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
+        onRowClick={handleViewDetail}
         emptyMessage="No hay departamentos registrados"
       />
 

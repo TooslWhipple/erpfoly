@@ -538,7 +538,6 @@ export function Form({
             <FormContent>
                 <Grid container spacing={spacing}>
                     {fields.map((field) => {
-                        // Build size object for MUI v7 Grid
                         const sizeProps: Record<string, number> = { xs: field.xs ?? 12 };
                         if (field.sm !== undefined) sizeProps.sm = field.sm;
                         if (field.md !== undefined) sizeProps.md = field.md;

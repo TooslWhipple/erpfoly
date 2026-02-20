@@ -24,22 +24,6 @@ export const PageTitle = styled(Typography)({
     color: "#232325",
 });
 
-export const SendInviteButton = styled(Button)(({ theme }) => ({
-    height: 40,
-    minWidth: 160,
-    borderColor: colors.border,
-    color: "#71717A",
-    "&:hover": {
-        borderColor: theme.palette.primary.main,
-        color: theme.palette.primary.main,
-        backgroundColor: "transparent",
-    },
-    "&.Mui-disabled": {
-        borderColor: colors.border,
-        color: "#D1D5DB",
-    },
-}));
-
 // ============================================================================
 // FORM COMPONENTS
 // ============================================================================

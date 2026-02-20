@@ -1,4 +1,7 @@
-import { get, post } from "@/lib/axios";
+import { get, post, type ApiResult } from "@/lib/axios";
+
+/** Credentials needed so the browser sends and stores cookies (e.g. refresh token) */
+const AUTH_CREDENTIALS = { withCredentials: true } as const;
 
 export interface User {
 	id: string;
@@ -9,9 +12,16 @@ export interface User {
 	permissions: string[];
 }
 
+/** Login step 1: request OTP. Send either username or cellphone, always password. */
 export interface LoginCredentials {
-	employeeNumber: string;
+	username?: string;
+	cellphone?: string;
 	password: string;
+}
+
+/** Response from POST /auth/login when OTP is sent (no tokens yet). */
+export interface LoginOtpSentResponse {
+	message: string;
 }
 
 export interface LoginResponse {
@@ -55,23 +65,97 @@ interface BackendLoginResponse {
 	user: BackendUser;
 }
 
+export interface ValidateOtpRequest {
+	otp: string;
+}
+
+/** Same shape as login success: accessToken, refreshToken, user */
+export interface ValidateOtpResponse {
+	accessToken: string;
+	refreshToken: string;
+	user: User;
+}
+
+/** Body for resend OTP; same identifier as login (username or cellphone). */
+export interface ResendOtpRequest {
+	username?: string;
+	cellphone?: string;
+}
+
+export interface RefreshTokenResponse {
+	accessToken: string;
+	refreshToken?: string;
+}
+
 export const authService = {
-	async login(credentials: LoginCredentials): Promise<LoginResponse> {
-		const res = await post<BackendLoginResponse>("/auth/login", credentials);
+	/**
+	 * Step 1: request OTP. Body is { username, password } or { cellphone, password }.
+	 * Response 200: { message: "OTP enviado a tu celular" }. Uses credentials for cookies.
+	 */
+	async login(credentials: LoginCredentials): Promise<ApiResult<LoginOtpSentResponse>> {
+		const body =
+			credentials.cellphone != null && credentials.cellphone !== ""
+				? { cellphone: credentials.cellphone.trim(), password: credentials.password }
+				: { username: (credentials.username ?? "").trim(), password: credentials.password };
+		const result = await post<LoginOtpSentResponse>("/auth/login", body, AUTH_CREDENTIALS);
+		if (result.error) return { data: null, error: result.error };
+		return { data: result.data!, error: null };
+	},
+
+	/**
+	 * Validates the OTP sent after login (e.g. via SMS).
+	 * Uses credentials so cookies (e.g. refresh token) are sent and stored.
+	 */
+	async validateOtp(otp: string): Promise<ApiResult<LoginResponse>> {
+		const result = await post<BackendLoginResponse>(
+			"/auth/validate-otp",
+			{ otp: otp.trim() },
+			AUTH_CREDENTIALS
+		);
+		if (result.error) return { data: null, error: result.error };
+		const res = result.data!;
 		return {
-			token: res.accessToken,
-			user: mapBackendUserToFrontend(res.user),
+			data: {
+				token: res.accessToken,
+				user: mapBackendUserToFrontend(res.user),
+			},
+			error: null,
 		};
 	},
 
-	logout: () => post<void>("/auth/logout").catch(() => {}),
-
-	async me(): Promise<User> {
-		const res = await get<BackendUser>("/auth/me");
-		return mapBackendUserToFrontend(res);
+	/**
+	 * Resends OTP to the same identifier used at login (username or cellphone).
+	 * Uses credentials so session/cookies are sent.
+	 */
+	async resendOtp(identifier?: ResendOtpRequest): Promise<ApiResult<void | { message?: string }>> {
+		return post<void | { message?: string }>(
+			"/auth/login/otp/resend",
+			identifier ?? {},
+			AUTH_CREDENTIALS
+		);
 	},
 
-	forgotPassword: (data: ForgotPasswordRequest) =>
-		post<void>("/auth/password/recovery", data),
+	/**
+	 * Refreshes access token using the refresh token cookie.
+	 * Body empty; credentials required so the cookie is sent.
+	 * Returns new accessToken; refresh token is rotated via Set-Cookie.
+	 */
+	async refresh(): Promise<ApiResult<RefreshTokenResponse>> {
+		return post<RefreshTokenResponse>("/auth/refresh", {}, AUTH_CREDENTIALS);
+	},
+
+	async logout(): Promise<ApiResult<void>> {
+		return post<void>("/auth/logout", undefined, AUTH_CREDENTIALS);
+	},
+
+	async me(): Promise<ApiResult<User>> {
+		const result = await get<BackendUser>("/auth/me");
+		if (result.error) return { data: null, error: result.error };
+		return { data: mapBackendUserToFrontend(result.data!), error: null };
+	},
+
+	async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResult<void | { success: true; message?: string }>> {
+		return post<void | { success: true; message?: string }>("/auth/password/recovery", data);
+	},
 };
 

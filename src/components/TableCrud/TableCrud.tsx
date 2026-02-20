@@ -191,22 +191,22 @@ export function TableCrud<T>({
     switch (column.type) {
       case "id":
         const padding = column.idPadding ?? 2;
-        return typeof rawValue === "number" 
+        return typeof rawValue === "number"
           ? String(rawValue).padStart(padding, "0")
           : String(rawValue ?? "");
 
       case "number":
         return typeof rawValue === "number" ? numeral(rawValue).format("0,0") : String(rawValue ?? "");
-      
+
       case "currency":
         const symbol = column.currencySymbol || "$";
-        return typeof rawValue === "number" 
+        return typeof rawValue === "number"
           ? `${symbol}${numeral(rawValue).format("0,0.00")}`
           : String(rawValue ?? "");
-      
+
       case "percentage":
         return typeof rawValue === "number" ? numeral(rawValue).format("0.00") + "%" : String(rawValue ?? "");
-      
+
       case "date":
         if (rawValue instanceof Date) {
           return rawValue.toLocaleDateString();
@@ -215,14 +215,14 @@ export function TableCrud<T>({
           return new Date(rawValue).toLocaleDateString();
         }
         return String(rawValue ?? "");
-      
+
       case "boolean":
         return rawValue ? "Sí" : "No";
-      
+
       case "chip":
         const chipKey = String(rawValue);
         const chipStyle = column.chipConfig?.[chipKey];
-        
+
         if (chipStyle) {
           return (
             <Chip
@@ -238,7 +238,7 @@ export function TableCrud<T>({
             />
           );
         }
-        
+
         return (
           <Chip
             label={chipKey}
@@ -251,13 +251,13 @@ export function TableCrud<T>({
         if (Array.isArray(rawValue)) {
           const key = column.chipGroupKey || "name";
           const maxVisible = column.chipGroupMaxVisible ?? 6;
-          const items = rawValue.map((item) => 
+          const items = rawValue.map((item) =>
             typeof item === "object" && item !== null ? String(item[key] ?? "") : String(item)
           );
           return <ChipGroup items={items} maxVisible={maxVisible} />;
         }
         return null;
-      
+
       case "button":
         return (
           <Button
@@ -269,7 +269,7 @@ export function TableCrud<T>({
             {column.buttonLabel || String(rawValue)}
           </Button>
         );
-      
+
       default:
         return String(rawValue ?? "");
     }
@@ -278,7 +278,7 @@ export function TableCrud<T>({
   const renderCell = (value: T[keyof T], column: Column<T>, row: T) => {
     const formattedValue = formatValue(value, column, row);
     const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
-    
+
     let CellComponent = StyledTableCell;
     if (column.sticky) {
       CellComponent = StickyCell;
@@ -287,7 +287,7 @@ export function TableCrud<T>({
     } else if (column.truncate) {
       CellComponent = TruncatedCell;
     }
-    
+
     const width = getColumnWidth(column);
     const maxWidth = getColumnMaxWidth(column);
     // Use minWidth to allow columns to expand and fill available space
@@ -299,15 +299,15 @@ export function TableCrud<T>({
     }
 
     const cellProps: any = {
-        key: String(column.id),
-        align: column.align ?? "left",
-        style: cellStyle,
-        title: column.truncate ? String(value ?? "") : undefined,
-        className: column.sticky ? "sticky-cell" : undefined,
+      key: String(column.id),
+      align: column.align ?? "left",
+      style: cellStyle,
+      title: column.truncate ? String(value ?? "") : undefined,
+      className: column.sticky ? "sticky-cell" : undefined,
     };
 
     if (column.sticky && CellComponent === StickyCell) {
-        cellProps.position = column.stickyPosition;
+      cellProps.position = column.stickyPosition;
     }
 
     return (
@@ -317,7 +317,7 @@ export function TableCrud<T>({
     );
   };
 
-  const total = totalRows ?? rows.length;
+  const total = totalRows ?? rows?.length ?? 0;
   const hasActions = actions && actions.length > 0;
 
   // Render skeleton rows for loading state
@@ -373,9 +373,9 @@ export function TableCrud<T>({
             headerStyle.maxWidth = maxWidth;
             headerStyle.width = maxWidth;
           }
-          
+
           const HeaderCellComponent = column.sticky ? StickyHeaderCell : StyledHeaderCell;
-          
+
           return (
             <HeaderCellComponent
               key={String(column.id)}
@@ -400,7 +400,7 @@ export function TableCrud<T>({
           <TableBody>
             {loading ? (
               renderSkeletonRows()
-            ) : rows.length === 0 ? (
+            ) : !rows?.length ? (
               <StyledTableRow>
                 <StyledTableCell colSpan={columns.length + (hasActions ? 1 : 0)}>
                   <EmptyStateContainer>
@@ -411,7 +411,7 @@ export function TableCrud<T>({
                 </StyledTableCell>
               </StyledTableRow>
             ) : (
-              rows.map((row) => (
+              rows?.map((row) => (
                 <StyledTableRow
                   key={String(row[rowKey])}
                   onClick={() => onRowClick?.(row)}

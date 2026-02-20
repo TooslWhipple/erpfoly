@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
@@ -15,13 +15,13 @@ import {
     BreadcrumbsContainer,
     PageHeader,
     PageTitle,
-    SendInviteButton,
     FormCard,
     SectionTitle,
     Section,
     FieldsRow,
     HelperTextLink,
 } from "@/styles/catalogos/usuarios.styles";
+import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import {
     getUser as getUserApi,
     getRoles,
@@ -32,276 +32,193 @@ import {
     type BranchItem,
 } from "@/services/users.service";
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function nameToFirstLast(name: string): { firstName: string; lastName: string } {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 0) return { firstName: "", lastName: "" };
-    if (parts.length === 1) return { firstName: parts[0], lastName: "" };
-    return {
-        firstName: parts[0],
-        lastName: parts.slice(1).join(" "),
-    };
+async function loadCatalogs() {
+    const [rolesResult, branchesResult] = await Promise.all([
+        getRoles(),
+        getBranches(),
+    ]);
+    return { rolesResult, branchesResult };
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+async function loadUser(id: number) {
+    return getUserApi(id);
+}
+
+const USERNAME_MAX_LENGTH = 6;
+
+type UserFormState = {
+    firstName: string;
+    lastName: string;
+    username: string;
+    cellphone: string;
+    password: string;
+    roleId: number | "";
+    branchIds: number[];
+};
+
+type UserFormErrors = Partial<Record<keyof UserFormState, string>>;
+
+const initialUser: UserFormState = {
+    firstName: "",
+    lastName: "",
+    username: "",
+    cellphone: "",
+    password: "",
+    roleId: "",
+    branchIds: [],
+};
 
 export default function UserFormPage() {
     const router = useRouter();
     const { id } = router.query;
 
-    // Determine if creating or editing
     const isNew = id === "nuevo";
     const userId = isNew ? null : Number(id);
 
-    // State
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [sendingInvite, setSendingInvite] = useState(false);
 
-    // Catalog data
     const [roles, setRoles] = useState<RoleItem[]>([]);
     const [branches, setBranches] = useState<BranchItem[]>([]);
 
-    // Form state
-    const [name, setName] = useState("");
-    const [username, setUsername] = useState("");
-    const [phone, setPhone] = useState("");
-    const [password, setPassword] = useState("");
-    const [roleId, setRoleId] = useState<number | "">("");
-    const [branchIds, setBranchIds] = useState<number[]>([]);
+    const [user, setUser] = useState<UserFormState>(initialUser);
+    const [errors, setErrors] = useState<UserFormErrors>({});
 
-    // Errors
-    const [nameError, setNameError] = useState<string | undefined>();
-    const [usernameError, setUsernameError] = useState<string | undefined>();
-    const [phoneError, setPhoneError] = useState<string | undefined>();
-    const [passwordError, setPasswordError] = useState<string | undefined>();
-    const [roleError, setRoleError] = useState<string | undefined>();
-    const [branchError, setBranchError] = useState<string | undefined>();
+    useAsyncEffect(async (isCancelled) => {
+        const { rolesResult, branchesResult } = await loadCatalogs();
+        if (isCancelled()) return;
+        if (!rolesResult.error && rolesResult.data) setRoles(rolesResult.data);
+        if (!branchesResult.error && branchesResult.data) setBranches(branchesResult.data);
 
-    // Load roles and branches
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const [rolesRes, branchesRes] = await Promise.all([
-                    getRoles(),
-                    getBranches(),
-                ]);
-                if (!cancelled) {
-                    setRoles(rolesRes);
-                    setBranches(branchesRes);
-                    if (isNew) setLoading(false);
-                }
-            } catch (err) {
-                console.error("[UserForm] Error loading catalog:", err);
-                if (!cancelled && isNew) setLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
+        if (isNew) setLoading(false);
     }, [isNew]);
 
-    // Fetch user data if editing
-    useEffect(() => {
-        if (isNew || !userId) {
+    useAsyncEffect(async (isCancelled) => {
+        if (isNew || userId == null) {
             setLoading(false);
             return;
         }
-
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            try {
-                const user = await getUserApi(userId!);
-                if (!cancelled && user) {
-                    setName(user.name);
-                    setUsername(user.username);
-                    setPhone(user.phone ?? "");
-                    setRoleId(user.roleId);
-                    setBranchIds(user.branchIds);
-                }
-            } catch (err) {
-                console.error("[UserForm] Error loading user:", err);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
+        setLoading(true);
+        const result = await loadUser(userId);
+        if (isCancelled()) return;
+        if (!result.error && result.data) {
+            const data = result.data;
+            setUser({
+                firstName: data.firstName ?? "",
+                lastName: data.lastName ?? "",
+                username: data.username ?? "",
+                cellphone: data.cellphone ?? "",
+                password: "",
+                roleId: data.roleId,
+                branchIds: data.branchIds,
+            });
+        }
+        if (!isCancelled()) setLoading(false);
     }, [isNew, userId]);
 
-    // Auto-generate username from name
-    const handleNameChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newName = e.target.value;
-            setName(newName);
-            if (nameError) setNameError(undefined);
+    const setUserField = useCallback(<K extends keyof UserFormState>(key: K, value: UserFormState[K]) => {
+        setUser((prev) => ({ ...prev, [key]: value }));
+        setErrors((prev) => ({ ...prev, [key]: "" }));
+    }, []);
 
-            // Auto-generate username if creating new user
-            if (isNew && newName.trim()) {
-                const parts = newName.toLowerCase().trim().split(" ");
-                if (parts.length >= 2) {
-                    const generatedUsername = `${parts[0]}.${parts[parts.length - 1]}`;
-                    setUsername(generatedUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-                }
-            }
-        },
-        [isNew, nameError]
-    );
-
-    // Validate form
     const validateForm = (): boolean => {
-        let isValid = true;
+        const next: UserFormErrors = {};
 
-        if (!name.trim()) {
-            setNameError("El nombre es requerido");
-            isValid = false;
-        } else if (name.trim().length < 3) {
-            setNameError("El nombre debe tener al menos 3 caracteres");
-            isValid = false;
+        if (!user.firstName.trim()) {
+            next.firstName = "El nombre es requerido";
         }
 
-        if (!username.trim()) {
-            setUsernameError("El usuario es requerido");
-            isValid = false;
-        } else if (username.trim().length < 3) {
-            setUsernameError("El usuario debe tener al menos 3 caracteres");
-            isValid = false;
+        if (!user.lastName.trim()) {
+            next.lastName = "El apellido es requerido";
         }
 
-        const trimmedPhone = phone.trim();
+        if (!user.username.trim()) {
+            next.username = "El número de usuario es requerido";
+        } else if (user.username.trim().length > USERNAME_MAX_LENGTH) {
+            next.username = `Máximo ${USERNAME_MAX_LENGTH} caracteres`;
+        }
+
+        const trimmedPhone = user.cellphone.trim();
         if (!trimmedPhone) {
-            setPhoneError("El celular es requerido");
-            isValid = false;
+            next.cellphone = "El celular es requerido";
         } else if (trimmedPhone.length < 10) {
-            setPhoneError("Ingresa un número válido (mín. 10 dígitos)");
-            isValid = false;
+            next.cellphone = "Ingresa un número válido (mín. 10 dígitos)";
         }
 
-        if (!roleId) {
-            setRoleError("Selecciona un rol");
-            isValid = false;
+        if (!user.roleId) {
+            next.roleId = "Selecciona un rol";
         }
 
-        if (branchIds.length === 0) {
-            setBranchError("Selecciona al menos una sucursal");
-            isValid = false;
+        if (user.branchIds.length === 0) {
+            next.branchIds = "Selecciona al menos una sucursal";
         }
 
         if (isNew) {
-            if (!password.trim()) {
-                setPasswordError("La contraseña es requerida");
-                isValid = false;
-            } else if (password.trim().length < 10) {
-                setPasswordError("Mínimo 10 caracteres");
-                isValid = false;
+            if (!user.password.trim()) {
+                next.password = "La contraseña es requerida";
+            } else if (user.password.trim().length < 10) {
+                next.password = "Mínimo 10 caracteres";
             }
         }
 
-        return isValid;
+        setErrors(next);
+        return Object.keys(next).length === 0;
     };
 
-    // Handle save
-    const handleSave = async () => {
+    const handleConfirm = async () => {
         if (!validateForm()) return;
 
-        const { firstName, lastName } = nameToFirstLast(name);
-        setSaving(true);
-        try {
-            if (isNew) {
-                await createUser({
-                    firstName,
-                    lastName,
-                    username: username.trim(),
-                    phone: phone.trim(),
-                    password: password.trim(),
-                    roleId: roleId as number,
-                    branchIds,
-                });
-            } else {
-                await updateUser(userId!, {
-                    firstName,
-                    lastName,
-                    username: username.trim(),
-                    phone: phone.trim(),
-                    roleId: roleId as number,
-                    branchIds,
-                });
-            }
-            router.push("/catalogos/usuarios");
-        } catch (err) {
-            console.error("[UserForm] Error saving:", err);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // Handle send invitation (save then redirect)
-    const handleSendInvitation = async () => {
-        if (!validateForm()) return;
-
-        const { firstName, lastName } = nameToFirstLast(name);
         setSendingInvite(true);
-        try {
-            if (isNew) {
-                await createUser({
-                    firstName,
-                    lastName,
-                    username: username.trim(),
-                    phone: phone.trim(),
-                    password: password.trim(),
-                    roleId: roleId as number,
-                    branchIds,
-                });
-            } else {
-                await updateUser(userId!, {
-                    firstName,
-                    lastName,
-                    username: username.trim(),
-                    phone: phone.trim(),
-                    roleId: roleId as number,
-                    branchIds,
-                });
-            }
+        const result = isNew
+            ? await createUser({
+                firstName: user.firstName.trim(),
+                lastName: user.lastName.trim(),
+                username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
+                cellphone: user.cellphone.trim(),
+                password: user.password.trim(),
+                roleId: user.roleId as number,
+                branchIds: user.branchIds,
+            })
+            : await updateUser(userId!, {
+                firstName: user.firstName.trim(),
+                lastName: user.lastName.trim(),
+                username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
+                cellphone: user.cellphone.trim(),
+                roleId: user.roleId as number,
+                branchIds: user.branchIds,
+            });
+
+        if (!result.error) {
             router.push("/catalogos/usuarios");
-        } catch (err) {
-            console.error("[UserForm] Error sending invitation:", err);
-        } finally {
-            setSendingInvite(false);
         }
+
+        setSendingInvite(false);
     };
 
-    // Handle branch selection change
     const handleBranchChange = (selectedIds: (string | number)[]) => {
-        setBranchIds(selectedIds as number[]);
-        if (branchError && selectedIds.length > 0) {
-            setBranchError(undefined);
-        }
+        setUserField("branchIds", selectedIds as number[]);
     };
 
-    // Transform branches to selectable items
     const branchItems: SelectableItem[] = branches.map((branch) => ({
         id: branch.id,
         label: branch.name,
     }));
 
-    // Breadcrumbs
     const breadcrumbItems: BreadcrumbItem[] = [
         { label: "Usuarios", href: "/catalogos/usuarios" },
         { label: isNew ? "Nuevo" : "Editar" },
     ];
 
-    // Check if form has required data to enable invite button
     const canSendInvite =
-        name.trim().length >= 3 &&
-        username.trim().length >= 3 &&
-        phone.trim().length >= 10 &&
-        roleId !== "" &&
-        branchIds.length > 0 &&
-        (isNew ? password.trim().length >= 10 : true);
+        user.firstName.trim().length > 0 &&
+        user.lastName.trim().length > 0 &&
+        user.username.trim().length > 0 &&
+        user.username.trim().length <= USERNAME_MAX_LENGTH &&
+        user.cellphone.trim().length >= 10 &&
+        user.roleId !== "" &&
+        user.branchIds.length > 0 &&
+        (isNew ? user.password.trim().length >= 10 : true);
 
     if (loading) {
         return (
@@ -328,17 +245,17 @@ export default function UserFormPage() {
 
             <PageHeader>
                 <PageTitle>{isNew ? "Nuevo usuario" : "Editar usuario"}</PageTitle>
-                <SendInviteButton
+                <Button
                     variant="outlined"
-                    onClick={handleSendInvitation}
+                    onClick={handleConfirm}
                     disabled={!canSendInvite || sendingInvite || saving}
                 >
                     {sendingInvite ? (
                         <CircularProgress size={20} color="inherit" />
                     ) : (
-                        "Enviar invitación"
+                        (isNew) ? "Enviar invitación" : "Guardar cambios"
                     )}
-                </SendInviteButton>
+                </Button>
             </PageHeader>
 
             <FormCard>
@@ -347,43 +264,47 @@ export default function UserFormPage() {
                     <SectionTitle>Datos generales</SectionTitle>
                     <FieldsRow>
                         <FormTextField
-                            label="Nombre"
-                            placeholder="Ej. Juan Pérez García"
-                            value={name}
-                            onChange={handleNameChange}
-                            error={Boolean(nameError)}
-                            helperText={nameError}
+                            label="Nombre(s)"
+                            placeholder="Ej. Juan"
+                            value={user.firstName}
+                            onChange={(e) => setUserField("firstName", e.target.value)}
+                            error={Boolean(errors.firstName)}
+                            helperText={errors.firstName || undefined}
                             autoFocus
                         />
                         <FormTextField
-                            label="Usuario"
-                            placeholder="Ej. juan.perez"
-                            value={username}
-                            onChange={(e) => {
-                                setUsername(e.target.value);
-                                if (usernameError) setUsernameError(undefined);
-                            }}
-                            error={Boolean(usernameError)}
-                            helperText={usernameError}
+                            label="Apellido(s)"
+                            placeholder="Ej. Pérez García"
+                            value={user.lastName}
+                            onChange={(e) => setUserField("lastName", e.target.value)}
+                            error={Boolean(errors.lastName)}
+                            helperText={errors.lastName || undefined}
+                        />
+                        <FormTextField
+                            label="Número de empleado"
+                            placeholder="Máx. 6 caracteres"
+                            value={user.username}
+                            onChange={(e) =>
+                                setUserField("username", e.target.value.replace(/\D/g, "").slice(0, USERNAME_MAX_LENGTH))
+                            }
+                            error={Boolean(errors.username)}
+                            helperText={errors.username || undefined}
+                            inputProps={{ maxLength: USERNAME_MAX_LENGTH, inputMode: "numeric" }}
                         />
                         {isNew && (
                             <FormTextField
                                 label="Contraseña"
                                 placeholder="Mínimo 10 caracteres"
                                 type="password"
-                                value={password}
-                                onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    if (passwordError) setPasswordError(undefined);
-                                }}
-                                error={Boolean(passwordError)}
-                                helperText={passwordError}
+                                value={user.password}
+                                onChange={(e) => setUserField("password", e.target.value)}
+                                error={Boolean(errors.password)}
+                                helperText={errors.password || undefined}
                             />
                         )}
                     </FieldsRow>
                 </Section>
 
-                {/* Role and phone Section */}
                 <Section>
                     <SectionTitle>Rol y contacto</SectionTitle>
                     <FieldsRow>
@@ -391,30 +312,23 @@ export default function UserFormPage() {
                             label="Celular"
                             placeholder="Ej. 8341234567"
                             required
-                            value={phone}
-                            onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, "").slice(0, 15);
-                                setPhone(value);
-                                if (phoneError) setPhoneError(undefined);
-                            }}
-                            error={Boolean(phoneError)}
-                            helperText={phoneError}
-                            inputProps={{ inputMode: "tel", maxLength: 15 }}
+                            value={user.cellphone}
+                            onChange={(e) => setUserField("cellphone", e.target.value.replace(/\D/g, "").slice(0, 15))}
+                            error={Boolean(errors.cellphone)}
+                            helperText={errors.cellphone || undefined}
+                            inputProps={{ inputMode: "tel", maxLength: 10 }}
                         />
                         <FormSelect
                             label="Selecciona un rol"
                             placeholder="Selecciona un rol"
-                            value={roleId}
-                            onChange={(e) => {
-                                setRoleId(e.target.value as number);
-                                if (roleError) setRoleError(undefined);
-                            }}
+                            value={user.roleId}
+                            onChange={(e) => setUserField("roleId", e.target.value === "" ? "" : Number(e.target.value))}
                             options={roles.map((role) => ({
                                 value: role.id,
                                 label: role.name,
                             }))}
-                            error={Boolean(roleError)}
-                            helperText={roleError}
+                            error={Boolean(errors.roleId)}
+                            helperText={errors.roleId || undefined}
                         />
                     </FieldsRow>
                     <HelperTextLink>
@@ -429,11 +343,11 @@ export default function UserFormPage() {
                     <MultiSelectChips
                         label="Sucursal asignada"
                         items={branchItems}
-                        selectedIds={branchIds}
+                        selectedIds={user.branchIds}
                         onChange={handleBranchChange}
                         disabled={saving || sendingInvite}
-                        error={Boolean(branchError)}
-                        helperText={branchError}
+                        error={Boolean(errors.branchIds)}
+                        helperText={errors.branchIds || undefined}
                     />
                 </Section>
             </FormCard>

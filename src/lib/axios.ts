@@ -3,7 +3,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -20,6 +20,26 @@ api.interceptors.request.use(
 	},
 	(error) => Promise.reject(error)
 );
+
+type BackendBody<T> =
+	| { data: T; error?: never }
+	| { error: { message: string;[k: string]: unknown }; data?: never };
+
+function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
+	const url = config?.url ?? "";
+	return typeof url === "string" && url.includes("/auth/refresh");
+}
+
+let isRefreshing = false;
+const failedQueue: Array<{ resolve: (token: string) => void; reject: (err: AxiosError) => void }> = [];
+
+function processQueue(err: AxiosError | null, token: string | null) {
+	failedQueue.forEach((prom) => {
+		if (err) prom.reject(err);
+		else if (token) prom.resolve(token);
+	});
+	failedQueue.length = 0;
+}
 
 const DEFAULT_ERROR_MESSAGE = "Ha ocurrido un error. Intenta de nuevo.";
 
@@ -42,19 +62,80 @@ function getErrorMessage(error: AxiosError): string {
 
 api.interceptors.response.use(
 	(response) => {
-		const body = response.data as { success?: boolean; data?: unknown };
+		const body = response.data as BackendBody<unknown> & { success?: boolean; data?: unknown };
+		if (body?.error != null && typeof body.error === "object" && "message" in body.error) {
+			return response;
+		}
+
 		if (body?.success === true && body.data !== undefined) {
 			response.data = body.data;
 		}
+
 		return response;
 	},
-	(error: AxiosError) => {
-		if (error.response?.status === 401) {
-			useAuthStore.getState().logout();
-		} else {
+	async (error: AxiosError) => {
+		const originalRequest = error.config;
+
+		if (error.response?.status !== 401) {
 			useSnackbarStore.getState().showError(getErrorMessage(error));
+			return Promise.reject(error);
 		}
-		return Promise.reject(error);
+
+		if (!originalRequest) {
+			useAuthStore.getState().logout();
+			return Promise.reject(error);
+		}
+
+		if (isRefreshRequest(originalRequest) || (originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry) {
+			useAuthStore.getState().logout();
+			if (typeof window !== "undefined") {
+				window.location.href = "/login";
+			}
+			return Promise.reject(error);
+		}
+
+		if (isRefreshing) {
+			return new Promise<string>((resolve, reject) => {
+				failedQueue.push({
+					resolve: (token: string) => {
+						if (originalRequest.headers) {
+							originalRequest.headers.Authorization = `Bearer ${token}`;
+						}
+						resolve(token);
+					},
+					reject,
+				});
+			})
+				.then((token) => api.request({ ...originalRequest, headers: { ...originalRequest.headers, Authorization: `Bearer ${token}` } }))
+				.catch((e) => Promise.reject(e));
+		}
+
+		(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry = true;
+		isRefreshing = true;
+
+		try {
+			const { authService } = await import("@/services/auth.service");
+			const result = await authService.refresh();
+			if (result.error || !result.data?.accessToken) {
+				processQueue(error, null);
+				useAuthStore.getState().logout();
+				if (typeof window !== "undefined") {
+					window.location.href = "/login";
+				}
+				return Promise.reject(error);
+			}
+
+			const newToken = result.data.accessToken;
+			useAuthStore.getState().setToken(newToken);
+			processQueue(null, newToken);
+
+			if (originalRequest.headers) {
+				originalRequest.headers.Authorization = `Bearer ${newToken}`;
+			}
+			return api.request(originalRequest);
+		} finally {
+			isRefreshing = false;
+		}
 	}
 );
 
@@ -68,6 +149,11 @@ export interface ApiError {
 	errors?: Record<string, string[]>;
 }
 
+export interface ApiSuccessPayload {
+	success: true;
+	message?: string;
+}
+
 export interface PaginatedResponse<T> {
 	data: T[];
 	total: number;
@@ -76,19 +162,72 @@ export interface PaginatedResponse<T> {
 	totalPages: number;
 }
 
+export interface ApiResult<T> {
+	data: T | null;
+	error: ApiError | null;
+}
+
+function isBackendErrorBody(
+	value: unknown
+): value is { error: { message: string } } {
+	return (
+		value != null &&
+		typeof value === "object" &&
+		"error" in value &&
+		value.error != null &&
+		typeof (value as { error: unknown }).error === "object" &&
+		"message" in (value as { error: Record<string, unknown> }).error
+	);
+}
+
+function apiErrorFromAxios(error: AxiosError): ApiError {
+	const data = error.response?.data;
+	if (data != null && typeof data === "object" && "error" in data) {
+		const err = (data as { error: { message?: string } }).error;
+		if (err?.message) return { message: err.message };
+	}
+	if (data != null && typeof data === "object" && "message" in data) {
+		const msg = (data as { message: string }).message;
+		if (typeof msg === "string") return { message: msg };
+	}
+	return {
+		message: error.message || "Network or server error",
+	};
+}
+
 export async function request<T>(
 	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 	url: string,
-	data?: unknown,
+	payload?: unknown,
 	config?: AxiosRequestConfig
-): Promise<T> {
-	const response = await api.request<T>({
-		method,
-		url,
-		data,
-		...config,
-	});
-	return response.data;
+): Promise<ApiResult<T>> {
+	try {
+		const response = await api.request<BackendBody<T> | T>({
+			method,
+			url,
+			data: payload,
+			...config,
+		});
+		const body = response.data;
+
+		if (isBackendErrorBody(body)) {
+			return {
+				data: null,
+				error: { message: body.error.message },
+			};
+		}
+		
+		const data = (body as BackendBody<T>).data ?? (body as T);
+		return { data, error: null };
+	} catch (err) {
+		if (err instanceof AxiosError) {
+			return { data: null, error: apiErrorFromAxios(err) };
+		}
+		return {
+			data: null,
+			error: { message: err instanceof Error ? err.message : "Unknown error" },
+		};
+	}
 }
 
 export const get = <T>(url: string, config?: AxiosRequestConfig) =>
@@ -105,3 +244,15 @@ export const patch = <T>(url: string, data?: unknown, config?: AxiosRequestConfi
 
 export const del = <T>(url: string, config?: AxiosRequestConfig) =>
 	request<T>("DELETE", url, undefined, config);
+
+export function unwrapOrThrow<T>(result: ApiResult<T>): T {
+	if (result.error) {
+		const e = new Error(result.error.message) as Error & { apiError?: ApiError };
+		e.apiError = result.error;
+		throw e;
+	}
+	if (result.data === null) {
+		throw new Error("Unexpected null data");
+	}
+	return result.data;
+}

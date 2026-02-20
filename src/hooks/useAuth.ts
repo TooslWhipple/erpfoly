@@ -14,29 +14,27 @@ export function useAuth() {
 		setError(null);
 		setLoading(true);
 
-		try {
-			const response = await authService.login(credentials);
-			setAuth(response.token, response.user);
-			router.push("/solicitudes-credito");
-		} catch (err: unknown) {
-			const message = err instanceof Error ? err.message : "Error al iniciar sesión";
-			setError(message);
-			throw err;
-		} finally {
+		const result = await authService.login(credentials);
+		if (result.error) {
+			setError(result.error.message);
 			setIsLoading(false);
 			setLoading(false);
+			return;
 		}
+		// Step 1 success: OTP sent → go to OTP screen (pass identifier for resend)
+		const query: Record<string, string> = {};
+		if (credentials.username?.trim()) query.username = credentials.username.trim();
+		if (credentials.cellphone?.trim()) query.cellphone = credentials.cellphone.trim();
+		const search = new URLSearchParams(query).toString();
+		router.push(search ? `/login/validate-otp?${search}` : "/login/validate-otp");
+		setIsLoading(false);
+		setLoading(false);
 	};
 
 	const logout = async () => {
-		try {
-			await authService.logout();
-		} catch {
-			// Ignorar error de logout en API
-		} finally {
-			clearAuth();
-			router.push("/login");
-		}
+		await authService.logout();
+		clearAuth();
+		router.push("/login");
 	};
 
 	return {
@@ -45,6 +43,7 @@ export function useAuth() {
 		isAuthenticated,
 		isLoading,
 		error,
+		clearError: () => setError(null),
 		login,
 		logout,
 	};

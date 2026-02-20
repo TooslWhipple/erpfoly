@@ -1,4 +1,4 @@
-import { get, post, patch, del } from "@/lib/axios";
+import { get, post, patch, del, type ApiResult } from "@/lib/axios";
 
 // ============================================================================
 // TYPES
@@ -6,18 +6,26 @@ import { get, post, patch, del } from "@/lib/axios";
 
 export interface UserListItem {
     id: number;
-    name: string;
-    email: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    cellphone: string;
     roleId: number;
     roleName: string;
+    breanches: number[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface UserDetail {
     id: number;
-    name: string;
+    firstName: string;
+    lastName: string;
     username: string;
-    phone: string;
+    cellphone: string;
     roleId: number;
+    roleName: string;
+    branches: BranchItem[];
     branchIds: number[];
 }
 
@@ -38,7 +46,7 @@ export interface GetUsersParams {
 }
 
 export interface GetUsersResponse {
-    data: UserListItem[];
+    rows: UserListItem[];
     total: number;
     page: number;
     limit: number;
@@ -49,7 +57,7 @@ export interface CreateUserPayload {
     firstName: string;
     lastName: string;
     username: string;
-    phone?: string;
+    cellphone?: string;
     email?: string;
     password: string;
     roleId: number;
@@ -60,7 +68,7 @@ export interface UpdateUserPayload {
     firstName?: string;
     lastName?: string;
     username?: string;
-    phone?: string;
+    cellphone?: string;
     email?: string;
     password?: string;
     roleId?: number;
@@ -76,7 +84,7 @@ const CATALOG = "/catalog";
 
 export async function getUsers(
     params: GetUsersParams = {}
-): Promise<GetUsersResponse> {
+): Promise<ApiResult<GetUsersResponse>> {
     const searchParams = new URLSearchParams();
     if (params.page != null) searchParams.set("page", String(params.page));
     if (params.limit != null) searchParams.set("limit", String(params.limit));
@@ -86,50 +94,50 @@ export async function getUsers(
     return get<GetUsersResponse>(url);
 }
 
-export async function getUser(id: number): Promise<UserDetail> {
+export async function getUser(id: number): Promise<ApiResult<UserDetail>> {
     return get<UserDetail>(`${BASE}/${id}`);
 }
 
-export async function getRoles(): Promise<RoleItem[]> {
+export async function getRoles(): Promise<ApiResult<RoleItem[]>> {
     return get<RoleItem[]>(`${CATALOG}/roles`);
 }
 
-export async function getBranches(): Promise<BranchItem[]> {
+export async function getBranches(): Promise<ApiResult<BranchItem[]>> {
     return get<BranchItem[]>(`${CATALOG}/branches`);
 }
 
 export async function createUser(
     payload: CreateUserPayload
-): Promise<UserListItem> {
+): Promise<ApiResult<UserListItem | { success: true; message?: string }>> {
     const body = {
         firstName: payload.firstName,
         lastName: payload.lastName,
         username: payload.username,
-        phone: payload.phone || undefined,
+        cellphone: payload.cellphone || undefined,
         email: payload.email || undefined,
         password: payload.password,
         roleId: payload.roleId,
         branchIds: payload.branchIds,
     };
-    return post<UserListItem>(BASE, body);
+    return post<UserListItem | { success: true; message?: string }>(BASE, body);
 }
 
 export async function updateUser(
     id: number,
     payload: UpdateUserPayload
-): Promise<UserDetail> {
+): Promise<ApiResult<UserDetail | { success: true; message?: string }>> {
     const body: Record<string, unknown> = {};
     if (payload.firstName !== undefined) body.firstName = payload.firstName;
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
     if (payload.username !== undefined) body.username = payload.username;
-    if (payload.phone !== undefined) body.phone = payload.phone;
+    if (payload.cellphone !== undefined) body.cellphone = payload.cellphone;
     if (payload.email !== undefined) body.email = payload.email;
     if (payload.password !== undefined) body.password = payload.password;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
-    return patch<UserDetail>(`${BASE}/${id}`, body);
+    return patch<UserDetail | { success: true; message?: string }>(`${BASE}/${id}`, body);
 }
 
-export async function deleteUser(id: number): Promise<{ id: number; message: string }> {
+export async function deleteUser(id: number): Promise<ApiResult<{ id: number; message: string }>> {
     return del<{ id: number; message: string }>(`${BASE}/${id}`);
 }

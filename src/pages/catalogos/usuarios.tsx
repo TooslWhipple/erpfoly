@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { MainLayout, Title, TableCrud, ChipStyleConfig } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import {
     HeaderContainer,
@@ -13,20 +13,16 @@ import {
 } from "@/styles/catalogos/catalogos.styledComponents";
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 type User = UserListItem;
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
+    "ACTIVE": { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
+    "INACTIVE": { label: "Inactivo", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+};
 
 export default function Usuarios() {
     const router = useRouter();
 
-    // State management
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -37,19 +33,21 @@ export default function Usuarios() {
     // Fetch users
     const fetchUsers = useCallback(async () => {
         setLoading(true);
-        try {
-            const response = await getUsersApi({
-                page: page + 1,
-                limit: rowsPerPage,
-                search: searchValue || undefined,
-            });
-            setUsers(response.data);
-            setTotalRows(response.total);
-        } catch (err) {
-            console.error("[Usuarios] Error fetching:", err);
-        } finally {
-            setLoading(false);
+        const result = await getUsersApi({
+            page: page + 1,
+            limit: rowsPerPage,
+            search: searchValue || undefined,
+        });
+
+        if (result.error) {
+            setUsers([]);
+            setTotalRows(0);
+        } else if (result.data) {
+            setUsers(result.data.rows);
+            setTotalRows(result.data.total);
         }
+
+        setLoading(false);
     }, [page, rowsPerPage, searchValue]);
 
     useEffect(() => {
@@ -93,23 +91,49 @@ export default function Usuarios() {
             idPadding: 4,
         },
         {
-            id: "name",
+            id: "fullName",
             label: "Nombre",
-            size: "xl",
-        },
-        {
-            id: "email",
-            label: "Correo electrónico",
             size: "xl",
         },
         {
             id: "roleName",
             label: "Rol",
-            size: "lg",
+            size: "sm",
         },
+        {
+            id: "cellphone",
+            label: "Celular",
+            size: "sm",
+        },
+        {
+            id: "branches",
+            label: "Sucursales",
+            type: "chipGroup",
+            chipGroupKey: "name",
+            chipGroupMaxVisible: 2,
+            size: "xl"
+        },
+        {
+            id: "status",
+            label: "Estatus",
+            type: "chip",
+            size: "sm",
+            chipConfig: ESTATUS_CHIP_CONFIG,
+        },
+        {
+            id: "createdAt",
+            label: "Fecha registro",
+            type: "date",
+            size: "sm",
+        },
+        {
+            id: "updatedAt",
+            label: "Últ. actualización",
+            type: "date",
+            size: "sm",
+        }
     ];
 
-    // Row actions (for menu)
     const actions: RowAction<User>[] = [
         {
             id: "edit",

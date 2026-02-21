@@ -1,4 +1,4 @@
-import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
+import { del, get, patch, post, unwrapOrThrow } from "@/lib/axios";
 import type { PaginatedResponse } from "@/lib/axios";
 
 // ============================================================================
@@ -80,5 +80,16 @@ export async function updateDepartment(
 
 export async function getDepartmentById(id: number): Promise<Department> {
   const result = await get<Department>(`${BASE}/${id}`);
+  return unwrapOrThrow(result);
+}
+
+export interface DeleteDepartmentResponse {
+  message: string;
+}
+
+export async function deleteDepartment(
+  id: number
+): Promise<DeleteDepartmentResponse> {
+  const result = await del<DeleteDepartmentResponse>(`${BASE}/${id}`);
   return unwrapOrThrow(result);
 }

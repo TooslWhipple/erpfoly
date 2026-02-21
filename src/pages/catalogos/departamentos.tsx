@@ -18,29 +18,23 @@ import {
   getDepartments,
   createDepartment,
   updateDepartment,
+  deleteDepartment,
 } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 // Re-export types for consumers (e.g. detail page)
 export type { Department } from "@/services/departments.service";
 export type { ProductGroup } from "@/services/departments.service";
 
 // ============================================================================
-// MOCK HELPERS (delete not yet in API - to be replaced)
+// HELPERS (affected items count for promotion info - can be replaced by API later)
 // ============================================================================
 
-async function getAffectedItemsCount(_departmentId?: number): Promise<number> {
+async function getAffectedItemsCount(): Promise<number> {
   await new Promise((resolve) => setTimeout(resolve, 100));
   return Math.floor(Math.random() * 50) + 10;
 }
-
-async function deleteDepartment(id: number): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  console.log("[API] Deleted department (mock):", id);
-  return { success: true };
-}
-
-export { deleteDepartment };
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -50,6 +44,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Departamentos() {
   const router = useRouter();
+
+  const showSnackbar = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
 
   const {
     data: departments,
@@ -184,7 +181,7 @@ export default function Departamentos() {
   // Load affected items count when promotion is enabled
   useEffect(() => {
     if (hasPromotion && modalOpen) {
-      getAffectedItemsCount(editingDepartment?.id).then(setAffectedItemsCount);
+      getAffectedItemsCount().then(setAffectedItemsCount);
     } else {
       setAffectedItemsCount(null);
     }
@@ -266,8 +263,12 @@ export default function Departamentos() {
     try {
       await deleteDepartment(department.id);
       refetch();
+      showSnackbar("Departamento desactivado correctamente.");
     } catch (err) {
       console.error("[Departamentos] Error deleting:", err);
+      showError(
+        err instanceof Error ? err.message : "Error al desactivar el departamento."
+      );
     }
   };
 

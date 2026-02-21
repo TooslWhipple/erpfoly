@@ -1,10 +1,19 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResult } from "@/lib/axios";
 
 export interface PaginatedListParams {
     page: number;
     limit: number;
     search?: string;
+}
+
+export interface PaginatedListPayload<T> {
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 export interface PaginatedListResult<T> {
@@ -25,22 +34,23 @@ export interface PaginatedListResult<T> {
 
 export interface UsePaginatedListOptions<T> {
     queryKey: string[];
-    queryFn: (params: PaginatedListParams) => Promise<{
-        data: T[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
+    /** API function that returns ApiResult; the hook unwraps and throws on error for React Query. */
+    queryFn: (params: PaginatedListParams) => Promise<ApiResult<PaginatedListPayload<T>>>;
     initialPage?: number;
     initialRowsPerPage?: number;
     initialSearch?: string;
 }
 
+function unwrapApiResult<T>(result: ApiResult<T>): T {
+    if (result.error) throw new Error(result.error.message);
+    if (result.data === null) throw new Error("No data");
+    return result.data;
+}
+
 /**
- * Generic hook for paginated list data. Manages page, rowsPerPage and search state,
- * and runs a TanStack Query with params derived from that state.
- * API is expected to use 1-based page; this hook converts from 0-based UI state.
+ * Paginated list hook. Manages page, rowsPerPage and search state, and runs a TanStack Query.
+ * Accepts a service that returns ApiResult<PaginatedResponse> and unwraps internally.
+ * API is expected to use 1-based page; the hook uses 0-based UI state.
  */
 export function usePaginatedList<T>({
     queryKey,
@@ -57,12 +67,14 @@ export function usePaginatedList<T>({
 
     const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: [...queryKey, apiPage, rowsPerPage, search],
-        queryFn: () =>
-            queryFn({
+        queryFn: async () => {
+            const result = await queryFn({
                 page: apiPage,
                 limit: rowsPerPage,
                 search: search || undefined,
-            }),
+            });
+            return unwrapApiResult(result);
+        },
     });
 
     const setRowsPerPageAndResetPage = useCallback((newRowsPerPage: number) => {

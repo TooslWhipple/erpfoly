@@ -183,7 +183,7 @@ export default function Departamentos() {
     if (hasPromotion && modalOpen) {
       getAffectedItemsCount().then(setAffectedItemsCount);
     } else {
-      setAffectedItemsCount(null);
+      queueMicrotask(() => setAffectedItemsCount(null));
     }
   }, [hasPromotion, modalOpen, editingDepartment]);
 
@@ -210,25 +210,32 @@ export default function Departamentos() {
 
   const handleSaveDepartment = async (data: Record<string, unknown>) => {
     setSaving(true);
-    try {
-      if (editingDepartment) {
-        await updateDepartment(editingDepartment.id, {
-          name: data.name as string,
-          margin: Number(data.margin),
-        });
-      } else {
-        await createDepartment({
-          name: data.name as string,
-          margin: Number(data.margin),
-        });
+    if (editingDepartment) {
+      const result = await updateDepartment(editingDepartment.id, {
+        name: data.name as string,
+        margin: Number(data.margin),
+      });
+      if (result.error) {
+        setSaving(false);
+        console.error("[Departamentos] Error saving:", result.error.message);
+        showError(result.error.message);
+        return;
       }
-      handleCloseModal();
-      refetch();
-    } catch (err) {
-      console.error("[Departamentos] Error saving:", err);
-    } finally {
-      setSaving(false);
+    } else {
+      const result = await createDepartment({
+        name: data.name as string,
+        margin: Number(data.margin),
+      });
+      if (result.error) {
+        setSaving(false);
+        console.error("[Departamentos] Error saving:", result.error.message);
+        showError(result.error.message);
+        return;
+      }
     }
+    setSaving(false);
+    handleCloseModal();
+    refetch();
   };
 
   // Handle form value changes to update promotion toggle and preserve values
@@ -260,16 +267,14 @@ export default function Departamentos() {
     );
     if (!confirmed) return;
 
-    try {
-      await deleteDepartment(department.id);
-      refetch();
-      showSnackbar("Departamento desactivado correctamente.");
-    } catch (err) {
-      console.error("[Departamentos] Error deleting:", err);
-      showError(
-        err instanceof Error ? err.message : "Error al desactivar el departamento."
-      );
+    const result = await deleteDepartment(department.id);
+    if (result.error) {
+      console.error("[Departamentos] Error deleting:", result.error.message);
+      showError(result.error.message);
+      return;
     }
+    refetch();
+    showSnackbar("Departamento desactivado correctamente.");
   };
 
   const handlePageChange = (newPage: number) => {

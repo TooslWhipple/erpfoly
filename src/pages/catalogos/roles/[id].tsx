@@ -53,22 +53,31 @@ export default function RoleFormPage() {
   useEffect(() => {
     if (isNew) {
       getPermissionsTemplate()
-        .then((modules) => {
-          setApiModules(modules);
-          setTableModules(apiModulesToTableModules(modules));
+        .then((result) => {
+          if (result.error) {
+            console.error("[RoleForm] Error loading permissions template:", result.error.message);
+            return;
+          }
+          if (result.data) {
+            setApiModules(result.data);
+            setTableModules(apiModulesToTableModules(result.data));
+          }
         })
-        .catch((err) =>
-          console.error("[RoleForm] Error loading permissions template:", err),
-        )
         .finally(() => setLoading(false));
       return;
     }
     if (!roleId || Number.isNaN(roleId)) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     getRoleDetail(roleId)
-      .then((res) => {
+      .then((result) => {
+        if (result.error) {
+          console.error("[RoleForm] Error loading role:", result.error.message);
+          return;
+        }
+        if (!result.data) return;
+        const res = result.data;
         const roleName = res.role.name;
         const roleDescription = res.role.description ?? "";
         const modules = apiModulesToTableModules(res.modules);
@@ -82,7 +91,6 @@ export default function RoleFormPage() {
           tableModules: modules,
         };
       })
-      .catch((err) => console.error("[RoleForm] Error loading role:", err))
       .finally(() => setLoading(false));
   }, [isNew, roleId]);
 
@@ -144,27 +152,43 @@ export default function RoleFormPage() {
     }
 
     setSaving(true);
-    try {
-      if (isNew) {
-        const created = await createRole({
-          name: trimmedName,
-          description: trimmedDescription || undefined,
-        });
-        const payload = tableModulesToPayload(apiModules, tableModules);
-        await updateRolePermissions(created.id, { permissions: payload });
-        router.push("/catalogos/roles");
-      } else if (roleId) {
-        await updateRole(roleId, {
-          name: trimmedName,
-          description: trimmedDescription || undefined,
-        });
-        const payload = tableModulesToPayload(apiModules, tableModules);
-        await updateRolePermissions(roleId, { permissions: payload });
-        router.push("/catalogos/roles");
+    if (isNew) {
+      const created = await createRole({
+        name: trimmedName,
+        description: trimmedDescription || undefined,
+      });
+      if (created.error || !created.data) {
+        setSaving(false);
+        console.error("[RoleForm] Error saving:", created.error?.message);
+        return;
       }
-    } catch (err) {
-      console.error("[RoleForm] Error saving:", err);
-    } finally {
+      const payload = tableModulesToPayload(apiModules, tableModules);
+      const permResult = await updateRolePermissions(created.data.id, { permissions: payload });
+      setSaving(false);
+      if (permResult.error) {
+        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        return;
+      }
+      router.push("/catalogos/roles");
+    } else if (roleId) {
+      const updateResult = await updateRole(roleId, {
+        name: trimmedName,
+        description: trimmedDescription || undefined,
+      });
+      if (updateResult.error) {
+        setSaving(false);
+        console.error("[RoleForm] Error saving:", updateResult.error.message);
+        return;
+      }
+      const payload = tableModulesToPayload(apiModules, tableModules);
+      const permResult = await updateRolePermissions(roleId, { permissions: payload });
+      setSaving(false);
+      if (permResult.error) {
+        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        return;
+      }
+      router.push("/catalogos/roles");
+    } else {
       setSaving(false);
     }
   };

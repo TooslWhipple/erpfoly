@@ -216,9 +216,8 @@ export async function request<T>(
 				error: { message: body.error.message },
 			};
 		}
-		
-		const data = (body as BackendBody<T>).data ?? (body as T);
-		return { data, error: null };
+
+		return { data: body as T, error: null };
 	} catch (err) {
 		if (err instanceof AxiosError) {
 			return { data: null, error: apiErrorFromAxios(err) };

@@ -12,262 +12,37 @@ import {
   CreateButton,
   SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import {
+  getDepartments,
+  createDepartment,
+  updateDepartment,
+} from "@/services/departments.service";
+import type { Department } from "@/services/departments.service";
+
+// Re-export types for consumers (e.g. detail page)
+export type { Department } from "@/services/departments.service";
+export type { ProductGroup } from "@/services/departments.service";
 
 // ============================================================================
-// TYPES & INTERFACES
+// MOCK HELPERS (delete not yet in API - to be replaced)
 // ============================================================================
 
-export interface ProductGroup {
-  id: string;
-  name: string;
-  promotion?: {
-    percentage: number;
-    startDate: string;
-    endDate: string;
-  };
-}
-
-export interface Department {
-  id: number;
-  name: string;
-  margin: number;
-  groups: ProductGroup[];
-  promotion?: {
-    percentage: number;
-    startDate: string;
-    endDate: string;
-  };
-}
-
-interface GetDepartmentsParams {
-  page: number;
-  limit: number;
-  search?: string;
-}
-
-interface GetDepartmentsResponse {
-  data: Department[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ============================================================================
-// MOCK DATA - Realistic e-commerce departments
-// ============================================================================
-
-const DUMMY_DEPARTMENTS: Department[] = [
-  {
-    id: 1,
-    name: "Línea Blanca",
-    margin: 32,
-    groups: [
-      { id: "g1", name: "Estufa" },
-      { id: "g2", name: "Horno" },
-      { id: "g3", name: "Parrillas" },
-      { id: "g4", name: "Campana Cocina" },
-      { id: "g5", name: "Microondas" },
-      { id: "g6", name: "Lavadora" },
-      { id: "g7", name: "Secadora" },
-      { id: "g8", name: "Refrigerador" },
-      { id: "g9", name: "Lavavajillas" },
-      { id: "g10", name: "Congelador" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Colchón",
-    margin: 29,
-    groups: [
-      { id: "g11", name: "Individual" },
-      { id: "g12", name: "Matrimonial" },
-      { id: "g13", name: "Queen" },
-      { id: "g14", name: "King" },
-      { id: "g15", name: "Almohadas y protectores" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Muebles casa",
-    margin: 29,
-    groups: [
-      { id: "g16", name: "Individual" },
-      { id: "g17", name: "Matrimonial" },
-      { id: "g18", name: "Queen" },
-      { id: "g19", name: "King" },
-      { id: "g20", name: "Almohadas y protectores" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Electrodomésticos",
-    margin: 29,
-    groups: [
-      { id: "g21", name: "Sartenes" },
-      { id: "g22", name: "Hidrolavadora" },
-      { id: "g23", name: "Licuadoras" },
-      { id: "g24", name: "Freidoras de aire" },
-      { id: "g25", name: "Microondas" },
-      { id: "g26", name: "Batidoras" },
-      { id: "g27", name: "Cafeteras" },
-      { id: "g28", name: "Tostadoras" },
-      { id: "g29", name: "Planchas" },
-      { id: "g30", name: "Aspiradoras" },
-    ],
-  },
-  {
-    id: 5,
-    name: "Aire Acondicionado",
-    margin: 29,
-    groups: [
-      { id: "g31", name: "Minisplit" },
-      { id: "g32", name: "Inverter" },
-      { id: "g33", name: "Ventilador de techo" },
-      { id: "g34", name: "Ventilador" },
-    ],
-  },
-  {
-    id: 6,
-    name: "Electrónica",
-    margin: 29,
-    groups: [
-      { id: "g35", name: "Pantalla - TV" },
-      { id: "g36", name: "Audio" },
-      { id: "g37", name: "Laptop" },
-      { id: "g38", name: "Tabletas" },
-      { id: "g39", name: "Celular" },
-      { id: "g40", name: "Celular inteligente" },
-      { id: "g41", name: "Consolas" },
-      { id: "g42", name: "Accesorios" },
-    ],
-  },
-  {
-    id: 7,
-    name: "Bicicletas",
-    margin: 29,
-    groups: [
-      { id: "g43", name: "Bicicleta adulto" },
-      { id: "g44", name: "Bicicleta niños" },
-      { id: "g45", name: "Aparatos de ejercicio" },
-    ],
-  },
-  {
-    id: 8,
-    name: "Herramientas",
-    margin: 25,
-    groups: [
-      { id: "g46", name: "Taladros" },
-      { id: "g47", name: "Sierras" },
-      { id: "g48", name: "Lijadoras" },
-      { id: "g49", name: "Rotomartillos" },
-      { id: "g50", name: "Compresores" },
-    ],
-  },
-  {
-    id: 9,
-    name: "Jardín",
-    margin: 28,
-    groups: [
-      { id: "g51", name: "Podadoras" },
-      { id: "g52", name: "Desbrozadoras" },
-      { id: "g53", name: "Mangueras" },
-      { id: "g54", name: "Macetas" },
-    ],
-  },
-  {
-    id: 10,
-    name: "Motos",
-    margin: 22,
-    groups: [
-      { id: "g55", name: "Motocicletas" },
-      { id: "g56", name: "Motonetas" },
-      { id: "g57", name: "Cuatrimotos" },
-      { id: "g58", name: "Accesorios moto" },
-    ],
-  },
-];
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getDepartments(
-  params: GetDepartmentsParams
-): Promise<GetDepartmentsResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  let filteredData = [...DUMMY_DEPARTMENTS];
-
-  // Filter by search
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter(
-      (d) =>
-        d.name.toLowerCase().includes(searchLower) ||
-        d.groups.some((g) => g.name.toLowerCase().includes(searchLower))
-    );
-  }
-
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
-
-  return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
-  };
-}
-
-async function createDepartment(
-  data: Omit<Department, "id">
-): Promise<Department> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newDepartment: Department = {
-    id: Date.now(),
-    ...data,
-  };
-  console.log("[API] Created department:", newDepartment);
-  return newDepartment;
-}
-
-async function updateDepartment(
-  id: number,
-  data: Omit<Department, "id">
-): Promise<Department> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const updatedDepartment: Department = {
-    id,
-    ...data,
-  };
-  console.log("[API] Updated department:", updatedDepartment);
-  return updatedDepartment;
-}
-
-// Mock function to get affected items count
-async function getAffectedItemsCount(departmentId?: number): Promise<number> {
+async function getAffectedItemsCount(_departmentId?: number): Promise<number> {
   await new Promise((resolve) => setTimeout(resolve, 100));
-  // Simulate different counts based on department
-  if (departmentId === 1) return 43;
-  if (departmentId === 2) return 28;
   return Math.floor(Math.random() * 50) + 10;
 }
 
 async function deleteDepartment(id: number): Promise<{ success: boolean }> {
   await new Promise((resolve) => setTimeout(resolve, 300));
-  console.log("[API] Deleted department:", id);
+  console.log("[API] Deleted department (mock):", id);
   return { success: true };
 }
 
-export async function getDepartmentById(id: number): Promise<Department | null> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  return DUMMY_DEPARTMENTS.find((d) => d.id === id) ?? null;
-}
+export { deleteDepartment };
 
-export { deleteDepartment, updateDepartment, createDepartment };
-export type { GetDepartmentsParams, GetDepartmentsResponse };
+const SEARCH_DEBOUNCE_MS = 300;
 
 // ============================================================================
 // MAIN COMPONENT
@@ -276,13 +51,33 @@ export type { GetDepartmentsParams, GetDepartmentsResponse };
 export default function Departamentos() {
   const router = useRouter();
 
-  // State management
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const {
+    data: departments,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+    refetch,
+  } = usePaginatedList<Department>({
+    queryKey: ["departments"],
+    queryFn: getDepartments,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -291,32 +86,6 @@ export default function Departamentos() {
   const [hasPromotion, setHasPromotion] = useState(false);
   const [affectedItemsCount, setAffectedItemsCount] = useState<number | null>(null);
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
-
-  // Fetch departments
-  const fetchDepartments = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getDepartments({
-        page,
-        limit: rowsPerPage,
-        search: searchValue,
-      });
-      setDepartments(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error("[Departamentos] Error fetching:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, searchValue]);
-
-  useEffect(() => {
-    fetchDepartments();
-  }, [fetchDepartments]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [searchValue]);
 
   // Calculate next available ID for new departments
   const getNextId = useCallback(() => {
@@ -423,7 +192,7 @@ export default function Departamentos() {
 
   // Event handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(event.target.value);
+    setSearchInput(event.target.value);
   };
 
   const handleOpenCreateModal = () => {
@@ -445,27 +214,19 @@ export default function Departamentos() {
   const handleSaveDepartment = async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
-      const departmentData: Omit<Department, "id"> = {
-        name: data.name as string,
-        margin: Number(data.margin),
-        groups: editingDepartment?.groups || [],
-      };
-
-      if (data.hasPromotion && data.promotionPercentage && data.promotionStartDate && data.promotionEndDate) {
-        departmentData.promotion = {
-          percentage: Number(data.promotionPercentage),
-          startDate: data.promotionStartDate as string,
-          endDate: data.promotionEndDate as string,
-        };
-      }
-
       if (editingDepartment) {
-        await updateDepartment(editingDepartment.id, departmentData);
+        await updateDepartment(editingDepartment.id, {
+          name: data.name as string,
+          margin: Number(data.margin),
+        });
       } else {
-        await createDepartment(departmentData);
+        await createDepartment({
+          name: data.name as string,
+          margin: Number(data.margin),
+        });
       }
       handleCloseModal();
-      fetchDepartments();
+      refetch();
     } catch (err) {
       console.error("[Departamentos] Error saving:", err);
     } finally {
@@ -490,7 +251,10 @@ export default function Departamentos() {
   };
 
   const handleEditDepartment = (department: Department) => {
-    router.push(`/catalogos/departamentos/${department.id}`);
+    setEditingDepartment(department);
+    setHasPromotion(Boolean(department.promotion));
+    setFormValues({});
+    setModalOpen(true);
   };
 
   const handleDeleteDepartment = async (department: Department) => {
@@ -501,7 +265,7 @@ export default function Departamentos() {
 
     try {
       await deleteDepartment(department.id);
-      fetchDepartments();
+      refetch();
     } catch (err) {
       console.error("[Departamentos] Error deleting:", err);
     }
@@ -578,7 +342,7 @@ export default function Departamentos() {
           <SearchInput
             size="small"
             placeholder="Buscar"
-            value={searchValue}
+            value={searchInput}
             onChange={handleSearchChange}
             InputProps={{
               startAdornment: (

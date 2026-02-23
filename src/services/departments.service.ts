@@ -1,5 +1,5 @@
-import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
-import type { PaginatedResponse } from "@/lib/axios";
+import { del, get, patch, post } from "@/lib/axios";
+import type { ApiResult, PaginatedResponse } from "@/lib/axios";
 
 // ============================================================================
 // TYPES
@@ -50,7 +50,7 @@ const BASE = "/departments";
 
 export async function getDepartments(
   params: GetDepartmentsParams
-): Promise<GetDepartmentsResponse> {
+): Promise<ApiResult<GetDepartmentsResponse>> {
   const searchParams = new URLSearchParams();
   searchParams.set("page", String(params.page));
   searchParams.set("limit", String(params.limit));
@@ -59,26 +59,32 @@ export async function getDepartments(
   }
   const query = searchParams.toString();
   const url = query ? `${BASE}?${query}` : BASE;
-  const result = await get<GetDepartmentsResponse>(url);
-  return unwrapOrThrow(result);
+  return get<GetDepartmentsResponse>(url);
 }
 
 export async function createDepartment(
   payload: CreateDepartmentPayload
-): Promise<Department> {
-  const result = await post<Department>(BASE, payload);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<Department>> {
+  return post<Department>(BASE, payload);
 }
 
 export async function updateDepartment(
   id: number,
   payload: UpdateDepartmentPayload
-): Promise<Department> {
-  const result = await patch<Department>(`${BASE}/${id}`, payload);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<Department>> {
+  return patch<Department>(`${BASE}/${id}`, payload);
 }
 
-export async function getDepartmentById(id: number): Promise<Department> {
-  const result = await get<Department>(`${BASE}/${id}`);
-  return unwrapOrThrow(result);
+export async function getDepartmentById(id: number): Promise<ApiResult<Department>> {
+  return get<Department>(`${BASE}/${id}`);
+}
+
+export interface DeleteDepartmentResponse {
+  message: string;
+}
+
+export async function deleteDepartment(
+  id: number
+): Promise<ApiResult<DeleteDepartmentResponse>> {
+  return del<DeleteDepartmentResponse>(`${BASE}/${id}`);
 }

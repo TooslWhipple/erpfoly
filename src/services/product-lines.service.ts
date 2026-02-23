@@ -1,5 +1,5 @@
-import { get, unwrapOrThrow } from "@/lib/axios";
-import type { PaginatedResponse } from "@/lib/axios";
+import { del, get, patch, post } from "@/lib/axios";
+import type { ApiResult, PaginatedResponse } from "@/lib/axios";
 
 // ============================================================================
 // TYPES
@@ -20,6 +20,21 @@ export interface GetProductLinesParams {
 
 export type GetProductLinesResponse = PaginatedResponse<ProductLineItem>;
 
+export interface CreateProductLinePayload {
+  departmentId: number;
+  name: string;
+  code: string;
+}
+
+export interface UpdateProductLinePayload {
+  name?: string;
+  code?: string;
+}
+
+export interface DeleteProductLineResponse {
+  message: string;
+}
+
 // ============================================================================
 // API
 // ============================================================================
@@ -28,7 +43,7 @@ const BASE = "/product-lines";
 
 export async function getProductLines(
   params: GetProductLinesParams
-): Promise<GetProductLinesResponse> {
+): Promise<ApiResult<GetProductLinesResponse>> {
   const searchParams = new URLSearchParams();
   searchParams.set("departmentId", String(params.departmentId));
   if (params.page != null) searchParams.set("page", String(params.page));
@@ -38,6 +53,24 @@ export async function getProductLines(
   }
   const query = searchParams.toString();
   const url = `${BASE}?${query}`;
-  const result = await get<GetProductLinesResponse>(url);
-  return unwrapOrThrow(result);
+  return get<GetProductLinesResponse>(url);
+}
+
+export async function createProductLine(
+  payload: CreateProductLinePayload
+): Promise<ApiResult<ProductLineItem>> {
+  return post<ProductLineItem>(BASE, payload);
+}
+
+export async function updateProductLine(
+  id: number,
+  payload: UpdateProductLinePayload
+): Promise<ApiResult<ProductLineItem>> {
+  return patch<ProductLineItem>(`${BASE}/${id}`, payload);
+}
+
+export async function deleteProductLine(
+  id: number
+): Promise<ApiResult<DeleteProductLineResponse>> {
+  return del<DeleteProductLineResponse>(`${BASE}/${id}`);
 }

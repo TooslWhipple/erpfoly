@@ -42,4 +42,6 @@ export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";
+export { CreditLimitBar } from "./CreditLimitBar";
+export type { CreditLimitBarProps } from "./CreditLimitBar";
 

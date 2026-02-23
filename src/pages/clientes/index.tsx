@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import {
   Add as AddIcon,
   FileDownload as ExportIcon,
@@ -88,6 +89,7 @@ const columns: Column<Cliente>[] = [
 ];
 
 export default function Clientes() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -117,7 +119,7 @@ export default function Clientes() {
       id: "view",
       label: "Ver detalles",
       icon: <ViewIcon />,
-      onClick: (row) => console.log("Ver:", row),
+      onClick: (row) => router.push(`/clientes/${row.id}`),
     },
     {
       id: "edit",
@@ -159,6 +161,7 @@ export default function Clientes() {
         totalRows={mockClientes.length}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
+        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
       />
     </MainLayout>
   );

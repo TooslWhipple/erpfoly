@@ -1,5 +1,6 @@
 import { del, get, patch, post } from "@/lib/axios";
 import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -51,15 +52,7 @@ const BASE = "/departments";
 export async function getDepartments(
   params: GetDepartmentsParams
 ): Promise<ApiResult<GetDepartmentsResponse>> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("page", String(params.page));
-  searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = query ? `${BASE}?${query}` : BASE;
-  return get<GetDepartmentsResponse>(url);
+  return get<GetDepartmentsResponse>(buildListUrl(BASE, params));
 }
 
 export async function createDepartment(

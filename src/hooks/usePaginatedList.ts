@@ -6,6 +6,7 @@ export interface PaginatedListParams {
     page: number;
     limit: number;
     search?: string;
+    [key: string]: unknown;
 }
 
 export interface PaginatedListPayload<T> {
@@ -39,6 +40,10 @@ export interface UsePaginatedListOptions<T> {
     initialPage?: number;
     initialRowsPerPage?: number;
     initialSearch?: string;
+    /** Extra params (e.g. status) included in queryKey and passed to queryFn. Changes trigger refetch. */
+    extraParams?: Record<string, unknown>;
+    /** When false, the query is not run (e.g. when a required parent id is not yet available). */
+    enabled?: boolean;
 }
 
 function unwrapApiResult<T>(result: ApiResult<T>): T {
@@ -58,20 +63,25 @@ export function usePaginatedList<T>({
     initialPage = 0,
     initialRowsPerPage = 10,
     initialSearch = "",
+    extraParams,
+    enabled = true,
 }: UsePaginatedListOptions<T>): PaginatedListResult<T> {
     const [page, setPage] = useState(initialPage);
     const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
     const [search, setSearch] = useState(initialSearch);
 
     const apiPage = page + 1;
+    const extraKey = extraParams ? Object.entries(extraParams).flat() : [];
 
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: [...queryKey, apiPage, rowsPerPage, search],
+        queryKey: [...queryKey, apiPage, rowsPerPage, search, ...extraKey],
+        enabled,
         queryFn: async () => {
             const result = await queryFn({
                 page: apiPage,
                 limit: rowsPerPage,
                 search: search || undefined,
+                ...extraParams,
             });
             return unwrapApiResult(result);
         },

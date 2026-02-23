@@ -12,6 +12,7 @@ import {
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { FormFieldConfig } from "@/components/Form";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { getDepartmentById } from "@/services/departments.service";
 import {
   getProductLines,
@@ -56,9 +57,22 @@ export default function DepartmentDetailPage() {
   const showError = useSnackbarStore((s) => s.showError);
 
   const [department, setDepartment] = useState<Department | null>(null);
-  const [productLines, setProductLines] = useState<ProductLineItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingLines, setLoadingLines] = useState(true);
+
+  const isDepartmentReady = departmentId != null && !Number.isNaN(departmentId);
+
+  const {
+    data: productLines,
+    isLoading: loadingLines,
+    refetch: refetchProductLines,
+  } = usePaginatedList<ProductLineItem>({
+    queryKey: ["product-lines", String(departmentId ?? "")],
+    queryFn: (params) => getProductLines({ departmentId: departmentId!, ...params }),
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    enabled: isDepartmentReady,
+  });
 
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<ProductLineItem | null>(null);
@@ -68,7 +82,7 @@ export default function DepartmentDetailPage() {
   const [groupFormValues, setGroupFormValues] = useState<Record<string, unknown>>({});
 
   const fetchDepartment = useCallback(async () => {
-    if (departmentId == null || Number.isNaN(departmentId)) {
+    if (!isDepartmentReady) {
       setLoading(false);
       return;
     }
@@ -82,32 +96,11 @@ export default function DepartmentDetailPage() {
       return;
     }
     setDepartment(result.data ?? null);
-  }, [departmentId]);
-
-  const fetchProductLines = useCallback(async () => {
-    if (departmentId == null || Number.isNaN(departmentId)) {
-      setLoadingLines(false);
-      return;
-    }
-
-    setLoadingLines(true);
-    const result = await getProductLines({ departmentId });
-    setLoadingLines(false);
-    if (result.error) {
-      console.error("[DepartmentDetail] Error fetching product lines:", result.error.message);
-      setProductLines([]);
-      return;
-    }
-    setProductLines(result.data?.data ?? []);
-  }, [departmentId]);
+  }, [departmentId, isDepartmentReady]);
 
   useEffect(() => {
     fetchDepartment();
   }, [fetchDepartment]);
-
-  useEffect(() => {
-    fetchProductLines();
-  }, [fetchProductLines]);
 
   useEffect(() => {
     if (hasGroupPromotion && groupModalOpen && department) {
@@ -177,7 +170,7 @@ export default function DepartmentDetailPage() {
       showSnackbar("Línea creada correctamente.");
     }
     handleCloseGroupModal();
-    await Promise.all([fetchProductLines(), fetchDepartment()]);
+    await Promise.all([refetchProductLines(), fetchDepartment()]);
   };
 
   const handleDeleteGroup = async (row: GroupRow) => {
@@ -193,7 +186,7 @@ export default function DepartmentDetailPage() {
       return;
     }
     showSnackbar("Línea eliminada correctamente.");
-    await Promise.all([fetchProductLines(), fetchDepartment()]);
+    await Promise.all([refetchProductLines(), fetchDepartment()]);
   };
 
   const groupRows: GroupRow[] = useMemo(() => {
@@ -256,6 +249,7 @@ export default function DepartmentDetailPage() {
         placeholder: "Ej. LB",
         validation: { required: true, minLength: 1, maxLength: 32 },
         disabled: !!editingLine,
+        transformInput: (v) => v.toUpperCase(),
       },
       {
         name: "name",
@@ -268,6 +262,7 @@ export default function DepartmentDetailPage() {
           maxLength: 128,
         },
         autoFocus: true,
+        showErrorOnlyAfterSubmit: true,
       },
       {
         name: "hasGroupPromotion",
@@ -317,7 +312,7 @@ export default function DepartmentDetailPage() {
     if (Object.keys(groupFormValues).length > 0) return groupFormValues;
     if (editingLine) {
       return {
-        code: editingLine.code ?? "",
+        code: (editingLine.code ?? "").toUpperCase(),
         name: editingLine.name,
         hasGroupPromotion: false,
       };

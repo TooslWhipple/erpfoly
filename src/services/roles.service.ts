@@ -1,5 +1,6 @@
 import { get, post, patch } from "@/lib/axios";
 import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   RoleListItem,
   RoleDetailResponse,
@@ -13,18 +14,12 @@ export interface GetRolesListParams {
   search?: string;
 }
 
+const ROLES_BASE = "/role";
+
 export async function getRolesList(
   params: GetRolesListParams
 ): Promise<ApiResult<PaginatedResponse<RoleListItem>>> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("page", String(params.page));
-  searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = query ? `/role?${query}` : '/role';
-  return get<PaginatedResponse<RoleListItem>>(url);
+  return get<PaginatedResponse<RoleListItem>>(buildListUrl(ROLES_BASE, params));
 }
 
 export async function getRoleDetail(roleId: number): Promise<ApiResult<RoleDetailResponse>> {

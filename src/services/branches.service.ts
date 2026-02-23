@@ -1,4 +1,5 @@
 import { get, post, patch, del, type ApiResult } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -44,13 +45,7 @@ const BASE = "/branches";
 export async function getBranches(
   params: GetBranchesParams = {}
 ): Promise<ApiResult<GetBranchesResponse>> {
-  const searchParams = new URLSearchParams();
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.limit != null) searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) searchParams.set("search", params.search.trim());
-  const query = searchParams.toString();
-  const url = query ? `${BASE}?${query}` : BASE;
-  return get<GetBranchesResponse>(url);
+  return get<GetBranchesResponse>(buildListUrl(BASE, params));
 }
 
 export async function getBranch(id: number): Promise<ApiResult<Branch>> {

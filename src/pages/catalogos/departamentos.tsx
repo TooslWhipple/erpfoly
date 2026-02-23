@@ -18,29 +18,23 @@ import {
   getDepartments,
   createDepartment,
   updateDepartment,
+  deleteDepartment,
 } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 // Re-export types for consumers (e.g. detail page)
 export type { Department } from "@/services/departments.service";
 export type { ProductGroup } from "@/services/departments.service";
 
 // ============================================================================
-// MOCK HELPERS (delete not yet in API - to be replaced)
+// HELPERS (affected items count for promotion info - can be replaced by API later)
 // ============================================================================
 
-async function getAffectedItemsCount(_departmentId?: number): Promise<number> {
+async function getAffectedItemsCount(): Promise<number> {
   await new Promise((resolve) => setTimeout(resolve, 100));
   return Math.floor(Math.random() * 50) + 10;
 }
-
-async function deleteDepartment(id: number): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  console.log("[API] Deleted department (mock):", id);
-  return { success: true };
-}
-
-export { deleteDepartment };
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -50,6 +44,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Departamentos() {
   const router = useRouter();
+
+  const showSnackbar = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
 
   const {
     data: departments,
@@ -184,9 +181,9 @@ export default function Departamentos() {
   // Load affected items count when promotion is enabled
   useEffect(() => {
     if (hasPromotion && modalOpen) {
-      getAffectedItemsCount(editingDepartment?.id).then(setAffectedItemsCount);
+      getAffectedItemsCount().then(setAffectedItemsCount);
     } else {
-      setAffectedItemsCount(null);
+      queueMicrotask(() => setAffectedItemsCount(null));
     }
   }, [hasPromotion, modalOpen, editingDepartment]);
 
@@ -213,25 +210,32 @@ export default function Departamentos() {
 
   const handleSaveDepartment = async (data: Record<string, unknown>) => {
     setSaving(true);
-    try {
-      if (editingDepartment) {
-        await updateDepartment(editingDepartment.id, {
-          name: data.name as string,
-          margin: Number(data.margin),
-        });
-      } else {
-        await createDepartment({
-          name: data.name as string,
-          margin: Number(data.margin),
-        });
+    if (editingDepartment) {
+      const result = await updateDepartment(editingDepartment.id, {
+        name: data.name as string,
+        margin: Number(data.margin),
+      });
+      if (result.error) {
+        setSaving(false);
+        console.error("[Departamentos] Error saving:", result.error.message);
+        showError(result.error.message);
+        return;
       }
-      handleCloseModal();
-      refetch();
-    } catch (err) {
-      console.error("[Departamentos] Error saving:", err);
-    } finally {
-      setSaving(false);
+    } else {
+      const result = await createDepartment({
+        name: data.name as string,
+        margin: Number(data.margin),
+      });
+      if (result.error) {
+        setSaving(false);
+        console.error("[Departamentos] Error saving:", result.error.message);
+        showError(result.error.message);
+        return;
+      }
     }
+    setSaving(false);
+    handleCloseModal();
+    refetch();
   };
 
   // Handle form value changes to update promotion toggle and preserve values
@@ -263,12 +267,14 @@ export default function Departamentos() {
     );
     if (!confirmed) return;
 
-    try {
-      await deleteDepartment(department.id);
-      refetch();
-    } catch (err) {
-      console.error("[Departamentos] Error deleting:", err);
+    const result = await deleteDepartment(department.id);
+    if (result.error) {
+      console.error("[Departamentos] Error deleting:", result.error.message);
+      showError(result.error.message);
+      return;
     }
+    refetch();
+    showSnackbar("Departamento desactivado correctamente.");
   };
 
   const handlePageChange = (newPage: number) => {

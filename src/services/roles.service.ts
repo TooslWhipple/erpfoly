@@ -1,5 +1,6 @@
 import { get, post, patch } from "@/lib/axios";
-import type { PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   RoleListItem,
   RoleDetailResponse,
@@ -13,26 +14,20 @@ export interface GetRolesListParams {
   search?: string;
 }
 
+const ROLES_BASE = "/role";
+
 export async function getRolesList(
   params: GetRolesListParams
-): Promise<PaginatedResponse<RoleListItem>> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("page", String(params.page));
-  searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = query ? `/role?${query}` : '/role';
-  return get<PaginatedResponse<RoleListItem>>(url);
+): Promise<ApiResult<PaginatedResponse<RoleListItem>>> {
+  return get<PaginatedResponse<RoleListItem>>(buildListUrl(ROLES_BASE, params));
 }
 
-export async function getRoleDetail(roleId: number): Promise<RoleDetailResponse> {
+export async function getRoleDetail(roleId: number): Promise<ApiResult<RoleDetailResponse>> {
   const url = `/role/${roleId}`;
   return get<RoleDetailResponse>(url);
 }
 
-export async function getPermissionsTemplate(): Promise<PermissionsTemplateResponse> {
+export async function getPermissionsTemplate(): Promise<ApiResult<PermissionsTemplateResponse>> {
   return get<PermissionsTemplateResponse>("/role/permissions");
 }
 
@@ -43,7 +38,7 @@ export interface CreateRolePayload {
 
 export async function createRole(
   payload: CreateRolePayload
-): Promise<{ id: number; name: string; description?: string | null }> {
+): Promise<ApiResult<{ id: number; name: string; description?: string | null }>> {
   return post<{ id: number; name: string; description?: string | null }>(
     '/role',
     payload
@@ -58,7 +53,7 @@ export interface UpdateRolePayload {
 export async function updateRole(
   roleId: number,
   payload: UpdateRolePayload
-): Promise<{ id: number; name: string; description?: string | null }> {
+): Promise<ApiResult<{ id: number; name: string; description?: string | null }>> {
   return patch<{ id: number; name: string; description?: string | null }>(
     `/role/${roleId}`,
     payload
@@ -68,7 +63,7 @@ export async function updateRole(
 export async function updateRolePermissions(
   roleId: number,
   payload: UpdateRolePermissionsPayload
-): Promise<{ added: number; removed: number }> {
+): Promise<ApiResult<{ added: number; removed: number }>> {
   return patch<{ added: number; removed: number }>(
     `/role/${roleId}/permissions`,
     payload

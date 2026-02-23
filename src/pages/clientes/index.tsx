@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Add as AddIcon,
@@ -12,43 +12,32 @@ import {
   Title,
   TitleAction,
   TabFilters,
-  TabOption,
   TableCrud,
   Column,
   RowAction,
   ChipStyleConfig,
 } from "@/components";
 import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { getClients, type Client, type ClientStatus } from "@/services/clients.service";
 
-interface Cliente {
-  id: number;
-  fullName: string;
-  email: string;
-  cellphone: string;
-  estatus: string;
-  address: string;
-}
+const SEARCH_DEBOUNCE_MS = 300;
 
-const mockClientes: Cliente[] = [
-  { id: 1, fullName: "Juan Pérez Solís", email: "juan@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
-  { id: 2, fullName: "María García Robles", email: "maria@email.com", cellphone: "667 123 4567", estatus: "En retraso", address: "Circuito Universitario 2322. Colonia Universitarios" },
-  { id: 3, fullName: "Carlos López Montañez", email: "carlos@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
-  { id: 4, fullName: "Ana Martínez Hernández", email: "ana@email.com", cellphone: "667 123 4567", estatus: "En retraso", address: "Circuito Universitario 2322. Colonia Universitarios" },
-  { id: 5, fullName: "Pedro Sánchez Estrada", email: "pedro@email.com", cellphone: "667 123 4567", estatus: "Al corriente", address: "Circuito Universitario 2322. Colonia Universitarios" },
+const STATUS_TABS: { label: string; value: string }[] = [
+  { label: "Todos", value: "all" },
+  { label: "Activos", value: "active" },
+  { label: "Inactivos", value: "inactive" },
+  { label: "Bloqueados", value: "blocked" },
 ];
 
-const tabs: TabOption[] = [
-  { label: "Todos", value: "all", count: 150 },
-  { label: "Al corriente", value: "current", count: 120 },
-  { label: "En retraso", value: "delayed", count: 30 },
-];
-
-const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
-  "Al corriente": { label: "Al corriente", bgColor: "#DCFCE7", textColor: "#1B8854" },
-  "En retraso": { label: "En retraso", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+const STATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
+  active: { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
+  inactive: { label: "Inactivo", bgColor: "#F3F4F6", textColor: "#6B7280" },
+  blocked: { label: "Bloqueado", bgColor: "#FCE4E4", textColor: "#E91E1F" },
 };
 
-const columns: Column<Cliente>[] = [
+const columns: Column<Client>[] = [
   {
     id: "id",
     label: "ID",
@@ -62,7 +51,7 @@ const columns: Column<Cliente>[] = [
     size: "lg",
   },
   {
-    id: "cellphone",
+    id: "phoneNumber",
     label: "Teléfono",
     type: "text",
     size: "md",
@@ -74,14 +63,14 @@ const columns: Column<Cliente>[] = [
     size: "lg",
   },
   {
-    id: "estatus",
+    id: "status",
     label: "Estatus",
     type: "chip",
     size: "sm",
-    chipConfig: ESTATUS_CHIP_CONFIG,
+    chipConfig: STATUS_CHIP_CONFIG,
   },
   {
-    id: "address",
+    id: "primaryAddressFormatted",
     label: "Domicilio",
     size: "xl",
     truncate: true,
@@ -91,9 +80,47 @@ const columns: Column<Cliente>[] = [
 export default function Clientes() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const statusParam: { status?: ClientStatus } | undefined =
+    activeTab === "all" ? undefined : { status: activeTab as ClientStatus };
+
+  const {
+    data: clients,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+  } = usePaginatedList<Client>({
+    queryKey: ["clients", activeTab],
+    queryFn: getClients,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: statusParam,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPage(0);
+  };
+
+  const tabs = STATUS_TABS.map((t) => ({
+    ...t,
+    count: t.value === activeTab ? totalRows : undefined,
+  }));
 
   const actions: TitleAction[] = [
     {
@@ -114,7 +141,7 @@ export default function Clientes() {
     },
   ];
 
-  const rowActions: RowAction<Cliente>[] = [
+  const rowActions: RowAction<Client>[] = [
     {
       id: "view",
       label: "Ver detalles",
@@ -138,30 +165,29 @@ export default function Clientes() {
 
   return (
     <MainLayout>
-      <Title
-        title="Clientes"
-        actions={actions}
-      />
+      <Title title="Clientes" actions={actions} />
       <TabFilters
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         showSearch
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Buscar por nombre"
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="Buscar por nombre, correo o teléfono"
       />
       <TableCrud
         columns={columns}
-        rows={mockClientes}
+        rows={clients}
         actions={rowActions}
+        loading={loading}
         rowKey="id"
         page={page}
         rowsPerPage={rowsPerPage}
-        totalRows={mockClientes.length}
+        totalRows={totalRows}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
         onRowClick={(row) => router.push(`/clientes/${row.id}`)}
+        emptyMessage="No hay clientes registrados"
       />
     </MainLayout>
   );

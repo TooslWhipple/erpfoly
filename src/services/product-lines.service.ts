@@ -1,5 +1,6 @@
 import { del, get, patch, post } from "@/lib/axios";
 import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -44,16 +45,7 @@ const BASE = "/product-lines";
 export async function getProductLines(
   params: GetProductLinesParams
 ): Promise<ApiResult<GetProductLinesResponse>> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("departmentId", String(params.departmentId));
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.limit != null) searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = `${BASE}?${query}`;
-  return get<GetProductLinesResponse>(url);
+  return get<GetProductLinesResponse>(buildListUrl(BASE, params));
 }
 
 export async function createProductLine(

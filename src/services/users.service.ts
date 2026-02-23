@@ -1,4 +1,5 @@
 import { get, post, patch, del, type ApiResult } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -85,13 +86,7 @@ const CATALOG = "/catalog";
 export async function getUsers(
     params: GetUsersParams = {}
 ): Promise<ApiResult<GetUsersResponse>> {
-    const searchParams = new URLSearchParams();
-    if (params.page != null) searchParams.set("page", String(params.page));
-    if (params.limit != null) searchParams.set("limit", String(params.limit));
-    if (params.search?.trim()) searchParams.set("search", params.search.trim());
-    const query = searchParams.toString();
-    const url = query ? `${BASE}?${query}` : BASE;
-    return get<GetUsersResponse>(url);
+  return get<GetUsersResponse>(buildListUrl(BASE, params));
 }
 
 export async function getUser(id: number): Promise<ApiResult<UserDetail>> {

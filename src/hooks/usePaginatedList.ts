@@ -39,6 +39,8 @@ export interface UsePaginatedListOptions<T> {
     initialPage?: number;
     initialRowsPerPage?: number;
     initialSearch?: string;
+    /** When false, the query is not run (e.g. when a required parent id is not yet available). */
+    enabled?: boolean;
 }
 
 function unwrapApiResult<T>(result: ApiResult<T>): T {
@@ -58,6 +60,7 @@ export function usePaginatedList<T>({
     initialPage = 0,
     initialRowsPerPage = 10,
     initialSearch = "",
+    enabled = true,
 }: UsePaginatedListOptions<T>): PaginatedListResult<T> {
     const [page, setPage] = useState(initialPage);
     const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
@@ -67,6 +70,7 @@ export function usePaginatedList<T>({
 
     const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: [...queryKey, apiPage, rowsPerPage, search],
+        enabled,
         queryFn: async () => {
             const result = await queryFn({
                 page: apiPage,

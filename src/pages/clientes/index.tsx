@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import {
   Add as AddIcon,
   FileDownload as ExportIcon,
@@ -77,6 +78,7 @@ const columns: Column<Client>[] = [
 ];
 
 export default function Clientes() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
 
   const statusParam: { status?: ClientStatus } | undefined =
@@ -144,7 +146,7 @@ export default function Clientes() {
       id: "view",
       label: "Ver detalles",
       icon: <ViewIcon />,
-      onClick: (row) => console.log("Ver:", row),
+      onClick: (row) => router.push(`/clientes/${row.id}`),
     },
     {
       id: "edit",
@@ -184,6 +186,7 @@ export default function Clientes() {
         totalRows={totalRows}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
+        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
         emptyMessage="No hay clientes registrados"
       />
     </MainLayout>

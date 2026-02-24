@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { styled } from "@mui/material/styles";
 import { Box, Typography, IconButton } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { colors } from "@/styles/theme";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -34,11 +35,23 @@ const Container = styled(Box)({
 });
 
 const BackButton = styled(IconButton)(({ theme }) => ({
-    padding: 4,
-    marginRight: 4,
-    color: theme.palette.text.secondary,
+    width: 36,
+    height: 36,
+    marginRight: theme.spacing(1),
+    padding: 0,
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    color: colors.text.primary,
+    boxShadow: "none",
     "&:hover": {
-        backgroundColor: theme.palette.action.hover,
+        backgroundColor: colors.background.sidebar,
+        borderColor: colors.border,
+        boxShadow: "none",
+        opacity: 0.9,
+    },
+    "& .MuiSvgIcon-root": {
+        fontSize: 20,
     },
 }));
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Collapse, List, ListItemText, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Button, Collapse, List, ListItemText, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
+  Add as AddIcon,
   CreditCard as CreditCardIcon,
   PointOfSale as PointOfSaleIcon,
   People as PeopleIcon,
@@ -55,10 +56,8 @@ const navItems: NavItem[] = [
     ],
   },
   { label: "Pedidos", path: "/pedidos", icon: <ShoppingCartIcon /> },
-  { label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
   { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <StoreIcon /> },
   { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <AssignmentIcon /> },
-  { label: "Solicitudes de descuentos", path: "/solicitudes-descuento", icon: <AttachMoneyIcon /> },
   {
     label: "Inventario",
     path: "/inventario",
@@ -71,6 +70,8 @@ const navItems: NavItem[] = [
   },
   { label: "Atención a cliente", path: "/atencion-cliente", icon: <SupportIcon /> },
   { label: "Rutas", path: "/rutas", icon: <RouteIcon /> },
+  //{ label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
+  // { label: "Solicitudes de descuentos", path: "/solicitudes-descuento", icon: <AttachMoneyIcon /> },
   {
     label: "Catálogos",
     path: "/catalogos",
@@ -182,15 +183,23 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const drawerContent = (
     <>
-      <Stack direction="row" alignItems="center" spacing={1} p={1}>
-        <img src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-        <Stack>
-          <Typography variant="subtitle2">Folysoft</Typography>
-          <Typography variant="body2" color="text.secondary">V.1.0</Typography>
-        </Stack>
-      </Stack>
-
       <NavigationContainer>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <img src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+          <Stack>
+            <Typography variant="subtitle2">Folysoft</Typography>
+            <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+          </Stack>
+        </Stack>
+
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={() => handleNavigation("/solicitudes-credito/nueva")}
+        >
+          Nueva solicitud
+        </Button>
+
         <List component="nav" disablePadding>
           {navItems.map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;

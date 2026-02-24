@@ -9,6 +9,10 @@ export const colors = {
     sidebar: "#FFFFFF",
   },
   border: "#E4E4E7",
+  text: {
+    primary: "#232325",
+    secondary: "#71717A",
+  },
   sidebar: {
     itemSelected: "#F0F6FF",
     textSelected: "#2663EB",
@@ -17,6 +21,10 @@ export const colors = {
     background: "#F1F5F9",
     border: "#F9FAFC",
     text: "#475569",
+  },
+  segmentControl: {
+    background: "#EBEBEB",
+    textInactive: "#707070",
   },
 };
 

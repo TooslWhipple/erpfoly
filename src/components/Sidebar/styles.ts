@@ -2,7 +2,6 @@ import { styled } from "@mui/material/styles";
 import { Avatar, Box, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { SIDEBAR_WIDTH, colors } from "@/styles/theme";
-
 interface StyledDrawerProps {
   isMobile?: boolean;
 }
@@ -21,8 +20,11 @@ export const StyledDrawer = styled(Drawer, {
 }));
 
 export const NavigationContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
   flex: 1,
-  padding: theme.spacing(2, 1.5),
+  padding: "16px 8px 0px",
+  gap: "24px",
   overflowY: "auto",
 }));
 

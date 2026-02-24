@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Collapse, List, ListItemText, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Collapse, List, ListItemText, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
   CreditCard as CreditCardIcon,
   PointOfSale as PointOfSaleIcon,
@@ -17,10 +17,6 @@ import {
 } from "@mui/icons-material";
 import {
   StyledDrawer,
-  HeaderContainer,
-  LogoBox,
-  LogoText,
-  BrandName,
   NavigationContainer,
   NavItemButton,
   NavItemIcon,
@@ -145,27 +141,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (item.subItems) {
       return item.subItems.some((sub) => router.pathname === sub.path);
     }
-    
+
     // Check if current path matches this item
     const pathMatches = router.pathname === item.path || router.pathname.startsWith(item.path + "/");
-    
+
     if (!pathMatches) {
       return false;
     }
-    
+
     // If path matches, check if there's a more specific item that also matches
     // This prevents shorter paths from being active when a longer path is active
     const hasMoreSpecificMatch = navItems.some((otherItem) => {
       if (otherItem === item) return false;
       if (otherItem.subItems) return false;
-      
+
       const otherPathMatches = router.pathname === otherItem.path || router.pathname.startsWith(otherItem.path + "/");
       if (!otherPathMatches) return false;
-      
+
       // Check if the other item's path is longer (more specific)
       return otherItem.path.length > item.path.length;
     });
-    
+
     // Only active if no more specific match exists
     return !hasMoreSpecificMatch;
   };
@@ -186,12 +182,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const drawerContent = (
     <>
-      <HeaderContainer>
-        <LogoBox>
-          <LogoText variant="caption">Foly</LogoText>
-        </LogoBox>
-        <BrandName variant="subtitle2">Folysoft</BrandName>
-      </HeaderContainer>
+      <Stack direction="row" alignItems="center" spacing={1} p={1}>
+        <img src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+        <Stack>
+          <Typography variant="subtitle2">Folysoft</Typography>
+          <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+        </Stack>
+      </Stack>
 
       <NavigationContainer>
         <List component="nav" disablePadding>

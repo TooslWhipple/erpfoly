@@ -22,6 +22,8 @@ export { ModalForm } from "./ModalForm";
 export type { ModalFormProps } from "./ModalForm";
 export { MultiSelectChips } from "./MultiSelectChips";
 export type { MultiSelectChipsProps, SelectableItem } from "./MultiSelectChips";
+export { MultiSelectAutocomplete } from "./MultiSelectAutocomplete";
+export type { MultiSelectAutocompleteProps, SelectableItem as SelectableItemAutocomplete } from "./MultiSelectAutocomplete";
 export { Tabs } from "./Tabs";
 export type { TabItem, TabsProps } from "./Tabs";
 export { OrderCard, OrderList } from "./OrderCard";

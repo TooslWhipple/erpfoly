@@ -3,12 +3,10 @@ import numeral from "numeral";
 import {
   CardContainer,
   CardHeader,
-  CardLabel,
-  CardValue,
-  ComparisonText,
   IconWrapper,
   StatsCardGroupContainer,
 } from "./styles";
+import { Typography } from "@mui/material";
 
 export interface StatsCardData {
   id: string;
@@ -20,11 +18,8 @@ export interface StatsCardData {
     period: string;
   };
   icon?: React.ReactNode;
-  /** Custom border color for the card */
   borderColor?: string;
-  /** Custom color for the value */
   valueColor?: string;
-  /** Format value as currency */
   isCurrency?: boolean;
 }
 
@@ -37,11 +32,8 @@ interface StatsCardProps {
     period: string;
   };
   icon?: React.ReactNode;
-  /** Custom border color for the card */
   borderColor?: string;
-  /** Custom color for the value */
   valueColor?: string;
-  /** Format value as currency */
   isCurrency?: boolean;
 }
 
@@ -83,12 +75,12 @@ export function StatsCard({
   return (
     <CardContainer borderColor={borderColor}>
       <CardHeader>
-        <CardLabel>{label}</CardLabel>
+        <Typography variant="subtitle1">{label}</Typography>
         <IconWrapper>{icon}</IconWrapper>
       </CardHeader>
-      <CardValue valueColor={valueColor}>{formatValue(value)}</CardValue>
+      <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>
       {comparison && (
-        <ComparisonText trend={getTrend()}>{getComparisonText()}</ComparisonText>
+        <Typography variant="body2" color="text.secondary">{getComparisonText()}</Typography>
       )}
     </CardContainer>
   );
@@ -96,14 +88,12 @@ export function StatsCard({
 
 interface StatsCardGroupProps {
   cards: StatsCardData[];
-  /** Number of columns in the grid. Defaults to the number of cards (auto-fit) */
   columns?: number;
 }
 
 export function StatsCardGroup({ cards, columns }: StatsCardGroupProps) {
-  // Use provided columns or default to number of cards for auto-fit behavior
   const gridColumns = columns ?? cards.length;
-  
+
   return (
     <StatsCardGroupContainer columns={gridColumns}>
       {cards.map((card) => (

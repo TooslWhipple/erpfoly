@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Avatar, Box, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { ChevronDown, ChevronUp } from "@/components/Icons";
 import { SIDEBAR_WIDTH, colors } from "@/styles/theme";
 interface StyledDrawerProps {
   isMobile?: boolean;
@@ -54,9 +54,10 @@ export const NavItemIcon = styled(ListItemIcon, {
   minWidth: 24,
   marginRight: 8,
   color: active ? colors.sidebar.textSelected : "inherit",
-  "& .MuiSvgIcon-root": {
+  "& svg": {
     width: 16,
     height: 16,
+    flexShrink: 0,
   },
 }));
 
@@ -75,14 +76,16 @@ export const SubItemButton = styled(ListItemButton, {
   },
 }));
 
-export const ExpandIcon = styled(ExpandMore)({
+export const ExpandIcon = styled(ChevronDown)({
   width: 16,
   height: 16,
+  flexShrink: 0,
 });
 
-export const CollapseIcon = styled(ExpandLess)({
+export const CollapseIcon = styled(ChevronUp)({
   width: 16,
   height: 16,
+  flexShrink: 0,
 });
 
 export const UserProfileContainer = styled(Box)(({ theme }) => ({

@@ -2,20 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Box, Button, Collapse, List, ListItemText, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
-  Add as AddIcon,
-  CreditCard as CreditCardIcon,
-  PointOfSale as PointOfSaleIcon,
-  People as PeopleIcon,
-  ShoppingCart as ShoppingCartIcon,
-  LocalShipping as LocalShippingIcon,
-  Store as StoreIcon,
-  Assignment as AssignmentIcon,
-  AttachMoney as AttachMoneyIcon,
-  Inventory as InventoryIcon,
-  Support as SupportIcon,
-  Route as RouteIcon,
-  Folder as FolderIcon,
-} from "@mui/icons-material";
+  CreditCard,
+  Users,
+  ClipboardList,
+  Package,
+  LayoutList,
+  Monitor,
+  Route,
+  Plus,
+  Van,
+  HeartHandshake
+} from "@/components/Icons";
 import {
   StyledDrawer,
   NavigationContainer,
@@ -42,40 +39,40 @@ interface NavItem {
   subItems?: NavSubItem[];
 }
 
+const ICON_SIZE = 16;
+
 const navItems: NavItem[] = [
-  { label: "Solicitudes de crédito", path: "/solicitudes-credito", icon: <CreditCardIcon /> },
-  { label: "Cajas", path: "/cajas", icon: <PointOfSaleIcon /> },
+  { label: "Solicitudes de crédito", path: "/solicitudes-credito", icon: <CreditCard size={ICON_SIZE} /> },
+  { label: "Cajas", path: "/cajas", icon: <Monitor size={ICON_SIZE} /> },
   {
     label: "Clientes",
     path: "/clientes",
-    icon: <PeopleIcon />,
+    icon: <Users size={ICON_SIZE} />,
     subItems: [
       { label: "Clientes", path: "/clientes" },
       { label: "Clientes con morosidad", path: "/clientes/morosidad" },
       { label: "Cobranza automática", path: "/clientes/cobranza" },
     ],
   },
-  { label: "Pedidos", path: "/pedidos", icon: <ShoppingCartIcon /> },
-  { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <StoreIcon /> },
-  { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <AssignmentIcon /> },
+  { label: "Pedidos", path: "/pedidos", icon: <Van size={ICON_SIZE} /> },
+  { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <Van size={ICON_SIZE} /> },
+  { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <ClipboardList size={ICON_SIZE} /> },
   {
     label: "Inventario",
     path: "/inventario",
-    icon: <InventoryIcon />,
+    icon: <Package size={ICON_SIZE} />,
     subItems: [
       { label: "Inventario", path: "/inventario" },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada" },
       { label: "Liquidaciones", path: "/inventario/liquidaciones" },
     ],
   },
-  { label: "Atención a cliente", path: "/atencion-cliente", icon: <SupportIcon /> },
-  { label: "Rutas", path: "/rutas", icon: <RouteIcon /> },
-  //{ label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
-  // { label: "Solicitudes de descuentos", path: "/solicitudes-descuento", icon: <AttachMoneyIcon /> },
+  { label: "Atención a cliente", path: "/atencion-cliente", icon: <HeartHandshake size={ICON_SIZE} /> },
+  { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} /> },
   {
     label: "Catálogos",
     path: "/catalogos",
-    icon: <FolderIcon />,
+    icon: <LayoutList size={ICON_SIZE} />,
     subItems: [
       { label: "Productos", path: "/catalogos/productos" },
       { label: "Departamentos", path: "/catalogos/departamentos" },
@@ -194,7 +191,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <Button
           variant="outlined"
-          startIcon={<AddIcon />}
+          startIcon={<Plus size={18} />}
           onClick={() => handleNavigation("/solicitudes-credito/nueva")}
         >
           Nueva solicitud

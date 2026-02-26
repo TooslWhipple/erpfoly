@@ -44,4 +44,11 @@ export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";
 export { CreditLimitBar } from "./CreditLimitBar";
 export type { CreditLimitBarProps } from "./CreditLimitBar";
+export { DepartmentCard } from "./DepartmentCard";
+export type { DepartmentCardProps } from "./DepartmentCard";
+export { PriceSuggestionCard } from "./PriceSuggestionCard";
+export type { PriceSuggestionCardProps } from "./PriceSuggestionCard";
+export { PriceSuggestionsSidebar } from "./PriceSuggestionsSidebar";
+export type { PriceSuggestionsSidebarProps } from "./PriceSuggestionsSidebar";
+export * from "./Icons";
 

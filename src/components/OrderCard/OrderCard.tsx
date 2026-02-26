@@ -1,13 +1,28 @@
-import { styled } from "@mui/material/styles";
-import { Box, Chip, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { ArrowForward as ArrowForwardIcon } from "@mui/icons-material";
-import { colors } from "@/styles/theme";
+import {
+    CardContainer,
+    ProgressBarContainer,
+    ProgressBarFill,
+    ContentRow,
+    InfoSection,
+    SupplierName,
+    DateText,
+    ArrowContainer,
+    DestinationSection,
+    DestinationName,
+    ItemCountText,
+    StatusChip,
+    ListContainer,
+    EmptyContainer,
+} from "./styles";
+import type { OrderStatus } from "./styles";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type OrderStatus = "pending" | "in_progress" | "received";
+export type { OrderStatus } from "./styles";
 
 export interface OrderCardData {
     id: number;
@@ -25,123 +40,6 @@ interface OrderCardProps {
     order: OrderCardData;
     onClick?: (order: OrderCardData) => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const CardContainer = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    padding: theme.spacing(2),
-    cursor: "pointer",
-    transition: "background-color 0.15s ease",
-    "&:hover": {
-        backgroundColor: colors.background.main,
-    },
-}));
-
-const ProgressBarContainer = styled(Box)({
-    position: "relative",
-    height: 6,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 12,
-    backgroundColor: "#e5e7eb",
-});
-
-interface ProgressBarFillProps {
-    fillColor: string;
-    progress: number;
-}
-
-const ProgressBarFill = styled(Box)<ProgressBarFillProps>(({ fillColor, progress }) => ({
-    position: "absolute",
-    top: 0,
-    left: 0,
-    height: "100%",
-    width: `${progress}%`,
-    backgroundColor: fillColor,
-    borderRadius: 3,
-    transition: "width 0.3s ease",
-}));
-
-const ContentRow = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-});
-
-const InfoSection = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    minWidth: 0,
-    flex: 1,
-});
-
-const SupplierName = styled(Typography)({
-    fontSize: 15,
-    fontWeight: 500,
-    color: "#232325",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-});
-
-const DateText = styled(Typography)({
-    fontSize: 13,
-    color: "#71717A",
-});
-
-const ArrowContainer = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#9CA3AF",
-    flexShrink: 0,
-    padding: "0 8px",
-});
-
-const DestinationSection = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    minWidth: 0,
-    flex: 1,
-});
-
-const DestinationName = styled(Typography)({
-    fontSize: 15,
-    fontWeight: 500,
-    color: "#232325",
-});
-
-const ItemCountText = styled(Typography)({
-    fontSize: 14,
-    color: "#71717A",
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-});
-
-const StatusChip = styled(Chip)<{ statusType: OrderStatus }>(({ statusType }) => {
-    const statusStyles: Record<OrderStatus, { bg: string; text: string }> = {
-        received: { bg: "#dcfce7", text: "#16a34a" },
-        in_progress: { bg: "#dbeafe", text: "#2563eb" },
-        pending: { bg: "#ffedd5", text: "#ea580c" },
-    };
-    const style = statusStyles[statusType];
-    return {
-        backgroundColor: style.bg,
-        color: style.text,
-        fontWeight: 500,
-        fontSize: 13,
-        borderRadius: 6,
-        height: 28,
-    };
-});
 
 // ============================================================================
 // HELPERS
@@ -224,21 +122,12 @@ interface OrderListProps {
     emptyMessage?: string;
 }
 
-const ListContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-}));
-
-const EmptyContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing(6),
-    color: "#71717A",
-}));
-
-export function OrderList({ orders, onOrderClick, loading, emptyMessage = "No hay pedidos" }: OrderListProps) {
+export function OrderList({
+    orders,
+    onOrderClick,
+    loading,
+    emptyMessage = "No hay pedidos",
+}: OrderListProps) {
     if (loading) {
         return (
             <ListContainer>

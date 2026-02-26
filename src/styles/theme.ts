@@ -9,6 +9,10 @@ export const colors = {
     sidebar: "#FFFFFF",
   },
   border: "#E4E4E7",
+  text: {
+    primary: "#232325",
+    secondary: "#71717A",
+  },
   sidebar: {
     itemSelected: "#F0F6FF",
     textSelected: "#2663EB",
@@ -17,6 +21,10 @@ export const colors = {
     background: "#F1F5F9",
     border: "#F9FAFC",
     text: "#475569",
+  },
+  segmentControl: {
+    background: "#EBEBEB",
+    textInactive: "#707070",
   },
 };
 
@@ -190,6 +198,47 @@ export const theme = createTheme({
           padding: "8px 12px",
           borderRadius: 6,
           marginBottom: 4,
+        },
+      },
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        root: {
+          width: 44,
+          height: 24,
+          padding: 0,
+        },
+        switchBase: ({ theme }) => ({
+          padding: 2,
+          "&.Mui-checked": {
+            transform: "translateX(20px)",
+            "& + .MuiSwitch-track": {
+              backgroundColor: theme.palette.primary.main,
+              opacity: 1,
+            },
+            "& .MuiSwitch-thumb": {
+              boxShadow: "none",
+              border: "none",
+            },
+          },
+        }),
+        thumb: {
+          width: 20,
+          height: 20,
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          "&.Mui-checked": {
+            backgroundColor: "#FFFFFF",
+          },
+        },
+        track: {
+          borderRadius: 12,
+          backgroundColor: "#E5E7EB",
+          opacity: 1,
+          "&:after, &:before": {
+            display: "none",
+          },
         },
       },
     },

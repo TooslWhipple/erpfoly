@@ -1,26 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Collapse, List, ListItemText, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Button, Collapse, List, ListItemText, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
-  CreditCard as CreditCardIcon,
-  PointOfSale as PointOfSaleIcon,
-  People as PeopleIcon,
-  ShoppingCart as ShoppingCartIcon,
-  LocalShipping as LocalShippingIcon,
-  Store as StoreIcon,
-  Assignment as AssignmentIcon,
-  AttachMoney as AttachMoneyIcon,
-  Inventory as InventoryIcon,
-  Support as SupportIcon,
-  Route as RouteIcon,
-  Folder as FolderIcon,
-} from "@mui/icons-material";
+  CreditCard,
+  Users,
+  ClipboardList,
+  Package,
+  LayoutList,
+  Monitor,
+  Route,
+  Plus,
+  Van,
+  HeartHandshake
+} from "@/components/Icons";
 import {
   StyledDrawer,
-  HeaderContainer,
-  LogoBox,
-  LogoText,
-  BrandName,
   NavigationContainer,
   NavItemButton,
   NavItemIcon,
@@ -45,40 +39,40 @@ interface NavItem {
   subItems?: NavSubItem[];
 }
 
+const ICON_SIZE = 16;
+
 const navItems: NavItem[] = [
-  { label: "Solicitudes de crédito", path: "/solicitudes-credito", icon: <CreditCardIcon /> },
-  { label: "Cajas", path: "/cajas", icon: <PointOfSaleIcon /> },
+  { label: "Solicitudes de crédito", path: "/solicitudes-credito", icon: <CreditCard size={ICON_SIZE} /> },
+  { label: "Cajas", path: "/cajas", icon: <Monitor size={ICON_SIZE} /> },
   {
     label: "Clientes",
     path: "/clientes",
-    icon: <PeopleIcon />,
+    icon: <Users size={ICON_SIZE} />,
     subItems: [
       { label: "Clientes", path: "/clientes" },
       { label: "Clientes con morosidad", path: "/clientes/morosidad" },
       { label: "Cobranza automática", path: "/clientes/cobranza" },
     ],
   },
-  { label: "Pedidos", path: "/pedidos", icon: <ShoppingCartIcon /> },
-  { label: "Recepción de mercancías", path: "/recepcion-mercancias", icon: <LocalShippingIcon /> },
-  { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <StoreIcon /> },
-  { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <AssignmentIcon /> },
-  { label: "Solicitudes de descuentos", path: "/solicitudes-descuento", icon: <AttachMoneyIcon /> },
+  { label: "Pedidos", path: "/pedidos", icon: <Van size={ICON_SIZE} /> },
+  { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <Van size={ICON_SIZE} /> },
+  { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <ClipboardList size={ICON_SIZE} /> },
   {
     label: "Inventario",
     path: "/inventario",
-    icon: <InventoryIcon />,
+    icon: <Package size={ICON_SIZE} />,
     subItems: [
       { label: "Inventario", path: "/inventario" },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada" },
       { label: "Liquidaciones", path: "/inventario/liquidaciones" },
     ],
   },
-  { label: "Atención a cliente", path: "/atencion-cliente", icon: <SupportIcon /> },
-  { label: "Rutas", path: "/rutas", icon: <RouteIcon /> },
+  { label: "Atención a cliente", path: "/atencion-cliente", icon: <HeartHandshake size={ICON_SIZE} /> },
+  { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} /> },
   {
     label: "Catálogos",
     path: "/catalogos",
-    icon: <FolderIcon />,
+    icon: <LayoutList size={ICON_SIZE} />,
     subItems: [
       { label: "Productos", path: "/catalogos/productos" },
       { label: "Departamentos", path: "/catalogos/departamentos" },
@@ -145,27 +139,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (item.subItems) {
       return item.subItems.some((sub) => router.pathname === sub.path);
     }
-    
+
     // Check if current path matches this item
     const pathMatches = router.pathname === item.path || router.pathname.startsWith(item.path + "/");
-    
+
     if (!pathMatches) {
       return false;
     }
-    
+
     // If path matches, check if there's a more specific item that also matches
     // This prevents shorter paths from being active when a longer path is active
     const hasMoreSpecificMatch = navItems.some((otherItem) => {
       if (otherItem === item) return false;
       if (otherItem.subItems) return false;
-      
+
       const otherPathMatches = router.pathname === otherItem.path || router.pathname.startsWith(otherItem.path + "/");
       if (!otherPathMatches) return false;
-      
+
       // Check if the other item's path is longer (more specific)
       return otherItem.path.length > item.path.length;
     });
-    
+
     // Only active if no more specific match exists
     return !hasMoreSpecificMatch;
   };
@@ -186,14 +180,23 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const drawerContent = (
     <>
-      <HeaderContainer>
-        <LogoBox>
-          <LogoText variant="caption">Foly</LogoText>
-        </LogoBox>
-        <BrandName variant="subtitle2">Folysoft</BrandName>
-      </HeaderContainer>
-
       <NavigationContainer>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <img src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+          <Stack>
+            <Typography variant="subtitle2">Folysoft</Typography>
+            <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+          </Stack>
+        </Stack>
+
+        <Button
+          variant="outlined"
+          startIcon={<Plus size={18} />}
+          onClick={() => handleNavigation("/solicitudes-credito/nueva")}
+        >
+          Nueva solicitud
+        </Button>
+
         <List component="nav" disablePadding>
           {navItems.map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;

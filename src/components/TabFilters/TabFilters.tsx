@@ -7,7 +7,6 @@ import {
   StyledTabs,
   StyledTab,
   SearchContainer,
-  SearchIconStyled,
   FiltersRightSection,
 } from "./styles";
 
@@ -86,8 +85,8 @@ export function TabFilters({
   return (
     <Container>
       <TabsWrapper>
-        <StyledTabs 
-          value={activeTab} 
+        <StyledTabs
+          value={activeTab}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons={false}

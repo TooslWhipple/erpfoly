@@ -1,45 +1,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { Settings as SettingsIcon, LocalLaundryService as LaundryIcon } from "@mui/icons-material";
+import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
 import {
-    GridView as GridViewIcon,
-    Sync as SyncIcon,
-    LocalShipping as ShippingIcon,
-    Build as BuildIcon,
-    Settings as SettingsIcon,
-    LocalLaundryService as LaundryIcon,
-    Inventory2 as BoxIcon,
-} from "@mui/icons-material";
-import { MainLayout, Breadcrumbs, Tabs } from "@/components";
-import {
-    SalesChart,
-    ActivityLog,
-    ProductInfoCard,
-    InventoryByBranchTable,
-} from "@/components/InventoryDetail";
-import { TableCrud } from "@/components/TableCrud";
-import type { Column } from "@/components/TableCrud";
-import {
-    DetailContainer,
-    HeaderSection,
-    ProductHeader,
-    ProductInfo,
-    ProductCategories,
     CategoryChip,
     StatusChip,
-    SummarySection,
-    SummaryCard,
-    SummaryCardContent,
-    SummaryCardIcon,
-    TabContent,
-    GalleryContainer,
-    GalleryImage,
-    PackagesList,
-    PackageItem,
-    PackageIcon,
-    PackageInfo,
-    PackagePrice,
-    PricingGrid,
-    PricingItem,
 } from "@/styles/inventario/detalle.styles";
 import {
     MOCK_INVENTORY_DETAIL,
@@ -51,14 +16,12 @@ import {
     MOCK_PRICING_STRATEGY,
     MOCK_PACKAGES,
     MOCK_GALLERY,
+    getSalesBranchesConfig,
 } from "@/data/inventario.mockData";
+import type { SalesBranchConfig } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
-import numeral from "numeral";
-import { Typography } from "@mui/material";
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
+import { Stack, Typography } from "@mui/material";
+import { InventoryTab, ActivityTab, TechnicalTab, ConfigurationsTab } from "./sku-tabs";
 
 async function getInventoryDetail(sku: string) {
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -105,6 +68,10 @@ async function getGallery(sku: string) {
     return MOCK_GALLERY;
 }
 
+async function getSalesBranches(sku: string) {
+    return getSalesBranchesConfig(sku);
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -124,8 +91,8 @@ export default function InventoryDetail() {
     const [pricingStrategy, setPricingStrategy] = useState(MOCK_PRICING_STRATEGY);
     const [packages, setPackages] = useState(MOCK_PACKAGES);
     const [gallery, setGallery] = useState(MOCK_GALLERY);
+    const [salesBranches, setSalesBranches] = useState<SalesBranchConfig[]>([]);
 
-    // Load data
     useEffect(() => {
         if (!sku || typeof sku !== "string") return;
 
@@ -144,6 +111,7 @@ export default function InventoryDetail() {
                     pricing,
                     packagesData,
                     galleryData,
+                    branchesData,
                 ] = await Promise.all([
                     getInventoryDetail(skuString),
                     getInventorySummary(skuString),
@@ -154,6 +122,7 @@ export default function InventoryDetail() {
                     getPricingStrategy(skuString),
                     getPackages(skuString),
                     getGallery(skuString),
+                    getSalesBranches(skuString),
                 ]);
 
                 setInventoryDetail(detail);
@@ -165,6 +134,7 @@ export default function InventoryDetail() {
                 setPricingStrategy(pricing);
                 setPackages(packagesData);
                 setGallery(galleryData);
+                setSalesBranches(branchesData);
             } catch (err) {
                 console.error("[InventoryDetail] Error loading data:", err);
             } finally {
@@ -175,269 +145,85 @@ export default function InventoryDetail() {
         loadData();
     }, [sku]);
 
-    // Tabs configuration
+    const handleBranchToggle = (branchId: string, enabled: boolean) => {
+        setSalesBranches((prev) =>
+            prev.map((b) => (b.id === branchId ? { ...b, enabled } : b))
+        );
+    };
+
     const tabs: TabItem[] = [
         { value: "inventory", label: "Inventario" },
         { value: "activity", label: "Actividad" },
+        { value: "configurations", label: "Configuraciones" },
         { value: "technical", label: "Ficha técnica" },
     ];
 
-    // Breadcrumbs
     const breadcrumbs = [
         { label: "Inventario", href: "/inventario" },
         { label: inventoryDetail.name.length > 30 ? `${inventoryDetail.name.substring(0, 30)}...` : inventoryDetail.name },
     ];
 
-    // General info fields
-    const generalInfoFields = [
-        { label: "Nombre corto", value: inventoryDetail.shortName },
-        { label: "Descripción del artículo", value: inventoryDetail.description },
-        { label: "Departamento", value: `${inventoryDetail.department.code} - ${inventoryDetail.department.name}` },
-        { label: "Línea", value: `${inventoryDetail.line.code} - ${inventoryDetail.line.name}` },
-        { label: "Garantía", value: inventoryDetail.warranty },
-    ];
-
-    // Suppliers table columns
-    const suppliersColumns: Column<typeof suppliers[0]>[] = [
-        {
-            id: "supplierId",
-            label: "ID",
-            size: "md",
-        },
-        {
-            id: "supplierName",
-            label: "PROVEEDOR",
-            size: "xl",
-        },
-        {
-            id: "status",
-            label: "ESTATUS",
-            type: "chip",
-            size: "sm",
-            chipConfig: {
-                principal: {
-                    label: "Principal",
-                    bgColor: "#FEF3C7",
-                    textColor: "#92400E",
-                },
-                secondary: {
-                    label: "Secundario",
-                    bgColor: "#F3F4F6",
-                    textColor: "#6B7280",
-                },
-            },
-        },
-    ];
-
     return (
         <MainLayout>
-            <HeaderSection>
+            <Stack spacing={3}>
                 <Breadcrumbs items={breadcrumbs} />
-                <ProductHeader>
-                    <ProductInfo>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {inventoryDetail.code}
-                        </Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1.5, lineHeight: 1.3 }}>
-                            {inventoryDetail.name}
-                        </Typography>
-                        <ProductCategories>
-                            <CategoryChip
-                                icon={<SettingsIcon />}
-                                label={`${inventoryDetail.department.code} - ${inventoryDetail.department.name}`}
-                                size="small"
-                            />
-                            <CategoryChip
-                                icon={<LaundryIcon />}
-                                label={`${inventoryDetail.line.code} - ${inventoryDetail.line.name}`}
-                                size="small"
-                            />
-                            <StatusChip
-                                status={inventoryDetail.status}
-                                label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
-                            />
-                        </ProductCategories>
-                    </ProductInfo>
-                </ProductHeader>
-            </HeaderSection>
 
-            <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
-
-            <TabContent>
-                {activeTab === "inventory" && (
-                    <>
-                        <SummarySection>
-                            <SummaryCard>
-                                <SummaryCardContent>
-                                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
-                                        {summary.inStock}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                                        Total en todas las sucursales.
-                                    </Typography>
-                                </SummaryCardContent>
-                                <SummaryCardIcon>
-                                    <GridViewIcon />
-                                </SummaryCardIcon>
-                            </SummaryCard>
-                            <SummaryCard>
-                                <SummaryCardContent>
-                                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
-                                        {summary.orders}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                                        Artículos solicitados a proveedores.
-                                    </Typography>
-                                </SummaryCardContent>
-                                <SummaryCardIcon>
-                                    <SyncIcon />
-                                </SummaryCardIcon>
-                            </SummaryCard>
-                            <SummaryCard>
-                                <SummaryCardContent>
-                                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
-                                        {summary.inTransit}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                                        Artículos con pedido activo
-                                    </Typography>
-                                </SummaryCardContent>
-                                <SummaryCardIcon>
-                                    <ShippingIcon />
-                                </SummaryCardIcon>
-                            </SummaryCard>
-                            <SummaryCard>
-                                <SummaryCardContent>
-                                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2, color: "#DC2626" }}>
-                                        {summary.damaged}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                                        Requieren gestión especial
-                                    </Typography>
-                                </SummaryCardContent>
-                                <SummaryCardIcon>
-                                    <BuildIcon />
-                                </SummaryCardIcon>
-                            </SummaryCard>
-                        </SummarySection>
-
-                        <ProductInfoCard
-                            title="Inventario por Sucursal"
-                            subtitle="Distribución de existencias en cada ubicación"
-                            showEditButton={false}
-                        >
-                            <InventoryByBranchTable data={branchInventory} loading={loading} />
-                        </ProductInfoCard>
-                    </>
-                )}
-
-                {activeTab === "activity" && (
-                    <>
-                        <SalesChart data={salesData} />
-                        <ActivityLog activities={activityLog} />
-                    </>
-                )}
-
-                {activeTab === "technical" && (
-                    <>
-                        <ProductInfoCard
-                            title="Información general"
-                            subtitle="Detalles completos del artículo"
-                            fields={generalInfoFields}
+                <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">{inventoryDetail.code}</Typography>
+                    <Typography variant="h5">{inventoryDetail.name}</Typography>
+                    <Stack direction="row" spacing={2}>
+                        <CategoryChip
+                            icon={<SettingsIcon />}
+                            label={`${inventoryDetail.department.code} - ${inventoryDetail.department.name}`}
+                            size="small"
                         />
+                        <CategoryChip
+                            icon={<LaundryIcon />}
+                            label={`${inventoryDetail.line.code} - ${inventoryDetail.line.name}`}
+                            size="small"
+                        />
+                        <StatusChip
+                            status={inventoryDetail.status}
+                            label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
+                        />
+                    </Stack>
+                </Stack>
 
-                        <ProductInfoCard
-                            title="Proveedores"
-                            subtitle="Proveedores autorizados para este artículo"
-                        >
-                            <TableCrud
-                                columns={suppliersColumns}
-                                rows={suppliers}
-                                loading={loading}
-                                rowKey="id"
-                                emptyMessage="No hay proveedores asignados"
-                            />
-                        </ProductInfoCard>
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                />
 
-                        <ProductInfoCard
-                            title="Estrategia de Precios"
-                            subtitle="Configuración de precios y márgenes"
-                        >
-                            <PricingGrid>
-                                <PricingItem>
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                        Costo
-                                    </Typography>
-                                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                                        {numeral(pricingStrategy.cost).format("$0,0.00")}
-                                    </Typography>
-                                </PricingItem>
-                                <PricingItem>
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                        Precio de lista
-                                    </Typography>
-                                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                                        {numeral(pricingStrategy.listPrice).format("$0,0.00")}
-                                    </Typography>
-                                </PricingItem>
-                                <PricingItem>
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                        Riguroso contado
-                                    </Typography>
-                                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                                        {numeral(pricingStrategy.cashPrice).format("$0,0.00")}
-                                    </Typography>
-                                </PricingItem>
-                            </PricingGrid>
-                        </ProductInfoCard>
 
-                        <ProductInfoCard
-                            title="Galería"
-                            subtitle="Imágenes del artículo"
-                        >
-                            <GalleryContainer>
-                                {gallery.images.map((image, index) => (
-                                    <GalleryImage key={index}>
-                                        <img src={image} alt={`Product image ${index + 1}`} />
-                                    </GalleryImage>
-                                ))}
-                            </GalleryContainer>
-                        </ProductInfoCard>
-
-                        <ProductInfoCard
-                            title="Paquetes"
-                            subtitle="Paquetes especiales"
-                        >
-                            <PackagesList>
-                                {packages.map((pkg) => (
-                                    <PackageItem key={pkg.id}>
-                                        <PackageIcon>
-                                            <BoxIcon />
-                                        </PackageIcon>
-                                        <PackageInfo>
-                                            <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
-                                                {pkg.articleName}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Cantidad: {pkg.quantity} Ult. precio:{" "}
-                                                {numeral(pkg.lastPrice).format("$0,0.00")}
-                                            </Typography>
-                                        </PackageInfo>
-                                        <PackagePrice>
-                                            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                                                Precio paquete:
-                                            </Typography>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                                {numeral(pkg.packagePrice).format("$0,0.00")}
-                                            </Typography>
-                                        </PackagePrice>
-                                    </PackageItem>
-                                ))}
-                            </PackagesList>
-                        </ProductInfoCard>
-                    </>
+                {activeTab === "inventory" && (
+                    <InventoryTab
+                        summary={summary}
+                        branchInventory={branchInventory}
+                        loading={loading}
+                    />
                 )}
-            </TabContent>
+                {activeTab === "activity" && (
+                    <ActivityTab salesData={salesData} activityLog={activityLog} />
+                )}
+                {activeTab === "configurations" && (
+                    <ConfigurationsTab
+                        branches={salesBranches}
+                        loading={loading}
+                        onBranchToggle={handleBranchToggle}
+                    />
+                )}
+                {activeTab === "technical" && (
+                    <TechnicalTab
+                        inventoryDetail={inventoryDetail}
+                        suppliers={suppliers}
+                        pricingStrategy={pricingStrategy}
+                        packages={packages}
+                        gallery={gallery}
+                        loading={loading}
+                    />
+                )}
+            </Stack>
         </MainLayout>
     );
 }

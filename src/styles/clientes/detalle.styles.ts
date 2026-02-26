@@ -262,37 +262,14 @@ export const TypeCellContent = styled(Box)<{ variant: "payment" | "purchase" }>(
   })
 );
 
-export const InfoSectionHeader = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-}));
-
-export const InfoSectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 20,
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-  marginBottom: 4,
-}));
-
-export const InfoSectionSubtitle = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
-}));
-
-export const InfoGrid = styled(Box)(({ theme }) => ({
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-  gap: theme.spacing(2),
-}));
-
 export const InfoCard = styled(Box)(({ theme }) => ({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "row",
   alignItems: "center",
-  justifyContent: "center",
-  gap: theme.spacing(1),
-  padding: theme.spacing(2.5),
+  gap: "12px",
+  padding: "12px 24px 12px 12px",
   border: `1px solid ${colors.border}`,
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: "16px",
   backgroundColor: colors.background.sidebar,
   cursor: "pointer",
   transition: "border-color 0.2s, background-color 0.2s",
@@ -303,6 +280,10 @@ export const InfoCard = styled(Box)(({ theme }) => ({
 }));
 
 export const InfoCardIcon = styled(Box)(({ theme }) => ({
+  width: "40px",
+  height: "40px",
+  borderRadius: "50%",
+  backgroundColor: colors.chip.background,
   color: theme.palette.text.secondary,
   display: "flex",
   alignItems: "center",

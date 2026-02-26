@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { MainLayout, Title, Tabs, OrderList, SuggestionsCard, SupplierSelectionModal } from "@/components";
+import { MainLayout, Title, Tabs, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
@@ -240,13 +240,12 @@ export default function Pedidos() {
 
             <PageContent>
                 <MainContent>
-                    <TabsWrapper>
-                        <Tabs
-                            tabs={tabs}
-                            value={activeTab}
-                            onChange={handleTabChange}
-                        />
-                    </TabsWrapper>
+
+                    <TabFilters
+                        tabs={tabs}
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                    />
 
                     <OrderList
                         orders={orders}

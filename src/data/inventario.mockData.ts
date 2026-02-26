@@ -12,6 +12,7 @@ import type {
     PricingStrategy,
     ProductPackage,
     ProductGallery,
+    SalesBranchConfig,
 } from "@/types/inventario.types";
 
 export const MOCK_INVENTORY_DETAIL: InventoryDetail = {
@@ -48,31 +49,36 @@ export const MOCK_BRANCH_INVENTORY: BranchInventory[] = [
         id: "1",
         branchName: "Matriz",
         stock: 14,
-        lastPrice: 7900.0,
+        creditPrice: 7900.0,
+        price: 7900.0,
     },
     {
         id: "2",
         branchName: "Carrera",
         stock: 2,
-        lastPrice: 7900.0,
+        creditPrice: 7900.0,
+        price: 7900.0,
     },
     {
         id: "3",
         branchName: "Estación",
         stock: 4,
-        lastPrice: 7900.0,
+        creditPrice: 7900.0,
+        price: 7900.0,
     },
     {
         id: "4",
         branchName: "Matamoros-Pedro Cárdenas",
         stock: 10,
-        lastPrice: 7900.0
+        creditPrice: 7900.0,
+        price: 7900.0,
     },
     {
         id: "5",
         branchName: "Matamoros-Plaza Patio",
         stock: 9,
-        lastPrice: 7900.0,
+        creditPrice: 7900.0,
+        price: 7900.0,
     },
 ];
 
@@ -176,3 +182,21 @@ export const MOCK_GALLERY: ProductGallery = {
         "/api/placeholder/400/300",
     ],
 };
+
+export const MOCK_SALES_BRANCHES_CONFIG: SalesBranchConfig[] = [
+    { id: "1", name: "Matriz", enabled: true },
+    { id: "2", name: "Carrera", enabled: true },
+    { id: "3", name: "Estación", enabled: true },
+    { id: "4", name: "Reynosa-Av. Hidalgo", enabled: true },
+    { id: "5", name: "Reynosa-Periférico", enabled: true },
+    { id: "6", name: "Nuevo Laredo", enabled: true },
+    { id: "7", name: "Concordia-Mty", enabled: true },
+    { id: "8", name: "Matamoros-Pedro Cárdenas", enabled: false },
+    { id: "9", name: "Matamoros-Plaza Patio", enabled: false },
+    { id: "10", name: "Matamoros-Brisas", enabled: false },
+];
+
+export async function getSalesBranchesConfig(_sku: string): Promise<SalesBranchConfig[]> {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return [...MOCK_SALES_BRANCHES_CONFIG];
+}

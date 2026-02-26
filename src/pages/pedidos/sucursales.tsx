@@ -2,12 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { ChipStyleConfig, Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 type OrderStatus = "pending" | "delivered";
 
@@ -35,10 +31,10 @@ interface GetBranchOrdersResponse {
     page: number;
     limit: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
+const ESTATUS_CHIP_CONFIG: Record<OrderStatus, ChipStyleConfig> = {
+    pending: { label: "Pendiente", bgColor: "#FFF7ED", textColor: "#EA580C" },
+    delivered: { label: "Entregado", bgColor: "#F0FDF4", textColor: "#16A34A" },
+};
 
 const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
     {
@@ -311,26 +307,21 @@ export default function PedidosSucursales() {
             id: "requestedItems",
             label: "Artículos solicitados",
             type: "number",
-            size: "md",
-            align: "left",
+            size: "md"
         },
         {
             id: "deliveredItems",
             label: "Artículos entregados",
             type: "number",
             size: "md",
-            align: "left",
             format: (value) => (value === null ? "-" : String(value)),
         },
         {
             id: "status",
             label: "Estatus",
             size: "md",
-            format: (value) => (
-                <span style={{ color: getStatusColor(value as OrderStatus), fontWeight: 500 }}>
-                    {getStatusLabel(value as OrderStatus)}
-                </span>
-            ),
+            type: "chip",
+            chipConfig: ESTATUS_CHIP_CONFIG
         },
     ];
 

@@ -1,95 +1,110 @@
 import numeral from "numeral";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
   CardContainer,
-  ProductRow,
   ProductImage,
-  ProductInfo,
-  ProductName,
-  ProductSku,
-  SuggestedPriceBlock,
-  SuggestedPriceLabel,
-  SuggestedPriceValue,
+  PriceListContainer,
+  PriceListItem,
+  TimelineColumn,
+  TimelineDot,
+  TimelineLine,
+  PriceRow,
+  PriceRowContent,
+  PriceAmount,
+  PriceChange,
   ApplyButton,
-  AlternativePrices,
-  AlternativePriceItem,
 } from "./styles";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { Stack, Typography } from "@mui/material";
 
 export interface PriceSuggestionCardProps {
   item: PriceSuggestionItem;
   onApply?: (item: PriceSuggestionItem, price: number) => void;
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+interface PriceRowData {
+  price: number;
+  changePercent: number;
+  direction: "up" | "down";
+  isSuggested: boolean;
+}
 
 function formatPrice(value: number): string {
   return numeral(value).format("$0,0.00");
 }
 
-function formatChange(percent: number, direction: "up" | "down"): string {
-  const arrow = direction === "down" ? "▼" : "▲";
-  return `${arrow} ${percent}%`;
+function buildPriceRows(item: PriceSuggestionItem): PriceRowData[] {
+  const suggested: PriceRowData = {
+    price: item.suggestedPrice,
+    changePercent: item.changePercent,
+    direction: item.direction,
+    isSuggested: true,
+  };
+  const alternatives: PriceRowData[] = item.alternativePrices.map((alt) => ({
+    price: alt.price,
+    changePercent: alt.changePercent,
+    direction: alt.direction,
+    isSuggested: false,
+  }));
+  return [suggested, ...alternatives];
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function PriceSuggestionCard({ item, onApply }: PriceSuggestionCardProps) {
+  const priceRows = buildPriceRows(item);
+
   const handleApply = () => {
     onApply?.(item, item.suggestedPrice);
   };
 
-  const changeClass =
-    item.direction === "down" ? "change-down" : "change-up";
-
   return (
     <CardContainer>
-      <ProductRow>
+      <Stack direction="row" spacing={1} alignItems="center">
         <ProductImage />
-        <ProductInfo>
-          <ProductName>{item.productName}</ProductName>
-          <ProductSku>{item.sku}</ProductSku>
-        </ProductInfo>
-      </ProductRow>
+        <Stack>
+          <Typography variant="body1" fontWeight={700}>{item.productName}</Typography>
+          <Typography variant="caption">{item.sku}</Typography>
+        </Stack>
+      </Stack>
 
-      <SuggestedPriceLabel>Nuevo precio sugerido</SuggestedPriceLabel>
-      <SuggestedPriceBlock>
-        <SuggestedPriceValue>
-          <span className="price">{formatPrice(item.suggestedPrice)}</span>
-          <span className={`change ${changeClass}`}>
-            {formatChange(item.changePercent, item.direction)}
-          </span>
-        </SuggestedPriceValue>
-        <ApplyButton
-          variant="contained"
-          color="primary"
-          size="small"
-          onClick={handleApply}
-        >
-          Aplicar
-        </ApplyButton>
-      </SuggestedPriceBlock>
-
-      {item.alternativePrices.length > 0 && (
-        <AlternativePrices>
-          {item.alternativePrices.map((alt, index) => (
-            <AlternativePriceItem key={index} component="span">
-              {formatPrice(alt.price)}{" "}
-              <span className={alt.direction === "down" ? "down" : "up"}>
-                {formatChange(alt.changePercent, alt.direction)}
-              </span>
-              {index < item.alternativePrices.length - 1 ? " · " : ""}
-            </AlternativePriceItem>
-          ))}
-        </AlternativePrices>
-      )}
+      <PriceListContainer>
+        {priceRows.map((row, index) => (
+          <PriceListItem key={index}>
+            <TimelineColumn>
+              <TimelineDot active={row.isSuggested} />
+              {index < priceRows.length - 1 && <TimelineLine />}
+            </TimelineColumn>
+            <PriceRow highlighted={row.isSuggested}>
+              <PriceRowContent>
+                {
+                  row.isSuggested &&
+                  <Typography variant="body1" color="text.secondary" fontWeight={500}>Nuevo precio sugerido</Typography>
+                }
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <PriceAmount active={row.isSuggested}>{formatPrice(row.price)}</PriceAmount>
+                  <PriceChange active={row.isSuggested}>
+                    {row.direction === "down" ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronUp size={14} />
+                    )}
+                    <span>{row.changePercent}%</span>
+                  </PriceChange>
+                </Stack>
+              </PriceRowContent>
+              {row.isSuggested && (
+                <ApplyButton
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={handleApply}
+                >
+                  Aplicar
+                </ApplyButton>
+              )}
+            </PriceRow>
+          </PriceListItem>
+        ))}
+      </PriceListContainer>
     </CardContainer>
   );
 }

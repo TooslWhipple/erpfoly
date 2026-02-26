@@ -7,91 +7,98 @@ import { colors } from "@/styles/theme";
 // ============================================================================
 
 export const CardContainer = styled(Box)(({ theme }) => ({
-  paddingBottom: theme.spacing(2),
-  borderBottom: `1px solid ${colors.border}`,
-  "&:last-child": {
-    borderBottom: "none",
-    paddingBottom: 0,
-  },
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  backgroundColor: colors.background.sidebar,
+  border: `1px solid ${colors.border}`,
+  borderRadius: "12px",
+  padding: "16px"
 }));
 
-export const ProductRow = styled(Box)({
-  display: "flex",
-  gap: 12,
-  marginBottom: 12,
-});
-
 export const ProductImage = styled(Box)({
-  width: 48,
-  height: 48,
-  borderRadius: 6,
+  width: "48px",
+  height: "48px",
+  borderRadius: "10px",
   backgroundColor: "#F3F4F6",
   flexShrink: 0,
 });
 
-export const ProductInfo = styled(Box)({
-  flex: 1,
-  minWidth: 0,
+export const PriceListContainer = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 0,
 });
 
-export const ProductName = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  fontWeight: 500,
-  color: theme.palette.text.primary,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
+export const PriceListItem = styled(Box)({
+  display: "flex",
+  alignItems: "stretch",
+  gap: 0,
+});
+
+export const TimelineColumn = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  width: 24,
+  flexShrink: 0,
+  paddingTop: 6,
+  paddingBottom: 2,
 }));
 
-export const ProductSku = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
-  color: theme.palette.text.secondary,
-  marginTop: 2,
+export const TimelineDot = styled(Box)<{ active?: boolean }>(({ theme, active }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  backgroundColor: active ? theme.palette.primary.main : colors.border,
+  flexShrink: 0,
+  zIndex: 1,
 }));
 
-// ============================================================================
-// SUGGESTED PRICE BLOCK
-// ============================================================================
+export const TimelineLine = styled(Box)({
+  width: 2,
+  flex: 1,
+  minHeight: 12,
+  backgroundColor: colors.border,
+  marginTop: 6,
+  marginBottom: 2,
+});
 
-export const SuggestedPriceBlock = styled(Box)(({ theme }) => ({
+export const PriceRow = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "highlighted",
+})<{ highlighted?: boolean }>(({ theme, highlighted }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: theme.spacing(1.5),
   flexWrap: "wrap",
-  marginBottom: theme.spacing(1),
+  padding: "8px",
+  borderRadius: "12px",
+  backgroundColor: highlighted ? colors.sidebar.itemSelected : "transparent",
+  flex: 1,
+  minWidth: 0,
+  marginLeft: theme.spacing(1.5),
 }));
 
-export const SuggestedPriceLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 11,
-  fontWeight: 500,
-  color: theme.palette.text.secondary,
-  textTransform: "uppercase",
-  letterSpacing: "0.02em",
-  marginBottom: 2,
-}));
-
-export const SuggestedPriceValue = styled(Box)(({ theme }) => ({
+export const PriceRowContent = styled(Box)({
   display: "flex",
-  alignItems: "baseline",
-  gap: 6,
-  "& .price": {
-    fontSize: 16,
-    fontWeight: 700,
-    color: theme.palette.text.primary,
-  },
-  "& .change": {
-    fontSize: 13,
-    fontWeight: 500,
-  },
-  "& .change-down": {
-    color: "#16a34a",
-  },
-  "& .change-up": {
-    color: "#dc2626",
-  },
+  flexDirection: "column",
+  minWidth: 0,
+  flex: 1,
+});
+
+export const PriceAmount = styled(Typography)<{ active?: boolean }>(({ theme, active }) => ({
+  fontSize: 18,
+  fontWeight: 700,
+  color: active !== false ? theme.palette.text.primary : theme.palette.text.secondary,
+}));
+
+export const PriceChange = styled(Box)<{ active?: boolean }>(({ theme, active }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontSize: 12,
+  fontWeight: 700,
+  color: active ? theme.palette.primary.main : theme.palette.text.secondary,
 }));
 
 export const ApplyButton = styled(Button)(({ theme }) => ({
@@ -100,30 +107,8 @@ export const ApplyButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   paddingLeft: theme.spacing(2),
   paddingRight: theme.spacing(2),
-}));
-
-// ============================================================================
-// ALTERNATIVE PRICES
-// ============================================================================
-
-export const AlternativePrices = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: theme.spacing(1.5),
-  fontSize: 12,
-  color: theme.palette.text.secondary,
-}));
-
-export const AlternativePriceItem = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
-  color: theme.palette.text.secondary,
-  "& .price": {
-    fontWeight: 500,
-  },
-  "& .down": {
-    color: "#16a34a",
-  },
-  "& .up": {
-    color: "#dc2626",
+  boxShadow: "none",
+  "&:hover": {
+    boxShadow: "none",
   },
 }));

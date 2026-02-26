@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import {
   FilterList as FilterListIcon,
   InfoOutlined as InfoIcon,
@@ -21,7 +22,7 @@ import {
 import { PageContent, MainContent, SidebarPanel } from "@/styles/pedidos.styles";
 import { DepartmentsList } from "@/styles/inventario/liquidaciones.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { Typography } from "@mui/material";
+import { Typography, Box, Skeleton } from "@mui/material";
 
 // ============================================================================
 // TYPES
@@ -34,6 +35,7 @@ type PageState = "loading" | "success" | "empty" | "error";
 // ============================================================================
 
 export default function LiquidacionesPage() {
+  const router = useRouter();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
@@ -93,6 +95,13 @@ export default function LiquidacionesPage() {
     }
   }, [confirmModalItem, showSuccess, showError, fetchData]);
 
+  const handleDepartmentClick = useCallback(
+    (department: { id: string }) => {
+      router.push(`/inventario/liquidaciones/departamento/${department.id}`);
+    },
+    [router]
+  );
+
   const previousPriceFromItem = confirmModalItem
     ? confirmModalItem.direction === "down"
       ? confirmModalItem.suggestedPrice / (1 - confirmModalItem.changePercent / 100)
@@ -129,9 +138,38 @@ export default function LiquidacionesPage() {
       <PageContent>
         <MainContent>
           {state === "loading" && (
-            <p style={{ color: "var(--mui-palette-text-secondary)" }}>
-              Cargando...
-            </p>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 2,
+                  mb: 1,
+                }}
+              >
+                {[1, 2, 3].map((i) => (
+                  <Skeleton
+                    key={i}
+                    variant="rectangular"
+                    height={120}
+                    sx={{ borderRadius: 2 }}
+                    animation="wave"
+                  />
+                ))}
+              </Box>
+              <Skeleton variant="text" width={200} height={32} animation="wave" />
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton
+                    key={i}
+                    variant="rectangular"
+                    height={88}
+                    sx={{ borderRadius: 2 }}
+                    animation="wave"
+                  />
+                ))}
+              </Box>
+            </Box>
           )}
           {state === "error" && (
             <p style={{ color: "var(--mui-palette-error-main)" }}>
@@ -152,7 +190,11 @@ export default function LiquidacionesPage() {
               <DepartmentsList>
                 {
                   departments.map((dept) => (
-                    <DepartmentCard key={dept.id} department={dept} />
+                    <DepartmentCard
+                      key={dept.id}
+                      department={dept}
+                      onClick={handleDepartmentClick}
+                    />
                   ))
                 }
               </DepartmentsList>

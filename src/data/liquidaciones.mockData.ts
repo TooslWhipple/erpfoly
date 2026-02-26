@@ -7,6 +7,8 @@ import type {
   DepartmentLowRotation,
   PriceSuggestionItem,
   LowRotationStrategyResponse,
+  DepartmentDetail,
+  LiquidationRule,
 } from "@/types/liquidaciones.types";
 
 export const MOCK_SUMMARY: LowRotationSummaryStats = {
@@ -118,8 +120,59 @@ export const MOCK_PRICE_SUGGESTIONS: PriceSuggestionItem[] = [
 ];
 
 // ============================================================================
+// DEPARTMENT DETAIL MOCK (rules + articles by department)
+// ============================================================================
+
+const MOCK_RULES_BY_DEPARTMENT: Record<string, LiquidationRule[]> = {
+  "1": [
+    {
+      id: "r1",
+      order: 1,
+      operator: "less",
+      value: 10,
+      periodDays: "30",
+      promotionPercent: 15,
+      redLabelEnabled: false,
+    },
+    {
+      id: "r2",
+      order: 2,
+      operator: "less",
+      value: 10,
+      periodDays: "60",
+      promotionPercent: 10,
+      redLabelEnabled: true,
+    },
+  ],
+  "2": [
+    {
+      id: "r3",
+      order: 1,
+      operator: "less",
+      value: 5,
+      periodDays: "90",
+      promotionPercent: 20,
+      redLabelEnabled: true,
+    },
+  ],
+};
+
+// ============================================================================
 // MOCK API FUNCTIONS
 // ============================================================================
+
+export async function getDepartmentDetail(departmentId: string): Promise<DepartmentDetail | null> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const department = MOCK_DEPARTMENTS.find((d) => d.id === departmentId);
+  if (!department) return null;
+  const rules = MOCK_RULES_BY_DEPARTMENT[departmentId] ?? [];
+  return {
+    id: department.id,
+    name: department.name,
+    articles: MOCK_PRICE_SUGGESTIONS,
+    rules: [...rules].sort((a, b) => a.order - b.order),
+  };
+}
 
 export async function getLowRotationStrategy(): Promise<LowRotationStrategyResponse> {
   await new Promise((resolve) => setTimeout(resolve, 600));

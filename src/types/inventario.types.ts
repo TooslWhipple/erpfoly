@@ -34,7 +34,8 @@ export interface BranchInventory {
     id: string;
     branchName: string;
     stock: number;
-    lastPrice: number;
+    creditPrice: number;
+    price: number;
     tags?: string[];
 }
 
@@ -86,4 +87,10 @@ export interface ProductPackage {
 
 export interface ProductGallery {
     images: string[];
+}
+
+export interface SalesBranchConfig {
+    id: string;
+    name: string;
+    enabled: boolean;
 }

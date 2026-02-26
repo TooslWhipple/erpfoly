@@ -5,6 +5,7 @@ import {
     Edit as EditIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
+import { Box, Skeleton } from "@mui/material";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
@@ -452,7 +453,27 @@ export default function MercanciaDanada() {
             <Title title="Mercancía dañada" />
 
             <StatsSection>
-                <StatsCardGroup cards={statsCards} />
+                {stats ? (
+                    <StatsCardGroup cards={statsCards} />
+                ) : (
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, 1fr)",
+                            gap: 2,
+                        }}
+                    >
+                        {[1, 2, 3].map((i) => (
+                            <Skeleton
+                                key={i}
+                                variant="rectangular"
+                                height={120}
+                                sx={{ borderRadius: 2 }}
+                                animation="wave"
+                            />
+                        ))}
+                    </Box>
+                )}
             </StatsSection>
 
             <TabFilters

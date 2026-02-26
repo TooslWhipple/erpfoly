@@ -52,5 +52,7 @@ export { PriceSuggestionCard } from "./PriceSuggestionCard";
 export type { PriceSuggestionCardProps } from "./PriceSuggestionCard";
 export { PriceSuggestionsSidebar } from "./PriceSuggestionsSidebar";
 export type { PriceSuggestionsSidebarProps } from "./PriceSuggestionsSidebar";
+export { LiquidationRuleCard } from "./LiquidationRuleCard";
+export type { LiquidationRuleCardProps } from "./LiquidationRuleCard";
 export * from "./Icons";
 

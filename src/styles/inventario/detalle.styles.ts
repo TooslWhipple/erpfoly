@@ -64,40 +64,25 @@ export const StatusChip = styled(Chip)<{ status: "active" | "inactive" }>(
     })
 );
 
-// ============================================================================
-// SUMMARY CARDS STYLES
-// ============================================================================
 
-export const SummarySection = styled(Box)(({ theme }) => ({
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(3),
-}));
-
-export const SummaryCard = styled(Box)(({ theme }) => ({
+export const SummaryCard = styled(Box)({
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(2),
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-}));
-
-export const SummaryCardContent = styled(Box)({
-    flex: 1,
+    borderRadius: "16px",
+    padding: "24px",
+    height: "100%",
 });
 
-
 export const SummaryCardIcon = styled(Box)(({ theme }) => ({
+    position: "absolute",
+    top: "24px",
+    right: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 40,
-    height: 40,
-    borderRadius: "8px",
-    backgroundColor: theme.palette.action.hover,
     color: theme.palette.text.secondary,
     "& svg": {
         fontSize: 20,
@@ -221,4 +206,37 @@ export const PricingItem = styled(Box)({
     flexDirection: "column",
     gap: 4,
 });
+
+// ============================================================================
+// CONFIGURATIONS TAB - SALES BRANCHES
+// ============================================================================
+
+export const ConfigSectionTitle = styled(Typography)(({ theme }) => ({
+    fontSize: 18,
+    fontWeight: 600,
+    color: theme.palette.text.primary,
+    marginBottom: theme.spacing(0.5),
+}));
+
+export const ConfigSectionSubtitle = styled(Typography)(({ theme }) => ({
+    fontSize: 14,
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(2),
+}));
+
+export const SalesBranchList = styled(Box)(({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1.5),
+}));
+
+export const SalesBranchCard = styled(Box)(({ theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing(2),
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 12,
+}));
 

@@ -8,4 +8,5 @@ export const Card = styled("div")({
   borderRadius: "16px",
   border: `1px solid ${colors.border}`,
   background: "white",
+  transition: "border-color 0.15s ease",
 });

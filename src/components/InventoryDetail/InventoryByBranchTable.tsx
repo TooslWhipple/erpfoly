@@ -1,21 +1,11 @@
-import { Box, Chip } from "@mui/material";
 import { TableCrud } from "@/components/TableCrud";
 import type { Column } from "@/components/TableCrud";
 import type { BranchInventory } from "@/types/inventario.types";
-import numeral from "numeral";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 export interface InventoryByBranchTableProps {
     data: BranchInventory[];
     loading?: boolean;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function InventoryByBranchTable({
     data,
@@ -24,39 +14,29 @@ export function InventoryByBranchTable({
     const columns: Column<BranchInventory>[] = [
         {
             id: "branchName",
-            label: "SUCURSAL",
+            label: "Sucursal",
             size: "xl",
         },
         {
             id: "stock",
-            label: "EXISTENCIAS",
+            label: "Existencias",
             type: "number",
             size: "md",
             align: "left",
         },
         {
-            id: "lastPrice",
-            label: "ÚLTIMO PRECIO",
+            id: "creditPrice",
+            label: "Precio crédito",
             type: "currency",
             size: "md",
             align: "left",
-            format: (value, row) => (
-                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-                    <span>{numeral(value as number).format("$0,0.00")}</span>
-                    {row.tags && row.tags.length > 0 && (
-                        <Chip
-                            label={row.tags[0]}
-                            size="small"
-                            sx={{
-                                height: 20,
-                                fontSize: "11px",
-                                backgroundColor: "#FEF3C7",
-                                color: "#92400E",
-                            }}
-                        />
-                    )}
-                </Box>
-            ),
+        },
+        {
+            id: "price",
+            label: "Precio contado",
+            type: "currency",
+            size: "md",
+            align: "left",
         },
     ];
 

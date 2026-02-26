@@ -201,5 +201,46 @@ export const theme = createTheme({
         },
       },
     },
+    MuiSwitch: {
+      styleOverrides: {
+        root: {
+          width: 44,
+          height: 24,
+          padding: 0,
+        },
+        switchBase: ({ theme }) => ({
+          padding: 2,
+          "&.Mui-checked": {
+            transform: "translateX(20px)",
+            "& + .MuiSwitch-track": {
+              backgroundColor: theme.palette.primary.main,
+              opacity: 1,
+            },
+            "& .MuiSwitch-thumb": {
+              boxShadow: "none",
+              border: "none",
+            },
+          },
+        }),
+        thumb: {
+          width: 20,
+          height: 20,
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          "&.Mui-checked": {
+            backgroundColor: "#FFFFFF",
+          },
+        },
+        track: {
+          borderRadius: 12,
+          backgroundColor: "#E5E7EB",
+          opacity: 1,
+          "&:after, &:before": {
+            display: "none",
+          },
+        },
+      },
+    },
   },
 });

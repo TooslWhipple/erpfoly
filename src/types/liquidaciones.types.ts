@@ -38,3 +38,27 @@ export interface LowRotationStrategyResponse {
   departments: DepartmentLowRotation[];
   priceSuggestions: PriceSuggestionItem[];
 }
+
+// ============================================================================
+// DEPARTMENT DETAIL (liquidaciones/departamento/[id])
+// ============================================================================
+
+export type LiquidationRuleOperator = "less" | "greater";
+export type LiquidationRulePeriod = "30" | "60" | "90";
+
+export interface LiquidationRule {
+  id: string;
+  order: number;
+  operator: LiquidationRuleOperator;
+  value: number;
+  periodDays: LiquidationRulePeriod;
+  promotionPercent: number;
+  redLabelEnabled: boolean;
+}
+
+export interface DepartmentDetail {
+  id: string;
+  name: string;
+  articles: PriceSuggestionItem[];
+  rules: LiquidationRule[];
+}

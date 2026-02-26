@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Skeleton } from "@mui/material";
 import { Lightbulb } from "lucide-react";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import { PriceSuggestionCard } from "@/components/PriceSuggestionCard";
@@ -41,9 +41,18 @@ export function PriceSuggestionsSidebar({
             <SidebarTitle>Sugerencias</SidebarTitle>
           </Box>
         </SidebarHeader>
-        <Box sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>
-          Cargando...
-        </Box>
+        <Skeleton variant="text" width="90%" sx={{ mb: 2 }} animation="wave" />
+        <SuggestionsList>
+          {[1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={160}
+              sx={{ borderRadius: 2 }}
+              animation="wave"
+            />
+          ))}
+        </SuggestionsList>
       </SidebarContainer>
     );
   }

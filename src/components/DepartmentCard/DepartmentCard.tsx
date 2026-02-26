@@ -5,11 +5,16 @@ import { Divider, Stack, Typography } from "@mui/material";
 
 export interface DepartmentCardProps {
   department: DepartmentLowRotation;
+  onClick?: (department: DepartmentLowRotation) => void;
 }
 
-export function DepartmentCard({ department }: DepartmentCardProps) {
+export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
   return (
-    <Card>
+    <Card
+      role={onClick ? "button" : undefined}
+      onClick={onClick ? () => onClick(department) : undefined}
+      sx={onClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : undefined}
+    >
       <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
         <Stack flex={1}>
           <Typography variant="h6" fontWeight={700}>{department.name}</Typography>

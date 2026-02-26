@@ -8,14 +8,11 @@ import {
     Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
+import { Box, Skeleton } from "@mui/material";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { StatsSection, INVENTORY_COLORS } from "@/styles/inventario/styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 interface InventoryItem {
     id: number;
@@ -49,10 +46,6 @@ interface InventoryStats {
     inTransit: number;
     damaged: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_INVENTORY: InventoryItem[] = [
     {
@@ -167,10 +160,6 @@ const DUMMY_INVENTORY: InventoryItem[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getInventoryStats(): Promise<InventoryStats> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
@@ -215,10 +204,6 @@ async function getInventory(params: GetInventoryParams): Promise<GetInventoryRes
         limit: params.limit,
     };
 }
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export default function Inventario() {
     const router = useRouter();
@@ -348,12 +333,12 @@ export default function Inventario() {
     const columns: Column<InventoryItem>[] = [
         {
             id: "code",
-            label: "CÓDIGO",
+            label: "Código",
             size: "md",
         },
         {
             id: "status",
-            label: "ESTATUS",
+            label: "Estatus",
             type: "chip",
             size: "sm",
             chipConfig: {
@@ -371,24 +356,24 @@ export default function Inventario() {
         },
         {
             id: "name",
-            label: "NOMBRE",
+            label: "Nombre",
             size: "xl",
             truncate: true,
         },
         {
             id: "department",
-            label: "DEPARTAMENTO",
+            label: "Departamento",
             size: "lg",
             truncate: true,
         },
         {
             id: "line",
-            label: "LÍNEA",
+            label: "Línea",
             size: "md",
         },
         {
             id: "inStock",
-            label: "EN EXISTENCIA",
+            label: "En existencia",
             type: "number",
             size: "sm",
             align: "left",
@@ -400,7 +385,7 @@ export default function Inventario() {
         },
         {
             id: "inTransit",
-            label: "EN TRÁNSITO",
+            label: "En tránsito",
             type: "number",
             size: "sm",
             align: "left",
@@ -412,7 +397,7 @@ export default function Inventario() {
         },
         {
             id: "damaged",
-            label: "DAÑADA",
+            label: "Dañada",
             type: "number",
             size: "sm",
             align: "left",
@@ -439,7 +424,27 @@ export default function Inventario() {
             <Title title="Inventario" />
 
             <StatsSection>
-                <StatsCardGroup cards={statsCards} />
+                {stats ? (
+                    <StatsCardGroup cards={statsCards} />
+                ) : (
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: 2,
+                        }}
+                    >
+                        {[1, 2, 3, 4].map((i) => (
+                            <Skeleton
+                                key={i}
+                                variant="rectangular"
+                                height={120}
+                                sx={{ borderRadius: 2 }}
+                                animation="wave"
+                            />
+                        ))}
+                    </Box>
+                )}
             </StatsSection>
 
             <TabFilters

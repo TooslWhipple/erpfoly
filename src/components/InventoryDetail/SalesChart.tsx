@@ -1,48 +1,28 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { TrendingUp as TrendingUpIcon } from "@mui/icons-material";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from "recharts";
 import type { SalesData } from "@/types/inventario.types";
 import {
     SalesChartContainer,
-    SalesHeader,
     SalesIcon,
-    SalesMetric,
-    ChartContainer,
 } from "./styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 export interface SalesChartProps {
     data: SalesData;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function SalesChart({ data }: SalesChartProps) {
     return (
         <SalesChartContainer>
-            <SalesHeader>
+            <Stack flex={1} spacing={1}>
                 <SalesIcon>
                     <TrendingUpIcon />
                 </SalesIcon>
-                <Stack direction="column">
-                    <Typography variant="subtitle1" color="text.secondary">
-                        Ventas del último mes
-                    </Typography>
-                    <Typography variant="h1" sx={{ fontWeight: 700, color: "#16A34A" }}>
-                        {data.lastMonth}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        + {data.percentageChange}% del mes anterior
-                    </Typography>
-                </Stack>
-            </SalesHeader>
-
-            <ChartContainer>
+                <Typography variant="subtitle1">Ventas del último mes</Typography>
+                <Typography variant="h2" sx={{ color: "#16A34A" }}>{data.lastMonth}</Typography>
+                <Typography variant="body2" color="text.secondary">+ {data.percentageChange}% del mes anterior</Typography>
+            </Stack>
+            <Stack flex={6} height={200}>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={data.monthlyData}
@@ -70,7 +50,7 @@ export function SalesChart({ data }: SalesChartProps) {
                         />
                     </BarChart>
                 </ResponsiveContainer>
-            </ChartContainer>
+            </Stack>
         </SalesChartContainer>
     );
 }

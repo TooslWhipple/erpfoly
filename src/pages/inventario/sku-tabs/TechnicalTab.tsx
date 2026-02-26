@@ -1,5 +1,5 @@
 import { Inventory2 as BoxIcon } from "@mui/icons-material";
-import { Typography } from "@mui/material";
+import { Grid, Typography } from "@mui/material";
 import { ProductInfoCard } from "@/components/InventoryDetail";
 import { TableCrud } from "@/components/TableCrud";
 import type { Column } from "@/components/TableCrud";
@@ -106,32 +106,26 @@ export function TechnicalTab({
                 title="Estrategia de Precios"
                 subtitle="Configuración de precios y márgenes"
             >
-                <PricingGrid>
-                    <PricingItem>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            Costo
-                        </Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                            {numeral(pricingStrategy.cost).format("$0,0.00")}
-                        </Typography>
-                    </PricingItem>
-                    <PricingItem>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            Precio de lista
-                        </Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                            {numeral(pricingStrategy.listPrice).format("$0,0.00")}
-                        </Typography>
-                    </PricingItem>
-                    <PricingItem>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            Riguroso contado
-                        </Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                            {numeral(pricingStrategy.cashPrice).format("$0,0.00")}
-                        </Typography>
-                    </PricingItem>
-                </PricingGrid>
+                <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                        <PricingItem>
+                            <Typography variant="body2" color="text.secondary">Costo</Typography>
+                            <Typography variant="h5">{numeral(pricingStrategy.cost).format("$0,0.00")}</Typography>
+                        </PricingItem>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                        <PricingItem>
+                            <Typography variant="body2" color="text.secondary">Precio de lista</Typography>
+                            <Typography variant="h5">{numeral(pricingStrategy.listPrice).format("$0,0.00")}</Typography>
+                        </PricingItem>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                        <PricingItem>
+                            <Typography variant="body2" color="text.secondary">Riguroso contado</Typography>
+                            <Typography variant="h5">{numeral(pricingStrategy.cashPrice).format("$0,0.00")}</Typography>
+                        </PricingItem>
+                    </Grid>
+                </Grid>
             </ProductInfoCard>
 
             <ProductInfoCard

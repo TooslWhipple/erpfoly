@@ -3,13 +3,8 @@ import { useRouter } from "next/router";
 import { Settings as SettingsIcon, LocalLaundryService as LaundryIcon } from "@mui/icons-material";
 import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
 import {
-    HeaderSection,
-    ProductHeader,
-    ProductInfo,
-    ProductCategories,
     CategoryChip,
     StatusChip,
-    TabContent,
 } from "@/styles/inventario/detalle.styles";
 import {
     MOCK_INVENTORY_DETAIL,
@@ -25,7 +20,7 @@ import {
 } from "@/data/inventario.mockData";
 import type { SalesBranchConfig } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
-import { Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { InventoryTab, ActivityTab, TechnicalTab, ConfigurationsTab } from "./sku-tabs";
 
 async function getInventoryDetail(sku: string) {
@@ -98,7 +93,6 @@ export default function InventoryDetail() {
     const [gallery, setGallery] = useState(MOCK_GALLERY);
     const [salesBranches, setSalesBranches] = useState<SalesBranchConfig[]>([]);
 
-    // Load data
     useEffect(() => {
         if (!sku || typeof sku !== "string") return;
 
@@ -157,7 +151,6 @@ export default function InventoryDetail() {
         );
     };
 
-    // Tabs configuration
     const tabs: TabItem[] = [
         { value: "inventory", label: "Inventario" },
         { value: "activity", label: "Actividad" },
@@ -165,7 +158,6 @@ export default function InventoryDetail() {
         { value: "technical", label: "Ficha técnica" },
     ];
 
-    // Breadcrumbs
     const breadcrumbs = [
         { label: "Inventario", href: "/inventario" },
         { label: inventoryDetail.name.length > 30 ? `${inventoryDetail.name.substring(0, 30)}...` : inventoryDetail.name },
@@ -173,43 +165,37 @@ export default function InventoryDetail() {
 
     return (
         <MainLayout>
-            <HeaderSection>
+            <Stack spacing={3}>
                 <Breadcrumbs items={breadcrumbs} />
-                <ProductHeader>
-                    <ProductInfo>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {inventoryDetail.code}
-                        </Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1.5, lineHeight: 1.3 }}>
-                            {inventoryDetail.name}
-                        </Typography>
-                        <ProductCategories>
-                            <CategoryChip
-                                icon={<SettingsIcon />}
-                                label={`${inventoryDetail.department.code} - ${inventoryDetail.department.name}`}
-                                size="small"
-                            />
-                            <CategoryChip
-                                icon={<LaundryIcon />}
-                                label={`${inventoryDetail.line.code} - ${inventoryDetail.line.name}`}
-                                size="small"
-                            />
-                            <StatusChip
-                                status={inventoryDetail.status}
-                                label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
-                            />
-                        </ProductCategories>
-                    </ProductInfo>
-                </ProductHeader>
-            </HeaderSection>
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-            />
+                <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">{inventoryDetail.code}</Typography>
+                    <Typography variant="h5">{inventoryDetail.name}</Typography>
+                    <Stack direction="row" spacing={2}>
+                        <CategoryChip
+                            icon={<SettingsIcon />}
+                            label={`${inventoryDetail.department.code} - ${inventoryDetail.department.name}`}
+                            size="small"
+                        />
+                        <CategoryChip
+                            icon={<LaundryIcon />}
+                            label={`${inventoryDetail.line.code} - ${inventoryDetail.line.name}`}
+                            size="small"
+                        />
+                        <StatusChip
+                            status={inventoryDetail.status}
+                            label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
+                        />
+                    </Stack>
+                </Stack>
 
-            <TabContent>
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                />
+
+
                 {activeTab === "inventory" && (
                     <InventoryTab
                         summary={summary}
@@ -237,7 +223,7 @@ export default function InventoryDetail() {
                         loading={loading}
                     />
                 )}
-            </TabContent>
+            </Stack>
         </MainLayout>
     );
 }

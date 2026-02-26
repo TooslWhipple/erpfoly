@@ -1,16 +1,6 @@
-import { Box, Typography, Button } from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
-import {
-    InfoCardContainer,
-    InfoCardHeader,
-    InfoCardContent,
-    InfoField,
-    EditButton,
-} from "./styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { Typography, Button, Stack } from "@mui/material";
+import { PencilLine as EditIcon } from "lucide-react";
+import { CardContainer } from "./styles";
 
 export interface InfoFieldData {
     label: string;
@@ -26,10 +16,6 @@ export interface ProductInfoCardProps {
     children?: React.ReactNode;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function ProductInfoCard({
     title,
     subtitle,
@@ -39,40 +25,40 @@ export function ProductInfoCard({
     children,
 }: ProductInfoCardProps) {
     return (
-        <InfoCardContainer>
-            <InfoCardHeader>
-                <Box>
-                    <Typography variant="h6" sx={{ mb: 0.5 }}>
-                        {title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {subtitle}
-                    </Typography>
-                </Box>
-                {showEditButton && (
-                    <EditButton
-                        startIcon={<EditIcon />}
-                        onClick={onEdit}
+        <CardContainer>
+            <Stack direction="row" justifyContent="space-between">
+                <Stack>
+                    <Typography variant="h6">{title}</Typography>
+                    <Typography variant="body2" color="text.secondary">{subtitle}</Typography>
+                </Stack>
+                {
+                    (showEditButton) &&
+                    <Button
                         variant="outlined"
                         size="small"
+                        startIcon={<EditIcon size={16} />}
+                        onClick={onEdit}
                     >
                         Editar
-                    </EditButton>
-                )}
-            </InfoCardHeader>
+                    </Button>
+                }
+            </Stack>
 
-            {children ? (
-                <>{children}</>
-            ) : (
-                <InfoCardContent>
-                    {fields.map((field, index) => (
-                        <InfoField key={index}>
-                            <Typography variant="body2" color="text.secondary">{field.label}</Typography>
-                            <Typography variant="body1" color="text.primary">{field.value}</Typography>
-                        </InfoField>
-                    ))}
-                </InfoCardContent>
-            )}
-        </InfoCardContainer>
+            {
+                children ?
+                    <>{children}</>
+                    :
+                    <Stack spacing={2}>
+                        {
+                            fields.map((field, index) => (
+                                <Stack key={index} direction="row" spacing={1}>
+                                    <Typography variant="body2" color="text.secondary" fontWeight={500} minWidth={"124px"}>{field.label}</Typography>
+                                    <Typography variant="body1" color="text.primary">{field.value}</Typography>
+                                </Stack>
+                            ))
+                        }
+                    </Stack>
+            }
+        </CardContainer>
     );
 }

@@ -1,10 +1,8 @@
 import { Stack, Switch, Typography, Skeleton } from "@mui/material";
 import type { SalesBranchConfig } from "@/types/inventario.types";
 import {
-    ConfigSectionTitle,
-    ConfigSectionSubtitle,
-    SalesBranchList,
-    SalesBranchCard,
+    CardContainer,
+    BranchCard,
 } from "@/styles/inventario/detalle.styles";
 
 // ============================================================================
@@ -28,10 +26,12 @@ export function ConfigurationsTab({
 }: ConfigurationsTabProps) {
     if (loading) {
         return (
-            <Stack spacing={2}>
-                <Skeleton variant="text" width={220} height={28} animation="wave" />
-                <Skeleton variant="text" width="80%" height={20} animation="wave" />
-                <SalesBranchList>
+            <CardContainer>
+                <Stack>
+                    <Skeleton variant="text" width={220} height={28} animation="wave" />
+                    <Skeleton variant="text" width="80%" height={20} animation="wave" />
+                </Stack>
+                <Stack spacing={1.5}>
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                         <Skeleton
                             key={i}
@@ -41,39 +41,38 @@ export function ConfigurationsTab({
                             animation="wave"
                         />
                     ))}
-                </SalesBranchList>
-            </Stack>
+                </Stack>
+            </CardContainer>
         );
     }
 
     return (
-        <Stack spacing={2}>
-            <ConfigSectionTitle>Sucursales de venta</ConfigSectionTitle>
-            <ConfigSectionSubtitle>
-                Selecciona en qué sucursales se puede vender este artículo
-            </ConfigSectionSubtitle>
+        <CardContainer>
+            <Stack>
+                <Typography variant="h5" fontWeight={600}>Sucursales de venta</Typography>
+                <Typography variant="body2" color="text.secondary">Selecciona en qué sucursales se puede vender este artículo</Typography>
+            </Stack>
 
-            {branches.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                    No hay sucursales configuradas.
-                </Typography>
-            ) : (
-                <SalesBranchList>
-                    {branches.map((branch) => (
-                        <SalesBranchCard key={branch.id}>
-                            <Typography variant="body1" fontWeight={500}>
-                                {branch.name}
-                            </Typography>
-                            <Switch
-                                checked={branch.enabled}
-                                onChange={(_, checked) => onBranchToggle(branch.id, checked)}
-                                color="primary"
-                                size="medium"
-                            />
-                        </SalesBranchCard>
-                    ))}
-                </SalesBranchList>
-            )}
-        </Stack>
+            {
+                (branches.length === 0) ?
+                    <Typography variant="body2" color="text.secondary">No hay sucursales configuradas.</Typography>
+                    :
+                    <Stack spacing={1.5}>
+                        {
+                            branches.map((branch) => (
+                                <BranchCard key={branch.id}>
+                                    <Switch
+                                        checked={branch.enabled}
+                                        onChange={(_, checked) => onBranchToggle(branch.id, checked)}
+                                        color="primary"
+                                        size="medium"
+                                    />
+                                    <Typography variant="body1">{branch.name}</Typography>
+                                </BranchCard>
+                            ))
+                        }
+                    </Stack>
+            }
+        </CardContainer>
     );
 }

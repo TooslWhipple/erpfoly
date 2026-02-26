@@ -1,46 +1,12 @@
 import { styled } from "@mui/material/styles";
-import { Box, Typography, Chip } from "@mui/material";
+import { Chip } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// PAGE CONTAINER
-// ============================================================================
-
-export const DetailContainer = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(3),
-}));
-
-// ============================================================================
-// HEADER STYLES
-// ============================================================================
-
-export const HeaderSection = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    marginBottom: theme.spacing(2),
-    gap: theme.spacing(2),
-}));
-
-export const ProductHeader = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start"
-}));
-
-export const ProductInfo = styled(Box)({
-    flex: 1,
+export const DetailContainer = styled('div')({
+    padding: "24px"
 });
 
-
-export const ProductCategories = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-});
-
-export const CategoryChip = styled(Chip)(({ theme }) => ({
+export const CategoryChip = styled(Chip)({
     height: 24,
     fontSize: "12px",
     fontWeight: 500,
@@ -51,7 +17,7 @@ export const CategoryChip = styled(Chip)(({ theme }) => ({
         marginLeft: 6,
         fontSize: 14,
     },
-}));
+});
 
 export const StatusChip = styled(Chip)<{ status: "active" | "inactive" }>(
     ({ theme, status }) => ({
@@ -65,7 +31,7 @@ export const StatusChip = styled(Chip)<{ status: "active" | "inactive" }>(
 );
 
 
-export const SummaryCard = styled(Box)({
+export const SummaryCard = styled('div')({
     position: "relative",
     display: "flex",
     flexDirection: "column",
@@ -76,7 +42,7 @@ export const SummaryCard = styled(Box)({
     height: "100%",
 });
 
-export const SummaryCardIcon = styled(Box)(({ theme }) => ({
+export const SummaryCardIcon = styled('div')(({ theme }) => ({
     position: "absolute",
     top: "24px",
     right: "24px",
@@ -89,20 +55,7 @@ export const SummaryCardIcon = styled(Box)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// TAB CONTENT STYLES
-// ============================================================================
-
-export const TabContent = styled(Box)(({ theme }) => ({
-    marginTop: theme.spacing(3),
-}));
-
-
-// ============================================================================
-// GALLERY STYLES
-// ============================================================================
-
-export const GalleryContainer = styled(Box)({
+export const GalleryContainer = styled('div')({
     display: "flex",
     gap: 12,
     overflowX: "auto",
@@ -123,7 +76,7 @@ export const GalleryContainer = styled(Box)({
     },
 });
 
-export const GalleryImage = styled(Box)(({ theme }) => ({
+export const GalleryImage = styled('div')(({ theme }) => ({
     width: 120,
     height: 120,
     borderRadius: theme.shape.borderRadius,
@@ -144,17 +97,13 @@ export const GalleryImage = styled(Box)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// PACKAGES STYLES
-// ============================================================================
-
-export const PackagesList = styled(Box)({
+export const PackagesList = styled('div')({
     display: "flex",
     flexDirection: "column",
     gap: 16,
 });
 
-export const PackageItem = styled(Box)(({ theme }) => ({
+export const PackageItem = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: 16,
@@ -164,7 +113,7 @@ export const PackageItem = styled(Box)(({ theme }) => ({
     border: `1px solid ${colors.border}`,
 }));
 
-export const PackageIcon = styled(Box)(({ theme }) => ({
+export const PackageIcon = styled('div')(({ theme }) => ({
     width: 40,
     height: 40,
     borderRadius: theme.shape.borderRadius,
@@ -179,64 +128,49 @@ export const PackageIcon = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const PackageInfo = styled(Box)({
+export const PackageInfo = styled('div')({
     flex: 1,
 });
 
 
-export const PackagePrice = styled(Box)({
+export const PackagePrice = styled('div')({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-end",
 });
 
-
-// ============================================================================
-// PRICING STRATEGY STYLES
-// ============================================================================
-
-export const PricingGrid = styled(Box)(({ theme }) => ({
+export const PricingGrid = styled('div')(({ theme }) => ({
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: theme.spacing(2),
 }));
 
-export const PricingItem = styled(Box)({
+export const PricingItem = styled('div')({
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    padding: "16px",
+    border: `1px solid ${colors.border}`,
+    borderRadius: "12px",
+    gap: "8px"
 });
 
-// ============================================================================
-// CONFIGURATIONS TAB - SALES BRANCHES
-// ============================================================================
-
-export const ConfigSectionTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 18,
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    marginBottom: theme.spacing(0.5),
-}));
-
-export const ConfigSectionSubtitle = styled(Typography)(({ theme }) => ({
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(2),
-}));
-
-export const SalesBranchList = styled(Box)(({ theme }) => ({
+export const CardContainer = styled('div')({
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(1.5),
-}));
+    gap: "24px",
+    padding: "24px",
+    backgroundColor: colors.background.sidebar,
+    borderRadius: "16px",
+    border: `1px solid ${colors.border}`
+});
 
-export const SalesBranchCard = styled(Box)(({ theme }) => ({
+export const BranchCard = styled('div')(() => ({
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing(2),
+    gap: "16px",
+    padding: "16px",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
-    borderRadius: 12,
+    borderRadius: "8px"
 }));
 

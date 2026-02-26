@@ -144,7 +144,7 @@ export function MultiSelectAutocomplete({
                         />
                     );
                 }}
-                renderTags={() => null}
+                renderValue={() => null}
             />
 
             <ChipsContainer

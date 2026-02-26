@@ -49,6 +49,5 @@ export const StatsCardGroupContainer = styled('div', {
 })<StatsCardGroupContainerProps>(({ columns = 4 }) => ({
   display: "grid",
   gridTemplateColumns: `repeat(${columns}, 1fr)`,
-  gap: "8px",
-  marginBottom: "24px",
+  gap: "8px"
 }));

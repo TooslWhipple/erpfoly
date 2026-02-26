@@ -1,5 +1,6 @@
 import { Table, TableBody } from "@mui/material";
-import { Chip, Typography } from "@mui/material";
+import { Box, Chip, Typography } from "@mui/material";
+import { Warning as WarningIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
   TableWrapper,
@@ -112,7 +113,7 @@ function formatCellValue<T>(
       const chipKey = String(rawValue);
       const chipStyle = column.chipConfig?.[chipKey];
       if (chipStyle) {
-        return (
+        const chipNode = (
           <Chip
             label={chipStyle.label ?? chipKey}
             size="small"
@@ -125,6 +126,18 @@ function formatCellValue<T>(
             }}
           />
         );
+        if (chipStyle.showWarningIcon) {
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <WarningIcon
+                sx={{ color: chipStyle.textColor, fontSize: 18 }}
+                aria-hidden
+              />
+              {chipNode}
+            </Box>
+          );
+        }
+        return chipNode;
       }
       return (
         <Chip

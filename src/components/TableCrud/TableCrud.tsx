@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Button, Chip, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
-import { MoreVert as MoreVertIcon } from "@mui/icons-material";
+import { Box, Button, Chip, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
+import { MoreVert as MoreVertIcon, Warning as WarningIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
   TableWrapper,
@@ -39,6 +39,8 @@ export interface ChipStyleConfig {
   label?: string;
   bgColor: string;
   textColor: string;
+  /** When true, shows a warning icon before the chip label (e.g. for critical/warning states) */
+  showWarningIcon?: boolean;
 }
 
 export interface Column<T> {
@@ -219,12 +221,12 @@ export function TableCrud<T>({
       case "boolean":
         return rawValue ? "Sí" : "No";
 
-      case "chip":
+      case "chip": {
         const chipKey = String(rawValue);
         const chipStyle = column.chipConfig?.[chipKey];
 
         if (chipStyle) {
-          return (
+          const chipNode = (
             <Chip
               label={chipStyle.label ?? chipKey}
               size="small"
@@ -237,6 +239,18 @@ export function TableCrud<T>({
               }}
             />
           );
+          if (chipStyle.showWarningIcon) {
+            return (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                <WarningIcon
+                  sx={{ color: chipStyle.textColor, fontSize: 18 }}
+                  aria-hidden
+                />
+                {chipNode}
+              </Box>
+            );
+          }
+          return chipNode;
         }
 
         return (
@@ -246,6 +260,7 @@ export function TableCrud<T>({
             color={column.chipColor || "default"}
           />
         );
+      }
 
       case "chipGroup":
         if (Array.isArray(rawValue)) {

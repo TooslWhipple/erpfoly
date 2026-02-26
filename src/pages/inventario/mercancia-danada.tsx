@@ -5,21 +5,16 @@ import {
     Edit as EditIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import { Box, Skeleton } from "@mui/material";
+import { Box, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import {
     StatsSection,
-    StatusText,
-    TimeCell,
-    WarningIconStyled,
     DamageStatus,
 } from "@/styles/inventario/styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { colors } from "@/styles/theme";
+import type { ChipStyleConfig } from "@/components/TableCrud";
 
 interface DamagedItem {
     id: number;
@@ -57,10 +52,6 @@ interface DamagedStats {
     costChange: number;
     valueChange: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_DAMAGED_ITEMS: DamagedItem[] = [
     {
@@ -169,10 +160,6 @@ const DUMMY_DAMAGED_ITEMS: DamagedItem[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getDamagedStats(): Promise<DamagedStats> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
@@ -192,12 +179,10 @@ async function getDamagedItems(
 
     let filteredData = [...DUMMY_DAMAGED_ITEMS];
 
-    // Filter by status
     if (params.status && params.status !== "all") {
         filteredData = filteredData.filter((item) => item.status === params.status);
     }
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -223,10 +208,6 @@ async function getDamagedItems(
     };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: DamageStatus): string {
     const labels: Record<DamageStatus, string> = {
         pending: "Por realizar",
@@ -237,14 +218,45 @@ function getStatusLabel(status: DamageStatus): string {
     return labels[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+/** Builds chipConfig for timeElapsed: critical (red + icon), warning (orange + icon), normal (gray) */
+function buildTimeElapsedChipConfig(): Record<string, ChipStyleConfig> {
+    const config: Record<string, ChipStyleConfig> = {};
+    const critical: ChipStyleConfig = {
+        bgColor: "#FEF2F2",
+        textColor: "#DC2626",
+        showWarningIcon: true,
+    };
+    const warning: ChipStyleConfig = {
+        bgColor: "#FFF7ED",
+        textColor: "#EA580C",
+        showWarningIcon: true,
+    };
+    const normal: ChipStyleConfig = {
+        bgColor: colors.chip.background,
+        textColor: colors.chip.text,
+    };
+    for (let i = 1; i <= 10; i++) {
+        config[i === 1 ? "1 año" : `${i} años`] = critical;
+    }
+    for (let i = 6; i <= 11; i++) {
+        config[`${i} meses`] = warning;
+    }
+    config["1 mes"] = normal;
+    for (let i = 2; i <= 5; i++) {
+        config[`${i} meses`] = normal;
+    }
+    config["1 día"] = normal;
+    for (let i = 2; i <= 31; i++) {
+        config[`${i} días`] = normal;
+    }
+    return config;
+}
+
+const TIME_ELAPSED_CHIP_CONFIG = buildTimeElapsedChipConfig();
 
 export default function MercanciaDanada() {
     const router = useRouter();
 
-    // State
     const [stats, setStats] = useState<DamagedStats | null>(null);
     const [items, setItems] = useState<DamagedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -254,7 +266,6 @@ export default function MercanciaDanada() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Tab options
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Por realizar", value: "pending" },
@@ -263,12 +274,10 @@ export default function MercanciaDanada() {
         { label: "Canceladas", value: "cancelled" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | DamageStatus => {
         return activeTab as "all" | DamageStatus;
     }, [activeTab]);
 
-    // Fetch stats
     useEffect(() => {
         async function loadStats() {
             try {
@@ -281,7 +290,6 @@ export default function MercanciaDanada() {
         loadStats();
     }, []);
 
-    // Fetch items
     const fetchItems = useCallback(async () => {
         setLoading(true);
         try {
@@ -308,7 +316,6 @@ export default function MercanciaDanada() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -334,7 +341,6 @@ export default function MercanciaDanada() {
         setPage(0);
     };
 
-    // Stats cards data
     const statsCards: StatsCardData[] = stats
         ? [
             {
@@ -375,7 +381,6 @@ export default function MercanciaDanada() {
         ]
         : [];
 
-    // Table columns
     const columns: Column<DamagedItem>[] = [
         {
             id: "folio",
@@ -419,22 +424,36 @@ export default function MercanciaDanada() {
             id: "status",
             label: "Estatus",
             size: "md",
-            format: (value) => (
-                <StatusText status={value as DamageStatus}>
-                    {getStatusLabel(value as DamageStatus)}
-                </StatusText>
-            ),
+            type: "chip",
+            chipConfig: {
+                pending: {
+                    label: "Por realizar",
+                    bgColor: "#FFF7ED",
+                    textColor: "#EA580C",
+                },
+                in_progress: {
+                    label: "Realizando",
+                    bgColor: "#FFF7ED",
+                    textColor: "#EA580C",
+                },
+                completed: {
+                    label: "Finalizada",
+                    bgColor: "#DCFCE7",
+                    textColor: "#16A34A",
+                },
+                cancelled: {
+                    label: "Cancelada",
+                    bgColor: "#FEF2F2",
+                    textColor: "#EF4444",
+                },
+            }
         },
         {
             id: "timeElapsed",
             label: "Tiempo",
             size: "md",
-            format: (value, row) => (
-                <TimeCell>
-                    {row.hasWarning && <WarningIconStyled />}
-                    {String(value)}
-                </TimeCell>
-            ),
+            type: "chip",
+            chipConfig: TIME_ELAPSED_CHIP_CONFIG,
         },
     ];
 
@@ -450,64 +469,68 @@ export default function MercanciaDanada() {
 
     return (
         <MainLayout>
-            <Title title="Mercancía dañada" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Mercancía dañada" />
 
-            <StatsSection>
-                {stats ? (
-                    <StatsCardGroup cards={statsCards} />
-                ) : (
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
-                            gap: 2,
-                        }}
-                    >
-                        {[1, 2, 3].map((i) => (
-                            <Skeleton
-                                key={i}
-                                variant="rectangular"
-                                height={120}
-                                sx={{ borderRadius: 2 }}
-                                animation="wave"
-                            />
-                        ))}
-                    </Box>
-                )}
-            </StatsSection>
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Ingresar",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                        },
+                    ]}
+                />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
-                actions={[
+                <StatsSection>
                     {
-                        label: "Ingresar",
-                        onClick: handleCreate,
-                        variant: "contained",
-                        color: "primary",
-                    },
-                ]}
-            />
+                        stats ? <StatsCardGroup cards={statsCards} />
+                            :
+                            <Box
+                                sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(3, 1fr)",
+                                    gap: 2,
+                                }}
+                            >
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton
+                                        key={i}
+                                        variant="rectangular"
+                                        height={120}
+                                        sx={{ borderRadius: 2 }}
+                                        animation="wave"
+                                    />
+                                ))}
+                            </Box>
 
-            <TableCrud
-                columns={columns}
-                rows={items}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleEdit}
-                emptyMessage="No hay mercancía dañada registrada"
-            />
+                    }
+                </StatsSection>
+
+                <TableCrud
+                    columns={columns}
+                    rows={items}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEdit}
+                    emptyMessage="No hay mercancía dañada registrada"
+                />
+            </Stack>
+
         </MainLayout>
     );
 }

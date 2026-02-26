@@ -38,6 +38,8 @@ export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";
 export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
+export { OrderItemCard } from "./OrderItemCard";
+export type { OrderItemCardProps } from "./OrderItemCard";
 export { AddArticleToOrderModal } from "./AddArticleToOrderModal";
 export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticleToOrderModal";
 export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal";

@@ -24,6 +24,13 @@ Componentes:
   - Patrón de Material UI
   - Enfoque reutilizable
 - NO crees componentes específicos si pueden ser genéricos
+- Utiliza el componente Typography de Material UI con su prop variant
+- NO crees styledComponents de Typography, utiliza la variante más similar a lo que se necesite
+- NO utilices el componente Box, en su lugar puedes utilizar Stack o div 
+- NO crees styledComponents de layours div sí se puede resolver con Stack
+- NO crees styledComponents de Buttons, utiliza sus variantes
+- Utiliza los iconos de lucide-react
+
 
 Datos y lógica:
 - Genera data dummy realista y coherente

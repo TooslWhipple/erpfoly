@@ -10,6 +10,7 @@ import {
   StatsCardGroup,
   DepartmentCard,
   PriceSuggestionsSidebar,
+  ConfirmPriceChangeModal,
 } from "@/components";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
@@ -46,6 +47,9 @@ export default function LiquidacionesPage() {
     Awaited<ReturnType<typeof getLowRotationStrategy>>["departments"]
   >([]);
   const [suggestions, setSuggestions] = useState<PriceSuggestionItem[]>([]);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalItem, setConfirmModalItem] = useState<PriceSuggestionItem | null>(null);
+  const [applyLoading, setApplyLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setState("loading");
@@ -68,18 +72,32 @@ export default function LiquidacionesPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleApplySuggestion = useCallback(
-    async (item: PriceSuggestionItem, price: number) => {
-      try {
-        await applyPriceSuggestion(item.id, price);
-        showSuccess("Precio aplicado correctamente");
-        fetchData();
-      } catch {
-        showError("No se pudo aplicar el precio");
-      }
-    },
-    [showSuccess, showError, fetchData]
-  );
+  const handleApplyClick = useCallback((item: PriceSuggestionItem, _price: number) => {
+    setConfirmModalItem(item);
+    setConfirmModalOpen(true);
+  }, []);
+
+  const handleConfirmPriceChange = useCallback(async () => {
+    if (!confirmModalItem) return;
+    setApplyLoading(true);
+    try {
+      await applyPriceSuggestion(confirmModalItem.id, confirmModalItem.suggestedPrice);
+      showSuccess("Precio aplicado correctamente");
+      setConfirmModalOpen(false);
+      setConfirmModalItem(null);
+      fetchData();
+    } catch {
+      showError("No se pudo aplicar el precio");
+    } finally {
+      setApplyLoading(false);
+    }
+  }, [confirmModalItem, showSuccess, showError, fetchData]);
+
+  const previousPriceFromItem = confirmModalItem
+    ? confirmModalItem.direction === "down"
+      ? confirmModalItem.suggestedPrice / (1 - confirmModalItem.changePercent / 100)
+      : confirmModalItem.suggestedPrice / (1 + confirmModalItem.changePercent / 100)
+    : 0;
 
   const statsCards: StatsCardData[] = summary
     ? [
@@ -146,10 +164,28 @@ export default function LiquidacionesPage() {
           <PriceSuggestionsSidebar
             suggestions={suggestions}
             loading={state === "loading"}
-            onApply={handleApplySuggestion}
+            onApply={handleApplyClick}
           />
         </SidebarPanel>
       </PageContent>
+
+      <ConfirmPriceChangeModal
+        open={confirmModalOpen}
+        onClose={() => {
+          if (!applyLoading) {
+            setConfirmModalOpen(false);
+            setConfirmModalItem(null);
+          }
+        }}
+        productName={confirmModalItem?.productName ?? ""}
+        sku={confirmModalItem?.sku ?? ""}
+        previousPrice={previousPriceFromItem}
+        newPrice={confirmModalItem?.suggestedPrice ?? 0}
+        changePercent={confirmModalItem?.changePercent ?? 0}
+        direction={confirmModalItem?.direction ?? "down"}
+        onConfirm={handleConfirmPriceChange}
+        loading={applyLoading}
+      />
     </MainLayout>
   );
 }

@@ -1,6 +1,7 @@
+import { useState, useMemo } from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Chip, Typography } from "@mui/material";
-import { Add as AddIcon, Close as CloseIcon } from "@mui/icons-material";
+import { Box, Chip, InputAdornment, TextField, Typography } from "@mui/material";
+import { Add as AddIcon, Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 
 // ============================================================================
@@ -29,6 +30,10 @@ export interface MultiSelectChipsProps {
     helperText?: string;
     /** Empty state text when no items are selected */
     emptyText?: string;
+    /** Show search input to filter available items */
+    searchable?: boolean;
+    /** Placeholder for search input when searchable */
+    searchPlaceholder?: string;
 }
 
 // ============================================================================
@@ -64,6 +69,13 @@ const AvailableContainer = styled(Box)({
     flexWrap: "wrap",
     gap: 8,
 });
+
+const SearchField = styled(TextField)(({ theme }) => ({
+    "& .MuiOutlinedInput-root": {
+        fontSize: "0.875rem",
+        backgroundColor: theme.palette.background.paper,
+    },
+}));
 
 const SelectedChip = styled(Chip)(({ theme }) => ({
     backgroundColor: colors.background.sidebar,
@@ -142,10 +154,20 @@ export function MultiSelectChips({
     error = false,
     helperText,
     emptyText = "No hay elementos seleccionados",
+    searchable = false,
+    searchPlaceholder = "Buscar...",
 }: MultiSelectChipsProps) {
-    // Separate selected and available items
+    const [searchValue, setSearchValue] = useState("");
+
     const selectedItems = items.filter((item) => selectedIds.includes(item.id));
-    const availableItems = items.filter((item) => !selectedIds.includes(item.id));
+    const availableItems = useMemo(() => {
+        const notSelected = items.filter((item) => !selectedIds.includes(item.id));
+        if (!searchable || !searchValue.trim()) return notSelected;
+        const term = searchValue.trim().toLowerCase();
+        return notSelected.filter((item) =>
+            String(item.label).toLowerCase().includes(term),
+        );
+    }, [items, selectedIds, searchable, searchValue]);
 
     // Handle adding an item
     const handleAdd = (id: string | number) => {
@@ -162,6 +184,27 @@ export function MultiSelectChips({
     return (
         <Container>
             {label && <Label>{label}</Label>}
+
+            {searchable && (
+                <SearchField
+                    size="small"
+                    fullWidth
+                    placeholder={searchPlaceholder}
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    disabled={disabled}
+                    slotProps={{
+                        input: {
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" />
+                                </InputAdornment>
+                            ),
+                        },
+                    }}
+                    sx={{ mb: 0.5 }}
+                />
+            )}
 
             {/* Selected items box */}
             <SelectedContainer

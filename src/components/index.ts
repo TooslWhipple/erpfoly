@@ -40,6 +40,8 @@ export { OrderSummarySidebar } from "./OrderSummarySidebar";
 export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
 export { OrderItemCard } from "./OrderItemCard";
 export type { OrderItemCardProps } from "./OrderItemCard";
+export { BranchOrderItemRow } from "./BranchOrderItemRow";
+export type { BranchOrderItemRowProps } from "./BranchOrderItemRow";
 export { AddArticleToOrderModal } from "./AddArticleToOrderModal";
 export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticleToOrderModal";
 export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal";

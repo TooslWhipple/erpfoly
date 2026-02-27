@@ -297,19 +297,19 @@ export default function Departamentos() {
     },
     {
       id: "name",
-      label: "NOMBRE",
+      label: "Nombre",
       size: "sm",
     },
     {
       id: "margin",
-      label: "MARGEN",
+      label: "Margen",
       size: "xs",
       type: "percentage",
       align: "left",
     },
     {
       id: "groups",
-      label: "GRUPOS",
+      label: "Lineas",
       type: "chipGroup",
       chipGroupKey: "name",
       chipGroupMaxVisible: 6,

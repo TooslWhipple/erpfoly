@@ -1,12 +1,10 @@
 import { CalendarToday as CalendarIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
-  CardContainer,
-  CardHeader,
-  IconWrapper,
-  StatsCardGroupContainer,
+  CardContainer
 } from "./styles";
-import { Typography } from "@mui/material";
+import { Grid, Stack, Typography } from "@mui/material";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 export interface StatsCardData {
   id: string;
@@ -18,7 +16,6 @@ export interface StatsCardData {
     period: string;
   };
   icon?: React.ReactNode;
-  borderColor?: string;
   valueColor?: string;
   isCurrency?: boolean;
 }
@@ -32,8 +29,6 @@ interface StatsCardProps {
     period: string;
   };
   icon?: React.ReactNode;
-  borderColor?: string;
-  valueColor?: string;
   isCurrency?: boolean;
 }
 
@@ -42,8 +37,6 @@ export function StatsCard({
   value,
   comparison,
   icon = <CalendarIcon />,
-  borderColor,
-  valueColor,
   isCurrency = false,
 }: StatsCardProps) {
   const formatValue = (val: number): string => {
@@ -66,22 +59,18 @@ export function StatsCard({
     return `${formatComparisonValue(comparison.value)} ${prefix} que ${comparison.period}`;
   };
 
-  const getTrend = (): "positive" | "negative" | "neutral" => {
-    if (!comparison) return "neutral";
-    // In delinquency context, decrease is positive (fewer delinquent customers)
-    return comparison.type === "decrease" ? "neutral" : "neutral";
-  };
-
   return (
-    <CardContainer borderColor={borderColor}>
-      <CardHeader>
-        <Typography variant="subtitle1">{label}</Typography>
-        <IconWrapper>{icon}</IconWrapper>
-      </CardHeader>
-      <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>
-      {comparison && (
-        <Typography variant="body2" color="text.secondary">{getComparisonText()}</Typography>
-      )}
+    <CardContainer>
+      <Typography variant="subtitle1">{label}</Typography>
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>
+        {
+          comparison?.type === "increase" ? <ArrowUp size={16} color='#DC2626' /> : <ArrowDown size={16} color="#4ADE80" />
+        }
+      </Stack>
+      {
+        comparison && <Typography variant="body2" color="text.secondary">{getComparisonText()}</Typography>
+      }
     </CardContainer>
   );
 }
@@ -95,19 +84,20 @@ export function StatsCardGroup({ cards, columns }: StatsCardGroupProps) {
   const gridColumns = columns ?? cards.length;
 
   return (
-    <StatsCardGroupContainer columns={gridColumns}>
-      {cards.map((card) => (
-        <StatsCard
-          key={card.id}
-          label={card.label}
-          value={card.value}
-          comparison={card.comparison}
-          icon={card.icon}
-          borderColor={card.borderColor}
-          valueColor={card.valueColor}
-          isCurrency={card.isCurrency}
-        />
-      ))}
-    </StatsCardGroupContainer>
+    <Grid container spacing={2}>
+      {
+        cards.map((card) => (
+          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+            <StatsCard
+              label={card.label}
+              value={card.value}
+              comparison={card.comparison}
+              icon={card.icon}
+              isCurrency={card.isCurrency}
+            />
+          </Grid>
+        ))
+      }
+    </Grid>
   );
 }

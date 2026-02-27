@@ -20,6 +20,8 @@ export { Form, FormTextField, FormSelect } from "./Form";
 export type { FormProps, FormFieldConfig, FieldType, FieldValidation, SelectOption, FormTextFieldProps, FormSelectProps } from "./Form";
 export { ModalForm } from "./ModalForm";
 export type { ModalFormProps } from "./ModalForm";
+export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
+export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues, DamageOrigin, ActionWithArticle } from "./AddDamagedGoodsModal";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { MultiSelectChips } from "./MultiSelectChips";

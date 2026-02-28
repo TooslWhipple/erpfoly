@@ -1,24 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
+import { Box, InputAdornment, CircularProgress } from "@mui/material";
+import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import {
-    Box,
-    InputAdornment,
-    CircularProgress,
-} from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, FormTextField, Tabs, ModalForm, MultiSelectAutocomplete } from "@/components";
+    MainLayout,
+    Title,
+    TableCrud,
+    FormTextField,
+    TabFilters,
+    ModalForm,
+    MultiSelectAutocomplete,
+} from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { TabItem } from "@/components/Tabs";
 import type { FormFieldConfig } from "@/components/Form";
 import type { SelectableItem } from "@/components/MultiSelectChips";
+import { HeaderContainer } from "@/styles/catalogos/catalogos.styledComponents";
 import {
-    HeaderContainer,
-    ControlsContainer,
-    SearchInput,
-    CreateButton,
-    SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
-import {
-    TabsWrapper,
     SettingsCard,
     SectionTitle,
     FieldContainer,
@@ -100,8 +96,8 @@ export default function ProveedoresReparaciones() {
         return list.map((d: Department) => ({ id: d.id, label: d.name }));
     }, [departmentsResponse?.data]);
 
-    const tabItems: TabItem[] = [
-        { value: "suppliers", label: "Proveedores" },
+    const tabs = [
+        { value: "suppliers", label: "Proveedores", count: totalRows },
         { value: "settings", label: "Ajustes" },
     ];
 
@@ -109,8 +105,8 @@ export default function ProveedoresReparaciones() {
         setActiveTab(value);
     };
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchInput(event.target.value);
+    const handleSearchChange = (value: string) => {
+        setSearchInput(value);
     };
 
     const handleCreateSupplier = () => {
@@ -301,60 +297,48 @@ export default function ProveedoresReparaciones() {
 
     return (
         <MainLayout>
-            <Title title="Proveedores de reparaciones" />
+            <HeaderContainer>
+                <Title title="Proveedores de reparaciones" />
+            </HeaderContainer>
 
-            <TabsWrapper>
-                <Tabs
-                    tabs={tabItems}
-                    value={activeTab}
-                    onChange={handleTabChange}
-                />
-            </TabsWrapper>
+            <TabFilters
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                showSearch={activeTab === "suppliers"}
+                searchValue={searchInput}
+                onSearchChange={handleSearchChange}
+                searchPlaceholder="Buscar"
+                actions={
+                    activeTab === "suppliers"
+                        ? [
+                              {
+                                  label: "Nuevo",
+                                  onClick: handleCreateSupplier,
+                                  variant: "contained",
+                                  color: "primary",
+                                  showIcon: true,
+                              },
+                          ]
+                        : []
+                }
+            />
 
             {activeTab === "suppliers" && (
-                <>
-                    <HeaderContainer>
-                        <Box />
-                        <ControlsContainer>
-                            <SearchInput
-                                size="small"
-                                placeholder="Buscar"
-                                value={searchInput}
-                                onChange={handleSearchChange}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIconStyled />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                            <CreateButton
-                                variant="contained"
-                                color="primary"
-                                startIcon={<AddIcon />}
-                                onClick={handleCreateSupplier}
-                            >
-                                Nuevo
-                            </CreateButton>
-                        </ControlsContainer>
-                    </HeaderContainer>
-
-                    <TableCrud
-                        columns={columns}
-                        rows={suppliers}
-                        actions={actions}
-                        loading={loading}
-                        rowKey="id"
-                        page={page}
-                        rowsPerPage={rowsPerPage}
-                        totalRows={totalRows}
-                        onPageChange={handlePageChange}
-                        onRowsPerPageChange={handleRowsPerPageChange}
-                        onRowClick={handleEditSupplier}
-                        emptyMessage="No hay proveedores de reparaciones registrados"
-                    />
-                </>
+                <TableCrud
+                    columns={columns}
+                    rows={suppliers}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEditSupplier}
+                    emptyMessage="No hay proveedores de reparaciones registrados"
+                />
             )}
 
             <ModalForm

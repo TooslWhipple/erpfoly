@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Stack, TextField, Button, Typography, CircularProgress } from "@mui/material";
-import { Card, CardTitle } from "@/styles/catalogos/goals.styles";
+import { Card } from "@/styles/catalogos/goals.styles";
 import { getBranchSettings, saveBranchSettings } from "@/services/branchDetail.service";
 
 interface SettingsTabProps {
@@ -61,7 +61,7 @@ export function SettingsTab({ branchId }: SettingsTabProps) {
   return (
     <Stack spacing={3}>
       <Card>
-        <CardTitle>Configuraciones de sucursal</CardTitle>
+        <Typography variant="h6">Configuraciones de sucursal</Typography>
         {error && (
           <Typography color="error" variant="body2" sx={{ mb: 2 }}>
             {error}

@@ -21,6 +21,13 @@ export const colors = {
     background: "#F1F5F9",
     border: "#F9FAFC",
     text: "#475569",
+    variants: {
+      default: { background: "#F8FAFC", color: "#475569" },
+      success: { background: "#DCFCE7", color: "#15803D" },
+      pending: { background: "#FFF7ED", color: "#EA580C" },
+      error: { background: "#FEF2F2", color: "#DC2626" },
+      warning: { background: "#F3E8FF", color: "#7E22CE" },
+    },
   },
   segmentControl: {
     background: "#EBEBEB",

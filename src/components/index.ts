@@ -14,6 +14,8 @@ export { RuleCard, RulesList } from "./RuleCard";
 export type { CollectionRuleData, SelectOption as RuleSelectOption } from "./RuleCard";
 export { ChipGroup } from "./ChipGroup";
 export type { ChipGroupProps } from "./ChipGroup";
+export { StatusChip } from "./StatusChip";
+export type { StatusChipProps, StatusChipVariant } from "./StatusChip";
 export { PermissionsTable } from "./PermissionsTable";
 export type { PermissionsTableProps, ModulePermission, Permission } from "./PermissionsTable";
 export { Form, FormTextField, FormSelect } from "./Form";

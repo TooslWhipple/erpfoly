@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack, Chip, Typography, Button } from "@mui/material";
 import { Plus } from "lucide-react";
-import { MainLayout, Breadcrumbs, Tabs } from "@/components";
+import { MainLayout, Breadcrumbs, Tabs, TabFilters, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { SalesTab, GoalsTab, PromotionsTab, SettingsTab } from "@/components/BranchDetailTabs";
 import { getBranch } from "@/services/branchDetail.service";
@@ -66,6 +66,7 @@ export default function BranchDetailPage() {
         </Stack>
       );
     }
+
     switch (activeTab) {
       case TAB_VENTAS:
         return <SalesTab branchId={branchId} />;
@@ -89,33 +90,25 @@ export default function BranchDetailPage() {
   return (
     <MainLayout>
       <Stack spacing={3}>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          flexWrap="wrap"
-          gap={2}
-        >
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Breadcrumbs items={breadcrumbItems} showBackButton />
-          {branch && (
-            <Chip
-              label={branch.status === "active" ? "Activo" : "Inactivo"}
-              size="small"
-              color={branch.status === "active" ? "success" : "default"}
-              sx={{ fontWeight: 600 }}
+          {
+            branch &&
+            <StatusChip
+              variant={(branch.status) === "active" ? "success" : "pending"}
+              label={(branch.status) === "active" ? "Activo" : "Inactivo"}
             />
-          )}
+          }
         </Stack>
 
         <Typography variant="h2" component="h1">
           {branch?.name ?? branch?.city ?? "Sucursal"}
         </Typography>
 
-        <Tabs
+        <TabFilters
           tabs={TABS}
-          value={activeTab}
-          onChange={setActiveTab}
-          rightContent={tabRightContent}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
 
         {renderTabContent()}

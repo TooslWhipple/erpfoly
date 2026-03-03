@@ -23,15 +23,7 @@ import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components";
 import {
   Card,
-  CardTitle,
-  ChartHeader,
-  ChartWrapper,
-  MonthNavigatorRow,
-  MonthNavigatorCenter,
-  MonthLabel,
-  TotalGoalAmount,
-  NavigatorDescription,
-  TableCardTitle,
+  ChartWrapper
 } from "@/styles/catalogos/goals.styles";
 import { colors } from "@/styles/theme";
 import { getSalesHistory, getSellerGoals } from "@/services/branchDetail.service";
@@ -192,24 +184,14 @@ export function GoalsTab({ branchId }: GoalsTabProps) {
   return (
     <Stack spacing={3}>
       <Card>
-        <CardTitle>Configura la meta para esta sucursal</CardTitle>
-        <NavigatorDescription>
+        <Typography variant="h6">Configura la meta para esta sucursal</Typography>
+        <Typography variant="body2" color="text.secondary">
           El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
-        </NavigatorDescription>
+        </Typography>
       </Card>
 
       <Card>
-        <ChartHeader>
-          <CardTitle>Historial de ventas</CardTitle>
-          <Stack direction="row" spacing={1}>
-            <Typography variant="caption" sx={{ color: "#2663EB" }}>
-              — Ventas
-            </Typography>
-            <Typography variant="caption" sx={{ color: "#DC2626" }}>
-              — Metas
-            </Typography>
-          </Stack>
-        </ChartHeader>
+        <Typography variant="h6">Historial de ventas</Typography>
         <ChartWrapper>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
@@ -258,25 +240,25 @@ export function GoalsTab({ branchId }: GoalsTabProps) {
       </Card>
 
       <Card>
-        <MonthNavigatorRow>
-          <MonthNavigatorCenter>
-            <IconButton onClick={handlePrevMonth} size="small" aria-label="Mes anterior">
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography variant="h5" fontWeight={600}>{monthLabel}</Typography>
+            <IconButton onClick={handlePrevMonth} size="small">
               <ChevronLeft size={20} />
             </IconButton>
-            <MonthLabel>{monthLabel}</MonthLabel>
-            <IconButton onClick={handleNextMonth} size="small" aria-label="Mes siguiente">
+            <IconButton onClick={handleNextMonth} size="small">
               <ChevronRight size={20} />
             </IconButton>
-          </MonthNavigatorCenter>
-          <TotalGoalAmount>{numeral(totalGoal).format("$0,0.00")}</TotalGoalAmount>
-        </MonthNavigatorRow>
-        <NavigatorDescription>
+          </Stack>
+          <Typography variant="h4" fontWeight={600}>{numeral(totalGoal).format("$0,0.00")}</Typography>
+        </Stack>
+        <Typography variant="body2" color="text.secondary">
           El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
-        </NavigatorDescription>
+        </Typography>
       </Card>
 
       <Card>
-        <TableCardTitle>Meta mensual por vendedor</TableCardTitle>
+        <Typography variant="h6">Meta mensual por vendedor</Typography>
         <DataTable
           columns={columns}
           rows={sellers}

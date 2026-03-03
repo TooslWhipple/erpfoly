@@ -3,6 +3,7 @@ import {
     NumberInputWrapper,
     NumberInputButton,
     NumberInputField,
+    StepperUnitLabel,
 } from "@/styles/catalogos/folypuntos.styles";
 
 // ============================================================================
@@ -28,6 +29,8 @@ export interface NumberInputProps {
     width?: number;
     /** Size of the input */
     size?: "small" | "medium";
+    /** Unit label rendered inside the same container */
+    unit?: string;
 }
 
 // ============================================================================
@@ -44,6 +47,7 @@ export function NumberInput({
     placeholder = "0",
     width = 80,
     size = "medium",
+    unit,
 }: NumberInputProps) {
     const handleIncrement = () => {
         const newValue = value + step;
@@ -125,6 +129,7 @@ export function NumberInput({
             >
                 <AddIcon fontSize={iconSize} />
             </NumberInputButton>
+            {unit != null && unit !== "" && <StepperUnitLabel>{unit}</StepperUnitLabel>}
         </NumberInputWrapper>
     );
 }

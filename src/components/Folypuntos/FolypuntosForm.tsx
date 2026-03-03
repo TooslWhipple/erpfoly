@@ -1,4 +1,5 @@
-import { Box } from "@mui/material";
+import { useCallback } from "react";
+import { Typography } from "@mui/material";
 import { ArrowForward as ArrowForwardIcon } from "@mui/icons-material";
 import {
     FormCard,
@@ -6,35 +7,37 @@ import {
     SectionTitle,
     SectionDescription,
     NumberInputContainer,
-    NumberInputLabel,
     NumberInputArrow,
+    StepperGroupLabel,
 } from "@/styles/catalogos/folypuntos.styles";
-import { NumberInput } from "./NumberInput";
 import { CurrencyInput } from "./CurrencyInput";
+import { NumberInput } from "./NumberInput";
 import type { FolypuntosFormState, PaymentType } from "@/types/folypuntos.types";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+export type FolypuntosField = "purchaseEquivalence" | "saleEquivalence";
 
 export interface FolypuntosFormProps {
-    /** Current form state */
     formState: FolypuntosFormState;
-    /** Active payment type tab */
     activePaymentType: PaymentType;
-    /** Callback when form values change */
     onFieldChange: (
         paymentType: PaymentType,
-        field: "purchaseEquivalence" | "saleEquivalence",
+        field: FolypuntosField,
         value: number
     ) => void;
-    /** Disable form inputs */
     disabled?: boolean;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+const PURCHASE_SECTION = {
+    title: "Equivalencia de compra a Folypuntos",
+    description:
+        "Configura la cantidad de Folypuntos que se otorgan por cada peso gastado.",
+} as const;
+
+const SALE_SECTION = {
+    title: "Equivalencia de venta a Folypuntos",
+    description:
+        "Configura el valor en pesos que tendrá cada Folypunto al ser canjeado.",
+} as const;
 
 export function FolypuntosForm({
     formState,
@@ -42,81 +45,79 @@ export function FolypuntosForm({
     onFieldChange,
     disabled = false,
 }: FolypuntosFormProps) {
-    const currentConfig = formState[activePaymentType];
+    const config = formState[activePaymentType];
 
-    const handlePurchaseEquivalenceChange = (value: number) => {
-        // Update only the active payment type
-        onFieldChange(activePaymentType, "purchaseEquivalence", value);
-    };
-
-    const handleSaleEquivalenceChange = (value: number) => {
-        // Update only the active payment type
-        onFieldChange(activePaymentType, "saleEquivalence", value);
-    };
+    const handleChange = useCallback(
+        (field: FolypuntosField) => (value: number) => {
+            onFieldChange(activePaymentType, field, value);
+        },
+        [activePaymentType, onFieldChange]
+    );
 
     return (
-        <Box>
-            {/* Purchase Equivalence Section */}
+        <>
             <FormCard>
                 <Section>
-                    <SectionTitle>Equivalencia de compra a Folypuntos</SectionTitle>
+                    <SectionTitle>{PURCHASE_SECTION.title}</SectionTitle>
                     <SectionDescription>
-                        Configura la cantidad de Folypuntos que se otorgan por cada peso gastado.
+                        {PURCHASE_SECTION.description}
                     </SectionDescription>
                     <NumberInputContainer>
-                        <NumberInputLabel>Por cada</NumberInputLabel>
-                        <NumberInput
-                            value={currentConfig.purchaseEquivalence}
-                            onChange={handlePurchaseEquivalenceChange}
+                        <CurrencyInput
+                            value={config.purchaseEquivalence}
+                            onChange={handleChange("purchaseEquivalence")}
                             min={1}
                             max={999999}
                             step={1}
+                            decimals={0}
                             disabled={disabled}
-                            width={80}
+                            currencySymbol="$"
+                            prefix="Por cada"
+                            unit="pesos"
                         />
-                        <NumberInputLabel>pesos</NumberInputLabel>
                         <NumberInputArrow>
                             <ArrowForwardIcon fontSize="small" />
                         </NumberInputArrow>
                         <NumberInput
                             value={1}
-                            onChange={() => {}} // Fixed value: 1 Folypunto
+                            onChange={() => {}}
                             min={1}
                             max={1}
-                            disabled={true}
+                            disabled
                             width={80}
+                            unit="Folypuntos"
                         />
-                        <NumberInputLabel>Folypuntos</NumberInputLabel>
                     </NumberInputContainer>
                 </Section>
             </FormCard>
 
-            {/* Sale Equivalence Section */}
             <FormCard>
                 <Section>
-                    <SectionTitle>Equivalencia de venta a Folypuntos</SectionTitle>
+                    <SectionTitle>{SALE_SECTION.title}</SectionTitle>
                     <SectionDescription>
-                        Configura el valor en pesos que tendrá cada Folypunto al ser canjeado.
+                        {SALE_SECTION.description}
                     </SectionDescription>
                     <NumberInputContainer>
-                        <NumberInputLabel>1 Folypunto</NumberInputLabel>
+                        <StepperGroupLabel>
+                            <Typography component="span">1 Folypunto</Typography>
+                        </StepperGroupLabel>
                         <NumberInputArrow>
                             <ArrowForwardIcon fontSize="small" />
                         </NumberInputArrow>
                         <CurrencyInput
-                            value={currentConfig.saleEquivalence}
-                            onChange={handleSaleEquivalenceChange}
+                            value={config.saleEquivalence}
+                            onChange={handleChange("saleEquivalence")}
                             min={0.01}
                             max={999999.99}
                             step={0.01}
                             disabled={disabled}
                             currencySymbol="$"
                             decimals={2}
+                            unit="pesos mexicanos."
                         />
-                        <NumberInputLabel>pesos mexicanos</NumberInputLabel>
                     </NumberInputContainer>
                 </Section>
             </FormCard>
-        </Box>
+        </>
     );
 }

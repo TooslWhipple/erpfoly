@@ -2,7 +2,7 @@ import { Inventory2 as BoxIcon } from "@mui/icons-material";
 import { Grid, Typography } from "@mui/material";
 import { ProductInfoCard } from "@/components/InventoryDetail";
 import { TableCrud } from "@/components/TableCrud";
-import type { Column } from "@/components/TableCrud";
+import type { Column, StatusChipVariant } from "@/components/TableCrud";
 import {
     GalleryContainer,
     GalleryImage,
@@ -32,17 +32,13 @@ export interface TechnicalTabProps {
     loading: boolean;
 }
 
-const SUPPLIERS_CHIP_CONFIG = {
-    principal: {
-        label: "Principal",
-        bgColor: "#FEF3C7",
-        textColor: "#92400E",
-    },
-    secondary: {
-        label: "Secundario",
-        bgColor: "#F3F4F6",
-        textColor: "#6B7280",
-    },
+const SUPPLIERS_CHIP_LABELS: Record<string, string> = {
+  principal: "Principal",
+  secondary: "Secundario",
+};
+const SUPPLIERS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  principal: "warning",
+  secondary: "default",
 };
 
 const suppliersColumns: Column<ProductSupplier>[] = [
@@ -61,7 +57,8 @@ const suppliersColumns: Column<ProductSupplier>[] = [
         label: "ESTATUS",
         type: "chip",
         size: "sm",
-        chipConfig: SUPPLIERS_CHIP_CONFIG,
+        chipLabelMap: SUPPLIERS_CHIP_LABELS,
+        chipVariantMap: SUPPLIERS_CHIP_VARIANTS,
     },
 ];
 

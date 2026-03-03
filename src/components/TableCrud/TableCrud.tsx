@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Box, Button, Chip, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
-import { MoreVert as MoreVertIcon, Warning as WarningIcon } from "@mui/icons-material";
+import { Box, Button, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
+import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
   TableWrapper,
@@ -22,10 +22,29 @@ import {
   StickyCell,
 } from "./styles";
 import { ChipGroup } from "../ChipGroup";
+import { StatusChip } from "../StatusChip";
+import type { StatusChipVariant } from "../StatusChip";
 
 export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "boolean" | "chip" | "chipGroup" | "button" | "id";
 
 export type ColumnSize = "xs" | "sm" | "md" | "lg" | "xl";
+
+const CHIP_COLOR_TO_STATUS_VARIANT: Record<
+  NonNullable<Column<unknown>["chipColor"]>,
+  StatusChipVariant
+> = {
+  default: "default",
+  primary: "default",
+  secondary: "default",
+  success: "success",
+  error: "error",
+  warning: "warning",
+  info: "pending",
+};
+
+export function getStatusChipVariant(chipColor?: Column<unknown>["chipColor"]): StatusChipVariant {
+  return CHIP_COLOR_TO_STATUS_VARIANT[chipColor ?? "default"];
+}
 
 const COLUMN_SIZES: Record<ColumnSize, number> = {
   xs: 60,
@@ -35,42 +54,29 @@ const COLUMN_SIZES: Record<ColumnSize, number> = {
   xl: 280,
 };
 
-export interface ChipStyleConfig {
-  label?: string;
-  bgColor: string;
-  textColor: string;
-  /** When true, shows a warning icon before the chip label (e.g. for critical/warning states) */
-  showWarningIcon?: boolean;
-}
-
 export interface Column<T> {
   id: keyof T | string;
   label: string;
   type?: ColumnType;
   size?: ColumnSize;
-  /** Maximum size for the column (limits expansion) */
   maxSize?: ColumnSize;
   align?: "left" | "center" | "right";
   truncate?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
-  /** Make column sticky (useful for action buttons) */
   sticky?: boolean;
-  /** Position for sticky column (left or right) */
   stickyPosition?: "left" | "right";
-  // Button type options
   buttonLabel?: string;
   buttonVariant?: "text" | "outlined" | "contained";
   buttonColor?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
   onButtonClick?: (row: T) => void;
-  // Chip type options
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
-  chipConfig?: Record<string, ChipStyleConfig>;
-  // Currency type options
+  /** Map cell value to StatusChip variant (overrides chipColor when present) */
+  chipVariantMap?: Record<string, StatusChipVariant>;
+  /** Map cell value to display label */
+  chipLabelMap?: Record<string, string>;
   currencySymbol?: string;
-  // ChipGroup type options
   chipGroupKey?: string;
   chipGroupMaxVisible?: number;
-  // ID type options
   idPadding?: number;
 }
 
@@ -96,7 +102,6 @@ interface TableCrudProps<T> {
   onPageChange?: (page: number) => void;
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   rowsPerPageOptions?: number[];
-  /** Callback when a row is clicked */
   onRowClick?: (row: T) => void;
 }
 
@@ -122,7 +127,6 @@ export function TableCrud<T>({
     if (column.size) {
       return COLUMN_SIZES[column.size];
     }
-    // Default sizes based on type
     switch (column.type) {
       case "id":
         return COLUMN_SIZES.xs;
@@ -223,43 +227,13 @@ export function TableCrud<T>({
 
       case "chip": {
         const chipKey = String(rawValue);
-        const chipStyle = column.chipConfig?.[chipKey];
+        const label = column.chipLabelMap?.[chipKey] ?? chipKey;
+        const variant = column.chipVariantMap?.[chipKey] ?? getStatusChipVariant(column.chipColor);
 
-        if (chipStyle) {
-          const chipNode = (
-            <Chip
-              label={chipStyle.label ?? chipKey}
-              size="small"
-              sx={{
-                backgroundColor: chipStyle.bgColor,
-                color: chipStyle.textColor,
-                borderRadius: "6px",
-                fontWeight: 500,
-                fontSize: "13px",
-              }}
-            />
-          );
-          if (chipStyle.showWarningIcon) {
-            return (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <WarningIcon
-                  sx={{ color: chipStyle.textColor, fontSize: 18 }}
-                  aria-hidden
-                />
-                {chipNode}
-              </Box>
-            );
-          }
-          return chipNode;
-        }
-
-        return (
-          <Chip
-            label={chipKey}
-            size="small"
-            color={column.chipColor || "default"}
-          />
-        );
+        return <StatusChip
+          label={label}
+          variant={variant}
+          size="small" />;
       }
 
       case "chipGroup":
@@ -305,8 +279,6 @@ export function TableCrud<T>({
 
     const width = getColumnWidth(column);
     const maxWidth = getColumnMaxWidth(column);
-    // Use minWidth to allow columns to expand and fill available space
-    // Use maxWidth to limit expansion when maxSize is specified
     const cellStyle: React.CSSProperties = { minWidth: width };
     if (maxWidth !== undefined) {
       cellStyle.maxWidth = maxWidth;
@@ -335,7 +307,6 @@ export function TableCrud<T>({
   const total = totalRows ?? rows?.length ?? 0;
   const hasActions = actions && actions.length > 0;
 
-  // Render skeleton rows for loading state
   const renderSkeletonRows = () => {
     const skeletonRows = Array.from({ length: rowsPerPage }, (_, index) => index);
 
@@ -375,7 +346,6 @@ export function TableCrud<T>({
     ));
   };
 
-  // Render table header
   const renderTableHeader = () => (
     <StyledTableHead>
       <StyledTableRow>

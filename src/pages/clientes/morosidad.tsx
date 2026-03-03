@@ -4,7 +4,7 @@ import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, RowAction, ChipStyleConfig } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -233,17 +233,21 @@ const TABS: TabOption[] = [
   { label: "Listas compartidas", value: "shared_lists" },
 ];
 
-const DELINQUENCY_CHIP_CONFIG: Record<DelinquencyPeriod, ChipStyleConfig> = {
-  "1_day": { label: "1 día", bgColor: "#F4F4F5", textColor: "#71717A" },
-  "1_week": { label: "1 semana", bgColor: "#FEE2E2", textColor: "#DC2626" },
-  "1_month": { label: "1 mes", bgColor: "#FEE2E2", textColor: "#DC2626" },
-  "2_months": { label: "2 meses", bgColor: "#FEE2E2", textColor: "#DC2626" },
+const DELINQUENCY_CHIP_LABELS: Record<string, string> = {
+  "1_day": "1 día",
+  "1_week": "1 semana",
+  "1_month": "1 mes",
+  "2_months": "2 meses",
+  "2_days": "2 días",
+  "5_days": "5 días",
 };
-
-// Additional chip styles for days variations
-const DAYS_CHIP_STYLES: Record<string, ChipStyleConfig> = {
-  "2_days": { label: "2 días", bgColor: "#F4F4F5", textColor: "#71717A" },
-  "5_days": { label: "5 días", bgColor: "#F4F4F5", textColor: "#71717A" },
+const DELINQUENCY_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  "1_day": "default",
+  "1_week": "error",
+  "1_month": "error",
+  "2_months": "error",
+  "2_days": "default",
+  "5_days": "default",
 };
 
 // ============================================================================
@@ -431,7 +435,8 @@ export default function ClientesMorosidad() {
       size: "sm",
       type: "chip",
       align: "center",
-      chipConfig: { ...DELINQUENCY_CHIP_CONFIG, ...DAYS_CHIP_STYLES },
+      chipLabelMap: DELINQUENCY_CHIP_LABELS,
+      chipVariantMap: DELINQUENCY_CHIP_VARIANTS,
     },
     {
       id: "debtAmount",

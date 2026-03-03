@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import {
     HeaderContainer,
     ControlsContainer,
@@ -277,18 +277,8 @@ export default function Mensajes() {
             label: "Estatus",
             size: "sm",
             type: "chip",
-            chipConfig: {
-                active: {
-                    label: "En uso",
-                    bgColor: "#DCFCE7",
-                    textColor: "#166534",
-                },
-                inactive: {
-                    label: "Sin uso",
-                    bgColor: "#F1F5F9",
-                    textColor: "#64748B",
-                },
-            },
+            chipLabelMap: { active: "En uso", inactive: "Sin uso" },
+            chipVariantMap: { active: "success", inactive: "default" } as Record<string, StatusChipVariant>,
         },
     ];
 

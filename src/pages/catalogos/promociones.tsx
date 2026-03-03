@@ -8,7 +8,7 @@ import {
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, FilterMenu } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { FilterOption } from "@/components/FilterMenu";
 import {
   HeaderContainer,
@@ -329,20 +329,12 @@ export default function Promociones() {
       label: "Tipo",
       size: "md",
       type: "chip",
-      chipConfig: {
-        Crédito: {
-          bgColor: "#E0F2FE",
-          textColor: "#0369A1",
-        },
-        Contado: {
-          bgColor: "#F0FDF4",
-          textColor: "#166534",
-        },
-        Apartados: {
-          bgColor: "#FEF3C7",
-          textColor: "#92400E",
-        },
-      },
+      chipLabelMap: { Crédito: "Crédito", Contado: "Contado", Apartados: "Apartados" },
+      chipVariantMap: {
+        Crédito: "default",
+        Contado: "success",
+        Apartados: "warning",
+      } as Record<string, StatusChipVariant>,
     },
     {
       id: "startDate",

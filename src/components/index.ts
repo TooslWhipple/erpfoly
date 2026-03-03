@@ -7,7 +7,7 @@ export type { TitleAction } from "./Title";
 export { TabFilters } from "./TabFilters";
 export type { TabOption, SelectFilterOption } from "./TabFilters";
 export { TableCrud, DataTable } from "./TableCrud";
-export type { Column, RowAction, ChipStyleConfig, DataTableColumn, DataTableColumnType, DataTableProps } from "./TableCrud";
+export type { Column, RowAction, DataTableColumn, DataTableColumnType, DataTableProps } from "./TableCrud";
 export { StatsCard, StatsCardGroup } from "./StatsCard";
 export type { StatsCardData } from "./StatsCard";
 export { RuleCard, RulesList } from "./RuleCard";

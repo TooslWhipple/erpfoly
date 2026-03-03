@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, RowAction, ChipStyleConfig } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
 type SolicitudEstatus = "pendiente" | "aceptada" | "rechazada";
 type SolicitudTipo = "nuevo" | "aumento";
@@ -209,10 +209,15 @@ const TABS: TabOption[] = [
   { label: "Rechazadas", value: "rechazada" },
 ];
 
-const ESTATUS_CHIP_CONFIG: Record<SolicitudEstatus, ChipStyleConfig> = {
-  pendiente: { label: "Pendiente", bgColor: "#F4F4F5", textColor: "#ACACB1" },
-  aceptada: { label: "Aceptada", bgColor: "#DCFCE7", textColor: "#1B8854" },
-  rechazada: { label: "Rechazada", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+const ESTATUS_CHIP_LABELS: Record<SolicitudEstatus, string> = {
+  pendiente: "Pendiente",
+  aceptada: "Aceptada",
+  rechazada: "Rechazada",
+};
+const ESTATUS_CHIP_VARIANTS: Record<SolicitudEstatus, StatusChipVariant> = {
+  pendiente: "default",
+  aceptada: "success",
+  rechazada: "error",
 };
 
 const TIPO_CONFIG: Record<SolicitudTipo, { label: string; color: string }> = {
@@ -305,7 +310,8 @@ export default function SolicitudesCredito() {
       label: "Estatus",
       size: "sm",
       type: "chip",
-      chipConfig: ESTATUS_CHIP_CONFIG,
+      chipLabelMap: ESTATUS_CHIP_LABELS,
+      chipVariantMap: ESTATUS_CHIP_VARIANTS,
     },
     {
       id: "fullName",

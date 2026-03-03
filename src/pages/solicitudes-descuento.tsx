@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Box, Typography } from "@mui/material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, ChipStyleConfig } from "@/components/TableCrud";
+import type { Column, StatusChipVariant } from "@/components/TableCrud";
 import { getDiscountRequests } from "@/services/discount-requests.service";
 import type {
   DiscountRequest,
@@ -22,17 +22,13 @@ const TABS: TabOption[] = [
   { label: "Rechazadas", value: "rejected" },
 ];
 
-const TYPE_CHIP_CONFIG: Record<DiscountRequestType, ChipStyleConfig> = {
-  contado: {
-    label: "Contado",
-    bgColor: "#FEF9C3",
-    textColor: "#713F12",
-  },
-  credito: {
-    label: "Crédito",
-    bgColor: "#DBEAFE",
-    textColor: "#1E3A8A",
-  },
+const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {
+  contado: "Contado",
+  credito: "Crédito",
+};
+const TYPE_CHIP_VARIANTS: Record<DiscountRequestType, StatusChipVariant> = {
+  contado: "warning",
+  credito: "default",
 };
 
 // ============================================================================
@@ -115,7 +111,8 @@ export default function SolicitudesDescuentoPage() {
       label: "TIPO",
       size: "sm",
       type: "chip",
-      chipConfig: TYPE_CHIP_CONFIG,
+      chipLabelMap: TYPE_CHIP_LABELS,
+      chipVariantMap: TYPE_CHIP_VARIANTS,
     },
     {
       id: "customerName",

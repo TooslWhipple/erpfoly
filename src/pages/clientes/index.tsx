@@ -15,8 +15,8 @@ import {
   TableCrud,
   Column,
   RowAction,
-  ChipStyleConfig,
 } from "@/components";
+import type { StatusChipVariant } from "@/components/TableCrud";
 import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -31,10 +31,15 @@ const STATUS_TABS: { label: string; value: string }[] = [
   { label: "Bloqueados", value: "blocked" },
 ];
 
-const STATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
-  active: { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
-  inactive: { label: "Inactivo", bgColor: "#F3F4F6", textColor: "#6B7280" },
-  blocked: { label: "Bloqueado", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+const STATUS_CHIP_LABELS: Record<string, string> = {
+  active: "Activo",
+  inactive: "Inactivo",
+  blocked: "Bloqueado",
+};
+const STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  active: "success",
+  inactive: "default",
+  blocked: "error",
 };
 
 const columns: Column<Client>[] = [
@@ -67,7 +72,8 @@ const columns: Column<Client>[] = [
     label: "Estatus",
     type: "chip",
     size: "sm",
-    chipConfig: STATUS_CHIP_CONFIG,
+    chipLabelMap: STATUS_CHIP_LABELS,
+    chipVariantMap: STATUS_CHIP_VARIANTS,
   },
   {
     id: "primaryAddressFormatted",

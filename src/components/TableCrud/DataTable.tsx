@@ -1,6 +1,5 @@
 import { Table, TableBody } from "@mui/material";
-import { Box, Chip, Typography } from "@mui/material";
-import { Warning as WarningIcon } from "@mui/icons-material";
+import { Typography } from "@mui/material";
 import numeral from "numeral";
 import {
   TableWrapper,
@@ -13,7 +12,9 @@ import {
   EmptyStateContainer,
 } from "./styles";
 import { ChipGroup } from "../ChipGroup";
-import type { ChipStyleConfig } from "./TableCrud";
+import { StatusChip } from "../StatusChip";
+import { getStatusChipVariant } from "./TableCrud";
+import type { StatusChipVariant } from "../StatusChip";
 
 // ============================================================================
 // TYPES (aligned with TableCrud where applicable)
@@ -39,7 +40,8 @@ export interface DataTableColumn<T> {
   format?: (value: unknown, row: T) => React.ReactNode;
   // Chip type options (same as TableCrud)
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
-  chipConfig?: Record<string, ChipStyleConfig>;
+  chipVariantMap?: Record<string, StatusChipVariant>;
+  chipLabelMap?: Record<string, string>;
   // ChipGroup type options
   chipGroupKey?: string;
   chipGroupMaxVisible?: number;
@@ -111,41 +113,10 @@ function formatCellValue<T>(
 
     case "chip": {
       const chipKey = String(rawValue);
-      const chipStyle = column.chipConfig?.[chipKey];
-      if (chipStyle) {
-        const chipNode = (
-          <Chip
-            label={chipStyle.label ?? chipKey}
-            size="small"
-            sx={{
-              backgroundColor: chipStyle.bgColor,
-              color: chipStyle.textColor,
-              borderRadius: "6px",
-              fontWeight: 500,
-              fontSize: "13px",
-            }}
-          />
-        );
-        if (chipStyle.showWarningIcon) {
-          return (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-              <WarningIcon
-                sx={{ color: chipStyle.textColor, fontSize: 18 }}
-                aria-hidden
-              />
-              {chipNode}
-            </Box>
-          );
-        }
-        return chipNode;
-      }
-      return (
-        <Chip
-          label={chipKey}
-          size="small"
-          color={column.chipColor || "default"}
-        />
-      );
+      const label = column.chipLabelMap?.[chipKey] ?? chipKey;
+      const variant =
+        column.chipVariantMap?.[chipKey] ?? getStatusChipVariant(column.chipColor);
+      return <StatusChip label={label} variant={variant} />;
     }
 
     case "chipGroup":

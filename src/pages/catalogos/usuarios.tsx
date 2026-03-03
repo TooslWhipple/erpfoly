@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ChipStyleConfig } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import { MainLayout, Title, TableCrud } from "@/components";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import {
     HeaderContainer,
     ControlsContainer,
@@ -15,9 +15,13 @@ import { getUsers as getUsersApi, type UserListItem } from "@/services/users.ser
 
 type User = UserListItem;
 
-const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
-    "ACTIVE": { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
-    "INACTIVE": { label: "Inactivo", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+const ESTATUS_CHIP_LABELS: Record<string, string> = {
+  ACTIVE: "Activo",
+  INACTIVE: "Inactivo",
+};
+const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  ACTIVE: "success",
+  INACTIVE: "error",
 };
 
 export default function Usuarios() {
@@ -118,7 +122,8 @@ export default function Usuarios() {
             label: "Estatus",
             type: "chip",
             size: "sm",
-            chipConfig: ESTATUS_CHIP_CONFIG,
+            chipLabelMap: ESTATUS_CHIP_LABELS,
+            chipVariantMap: ESTATUS_CHIP_VARIANTS,
         },
         {
             id: "createdAt",

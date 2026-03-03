@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
-import type { ChipStyleConfig, Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 
 type OrderStatus = "pending" | "delivered";
@@ -31,9 +31,13 @@ interface GetBranchOrdersResponse {
     page: number;
     limit: number;
 }
-const ESTATUS_CHIP_CONFIG: Record<OrderStatus, ChipStyleConfig> = {
-    pending: { label: "Pendiente", bgColor: "#FFF7ED", textColor: "#EA580C" },
-    delivered: { label: "Entregado", bgColor: "#F0FDF4", textColor: "#16A34A" },
+const ESTATUS_CHIP_LABELS: Record<OrderStatus, string> = {
+  pending: "Pendiente",
+  delivered: "Entregado",
+};
+const ESTATUS_CHIP_VARIANTS: Record<OrderStatus, StatusChipVariant> = {
+  pending: "pending",
+  delivered: "success",
 };
 
 const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
@@ -321,7 +325,8 @@ export default function PedidosSucursales() {
             label: "Estatus",
             size: "md",
             type: "chip",
-            chipConfig: ESTATUS_CHIP_CONFIG
+            chipLabelMap: ESTATUS_CHIP_LABELS,
+            chipVariantMap: ESTATUS_CHIP_VARIANTS,
         },
     ];
 

@@ -6,12 +6,10 @@ import {
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
 import { Box, Skeleton, Stack } from "@mui/material";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { DamageStatus } from "@/styles/inventario/styles";
-import { colors } from "@/styles/theme";
-import type { ChipStyleConfig } from "@/components/TableCrud";
 
 interface DamagedItem {
     id: number;
@@ -215,41 +213,37 @@ function getStatusLabel(status: DamageStatus): string {
     return labels[status];
 }
 
-/** Builds chipConfig for timeElapsed: critical (red + icon), warning (orange + icon), normal (gray) */
-function buildTimeElapsedChipConfig(): Record<string, ChipStyleConfig> {
-    const config: Record<string, ChipStyleConfig> = {};
-    const critical: ChipStyleConfig = {
-        bgColor: "#FEF2F2",
-        textColor: "#DC2626",
-        showWarningIcon: true,
-    };
-    const warning: ChipStyleConfig = {
-        bgColor: "#FFF7ED",
-        textColor: "#EA580C",
-        showWarningIcon: true,
-    };
-    const normal: ChipStyleConfig = {
-        bgColor: colors.chip.background,
-        textColor: colors.chip.text,
-    };
-    for (let i = 1; i <= 10; i++) {
-        config[i === 1 ? "1 año" : `${i} años`] = critical;
-    }
-    for (let i = 6; i <= 11; i++) {
-        config[`${i} meses`] = warning;
-    }
-    config["1 mes"] = normal;
-    for (let i = 2; i <= 5; i++) {
-        config[`${i} meses`] = normal;
-    }
-    config["1 día"] = normal;
-    for (let i = 2; i <= 31; i++) {
-        config[`${i} días`] = normal;
-    }
-    return config;
+/** Builds chipLabelMap and chipVariantMap for timeElapsed: critical->error, warning->warning, normal->default */
+function buildTimeElapsedChipMaps(): {
+  chipLabelMap: Record<string, string>;
+  chipVariantMap: Record<string, StatusChipVariant>;
+} {
+  const labels: Record<string, string> = {};
+  const variants: Record<string, StatusChipVariant> = {};
+  for (let i = 1; i <= 10; i++) {
+    const key = i === 1 ? "1 año" : `${i} años`;
+    labels[key] = key;
+    variants[key] = "error";
+  }
+  for (let i = 6; i <= 11; i++) {
+    const key = `${i} meses`;
+    labels[key] = key;
+    variants[key] = "warning";
+  }
+  const normalKeys = ["1 mes", "2 meses", "3 meses", "4 meses", "5 meses", "1 día"];
+  for (const key of normalKeys) {
+    labels[key] = key;
+    variants[key] = "default";
+  }
+  for (let i = 2; i <= 31; i++) {
+    const key = `${i} días`;
+    labels[key] = key;
+    variants[key] = "default";
+  }
+  return { chipLabelMap: labels, chipVariantMap: variants };
 }
 
-const TIME_ELAPSED_CHIP_CONFIG = buildTimeElapsedChipConfig();
+const TIME_ELAPSED_CHIP_MAPS = buildTimeElapsedChipMaps();
 
 export default function MercanciaDanada() {
     const router = useRouter();
@@ -423,35 +417,26 @@ export default function MercanciaDanada() {
             label: "Estatus",
             size: "md",
             type: "chip",
-            chipConfig: {
-                pending: {
-                    label: "Por realizar",
-                    bgColor: "#FFF7ED",
-                    textColor: "#EA580C",
-                },
-                in_progress: {
-                    label: "Realizando",
-                    bgColor: "#FFF7ED",
-                    textColor: "#EA580C",
-                },
-                completed: {
-                    label: "Finalizada",
-                    bgColor: "#DCFCE7",
-                    textColor: "#16A34A",
-                },
-                cancelled: {
-                    label: "Cancelada",
-                    bgColor: "#FEF2F2",
-                    textColor: "#EF4444",
-                },
-            }
+            chipLabelMap: {
+                pending: "Por realizar",
+                in_progress: "Realizando",
+                completed: "Finalizada",
+                cancelled: "Cancelada",
+            },
+            chipVariantMap: {
+                pending: "pending",
+                in_progress: "pending",
+                completed: "success",
+                cancelled: "error",
+            } as Record<string, StatusChipVariant>,
         },
         {
             id: "timeElapsed",
             label: "Tiempo",
             size: "md",
             type: "chip",
-            chipConfig: TIME_ELAPSED_CHIP_CONFIG,
+            chipLabelMap: TIME_ELAPSED_CHIP_MAPS.chipLabelMap,
+            chipVariantMap: TIME_ELAPSED_CHIP_MAPS.chipVariantMap,
         },
     ];
 

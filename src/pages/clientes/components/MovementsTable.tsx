@@ -1,11 +1,15 @@
 import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components";
-import type { ChipStyleConfig } from "@/components";
+import type { StatusChipVariant } from "@/components/TableCrud";
 import type { ClientMovement } from "@/types/clientes.types";
 
-const MOVEMENT_TYPE_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
-  payment: { label: "Abono", bgColor: "#dcfce7", textColor: "#16a34a" },
-  purchase: { label: "Compra", bgColor: "#dbeafe", textColor: "#2563eb" },
+const MOVEMENT_TYPE_CHIP_LABELS: Record<string, string> = {
+  payment: "Abono",
+  purchase: "Compra",
+};
+const MOVEMENT_TYPE_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  payment: "success",
+  purchase: "default",
 };
 
 const COLUMNS: DataTableColumn<ClientMovement>[] = [
@@ -13,7 +17,8 @@ const COLUMNS: DataTableColumn<ClientMovement>[] = [
     id: "type",
     label: "TIPO",
     type: "chip",
-    chipConfig: MOVEMENT_TYPE_CHIP_CONFIG,
+    chipLabelMap: MOVEMENT_TYPE_CHIP_LABELS,
+    chipVariantMap: MOVEMENT_TYPE_CHIP_VARIANTS,
   },
   { id: "description", label: "DESCRIPCIÓN" },
   { id: "invoice", label: "FACTURA" },

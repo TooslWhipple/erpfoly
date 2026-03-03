@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { HeaderContainer } from "@/styles/catalogos/catalogos.styledComponents";
 
 // ============================================================================
@@ -295,18 +295,8 @@ export default function Productos() {
       label: "ESTATUS",
       type: "chip",
       size: "sm",
-      chipConfig: {
-        active: {
-          label: "Activo",
-          bgColor: "#dcfce7",
-          textColor: "#16a34a",
-        },
-        draft: {
-          label: "Borrador",
-          bgColor: "#f3f4f6",
-          textColor: "#6b7280",
-        },
-      },
+      chipLabelMap: { active: "Activo", draft: "Borrador" },
+      chipVariantMap: { active: "success", draft: "default" } as Record<string, StatusChipVariant>,
     },
     {
       id: "name",

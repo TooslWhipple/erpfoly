@@ -9,7 +9,7 @@ import {
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
 import { Box, Skeleton } from "@mui/material";
-import type { Column, RowAction } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { INVENTORY_COLORS } from "@/styles/inventario/styles";
@@ -341,18 +341,8 @@ export default function Inventario() {
             label: "Estatus",
             type: "chip",
             size: "sm",
-            chipConfig: {
-                active: {
-                    label: "Activo",
-                    bgColor: "#dcfce7",
-                    textColor: "#16a34a",
-                },
-                inactive: {
-                    label: "Inactivo",
-                    bgColor: "#f3f4f6",
-                    textColor: "#6b7280",
-                },
-            },
+            chipLabelMap: { active: "Activo", inactive: "Inactivo" },
+            chipVariantMap: { active: "success", inactive: "default" } as Record<string, StatusChipVariant>,
         },
         {
             id: "name",

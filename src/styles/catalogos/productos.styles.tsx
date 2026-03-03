@@ -1,5 +1,6 @@
+import React from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
+import { Box, Paper, Typography, Button, IconButton, Switch, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
@@ -13,6 +14,31 @@ export const FormCard = styled('div')(({ theme }) => ({
     gap: "24px",
 }));
 
+
+export const SectionTitle = styled(Typography)(({ theme }) => ({
+    fontSize: "1rem",
+    fontWeight: 600,
+    color: "#232325",
+    marginBottom: theme.spacing(2),
+}));
+
+export const SectionDescription = styled(Typography)(({ theme }) => ({
+    fontSize: "0.875rem",
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(2),
+}));
+
+export const Section = styled(Box)(({ theme }) => ({
+    marginBottom: theme.spacing(4),
+    "&:last-child": {
+        marginBottom: 0,
+    },
+}));
+
+// ============================================================================
+// RADIO BUTTONS
+// ============================================================================
+
 export const RadioGroupContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -25,6 +51,89 @@ export const RadioLabel = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
     marginBottom: theme.spacing(1),
 }));
+
+export const StyledRadioGroup = styled(Box)(({ theme }) => ({
+    display: "flex",
+    flexDirection: "row",
+    gap: theme.spacing(2),
+}));
+
+const RadioOptionIcon = styled(Box)<{ selected?: boolean }>(({ theme, selected }) => ({
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    border: `2px solid ${selected ? colors.sidebar.textSelected : theme.palette.text.primary}`,
+    backgroundColor: selected ? colors.sidebar.textSelected : "transparent",
+    position: "relative",
+    flexShrink: 0,
+    ...(selected && {
+        "&::after": {
+            content: '""',
+            position: "absolute",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            backgroundColor: colors.background.sidebar,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+        },
+    }),
+}));
+
+const StyledRadioOptionButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
+    margin: 0,
+    padding: theme.spacing(1, 2),
+    borderRadius: "12px",
+    border: `1px solid ${selected ? colors.sidebar.itemSelected : theme.palette.text.primary}`,
+    backgroundColor: selected ? colors.sidebar.itemSelected : colors.background.sidebar,
+    color: selected ? colors.sidebar.textSelected : theme.palette.text.primary,
+    fontWeight: selected ? 600 : 400,
+    textTransform: "none",
+    fontSize: "0.9375rem",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing(1.25),
+    transition: "all 0.2s ease",
+    "&:hover": {
+        backgroundColor: selected ? colors.sidebar.itemSelected : theme.palette.action.hover,
+        borderColor: selected ? colors.sidebar.itemSelected : theme.palette.text.primary,
+    },
+}));
+
+export interface StyledFormControlLabelProps {
+    value: string;
+    label: string;
+    checked: boolean;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+export function StyledFormControlLabel({
+    value,
+    label,
+    checked,
+    onChange,
+}: StyledFormControlLabelProps) {
+    const handleClick = () => {
+        onChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+    };
+
+    return (
+        <StyledRadioOptionButton
+            role="radio"
+            aria-checked={checked}
+            selected={checked}
+            onClick={handleClick}
+        >
+            <RadioOptionIcon selected={checked} />
+            {label}
+        </StyledRadioOptionButton>
+    );
+}
+
+// ============================================================================
+// GALLERY COMPONENTS
+// ============================================================================
 
 export const GalleryGrid = styled(Box)(({ theme }) => ({
     display: "grid",
@@ -126,6 +235,10 @@ export const HiddenFileInput = styled("input")({
     display: "none",
 });
 
+// ============================================================================
+// BRANCHES COMPONENTS
+// ============================================================================
+
 export const BranchListContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -185,6 +298,10 @@ export const InventoryButton = styled(IconButton)(({ theme }) => ({
     },
 }));
 
+// ============================================================================
+// EMPTY STATES
+// ============================================================================
+
 export const EmptyStateContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -203,6 +320,10 @@ export const EmptyStateText = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
     marginTop: theme.spacing(1),
 }));
+
+// ============================================================================
+// COST SUMMARY COMPONENTS
+// ============================================================================
 
 export const CostSummaryContainer = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -233,6 +354,10 @@ export const CostValue = styled(Typography)(({ theme }) => ({
     fontWeight: 600,
     color: theme.palette.text.primary,
 }));
+
+// ============================================================================
+// COST HISTORY MODAL COMPONENTS
+// ============================================================================
 
 export const CostHistoryTimeline = styled(Box)(({ theme }) => ({
     position: "relative",
@@ -297,7 +422,11 @@ export const TimelineChange = styled(Box)(({ theme }) => ({
     color: theme.palette.text.secondary,
     fontSize: "0.875rem",
 }));
-    
+
+// ============================================================================
+// SUPPLIER MODAL COMPONENTS
+// ============================================================================
+
 export const SupplierTableContainer = styled(TableContainer)(({ theme }) => ({
     flex: 1,
     border: `1px solid ${colors.border}`,

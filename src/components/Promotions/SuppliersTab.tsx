@@ -1,53 +1,22 @@
-import { useState } from "react";
-import { styled } from "@mui/material/styles";
-import { Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { useState, useMemo } from "react";
+import { Box, Button, InputAdornment, Stack, Table, TableBody, TableHead, TableRow, Typography } from "@mui/material";
+import { FormTextField } from "@/components";
 import { AddSupplierModal } from "@/components/Products/AddSupplierModal";
-import { Section, SectionTitle, SectionDescription, SupplierTableContainer, SupplierTableHeader, SupplierTableRow, SupplierTableCell, SupplierAddButton } from "@/styles/catalogos/productos.styles";
+import {
+    FormCard,
+    SupplierTableContainer,
+    SupplierTableHeader,
+    SupplierTableRow,
+    SupplierTableCell,
+} from "@/styles/catalogos/productos.styles";
 import type { PromotionFormState, PromotionSupplier } from "@/types/promociones.types";
 import { MOCK_SUPPLIERS_FOR_SELECTION } from "@/data/promociones.mockData";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { PlusIcon, Search } from "lucide-react";
 
 interface SuppliersTabProps {
     formState: PromotionFormState;
     onFieldChange: (field: keyof PromotionFormState, value: any) => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const AddButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "0.875rem",
-    fontWeight: 600,
-}));
-
-const RemoveButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    color: theme.palette.error.main,
-    padding: theme.spacing(0.5, 1),
-    minWidth: "auto",
-    "&:hover": {
-        backgroundColor: "transparent",
-        textDecoration: "underline",
-    },
-}));
-
-const SummaryText = styled(Box)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(2),
-}));
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function SuppliersTab({
     formState,
@@ -55,6 +24,18 @@ export function SuppliersTab({
 }: SuppliersTabProps) {
     const [modalOpen, setModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const filteredSuppliers = useMemo(() => {
+        const suppliers = formState.suppliers || [];
+        if (!searchTerm.trim()) return suppliers;
+        const term = searchTerm.toLowerCase().trim();
+        return suppliers.filter(
+            (s) =>
+                String(s.supplierId).toLowerCase().includes(term) ||
+                s.supplierName.toLowerCase().includes(term)
+        );
+    }, [formState.suppliers, searchTerm]);
 
     const handleOpenModal = () => {
         setModalOpen(true);
@@ -92,7 +73,6 @@ export function SuppliersTab({
     };
 
     const handleNewSupplier = () => {
-        // Navigate to new supplier page
         window.location.href = "/catalogos/proveedores/nuevo";
     };
 
@@ -100,63 +80,91 @@ export function SuppliersTab({
 
     return (
         <Box>
-            <Section>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                    <Box>
-                        <SectionTitle>Proveedores</SectionTitle>
-                        <SectionDescription>
-                            Configura los proveedores que aplicará con este Promoción.
-                        </SectionDescription>
-                    </Box>
-                    <AddButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenModal}
-                    >
-                        Agregar
-                    </AddButton>
-                </Box>
+            <FormCard>
+                <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack spacing={0.5}>
+                        <Typography variant="h6">Proveedores</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Configura los proveedores que aplicará con esta Promoción.
+                        </Typography>
+                    </Stack>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <FormTextField
+                            placeholder="Buscar proveedores"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            size="small"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search size={16} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<PlusIcon size={12} />}
+                            sx={{ minWidth: 128 }}
+                            onClick={handleOpenModal}
+                        >
+                            Agregar
+                        </Button>
+                    </Stack>
+                </Stack>
 
-                {formState.suppliers && formState.suppliers.length > 0 && (
-                    <SummaryText>
-                        {formState.suppliers.length} proveedores agregados
-                    </SummaryText>
-                )}
+                {
+                    formState.suppliers && formState.suppliers.length > 0 &&
+                    <Typography variant="body2" color="text.secondary">
+                        {formState.suppliers.length}
+                        {
+                            formState.suppliers.length > 1 ? " proveedores agregados" : " proveedor agregado"
+                        }
+                    </Typography>
+                }
 
-                {formState.suppliers && formState.suppliers.length > 0 ? (
-                    <SupplierTableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <SupplierTableHeader>ID</SupplierTableHeader>
-                                    <SupplierTableHeader>Proveedor</SupplierTableHeader>
-                                    <SupplierTableHeader align="right"></SupplierTableHeader>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {formState.suppliers.map((supplier) => (
-                                    <SupplierTableRow key={supplier.id}>
-                                        <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
-                                        <SupplierTableCell>{supplier.supplierName}</SupplierTableCell>
-                                        <SupplierTableCell align="right">
-                                            <RemoveButton
-                                                onClick={() => handleRemoveSupplier(supplier.id)}
-                                            >
-                                                Remover
-                                            </RemoveButton>
-                                        </SupplierTableCell>
-                                    </SupplierTableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </SupplierTableContainer>
-                ) : (
-                    <Box sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
-                        No hay proveedores agregados
-                    </Box>
-                )}
-            </Section>
+                {
+                    formState.suppliers && formState.suppliers.length > 0 ?
+                        <SupplierTableContainer>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <SupplierTableHeader>ID</SupplierTableHeader>
+                                        <SupplierTableHeader>Proveedor</SupplierTableHeader>
+                                        <SupplierTableHeader align="right"></SupplierTableHeader>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredSuppliers.length === 0 ? (
+                                        <TableRow>
+                                            <SupplierTableCell colSpan={3} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                                No se encontraron proveedores
+                                            </SupplierTableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredSuppliers.map((supplier) => (
+                                            <SupplierTableRow key={supplier.id}>
+                                                <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
+                                                <SupplierTableCell>{supplier.supplierName}</SupplierTableCell>
+                                                <SupplierTableCell align="right">
+                                                    <Button
+                                                        variant="text"
+                                                        onClick={() => handleRemoveSupplier(supplier.id)}
+                                                    >
+                                                        Remover
+                                                    </Button>
+                                                </SupplierTableCell>
+                                            </SupplierTableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </SupplierTableContainer>
+                        :
+                        <Typography variant="body2" color="text.secondary">No hay proveedores agregados</Typography>
+                }
+            </FormCard>
 
             <AddSupplierModal
                 open={modalOpen}

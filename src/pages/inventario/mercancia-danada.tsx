@@ -4,15 +4,12 @@ import {
     TrendingUp as TrendingUpIcon,
     Edit as EditIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
+import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
 import { Box, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import {
-    StatsSection,
-    DamageStatus,
-} from "@/styles/inventario/styles";
+import { DamageStatus } from "@/styles/inventario/styles";
 import { colors } from "@/styles/theme";
 import type { ChipStyleConfig } from "@/components/TableCrud";
 
@@ -265,6 +262,7 @@ export default function MercanciaDanada() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [addModalOpen, setAddModalOpen] = useState(false);
 
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
@@ -325,7 +323,7 @@ export default function MercanciaDanada() {
     };
 
     const handleCreate = () => {
-        router.push("/inventario/mercancia-danada/ingresar");
+        setAddModalOpen(true);
     };
 
     const handleEdit = (item: DamagedItem) => {
@@ -490,30 +488,28 @@ export default function MercanciaDanada() {
                     ]}
                 />
 
-                <StatsSection>
-                    {
-                        stats ? <StatsCardGroup cards={statsCards} />
-                            :
-                            <Box
-                                sx={{
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(3, 1fr)",
-                                    gap: 2,
-                                }}
-                            >
-                                {[1, 2, 3].map((i) => (
-                                    <Skeleton
-                                        key={i}
-                                        variant="rectangular"
-                                        height={120}
-                                        sx={{ borderRadius: 2 }}
-                                        animation="wave"
-                                    />
-                                ))}
-                            </Box>
+                {
+                    stats ? <StatsCardGroup cards={statsCards} />
+                        :
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(3, 1fr)",
+                                gap: 2,
+                            }}
+                        >
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton
+                                    key={i}
+                                    variant="rectangular"
+                                    height={120}
+                                    sx={{ borderRadius: 2 }}
+                                    animation="wave"
+                                />
+                            ))}
+                        </Box>
 
-                    }
-                </StatsSection>
+                }
 
                 <TableCrud
                     columns={columns}
@@ -528,6 +524,15 @@ export default function MercanciaDanada() {
                     onRowsPerPageChange={handleRowsPerPageChange}
                     onRowClick={handleEdit}
                     emptyMessage="No hay mercancía dañada registrada"
+                />
+
+                <AddDamagedGoodsModal
+                    open={addModalOpen}
+                    onClose={() => setAddModalOpen(false)}
+                    onSubmit={async () => {
+                        await new Promise((r) => setTimeout(r, 800));
+                        fetchItems();
+                    }}
                 />
             </Stack>
 

@@ -1,12 +1,22 @@
-import { styled } from "@mui/material/styles";
-import { Box, Grid, Radio, Switch, Button, Divider } from "@mui/material";
-import { FormTextField } from "@/components";
-import { Section, SectionTitle, SectionDescription, StyledRadioGroup, StyledFormControlLabel } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, FormErrors, PromotionApplicationType, PromotionMonth, PromotionDay } from "@/types/promociones.types";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { Box, Grid, Switch, Stack, Typography } from "@mui/material";
+import { FormTextField, RadioButton, RadioButtonGroup } from "@/components";
+import {
+    FormCard
+} from "@/styles/catalogos/productos.styles";
+import {
+    MonthButton,
+    MonthButtonIcon,
+    DayButton,
+    SwitchContainer,
+} from "@/styles/catalogos/promociones.styles";
+import { Check as CheckIcon } from "@mui/icons-material";
+import type {
+    PromotionFormState,
+    FormErrors,
+    PromotionApplicationType,
+    PromotionMonth,
+    PromotionDay
+} from "@/types/promociones.types";
 
 interface ConfigurationTabProps {
     formState: PromotionFormState;
@@ -14,48 +24,6 @@ interface ConfigurationTabProps {
     onFieldChange: (field: keyof PromotionFormState, value: any) => void;
     onErrorClear: (field: string) => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const MonthButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
-    minWidth: 48,
-    height: 36,
-    fontSize: "0.875rem",
-    fontWeight: selected ? 600 : 400,
-    backgroundColor: selected ? theme.palette.primary.main : "transparent",
-    color: selected ? theme.palette.primary.contrastText : theme.palette.text.primary,
-    border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
-    "&:hover": {
-        backgroundColor: selected ? theme.palette.primary.dark : theme.palette.action.hover,
-    },
-}));
-
-const DayButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
-    minWidth: 60,
-    height: 36,
-    fontSize: "0.875rem",
-    fontWeight: selected ? 600 : 400,
-    backgroundColor: selected ? theme.palette.primary.main : "transparent",
-    color: selected ? theme.palette.primary.contrastText : theme.palette.text.primary,
-    border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
-    borderRadius: 8,
-    "&:hover": {
-        backgroundColor: selected ? theme.palette.primary.dark : theme.palette.action.hover,
-    },
-}));
-
-const SwitchContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing(2),
-}));
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function ConfigurationTab({
     formState,
@@ -70,22 +38,12 @@ export function ConfigurationTab({
         }
     };
 
-    const handleMonthToggle = (month: PromotionMonth) => {
-        const currentMonths = formState.months || [];
-        const isSelected = currentMonths.includes(month);
-        const newMonths = isSelected
-            ? currentMonths.filter((m) => m !== month)
-            : [...currentMonths, month];
-        onFieldChange("months", newMonths);
+    const handleMonthSelect = (month: PromotionMonth) => {
+        onFieldChange("months", [month]);
     };
 
-    const handleDayToggle = (day: PromotionDay) => {
-        const currentDays = formState.days || [];
-        const isSelected = currentDays.includes(day);
-        const newDays = isSelected
-            ? currentDays.filter((d) => d !== day)
-            : [...currentDays, day];
-        onFieldChange("days", newDays);
+    const handleDaySelect = (day: PromotionDay) => {
+        onFieldChange("days", [day]);
     };
 
     const handleClientLevelChange = (level: number, field: "level" | "advancePercentage", value: number | string) => {
@@ -116,13 +74,14 @@ export function ConfigurationTab({
     };
 
     return (
-        <Box>
-            {/* Promotion Configuration Section */}
-            <Section>
-                <SectionTitle>Configuraciones de la promoción</SectionTitle>
-                <SectionDescription>
-                    Ingresa un nombre y porcentaje para tu nueva promoción.
-                </SectionDescription>
+        <>
+            <FormCard>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">Configuraciones de la promoción</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Ingresa un nombre y porcentaje para tu nueva promoción.
+                    </Typography>
+                </Stack>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <FormTextField
@@ -137,7 +96,7 @@ export function ConfigurationTab({
                             placeholder="Ej. Buen fin"
                         />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid size={{ xs: 12, sm: 3 }}>
                         <FormTextField
                             label="Porcentaje"
                             value={formState.percentage}
@@ -147,112 +106,126 @@ export function ConfigurationTab({
                             }}
                             error={Boolean(errors.percentage)}
                             helperText={errors.percentage}
-                            placeholder="15%"
+                            placeholder="15"
+                            InputProps={{
+                                endAdornment: <Box component="span" sx={{ color: "text.secondary" }}>%</Box>,
+                            }}
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 3 }}>
+                        <FormTextField
+                            label="Anticipo"
+                            value={formState.advancePercentage}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "" || /^\d{0,3}(\.\d*)?$/.test(v)) {
+                                    onFieldChange("advancePercentage", v);
+                                    if (errors.advancePercentage) onErrorClear("advancePercentage");
+                                }
+                            }}
+                            error={Boolean(errors.advancePercentage)}
+                            helperText={errors.advancePercentage}
+                            placeholder="0"
                             InputProps={{
                                 endAdornment: <Box component="span" sx={{ color: "text.secondary" }}>%</Box>,
                             }}
                         />
                     </Grid>
                 </Grid>
-            </Section>
+            </FormCard>
 
-            {/* Application Section */}
-            <Section>
-                <SectionTitle>Aplicación</SectionTitle>
-                <SectionDescription>
-                    Selecciona a qué tipo de venta se aplicará la promoción.
-                </SectionDescription>
-                <Grid container spacing={3}>
-                    <Grid size={{ xs: 12 }}>
-                        <Box>
-                            <Box sx={{ mb: 2, fontSize: "0.875rem", fontWeight: 500 }}>
-                                Aplicación
-                            </Box>
-                            <StyledRadioGroup
-                                value={formState.applicationType}
-                                onChange={(e) => handleApplicationTypeChange(e.target.value as PromotionApplicationType)}
-                            >
-                                <StyledFormControlLabel
+            <FormCard>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">Aplicación</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Selecciona a qué tipo de venta se aplicará la promoción.
+                    </Typography>
+                </Stack>
+                <Grid container spacing={3} width="100%">
+                    <Grid size={{ xs: 12, sm: 'auto' }}>
+                        <Stack spacing={1}>
+                            <Typography variant="body1" fontWeight={500}>Aplicación</Typography>
+                            <RadioButtonGroup>
+                                <RadioButton
                                     value="Crédito"
-                                    control={<Radio />}
                                     label="Crédito"
                                     checked={formState.applicationType === "Crédito"}
+                                    onChange={(e) => handleApplicationTypeChange(e.target.value as PromotionApplicationType)}
                                 />
-                                <StyledFormControlLabel
+                                <RadioButton
                                     value="Contado"
-                                    control={<Radio />}
                                     label="Contado"
                                     checked={formState.applicationType === "Contado"}
+                                    onChange={(e) => handleApplicationTypeChange(e.target.value as PromotionApplicationType)}
                                 />
-                                <StyledFormControlLabel
+                                <RadioButton
                                     value="Apartados"
-                                    control={<Radio />}
                                     label="Apartados"
                                     checked={formState.applicationType === "Apartados"}
+                                    onChange={(e) => handleApplicationTypeChange(e.target.value as PromotionApplicationType)}
                                 />
-                            </StyledRadioGroup>
-                        </Box>
+                            </RadioButtonGroup>
+                        </Stack>
                     </Grid>
                     {formState.applicationType === "Crédito" && (
-                        <Grid size={{ xs: 12 }}>
-                            <Box>
-                                <Box sx={{ mb: 2, fontSize: "0.875rem", fontWeight: 500 }}>
-                                    Meses
-                                </Box>
-                                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                                    {([3, 6, 9, 12, 18, 24] as PromotionMonth[]).map((month) => (
+                        <Stack spacing={1}>
+                            <Typography variant="body1" fontWeight={500}>Meses</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                {([3, 6, 9, 12, 18, 24] as PromotionMonth[]).map((month) => {
+                                    const isSelected = formState.months?.includes(month);
+                                    return (
                                         <MonthButton
                                             key={month}
-                                            variant={formState.months?.includes(month) ? "contained" : "outlined"}
-                                            onClick={() => handleMonthToggle(month)}
-                                            selected={formState.months?.includes(month)}
+                                            onClick={() => handleMonthSelect(month)}
+                                            selected={isSelected}
                                         >
+                                            <MonthButtonIcon selected={isSelected}>
+                                                {isSelected ? <CheckIcon /> : null}
+                                            </MonthButtonIcon>
                                             {month}
                                         </MonthButton>
-                                    ))}
-                                </Box>
-                            </Box>
-                        </Grid>
+                                    );
+                                })}
+                            </Stack>
+                        </Stack>
                     )}
                     {formState.applicationType === "Apartados" && (
-                        <Grid size={{ xs: 12 }}>
-                            <Box>
-                                <Box sx={{ mb: 2, fontSize: "0.875rem", fontWeight: 500 }}>
-                                    Días
-                                </Box>
-                                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                                    {([30, 45, 60] as PromotionDay[]).map((day) => (
-                                        <DayButton
+                        <Stack spacing={1}>
+                            <Typography variant="body1" fontWeight={500}>Días</Typography>
+                            <RadioButtonGroup>
+                                {
+                                    ([30, 45, 60] as PromotionDay[]).map((day) => (
+                                        <RadioButton
                                             key={day}
-                                            variant={formState.days?.includes(day) ? "contained" : "outlined"}
-                                            onClick={() => handleDayToggle(day)}
-                                            selected={formState.days?.includes(day)}
-                                        >
-                                            {day}
-                                        </DayButton>
-                                    ))}
-                                </Box>
-                            </Box>
-                        </Grid>
+                                            value={day.toString()}
+                                            label={day.toString()}
+                                            checked={formState.days?.includes(day)}
+                                            onChange={(e) => handleDaySelect(Number(e.target.value) as PromotionDay)}
+                                        />
+                                    ))
+                                }
+                            </RadioButtonGroup>
+                        </Stack>
                     )}
                 </Grid>
-            </Section>
+            </FormCard>
 
-            {/* Client Level Advance Section */}
             {(formState.applicationType === "Crédito" || formState.applicationType === "Apartados") && (
-                <Section>
-                    <SectionTitle>Anticipo por nivel de cliente</SectionTitle>
-                    <SectionDescription>
-                        Configure el porcentaje de anticipo que se aplicará a cada nivel de cliente.
-                    </SectionDescription>
-                    <Grid container spacing={2}>
+                <FormCard>
+                    <Stack spacing={0.5}>
+                        <Typography variant="h6">Enganche por nivel de cliente</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Configure el porcentaje de enganche que se aplicará a cada nivel de cliente.
+                        </Typography>
+                    </Stack>
+                    <Grid container spacing={2} width="100%">
                         {[1, 2, 3].map((level) => {
                             const levelData = formState.clientLevels.find((l) => l.level === level) || {
                                 level,
                                 advancePercentage: 0,
                             };
                             return (
-                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={level}>
+                                <Grid size={{ xs: 12, sm: 'auto' }} key={level}>
                                     <FormTextField
                                         label={`Nivel ${level}`}
                                         value={levelData.advancePercentage.toString()}
@@ -271,17 +244,18 @@ export function ConfigurationTab({
                             );
                         })}
                     </Grid>
-                </Section>
+                </FormCard>
             )}
 
-            {/* Validity Period Section */}
-            <Section>
-                <SectionTitle>Periodo de vigencia</SectionTitle>
-                <SectionDescription>
-                    Define el periodo de vigencia para la promoción.
-                </SectionDescription>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid size={{ xs: 12, sm: 5 }}>
+            <FormCard>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">Periodo de vigencia</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Define el periodo de vigencia para la promoción.
+                    </Typography>
+                </Stack>
+                <Grid container spacing={2} alignItems="flex-end" width="100%">
+                    <Grid size={{ xs: 12, sm: 'auto' }}>
                         <FormTextField
                             label="Fecha de inicio"
                             type="date"
@@ -297,7 +271,7 @@ export function ConfigurationTab({
                             }}
                         />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 2 }}>
+                    <Grid size={{ xs: 12, sm: 'auto' }}>
                         <SwitchContainer>
                             <Switch
                                 checked={formState.hasEndDate}
@@ -305,7 +279,7 @@ export function ConfigurationTab({
                             />
                         </SwitchContainer>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 5 }}>
+                    <Grid size={{ xs: 12, sm: 'auto' }}>
                         <FormTextField
                             label="Fecha de fin"
                             type="date"
@@ -323,7 +297,7 @@ export function ConfigurationTab({
                         />
                     </Grid>
                 </Grid>
-            </Section>
-        </Box>
+            </FormCard>
+        </>
     );
 }

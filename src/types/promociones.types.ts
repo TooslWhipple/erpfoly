@@ -45,6 +45,7 @@ export interface PromotionFormState {
     // Configuration
     name: string;
     percentage: string;
+    advancePercentage: string;
     applicationType: PromotionApplicationType;
     months: PromotionMonth[];
     days: PromotionDay[];
@@ -68,6 +69,7 @@ export interface Promotion {
     id: number;
     name: string;
     percentage: number;
+    advancePercentage?: number;
     applicationType: PromotionApplicationType;
     months: PromotionMonth[];
     days: PromotionDay[];

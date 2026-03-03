@@ -12,7 +12,7 @@ import { Box, Skeleton } from "@mui/material";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import { StatsSection, INVENTORY_COLORS } from "@/styles/inventario/styles";
+import { INVENTORY_COLORS } from "@/styles/inventario/styles";
 
 interface InventoryItem {
     id: number;
@@ -423,10 +423,8 @@ export default function Inventario() {
         <MainLayout>
             <Title title="Inventario" />
 
-            <StatsSection>
-                {stats ? (
-                    <StatsCardGroup cards={statsCards} />
-                ) : (
+            {
+                stats ? <StatsCardGroup cards={statsCards} /> :
                     <Box
                         sx={{
                             display: "grid",
@@ -444,8 +442,7 @@ export default function Inventario() {
                             />
                         ))}
                     </Box>
-                )}
-            </StatsSection>
+            }
 
             <TabFilters
                 tabs={tabs}

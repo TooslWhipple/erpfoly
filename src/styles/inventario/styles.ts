@@ -2,15 +2,7 @@ import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
 import { Warning as WarningIcon } from "@mui/icons-material";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export type DamageStatus = "pending" | "in_progress" | "completed" | "cancelled";
-
-// ============================================================================
-// COLORS
-// ============================================================================
 
 export const INVENTORY_COLORS = {
     green: "#16a34a",
@@ -20,18 +12,6 @@ export const INVENTORY_COLORS = {
     red: "#dc2626",
     redBorder: "#fca5a5",
 };
-
-// ============================================================================
-// COMMON COMPONENTS
-// ============================================================================
-
-export const StatsSection = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
-}));
-
-// ============================================================================
-// MERCANCIA DAÑADA COMPONENTS
-// ============================================================================
 
 export const StatusText = styled("span")<{ status: DamageStatus }>(({ status }) => {
     const statusColors: Record<DamageStatus, string> = {

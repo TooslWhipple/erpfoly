@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Dialog, Box, CircularProgress, Radio, Grid, InputAdornment } from "@mui/material";
+import { Dialog, Box, CircularProgress, Grid, InputAdornment } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormTextField, FormSelect, MultiSelectChips } from "@/components";
@@ -174,27 +174,30 @@ export function AddPackageModal({
                                 Tipo de paquete
                             </SectionTitle>
                             <RadioGroupContainer>
-                                <StyledRadioGroup
-                                    value={packageType}
-                                    onChange={(e) => {
-                                        setPackageType(e.target.value as PackageType);
-                                        setSelectedArticleId("");
-                                        setServiceName("");
-                                        setSelectedBranches([]);
-                                        setErrors({});
-                                    }}
-                                >
+                                <StyledRadioGroup>
                                     <StyledFormControlLabel
                                         value="article"
-                                        control={<Radio size="small" />}
                                         label="Artículo"
                                         checked={packageType === "article"}
+                                        onChange={(e) => {
+                                            setPackageType(e.target.value as PackageType);
+                                            setSelectedArticleId("");
+                                            setServiceName("");
+                                            setSelectedBranches([]);
+                                            setErrors({});
+                                        }}
                                     />
                                     <StyledFormControlLabel
                                         value="service"
-                                        control={<Radio size="small" />}
                                         label="Servicio"
                                         checked={packageType === "service"}
+                                        onChange={(e) => {
+                                            setPackageType(e.target.value as PackageType);
+                                            setSelectedArticleId("");
+                                            setServiceName("");
+                                            setSelectedBranches([]);
+                                            setErrors({});
+                                        }}
                                     />
                                 </StyledRadioGroup>
                             </RadioGroupContainer>

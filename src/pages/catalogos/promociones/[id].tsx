@@ -1,21 +1,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Stack } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
-    Tabs,
+    Title,
+    TabFilters,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import {
-    BreadcrumbsContainer,
-    PageHeader,
-    PageTitle,
-    SaveButton,
-    DiscardButton,
-    TabsContainer,
-    FormCard,
-} from "@/styles/catalogos/productos.styles";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
 import { getPromotion, savePromotion } from "@/services/promociones.service";
 import { MOCK_DEPARTMENTS, MOCK_ARTICLES, MOCK_BRANCHES } from "@/data/promociones.mockData";
@@ -45,6 +37,7 @@ export default function PromotionFormPage() {
     const [formState, setFormState] = useState<PromotionFormState>({
         name: "",
         percentage: "",
+        advancePercentage: "",
         applicationType: "Crédito",
         months: [],
         days: [],
@@ -80,6 +73,7 @@ export default function PromotionFormPage() {
                     setFormState({
                         name: promotion.name,
                         percentage: promotion.percentage.toString(),
+                        advancePercentage: promotion.advancePercentage != null ? String(promotion.advancePercentage) : "",
                         applicationType: promotion.applicationType,
                         months: promotion.months,
                         days: promotion.days || [],
@@ -113,6 +107,11 @@ export default function PromotionFormPage() {
 
         if (!formState.percentage || Number(formState.percentage) <= 0) {
             newErrors.percentage = "El porcentaje debe ser mayor a 0";
+        }
+
+        const advanceNum = formState.advancePercentage === "" ? NaN : Number(formState.advancePercentage);
+        if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
+            newErrors.advancePercentage = "El anticipo debe estar entre 0 y 100";
         }
 
         if (!formState.startDate) {
@@ -151,6 +150,7 @@ export default function PromotionFormPage() {
                 id: promotionId || undefined,
                 name: formState.name.trim(),
                 percentage: Number(formState.percentage),
+                advancePercentage: formState.advancePercentage === "" ? 0 : Number(formState.advancePercentage),
                 applicationType: formState.applicationType,
                 months: formState.months,
                 days: formState.days,
@@ -232,37 +232,31 @@ export default function PromotionFormPage() {
 
     return (
         <MainLayout>
-            <BreadcrumbsContainer>
+            <Stack spacing={2}>
                 <Breadcrumbs items={breadcrumbItems} />
-            </BreadcrumbsContainer>
-
-            <PageHeader>
-                <PageTitle>{isNew ? "Nueva promoción" : "Editar promoción"}</PageTitle>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                    <DiscardButton variant="outlined" onClick={handleDiscard} disabled={saving}>
-                        Descartar cambios
-                    </DiscardButton>
-                    <SaveButton
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSave}
-                        disabled={saving}
-                    >
-                        {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
-                    </SaveButton>
-                </Box>
-            </PageHeader>
-
-            <TabsContainer>
-                <Tabs
+                <Title
+                    title={isNew ? "Nueva promoción" : "Editar promoción"}
+                    actions={[
+                        {
+                            id: "discard",
+                            label: "Descartar cambios",
+                            onClick: handleDiscard,
+                            disabled: saving,
+                            variant: "outlined",
+                        },
+                        {
+                            id: "save",
+                            label: "Guardar",
+                            onClick: handleSave,
+                            disabled: saving,
+                        },
+                    ]} />
+                <TabFilters
                     tabs={tabs}
-                    value={activeTab}
-                    onChange={setActiveTab}
-                    withBorder={true}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
                 />
-            </TabsContainer>
 
-            <FormCard>
                 {activeTab === "configuration" && (
                     <ConfigurationTab
                         formState={formState}
@@ -292,7 +286,8 @@ export default function PromotionFormPage() {
                         onFieldChange={handleFieldChange}
                     />
                 )}
-            </FormCard>
-        </MainLayout>
+            </Stack>
+
+        </MainLayout >
     );
 }

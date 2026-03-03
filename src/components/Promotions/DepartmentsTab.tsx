@@ -1,83 +1,26 @@
 import { useState, useMemo } from "react";
-import { styled } from "@mui/material/styles";
-import { Box, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, InputAdornment, Chip } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
 import numeral from "numeral";
+
+import { Box, Grid, Table, TableBody, TableRow, Checkbox, InputAdornment, Typography, Stack, TableContainer } from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
-import { Section, SectionTitle, SectionDescription } from "@/styles/catalogos/productos.styles";
-import type { PromotionFormState, PromotionDepartment, PromotionArticle } from "@/types/promociones.types";
+import { FormCard } from "@/styles/catalogos/productos.styles";
+import {
+    StyledTableHead,
+    StyledTableCell,
+    StyledTableRow,
+    ArticleTableCell,
+    StatusChip,
+    SearchContainer,
+} from "@/styles/catalogos/promociones.styles";
+import type { PromotionFormState } from "@/types/promociones.types";
 import { MOCK_DEPARTMENTS, MOCK_ARTICLES } from "@/data/promociones.mockData";
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface DepartmentsTabProps {
     formState: PromotionFormState;
     onFieldChange: (field: keyof PromotionFormState, value: any) => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const ArticlesTableContainer = styled(TableContainer)(({ theme }) => ({
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 8,
-    marginTop: theme.spacing(2),
-    maxHeight: 500,
-    overflow: "auto",
-}));
-
-const StyledTableHead = styled(TableHead)(({ theme }) => ({
-    backgroundColor: theme.palette.background.default,
-    position: "sticky",
-    top: 0,
-    zIndex: 1,
-}));
-
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-    fontSize: "0.875rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    padding: theme.spacing(1.5, 2),
-}));
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-    "&:hover": {
-        backgroundColor: theme.palette.action.hover,
-    },
-    "&:last-child td": {
-        borderBottom: "none",
-    },
-}));
-
-const ArticleTableCell = styled(TableCell)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.primary,
-    padding: theme.spacing(1.5, 2),
-    borderBottom: `1px solid ${theme.palette.divider}`,
-}));
-
-const StatusChip = styled(Chip)<{ status: "Activo" | "Draft" }>(({ theme, status }) => ({
-    fontSize: "0.75rem",
-    height: 24,
-    backgroundColor: status === "Activo" ? "#dcfce7" : "#f3f4f6",
-    color: status === "Activo" ? "#16a34a" : "#6b7280",
-    fontWeight: 500,
-}));
-
-const SearchContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: theme.spacing(2),
-}));
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function DepartmentsTab({
     formState,
@@ -85,7 +28,6 @@ export function DepartmentsTab({
 }: DepartmentsTabProps) {
     const [searchTerm, setSearchTerm] = useState("");
 
-    // Convert departments to SelectableItem format
     const departmentItems = useMemo(() => {
         return MOCK_DEPARTMENTS.map((dept) => ({
             id: dept.id,
@@ -93,11 +35,9 @@ export function DepartmentsTab({
         }));
     }, []);
 
-    // Filter articles based on selected departments and search term
     const filteredArticles = useMemo(() => {
         let articles = MOCK_ARTICLES;
 
-        // Filter by selected departments
         if (formState.selectedDepartmentIds.length > 0) {
             articles = articles.filter((article) => {
                 const articleDeptCode = article.department.split(" - ")[0];
@@ -108,7 +48,6 @@ export function DepartmentsTab({
             });
         }
 
-        // Filter by search term
         if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();
             articles = articles.filter(
@@ -139,7 +78,6 @@ export function DepartmentsTab({
             formState.selectedArticleIds?.includes(article.id)
         );
         if (allSelected) {
-            // Deselect all filtered articles
             const filteredIds = filteredArticles.map((a) => a.id);
             onFieldChange(
                 "selectedArticleIds",
@@ -148,7 +86,6 @@ export function DepartmentsTab({
                 )
             );
         } else {
-            // Select all filtered articles
             const newIds = [
                 ...new Set([
                     ...(formState.selectedArticleIds || []),
@@ -166,10 +103,9 @@ export function DepartmentsTab({
         );
 
     return (
-        <Box>
-            {/* Departments Section */}
-            <Section>
-                <SectionTitle>Departamentos donde se aplicará la promoción</SectionTitle>
+        <>
+            <FormCard>
+                <Typography variant="h6">Departamentos donde se aplicará la promoción</Typography>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12 }}>
                         <Box sx={{ mb: 2 }}>
@@ -184,28 +120,29 @@ export function DepartmentsTab({
                         </Box>
                     </Grid>
                 </Grid>
-            </Section>
+            </FormCard>
 
-            {/* Articles Section */}
-            <Section>
-                <SectionTitle>Artículos</SectionTitle>
-                <SearchContainer>
-                    <FormTextField
-                        placeholder="Buscar"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        sx={{ width: 300 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                </SearchContainer>
+            <FormCard>
+                <Stack direction="row" justifyContent="space-between" width="100%">
+                    <Typography variant="h6">Artículos</Typography>
+                    <SearchContainer>
+                        <FormTextField
+                            placeholder="Buscar"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            sx={{ width: 300 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </SearchContainer>
+                </Stack>
 
-                <ArticlesTableContainer>
+                <TableContainer>
                     <Table>
                         <StyledTableHead>
                             <TableRow>
@@ -227,7 +164,7 @@ export function DepartmentsTab({
                                 <StyledTableCell>Departamento</StyledTableCell>
                                 <StyledTableCell>Línea</StyledTableCell>
                                 <StyledTableCell>Proveedor</StyledTableCell>
-                                <StyledTableCell align="right">Precio</StyledTableCell>
+                                <StyledTableCell>Precio</StyledTableCell>
                             </TableRow>
                         </StyledTableHead>
                         <TableBody>
@@ -271,8 +208,8 @@ export function DepartmentsTab({
                             )}
                         </TableBody>
                     </Table>
-                </ArticlesTableContainer>
-            </Section>
-        </Box>
+                </TableContainer>
+            </FormCard>
+        </>
     );
 }

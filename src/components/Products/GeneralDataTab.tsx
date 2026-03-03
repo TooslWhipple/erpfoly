@@ -9,7 +9,6 @@ import {
     StyledFormControlLabel,
 } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
-import { Radio } from "@mui/material";
 import { Box } from "@mui/material";
 
 // ============================================================================
@@ -120,19 +119,18 @@ export function GeneralDataTab({
                         Selecciona el tipo de garantía
                     </SectionDescription>
                     <RadioGroupContainer>
-                        <StyledRadioGroup
-                            value={formState.warrantyType}
-                            onChange={(e) => onFieldChange("warrantyType", e.target.value as WarrantyType)}
-                        >
+                        <StyledRadioGroup>
                             <StyledFormControlLabel
                                 value="months"
-                                control={<Radio size="small" />}
                                 label="Meses"
+                                checked={formState.warrantyType === "months"}
+                                onChange={(e) => onFieldChange("warrantyType", e.target.value as WarrantyType)}
                             />
                             <StyledFormControlLabel
                                 value="policy"
-                                control={<Radio size="small" />}
                                 label="Póliza anexa"
+                                checked={formState.warrantyType === "policy"}
+                                onChange={(e) => onFieldChange("warrantyType", e.target.value as WarrantyType)}
                             />
                         </StyledRadioGroup>
                     </RadioGroupContainer>

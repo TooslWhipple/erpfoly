@@ -18,6 +18,8 @@ export { PermissionsTable } from "./PermissionsTable";
 export type { PermissionsTableProps, ModulePermission, Permission } from "./PermissionsTable";
 export { Form, FormTextField, FormSelect } from "./Form";
 export type { FormProps, FormFieldConfig, FieldType, FieldValidation, SelectOption, FormTextFieldProps, FormSelectProps } from "./Form";
+export { RadioButton, RadioButtonGroup } from "./RadioButton";
+export type { RadioButtonProps } from "./RadioButton";
 export { ModalForm } from "./ModalForm";
 export type { ModalFormProps } from "./ModalForm";
 export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";

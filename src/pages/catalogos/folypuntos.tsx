@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Button, CircularProgress, Snackbar, Alert } from "@mui/material";
-import { MainLayout, Breadcrumbs, Tabs } from "@/components";
-import {
-    BreadcrumbsContainer,
-    PageHeader,
-    PageTitle,
-    SaveButton,
-    TabsContainer,
-} from "@/styles/catalogos/folypuntos.styles";
+import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
+import { BreadcrumbsContainer, PageHeader, PageTitle, SaveButton } from "@/styles/catalogos/folypuntos.styles";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { getFolypuntosConfiguration, saveFolypuntosConfiguration } from "@/services/folypuntos.service";
 import type { FolypuntosFormState, PaymentType } from "@/types/folypuntos.types";
@@ -169,21 +163,18 @@ export default function Folypuntos() {
                         color="primary"
                         onClick={handleSave}
                         disabled={saving}
-                        startIcon={saving ? <CircularProgress size={16} /> : null}
+                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
                     >
                         Guardar
                     </Button>
                 </SaveButton>
             </PageHeader>
 
-            <TabsContainer>
-                <Tabs
-                    tabs={tabs}
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    variant="standard"
-                />
-            </TabsContainer>
+            <TabFilters
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+            />
 
             <FolypuntosForm
                 formState={formState}

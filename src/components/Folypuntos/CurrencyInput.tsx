@@ -1,9 +1,10 @@
+import { InputAdornment } from "@mui/material";
 import { Remove as RemoveIcon, Add as AddIcon } from "@mui/icons-material";
 import {
     CurrencyInputWrapper,
     CurrencyInputField,
-    CurrencySymbol,
     NumberInputButton,
+    StepperUnitLabel,
 } from "@/styles/catalogos/folypuntos.styles";
 
 // ============================================================================
@@ -29,6 +30,10 @@ export interface CurrencyInputProps {
     currencySymbol?: string;
     /** Number of decimal places */
     decimals?: number;
+    /** Unit label rendered inside the same container (e.g. "pesos", "pesos mexicanos.") */
+    unit?: string;
+    /** Prefix label rendered inside the same container at the start (e.g. "Por cada") */
+    prefix?: string;
 }
 
 // ============================================================================
@@ -45,6 +50,8 @@ export function CurrencyInput({
     placeholder = "0.00",
     currencySymbol = "$",
     decimals = 2,
+    unit,
+    prefix,
 }: CurrencyInputProps) {
     const handleIncrement = () => {
         const newValue = parseFloat((value + step).toFixed(decimals));
@@ -99,10 +106,12 @@ export function CurrencyInput({
 
     return (
         <CurrencyInputWrapper>
+            {prefix != null && prefix !== "" && <StepperUnitLabel sx={{ marginLeft: 0, marginRight: 1 }}>{prefix}</StepperUnitLabel>}
             <NumberInputButton
                 onClick={handleDecrement}
                 disabled={disabled || value <= min}
                 size="small"
+                inputSize="medium"
             >
                 <RemoveIcon fontSize="small" />
             </NumberInputButton>
@@ -112,19 +121,29 @@ export function CurrencyInput({
                 onBlur={handleBlur}
                 disabled={disabled}
                 placeholder={placeholder}
-                inputProps={{
-                    style: { textAlign: "center" },
-                    inputMode: "decimal",
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                {currencySymbol}
+                            </InputAdornment>
+                        ),
+                        inputProps: {
+                            style: { textAlign: "center" as const },
+                            inputMode: "decimal",
+                        },
+                    },
                 }}
             />
-            <CurrencySymbol>{currencySymbol}</CurrencySymbol>
             <NumberInputButton
                 onClick={handleIncrement}
                 disabled={disabled || value >= max}
                 size="small"
+                inputSize="medium"
             >
                 <AddIcon fontSize="small" />
             </NumberInputButton>
+            {unit != null && unit !== "" && <StepperUnitLabel>{unit}</StepperUnitLabel>}
         </CurrencyInputWrapper>
     );
 }

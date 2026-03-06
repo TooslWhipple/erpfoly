@@ -7,7 +7,6 @@ export const Container = styled(Box)(({ theme }) => ({
   justifyContent: "space-between",
   alignItems: "center",
   flexDirection: "row",
-  marginBottom: "24px",
   gap: "16px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column-reverse",

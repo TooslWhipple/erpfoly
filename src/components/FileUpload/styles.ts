@@ -21,32 +21,28 @@ export const FileListContainer = styled("div")(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
+export const FileIconContainer = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "40px",
+  height: "40px",
+  borderRadius: "4px",
+  backgroundColor: "#EFF6FF",
+  padding: "8px",
+  '& svg': {
+    stroke: '#2563EB'
+  }
+}));
+
 export const FileItemRow = styled("div")(({ theme }) => ({
   display: "flex",
-  alignItems: "center",
+  flexDirection: "row",
   justifyContent: "space-between",
-  gap: theme.spacing(2),
-  padding: theme.spacing(1.5, 2),
+  alignItems: "center",
+  gap: "12px",
+  padding: "12px",
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  marginBottom: theme.spacing(1),
-  "&:last-of-type": {
-    marginBottom: 0,
-  },
-}));
-
-export const FileItemLeft = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(1.5),
-  minWidth: 0,
-  flex: 1,
-}));
-
-export const FileItemActions = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(0.5),
-  flexShrink: 0,
+  borderRadius: "12px"
 }));

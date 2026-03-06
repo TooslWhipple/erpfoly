@@ -66,5 +66,7 @@ export { PriceSuggestionsSidebar } from "./PriceSuggestionsSidebar";
 export type { PriceSuggestionsSidebarProps } from "./PriceSuggestionsSidebar";
 export { LiquidationRuleCard } from "./LiquidationRuleCard";
 export type { LiquidationRuleCardProps } from "./LiquidationRuleCard";
+export { FileUpload } from "./FileUpload";
+export type { FileUploadProps, UploadedFileItem } from "./FileUpload";
 export * from "./Icons";
 

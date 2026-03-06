@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, Typography } from "@mui/material";
+import { Link, Stack } from "@mui/material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
@@ -346,47 +346,47 @@ export default function ClientesMorosidad() {
   // Build stats cards data
   const statsCards: StatsCardData[] = summary
     ? [
-        {
-          id: "one_day",
-          label: "1 día",
-          value: summary.oneDay.count,
-          comparison: {
-            value: summary.oneDay.change,
-            type: summary.oneDay.changeType,
-            period: "el mes anterior",
-          },
+      {
+        id: "one_day",
+        label: "1 día",
+        value: summary.oneDay.count,
+        comparison: {
+          value: summary.oneDay.change,
+          type: summary.oneDay.changeType,
+          period: "el mes anterior",
         },
-        {
-          id: "one_week",
-          label: "1 semana",
-          value: summary.oneWeek.count,
-          comparison: {
-            value: summary.oneWeek.change,
-            type: summary.oneWeek.changeType,
-            period: "el mes anterior",
-          },
+      },
+      {
+        id: "one_week",
+        label: "1 semana",
+        value: summary.oneWeek.count,
+        comparison: {
+          value: summary.oneWeek.change,
+          type: summary.oneWeek.changeType,
+          period: "el mes anterior",
         },
-        {
-          id: "one_month",
-          label: "1 mes",
-          value: summary.oneMonth.count,
-          comparison: {
-            value: summary.oneMonth.change,
-            type: summary.oneMonth.changeType,
-            period: "el mes anterior",
-          },
+      },
+      {
+        id: "one_month",
+        label: "1 mes",
+        value: summary.oneMonth.count,
+        comparison: {
+          value: summary.oneMonth.change,
+          type: summary.oneMonth.changeType,
+          period: "el mes anterior",
         },
-        {
-          id: "two_months",
-          label: "2 meses",
-          value: summary.twoMonths.count,
-          comparison: {
-            value: summary.twoMonths.change,
-            type: summary.twoMonths.changeType,
-            period: "el mes anterior",
-          },
+      },
+      {
+        id: "two_months",
+        label: "2 meses",
+        value: summary.twoMonths.count,
+        comparison: {
+          value: summary.twoMonths.change,
+          type: summary.twoMonths.changeType,
+          period: "el mes anterior",
         },
-      ]
+      },
+    ]
     : [];
 
   // Table columns configuration
@@ -470,33 +470,35 @@ export default function ClientesMorosidad() {
 
   return (
     <MainLayout>
-      <Title title="Morosidad" />
+      <Stack spacing={3}>
+        <Title title="Morosidad" />
 
-      {summary && <StatsCardGroup cards={statsCards} />}
+        {summary && <StatsCardGroup cards={statsCards} />}
 
-      <TabFilters
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        showSearch
-        searchValue={searchValue}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por nombre"
-      />
+        <TabFilters
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar por nombre"
+        />
 
-      <TableCrud
-        columns={columns}
-        rows={customers}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        emptyMessage="No hay clientes con morosidad"
-      />
+        <TableCrud
+          columns={columns}
+          rows={customers}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          emptyMessage="No hay clientes con morosidad"
+        />
+      </Stack>
     </MainLayout>
   );
 }

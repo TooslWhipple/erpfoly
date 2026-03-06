@@ -80,14 +80,12 @@ interface StatsCardGroupProps {
   columns?: number;
 }
 
-export function StatsCardGroup({ cards, columns }: StatsCardGroupProps) {
-  const gridColumns = columns ?? cards.length;
-
+export function StatsCardGroup({ cards }: StatsCardGroupProps) {
   return (
     <Grid container spacing={2}>
       {
         cards.map((card) => (
-          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 3 }}>
             <StatsCard
               label={card.label}
               value={card.value}

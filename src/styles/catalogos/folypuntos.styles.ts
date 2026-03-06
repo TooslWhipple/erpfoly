@@ -1,90 +1,21 @@
 import { styled } from "@mui/material/styles";
-import { Box, Paper, Typography, IconButton, TextField } from "@mui/material";
+import { Typography, IconButton, TextField } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// LAYOUT COMPONENTS
-// ============================================================================
-
-export const BreadcrumbsContainer = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(1),
-}));
-
-export const PageHeader = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  marginBottom: theme.spacing(3),
-  gap: theme.spacing(2),
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-  },
-}));
-
-export const PageTitle = styled(Typography)({
-  fontSize: "1.75rem",
-  fontWeight: 700,
-  color: "#232325",
-});
-
-export const SaveButton = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(1),
-}));
-
-// ============================================================================
-// TABS CONTAINER
-// ============================================================================
-
-export const TabsContainer = styled(Box)(({ theme }) => ({
+export const TabsContainer = styled('div')(({ theme }) => ({
   marginBottom: theme.spacing(3),
 }));
 
-// ============================================================================
-// FORM COMPONENTS
-// ============================================================================
-
-export const FormCard = styled(Paper)(({ theme }) => ({
+export const FormCard = styled('div')({
+  display: "flex",
+  flexDirection: "column",
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: theme.spacing(3),
-  width: "100%",
-  boxShadow: "none",
-  marginBottom: theme.spacing(3),
-  "&:last-child": {
-    marginBottom: 0,
-  },
-}));
+  borderRadius: "8px",
+  padding: "24px",
+});
 
-export const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: "1rem",
-  fontWeight: 600,
-  color: "#232325",
-  marginBottom: theme.spacing(1),
-}));
-
-export const SectionDescription = styled(Typography)(({ theme }) => ({
-  fontSize: "0.875rem",
-  color: theme.palette.text.secondary,
-  marginBottom: theme.spacing(3),
-}));
-
-export const Section = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(4),
-  "&:last-child": {
-    marginBottom: 0,
-  },
-}));
-
-// ============================================================================
-// NUMBER INPUT WITH BUTTONS
-// ============================================================================
-
-export const NumberInputContainer = styled(Box)(({ theme }) => ({
+export const NumberInputContainer = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
@@ -98,7 +29,7 @@ export const NumberInputPrefix = styled(Typography)(({ theme }) => ({
   marginRight: theme.spacing(0.5),
 }));
 
-export const NumberInputWrapper = styled(Box)<{ size?: "small" | "medium" }>(({ theme, size = "medium" }) => ({
+export const NumberInputWrapper = styled('div')<{ size?: "small" | "medium" }>(({ theme, size = "medium" }) => ({
   display: "flex",
   alignItems: "center",
   gap: size === "small" ? theme.spacing(0.25) : theme.spacing(0.5),
@@ -167,7 +98,7 @@ export const NumberInputLabel = styled(Typography)(({ theme }) => ({
   margin: theme.spacing(0, 1),
 }));
 
-export const NumberInputArrow = styled(Box)(({ theme }) => ({
+export const NumberInputArrow = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   color: theme.palette.text.secondary,
@@ -175,7 +106,7 @@ export const NumberInputArrow = styled(Box)(({ theme }) => ({
   margin: theme.spacing(0, 1),
 }));
 
-export const CurrencyInputWrapper = styled(Box)(({ theme }) => ({
+export const CurrencyInputWrapper = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(0.5),
@@ -193,7 +124,7 @@ export const StepperUnitLabel = styled(Typography)(({ theme }) => ({
   whiteSpace: "nowrap",
 }));
 
-export const StepperGroupLabel = styled(Box)(({ theme }) => ({
+export const StepperGroupLabel = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   borderRadius: 10,

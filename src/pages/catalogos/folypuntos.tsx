@@ -1,17 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Box, Button, CircularProgress, Snackbar, Alert } from "@mui/material";
-import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
-import { BreadcrumbsContainer, PageHeader, PageTitle, SaveButton } from "@/styles/catalogos/folypuntos.styles";
+import { Box, CircularProgress, Snackbar, Alert } from "@mui/material";
+import { MainLayout, TabFilters, Title } from "@/components";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { getFolypuntosConfiguration, saveFolypuntosConfiguration } from "@/services/folypuntos.service";
 import type { FolypuntosFormState, PaymentType } from "@/types/folypuntos.types";
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function Folypuntos() {
-    // State management
     const [formState, setFormState] = useState<FolypuntosFormState>({
         cash: {
             purchaseEquivalence: 10,
@@ -39,7 +33,6 @@ export default function Folypuntos() {
         severity: "success",
     });
 
-    // Fetch configuration on mount
     useEffect(() => {
         const fetchConfiguration = async () => {
             setLoading(true);
@@ -61,7 +54,6 @@ export default function Folypuntos() {
         fetchConfiguration();
     }, []);
 
-    // Handle field changes
     const handleFieldChange = useCallback(
         (
             paymentType: PaymentType,
@@ -79,7 +71,6 @@ export default function Folypuntos() {
         []
     );
 
-    // Handle save
     const handleSave = useCallback(async () => {
         setSaving(true);
         try {
@@ -109,24 +100,20 @@ export default function Folypuntos() {
         }
     }, [formState]);
 
-    // Handle tab change
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
 
-    // Handle snackbar close
     const handleSnackbarClose = () => {
         setSnackbar((prev) => ({ ...prev, open: false }));
     };
 
-    // Tab configuration
     const tabs = [
         { value: "cash", label: "Contado" },
         { value: "credit", label: "Crédito" },
         { value: "layaway", label: "Apartados" },
     ];
 
-    // Breadcrumbs
     const breadcrumbs = [
         { label: "Folypuntos", href: "/catalogos/folypuntos" },
         { label: "Configuración" },
@@ -151,24 +138,14 @@ export default function Folypuntos() {
 
     return (
         <MainLayout>
-            <BreadcrumbsContainer>
-                <Breadcrumbs items={breadcrumbs} />
-            </BreadcrumbsContainer>
-
-            <PageHeader>
-                <PageTitle>Configuración de Folypuntos</PageTitle>
-                <SaveButton>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSave}
-                        disabled={saving}
-                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
-                    >
-                        Guardar
-                    </Button>
-                </SaveButton>
-            </PageHeader>
+            <Title title="Configuración de Folypuntos" actions={[
+                {
+                    id: "save",
+                    label: "Guardar",
+                    onClick: handleSave,
+                    disabled: saving,
+                },
+            ]} />
 
             <TabFilters
                 tabs={tabs}

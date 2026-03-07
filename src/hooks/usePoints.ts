@@ -47,8 +47,18 @@ export function useSavePointsConfig() {
       const result = await savePointsConfig({ rules });
       return unwrapOrThrow(result);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: POINTS_QUERY_KEYS.config });
+    onSuccess: (_data, rules) => {
+      const current = queryClient.getQueryData<PointsConfigResponse>(
+        POINTS_QUERY_KEYS.config
+      );
+      if (current) {
+        queryClient.setQueryData<PointsConfigResponse>(
+          POINTS_QUERY_KEYS.config,
+          { ...current, config: rules }
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: POINTS_QUERY_KEYS.config });
+      }
     },
   });
 }
@@ -85,7 +95,6 @@ function formStateToRules(
 export function useFolypuntosPage() {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
-  const queryClient = useQueryClient();
 
   const { data: configData, isLoading } = usePointsConfig();
   const saveMutation = useSavePointsConfig();
@@ -169,14 +178,13 @@ export function useFolypuntosPage() {
       showSuccess(
         response?.message?.trim() || "Configuración guardada exitosamente"
       );
-      await queryClient.refetchQueries({ queryKey: POINTS_QUERY_KEYS.config });
       setLocalEdits({});
     } catch (err) {
       console.error("[Folypuntos] Error saving configuration:", err);
       const message = err instanceof Error ? err.message : "";
       showError(message.trim() || "Error al guardar la configuración");
     }
-  }, [formState, purchaseTypes, saveMutation, queryClient, showSuccess, showError]);
+  }, [formState, purchaseTypes, saveMutation, showSuccess, showError]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);

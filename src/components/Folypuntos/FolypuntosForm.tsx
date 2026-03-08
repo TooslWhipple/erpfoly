@@ -9,16 +9,16 @@ import {
 } from "@/styles/catalogos/folypuntos.styles";
 import { CurrencyInput } from "./CurrencyInput";
 import { NumberInput } from "./NumberInput";
-import type { FolypuntosFormState, PaymentType } from "@/types/folypuntos.types";
+import type { PointsFormState } from "@/types/folypuntos.types";
 
-export type FolypuntosField = "purchaseEquivalence" | "saleEquivalence";
+export type PointsFormField = "amountToSpend" | "pointsAwarded" | "amountPerPoint";
 
 export interface FolypuntosFormProps {
-    formState: FolypuntosFormState;
-    activePaymentType: PaymentType;
+    formState: PointsFormState;
+    activePurchaseTypeId: string;
     onFieldChange: (
-        paymentType: PaymentType,
-        field: FolypuntosField,
+        purchaseTypeId: string,
+        field: PointsFormField,
         value: number
     ) => void;
     disabled?: boolean;
@@ -36,19 +36,25 @@ const SALE_SECTION = {
         "Configura el valor en pesos que tendrá cada Folypunto al ser canjeado.",
 } as const;
 
+const DEFAULT_CONFIG = {
+    amountToSpend: 10,
+    pointsAwarded: 1,
+    amountPerPoint: 1,
+};
+
 export function FolypuntosForm({
     formState,
-    activePaymentType,
+    activePurchaseTypeId,
     onFieldChange,
     disabled = false,
 }: FolypuntosFormProps) {
-    const config = formState[activePaymentType];
+    const config = formState[activePurchaseTypeId] ?? DEFAULT_CONFIG;
 
     const handleChange = useCallback(
-        (field: FolypuntosField) => (value: number) => {
-            onFieldChange(activePaymentType, field, value);
+        (field: PointsFormField) => (value: number) => {
+            onFieldChange(activePurchaseTypeId, field, value);
         },
-        [activePaymentType, onFieldChange]
+        [activePurchaseTypeId, onFieldChange]
     );
 
     return (
@@ -58,8 +64,8 @@ export function FolypuntosForm({
                 <Typography variant="body2" color="text.secondary">{PURCHASE_SECTION.description}</Typography>
                 <NumberInputContainer>
                     <CurrencyInput
-                        value={config.purchaseEquivalence}
-                        onChange={handleChange("purchaseEquivalence")}
+                        value={config.amountToSpend}
+                        onChange={handleChange("amountToSpend")}
                         min={1}
                         max={999999}
                         step={1}
@@ -73,11 +79,12 @@ export function FolypuntosForm({
                         <ArrowForwardIcon fontSize="small" />
                     </NumberInputArrow>
                     <NumberInput
-                        value={1}
-                        onChange={() => { }}
+                        value={config.pointsAwarded}
+                        onChange={handleChange("pointsAwarded")}
                         min={1}
-                        max={1}
-                        disabled
+                        max={9999}
+                        step={1}
+                        disabled={disabled}
                         width={80}
                         unit="Folypuntos"
                     />
@@ -95,8 +102,8 @@ export function FolypuntosForm({
                         <ArrowForwardIcon fontSize="small" />
                     </NumberInputArrow>
                     <CurrencyInput
-                        value={config.saleEquivalence}
-                        onChange={handleChange("saleEquivalence")}
+                        value={config.amountPerPoint}
+                        onChange={handleChange("amountPerPoint")}
                         min={0.01}
                         max={999999.99}
                         step={0.01}

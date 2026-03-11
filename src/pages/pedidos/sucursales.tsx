@@ -4,6 +4,7 @@ import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
+import { Stack } from "@mui/material";
 
 type OrderStatus = "pending" | "delivered";
 
@@ -32,12 +33,12 @@ interface GetBranchOrdersResponse {
     limit: number;
 }
 const ESTATUS_CHIP_LABELS: Record<OrderStatus, string> = {
-  pending: "Pendiente",
-  delivered: "Entregado",
+    pending: "Pendiente",
+    delivered: "Entregado",
 };
 const ESTATUS_CHIP_VARIANTS: Record<OrderStatus, StatusChipVariant> = {
-  pending: "pending",
-  delivered: "success",
+    pending: "pending",
+    delivered: "success",
 };
 
 const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
@@ -143,10 +144,6 @@ const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getBranchOrders(
     params: GetBranchOrdersParams
 ): Promise<GetBranchOrdersResponse> {
@@ -154,12 +151,10 @@ async function getBranchOrders(
 
     let filteredData = [...DUMMY_BRANCH_ORDERS];
 
-    // Filter by status
     if (params.status && params.status !== "all") {
         filteredData = filteredData.filter((order) => order.status === params.status);
     }
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -183,10 +178,6 @@ async function getBranchOrders(
     };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
         pending: "Pendiente",
@@ -203,14 +194,9 @@ function getStatusColor(status: OrderStatus): string {
     return colors[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function PedidosSucursales() {
     const router = useRouter();
 
-    // State
     const [orders, setOrders] = useState<BranchOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -219,19 +205,16 @@ export default function PedidosSucursales() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Tab options
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Pendientes", value: "pending" },
         { label: "Surtidos", value: "delivered" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | OrderStatus => {
         return activeTab as "all" | OrderStatus;
     }, [activeTab]);
 
-    // Fetch orders
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
@@ -258,7 +241,6 @@ export default function PedidosSucursales() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -284,7 +266,6 @@ export default function PedidosSucursales() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<BranchOrder>[] = [
         {
             id: "folio",
@@ -330,7 +311,6 @@ export default function PedidosSucursales() {
         },
     ];
 
-    // Row actions
     const actions: RowAction<BranchOrder>[] = [
         {
             id: "view",
@@ -342,41 +322,43 @@ export default function PedidosSucursales() {
 
     return (
         <MainLayout>
-            <Title title="Pedidos" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Pedidos" />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
-                actions={[
-                    {
-                        label: "Nuevo",
-                        onClick: handleCreate,
-                        variant: "contained",
-                        color: "primary",
-                        showIcon: true,
-                    },
-                ]}
-            />
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                            showIcon: true,
+                        },
+                    ]}
+                />
 
-            <TableCrud
-                columns={columns}
-                rows={orders}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleViewOrder}
-                emptyMessage="No hay pedidos de sucursales"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={orders}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleViewOrder}
+                    emptyMessage="No hay pedidos de sucursales"
+                />
+            </Stack>
         </MainLayout>
     );
 }

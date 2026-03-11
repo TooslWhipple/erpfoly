@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -11,7 +11,6 @@ import { MainLayout, Title, TableCrud, FilterMenu } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { FilterOption } from "@/components/FilterMenu";
 import {
-  HeaderContainer,
   ControlsContainer,
   SearchInput,
   CreateButton,
@@ -396,7 +395,7 @@ export default function Promociones() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Promociones" />
         <ControlsContainer>
           <FilterMenu
@@ -439,21 +438,21 @@ export default function Promociones() {
             Nuevo
           </CreateButton>
         </ControlsContainer>
-      </HeaderContainer>
 
-      <TableCrud
-        columns={columns}
-        rows={promotions}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        emptyMessage="No hay promociones registradas"
-      />
+        <TableCrud
+          columns={columns}
+          rows={promotions}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          emptyMessage="No hay promociones registradas"
+        />
+      </Stack>
     </MainLayout>
   );
 }

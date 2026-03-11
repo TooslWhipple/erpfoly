@@ -258,7 +258,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       </NavigationContainer>
 
       <UserProfileContainer>
-        <UserAvatar src="/avatar.png" alt="Usuario" />
+        <UserAvatar alt="Usuario">AZ</UserAvatar>
         <UserInfoContainer>
           <Typography variant="subtitle2" noWrap>
             Antonio Zamudio

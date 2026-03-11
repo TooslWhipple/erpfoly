@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import {
-    HeaderContainer,
     ControlsContainer,
     SearchInput,
     CreateButton,
@@ -16,12 +15,12 @@ import { getUsers as getUsersApi, type UserListItem } from "@/services/users.ser
 type User = UserListItem;
 
 const ESTATUS_CHIP_LABELS: Record<string, string> = {
-  ACTIVE: "Activo",
-  INACTIVE: "Inactivo",
+    ACTIVE: "Activo",
+    INACTIVE: "Inactivo",
 };
 const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
-  ACTIVE: "success",
-  INACTIVE: "error",
+    ACTIVE: "success",
+    INACTIVE: "error",
 };
 
 export default function Usuarios() {
@@ -34,7 +33,6 @@ export default function Usuarios() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Fetch users
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         const result = await getUsersApi({
@@ -62,7 +60,6 @@ export default function Usuarios() {
         setPage(0);
     }, [searchValue]);
 
-    // Event handlers
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
     };
@@ -83,8 +80,7 @@ export default function Usuarios() {
         setRowsPerPage(newRowsPerPage);
         setPage(0);
     };
-
-    // Table columns
+        
     const columns: Column<User>[] = [
         {
             id: "id",
@@ -150,7 +146,7 @@ export default function Usuarios() {
 
     return (
         <MainLayout>
-            <HeaderContainer>
+            <Stack direction="column" spacing={3}>
                 <Title title="Usuarios" />
                 <ControlsContainer>
                     <SearchInput
@@ -175,22 +171,22 @@ export default function Usuarios() {
                         Nuevo
                     </CreateButton>
                 </ControlsContainer>
-            </HeaderContainer>
+                <TableCrud
+                    columns={columns}
+                    rows={users}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEditUser}
+                    emptyMessage="No hay usuarios registrados"
+                />
+            </Stack>
 
-            <TableCrud
-                columns={columns}
-                rows={users}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleEditUser}
-                emptyMessage="No hay usuarios registrados"
-            />
         </MainLayout>
     );
 }

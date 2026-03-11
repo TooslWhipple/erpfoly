@@ -8,7 +8,7 @@ import {
     Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import { Box, Skeleton } from "@mui/material";
+import { Box, Grid, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
@@ -175,12 +175,10 @@ async function getInventory(params: GetInventoryParams): Promise<GetInventoryRes
 
     let filteredData = [...DUMMY_INVENTORY];
 
-    // Filter by status
     if (params.status && params.status !== "all") {
         filteredData = filteredData.filter((item) => item.status === params.status);
     }
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -208,7 +206,6 @@ async function getInventory(params: GetInventoryParams): Promise<GetInventoryRes
 export default function Inventario() {
     const router = useRouter();
 
-    // State
     const [stats, setStats] = useState<InventoryStats | null>(null);
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -218,19 +215,16 @@ export default function Inventario() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Tab options
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Activos", value: "active" },
         { label: "Inactivos", value: "inactive" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | "active" | "inactive" => {
         return activeTab as "all" | "active" | "inactive";
     }, [activeTab]);
 
-    // Fetch stats
     useEffect(() => {
         async function loadStats() {
             try {
@@ -243,7 +237,6 @@ export default function Inventario() {
         loadStats();
     }, []);
 
-    // Fetch inventory
     const fetchInventory = useCallback(async () => {
         setLoading(true);
         try {
@@ -270,7 +263,6 @@ export default function Inventario() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -288,9 +280,7 @@ export default function Inventario() {
         setPage(0);
     };
 
-    // Navigation handlers
     const handleViewDetail = (item: InventoryItem) => {
-        // Convert code to SKU format (remove spaces)
         const sku = item.code.replace(/\s+/g, "");
         router.push(`/inventario/${sku}`);
     };
@@ -299,7 +289,6 @@ export default function Inventario() {
         handleViewDetail(item);
     };
 
-    // Stats cards data
     const statsCards: StatsCardData[] = stats
         ? [
             {
@@ -329,7 +318,6 @@ export default function Inventario() {
         ]
         : [];
 
-    // Table columns
     const columns: Column<InventoryItem>[] = [
         {
             id: "code",
@@ -399,7 +387,6 @@ export default function Inventario() {
         },
     ];
 
-    // Row actions
     const rowActions: RowAction<InventoryItem>[] = [
         {
             id: "view-detail",
@@ -411,53 +398,51 @@ export default function Inventario() {
 
     return (
         <MainLayout>
-            <Title title="Inventario" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Inventario" />
 
-            {
-                stats ? <StatsCardGroup cards={statsCards} /> :
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(4, 1fr)",
-                            gap: 2,
-                        }}
-                    >
-                        {[1, 2, 3, 4].map((i) => (
-                            <Skeleton
-                                key={i}
-                                variant="rectangular"
-                                height={120}
-                                sx={{ borderRadius: 2 }}
-                                animation="wave"
-                            />
-                        ))}
-                    </Box>
-            }
+                {
+                    stats ? <StatsCardGroup cards={statsCards} /> :
+                        <Grid container spacing={2}>
+                            {[1, 2, 3, 4].map((i) => (
+                                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                                    <Skeleton
+                                        variant="rectangular"
+                                        width="100%"
+                                        height="128px"
+                                        style={{ borderRadius: 8 }}
+                                        animation="wave"
+                                    />
+                                </Grid>
+                            ))}
+                        </Grid>
+                }
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar por código"
-            />
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar por código"
+                />
 
-            <TableCrud
-                columns={columns}
-                rows={items}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleRowClick}
-                actions={rowActions}
-                emptyMessage="No hay artículos en inventario"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={items}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleRowClick}
+                    actions={rowActions}
+                    emptyMessage="No hay artículos en inventario"
+                />
+            </Stack>
         </MainLayout>
     );
 }

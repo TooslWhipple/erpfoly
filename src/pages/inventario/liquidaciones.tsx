@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import { Typography, Box, Skeleton, Stack } from "@mui/material";
 import {
   FilterList as FilterListIcon,
   InfoOutlined as InfoIcon,
@@ -19,10 +20,12 @@ import {
   getLowRotationStrategy,
   applyPriceSuggestion,
 } from "@/data/liquidaciones.mockData";
-import { PageContent, MainContent, SidebarPanel } from "@/styles/pedidos.styles";
-import { DepartmentsList } from "@/styles/inventario/liquidaciones.styles";
+import {
+  PageContent,
+  SidebarPanel,
+  DepartmentsList,
+} from "@/styles/inventario/liquidaciones.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { Typography, Box, Skeleton } from "@mui/material";
 
 // ============================================================================
 // TYPES
@@ -133,10 +136,10 @@ export default function LiquidacionesPage() {
 
   return (
     <MainLayout>
-      <Title title="Estrategia de baja rotación" />
 
       <PageContent>
-        <MainContent>
+        <Stack direction="column" spacing={3} flex={1}>
+          <Title title="Estrategia de baja rotación" />
           {state === "loading" && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <Box
@@ -200,7 +203,7 @@ export default function LiquidacionesPage() {
               </DepartmentsList>
             </>
           )}
-        </MainContent>
+        </Stack>
 
         <SidebarPanel>
           <PriceSuggestionsSidebar

@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const TableWrapper = styled(Box)({
+export const TableWrapper = styled('div')({
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
@@ -23,7 +23,7 @@ export const StyledTableContainer = styled(TableContainer)({
   overflow: "auto",
   position: "relative",
   maxWidth: "100%",
-  backgroundColor: "transparent",
+  width: "100%",
   boxShadow: "none",
 });
 

@@ -1,4 +1,4 @@
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Stack } from "@mui/material";
 import { MainLayout, TabFilters, Title } from "@/components";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { useFolypuntosPage } from "@/hooks/usePoints";
@@ -44,30 +44,32 @@ export default function Folypuntos() {
 
   return (
     <MainLayout>
-      <Title
-        title="Configuración de Folypuntos"
-        actions={[
-          {
-            id: "save",
-            label: "Guardar",
-            onClick: handleSave,
-            disabled: saving,
-          },
-        ]}
-      />
+      <Stack direction="column" spacing={3}>
+        <Title
+          title="Configuración de Folypuntos"
+          actions={[
+            {
+              id: "save",
+              label: "Guardar",
+              onClick: handleSave,
+              disabled: saving,
+            },
+          ]}
+        />
 
-      <TabFilters
-        tabs={tabs}
-        activeTab={effectiveActiveTab}
-        onTabChange={handleTabChange}
-      />
+        <TabFilters
+          tabs={tabs}
+          activeTab={effectiveActiveTab}
+          onTabChange={handleTabChange}
+        />
 
-      <FolypuntosForm
-        formState={formState}
-        activePurchaseTypeId={effectiveActiveTab}
-        onFieldChange={handleFieldChange}
-        disabled={saving}
-      />
+        <FolypuntosForm
+          formState={formState}
+          activePurchaseTypeId={effectiveActiveTab}
+          onFieldChange={handleFieldChange}
+          disabled={saving}
+        />
+      </Stack>
     </MainLayout>
   );
 }

@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, TabFilters, ModalFormZod } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import { HeaderContainer } from "@/styles/catalogos/catalogos.styledComponents";
 import {
     SettingsCard,
     SectionTitle,
@@ -319,49 +318,73 @@ export default function ProveedoresReparaciones() {
 
     return (
         <MainLayout>
-            <HeaderContainer>
+            <Stack direction="column" spacing={3}>
+
                 <Title title="Proveedores de reparaciones" />
-            </HeaderContainer>
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch={activeTab === "suppliers"}
-                searchValue={searchInput}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
-                actions={
-                    activeTab === "suppliers"
-                        ? [
-                              {
-                                  label: "Nuevo",
-                                  onClick: handleCreateSupplier,
-                                  variant: "contained",
-                                  color: "primary",
-                                  showIcon: true,
-                              },
-                          ]
-                        : []
-                }
-            />
-
-            {activeTab === "suppliers" && (
-                <TableCrud
-                    columns={columns}
-                    rows={suppliers}
-                    actions={actions}
-                    loading={loading}
-                    rowKey="id"
-                    page={page}
-                    rowsPerPage={rowsPerPage}
-                    totalRows={totalRows}
-                    onPageChange={handlePageChange}
-                    onRowsPerPageChange={handleRowsPerPageChange}
-                    onRowClick={handleEditSupplier}
-                    emptyMessage="No hay proveedores de reparaciones registrados"
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch={activeTab === "suppliers"}
+                    searchValue={searchInput}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={
+                        activeTab === "suppliers"
+                            ? [
+                                {
+                                    label: "Nuevo",
+                                    onClick: handleCreateSupplier,
+                                    variant: "contained",
+                                    color: "primary",
+                                    showIcon: true,
+                                },
+                            ]
+                            : []
+                    }
                 />
-            )}
+
+                {
+                    activeTab === "suppliers" &&
+                    <TableCrud
+                        columns={columns}
+                        rows={suppliers}
+                        actions={actions}
+                        loading={loading}
+                        rowKey="id"
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalRows={totalRows}
+                        onPageChange={handlePageChange}
+                        onRowsPerPageChange={handleRowsPerPageChange}
+                        onRowClick={handleEditSupplier}
+                        emptyMessage="No hay proveedores de reparaciones registrados"
+                    />
+                }
+
+
+                {
+                    activeTab === "settings" &&
+                    <SettingsCard>
+                        <SectionTitle>Costos por hora</SectionTitle>
+                        <FieldContainer>
+                            <FormFromFields
+                                fields={settingsFields}
+                                defaultValues={{ hourlyCost: "720.00" }}
+                                onSubmit={handleSaveSettings}
+                                confirmLabel="Guardar cambios"
+                                loading={savingSettings}
+                                actionsSx={{ justifyContent: "flex-start" }}
+                            />
+                        </FieldContainer>
+                        <HelperNote>
+                            El nuevo costo por hora será aplicado para nuevas órdenes de servicio,
+                            no se afectarán las órdenes ya generadas.
+                        </HelperNote>
+                    </SettingsCard>
+                }
+            </Stack>
 
             <ModalFormZod
                 key={editingSupplier?.id ?? "new"}
@@ -376,19 +399,19 @@ export default function ProveedoresReparaciones() {
                 defaultValues={
                     editingSupplier
                         ? {
-                              name: editingSupplier.name,
-                              contactPerson: editingSupplier.contactPerson ?? "",
-                              phone: editingSupplier.phone ?? "",
-                              email: editingSupplier.email ?? "",
-                              departmentIds: editingSupplier.departments.map((d) => d.id),
-                          }
+                            name: editingSupplier.name,
+                            contactPerson: editingSupplier.contactPerson ?? "",
+                            phone: editingSupplier.phone ?? "",
+                            email: editingSupplier.email ?? "",
+                            departmentIds: editingSupplier.departments.map((d) => d.id),
+                        }
                         : {
-                              name: "",
-                              contactPerson: "",
-                              phone: "",
-                              email: "",
-                              departmentIds: [],
-                          }
+                            name: "",
+                            contactPerson: "",
+                            phone: "",
+                            email: "",
+                            departmentIds: [],
+                        }
                 }
                 onSubmit={handleSaveSupplier}
                 loading={saving}
@@ -397,25 +420,6 @@ export default function ProveedoresReparaciones() {
                 fullWidth
             />
 
-            {activeTab === "settings" && (
-                <SettingsCard>
-                    <SectionTitle>Costos por hora</SectionTitle>
-                    <FieldContainer>
-                        <FormFromFields
-                            fields={settingsFields}
-                            defaultValues={{ hourlyCost: "720.00" }}
-                            onSubmit={handleSaveSettings}
-                            confirmLabel="Guardar cambios"
-                            loading={savingSettings}
-                            actionsSx={{justifyContent: "flex-start"}}
-                        />
-                    </FieldContainer>
-                    <HelperNote>
-                        El nuevo costo por hora será aplicado para nuevas órdenes de servicio,
-                        no se afectarán las órdenes ya generadas.
-                    </HelperNote>
-                </SettingsCard>
-            )}
         </MainLayout>
     );
 }

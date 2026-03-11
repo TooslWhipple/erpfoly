@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
+import { Stack } from "@mui/material";
 import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import { HeaderContainer } from "@/styles/catalogos/catalogos.styledComponents";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 type ProductStatus = "active" | "draft";
 
@@ -43,10 +39,6 @@ interface GetProductsResponse {
   page: number;
   limit: number;
 }
-
-// ============================================================================
-// MOCK DATA - Realistic e-commerce products
-// ============================================================================
 
 const DUMMY_PRODUCTS: Product[] = [
   {
@@ -159,22 +151,15 @@ const DUMMY_PRODUCTS: Product[] = [
   },
 ];
 
-// Mock departments and suppliers for form selects
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getProducts(params: GetProductsParams): Promise<GetProductsResponse> {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   let filteredData = [...DUMMY_PRODUCTS];
 
-  // Filter by status
   if (params.status && params.status !== "all") {
     filteredData = filteredData.filter((p) => p.status === params.status);
   }
 
-  // Filter by search
   if (params.search) {
     const searchLower = params.search.toLowerCase();
     filteredData = filteredData.filter(
@@ -198,14 +183,9 @@ async function getProducts(params: GetProductsParams): Promise<GetProductsRespon
 }
 
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function Productos() {
   const router = useRouter();
-  
-  // State management
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -214,14 +194,12 @@ export default function Productos() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
 
-  // Calculate status filter from active tab
   const statusFilter = useMemo(() => {
     if (activeTab === "active") return "active";
     if (activeTab === "draft") return "draft";
     return "all";
   }, [activeTab]);
 
-  // Fetch products
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -248,7 +226,6 @@ export default function Productos() {
     setPage(0);
   }, [searchValue, activeTab]);
 
-  // Event handlers
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
   };
@@ -274,7 +251,6 @@ export default function Productos() {
     setPage(0);
   };
 
-  // Calculate tab counts
   const tabCounts = useMemo(() => {
     const all = DUMMY_PRODUCTS.length;
     const active = DUMMY_PRODUCTS.filter((p) => p.status === "active").length;
@@ -282,7 +258,6 @@ export default function Productos() {
     return { all, active, draft };
   }, []);
 
-  // Table columns
   const columns: Column<Product>[] = [
     {
       id: "code",
@@ -333,7 +308,6 @@ export default function Productos() {
     },
   ];
 
-  // Row actions
   const actions: RowAction<Product>[] = [
     {
       id: "edit",
@@ -342,7 +316,6 @@ export default function Productos() {
     },
   ];
 
-  // Tab configuration
   const tabs = [
     { value: "all", label: "Todas", count: tabCounts.all },
     { value: "active", label: "Activos", count: tabCounts.active },
@@ -351,42 +324,40 @@ export default function Productos() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Catálogo de productos" />
-      </HeaderContainer>
-
-      <TabFilters
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        showSearch={true}
-        searchValue={searchValue}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por código o nombre"
-        actions={[
-          {
-            label: "Nuevo",
-            onClick: handleOpenCreateModal,
-            variant: "contained",
-            color: "primary",
-            showIcon: true,
-          },
-        ]}
-      />
-
-      <TableCrud
-        columns={columns}
-        rows={products}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        emptyMessage="No hay productos registrados"
-      />
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch={true}
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar por código o nombre"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleOpenCreateModal,
+              variant: "contained",
+              color: "primary",
+              showIcon: true,
+            },
+          ]}
+        />
+        <TableCrud
+          columns={columns}
+          rows={products}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          emptyMessage="No hay productos registrados"
+        />
+      </Stack>
     </MainLayout>
   );
 }

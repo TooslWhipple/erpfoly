@@ -16,10 +16,6 @@ import { StatusChip } from "../StatusChip";
 import { getStatusChipVariant } from "./TableCrud";
 import type { StatusChipVariant } from "../StatusChip";
 
-// ============================================================================
-// TYPES (aligned with TableCrud where applicable)
-// ============================================================================
-
 export type DataTableColumnType =
   | "text"
   | "number"
@@ -36,18 +32,13 @@ export interface DataTableColumn<T> {
   label: string;
   align?: "left" | "center" | "right";
   type?: DataTableColumnType;
-  /** Custom formatter; overrides type-based formatting when provided */
   format?: (value: unknown, row: T) => React.ReactNode;
-  // Chip type options (same as TableCrud)
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
   chipVariantMap?: Record<string, StatusChipVariant>;
   chipLabelMap?: Record<string, string>;
-  // ChipGroup type options
   chipGroupKey?: string;
   chipGroupMaxVisible?: number;
-  // Currency type options
   currencySymbol?: string;
-  // ID type options
   idPadding?: number;
 }
 
@@ -57,10 +48,6 @@ export interface DataTableProps<T> {
   rowKey: keyof T;
   emptyMessage?: string;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function getValue<T>(row: T, columnId: keyof T | string): unknown {
   return row[columnId as keyof T];
@@ -116,7 +103,7 @@ function formatCellValue<T>(
       const label = column.chipLabelMap?.[chipKey] ?? chipKey;
       const variant =
         column.chipVariantMap?.[chipKey] ?? getStatusChipVariant(column.chipColor);
-      return <StatusChip label={label} variant={variant} />;
+      return <StatusChip label={label} variant={variant} size="small" />;
     }
 
     case "chipGroup":
@@ -137,14 +124,6 @@ function formatCellValue<T>(
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-/**
- * Reusable data table with the same styles and column types as TableCrud.
- * Use for read-only tables without actions or pagination.
- */
 export function DataTable<T>({
   columns,
   rows,

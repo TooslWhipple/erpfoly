@@ -1,27 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { colors } from "@/styles/theme";
 
-export const PageContent = styled("div")(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing(3),
-  flex: 1,
-  minHeight: 0,
-  [theme.breakpoints.down("lg")]: {
-    flexDirection: "column",
-  },
-}));
-
-export const RouteListPanel = styled("div")(({ theme }) => ({
-  width: 320,
-  flexShrink: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(2),
-  [theme.breakpoints.down("lg")]: {
-    width: "100%",
-  },
-}));
-
 export const RouteDetailPanel = styled("div")(({ theme }) => ({
   flex: 1,
   minWidth: 0,
@@ -68,10 +47,15 @@ export const MapPlaceholderLarge = styled("div")(({ theme }) => ({
   borderRadius: 8,
 }));
 
-export const DetailHeader = styled("div")(({ theme }) => ({
-  padding: theme.spacing(2, 3),
-  borderBottom: `1px solid ${colors.border}`,
-}));
+export const DetailHeader = styled("div")({
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  backgroundColor: colors.background.sidebar,
+  padding: "16px 24px",
+  border: `1px solid ${colors.border}`,
+  borderRadius: "12px",
+});
 
 export const TabContent = styled("div")(({ theme }) => ({
   padding: theme.spacing(2, 3),
@@ -87,9 +71,22 @@ export const PersonRow = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: theme.spacing(1.5, 2),
+  padding: "12px",
+  borderRadius: "12px",
   backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  marginBottom: theme.spacing(1),
+  border: `1px solid ${colors.border}`
+}));
+
+export const IconContainer = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "40px",
+  height: "40px",
+  backgroundColor: "#EFF6FF",
+  borderRadius: "4px",
+  padding: "8px",
+  '& svg': {
+    stroke: '#2563EB'
+  }
 }));

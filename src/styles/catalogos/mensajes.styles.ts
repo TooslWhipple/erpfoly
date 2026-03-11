@@ -22,27 +22,32 @@ export const MessageFormTopRow = styled(Box)(({ theme }) => ({
   flex: 1,
 }));
 
-export const StatusIndicator = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(0.75),
-  padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: "#DCFCE7",
-  color: "#166534",
-  fontSize: "0.875rem",
-  fontWeight: 500,
-  "&::before": {
-    content: '""',
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    backgroundColor: "#22C55E",
-    flexShrink: 0,
-  },
-}));
+export const StatusIndicator = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "variant",
+})<{ variant?: "active" | "inactive" }>(({ theme, variant = "active" }) => {
+  const isActive = variant === "active";
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.75),
+    padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
+    borderRadius: theme.shape.borderRadius,
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    backgroundColor: isActive ? "#DCFCE7" : theme.palette.action.hover,
+    color: isActive ? "#166534" : theme.palette.text.secondary,
+    "&::before": {
+      content: '""',
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      flexShrink: 0,
+      backgroundColor: isActive ? "#22C55E" : theme.palette.text.disabled,
+    },
+  };
+});
 
-export const MessageNameInput = styled(TextField)(({ theme }) => ({
+export const MessageNameInput = styled(TextField)(() => ({
   flex: 1,
   "& .MuiOutlinedInput-root": {
     backgroundColor: colors.background.sidebar,
@@ -58,7 +63,7 @@ export const MessageNameInput = styled(TextField)(({ theme }) => ({
   },
 }));
 
-export const SaveButton = styled(Button)(({ theme }) => ({
+export const SaveButton = styled(Button)(() => ({
   height: 40,
   minWidth: 100,
   fontWeight: 600,
@@ -133,5 +138,46 @@ export const VariableChip = styled(Chip)(({ theme }) => ({
     marginRight: 0,
     color: theme.palette.text.secondary,
     fontSize: "1rem",
+  },
+}));
+
+export const VariableHighlight = styled("span")(({ theme }) => ({
+  display: "inline",
+  backgroundColor: theme.palette.primary.main + "20",
+  color: theme.palette.primary.dark,
+  padding: 0,
+  borderRadius: 2,
+  fontWeight: "inherit",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  verticalAlign: "baseline",
+}));
+
+export const HighlightOverlay = styled(Box)(() => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  overflow: "auto",
+  pointerEvents: "none",
+  whiteSpace: "pre-wrap",
+  wordWrap: "break-word",
+  font: "inherit",
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  letterSpacing: "inherit",
+  "& *": {
+    font: "inherit",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    fontWeight: "inherit",
+  },
+}));
+
+export const HighlightOverlayWrapper = styled(Box)(() => ({
+  position: "relative",
+  "& .highlight-input-overlay": {
+    minHeight: 120,
   },
 }));

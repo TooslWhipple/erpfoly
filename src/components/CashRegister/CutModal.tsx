@@ -5,7 +5,7 @@ import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
 import { NumberInput } from "@/components/Folypuntos";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -140,7 +140,7 @@ export function CutModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 <ModalHeader>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
                         <ModalTitle>{cashRegisterName}</ModalTitle>
@@ -286,7 +286,7 @@ export function CutModal({
                         {cutType === "final" ? "Realizar corte final" : "Realizar corte parcial"}
                     </CutButton>
                 </CutModalActions>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

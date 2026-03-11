@@ -1,12 +1,8 @@
 import { styled } from "@mui/material/styles";
-import { Box, Typography, IconButton, DialogContent } from "@mui/material";
+import { Box, Typography, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// RE-USE MODAL LAYOUT (aligned with ModalForm)
-// ============================================================================
-
-export const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
   padding: theme.spacing(3),
   display: "flex",
   flexDirection: "column",

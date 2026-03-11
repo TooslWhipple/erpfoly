@@ -4,7 +4,7 @@ import { Search as SearchIcon, Close as CloseIcon } from "@mui/icons-material";
 import type { Supplier } from "@/types/pedidos.types";
 import { getSuppliers } from "@/data/pedidos.mockData";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     ModalDescription,
@@ -16,23 +16,14 @@ import {
     SuppliersList,
     SupplierRow,
     SupplierId,
-    SupplierName,
-    SelectButton,
+    SupplierName
 } from "./styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 export interface SupplierSelectionModalProps {
     open: boolean;
     onClose: () => void;
     onSelect: (supplier: Supplier) => void;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function SupplierSelectionModal({
     open,
@@ -43,17 +34,14 @@ export function SupplierSelectionModal({
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch suppliers when modal opens
     useEffect(() => {
         if (open) {
             fetchSuppliers();
         } else {
-            // Reset search when modal closes
             setSearchQuery("");
         }
     }, [open]);
 
-    // Filter suppliers based on search query
     const filteredSuppliers = useMemo(() => {
         if (!searchQuery.trim()) {
             return suppliers;
@@ -106,7 +94,7 @@ export function SupplierSelectionModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 <ModalHeader>
                     <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
                         <ModalTitle>Proveedores</ModalTitle>
@@ -178,7 +166,7 @@ export function SupplierSelectionModal({
                         </SuppliersList>
                     )}
                 </SupplierModalContainer>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

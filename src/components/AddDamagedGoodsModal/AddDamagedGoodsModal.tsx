@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { Search, Calendar, Upload, X } from "lucide-react";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -187,7 +187,7 @@ export function AddDamagedGoodsModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 <ModalHeader>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
                         <ModalTitle>Agregar mercancía dañada</ModalTitle>
@@ -437,7 +437,7 @@ export function AddDamagedGoodsModal({
                         )}
                     </ConfirmButton>
                 </FormActions>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

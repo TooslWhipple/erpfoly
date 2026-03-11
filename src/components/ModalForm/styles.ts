@@ -1,12 +1,12 @@
 import { styled } from "@mui/material/styles";
-import { DialogContent, Typography, IconButton } from "@mui/material";
+import { DialogContent as MuiDialogContent, Typography, IconButton } from "@mui/material";
+import { colors } from "@/styles/theme";
 
-export const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
-  padding: theme.spacing(3),
-  "&:first-of-type": {
-    paddingTop: theme.spacing(3),
-  },
-}));
+export const DialogContent = styled(MuiDialogContent)({
+  display: "flex",
+  flexDirection: "column",
+  padding: "24px"
+});
 
 export const ModalHeader = styled("div")(({ theme }) => ({
   display: "flex",

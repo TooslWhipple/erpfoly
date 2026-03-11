@@ -3,16 +3,12 @@ import { Dialog, Box, CircularProgress, Table, TableBody, TableCell, TableContai
 import { Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     ModalDescription,
     CloseButton,
 } from "@/components/ModalForm/styles";
-import {
-    FormActions,
-    CancelButton,
-} from "@/components/Form/styles";
 import {
     SupplierTableContainer,
     SupplierTableHeader,
@@ -23,10 +19,6 @@ import {
 } from "@/styles/catalogos/productos.styles";
 import type { SupplierForSelection } from "@/data/productos.mockData";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 interface AddSupplierModalProps {
     open: boolean;
     onClose: () => void;
@@ -36,10 +28,6 @@ interface AddSupplierModalProps {
     availableSuppliers: SupplierForSelection[];
     existingSupplierIds?: number[];
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function AddSupplierModal({
     open,
@@ -52,7 +40,6 @@ export function AddSupplierModal({
 }: AddSupplierModalProps) {
     const [searchTerm, setSearchTerm] = useState<string>("");
 
-    // Filter suppliers based on search term and exclude already added suppliers
     const filteredSuppliers = useMemo(() => {
         return availableSuppliers.filter((supplier) => {
             const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +49,6 @@ export function AddSupplierModal({
         });
     }, [availableSuppliers, searchTerm, existingSupplierIds]);
 
-    // Reset form when modal opens/closes
     const handleClose = () => {
         if (!loading) {
             setSearchTerm("");
@@ -70,7 +56,6 @@ export function AddSupplierModal({
         }
     };
 
-    // Handle add supplier
     const handleAddSupplier = async (supplierId: number) => {
         await onAddSupplier(supplierId);
     };
@@ -89,7 +74,7 @@ export function AddSupplierModal({
                 },
             }}
         >
-            <StyledDialogContent sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <DialogContent sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
                 {/* Header */}
                 <ModalHeader>
                     <ModalTitle>Agregar proveedor</ModalTitle>
@@ -165,7 +150,7 @@ export function AddSupplierModal({
                         </TableBody>
                     </Table>
                 </SupplierTableContainer>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

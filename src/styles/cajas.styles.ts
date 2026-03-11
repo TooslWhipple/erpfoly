@@ -1,10 +1,6 @@
 import { styled } from "@mui/material/styles";
-import { Box, TextField, Typography, Chip, Button, LinearProgress, IconButton } from "@mui/material";
+import { Box, TextField, Typography, Chip, Button, LinearProgress, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
 import { colors } from "@/styles/theme";
-
-// ============================================================================
-// STATUS CHIP
-// ============================================================================
 
 export type CashRegisterStatus = "open" | "closed";
 
@@ -296,7 +292,7 @@ export const EmptyHistoryMessage = styled(Typography)(({ theme }) => ({
 // CUT MODAL STYLES
 // ============================================================================
 
-export const StyledDialogContent = styled(Box)(({ theme }) => ({
+export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
     padding: theme.spacing(3),
     display: "flex",
     flexDirection: "column",

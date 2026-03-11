@@ -1,12 +1,8 @@
 import { styled } from "@mui/material/styles";
-import { DialogContent, Typography, IconButton, Box, Button, TableCell, TableRow, TableContainer as MuiTableContainer, TextField } from "@mui/material";
+import { DialogContent as MuiDialogContent, Typography, IconButton, Box, Button, TableCell, TableRow, TableContainer as MuiTableContainer, TextField } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-export const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
     padding: theme.spacing(3),
     display: "flex",
     flexDirection: "column",

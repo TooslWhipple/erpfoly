@@ -21,6 +21,7 @@ import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getClients, type Client, type ClientStatus } from "@/services/clients.service";
+import { Stack } from "@mui/material";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -171,30 +172,32 @@ export default function Clientes() {
 
   return (
     <MainLayout>
-      <Title title="Clientes" actions={actions} />
-      <TabFilters
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        showSearch
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
-        searchPlaceholder="Buscar por nombre, correo o teléfono"
-      />
-      <TableCrud
-        columns={columns}
-        rows={clients}
-        actions={rowActions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={setPage}
-        onRowsPerPageChange={setRowsPerPage}
-        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
-        emptyMessage="No hay clientes registrados"
-      />
+      <Stack direction="column" spacing={3}>
+        <Title title="Clientes" actions={actions} />
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Buscar por nombre, correo o teléfono"
+        />
+        <TableCrud
+          columns={columns}
+          rows={clients}
+          actions={rowActions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onRowClick={(row) => router.push(`/clientes/${row.id}`)}
+          emptyMessage="No hay clientes registrados"
+        />
+      </Stack>
     </MainLayout>
   );
 }

@@ -4,7 +4,7 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect, FormTextField } from "@/components/Form";
 import {
-  StyledDialogContent,
+  DialogContent,
   ModalHeader,
   ModalTitle,
   CloseButton,
@@ -103,7 +103,7 @@ export function CashWithdrawalModal({
         },
       }}
     >
-      <StyledDialogContent>
+      <DialogContent>
         <ModalHeader>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
             <ModalTitle>{cashRegisterName}</ModalTitle>
@@ -186,7 +186,7 @@ export function CashWithdrawalModal({
             Realizar retiro
           </WithdrawalButton>
         </WithdrawalModalActions>
-      </StyledDialogContent>
+      </DialogContent>
     </Dialog>
   );
 }

@@ -5,7 +5,7 @@ import {
     Edit as EditIcon,
 } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
-import { Box, Skeleton, Stack } from "@mui/material";
+import { Box, Grid, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
@@ -213,34 +213,33 @@ function getStatusLabel(status: DamageStatus): string {
     return labels[status];
 }
 
-/** Builds chipLabelMap and chipVariantMap for timeElapsed: critical->error, warning->warning, normal->default */
 function buildTimeElapsedChipMaps(): {
-  chipLabelMap: Record<string, string>;
-  chipVariantMap: Record<string, StatusChipVariant>;
+    chipLabelMap: Record<string, string>;
+    chipVariantMap: Record<string, StatusChipVariant>;
 } {
-  const labels: Record<string, string> = {};
-  const variants: Record<string, StatusChipVariant> = {};
-  for (let i = 1; i <= 10; i++) {
-    const key = i === 1 ? "1 año" : `${i} años`;
-    labels[key] = key;
-    variants[key] = "error";
-  }
-  for (let i = 6; i <= 11; i++) {
-    const key = `${i} meses`;
-    labels[key] = key;
-    variants[key] = "warning";
-  }
-  const normalKeys = ["1 mes", "2 meses", "3 meses", "4 meses", "5 meses", "1 día"];
-  for (const key of normalKeys) {
-    labels[key] = key;
-    variants[key] = "default";
-  }
-  for (let i = 2; i <= 31; i++) {
-    const key = `${i} días`;
-    labels[key] = key;
-    variants[key] = "default";
-  }
-  return { chipLabelMap: labels, chipVariantMap: variants };
+    const labels: Record<string, string> = {};
+    const variants: Record<string, StatusChipVariant> = {};
+    for (let i = 1; i <= 10; i++) {
+        const key = i === 1 ? "1 año" : `${i} años`;
+        labels[key] = key;
+        variants[key] = "error";
+    }
+    for (let i = 6; i <= 11; i++) {
+        const key = `${i} meses`;
+        labels[key] = key;
+        variants[key] = "warning";
+    }
+    const normalKeys = ["1 mes", "2 meses", "3 meses", "4 meses", "5 meses", "1 día"];
+    for (const key of normalKeys) {
+        labels[key] = key;
+        variants[key] = "default";
+    }
+    for (let i = 2; i <= 31; i++) {
+        const key = `${i} días`;
+        labels[key] = key;
+        variants[key] = "default";
+    }
+    return { chipLabelMap: labels, chipVariantMap: variants };
 }
 
 const TIME_ELAPSED_CHIP_MAPS = buildTimeElapsedChipMaps();
@@ -440,7 +439,6 @@ export default function MercanciaDanada() {
         },
     ];
 
-    // Row actions
     const actions: RowAction<DamagedItem>[] = [
         {
             id: "edit",
@@ -476,23 +474,19 @@ export default function MercanciaDanada() {
                 {
                     stats ? <StatsCardGroup cards={statsCards} />
                         :
-                        <Box
-                            sx={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(3, 1fr)",
-                                gap: 2,
-                            }}
-                        >
+                        <Grid container spacing={2}>
                             {[1, 2, 3].map((i) => (
-                                <Skeleton
-                                    key={i}
-                                    variant="rectangular"
-                                    height={120}
-                                    sx={{ borderRadius: 2 }}
-                                    animation="wave"
-                                />
+                                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                                    <Skeleton
+                                        variant="rectangular"
+                                        width="100%"
+                                        height="128px"
+                                        style={{ borderRadius: 8 }}
+                                        animation="wave"
+                                    />
+                                </Grid>
                             ))}
-                        </Box>
+                        </Grid>
 
                 }
 

@@ -1,27 +1,17 @@
 import { useState, useCallback, useRef } from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
-import { ContentCopy as CopyIcon, Close as CloseIcon } from "@mui/icons-material";
+import { Box, Typography, CircularProgress, Stack, Button } from "@mui/material";
 import { SideModal } from "@/components/SideModal";
-import { ModalTitle, CloseButton } from "@/components/ModalForm/styles";
-import { HeaderRow } from "@/components/SideModal/styles";
 import {
-    StatusIndicator,
     VariablesSection,
-    VariablesInstruction,
     VariablesContainer,
     VariableChip,
-    ContentSection,
-    ContentTitle,
     ContentTextarea,
-    MessageNameInput,
-    SaveButton,
+    MessageNameInput
 } from "@/styles/catalogos/mensajes.styles";
 import { MessageVariablesProvider } from "./MessageVariablesContext";
 import HighlightedContentInput from "./HighlightedContentInput";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { StatusChip } from "../StatusChip";
+import { Copy } from "lucide-react";
 
 export interface MessageFormData {
     name: string;
@@ -29,7 +19,6 @@ export interface MessageFormData {
     status: "active" | "inactive";
 }
 
-/** Variable available for insertion in message content (e.g. from backend catalog). */
 export interface MessageVariableItem {
     key: string;
     label: string;
@@ -42,15 +31,8 @@ export interface MessageFormModalProps {
     onConfirm: (data: MessageFormData) => Promise<void>;
     initialValues?: Partial<MessageFormData>;
     loading?: boolean;
-    /** Catalog of variables for insertion (e.g. from API). Used for chips and highlight. */
     messageVariables?: MessageVariableItem[];
 }
-
-// ============================================================================
-// MESSAGE FORM MODAL COMPONENT
-// ============================================================================
-// MessageVariablesProvider is used because the custom inputComponent receives only
-// MUI input props; the variable list is injected via context for highlighting.
 
 export function MessageFormModal({
     open,
@@ -103,87 +85,75 @@ export function MessageFormModal({
             maxWidth="lg"
             fullWidth
             header={
-                <HeaderRow>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1, minWidth: 0 }}>
-                        <CloseButton
-                            onClick={onClose}
-                            disabled={loading}
+                <Stack direction="row" width="100%" spacing={2} justifyContent="space-between" alignItems="center">
+                    <Stack spacing={1} alignItems="flex-start">
+                        <StatusChip
                             size="small"
-                            aria-label="Cerrar"
-                        >
-                            <CloseIcon />
-                        </CloseButton>
-                        <StatusIndicator
-                            variant={status}
-                            onClick={() => setStatus((s) => (s === "active" ? "inactive" : "active"))}
-                            sx={{ cursor: "pointer", userSelect: "none" }}
-                        >
-                            {status === "active" ? "En uso" : "Sin uso"}
-                        </StatusIndicator>
-                        <ModalTitle sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {title}
-                        </ModalTitle>
-                    </Box>
-                    <SaveButton
+                            label={status === "active" ? "En uso" : "Sin uso"}
+                            variant={status === "active" ? "success" : "default"}
+                        />
+                        <Typography variant="h6">{title}</Typography>
+                    </Stack>
+                    <Button
                         variant="contained"
-                        color="primary"
                         onClick={handleSave}
                         disabled={!canSave || loading}
                     >
                         {loading ? <CircularProgress size={24} color="inherit" /> : "Guardar"}
-                    </SaveButton>
-                </HeaderRow>
-            }
-        >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <ContentSection>
-                    <ContentTitle>Nombre del mensaje</ContentTitle>
-                    <MessageNameInput
-                        fullWidth
-                        size="small"
-                        placeholder="Ingresa el nombre del mensaje"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        name="message-name"
-                    />
-                </ContentSection>
+                    </Button>
+                </Stack>
+            }>
+            <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
+                border: "1px solid #e0e0e0",
+                borderRadius: "16px",
+                padding: "24px",
+                marginTop: "24px"
+            }}>
+                <Typography variant="body2" color="text.secondary">Nombre del mensaje</Typography>
+                <MessageNameInput
+                    fullWidth
+                    size="small"
+                    placeholder="Ingresa el nombre del mensaje"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    name="message-name"
+                />
 
-                <ContentSection>
-                    <ContentTitle>Contenido del mensaje.</ContentTitle>
-                    <MessageVariablesProvider value={messageVariables.map((v) => v.value)}>
-                        <ContentTextarea
-                            fullWidth
-                            multiline
-                            minRows={6}
-                            placeholder="Escribe el contenido del mensaje aquí..."
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            name="message-content"
-                            inputRef={(el) => {
-                                if (el) textareaRef.current = el;
-                            }}
-                            slotProps={{
-                                input: { inputComponent: HighlightedContentInput },
-                            }}
-                        />
-                    </MessageVariablesProvider>
-                </ContentSection>
+                <Typography variant="body2" color="text.secondary">Contenido del mensaje.</Typography>
+                <MessageVariablesProvider value={messageVariables.map((v) => v.value)}>
+                    <ContentTextarea
+                        fullWidth
+                        multiline
+                        minRows={6}
+                        placeholder="Escribe el contenido del mensaje aquí..."
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        name="message-content"
+                        inputRef={(el) => {
+                            if (el) textareaRef.current = el;
+                        }}
+                        slotProps={{
+                            input: { inputComponent: HighlightedContentInput },
+                        }}
+                    />
+                </MessageVariablesProvider>
 
                 <VariablesSection>
-                    <VariablesInstruction>
-                        Puedes incrustar datos variables del cliente en tu mensaje como:
-                    </VariablesInstruction>
+                    <Typography variant="body2" color="text.secondary">Puedes incrustar datos variables del cliente en tu mensaje como:</Typography>
                     <VariablesContainer>
                         {messageVariables.map((variable) => (
                             <VariableChip
                                 key={variable.key}
                                 label={
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                    <Stack direction="row" spacing={0.5} alignItems="center">
                                         <Typography component="span" sx={{ fontSize: "0.875rem" }}>
                                             {variable.value}
                                         </Typography>
-                                        <CopyIcon sx={{ fontSize: "1rem" }} />
-                                    </Box>
+                                        <Copy size={16} />
+                                    </Stack>
                                 }
                                 onClick={() => handleInsertVariable(variable.value)}
                                 clickable
@@ -191,7 +161,7 @@ export function MessageFormModal({
                         ))}
                     </VariablesContainer>
                 </VariablesSection>
-            </Box>
+            </div>
         </SideModal>
     );
 }

@@ -4,9 +4,11 @@ import { colors } from "@/styles/theme";
 export const Card = styled('div')(({ padding }: { padding?: string }) => ({
   display: "flex",
   flexDirection: "column",
+  alignItems: "flex-start",
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
   borderRadius: "16px",
+  gap: "16px",
   padding: padding || "24px",
   height: "100%",
 }));

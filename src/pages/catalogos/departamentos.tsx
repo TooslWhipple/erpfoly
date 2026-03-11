@@ -1,17 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment, Box, Alert } from "@mui/material";
-import { Add as AddIcon, Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
+import { Box, Alert, Stack } from "@mui/material";
+import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { FormFieldConfig } from "@/components/Form";
-import {
-  HeaderContainer,
-  ControlsContainer,
-  SearchInput,
-  CreateButton,
-  SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -23,13 +16,8 @@ import {
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
-// Re-export types for consumers (e.g. detail page)
 export type { Department } from "@/services/departments.service";
 export type { ProductGroup } from "@/services/departments.service";
-
-// ============================================================================
-// HELPERS (affected items count for promotion info - can be replaced by API later)
-// ============================================================================
 
 async function getAffectedItemsCount(): Promise<number> {
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -37,10 +25,6 @@ async function getAffectedItemsCount(): Promise<number> {
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export default function Departamentos() {
   const router = useRouter();
@@ -76,7 +60,6 @@ export default function Departamentos() {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
 
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [saving, setSaving] = useState(false);
@@ -84,14 +67,12 @@ export default function Departamentos() {
   const [affectedItemsCount, setAffectedItemsCount] = useState<number | null>(null);
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
-  // Calculate next available ID for new departments
   const getNextId = useCallback(() => {
     if (departments.length === 0) return "01";
     const maxId = Math.max(...departments.map((d) => d.id));
     return String(maxId + 1).padStart(2, "0");
   }, [departments]);
 
-  // Form fields configuration with conditional promotion fields
   const departmentFormFields: FormFieldConfig[] = useMemo(() => {
     const baseFields: FormFieldConfig[] = [
       {
@@ -133,7 +114,6 @@ export default function Departamentos() {
       },
     ];
 
-    // Add promotion fields conditionally
     if (hasPromotion) {
       baseFields.push(
         {
@@ -178,7 +158,6 @@ export default function Departamentos() {
     return baseFields;
   }, [hasPromotion, editingDepartment, getNextId]);
 
-  // Load affected items count when promotion is enabled
   useEffect(() => {
     if (hasPromotion && modalOpen) {
       getAffectedItemsCount().then(setAffectedItemsCount);
@@ -187,7 +166,6 @@ export default function Departamentos() {
     }
   }, [hasPromotion, modalOpen, editingDepartment]);
 
-  // Event handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(event.target.value);
   };
@@ -238,12 +216,9 @@ export default function Departamentos() {
     refetch();
   };
 
-  // Handle form value changes to update promotion toggle and preserve values
   const handleFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    // Preserve form values
     setFormValues(values);
-    
-    // Update promotion toggle state
+
     const promotionEnabled = Boolean(values.hasPromotion);
     if (promotionEnabled !== hasPromotion) {
       setHasPromotion(promotionEnabled);
@@ -286,7 +261,6 @@ export default function Departamentos() {
     setPage(0);
   };
 
-  // Table columns
   const columns: Column<Department>[] = [
     {
       id: "id",
@@ -317,7 +291,6 @@ export default function Departamentos() {
     },
   ];
 
-  // Row actions (detail from row click or menu; edit goes to detail page; delete from list)
   const actions: RowAction<Department>[] = [
     {
       id: "view",
@@ -342,49 +315,43 @@ export default function Departamentos() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Departamentos" />
-        <ControlsContainer>
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchInput}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateModal}
-          >
-            Nuevo
-          </CreateButton>
-        </ControlsContainer>
-      </HeaderContainer>
 
-      <TableCrud
-        columns={columns}
-        rows={departments}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={handleViewDetail}
-        emptyMessage="No hay departamentos registrados"
-      />
+        <TabFilters
+          tabs={[]}
+          activeTab={''}
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={(value) => setSearchInput(value)}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleOpenCreateModal,
+              variant: "contained",
+              color: "primary",
+            }
+          ]}
+        />
 
-      {/* Create/Edit Department Modal */}
+        <TableCrud
+          columns={columns}
+          rows={departments}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          onRowClick={handleViewDetail}
+          emptyMessage="No hay departamentos registrados"
+        />
+      </Stack>
+
       <ModalForm
         open={modalOpen}
         onClose={handleCloseModal}
@@ -396,7 +363,7 @@ export default function Departamentos() {
           Object.keys(formValues).length > 0
             ? formValues
             : editingDepartment
-            ? {
+              ? {
                 id: String(editingDepartment.id).padStart(2, "0"),
                 name: editingDepartment.name,
                 margin: editingDepartment.margin,
@@ -405,7 +372,7 @@ export default function Departamentos() {
                 promotionStartDate: editingDepartment.promotion?.startDate,
                 promotionEndDate: editingDepartment.promotion?.endDate,
               }
-            : {
+              : {
                 id: getNextId(),
                 hasPromotion: false,
               }
@@ -415,7 +382,6 @@ export default function Departamentos() {
         maxWidth="sm"
         onValuesChange={handleFormValuesChange}
       >
-        {/* Promotion info message */}
         {hasPromotion && affectedItemsCount !== null && (
           <Box sx={{ mt: 2 }}>
             <Alert severity="info" sx={{ borderRadius: 1 }}>

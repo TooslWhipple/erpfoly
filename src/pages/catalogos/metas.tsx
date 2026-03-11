@@ -1,14 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Box,
-  CircularProgress,
-  IconButton,
-  Menu,
-  MenuItem,
-  Typography,
-} from "@mui/material";
-import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Check as CheckIcon } from "@mui/icons-material";
-import {
   ComposedChart,
   Bar,
   Line,
@@ -19,28 +10,27 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { MainLayout, DataTable } from "@/components";
+import numeral from "numeral";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Check as CheckIcon } from "@mui/icons-material";
+import { MainLayout, DataTable, Title } from "@/components";
 import type { DataTableColumn } from "@/components";
 import {
-  PageHeader,
-  PageTitle,
-  PageDescription,
   Card,
-  CardTitle,
-  ChartHeader,
-  ChartFilterButton,
   ChartWrapper,
-  MonthNavigatorRow,
-  MonthNavigatorCenter,
-  MonthLabel,
-  TotalGoalAmount,
-  NavigatorDescription,
-  TableCardTitle,
 } from "@/styles/catalogos/goals.styles";
 import { getGoalsPageData } from "@/services/goals.service";
 import type { ChartMetricType, SalesHistoryPoint } from "@/types/goals.types";
 import { colors } from "@/styles/theme";
-import numeral from "numeral";
 
 // ============================================================================
 // CHART METRIC OPTIONS
@@ -190,26 +180,26 @@ export default function MetasPage() {
     collectionGoal: number;
     monthlyGoal: number;
   }>[] = [
-    { id: "branchName", label: "SUCURSAL" },
-    {
-      id: "newCredits",
-      label: "NUEVOS CRÉDITOS",
-      align: "right",
-      format: (v) => numeral(v).format("$0,0"),
-    },
-    {
-      id: "collectionGoal",
-      label: "META COBRACIONES",
-      align: "right",
-      format: (v) => numeral(v).format("$0,0"),
-    },
-    {
-      id: "monthlyGoal",
-      label: "META MENSUAL",
-      align: "right",
-      type: "currency",
-    },
-  ];
+      { id: "branchName", label: "SUCURSAL" },
+      {
+        id: "newCredits",
+        label: "NUEVOS CRÉDITOS",
+        align: "right",
+        format: (v) => numeral(v).format("$0,0"),
+      },
+      {
+        id: "collectionGoal",
+        label: "META COBRACIONES",
+        align: "right",
+        format: (v) => numeral(v).format("$0,0"),
+      },
+      {
+        id: "monthlyGoal",
+        label: "META MENSUAL",
+        align: "right",
+        type: "currency",
+      },
+    ];
 
   const breadcrumbs = [
     { label: "Catálogos", href: "/catalogos/productos" },
@@ -228,31 +218,21 @@ export default function MetasPage() {
 
   return (
     <MainLayout>
-      <PageHeader>
-        <PageTitle>Metas</PageTitle>
-        <PageDescription>Configura las metas por sucursal</PageDescription>
-      </PageHeader>
+      <Stack direction="column" spacing={3}>
+        <Title
+          title="Metas"
+          description="Configura las metas por sucursal"
+        />
 
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-
-      {/* Sales history card with Recharts */}
-      <Card>
-        <ChartHeader>
-          <CardTitle>Historial de ventas</CardTitle>
-          <ChartFilterButton
+        <Card>
+          <Typography variant="h6">Historial de ventas</Typography>
+          <Button
             variant="outlined"
             size="small"
             onClick={handleChartFilterOpen}
-            aria-controls={chartAnchorEl ? "chart-metric-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={Boolean(chartAnchorEl)}
           >
             {currentMetricLabel}
-          </ChartFilterButton>
+          </Button>
           <Menu
             id="chart-metric-menu"
             anchorEl={chartAnchorEl}
@@ -272,94 +252,88 @@ export default function MetasPage() {
               </MenuItem>
             ))}
           </Menu>
-        </ChartHeader>
 
-        <ChartWrapper>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={salesHistory}
-              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-              barCategoryGap={4}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={{ stroke: colors.border }}
-                tick={(props) => (
-                  <XAxisTick
-                    x={Number(props.x)}
-                    y={Number(props.y)}
-                    payload={props.payload}
-                    index={props.index}
-                    data={salesHistory}
-                  />
-                )}
-              />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => numeral(v).format("0a")}
-              />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend
-                wrapperStyle={{ paddingTop: 8 }}
-                formatter={(value) => <span style={{ fontSize: 12 }}>{value}</span>}
-                iconType="rect"
-                iconSize={10}
-              />
-              <Bar
-                dataKey="sales"
-                name="Ventas"
-                fill="#C0DBFE"
-                radius={[4, 4, 0, 0]}
-                barSize={80}
-              />
-              <Line
-                type="monotone"
-                dataKey="goal"
-                name="Metas"
-                stroke="#DC2626"
-                strokeWidth={3}
-                dot={{ r: 0 }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartWrapper>
-      </Card>
+          <ChartWrapper>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={salesHistory}
+                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                barCategoryGap={4}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={{ stroke: colors.border }}
+                  tick={(props) => (
+                    <XAxisTick
+                      x={Number(props.x)}
+                      y={Number(props.y)}
+                      payload={props.payload}
+                      index={props.index}
+                      data={salesHistory}
+                    />
+                  )}
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => numeral(v).format("0a")}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend
+                  wrapperStyle={{ paddingTop: 8 }}
+                  formatter={(value) => <span style={{ fontSize: 12 }}>{value}</span>}
+                  iconType="rect"
+                  iconSize={10}
+                />
+                <Bar
+                  dataKey="sales"
+                  name="Ventas"
+                  fill="#C0DBFE"
+                  radius={[4, 4, 0, 0]}
+                  barSize={80}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="goal"
+                  name="Metas"
+                  stroke="#DC2626"
+                  strokeWidth={3}
+                  dot={{ r: 0 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartWrapper>
+        </Card>
 
-      {/* Month navigator card */}
-      <Card>
-        <MonthNavigatorRow>
-          <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-            <MonthNavigatorCenter>
-              <IconButton onClick={handlePrevMonth} size="small" aria-label="Mes anterior">
-                <ChevronLeftIcon />
-              </IconButton>
-              <MonthLabel>{monthLabel}</MonthLabel>
-              <IconButton onClick={handleNextMonth} size="small" aria-label="Mes siguiente">
-                <ChevronRightIcon />
-              </IconButton>
-            </MonthNavigatorCenter>
-          </Box>
-          <TotalGoalAmount>{numeral(totalGoal).format("$0,0.00")}</TotalGoalAmount>
-        </MonthNavigatorRow>
-        <NavigatorDescription>
-          El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
-        </NavigatorDescription>
-      </Card>
+        <Card>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton onClick={handlePrevMonth} size="small" aria-label="Mes anterior">
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography variant="h6">{monthLabel}</Typography>
+            <IconButton onClick={handleNextMonth} size="small" aria-label="Mes siguiente">
+              <ChevronRightIcon />
+            </IconButton>
+          </Stack>
+          <Typography variant="body1">{numeral(totalGoal).format("$0,0.00")}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
+          </Typography>
+        </Card>
 
-      {/* Branch goals table card */}
-      <Card>
-        <TableCardTitle>Meta mensual por sucursal</TableCardTitle>
-        <DataTable
-          columns={branchGoalsColumns}
-          rows={branchGoals}
-          rowKey="id"
-          emptyMessage="No hay metas configuradas para este mes."
-        />
-      </Card>
+        <Card>
+          <Typography variant="h6">Meta mensual por sucursal</Typography>
+          <DataTable
+            columns={branchGoalsColumns}
+            rows={branchGoals}
+            rowKey="id"
+            emptyMessage="No hay metas configuradas para este mes."
+          />
+        </Card>
+      </Stack>
     </MainLayout>
   );
 }

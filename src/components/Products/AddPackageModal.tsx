@@ -4,7 +4,7 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormTextField, FormSelect, MultiSelectChips } from "@/components";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -156,7 +156,7 @@ export function AddPackageModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 {/* Header */}
                 <ModalHeader>
                     <ModalTitle>Agregar paquete</ModalTitle>
@@ -373,7 +373,7 @@ export function AddPackageModal({
                         {loading ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
                     </ConfirmButton>
                 </FormActions>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

@@ -1,20 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import {
-    HeaderContainer,
     ControlsContainer,
     SearchInput,
     CreateButton,
     SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 interface Supplier {
     id: number;
@@ -34,10 +29,6 @@ interface GetSuppliersResponse {
     limit: number;
 }
 
-// ============================================================================
-// MOCK DATA - Suppliers for furniture e-commerce
-// ============================================================================
-
 const DUMMY_SUPPLIERS: Supplier[] = [
     { id: 1, name: "Arlix Muebles y Electrodomésticos S.A. de C.V." },
     { id: 2, name: "Mirage - Norage S.A. De C.V." },
@@ -56,16 +47,11 @@ const DUMMY_SUPPLIERS: Supplier[] = [
     { id: 15, name: "Muebles Finos del Bajío S.A. de C.V." },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getSuppliers(params: GetSuppliersParams): Promise<GetSuppliersResponse> {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     let filteredData = [...DUMMY_SUPPLIERS];
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter((s) =>
@@ -86,14 +72,9 @@ async function getSuppliers(params: GetSuppliersParams): Promise<GetSuppliersRes
     };
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function Proveedores() {
     const router = useRouter();
 
-    // State management
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -101,7 +82,6 @@ export default function Proveedores() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Fetch suppliers
     const fetchSuppliers = useCallback(async () => {
         setLoading(true);
         try {
@@ -127,7 +107,6 @@ export default function Proveedores() {
         setPage(0);
     }, [searchValue]);
 
-    // Event handlers
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
     };
@@ -149,7 +128,6 @@ export default function Proveedores() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<Supplier>[] = [
         {
             id: "id",
@@ -181,7 +159,6 @@ export default function Proveedores() {
         }
     ];
 
-    // Row actions (for menu)
     const actions: RowAction<Supplier>[] = [
         {
             id: "edit",
@@ -193,7 +170,7 @@ export default function Proveedores() {
 
     return (
         <MainLayout>
-            <HeaderContainer>
+            <Stack direction="column" spacing={3}>
                 <Title title="Proveedores" />
                 <ControlsContainer>
                     <SearchInput
@@ -218,22 +195,23 @@ export default function Proveedores() {
                         Nuevo
                     </CreateButton>
                 </ControlsContainer>
-            </HeaderContainer>
 
-            <TableCrud
-                columns={columns}
-                rows={suppliers}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleEditSupplier}
-                emptyMessage="No hay proveedores registrados"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={suppliers}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEditSupplier}
+                    emptyMessage="No hay proveedores registrados"
+                />
+            </Stack>
+
         </MainLayout>
     );
 }

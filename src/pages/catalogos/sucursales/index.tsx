@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { FormFieldConfig } from "@/components/Form";
 import {
-  HeaderContainer,
   ControlsContainer,
   SearchInput,
   CreateButton,
@@ -53,13 +52,13 @@ export default function Sucursales() {
     });
 
     setLoading(false);
-   
+
     if (result.error) {
       setBranches([]);
       setTotalRows(0);
       return;
     }
-    
+
     if (result.data) {
       setBranches(result.data.rows);
       setTotalRows(result.data.total);
@@ -74,7 +73,6 @@ export default function Sucursales() {
     setPage(0);
   }, [searchValue]);
 
-  // Form fields configuration
   const branchFormFields: FormFieldConfig[] = [
     {
       name: "name",
@@ -90,7 +88,6 @@ export default function Sucursales() {
     },
   ];
 
-  // Event handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(event.target.value);
   };
@@ -156,7 +153,6 @@ export default function Sucursales() {
     setPage(0);
   };
 
-  // Table columns
   const columns: Column<Branch>[] = [
     {
       id: "id",
@@ -193,12 +189,10 @@ export default function Sucursales() {
     },
   ];
 
-  // Navigation handler
   const handleViewDiscounts = (branch: Branch) => {
     router.push(`/catalogos/sucursales/${branch.id}`);
   };
-
-  // Row actions
+  
   const actions: RowAction<Branch>[] = [
     {
       id: "discounts",
@@ -220,7 +214,7 @@ export default function Sucursales() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Sucursales" />
         <ControlsContainer>
           <SearchInput
@@ -245,24 +239,23 @@ export default function Sucursales() {
             Nueva sucursal
           </CreateButton>
         </ControlsContainer>
-      </HeaderContainer>
 
-      <TableCrud
-        columns={columns}
-        rows={branches}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={handleViewDiscounts}
-        emptyMessage="No hay sucursales registradas"
-      />
+        <TableCrud
+          columns={columns}
+          rows={branches}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          onRowClick={handleViewDiscounts}
+          emptyMessage="No hay sucursales registradas"
+        />
+      </Stack>
 
-      {/* Create/Edit Branch Modal */}
       <ModalForm
         open={modalOpen}
         onClose={handleCloseModal}

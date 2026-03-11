@@ -4,4 +4,3 @@ export type {
     MessageFormModalProps,
     MessageVariableItem,
 } from "./MessageFormModal";
-export { MessageForm } from "./MessageForm";

@@ -3,7 +3,7 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import numeral from "numeral";
 import {
-  StyledDialogContent,
+  DialogContent,
   ModalHeader,
   ModalTitle,
   ModalDescription,
@@ -90,7 +90,7 @@ export function ConfirmPriceChangeModal({
         },
       }}
     >
-      <StyledDialogContent>
+      <DialogContent>
         <ModalHeader>
           <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
             <ModalTitle>Confirmar cambio de precio</ModalTitle>
@@ -158,7 +158,7 @@ export function ConfirmPriceChangeModal({
             )}
           </ConfirmButton>
         </FormActions>
-      </StyledDialogContent>
+      </DialogContent>
     </Dialog>
   );
 }

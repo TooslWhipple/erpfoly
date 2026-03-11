@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import {
-    HeaderContainer,
     ControlsContainer,
     SearchInput,
     CreateButton,
@@ -15,10 +14,6 @@ import {
     type MessageFormData,
     type MessageVariableItem,
 } from "@/components/Messages";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 interface Message {
     id: number;
@@ -39,10 +34,6 @@ interface GetMessagesResponse {
     page: number;
     limit: number;
 }
-
-// ============================================================================
-// MOCK DATA - Collection messages for payment reminders
-// ============================================================================
 
 const DUMMY_MESSAGES: Message[] = [
     {
@@ -105,15 +96,11 @@ const MESSAGE_VARIABLES_CATALOG: MessageVariableItem[] = [
 ];
 
 // ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getMessages(params: GetMessagesParams): Promise<GetMessagesResponse> {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     let filteredData = [...DUMMY_MESSAGES];
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -152,12 +139,7 @@ async function deleteMessage(id: number): Promise<{ success: boolean }> {
     return { success: true };
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function Mensajes() {
-    // State management
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -165,12 +147,10 @@ export default function Mensajes() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Modal state
     const [modalOpen, setModalOpen] = useState(false);
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
     const [saving, setSaving] = useState(false);
 
-    // Fetch messages
     const fetchMessages = useCallback(async () => {
         setLoading(true);
         try {
@@ -196,7 +176,6 @@ export default function Mensajes() {
         setPage(0);
     }, [searchValue]);
 
-    // Event handlers
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
     };
@@ -220,11 +199,9 @@ export default function Mensajes() {
         setSaving(true);
         try {
             if (editingMessage) {
-                // Update existing message
                 console.log("[Mensajes] Updating message:", editingMessage.id, data);
                 // await updateMessage(editingMessage.id, data);
             } else {
-                // Create new message
                 await createMessage({
                     name: data.name,
                     content: data.content,
@@ -263,7 +240,6 @@ export default function Mensajes() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<Message>[] = [
         {
             id: "id",
@@ -295,7 +271,6 @@ export default function Mensajes() {
         },
     ];
 
-    // Row actions
     const actions: RowAction<Message>[] = [
         {
             id: "edit",
@@ -312,7 +287,7 @@ export default function Mensajes() {
 
     return (
         <MainLayout>
-            <HeaderContainer>
+            <Stack direction="column" spacing={3}>
                 <Title title="Mensajes" />
                 <ControlsContainer>
                     <SearchInput
@@ -337,21 +312,22 @@ export default function Mensajes() {
                         Nuevo
                     </CreateButton>
                 </ControlsContainer>
-            </HeaderContainer>
-            <TableCrud
-                columns={columns}
-                rows={messages}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleOpenEditModal}
-                emptyMessage="No hay mensajes registrados"
-            />
+
+                <TableCrud
+                    columns={columns}
+                    rows={messages}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleOpenEditModal}
+                    emptyMessage="No hay mensajes registrados"
+                />
+            </Stack>
 
             <MessageFormModal
                 key={modalOpen ? (editingMessage?.id ?? "new") : "closed"}
@@ -362,10 +338,10 @@ export default function Mensajes() {
                 initialValues={
                     editingMessage
                         ? {
-                              name: editingMessage.name,
-                              content: editingMessage.content,
-                              status: editingMessage.status,
-                          }
+                            name: editingMessage.name,
+                            content: editingMessage.content,
+                            status: editingMessage.status,
+                        }
                         : undefined
                 }
                 loading={saving}

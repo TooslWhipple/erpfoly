@@ -1,8 +1,8 @@
 import { styled } from "@mui/material/styles";
-import { Box, Tab, Tabs } from "@mui/material";
+import { Tab, Tabs } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const Container = styled(Box)(({ theme }) => ({
+export const Container = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
@@ -15,7 +15,7 @@ export const Container = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const TabsWrapper = styled(Box)(({ theme }) => ({
+export const TabsWrapper = styled('div')(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   height: 36,
@@ -75,7 +75,9 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
   },
 }));
 
-export const SearchContainer = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
+export const SearchContainer = styled('div', {
+  shouldForwardProp: (prop) => prop !== "singleAction",
+})<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
   flexShrink: 0,
   [theme.breakpoints.down("md")]: {
     width: singleAction ? "auto" : "100%",
@@ -83,7 +85,9 @@ export const SearchContainer = styled(Box)<{ singleAction?: boolean }>(({ theme,
   },
 }));
 
-export const FiltersRightSection = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
+export const FiltersRightSection = styled('div', {
+  shouldForwardProp: (prop) => prop !== "singleAction",
+})<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

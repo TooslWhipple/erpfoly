@@ -17,7 +17,7 @@ import { Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { OrderToReceive } from "@/types/recepcion-mercancias.types";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -30,20 +30,12 @@ import {
     SearchInput,
 } from "./styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 interface ReceptionOrdersModalProps {
     open: boolean;
     onClose: () => void;
     onConfirm: (orderIds: string[]) => void | Promise<void>;
     loading?: boolean;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_ORDERS_TO_RECEIVE: OrderToReceive[] = [
     {
@@ -90,18 +82,10 @@ const DUMMY_ORDERS_TO_RECEIVE: OrderToReceive[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTION
-// ============================================================================
-
 async function getOrdersToReceive(): Promise<OrderToReceive[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return DUMMY_ORDERS_TO_RECEIVE;
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 function formatDeliveryDate(dateString: string): string {
     const date = new Date(dateString);
@@ -111,10 +95,6 @@ function formatDeliveryDate(dateString: string): string {
         year: "numeric",
     });
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function ReceptionOrdersModal({
     open,
@@ -127,7 +107,6 @@ export function ReceptionOrdersModal({
     const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch orders to receive
     useEffect(() => {
         if (open) {
             setLoadingOrders(true);
@@ -144,13 +123,11 @@ export function ReceptionOrdersModal({
                     setLoadingOrders(false);
                 });
         } else {
-            // Reset selection and search when modal closes
             setSelectedOrderIds(new Set());
             setSearchQuery("");
         }
     }, [open]);
 
-    // Filter orders based on search query
     const filteredOrders = useMemo(() => {
         if (!searchQuery.trim()) {
             return orders;
@@ -163,18 +140,15 @@ export function ReceptionOrdersModal({
         );
     }, [orders, searchQuery]);
 
-    // Handle search change
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
     };
 
-    // Handle select all (only for filtered orders)
     const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
             const allFilteredIds = new Set(filteredOrders.map((order) => order.id));
             setSelectedOrderIds(allFilteredIds);
         } else {
-            // Only deselect filtered orders
             const newSelection = new Set(selectedOrderIds);
             filteredOrders.forEach((order) => {
                 newSelection.delete(order.id);
@@ -183,7 +157,6 @@ export function ReceptionOrdersModal({
         }
     };
 
-    // Handle individual checkbox
     const handleSelectOrder = (orderId: string) => {
         const newSelection = new Set(selectedOrderIds);
         if (newSelection.has(orderId)) {
@@ -194,7 +167,6 @@ export function ReceptionOrdersModal({
         setSelectedOrderIds(newSelection);
     };
 
-    // Check if all filtered orders are selected
     const isAllSelected =
         filteredOrders.length > 0 &&
         filteredOrders.every((order) => selectedOrderIds.has(order.id));
@@ -202,14 +174,12 @@ export function ReceptionOrdersModal({
         filteredOrders.some((order) => selectedOrderIds.has(order.id)) &&
         !isAllSelected;
 
-    // Handle confirm
     const handleConfirm = async () => {
         if (selectedOrderIds.size > 0) {
             await onConfirm(Array.from(selectedOrderIds));
         }
     };
 
-    // Handle close
     const handleClose = () => {
         if (!loading && !loadingOrders) {
             onClose();
@@ -229,8 +199,7 @@ export function ReceptionOrdersModal({
                 },
             }}
         >
-            <StyledDialogContent>
-                {/* Header */}
+            <DialogContent>
                 <ModalHeader>
                     <ModalTitle>Pedidos por recibir</ModalTitle>
                     <CloseButton onClick={handleClose} disabled={loading || loadingOrders} size="small">
@@ -238,7 +207,6 @@ export function ReceptionOrdersModal({
                     </CloseButton>
                 </ModalHeader>
 
-                {/* Search */}
                 <SearchInput
                     placeholder="Buscar pedido"
                     value={searchQuery}
@@ -255,10 +223,8 @@ export function ReceptionOrdersModal({
                     }}
                 />
 
-                {/* Table */}
                 <TableContainer>
                     {loadingOrders ? (
-                        // Loading skeleton
                         <Box sx={{ p: 2 }}>
                             {Array.from({ length: 5 }).map((_, index) => (
                                 <Box key={index} sx={{ mb: 2 }}>
@@ -267,7 +233,6 @@ export function ReceptionOrdersModal({
                             ))}
                         </Box>
                     ) : filteredOrders.length === 0 ? (
-                        // Empty state
                         <EmptyStateContainer>
                             <Typography variant="body2" color="text.secondary">
                                 {searchQuery
@@ -321,7 +286,6 @@ export function ReceptionOrdersModal({
                     )}
                 </TableContainer>
 
-                {/* Actions */}
                 <ModalActions>
                     <ConfirmButton
                         type="button"
@@ -336,7 +300,7 @@ export function ReceptionOrdersModal({
                         )}
                     </ConfirmButton>
                 </ModalActions>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

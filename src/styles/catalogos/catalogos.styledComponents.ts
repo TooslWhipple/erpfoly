@@ -3,18 +3,6 @@ import { Box, Button, TextField } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 
-export const HeaderContainer = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: theme.spacing(3),
-  gap: theme.spacing(2),
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-  },
-}));
-
 export const ControlsContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",

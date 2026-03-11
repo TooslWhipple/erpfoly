@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import { Stack } from "@mui/material";
 
 type SolicitudEstatus = "pendiente" | "aceptada" | "rechazada";
 type SolicitudTipo = "nuevo" | "aumento";
@@ -243,7 +244,7 @@ export default function SolicitudesCredito() {
         estatus: activeTab as SolicitudEstatus | "todas",
         search: searchValue,
       });
-      
+
       setSolicitudes(response.data);
       setTotalRows(response.total);
     } catch (err) {
@@ -295,7 +296,7 @@ export default function SolicitudesCredito() {
       "Motivo de ejemplo"
     );
     if (result.success) {
-      fetchSolicitudes(); 
+      fetchSolicitudes();
     }
   };
 
@@ -373,31 +374,33 @@ export default function SolicitudesCredito() {
 
   return (
     <MainLayout>
-      <Title title="Solicitudes de crédito" />
+      <Stack direction="column" spacing={3}>
+        <Title title="Solicitudes de crédito" />
 
-      <TabFilters
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        showSearch
-        searchValue={searchValue}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por nombre"
-      />
+        <TabFilters
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar por nombre"
+        />
 
-      <TableCrud
-        columns={columns}
-        rows={solicitudes}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        emptyMessage="No hay solicitudes de crédito"
-      />
+        <TableCrud
+          columns={columns}
+          rows={solicitudes}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          emptyMessage="No hay solicitudes de crédito"
+        />
+      </Stack>
     </MainLayout>
   );
 }

@@ -1,11 +1,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
+import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import {
-  HeaderContainer,
   ControlsContainer,
   SearchInput,
   CreateButton,
@@ -84,7 +83,7 @@ export default function Roles() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Roles" />
         <ControlsContainer>
           <SearchInput
@@ -109,22 +108,22 @@ export default function Roles() {
             Nuevo
           </CreateButton>
         </ControlsContainer>
-      </HeaderContainer>
+        <TableCrud
+          columns={columns}
+          rows={list.data}
+          actions={actions}
+          loading={list.isLoading}
+          rowKey="id"
+          page={list.page}
+          rowsPerPage={list.rowsPerPage}
+          totalRows={list.total}
+          onPageChange={list.setPage}
+          onRowsPerPageChange={list.setRowsPerPage}
+          onRowClick={handleEditRole}
+          emptyMessage="No hay roles registrados"
+        />
+      </Stack>
 
-      <TableCrud
-        columns={columns}
-        rows={list.data}
-        actions={actions}
-        loading={list.isLoading}
-        rowKey="id"
-        page={list.page}
-        rowsPerPage={list.rowsPerPage}
-        totalRows={list.total}
-        onPageChange={list.setPage}
-        onRowsPerPageChange={list.setRowsPerPage}
-        onRowClick={handleEditRole}
-        emptyMessage="No hay roles registrados"
-      />
     </MainLayout>
   );
 }

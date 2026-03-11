@@ -1,7 +1,7 @@
 import { Dialog, CircularProgress, Typography } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -53,7 +53,7 @@ export function SendToCostingModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 <ModalHeader>
                     <ModalTitle>Enviar a costeo</ModalTitle>
                     <CloseButton onClick={handleClose} disabled={loading} size="small">
@@ -93,7 +93,7 @@ export function SendToCostingModal({
                         )}
                     </ConfirmButton>
                 </ModalActions>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

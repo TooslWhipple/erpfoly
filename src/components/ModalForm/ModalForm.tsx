@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Form } from "../Form";
 import type { FormProps, FormFieldConfig } from "../Form";
 import {
-  StyledDialogContent,
+  DialogContent,
   ModalHeader,
   ModalTitle,
   ModalDescription,
@@ -16,34 +16,17 @@ import {
   ConfirmButton,
 } from "../Form/styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export interface ModalFormProps extends Omit<FormProps, "showHeader"> {
-  /** Modal open state */
   open: boolean;
-  /** Close modal callback */
   onClose: () => void;
-  /** Maximum width of the modal */
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
-  /** Disable close on backdrop click */
   disableBackdropClick?: boolean;
-  /** Disable close on escape key */
   disableEscapeKeyDown?: boolean;
-  /** Full width modal */
   fullWidth?: boolean;
-  /** Additional content to render after the form */
   children?: React.ReactNode;
-  /** Additional content to render in the header, next to the title */
   headerContent?: React.ReactNode;
-  /** Callback fired when form values change */
   onValuesChange?: (values: Record<string, unknown>) => void;
 }
-
-// ============================================================================
-// MODAL FORM COMPONENT
-// ============================================================================
 
 export function ModalForm({
   open,
@@ -69,7 +52,6 @@ export function ModalForm({
 }: ModalFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Handle modal close
   const handleClose = (_event: object, reason: "backdropClick" | "escapeKeyDown") => {
     if (reason === "backdropClick" && disableBackdropClick) {
       return;
@@ -82,7 +64,6 @@ export function ModalForm({
     }
   };
 
-  // Handle cancel - use onCancel if provided, otherwise use onClose
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -91,12 +72,10 @@ export function ModalForm({
     }
   };
 
-  // Handle confirm with auto-close on success
   const handleConfirm = async (data: Record<string, unknown>) => {
     await onConfirm(data);
   };
 
-  // Handle form submit trigger
   const handleSubmitClick = () => {
     if (formRef.current) {
       formRef.current.requestSubmit();
@@ -116,8 +95,7 @@ export function ModalForm({
         },
       }}
     >
-      <StyledDialogContent>
-        {/* Header */}
+      <DialogContent>
         <ModalHeader>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
             <div>
@@ -131,7 +109,6 @@ export function ModalForm({
           </CloseButton>
         </ModalHeader>
 
-        {/* Form without its own header and actions */}
         <Box
           component="div"
           ref={(node: HTMLDivElement | null) => {
@@ -158,10 +135,8 @@ export function ModalForm({
           />
         </Box>
 
-        {/* Additional content (e.g., info messages) */}
         {children}
 
-        {/* Actions at the bottom, after children */}
         {showActions && (
           <FormActions>
             {onCancel && (
@@ -188,7 +163,7 @@ export function ModalForm({
             </ConfirmButton>
           </FormActions>
         )}
-      </StyledDialogContent>
+      </DialogContent>
     </Dialog>
   );
 }

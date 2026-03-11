@@ -11,7 +11,7 @@ export function GlobalSnackbar() {
       open={open}
       autoHideDuration={AUTO_HIDE_DURATION}
       onClose={close}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
     >
       <Alert onClose={close} severity={severity} sx={{ width: "100%" }}>
         {message}

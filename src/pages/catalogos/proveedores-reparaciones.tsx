@@ -1,24 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { Box, InputAdornment, CircularProgress } from "@mui/material";
+import { InputAdornment } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import {
-    MainLayout,
-    Title,
-    TableCrud,
-    FormTextField,
-    TabFilters,
-    ModalForm,
-    MultiSelectAutocomplete,
-} from "@/components";
+import { MainLayout, Title, TableCrud, TabFilters, ModalFormZod } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
-import type { SelectableItem } from "@/components/MultiSelectChips";
 import { HeaderContainer } from "@/styles/catalogos/catalogos.styledComponents";
 import {
     SettingsCard,
     SectionTitle,
     FieldContainer,
-    SaveButton,
     HelperNote,
 } from "@/styles/catalogos/proveedores-reparaciones.styles";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -34,12 +23,86 @@ import type { RepairSupplier } from "@/services/repair-suppliers.service";
 import { getDepartments } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { schemas, filters } from "@/forms";
+import {
+    defineFormFields,
+    FormFromFields,
+    type SchemaOutputFromFields,
+} from "@/forms";
+import { z } from "zod";
+import type { AutocompleteItem } from "@/forms";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+type RepairSupplierForm = {
+    name: string;
+    contactPerson?: string;
+    phone: string;
+    email?: string;
+    departmentIds?: (string | number)[];
+};
+
+function buildRepairSupplierFields(departmentItems: AutocompleteItem[]) {
+    return defineFormFields<RepairSupplierForm>()([
+        {
+            name: "name",
+            schema: schemas.requiredString(1, "El nombre del proveedor es requerido"),
+            label: "Nombre del proveedor",
+            type: "text",
+            placeholder: "Ingresa el nombre del proveedor",
+        },
+        {
+            name: "contactPerson",
+            schema: z.string().optional(),
+            label: "Persona de contacto",
+            type: "text",
+            placeholder: "Ingresa el nombre de la persona de contacto",
+        },
+        {
+            name: "phone",
+            schema: schemas.optionalString(),
+            label: "Número de teléfono",
+            type: "text",
+            placeholder: "Ingresa el número de teléfono",
+            filter: filters.onlyNumbers(10),
+        },
+        {
+            name: "email",
+            schema: z.preprocess(
+                (v) => (v === "" ? undefined : v),
+                schemas.emailString().optional(),
+            ),
+            label: "Correo electrónico",
+            type: "text",
+            placeholder: "Ingresa el correo electrónico",
+        },
+        {
+            name: "departmentIds",
+            schema: z.array(z.union([z.string(), z.number()])).optional(),
+            label: "Departamentos que puede atender",
+            type: "autocomplete",
+            placeholder: "Buscar departamentos...",
+            items: departmentItems,
+        },
+    ]);
+}
+
+const COST_INPUT_ADORNMENT = (
+    <InputAdornment position="start">$</InputAdornment>
+);
+
+const settingsFields = defineFormFields<{ hourlyCost: string }>()([
+    {
+        name: "hourlyCost",
+        schema: schemas.decimalString(2, "El costo es requerido"),
+        label: "Costo",
+        type: "text",
+        filter: filters.decimal(2),
+        slotProps: {
+            input: { startAdornment: COST_INPUT_ADORNMENT },
+        },
+    },
+]);
 
 export default function ProveedoresReparaciones() {
     const showSnackbar = useSnackbarStore((s) => s.showSuccess);
@@ -49,9 +112,19 @@ export default function ProveedoresReparaciones() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<RepairSupplier | null>(null);
     const [saving, setSaving] = useState(false);
-    const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<(string | number)[]>([]);
-    const [hourlyCost, setHourlyCost] = useState("720.00");
     const [savingSettings, setSavingSettings] = useState(false);
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            showSnackbar("Ajustes guardados.");
+        } catch {
+            showError("Error al guardar ajustes.");
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     const {
         data: suppliers,
@@ -91,10 +164,15 @@ export default function ProveedoresReparaciones() {
         },
     });
 
-    const departmentItems: SelectableItem[] = useMemo(() => {
+    const departmentItems: AutocompleteItem[] = useMemo(() => {
         const list = departmentsResponse?.data ?? [];
         return list.map((d: Department) => ({ id: d.id, label: d.name }));
     }, [departmentsResponse?.data]);
+
+    const repairSupplierFields = useMemo(
+        () => buildRepairSupplierFields(departmentItems),
+        [departmentItems],
+    );
 
     const tabs = [
         { value: "suppliers", label: "Proveedores", count: totalRows },
@@ -111,13 +189,11 @@ export default function ProveedoresReparaciones() {
 
     const handleCreateSupplier = () => {
         setEditingSupplier(null);
-        setSelectedDepartmentIds([]);
         setModalOpen(true);
     };
 
     const handleEditSupplier = (supplier: RepairSupplier) => {
         setEditingSupplier(supplier);
-        setSelectedDepartmentIds(supplier.departments.map((d) => d.id));
         setModalOpen(true);
     };
 
@@ -140,22 +216,23 @@ export default function ProveedoresReparaciones() {
         if (!saving) {
             setModalOpen(false);
             setEditingSupplier(null);
-            setSelectedDepartmentIds([]);
         }
     };
 
-    const handleSaveSupplier = async (data: Record<string, unknown>) => {
+    const handleSaveSupplier = async (
+        data: SchemaOutputFromFields<typeof repairSupplierFields>,
+    ) => {
         setSaving(true);
-        const departmentIds = selectedDepartmentIds.map((id) =>
+        const departmentIds = (data.departmentIds ?? []).map((id) =>
             typeof id === "string" ? parseInt(id, 10) : id,
         ).filter((id) => !Number.isNaN(id));
 
         if (editingSupplier) {
             const result = await updateRepairSupplier(editingSupplier.id, {
-                name: String(data.name ?? ""),
-                contactPerson: (data.contactPerson as string) || undefined,
-                phone: (data.phone as string) || undefined,
-                email: (data.email as string) || undefined,
+                name: data.name,
+                contactPerson: data.contactPerson || undefined,
+                phone: data.phone || undefined,
+                email: data.email || undefined,
                 departmentIds,
             });
             if (result.error) {
@@ -166,10 +243,10 @@ export default function ProveedoresReparaciones() {
             showSnackbar("Proveedor actualizado correctamente.");
         } else {
             const result = await createRepairSupplier({
-                name: String(data.name ?? ""),
-                contactPerson: (data.contactPerson as string) || undefined,
-                phone: (data.phone as string) || undefined,
-                email: (data.email as string) || undefined,
+                name: data.name,
+                contactPerson: data.contactPerson || undefined,
+                phone: data.phone || undefined,
+                email: data.email || undefined,
                 departmentIds: departmentIds.length > 0 ? departmentIds : undefined,
             });
             if (result.error) {
@@ -190,25 +267,6 @@ export default function ProveedoresReparaciones() {
 
     const handleRowsPerPageChange = (newRowsPerPage: number) => {
         setRowsPerPage(newRowsPerPage);
-    };
-
-    const handleHourlyCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-            setHourlyCost(value);
-        }
-    };
-
-    const handleSaveSettings = async () => {
-        setSavingSettings(true);
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            showSnackbar("Ajustes guardados.");
-        } catch {
-            showError("Error al guardar ajustes.");
-        } finally {
-            setSavingSettings(false);
-        }
     };
 
     const columns: Column<RepairSupplier>[] = [
@@ -259,42 +317,6 @@ export default function ProveedoresReparaciones() {
         },
     ];
 
-    const formFields: FormFieldConfig[] = [
-        {
-            name: "name",
-            label: "Nombre del proveedor",
-            type: "text",
-            placeholder: "Ingresa el nombre del proveedor",
-            validation: { required: true },
-            xs: 12,
-        },
-        {
-            name: "contactPerson",
-            label: "Persona de contacto",
-            type: "text",
-            placeholder: "Ingresa el nombre de la persona de contacto",
-            xs: 12,
-        },
-        {
-            name: "phone",
-            label: "Número de teléfono",
-            type: "phone",
-            placeholder: "Ingresa el número de teléfono",
-            xs: 12,
-        },
-        {
-            name: "email",
-            label: "Correo electrónico",
-            type: "email",
-            placeholder: "Ingresa el correo electrónico",
-            validation: {
-                pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                patternMessage: "El correo electrónico tiene un formato inválido",
-            },
-            xs: 12,
-        },
-    ];
-
     return (
         <MainLayout>
             <HeaderContainer>
@@ -341,70 +363,53 @@ export default function ProveedoresReparaciones() {
                 />
             )}
 
-            <ModalForm
+            <ModalFormZod
+                key={editingSupplier?.id ?? "new"}
                 open={modalOpen}
                 onClose={handleCloseModal}
-                title={editingSupplier ? editingSupplier.name : "Nuevo proveedor de reparaciones"}
-                fields={formFields}
-                onConfirm={handleSaveSupplier}
-                loading={saving}
-                initialValues={
+                title={
+                    editingSupplier
+                        ? editingSupplier.name
+                        : "Nuevo proveedor de reparaciones"
+                }
+                fields={repairSupplierFields}
+                defaultValues={
                     editingSupplier
                         ? {
                               name: editingSupplier.name,
                               contactPerson: editingSupplier.contactPerson ?? "",
                               phone: editingSupplier.phone ?? "",
                               email: editingSupplier.email ?? "",
+                              departmentIds: editingSupplier.departments.map((d) => d.id),
                           }
-                        : undefined
+                        : {
+                              name: "",
+                              contactPerson: "",
+                              phone: "",
+                              email: "",
+                              departmentIds: [],
+                          }
                 }
+                onSubmit={handleSaveSupplier}
+                loading={saving}
                 confirmLabel="Guardar cambios"
-                cancelLabel="Cancelar"
-                maxWidth="sm"
+                maxWidth="md"
                 fullWidth
-            >
-                <Box sx={{ mt: 2 }}>
-                    <MultiSelectAutocomplete
-                        label="Departamentos que puede atender"
-                        placeholder="Buscar departamentos..."
-                        items={departmentItems}
-                        selectedIds={selectedDepartmentIds}
-                        onChange={setSelectedDepartmentIds}
-                        disabled={saving}
-                        emptyText="No hay departamentos"
-                        emptyChipsText="No hay departamentos seleccionados"
-                    />
-                </Box>
-            </ModalForm>
+            />
 
             {activeTab === "settings" && (
                 <SettingsCard>
                     <SectionTitle>Costos por hora</SectionTitle>
                     <FieldContainer>
-                        <FormTextField
-                            label="Costo"
-                            value={hourlyCost}
-                            onChange={handleHourlyCostChange}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">$</InputAdornment>
-                                ),
-                            }}
-                            disabled={savingSettings}
+                        <FormFromFields
+                            fields={settingsFields}
+                            defaultValues={{ hourlyCost: "720.00" }}
+                            onSubmit={handleSaveSettings}
+                            confirmLabel="Guardar cambios"
+                            loading={savingSettings}
+                            actionsSx={{justifyContent: "flex-start"}}
                         />
                     </FieldContainer>
-                    <SaveButton
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSaveSettings}
-                        disabled={savingSettings || !hourlyCost}
-                    >
-                        {savingSettings ? (
-                            <CircularProgress size={20} color="inherit" />
-                        ) : (
-                            "Guardar cambios"
-                        )}
-                    </SaveButton>
                     <HelperNote>
                         El nuevo costo por hora será aplicado para nuevas órdenes de servicio,
                         no se afectarán las órdenes ya generadas.

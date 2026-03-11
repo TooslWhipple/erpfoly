@@ -9,7 +9,11 @@ import {
     CreateButton,
     SearchIconStyled,
 } from "@/styles/catalogos/catalogos.styledComponents";
-import { MessageFormModal, type MessageFormData } from "@/components/Messages";
+import {
+    MessageFormModal,
+    type MessageFormData,
+    type MessageVariableItem,
+} from "@/components/Messages";
 
 interface Message {
     id: number;
@@ -80,6 +84,15 @@ const DUMMY_MESSAGES: Message[] = [
         content: "Esta es tu recordatorio semanal: Tu próximo pago vence el *fecha_limite*. Monto pendiente: *monto_pendiente*.",
         status: "active",
     },
+];
+
+// TODO: replace with API call (e.g. getMessageVariables()) when backend is ready
+const MESSAGE_VARIABLES_CATALOG: MessageVariableItem[] = [
+    { key: "fecha_limite", label: "Fecha límite", value: "*fecha_limite*" },
+    { key: "num_factura", label: "Número de factura", value: "*num_factura*" },
+    { key: "descripcion_factura", label: "Descripción de factura", value: "*descripcion_factura*" },
+    { key: "total_adeudo", label: "Total adeudo", value: "*total_adeudo*" },
+    { key: "proximo_pag", label: "Próximo pago", value: "*proximo_pag*" },
 ];
 
 // ============================================================================
@@ -317,9 +330,11 @@ export default function Mensajes() {
             </Stack>
 
             <MessageFormModal
+                key={modalOpen ? (editingMessage?.id ?? "new") : "closed"}
                 open={modalOpen}
                 onClose={handleCloseModal}
                 onConfirm={handleSaveMessage}
+                messageVariables={MESSAGE_VARIABLES_CATALOG}
                 initialValues={
                     editingMessage
                         ? {

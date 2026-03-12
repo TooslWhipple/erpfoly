@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import type { Theme } from "@mui/material";
 
 export const HeaderRow = styled(Box)(({ theme }) => ({
@@ -8,6 +8,22 @@ export const HeaderRow = styled(Box)(({ theme }) => ({
   justifyContent: "space-between",
   width: "100%",
   marginBottom: theme.spacing(2),
+}));
+
+export const SideModalHeader = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  padding: theme.spacing(2, 3),
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+}));
+
+export const SideModalContent = styled(Stack)(({ theme }) => ({
+  flex: 1,
+  width: "100%",
+  backgroundColor: theme.palette.background.content,
+  padding: theme.spacing(2, 3),
+  borderBottomLeftRadius: 24,
+  borderBottomRightRadius: 24,
 }));
 
 export const PANEL_WIDTHS: Record<string, number> = {

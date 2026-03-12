@@ -54,6 +54,7 @@ export const ContentTextarea = styled(TextField)(({ theme }) => ({
   "& .MuiInputBase-input": {
     minHeight: "120px",
     padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.background.content,
   },
 }));
 

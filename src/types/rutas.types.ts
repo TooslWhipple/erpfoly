@@ -18,6 +18,15 @@ export interface RouteArticle {
   address: string;
 }
 
+/** Article from catalog that can be added to a route (SKU, type, name, zone) */
+export interface ArticleToAdd {
+  id: string;
+  sku: string;
+  type: "Venta" | "Servicio";
+  articleName: string;
+  zone: string;
+}
+
 export interface RoutePerson {
   id: string;
   name: string;

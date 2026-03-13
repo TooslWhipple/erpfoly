@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Stack, Typography, IconButton, Button } from "@mui/material";
+import { Stack, Typography, IconButton, Button, useTheme } from "@mui/material";
 import { Upload, Trash2, Download, Image, Clock9 } from "lucide-react";
 import {
   DropZoneRoot,
@@ -56,6 +56,8 @@ export function FileUpload({
   disabled = false,
   error,
 }: FileUploadProps) {
+  const theme = useTheme();
+
   const [isDragActive, setIsDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -178,14 +180,10 @@ export function FileUpload({
             disabled={disabled}
             style={{ display: "none" }}
           />
-          <Stack alignItems="center" spacing={1}>
-            <Upload size={32} color={colors.text.secondary} strokeWidth={1.5} />
-            <Typography variant="body2" color="text.secondary">
-              {placeholder}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Images and PDF. Max {Math.round(maxFileSizeBytes / 1024 / 1024)} MB.
-            </Typography>
+          <Stack alignItems="center" spacing={0.5}>
+            <Upload size={16} color={theme.palette.primary.main} strokeWidth={2} />
+            <Typography variant="body1" fontWeight={500} color="primary.main">{placeholder}</Typography>
+            <Typography variant="body1" fontWeight={400} color="primary.main">Images and PDF. Max {Math.round(maxFileSizeBytes / 1024 / 1024)} MB.</Typography>
           </Stack>
         </DropZoneRoot>
       )}
@@ -199,12 +197,13 @@ export function FileUpload({
             <Stack spacing={0.5}>
               <Stack minWidth={0}>
                 <Typography variant="subtitle2">{currentFile.name}</Typography>
-                {currentFile.uploadedAt && (
+                {
+                  currentFile.uploadedAt &&
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Clock9 size={14} color={colors.text.secondary} />
                     <Typography variant="caption">{currentFile.uploadedAt}</Typography>
                   </Stack>
-                )}
+                }
               </Stack>
             </Stack>
           </Stack>
@@ -213,9 +212,7 @@ export function FileUpload({
               onClick={(e) => {
                 e.stopPropagation();
                 removeFile(currentFile.id);
-              }}
-              aria-label="Remove file"
-            >
+              }}>
               <Trash2 size={16} color={colors.text.secondary} />
             </IconButton>
             <Button
@@ -226,8 +223,7 @@ export function FileUpload({
               onClick={(e) => {
                 e.stopPropagation();
                 downloadFile(currentFile);
-              }}
-            >
+              }}>
               Download
             </Button>
           </Stack>

@@ -1,18 +1,18 @@
-import { styled } from "@mui/material/styles";
+import { styled, darken } from "@mui/material/styles";
 import { colors } from "@/styles/theme";
 
 export const DropZoneRoot = styled("div")<{ isDragActive: boolean; isError?: boolean }>(
   ({ theme, isDragActive, isError }) => ({
-    border: `2px dashed ${isError ? "#DC2626" : isDragActive ? theme.palette.primary.main : colors.border}`,
-    borderRadius: 8,
-    backgroundColor: isDragActive ? `${theme.palette.primary.main}08` : colors.background.sidebar,
-    padding: theme.spacing(3),
+    border: `2px dashed ${(isError) ? "#DC2626" : (isDragActive) ? darken(theme.palette.primary.main, 0.06) : theme.palette.primary.main}`,
+    borderRadius: "12px",
+    backgroundColor: ((isDragActive) ? darken("EFF6FF", 0.06) : "#EFF6FF"),
+    padding: "24px 12px",
     textAlign: "center",
     cursor: "pointer",
     transition: "border-color 0.2s, background-color 0.2s",
     "&:hover": {
-      borderColor: isError ? "#DC2626" : theme.palette.primary.light,
-      backgroundColor: `${theme.palette.primary.main}06`,
+      borderColor: (isError) ? "#DC2626" : darken(theme.palette.primary.main, 0.06),
+      backgroundColor: darken("#EFF6FF", 0.06),
     },
   })
 );

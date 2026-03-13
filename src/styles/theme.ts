@@ -7,6 +7,7 @@ export const colors = {
   background: {
     main: "#FAFAFA",
     sidebar: "#FFFFFF",
+    content: "#F8FAFC",
   },
   border: "#E4E4E7",
   text: {
@@ -60,6 +61,7 @@ export const theme = createTheme({
     background: {
       default: colors.background.main,
       paper: colors.background.sidebar,
+      content: colors.background.content,
     },
     text: {
       primary: "#232325",
@@ -251,3 +253,9 @@ export const theme = createTheme({
     },
   },
 });
+
+declare module "@mui/material/styles" {
+  interface TypeBackground {
+    content: string;
+  }
+}

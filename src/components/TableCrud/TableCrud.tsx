@@ -87,6 +87,7 @@ export interface RowAction<T> {
   onClick: (row: T) => void;
   color?: "inherit" | "error" | "primary" | "secondary";
   permission?: string;
+  disabled?: boolean | ((row: T) => boolean);
 }
 
 interface TableCrudProps<T> {
@@ -407,10 +408,7 @@ export function TableCrud<T>({
                     return renderCell(value, column, row);
                   })}
                   {hasActions && (
-                    <ActionsCell
-                      align="center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <ActionsCell align="center" onClick={(e) => e.stopPropagation()}>
                       <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
                         <MoreVertIcon />
                       </ActionsButton>
@@ -452,16 +450,23 @@ export function TableCrud<T>({
           horizontal: "right",
         }}
       >
-        {actions?.map((action) => (
-          <StyledMenuItem
-            key={action.id}
-            onClick={() => handleActionClick(action)}
-            sx={{ color: action.color === "error" ? "error.main" : "inherit" }}
-          >
-            {action.icon}
-            {action.label}
-          </StyledMenuItem>
-        ))}
+        {actions?.map((action) => {
+          const isDisabled =
+            typeof action.disabled === "function" && selectedRow
+              ? action.disabled(selectedRow)
+              : Boolean(action.disabled);
+          return (
+            <StyledMenuItem
+              key={action.id}
+              onClick={() => !isDisabled && handleActionClick(action)}
+              disabled={isDisabled}
+              sx={{ color: action.color === "error" ? "error.main" : "inherit" }}
+            >
+              {action.icon}
+              {action.label}
+            </StyledMenuItem>
+          );
+        })}
       </StyledMenu>
     </TableWrapper>
   );

@@ -63,6 +63,7 @@ export interface GeneralDataFormState {
     code: string;
     description: string;
     shortName: string;
+    piecesCount: string;
     warrantyType: WarrantyType;
     warrantyMonths: string;
 }

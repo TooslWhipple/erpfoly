@@ -1,4 +1,10 @@
-import type { RouteSummary, RouteDetail, RouteArticle, RoutePerson } from "@/types/rutas.types";
+import type {
+  RouteSummary,
+  RouteDetail,
+  RouteArticle,
+  RoutePerson,
+  ArticleToAdd,
+} from "@/types/rutas.types";
 
 export const MOCK_ROUTES_SUMMARY: RouteSummary[] = [
   { id: 1, name: "RUTA 1", status: "scheduled", location: "Altamira Centro", articleCount: 6, pointCount: 6 },
@@ -70,5 +76,49 @@ export function getRoutesByDate(_date: Date): Promise<RouteSummary[]> {
 export function getRouteDetailById(id: number): Promise<RouteDetail | null> {
   return new Promise((resolve) => {
     setTimeout(() => resolve(getRouteDetail(id)), 300);
+  });
+}
+
+const MOCK_ARTICLES_TO_ADD: ArticleToAdd[] = [
+  {
+    id: "add-1",
+    sku: "18563",
+    type: "Venta",
+    articleName: "Estufa Mabe 30\" de Piso EM7654BFIS2/3 Acero...",
+    zone: "Altamira",
+  },
+  {
+    id: "add-2",
+    sku: "18563",
+    type: "Servicio",
+    articleName: "Secadora Whirlpool 20 kg Carga Superior Blanc...",
+    zone: "Altamira",
+  },
+  {
+    id: "add-3",
+    sku: "18563",
+    type: "Servicio",
+    articleName: "Refrigerador Whirlpool 25' Side by Side Gris WD...",
+    zone: "Altamira",
+  },
+  {
+    id: "add-4",
+    sku: "19680",
+    type: "Venta",
+    articleName: "Refrigerador Whirlpool 25' Side by Side Gris WD...",
+    zone: "Altamira",
+  },
+  {
+    id: "add-5",
+    sku: "19800",
+    type: "Servicio",
+    articleName: "Lavadora Mabe 18 kg LMA74143BDB0 Blanca",
+    zone: "Altamira",
+  },
+];
+
+export function getAvailableArticlesToAdd(_routeId: number): Promise<ArticleToAdd[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve([...MOCK_ARTICLES_TO_ADD]), 200);
   });
 }

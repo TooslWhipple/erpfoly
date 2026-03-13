@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Stack, Typography, IconButton, Skeleton, Divider } from "@mui/material";
-import { ChevronLeft, ChevronRight, User, Box, Route, Truck } from "lucide-react";
+import { Stack, Typography, IconButton, Skeleton, Divider, Button } from "@mui/material";
+import { ChevronLeft, ChevronRight, User, Box, Route, Truck, PlusCircle } from "lucide-react";
 import {
   MainLayout,
   StatusChip,
@@ -14,6 +14,7 @@ import {
   DetailHeader,
 } from "@/styles/rutas.styles";
 import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/pages/rutas/tabs";
+import { AddArticlesToRouteModal } from "@/pages/rutas/AddArticlesToRouteModal";
 import { getRoutesByDate, getRouteDetailById } from "@/data/rutas.mockData";
 import type { RouteSummary, RouteDetail } from "@/types/rutas.types";
 import { colors } from "@/styles/theme";
@@ -72,6 +73,7 @@ export default function RutaPage() {
 
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
   const [cartaPorteFiles, setCartaPorteFiles] = useState<UploadedFileItem[]>([]);
+  const [addArticlesModalOpen, setAddArticlesModalOpen] = useState(false);
 
   const loadRoutes = useCallback(async () => {
     setRoutesLoading(true);
@@ -238,11 +240,21 @@ export default function RutaPage() {
                 </Stack>
               </DetailHeader>
 
-              <TabFilters
-                tabs={TABS}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-              />
+              <Stack spacing={2} direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+                <TabFilters
+                  tabs={TABS}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                />
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PlusCircle size={16} />}
+                  onClick={() => setAddArticlesModalOpen(true)}
+                >
+                  Agregar
+                </Button>
+              </Stack>
 
               {activeTab === TAB_ARTICLES && (
                 <ArticlesTab articles={routeDetail.articles} />
@@ -260,6 +272,19 @@ export default function RutaPage() {
               {activeTab === TAB_DRIVER && (
                 <DriverTab routeDetail={routeDetail} />
               )}
+
+              {
+                selectedRouteId && (
+                  <AddArticlesToRouteModal
+                    open={addArticlesModalOpen}
+                    onClose={() => setAddArticlesModalOpen(false)}
+                    routeId={selectedRouteId}
+                    onConfirm={async (articleIds) => {
+                      if (selectedRouteId) await loadRouteDetail(selectedRouteId);
+                    }}
+                  />
+                )
+              }
             </Stack>
           ) :
             <Typography variant="body2" color="text.secondary">

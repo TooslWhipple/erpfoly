@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { messages } from "./messages";
+import { messages } from "../messages";
 
 /**
- * Reusable Zod schemas for form validation.
- * Use with defineFormFields() or directly in useFormWithZod.
+ * Schemas genéricos reutilizables para validación de formularios.
+ * Usar con defineFormFields() o directamente en useFormWithZod.
  */
 export const schemas = {
     requiredString(minLength = 1, msg: string = messages.required) {
@@ -43,7 +43,6 @@ export const schemas = {
             .max(max, messages.number.max(max));
     },
 
-    /** String representing a decimal (e.g. cost). Optionally limits decimal places. */
     decimalString(maxFractionDigits = 2, requiredMsg: string = messages.required) {
         const re = new RegExp(`^\\d*\\.?\\d{0,${maxFractionDigits}}$`);
         return z

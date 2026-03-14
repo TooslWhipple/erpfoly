@@ -7,7 +7,7 @@ import {
     StyledRadioGroup,
     StyledFormControlLabel,
 } from "@/styles/catalogos/proveedores.styles";
-import type { GeneralFormValues } from "./types";
+import type { GeneralFormValues } from "@/types/proveedores.types";
 
 export interface GeneralTabProps {
     values: GeneralFormValues;

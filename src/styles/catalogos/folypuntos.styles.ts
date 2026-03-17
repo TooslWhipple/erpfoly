@@ -12,7 +12,8 @@ export const FormCard = styled('div')({
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
   borderRadius: "8px",
-  padding: "24px",
+  gap: "24px",
+  padding: "24px"
 });
 
 export const NumberInputContainer = styled('div')(({ theme }) => ({

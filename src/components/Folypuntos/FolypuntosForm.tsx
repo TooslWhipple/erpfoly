@@ -60,8 +60,10 @@ export function FolypuntosForm({
     return (
         <Stack spacing={2}>
             <FormCard>
-                <Typography variant="h6">{PURCHASE_SECTION.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{PURCHASE_SECTION.description}</Typography>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">{PURCHASE_SECTION.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">{PURCHASE_SECTION.description}</Typography>
+                </Stack>
                 <NumberInputContainer>
                     <CurrencyInput
                         value={config.amountToSpend}
@@ -90,10 +92,11 @@ export function FolypuntosForm({
                     />
                 </NumberInputContainer>
             </FormCard>
-
             <FormCard>
-                <Typography variant="h6">{SALE_SECTION.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{SALE_SECTION.description}</Typography>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">{SALE_SECTION.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">{SALE_SECTION.description}</Typography>
+                </Stack>
                 <NumberInputContainer>
                     <StepperGroupLabel>
                         <Typography component="span">1 Folypunto</Typography>

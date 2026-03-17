@@ -124,7 +124,6 @@ export function GeneralDataTab({
                                 inputProps={{
                                     min: MIN_PIECES,
                                     max: MAX_PIECES,
-                                    "aria-label": "Número de piezas",
                                 }}
                                 value={formState.piecesCount}
                                 onChange={(e) => {

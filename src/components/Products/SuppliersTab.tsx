@@ -1,21 +1,10 @@
 import { useState } from "react";
-import { Box } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import {
-    Section,
-    SectionTitle,
-    SectionDescription,
-    EmptyStateContainer,
-    EmptyStateText,
-    SaveButton,
-} from "@/styles/catalogos/productos.styles";
+import { EmptyStateContainer } from "@/styles/catalogos/productos.styles";
 import { AddSupplierModal } from "./AddSupplierModal";
 import type { ProductSupplier } from "@/types/productos.types";
 import type { SupplierForSelection } from "@/data/productos.mockData";
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface SuppliersTabProps {
     suppliers: ProductSupplier[];
@@ -23,10 +12,6 @@ interface SuppliersTabProps {
     onAddSupplier: (supplierId: number) => Promise<void>;
     onNewSupplier?: () => void;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function SuppliersTab({
     suppliers,
@@ -59,35 +44,32 @@ export function SuppliersTab({
 
     return (
         <>
-            <Section>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                    <Box>
-                        <SectionTitle>Proveedores</SectionTitle>
-                        <SectionDescription>
-                            Agrega los proveedores para este artículo
-                        </SectionDescription>
-                    </Box>
-                    <SaveButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenModal}
-                    >
-                        Agregar proveedor
-                    </SaveButton>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                <Box>
+                    <Typography variant="h6">Proveedores</Typography>
+                    <Typography variant="body1">
+                        Agrega los proveedores para este artículo
+                    </Typography>
                 </Box>
-                {suppliers.length === 0 ? (
-                    <EmptyStateContainer>
-                        <EmptyStateText>
-                            No tienes proveedores asignados para este artículo.
-                        </EmptyStateText>
-                    </EmptyStateContainer>
-                ) : (
-                    <Box>
-                        {/* Lista de proveedores - implementar cuando se necesite mostrar */}
-                    </Box>
-                )}
-            </Section>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenModal}
+                >
+                    Agregar proveedor
+                </Button>
+            </Box>
+            {suppliers.length === 0 ? (
+                <EmptyStateContainer>
+                    <Typography variant="body1">
+                        No tienes proveedores asignados para este artículo.
+                    </Typography>
+                </EmptyStateContainer>
+            ) : (
+                <Box>
+                </Box>
+            )}
 
             <AddSupplierModal
                 open={modalOpen}

@@ -22,6 +22,7 @@ import type { SalesBranchConfig } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
 import { Stack, Typography } from "@mui/material";
 import { InventoryTab, ActivityTab, TechnicalTab, ConfigurationsTab } from "./sku-tabs";
+import TranspasosPage from "./transpasos";
 
 async function getInventoryDetail(sku: string) {
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -72,14 +73,19 @@ async function getSalesBranches(sku: string) {
     return getSalesBranchesConfig(sku);
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function InventoryDetail() {
     const router = useRouter();
     const { sku } = router.query;
+    const skuStr = typeof sku === "string" ? sku : Array.isArray(sku) ? sku[0] : undefined;
 
+    if (skuStr === "transpasos") {
+        return <TranspasosPage />;
+    }
+
+    return <InventoryDetailContent sku={skuStr} />;
+}
+
+function InventoryDetailContent({ sku }: { sku: string | undefined }) {
     const [activeTab, setActiveTab] = useState("inventory");
     const [loading, setLoading] = useState(true);
     const [inventoryDetail, setInventoryDetail] = useState(MOCK_INVENTORY_DETAIL);
@@ -94,11 +100,10 @@ export default function InventoryDetail() {
     const [salesBranches, setSalesBranches] = useState<SalesBranchConfig[]>([]);
 
     useEffect(() => {
-        if (!sku || typeof sku !== "string") return;
+        const skuVal = sku;
+        if (!skuVal) return;
 
-        const skuString = Array.isArray(sku) ? sku[0] : sku;
-
-        async function loadData() {
+        async function loadData(skuString: string) {
             setLoading(true);
             try {
                 const [
@@ -142,7 +147,7 @@ export default function InventoryDetail() {
             }
         }
 
-        loadData();
+        loadData(skuVal);
     }, [sku]);
 
     const handleBranchToggle = (branchId: string, enabled: boolean) => {
@@ -196,24 +201,28 @@ export default function InventoryDetail() {
                 />
 
 
-                {activeTab === "inventory" && (
+                {
+                    activeTab === "inventory" &&
                     <InventoryTab
                         summary={summary}
                         branchInventory={branchInventory}
                         loading={loading}
                     />
-                )}
-                {activeTab === "activity" && (
+                }
+                {
+                    activeTab === "activity" &&
                     <ActivityTab salesData={salesData} activityLog={activityLog} />
-                )}
-                {activeTab === "configurations" && (
+                }
+                {
+                    activeTab === "configurations" &&
                     <ConfigurationsTab
                         branches={salesBranches}
                         loading={loading}
                         onBranchToggle={handleBranchToggle}
                     />
-                )}
-                {activeTab === "technical" && (
+                }
+                {
+                    activeTab === "technical" &&
                     <TechnicalTab
                         inventoryDetail={inventoryDetail}
                         suppliers={suppliers}
@@ -222,7 +231,7 @@ export default function InventoryDetail() {
                         gallery={gallery}
                         loading={loading}
                     />
-                )}
+                }
             </Stack>
         </MainLayout>
     );

@@ -2,22 +2,11 @@ import { styled } from "@mui/material/styles";
 import { Tab, Tabs } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const Container = styled('div')(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  flexDirection: "row",
-  gap: "16px",
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column-reverse",
-    alignItems: "stretch",
-    gap: "12px"
-  },
-}));
 
 export const TabsWrapper = styled('div')(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
+  display: 'flex',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
   height: 36,
   backgroundColor: colors.segmentControl.background,
   borderRadius: 10,
@@ -28,6 +17,9 @@ export const TabsWrapper = styled('div')(({ theme }) => ({
     display: "none",
   },
   scrollbarWidth: "none",
+  [theme.breakpoints.down("md")]: {
+    width: '100%'
+  }
 }));
 
 export const StyledTabs = styled(Tabs)(({ theme }) => ({
@@ -47,6 +39,14 @@ export const StyledTabs = styled(Tabs)(({ theme }) => ({
       display: "none",
     },
     scrollbarWidth: "none",
+  },
+  [theme.breakpoints.down("md")]: {
+    "& .MuiTabs-flexContainer": {
+      width: "100%",
+    },
+    "& .MuiTabs-scroller": {
+      overflow: "hidden !important",
+    },
   },
 }));
 
@@ -73,28 +73,11 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
     padding: "0 12px",
     fontSize: 13,
   },
-}));
-
-export const SearchContainer = styled('div', {
-  shouldForwardProp: (prop) => prop !== "singleAction",
-})<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
-  flexShrink: 0,
   [theme.breakpoints.down("md")]: {
-    width: singleAction ? "auto" : "100%",
-    flex: singleAction ? "1 1 auto" : "none",
-  },
-}));
-
-export const FiltersRightSection = styled('div', {
-  shouldForwardProp: (prop) => prop !== "singleAction",
-})<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "12px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    flexDirection: (singleAction) ? "row" : "column",
-    flexWrap: (singleAction) ? "nowrap" : "wrap",
+    flex: 1,
+    minWidth: 0,
+    maxWidth: "none",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 }));

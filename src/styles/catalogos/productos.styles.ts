@@ -13,12 +13,6 @@ export const FormCard = styled('div')(({ theme }) => ({
     gap: "24px",
 }));
 
-export const RadioGroupContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(1),
-}));
-
 export const RadioLabel = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",
     fontWeight: 400,
@@ -164,7 +158,6 @@ export const InventoryLabel = styled(Typography)(({ theme }) => ({
 }));
 
 export const InventoryInput = styled(TextField)(({ theme }) => ({
-    width: 80,
     "& .MuiOutlinedInput-root": {
         height: 32,
         "& input": {
@@ -196,12 +189,6 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => ({
     border: `1px solid ${colors.border}`,
     borderRadius: 8,
     textAlign: "center",
-}));
-
-export const EmptyStateText = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    marginTop: theme.spacing(1),
 }));
 
 export const CostSummaryContainer = styled(Box)(({ theme }) => ({

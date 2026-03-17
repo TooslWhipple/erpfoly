@@ -46,7 +46,7 @@ export function ContactsTab({
                     return (
                         <Stack key={contact.id} spacing={3} width="100%">
                             <Grid container spacing={1} alignItems="center">
-                                <Grid size={{ xs: 12, md: 1 }}>
+                                <Grid size={{ xs: 12, md: 2 }}>
                                     <FormSelect
                                         label="Cargo"
                                         placeholder="Selecciona..."

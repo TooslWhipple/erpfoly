@@ -1,19 +1,11 @@
-import { Grid } from "@mui/material";
+import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box } from "@mui/material";
+import { Remove, Add } from "@mui/icons-material";
 import { FormTextField, FormSelect } from "@/components";
-import {
-    Section,
-    SectionTitle,
-    SectionDescription,
-    RadioGroupContainer,
-    StyledRadioGroup,
-    StyledFormControlLabel,
-} from "@/styles/catalogos/productos.styles";
+import { InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
-import { Box } from "@mui/material";
 
-// ============================================================================
-// TYPES
-// ============================================================================
+const MIN_PIECES = 1;
+const MAX_PIECES = 9999;
 
 interface GeneralDataTabProps {
     formState: GeneralDataFormState;
@@ -24,10 +16,6 @@ interface GeneralDataTabProps {
     lines: Array<{ value: string; label: string }>;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function GeneralDataTab({
     formState,
     errors,
@@ -37,13 +25,13 @@ export function GeneralDataTab({
     lines,
 }: GeneralDataTabProps) {
     return (
-        <Section>
-            <SectionTitle>Datos generales</SectionTitle>
-            <SectionDescription>
-                Registra los básicos del artículo
-            </SectionDescription>
+        <Stack width="100%" spacing={3} divider={<Divider />}>
+            <Stack spacing={0.5}>
+                <Typography variant="h6">Datos generales</Typography>
+                <Typography variant="body2" color="text.secondary">Registra los básicos del artículo</Typography>
+            </Stack>
             <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <FormSelect
                         label="Departamento"
                         placeholder="Selecciona"
@@ -58,7 +46,7 @@ export function GeneralDataTab({
                         required
                     />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <FormSelect
                         label="Línea"
                         placeholder="Selecciona"
@@ -73,7 +61,7 @@ export function GeneralDataTab({
                         required
                     />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <FormTextField
                         label="Código"
                         placeholder="-"
@@ -86,6 +74,8 @@ export function GeneralDataTab({
                     <FormTextField
                         label="Descripción del artículo"
                         placeholder="Ingresa"
+                        multiline
+                        rows={3}
                         value={formState.description}
                         onChange={(e) => {
                             onFieldChange("description", e.target.value);
@@ -112,47 +102,103 @@ export function GeneralDataTab({
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                    <SectionTitle sx={{ fontSize: "0.875rem", mb: 1 }}>
-                        Garantía
-                    </SectionTitle>
-                    <SectionDescription sx={{ mb: 2 }}>
-                        Selecciona el tipo de garantía
-                    </SectionDescription>
-                    <RadioGroupContainer>
-                        <StyledRadioGroup>
-                            <StyledFormControlLabel
-                                value="months"
-                                label="Meses"
-                                checked={formState.warrantyType === "months"}
-                                onChange={(e) => onFieldChange("warrantyType", e.target.value as WarrantyType)}
-                            />
-                            <StyledFormControlLabel
-                                value="policy"
-                                label="Póliza anexa"
-                                checked={formState.warrantyType === "policy"}
-                                onChange={(e) => onFieldChange("warrantyType", e.target.value as WarrantyType)}
-                            />
-                        </StyledRadioGroup>
-                    </RadioGroupContainer>
-                    {formState.warrantyType === "months" && (
-                        <Box sx={{ mt: 2 }}>
-                            <FormTextField
-                                label="Meses de garantía"
-                                placeholder="12"
-                                type="number"
-                                value={formState.warrantyMonths}
-                                onChange={(e) => {
-                                    onFieldChange("warrantyMonths", e.target.value);
-                                    onErrorClear("warrantyMonths");
+                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                        <Typography variant="body1" fontWeight={600} component="span">
+                            Número de piezas:
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <InventoryButton
+                                size="small"
+                                aria-label="Reducir piezas"
+                                onClick={() => {
+                                    const current = Math.max(MIN_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
+                                    const next = Math.max(MIN_PIECES, current - 1);
+                                    onFieldChange("piecesCount", String(next));
+                                    onErrorClear("piecesCount");
                                 }}
-                                error={Boolean(errors.warrantyMonths)}
-                                helperText={errors.warrantyMonths}
-                                required
+                            >
+                                <Remove fontSize="small" />
+                            </InventoryButton>
+                            <InventoryInput
+                                type="number"
+                                inputProps={{
+                                    min: MIN_PIECES,
+                                    max: MAX_PIECES,
+                                }}
+                                value={formState.piecesCount}
+                                onChange={(e) => {
+                                    const raw = e.target.value;
+                                    if (raw === "" || /^\d+$/.test(raw)) {
+                                        onFieldChange("piecesCount", raw);
+                                        onErrorClear("piecesCount");
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    const num = parseInt(e.target.value, 10);
+                                    if (Number.isNaN(num) || num < MIN_PIECES) {
+                                        onFieldChange("piecesCount", String(MIN_PIECES));
+                                    } else if (num > MAX_PIECES) {
+                                        onFieldChange("piecesCount", String(MAX_PIECES));
+                                    }
+                                }}
                             />
-                        </Box>
+                            <InventoryButton
+                                size="small"
+                                aria-label="Aumentar piezas"
+                                onClick={() => {
+                                    const current = Math.min(MAX_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
+                                    const next = Math.min(MAX_PIECES, current + 1);
+                                    onFieldChange("piecesCount", String(next));
+                                    onErrorClear("piecesCount");
+                                }}
+                            >
+                                <Add fontSize="small" />
+                            </InventoryButton>
+                        </Stack>
+                    </Box>
+                    {errors.piecesCount && (
+                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
+                            {errors.piecesCount}
+                        </Typography>
                     )}
                 </Grid>
             </Grid>
-        </Section>
+            <Stack spacing={3}>
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">Garantía</Typography>
+                    <Typography variant="body2" color="text.secondary">Selecciona el tipo de garantía</Typography>
+                </Stack>
+                <RadioGroup row>
+                    <FormControlLabel
+                        control={<Radio />}
+                        label="Meses"
+                        checked={formState.warrantyType === "months"}
+                        onChange={() => onFieldChange("warrantyType", "months")}
+                    />
+                    <FormControlLabel
+                        control={<Radio />}
+                        label="Póliza anexa"
+                        checked={formState.warrantyType === "policy"}
+                        onChange={() => onFieldChange("warrantyType", "policy")}
+                    />
+                </RadioGroup>
+                {
+                    formState.warrantyType === "months" &&
+                    <FormTextField
+                        label="Meses de garantía"
+                        placeholder="12"
+                        type="number"
+                        value={formState.warrantyMonths}
+                        onChange={(e) => {
+                            onFieldChange("warrantyMonths", e.target.value);
+                            onErrorClear("warrantyMonths");
+                        }}
+                        error={Boolean(errors.warrantyMonths)}
+                        helperText={errors.warrantyMonths}
+                        required
+                    />
+                }
+            </Stack>
+        </Stack>
     );
 }

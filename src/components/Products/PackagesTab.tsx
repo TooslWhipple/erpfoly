@@ -1,21 +1,10 @@
 import { useState } from "react";
-import { Box } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import {
-    Section,
-    SectionTitle,
-    SectionDescription,
-    EmptyStateContainer,
-    EmptyStateText,
-    SaveButton,
-} from "@/styles/catalogos/productos.styles";
+import { EmptyStateContainer } from "@/styles/catalogos/productos.styles";
 import { AddPackageModal } from "./AddPackageModal";
 import type { PackageFormData, SelectableItem } from "@/types/productos.types";
 import type { ArticleForPackage } from "@/data/productos.mockData";
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface PackagesTabProps {
     packages: unknown[];
@@ -23,10 +12,6 @@ interface PackagesTabProps {
     availableBranches: SelectableItem[];
     onAddPackage: (data: PackageFormData) => Promise<void>;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function PackagesTab({
     packages,
@@ -56,35 +41,32 @@ export function PackagesTab({
 
     return (
         <>
-            <Section>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                    <Box>
-                        <SectionTitle>Paquetes</SectionTitle>
-                        <SectionDescription>
-                            Configura los artículos que se podrán vender como paquete junto con este producto
-                        </SectionDescription>
-                    </Box>
-                    <SaveButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenModal}
-                    >
-                        Agregar paquete
-                    </SaveButton>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                <Box>
+                    <Typography variant="h6">Paquetes</Typography>
+                    <Typography variant="body1">
+                        Configura los artículos que se podrán vender como paquete junto con este producto
+                    </Typography>
                 </Box>
-                {packages.length === 0 ? (
-                    <EmptyStateContainer>
-                        <EmptyStateText>
-                            No hay paquetes agregados
-                        </EmptyStateText>
-                    </EmptyStateContainer>
-                ) : (
-                    <Box>
-                        {/* Lista de paquetes - implementar cuando se necesite mostrar */}
-                    </Box>
-                )}
-            </Section>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenModal}>
+                    Agregar paquete
+                </Button>
+            </Box>
+            {packages.length === 0 ? (
+                <EmptyStateContainer>
+                    <Typography variant="body1">
+                        No hay paquetes agregados
+                    </Typography>
+                </EmptyStateContainer>
+            ) : (
+                <Box>
+                    {/* Lista de paquetes - implementar cuando se necesite mostrar */}
+                </Box>
+            )}
 
             <AddPackageModal
                 open={modalOpen}

@@ -13,6 +13,7 @@ import {
 import { colors } from "@/styles/theme";
 
 export const TableWrapper = styled('div')({
+  width: "100%",
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
   borderRadius: 8,

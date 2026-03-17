@@ -11,12 +11,14 @@ import {
 } from "@/styles/catalogos/proveedores-reparaciones.styles";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     getRepairSuppliers,
     createRepairSupplier,
     updateRepairSupplier,
     deleteRepairSupplier,
+    getRepairSupplierConfiguration,
+    updateRepairSupplierConfiguration,
 } from "@/services/repair-suppliers.service";
 import type { RepairSupplier } from "@/services/repair-suppliers.service";
 import { getDepartments } from "@/services/departments.service";
@@ -93,7 +95,12 @@ const COST_INPUT_ADORNMENT = (
 const settingsFields = defineFormFields<{ hourlyCost: string }>()([
     {
         name: "hourlyCost",
-        schema: schemas.decimalString(2, "El costo es requerido"),
+        schema: schemas
+            .decimalString(2, "El costo es requerido")
+            .refine(
+                (v) => parseFloat(String(v).replace(/,/g, "")) >= 0,
+                "El costo debe ser mayor o igual a 0",
+            ),
         label: "Costo",
         type: "text",
         filter: filters.decimal(2),
@@ -106,6 +113,7 @@ const settingsFields = defineFormFields<{ hourlyCost: string }>()([
 export default function ProveedoresReparaciones() {
     const showSnackbar = useSnackbarStore((s) => s.showSuccess);
     const showError = useSnackbarStore((s) => s.showError);
+    const queryClient = useQueryClient();
 
     const [activeTab, setActiveTab] = useState("suppliers");
     const [modalOpen, setModalOpen] = useState(false);
@@ -113,16 +121,29 @@ export default function ProveedoresReparaciones() {
     const [saving, setSaving] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
 
-    const handleSaveSettings = async () => {
+    const { data: configData } = useQuery({
+        queryKey: ["repair-supplier-configuration"],
+        queryFn: async () => {
+            const result = await getRepairSupplierConfiguration();
+            if (result.error) throw new Error(result.error.message);
+            if (!result.data) throw new Error("No data");
+            return result.data;
+        },
+        enabled: activeTab === "settings",
+    });
+
+    const handleSaveSettings = async (data: { hourlyCost: string }) => {
         setSavingSettings(true);
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            showSnackbar("Ajustes guardados.");
-        } catch {
-            showError("Error al guardar ajustes.");
-        } finally {
-            setSavingSettings(false);
+        const result = await updateRepairSupplierConfiguration({
+            cost: parseFloat(data.hourlyCost.replace(/,/g, "")),
+        });
+        setSavingSettings(false);
+        if (result.error) {
+            showError(result.error.message);
+            return;
         }
+        await queryClient.invalidateQueries({ queryKey: ["repair-supplier-configuration"] });
+        showSnackbar(result.data?.message ?? "Ajustes guardados.");
     };
 
     const {
@@ -207,7 +228,7 @@ export default function ProveedoresReparaciones() {
             showError(result.error.message);
             return;
         }
-        showSnackbar("Proveedor desactivado correctamente.");
+        showSnackbar(result.data?.message ?? "Proveedor desactivado correctamente.");
         refetch();
     };
 
@@ -239,7 +260,7 @@ export default function ProveedoresReparaciones() {
                 showError(result.error.message);
                 return;
             }
-            showSnackbar("Proveedor actualizado correctamente.");
+            showSnackbar(result.data?.message ?? "Proveedor actualizado correctamente.");
         } else {
             const result = await createRepairSupplier({
                 name: data.name,
@@ -253,7 +274,7 @@ export default function ProveedoresReparaciones() {
                 showError(result.error.message);
                 return;
             }
-            showSnackbar("Proveedor creado correctamente.");
+            showSnackbar(result.data?.message ?? "Proveedor creado correctamente.");
         }
         setSaving(false);
         handleCloseModal();
@@ -370,8 +391,14 @@ export default function ProveedoresReparaciones() {
                         <SectionTitle>Costos por hora</SectionTitle>
                         <FieldContainer>
                             <FormFromFields
+                                key={configData?.cost ?? "initial"}
                                 fields={settingsFields}
-                                defaultValues={{ hourlyCost: "720.00" }}
+                                defaultValues={{
+                                    hourlyCost:
+                                        configData != null
+                                            ? Number(configData.cost).toFixed(2)
+                                            : "0",
+                                }}
                                 onSubmit={handleSaveSettings}
                                 confirmLabel="Guardar cambios"
                                 loading={savingSettings}

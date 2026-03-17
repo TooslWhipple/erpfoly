@@ -5,8 +5,8 @@
 
 export type { FormFieldInputType, SelectOption, AutocompleteItem } from "./types";
 
-export { messages, schemas, filters } from "./validation";
-export type { InputFilter } from "./validation";
+export { messages, schemas, filters, validateGeneralForm } from "./validation";
+export type { InputFilter, GeneralSchemaInput } from "./validation";
 
 export { buildSchema, defineFormFields } from "./fields";
 export type {

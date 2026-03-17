@@ -1,19 +1,21 @@
 import { Button, Grid, Stack, Typography } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { FormTextField } from "@/components";
+import { FormTextField, FormSelect } from "@/components";
 import {
     FormCard,
     DynamicListItem,
     DeleteButton,
     DeleteButtonWrapper
 } from "@/styles/catalogos/proveedores.styles";
-import type { BankAccount, CreditData } from "./types";
+import type { BankAccount, CreditData } from "@/types/proveedores.types";
+import type { ContactOption } from "./ContactsTab";
 import { Trash } from "lucide-react";
 
 export interface CreditTabProps {
     creditData: CreditData;
     bankAccounts: BankAccount[];
-    onCreditDataChange: (field: keyof CreditData, value: string) => void;
+    jobTitleOptions: ContactOption[];
+    onCreditDataChange: (field: keyof CreditData, value: string | number | null) => void;
     onAddBankAccount: () => void;
     onRemoveBankAccount: (accountId: string) => void;
     onBankAccountChange: (
@@ -23,14 +25,18 @@ export interface CreditTabProps {
     ) => void;
 }
 
+const emptyOption = { value: "", label: "Selecciona..." };
+
 export function CreditTab({
     creditData,
     bankAccounts,
+    jobTitleOptions,
     onCreditDataChange,
     onAddBankAccount,
     onRemoveBankAccount,
     onBankAccountChange,
 }: CreditTabProps) {
+    const jobTitleSelectOptions = [emptyOption, ...jobTitleOptions];
     return (
         <>
             <FormCard>
@@ -47,13 +53,22 @@ export function CreditTab({
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <FormTextField
+                        <FormSelect
                             label="Puesto"
-                            placeholder="Ingresar"
-                            value={creditData.position}
-                            onChange={(e) =>
-                                onCreditDataChange("position", e.target.value)
+                            placeholder="Selecciona..."
+                            value={
+                                creditData.jobTitleId != null
+                                    ? String(creditData.jobTitleId)
+                                    : ""
                             }
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                onCreditDataChange(
+                                    "jobTitleId",
+                                    v === "" ? null : Number(v)
+                                );
+                            }}
+                            options={jobTitleSelectOptions}
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>

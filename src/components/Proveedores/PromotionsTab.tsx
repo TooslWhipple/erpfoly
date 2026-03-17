@@ -7,7 +7,7 @@ import {
     DeleteButton,
     DeleteButtonWrapper
 } from "@/styles/catalogos/proveedores.styles";
-import type { Promotion } from "./types";
+import type { Promotion } from "@/types/proveedores.types";
 import { Trash } from "lucide-react";
 
 export interface PromotionsTabProps {

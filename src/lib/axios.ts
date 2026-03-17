@@ -180,16 +180,25 @@ function isBackendErrorBody(
 	);
 }
 
+function messageFromPayload(data: unknown): string | null {
+	if (data == null || typeof data !== "object") return null;
+	if ("error" in data && data.error != null && typeof data.error === "object" && "message" in data.error) {
+		const msg = (data.error as { message?: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+	}
+	if ("message" in data) {
+		const msg = (data as { message: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+	}
+	return null;
+}
+
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
-	if (data != null && typeof data === "object" && "error" in data) {
-		const err = (data as { error: { message?: string } }).error;
-		if (err?.message) return { message: err.message };
-	}
-	if (data != null && typeof data === "object" && "message" in data) {
-		const msg = (data as { message: string }).message;
-		if (typeof msg === "string") return { message: msg };
-	}
+	const message = messageFromPayload(data);
+	if (message) return { message };
 	return {
 		message: error.message || "Network or server error",
 	};
@@ -254,4 +263,16 @@ export function unwrapOrThrow<T>(result: ApiResult<T>): T {
 		throw new Error("Unexpected null data");
 	}
 	return result.data;
+}
+
+export function getApiErrorMessage(err: unknown): string {
+	if (axios.isAxiosError(err)) {
+		const msg = messageFromPayload(err.response?.data);
+		if (msg) return msg;
+		return err.message || "Error de red o servidor.";
+	}
+	const withApi = err as Error & { apiError?: ApiError };
+	if (err instanceof Error && withApi.apiError?.message) return withApi.apiError.message;
+	if (err instanceof Error && err.message) return err.message;
+	return "Ha ocurrido un error.";
 }

@@ -1,10 +1,6 @@
-/**
- * Supplier-related types for the proveedores catalog (create/edit form).
- */
-
 export interface SupplierContact {
     id: string;
-    position: string;
+    jobTitleId: number | null;
     name: string;
     phone: string;
 }
@@ -19,7 +15,7 @@ export interface BankAccount {
 
 export interface CreditData {
     attention: string;
-    position: string;
+    jobTitleId: number | null;
     phone: string;
 }
 

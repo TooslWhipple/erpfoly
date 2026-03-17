@@ -6,32 +6,43 @@ import {
     DeleteButton,
     DeleteButtonWrapper
 } from "@/styles/catalogos/proveedores.styles";
-import type { SupplierContact } from "./types";
-import { POSITION_OPTIONS } from "./constants";
+import type { SupplierContact } from "@/types/proveedores.types";
 import { Trash } from "lucide-react";
+
+export interface ContactOption {
+    value: number;
+    label: string;
+}
 
 export interface ContactsTabProps {
     contacts: SupplierContact[];
+    jobTitleOptions: ContactOption[];
     onAddContact: () => void;
     onRemoveContact: (contactId: string) => void;
     onContactChange: (
         contactId: string,
         field: keyof SupplierContact,
-        value: string
+        value: string | number | null
     ) => void;
 }
 
 export function ContactsTab({
     contacts,
+    jobTitleOptions,
     onAddContact,
     onRemoveContact,
     onContactChange,
 }: ContactsTabProps) {
+    const selectOptions = [
+        { value: "", label: "Selecciona..." },
+        ...jobTitleOptions,
+    ];
+
     return (
         <FormCard>
             <Stack spacing={3} width="100%">
                 {contacts.map((contact, index) => {
-                    const isRequired = index <= 1; // First two contacts are required and cannot be removed
+                    const isRequired = index <= 1;
                     return (
                         <Stack key={contact.id} spacing={3} width="100%">
                             <Grid container spacing={1} alignItems="center">
@@ -39,15 +50,22 @@ export function ContactsTab({
                                     <FormSelect
                                         label="Cargo"
                                         placeholder="Selecciona..."
-                                        value={contact.position}
-                                        onChange={(e) =>
+                                        value={
+                                            contact.jobTitleId != null
+                                                ? String(contact.jobTitleId)
+                                                : ""
+                                        }
+                                        onChange={(e) => {
+                                            const v = e.target.value;
                                             onContactChange(
                                                 contact.id,
-                                                "position",
-                                                String(e.target.value)
-                                            )
-                                        }
-                                        options={POSITION_OPTIONS}
+                                                "jobTitleId",
+                                                v === ""
+                                                    ? null
+                                                    : Number(v)
+                                            );
+                                        }}
+                                        options={selectOptions}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: "grow" }}>

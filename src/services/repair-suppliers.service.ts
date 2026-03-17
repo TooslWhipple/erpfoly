@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -45,10 +45,6 @@ export interface UpdateRepairSupplierPayload {
   departmentIds?: number[];
 }
 
-export interface DeleteRepairSupplierResponse {
-  message: string;
-}
-
 // ============================================================================
 // API
 // ============================================================================
@@ -63,15 +59,15 @@ export async function getRepairSuppliers(
 
 export async function createRepairSupplier(
   payload: CreateRepairSupplierPayload
-): Promise<ApiResult<RepairSupplier>> {
-  return post<RepairSupplier>(BASE, payload);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return post<ApiSuccessPayload>(BASE, payload);
 }
 
 export async function updateRepairSupplier(
   id: number,
   payload: UpdateRepairSupplierPayload
-): Promise<ApiResult<RepairSupplier>> {
-  return patch<RepairSupplier>(`${BASE}/${id}`, payload);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return patch<ApiSuccessPayload>(`${BASE}/${id}`, payload);
 }
 
 export async function getRepairSupplierById(
@@ -82,6 +78,31 @@ export async function getRepairSupplierById(
 
 export async function deleteRepairSupplier(
   id: number
-): Promise<ApiResult<DeleteRepairSupplierResponse>> {
-  return del<DeleteRepairSupplierResponse>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Repair supplier configuration (hourly cost)
+// ---------------------------------------------------------------------------
+
+export interface RepairSupplierConfiguration {
+  id: number;
+  cost: number;
+}
+
+export interface UpdateRepairSupplierConfigurationPayload {
+  cost: number;
+}
+
+export async function getRepairSupplierConfiguration(): Promise<
+  ApiResult<RepairSupplierConfiguration>
+> {
+  return get<RepairSupplierConfiguration>(`${BASE}/config`);
+}
+
+export async function updateRepairSupplierConfiguration(
+  payload: UpdateRepairSupplierConfigurationPayload
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return patch<ApiSuccessPayload>(`${BASE}/config`, payload);
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Stack, TextField, Button, Typography, CircularProgress } from "@mui/material";
+import { Stack, Button, Typography, CircularProgress } from "@mui/material";
 import { Card } from "@/styles/catalogos/goals.styles";
 import { getBranchSettings, saveBranchSettings } from "@/services/branchDetail.service";
+import { FormTextField } from "../Form";
 
 interface SettingsTabProps {
   branchId: number;
@@ -11,18 +12,15 @@ export function SettingsTab({ branchId }: SettingsTabProps) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
     if (!branchId) return;
     setLoading(true);
-    setError(null);
     try {
       const data = await getBranchSettings(branchId);
       setName(data.name);
     } catch (err) {
       console.error("[SettingsTab] Error:", err);
-      setError("Error al cargar configuración");
     } finally {
       setLoading(false);
     }
@@ -36,12 +34,10 @@ export function SettingsTab({ branchId }: SettingsTabProps) {
     const trimmed = name.trim();
     if (!trimmed) return;
     setSaving(true);
-    setError(null);
     try {
       await saveBranchSettings(branchId, { name: trimmed });
     } catch (err) {
       console.error("[SettingsTab] Error saving:", err);
-      setError("Error al guardar");
     } finally {
       setSaving(false);
     }
@@ -62,23 +58,19 @@ export function SettingsTab({ branchId }: SettingsTabProps) {
     <Stack spacing={3}>
       <Card>
         <Typography variant="h6">Configuraciones de sucursal</Typography>
-        {error && (
-          <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
-        )}
-        <Stack spacing={2} maxWidth={400}>
-          <TextField
+        <Stack spacing={2} direction={{ xs: "column", md: "row" }} alignItems="flex-end">
+          <FormTextField
             label="Nombre"
+            placeholder="Nombre de la sucursal"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            fullWidth
-            size="medium"
+            required
           />
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving || !name.trim()}
+            style={{ minWidth: 128 }}
           >
             {saving ? "Guardando..." : "Guardar"}
           </Button>

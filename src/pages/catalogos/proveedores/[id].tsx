@@ -72,41 +72,49 @@ export default function SupplierFormPage() {
                     onTabChange={setActiveTab}
                 />
 
-                {activeTab === "general" && (
-                    <GeneralTab
-                        values={generalFormValues}
-                        errors={errors}
-                        onFieldChange={handleGeneralFieldChange}
-                    />
-                )}
-                {activeTab === "contacts" && (
-                    <ContactsTab
-                        contacts={contacts}
-                        jobTitleOptions={jobTitleOptions}
-                        onAddContact={handleAddContact}
-                        onRemoveContact={handleRemoveContact}
-                        onContactChange={handleContactChange}
-                    />
-                )}
-                {activeTab === "credit" && (
-                    <CreditTab
-                        creditData={creditData}
-                        bankAccounts={bankAccounts}
-                        jobTitleOptions={jobTitleOptions}
-                        onCreditDataChange={handleCreditDataChange}
-                        onAddBankAccount={handleAddBankAccount}
-                        onRemoveBankAccount={handleRemoveBankAccount}
-                        onBankAccountChange={handleBankAccountChange}
-                    />
-                )}
-                {activeTab === "promotions" && (
-                    <PromotionsTab
-                        promotions={promotions}
-                        onAddPromotion={handleAddPromotion}
-                        onRemovePromotion={handleRemovePromotion}
-                        onPromotionChange={handlePromotionChange}
-                    />
-                )}
+                {
+                    activeTab === "general" && (
+                        <GeneralTab
+                            values={generalFormValues}
+                            errors={errors}
+                            onFieldChange={handleGeneralFieldChange}
+                        />
+                    )
+                }
+                {
+                    activeTab === "contacts" && (
+                        <ContactsTab
+                            contacts={contacts}
+                            jobTitleOptions={jobTitleOptions}
+                            onAddContact={handleAddContact}
+                            onRemoveContact={handleRemoveContact}
+                            onContactChange={handleContactChange}
+                        />
+                    )
+                }
+                {
+                    activeTab === "credit" && (
+                        <CreditTab
+                            creditData={creditData}
+                            bankAccounts={bankAccounts}
+                            jobTitleOptions={jobTitleOptions}
+                            onCreditDataChange={handleCreditDataChange}
+                            onAddBankAccount={handleAddBankAccount}
+                            onRemoveBankAccount={handleRemoveBankAccount}
+                            onBankAccountChange={handleBankAccountChange}
+                        />
+                    )
+                }
+                {
+                    activeTab === "promotions" && (
+                        <PromotionsTab
+                            promotions={promotions}
+                            onAddPromotion={handleAddPromotion}
+                            onRemovePromotion={handleRemovePromotion}
+                            onPromotionChange={handlePromotionChange}
+                        />
+                    )
+                }
             </Stack>
         </MainLayout>
     );

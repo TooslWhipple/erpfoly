@@ -185,15 +185,17 @@ export function SalesTab({ branchId }: SalesTabProps) {
             onClose={handleMonthClose}
             anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
           >
-            {MONTH_NAMES.map((name, index) => (
-              <MenuItem
-                key={name}
-                onClick={() => handleMonthSelect(index)}
-                selected={selectedMonthIndex === index}
-              >
-                {name}
-              </MenuItem>
-            ))}
+            {
+              MONTH_NAMES.map((name, index) => (
+                <MenuItem
+                  key={name}
+                  onClick={() => handleMonthSelect(index)}
+                  selected={selectedMonthIndex === index}
+                >
+                  {name}
+                </MenuItem>
+              ))
+            }
           </Menu>
           <Button
             variant="outlined"
@@ -215,7 +217,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
       <Grid container spacing={2} alignItems="stretch">
         <Grid size={{ xs: 12, md: 6 }}>
           <Card padding="8px 16px">
-            <Grid container spacing={2} alignItems="center">
+            <Grid container width="100%" spacing={2} alignItems="center">
               <Grid size={{ xs: 12, md: 3 }}>
                 <Stack spacing={0.5}>
                   <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
@@ -282,7 +284,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Card padding="8px 16px">
-            <Grid container spacing={2} alignItems="center" height="100%">
+            <Grid width="100%" height="100%" container spacing={2} alignItems="center">
               <Grid size={{ xs: 12, md: 4 }}>
                 <Stack spacing={0.5}>
                   <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
@@ -310,7 +312,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
 
         <Grid size={{ xs: 12 }}>
           <Card>
-            <Stack spacing={2}>
+            <Stack width="100%" spacing={2}>
               <Typography variant="h6">Ventas por mes</Typography>
               <ChartWrapper>
                 <ResponsiveContainer width="100%" height="100%">

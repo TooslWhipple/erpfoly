@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { DialogContent as MuiDialogContent, Typography, IconButton, Box, Button } from "@mui/material";
+import { DialogContent as MuiDialogContent, IconButton } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
@@ -14,71 +14,44 @@ export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
 
 export const ModalHeader = styled("div")({
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 16,
 });
 
-export const ModalTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1.25rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
-
 export const CloseButton = styled(IconButton)(({ theme }) => ({
-    color: theme.palette.text.secondary,
+    width: "40px",
+    height: "40px",
+    padding: "16px 8px",
+    border: `1px solid ${colors.border}`,
+    borderRadius: "8px",
+    color: theme.palette.text.primary,
     "&:hover": {
         backgroundColor: theme.palette.action.hover,
     },
 }));
 
-export const ModalContent = styled(Box)(({ theme }) => ({
+export const StatsContainer = styled('div')({
     display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-}));
-
-export const StatsContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(3),
-    marginTop: theme.spacing(2),
-}));
-
-export const StatItem = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    flex: 1,
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "24px",
+    padding: "16px",
+    border: `1px solid ${colors.border}`,
+    borderRadius: "16px",
 });
 
-export const StatLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-}));
-
-export const StatValue = styled(Typography)(({ theme }) => ({
-    fontSize: "2rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    lineHeight: 1.2,
-}));
-
-export const ModalActions = styled(Box)(({ theme }) => ({
+export const StatItem = styled('div')({
     display: "flex",
-    justifyContent: "flex-end",
-    gap: theme.spacing(2),
-    paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
-}));
+    flexDirection: "column",
+    gap: 4,
+});
 
-export const CancelButton = styled(Button)(({ theme }) => ({
-    minWidth: 100,
-    textTransform: "none",
-    fontWeight: 500,
-}));
+export const ModalActions = styled('div')({
+    display: "flex",
+    justifyContent: "flex-start",
+    gap: "16px",
+    marginTop: "24px"
+});
 
-export const ConfirmButton = styled(Button)(({ theme }) => ({
-    minWidth: 200,
-    textTransform: "none",
-    fontWeight: 500,
-}));
+
+

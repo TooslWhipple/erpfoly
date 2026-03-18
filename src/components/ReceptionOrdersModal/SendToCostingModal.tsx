@@ -1,18 +1,14 @@
-import { Dialog, CircularProgress, Typography } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { Dialog, CircularProgress, Typography, Stack, Button } from "@mui/material";
+import { X as Close } from 'lucide-react'
 import {
     DialogContent,
     ModalHeader,
-    ModalTitle,
     CloseButton,
     ModalActions,
-    ConfirmButton,
-    ModalContent,
     StatsContainer,
     StatItem,
-    StatLabel,
-    StatValue,
 } from "./SendToCostingModal.styles";
+import { colors } from "@/styles/theme";
 
 interface SendToCostingModalProps {
     open: boolean;
@@ -54,34 +50,32 @@ export function SendToCostingModal({
             }}
         >
             <DialogContent>
-                <ModalHeader>
-                    <ModalTitle>Enviar a costeo</ModalTitle>
-                    <CloseButton onClick={handleClose} disabled={loading} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
+                <CloseButton onClick={handleClose} disabled={loading} size="small">
+                    <Close size={12} color={colors.text.primary} />
+                </CloseButton>
 
-                <ModalContent>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        ¿Estás seguro que deseas enviar la recepción a costeo? Una vez confirmado
-                        se enviarán los datos para su procesamiento.
-                    </Typography>
-
+                <Stack spacing={3}>
+                    <Stack spacing={0.5}>
+                        <Typography variant="h5" fontWeight={600}>Guardar e imprimir etiquetas</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            ¿Estás seguro que deseas confirmar la cantidad de artículos recibidos? Una
+                            vez confirmados se imprimirán las etiquetas de control interno.
+                        </Typography>
+                    </Stack>
                     <StatsContainer>
                         <StatItem>
-                            <StatLabel>Total de artículos</StatLabel>
-                            <StatValue>{totalArticles}</StatValue>
+                            <Typography variant="body2" color="text.secondary">Total de artículos</Typography>
+                            <Typography variant="body1" fontWeight={600}>{totalArticles}</Typography>
                         </StatItem>
                         <StatItem>
-                            <StatLabel>Etiquetas a imprimir</StatLabel>
-                            <StatValue>{totalLabels}</StatValue>
+                            <Typography variant="body2" color="text.secondary">Etiquetas a imprimir</Typography>
+                            <Typography variant="body1" fontWeight={600}>{totalLabels}</Typography>
                         </StatItem>
                     </StatsContainer>
-                </ModalContent>
+                </Stack>
 
                 <ModalActions>
-                    <ConfirmButton
-                        type="button"
+                    <Button
                         variant="contained"
                         onClick={handleConfirm}
                         disabled={loading}
@@ -91,7 +85,15 @@ export function SendToCostingModal({
                         ) : (
                             "Guardar e imprimir etiquetas"
                         )}
-                    </ConfirmButton>
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={handleClose}
+                        disabled={loading}
+                    >
+                        Cancelar
+                    </Button>
                 </ModalActions>
             </DialogContent>
         </Dialog>

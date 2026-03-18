@@ -68,6 +68,11 @@ const navItems: NavItem[] = [
       { label: "Traspasos", path: "/inventario/transpasos" },
     ],
   },
+  {
+    label: "Recepción de mercancía",
+    path: "/recepcion-mercancias",
+    icon: <Van size={ICON_SIZE} />
+  },
   { label: "Atención a cliente", path: "/atencion-cliente", icon: <HeartHandshake size={ICON_SIZE} /> },
   { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} /> },
   {

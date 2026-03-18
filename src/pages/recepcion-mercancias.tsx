@@ -6,6 +6,7 @@ import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import { StatusChip } from "@/styles/recepcion-mercancias.styles";
 import type { MerchandiseReception, ReceptionStatus } from "@/types/recepcion-mercancias.types";
+import { Stack } from "@mui/material";
 
 interface GetReceptionsParams {
     page: number;
@@ -20,10 +21,6 @@ interface GetReceptionsResponse {
     page: number;
     limit: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_RECEPTIONS: MerchandiseReception[] = [
     {
@@ -128,10 +125,6 @@ const DUMMY_RECEPTIONS: MerchandiseReception[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getReceptions(
     params: GetReceptionsParams
 ): Promise<GetReceptionsResponse> {
@@ -168,10 +161,6 @@ async function getReceptions(
     };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: ReceptionStatus): string {
     const labels: Record<ReceptionStatus, string> = {
         pre_captured: "Precapturado",
@@ -181,14 +170,9 @@ function getStatusLabel(status: ReceptionStatus): string {
     return labels[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function RecepcionMercancias() {
     const router = useRouter();
 
-    // State
     const [receptions, setReceptions] = useState<MerchandiseReception[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -199,19 +183,16 @@ export default function RecepcionMercancias() {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Tab options
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Capturados", value: "captured" },
         { label: "Costeados", value: "costed" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | ReceptionStatus => {
         return activeTab as "all" | ReceptionStatus;
     }, [activeTab]);
 
-    // Fetch receptions
     const fetchReceptions = useCallback(async () => {
         setLoading(true);
         try {
@@ -238,7 +219,6 @@ export default function RecepcionMercancias() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -260,7 +240,6 @@ export default function RecepcionMercancias() {
     const handleConfirmOrders = async (orderIds: string[]) => {
         setSubmitting(true);
         try {
-            // Close modal and redirect to new reception page
             setModalOpen(false);
             router.push(`/recepcion-mercancias/nuevo?orderIds=${orderIds.join(",")}`);
         } catch (err) {
@@ -283,7 +262,6 @@ export default function RecepcionMercancias() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<MerchandiseReception>[] = [
         {
             id: "warehouse",
@@ -332,7 +310,6 @@ export default function RecepcionMercancias() {
         },
     ];
 
-    // Row actions
     const actions: RowAction<MerchandiseReception>[] = [
         {
             id: "view",
@@ -344,40 +321,42 @@ export default function RecepcionMercancias() {
 
     return (
         <MainLayout>
-            <Title title="Recepción de mercancía" />
+            <Stack spacing={3}>
+                <Title title="Recepción de mercancía" />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
-                actions={[
-                    {
-                        label: "Nuevo",
-                        onClick: handleCreate,
-                        variant: "contained",
-                        color: "primary",
-                    },
-                ]}
-            />
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                        },
+                    ]}
+                />
 
-            <TableCrud
-                columns={columns}
-                rows={receptions}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleViewReception}
-                emptyMessage="No hay recepciones de mercancía"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={receptions}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleViewReception}
+                    emptyMessage="No hay recepciones de mercancía"
+                />
+            </Stack>
 
             <ReceptionOrdersModal
                 open={modalOpen}

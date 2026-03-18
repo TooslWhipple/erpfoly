@@ -12,6 +12,7 @@ import {
     Skeleton,
     TextField,
     InputAdornment,
+    Stack,
 } from "@mui/material";
 import { Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
 import numeral from "numeral";
@@ -29,6 +30,7 @@ import {
     EmptyStateContainer,
     SearchInput,
 } from "./styles";
+import { SideModal } from "../SideModal";
 
 interface ReceptionOrdersModalProps {
     open: boolean;
@@ -187,26 +189,25 @@ export function ReceptionOrdersModal({
     };
 
     return (
-        <Dialog
+        <SideModal
             open={open}
             onClose={handleClose}
-            maxWidth="md"
+            title="Pedidos por recibir"
+            maxWidth="lg"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
+            disableClose={loading || loadingOrders}
+            headerActions={
+                <ConfirmButton
+                    type="button"
+                    variant="contained"
+                    onClick={handleConfirm}
+                    disabled={loading || loadingOrders || selectedOrderIds.size === 0}
+                >
+                    Continuar
+                </ConfirmButton>
+            }
         >
-            <DialogContent>
-                <ModalHeader>
-                    <ModalTitle>Pedidos por recibir</ModalTitle>
-                    <CloseButton onClick={handleClose} disabled={loading || loadingOrders} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
-
+            <Stack direction="column" spacing={2} sx={{ width: "100%" }}>
                 <SearchInput
                     placeholder="Buscar pedido"
                     value={searchQuery}
@@ -285,22 +286,7 @@ export function ReceptionOrdersModal({
                         </Table>
                     )}
                 </TableContainer>
-
-                <ModalActions>
-                    <ConfirmButton
-                        type="button"
-                        variant="contained"
-                        onClick={handleConfirm}
-                        disabled={loading || loadingOrders || selectedOrderIds.size === 0}
-                    >
-                        {loading ? (
-                            <CircularProgress size={20} color="inherit" />
-                        ) : (
-                            "Continuar"
-                        )}
-                    </ConfirmButton>
-                </ModalActions>
-            </DialogContent>
-        </Dialog>
+            </Stack>
+        </SideModal>
     );
 }

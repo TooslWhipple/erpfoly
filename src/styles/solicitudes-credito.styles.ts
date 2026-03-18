@@ -2,10 +2,6 @@ import { styled } from "@mui/material/styles";
 import { Typography } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// Layout - two columns (sidebar + content)
-// ============================================================================
-
 export const DetailLayout = styled("div")(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
@@ -31,14 +27,10 @@ export const ContentColumn = styled("div")(({ theme }) => ({
   minWidth: 0,
 }));
 
-// ============================================================================
-// Risk card (div-based, no Box/Paper)
-// ============================================================================
-
 export const RiskCard = styled("div")(({ theme }) => ({
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
-  borderRadius:  "16px",
+  borderRadius: "16px",
   padding: "12px",
   display: "flex",
   alignItems: "center",
@@ -68,10 +60,6 @@ export const RiskLabel = styled(Typography)(({ theme }) => ({
   borderRadius: 6,
 }));
 
-// ============================================================================
-// Content section card (div-based)
-// ============================================================================
-
 export const SectionCard = styled("div")(({ theme }) => ({
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
@@ -91,10 +79,6 @@ export const SectionDescription = styled(Typography)(({ theme }) => ({
   color: colors.text.secondary,
   marginBottom: theme.spacing(2),
 }));
-
-// ============================================================================
-// Document / biometric row (green check + text + thumbnail)
-// ============================================================================
 
 export const VerifiedRow = styled("div")(({ theme }) => ({
   display: "flex",
@@ -124,34 +108,29 @@ export const VerifiedThumb = styled("img")(({ theme }) => ({
   marginLeft: "auto",
 }));
 
-// ============================================================================
-// Purchase intention product row
-// ============================================================================
-
-export const ProductRow = styled("div")(({ theme }) => ({
+export const ProductCard = styled("div")(({ theme }) => ({
   display: "flex",
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
+  flexDirection: "column",
+  gap: "4px",
+  padding: "16px 12px",
   border: `1px solid ${colors.border}`,
-  borderRadius: theme.shape.borderRadius ?? 8,
+  borderRadius: "12px",
   backgroundColor: colors.background.sidebar,
-  marginBottom: theme.spacing(2),
 }));
 
 export const ProductImage = styled("img")(({ theme }) => ({
-  width: 80,
-  height: 80,
+  width: "64px",
+  height: "64px",
   objectFit: "cover",
-  borderRadius: 6,
+  borderRadius: "12px",
   flexShrink: 0,
 }));
 
-export const SummaryRow = styled("div")(({ theme }) => ({
+export const SummaryRow = styled("div")<{ withBackground?: boolean }>(({ withBackground = true }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: theme.spacing(1.5, 2),
-  backgroundColor: colors.chip.background,
-  borderRadius: theme.shape.borderRadius ?? 8,
-  marginTop: theme.spacing(1),
+  padding: "8px 12px",
+  backgroundColor: (withBackground) ? colors.chip.background : "transparent",
+  borderRadius: "12px"
 }));

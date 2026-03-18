@@ -1,7 +1,6 @@
-import { Divider, Stack, Typography } from "@mui/material";
-import { ProductRow, ProductImage, SummaryRow } from "@/styles/solicitudes-credito.styles";
+import { Divider, Grid, Stack, Typography } from "@mui/material";
+import { ProductCard, ProductImage, SummaryRow } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
-import { colors } from "@/styles/theme";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("es-MX", {
@@ -26,67 +25,53 @@ export function PurchaseIntentionSection({ detail }: PurchaseIntentionSectionPro
       </Stack>
       <Divider />
       <Stack spacing={2}>
-        {purchaseIntention.items.map((item, index) => (
-          <ProductRow key={index} style={{ marginBottom: 0 }}>
-            <ProductImage src={item.imageUrl} alt={item.name} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="text.secondary">
-                Código: {item.code}
-              </Typography>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {item.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {item.brand}
-              </Typography>
-              <table style={{ width: "100%", marginTop: 8, fontSize: 13 }}>
-                <tbody>
-                  <tr>
-                    <td>Cantidad</td>
-                    <td>{item.quantity}</td>
-                  </tr>
-                  <tr>
-                    <td>Precio individual</td>
-                    <td>${formatCurrency(item.unitPrice)}</td>
-                  </tr>
-                  <tr>
-                    <td>Subtotal</td>
-                    <td>${formatCurrency(item.subtotal)}</td>
-                  </tr>
-                  <tr>
-                    <td>Promoción</td>
-                    <td style={{ color: colors.chip.variants.error.color }}>
-                      -${formatCurrency(item.promotionDiscount)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Total</strong>
-                    </td>
-                    <td>
-                      <strong>${formatCurrency(item.total)}</strong>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </ProductRow>
-        ))}
+        {
+          purchaseIntention.items.map((item, index) => (
+            <ProductCard key={`product-${index + 1}`}>
+              <Stack spacing={1.5} direction="row" alignItems="center">
+                <ProductImage src={item.imageUrl} alt={item.name} />
+                <Stack>
+                  <Typography variant="caption" color="text.secondary">Código: {item.code}</Typography>
+                  <Typography variant="subtitle2" fontWeight={600}>{item.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">{item.brand}</Typography>
+                </Stack>
+              </Stack>
+              <Grid container spacing={1} paddingLeft="76px">
+                <Grid size={{ xs: 6, sm: 3, md: 'grow' }}>
+                  <Typography variant="body2" color="text.secondary">Cantidad</Typography>
+                  <Typography variant="body2" fontWeight={600}>{item.quantity}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3, md: 'grow' }}>
+                  <Typography variant="body2" color="text.secondary">Precio individual</Typography>
+                  <Typography variant="body2" fontWeight={600}>${formatCurrency(item.unitPrice)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3, md: 'grow' }}>
+                  <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                  <Typography variant="body2" fontWeight={600}>${formatCurrency(item.subtotal)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3, md: 'grow' }}>
+                  <Typography variant="body2" color="text.secondary">Promoción</Typography>
+                  <Typography variant="body2" fontWeight={600} color="error">-${formatCurrency(item.promotionDiscount)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3, md: 'grow' }}>
+                  <Typography variant="body2" color="text.secondary">Total</Typography>
+                  <Typography variant="body2" fontWeight={600}>${formatCurrency(item.total)}</Typography>
+                </Grid>
+              </Grid>
+            </ProductCard>
+          ))
+        }
       </Stack>
-      <SummaryRow>
-        <Typography variant="body2">Subtotal</Typography>
-        <Typography variant="body2" fontWeight={600}>
-          ${formatCurrency(purchaseIntention.subtotal)}
-        </Typography>
-      </SummaryRow>
-      <SummaryRow>
-        <Typography variant="body2" fontWeight={600}>
-          Total
-        </Typography>
-        <Typography variant="body2" fontWeight={600}>
-          ${formatCurrency(purchaseIntention.total)}
-        </Typography>
-      </SummaryRow>
-    </Stack>
+      <Stack>
+        <SummaryRow withBackground={false}>
+          <Typography variant="body1">Subtotal</Typography>
+          <Typography variant="body1" fontWeight={600}>${formatCurrency(purchaseIntention.subtotal)}</Typography>
+        </SummaryRow>
+        <SummaryRow>
+          <Typography variant="body1">Total</Typography>
+          <Typography variant="subtitle1" fontWeight={600}>${formatCurrency(purchaseIntention.total)}</Typography>
+        </SummaryRow>
+      </Stack>
+    </Stack >
   );
 }

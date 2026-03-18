@@ -139,13 +139,19 @@ export default function CreditApplicationDetailPage() {
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button variant="outlined" size="medium" onClick={() => {}}>
+            <Button
+              variant="outlined"
+              onClick={() => { }}>
               Solicitar inf. adicional
             </Button>
-            <Button variant="outlined" size="medium" color="error" onClick={() => {}}>
+            <Button
+              variant="outlined"
+              onClick={() => { }}>
               Rechazar solicitud
             </Button>
-            <Button variant="contained" size="medium" onClick={() => setApproveModalOpen(true)}>
+            <Button
+              variant="contained"
+              onClick={() => setApproveModalOpen(true)}>
               Aprobar solicitud
             </Button>
           </Stack>

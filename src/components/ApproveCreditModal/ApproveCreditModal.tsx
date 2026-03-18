@@ -7,6 +7,7 @@ import {
   Button,
   Slider,
   InputAdornment,
+  Grid,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { colors } from "@/styles/theme";
@@ -56,13 +57,10 @@ export function ApproveCreditModal({
   };
 
   const midValue = Math.round((minAmount + maxAmount) / 2);
-  const marks: { value: number; label: string }[] = [
-    { value: minAmount, label: formatCurrency(minAmount) },
-    { value: maxAmount, label: formatCurrency(maxAmount) },
-  ];
-  if (midValue > minAmount && midValue < maxAmount) {
-    marks.splice(1, 0, { value: midValue, label: formatCurrency(midValue) });
-  }
+  const hasMidMark = midValue > minAmount && midValue < maxAmount;
+  const range = maxAmount - minAmount;
+  const midLabelLeftPercent =
+    range > 0 ? ((midValue - minAmount) / range) * 100 : 50;
 
   return (
     <Dialog
@@ -72,56 +70,51 @@ export function ApproveCreditModal({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: "12px",
           overflow: "hidden",
         },
       }}
     >
-      <DialogContent sx={{ padding: 3 }}>
+      <DialogContent
+        style={{ padding: "24px" }}>
         <Stack spacing={2.5}>
-          <Typography variant="h6" fontWeight={600}>
-            Aprobar solicitud
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Al realizar esta acción se creará un perfil y se abrirá una nueva
-            línea de crédito para este cliente.
-          </Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="h5" fontWeight={600}>Aprobar solicitud</Typography>
+            <Typography variant="body2" color="text.secondary">Al realizar esta acción se creará un perfil y se abrirá una nueva línea de crédito para este cliente.</Typography>
+          </Stack>
 
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "12px 16px",
-              backgroundColor: colors.chip.variants.success.background,
-              borderRadius: 8,
+              padding: "12px",
+              backgroundColor: "#DCFCE7",
+              borderRadius: "12px",
             }}
           >
-            <Typography variant="body2" fontWeight={500}>
-              Monto sugerido:
-            </Typography>
-            <Typography variant="body2" fontWeight={600} color="success.dark">
-              ${formatCurrency(suggestedAmount)}
-            </Typography>
+            <Typography variant="body2" fontWeight={500}>Monto sugerido:</Typography>
+            <Typography variant="body2" fontWeight={500} color="success">${formatCurrency(suggestedAmount)}</Typography>
           </div>
 
-          <div>
-            <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-              Línea de crédito:
-            </Typography>
-            <Stack sx={{ mb: 1 }}>
+          <Grid container spacing={1} alignItems="center">
+            <Grid size={{ xs: 'grow' }}>
+              <Typography variant="body2" fontWeight={500} flex={1}>Línea de crédito:</Typography>
+            </Grid>
+            <Grid size={{ xs: 4 }}>
               <FormTextField
                 value={formatCurrency(creditLine)}
                 disabled
-                fullWidth
                 size="small"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">$</InputAdornment>
-                  ),
+                  )
                 }}
               />
-            </Stack>
+            </Grid>
+          </Grid>
+          <Stack spacing={1}>
             <Slider
               value={creditLine}
               onChange={handleSliderChange}
@@ -129,15 +122,28 @@ export function ApproveCreditModal({
               max={maxAmount}
               step={500}
               valueLabelDisplay="off"
-              marks={marks}
               sx={{
                 color: colors.sidebar.textSelected,
-                "& .MuiSlider-markLabel": {
-                  fontSize: 12,
-                },
               }}
             />
-          </div>
+            <Stack
+              direction="row"
+              sx={{
+                position: "relative",
+                width: "100%",
+                mt: 0.5,
+                alignItems: "flex-start",
+                minHeight: 18,
+              }}
+            >
+              <Typography variant="body1" color="text.secondary" sx={{ flex: "1 1 0", textAlign: "left" }}>${formatCurrency(minAmount)}</Typography>
+              {
+                hasMidMark &&
+                <Typography variant="body1" sx={{ position: "absolute", left: `${midLabelLeftPercent}%`, transform: "translateX(-50%)" }}>${formatCurrency(midValue)}</Typography>
+              }
+              <Typography variant="body1" color="text.secondary" sx={{ flex: "1 1 0", textAlign: "right" }}>${formatCurrency(maxAmount)}</Typography>
+            </Stack>
+          </Stack>
 
           <Button
             variant="contained"
@@ -148,7 +154,7 @@ export function ApproveCreditModal({
             Aprobar solicitud
           </Button>
         </Stack>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   );
 }

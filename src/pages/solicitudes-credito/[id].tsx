@@ -7,6 +7,7 @@ import {
   VerticalSidebarTabs,
   ImageViewerModal,
   ApproveCreditModal,
+  RejectCreditModal,
 } from "@/components";
 import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -59,6 +60,7 @@ export default function CreditApplicationDetailPage() {
   const [activeSection, setActiveSection] = useState<CreditApplicationDetailSection>("basic");
   const [imageViewer, setImageViewer] = useState<{ title: string; subtitle: string; url: string } | null>(null);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const loadDetail = useCallback(async (applicationId: string) => {
     setLoading(true);
@@ -144,9 +146,7 @@ export default function CreditApplicationDetailPage() {
               onClick={() => { }}>
               Solicitar inf. adicional
             </Button>
-            <Button
-              variant="outlined"
-              onClick={() => { }}>
+            <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
               Rechazar solicitud
             </Button>
             <Button
@@ -199,6 +199,12 @@ export default function CreditApplicationDetailPage() {
         suggestedAmount={detail.suggestedCreditLine}
         minAmount={detail.minCreditLine}
         maxAmount={detail.maxCreditLine}
+      />
+
+      <RejectCreditModal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        cooldownMonths={6}
       />
     </MainLayout>
   );

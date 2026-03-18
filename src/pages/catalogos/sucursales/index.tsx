@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment, Stack } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
+import { MainLayout, Title, TableCrud, ModalFormZod, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
+import { defineFormFields, schemas } from "@/forms";
 import {
   ControlsContainer,
   SearchInput,
@@ -73,20 +73,15 @@ export default function Sucursales() {
     setPage(0);
   }, [searchValue]);
 
-  const branchFormFields: FormFieldConfig[] = [
+  const branchFormFields = defineFormFields<{ name: string }>()([
     {
       name: "name",
+      schema: schemas.stringRange(3, 64),
       label: "Nombre de la sucursal",
       type: "text",
       placeholder: "Ej. Foly Muebles Centro",
-      validation: {
-        required: true,
-        minLength: 3,
-        maxLength: 64,
-      },
-      autoFocus: true,
     },
-  ];
+  ] as const);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(event.target.value);
@@ -107,11 +102,11 @@ export default function Sucursales() {
     setEditingBranch(null);
   };
 
-  const handleSaveBranch = async (data: Record<string, unknown>) => {
+  const handleSaveBranch = async (data: { name: string }) => {
     setSaving(true);
     if (editingBranch) {
       const result = await updateBranch(editingBranch.id, {
-        name: data.name as string,
+        name: data.name,
       });
       setSaving(false);
       if (result.error) {
@@ -119,7 +114,7 @@ export default function Sucursales() {
         return;
       }
     } else {
-      const result = await createBranch({ name: data.name as string });
+      const result = await createBranch({ name: data.name });
       setSaving(false);
       if (result.error) {
         console.error("[Sucursales] Error creating:", result.error.message);
@@ -192,7 +187,7 @@ export default function Sucursales() {
   const handleViewDiscounts = (branch: Branch) => {
     router.push(`/catalogos/sucursales/${branch.id}`);
   };
-  
+
   const actions: RowAction<Branch>[] = [
     {
       id: "discounts",
@@ -216,29 +211,23 @@ export default function Sucursales() {
     <MainLayout>
       <Stack direction="column" spacing={3}>
         <Title title="Sucursales" />
-        <ControlsContainer>
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchValue}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateModal}
-          >
-            Nueva sucursal
-          </CreateButton>
-        </ControlsContainer>
+        <TabFilters
+          tabs={[]}
+          activeTab={''}
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchValue}
+          onSearchChange={(value) => setSearchValue(value)}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nueva sucursal",
+              onClick: handleOpenCreateModal,
+              variant: "contained",
+              color: "primary",
+            }
+          ]}
+        />
 
         <TableCrud
           columns={columns}
@@ -256,16 +245,18 @@ export default function Sucursales() {
         />
       </Stack>
 
-      <ModalForm
+      <ModalFormZod
+        key={editingBranch?.id ?? "new"}
         open={modalOpen}
         onClose={handleCloseModal}
         title={editingBranch ? "Editar sucursal" : "Nueva sucursal"}
         fields={branchFormFields}
-        onConfirm={handleSaveBranch}
+        defaultValues={
+          editingBranch ? { name: editingBranch.name } : { name: "" }
+        }
+        onSubmit={handleSaveBranch}
         loading={saving}
-        initialValues={editingBranch ? { name: editingBranch.name } : undefined}
         confirmLabel="Guardar"
-        cancelLabel="Cancelar"
         maxWidth="xs"
       />
     </MainLayout>

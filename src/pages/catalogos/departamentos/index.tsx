@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Alert, Stack } from "@mui/material";
-import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
+import {
+  Visibility as VisibilityIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, ModalFormZod, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -15,6 +18,8 @@ import {
 } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { defineFormFields, messages, schemas } from "@/forms";
+import { z } from "zod";
 
 export type { Department } from "@/services/departments.service";
 export type { ProductGroup } from "@/services/departments.service";
@@ -25,6 +30,126 @@ async function getAffectedItemsCount(): Promise<number> {
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+type DepartmentModalFormValues = {
+  id: string;
+  name: string;
+  margin: string;
+  hasPromotion: boolean;
+  promotionPercentage: string;
+  promotionStartDate: string;
+  promotionEndDate: string;
+};
+
+const marginSchema = z
+  .string()
+  .min(1, messages.required)
+  .refine((s) => {
+    const n = Number(s);
+    return !Number.isNaN(n) && n >= 0 && n <= 100;
+  }, "Margin must be between 0 and 100");
+
+const departmentModalFields = defineFormFields<DepartmentModalFormValues>()([
+  {
+    name: "id",
+    schema: z.string(),
+    label: "ID",
+    type: "text",
+    slotProps: { input: { readOnly: true } },
+  },
+  {
+    name: "name",
+    schema: schemas.stringRange(2, 100),
+    label: "Nombre de la categoría",
+    type: "text",
+    placeholder: "Ej. Línea blanca",
+  },
+  {
+    name: "margin",
+    schema: marginSchema,
+    label: "Margen",
+    type: "number",
+    placeholder: "32",
+    helperText: "Porcentaje de margen (0-100)",
+  },
+  {
+    name: "hasPromotion",
+    schema: z.boolean(),
+    label: "Agregar promoción para éste departamento",
+    type: "switch",
+  },
+  {
+    name: "promotionPercentage",
+    schema: z.string(),
+    label: "Promoción",
+    type: "number",
+    placeholder: "32",
+    helperText: "Porcentaje de descuento (0-100)",
+    visibleWhen: { field: "hasPromotion", equals: true },
+  },
+  {
+    name: "promotionStartDate",
+    schema: z.string(),
+    label: "Fecha de inicio",
+    type: "date",
+    visibleWhen: { field: "hasPromotion", equals: true },
+  },
+  {
+    name: "promotionEndDate",
+    schema: z.string(),
+    label: "Fecha fin",
+    type: "date",
+    visibleWhen: { field: "hasPromotion", equals: true },
+  },
+] as const);
+
+function AffectedPromotionBanner({ enabled }: { enabled: boolean }) {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setCount(null);
+      return;
+    }
+    let cancelled = false;
+    getAffectedItemsCount().then((n) => {
+      if (!cancelled) setCount(n);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  if (!enabled || count === null) return null;
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Alert severity="info" sx={{ borderRadius: 1 }}>
+        {count} artículos serán afectados con esta promoción.
+      </Alert>
+    </Box>
+  );
+}
+
+function validatePromotionBlock(data: DepartmentModalFormValues, showError: (m: string) => void) {
+  if (!data.hasPromotion) return true;
+  const pct = String(data.promotionPercentage ?? "").trim();
+  const n = Number(pct);
+  if (!pct || Number.isNaN(n) || n < 0 || n > 100) {
+    showError("Indica un porcentaje de promoción válido (0-100).");
+    return false;
+  }
+  const start = data.promotionStartDate?.trim();
+  const end = data.promotionEndDate?.trim();
+  if (!start || !end) {
+    showError("Las fechas de promoción son obligatorias.");
+    return false;
+  }
+  if (new Date(end) < new Date(start)) {
+    showError("La fecha fin debe ser posterior a la fecha de inicio.");
+    return false;
+  }
+  return true;
+}
 
 export default function Departamentos() {
   const router = useRouter();
@@ -63,9 +188,6 @@ export default function Departamentos() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [saving, setSaving] = useState(false);
-  const [hasPromotion, setHasPromotion] = useState(false);
-  const [affectedItemsCount, setAffectedItemsCount] = useState<number | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
   const getNextId = useCallback(() => {
     if (departments.length === 0) return "01";
@@ -73,124 +195,27 @@ export default function Departamentos() {
     return String(maxId + 1).padStart(2, "0");
   }, [departments]);
 
-  const departmentFormFields: FormFieldConfig[] = useMemo(() => {
-    const baseFields: FormFieldConfig[] = [
-      {
-        name: "id",
-        label: "ID",
-        type: "text",
-        disabled: true,
-        defaultValue: editingDepartment ? String(editingDepartment.id).padStart(2, "0") : getNextId(),
-      },
-      {
-        name: "name",
-        label: "Nombre de la categoría",
-        type: "text",
-        placeholder: "Ej. Línea blanca",
-        validation: {
-          required: true,
-          minLength: 2,
-          maxLength: 100,
-        },
-        autoFocus: true,
-      },
-      {
-        name: "margin",
-        label: "Margen",
-        type: "number",
-        placeholder: "32",
-        validation: {
-          required: true,
-          min: 0,
-          max: 100,
-        },
-        helperText: "Porcentaje de margen (0-100)",
-      },
-      {
-        name: "hasPromotion",
-        label: "Agregar promoción para éste departamento",
-        type: "switch",
-        defaultValue: false,
-      },
-    ];
-
-    if (hasPromotion) {
-      baseFields.push(
-        {
-          name: "promotionPercentage",
-          label: "Promoción",
-          type: "number",
-          placeholder: "32",
-          validation: {
-            required: true,
-            min: 0,
-            max: 100,
-          },
-          helperText: "Porcentaje de descuento (0-100)",
-        },
-        {
-          name: "promotionStartDate",
-          label: "Fecha de inicio",
-          type: "date",
-          validation: {
-            required: true,
-          },
-        },
-        {
-          name: "promotionEndDate",
-          label: "Fecha fin",
-          type: "date",
-          validation: {
-            required: true,
-            custom: (value, allValues) => {
-              const startDate = allValues.promotionStartDate as string | undefined;
-              const endDate = value as string | undefined;
-              if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-                return "La fecha fin debe ser posterior a la fecha de inicio";
-              }
-              return undefined;
-            },
-          },
-        }
-      );
-    }
-
-    return baseFields;
-  }, [hasPromotion, editingDepartment, getNextId]);
-
-  useEffect(() => {
-    if (hasPromotion && modalOpen) {
-      getAffectedItemsCount().then(setAffectedItemsCount);
-    } else {
-      queueMicrotask(() => setAffectedItemsCount(null));
-    }
-  }, [hasPromotion, modalOpen, editingDepartment]);
-
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(event.target.value);
   };
 
   const handleOpenCreateModal = () => {
     setEditingDepartment(null);
-    setHasPromotion(false);
-    setAffectedItemsCount(null);
-    setFormValues({});
     setModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingDepartment(null);
-    setHasPromotion(false);
-    setAffectedItemsCount(null);
-    setFormValues({});
   };
 
-  const handleSaveDepartment = async (data: Record<string, unknown>) => {
+  const handleSaveDepartment = async (data: DepartmentModalFormValues) => {
+    if (!validatePromotionBlock(data, showError)) return;
+
     setSaving(true);
     if (editingDepartment) {
       const result = await updateDepartment(editingDepartment.id, {
-        name: data.name as string,
+        name: data.name,
         margin: Number(data.margin),
       });
       if (result.error) {
@@ -201,7 +226,7 @@ export default function Departamentos() {
       }
     } else {
       const result = await createDepartment({
-        name: data.name as string,
+        name: data.name,
         margin: Number(data.margin),
       });
       if (result.error) {
@@ -216,29 +241,18 @@ export default function Departamentos() {
     refetch();
   };
 
-  const handleFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    setFormValues(values);
-
-    const promotionEnabled = Boolean(values.hasPromotion);
-    if (promotionEnabled !== hasPromotion) {
-      setHasPromotion(promotionEnabled);
-    }
-  }, [hasPromotion]);
-
   const handleViewDetail = (department: Department) => {
     router.push(`/catalogos/departamentos/${department.id}`);
   };
 
   const handleEditDepartment = (department: Department) => {
     setEditingDepartment(department);
-    setHasPromotion(Boolean(department.promotion));
-    setFormValues({});
     setModalOpen(true);
   };
 
   const handleDeleteDepartment = async (department: Department) => {
     const confirmed = window.confirm(
-      `¿Estás seguro de eliminar el departamento "${department.name}"?`
+      `¿Estás seguro de eliminar el departamento "${department.name}"?`,
     );
     if (!confirmed) return;
 
@@ -287,7 +301,7 @@ export default function Departamentos() {
       type: "chipGroup",
       chipGroupKey: "name",
       chipGroupMaxVisible: 6,
-      size: "xl"
+      size: "xl",
     },
   ];
 
@@ -313,6 +327,32 @@ export default function Departamentos() {
     },
   ];
 
+  const departmentDefaultValues = useMemo((): DepartmentModalFormValues => {
+    if (editingDepartment) {
+      return {
+        id: String(editingDepartment.id).padStart(2, "0"),
+        name: editingDepartment.name,
+        margin: String(editingDepartment.margin),
+        hasPromotion: Boolean(editingDepartment.promotion),
+        promotionPercentage:
+          editingDepartment.promotion?.percentage != null
+            ? String(editingDepartment.promotion.percentage)
+            : "",
+        promotionStartDate: editingDepartment.promotion?.startDate ?? "",
+        promotionEndDate: editingDepartment.promotion?.endDate ?? "",
+      };
+    }
+    return {
+      id: getNextId(),
+      name: "",
+      margin: "",
+      hasPromotion: false,
+      promotionPercentage: "",
+      promotionStartDate: "",
+      promotionEndDate: "",
+    };
+  }, [editingDepartment, getNextId]);
+
   return (
     <MainLayout>
       <Stack direction="column" spacing={3}>
@@ -320,8 +360,8 @@ export default function Departamentos() {
 
         <TabFilters
           tabs={[]}
-          activeTab={''}
-          onTabChange={() => { }}
+          activeTab={""}
+          onTabChange={() => {}}
           showSearch
           searchValue={searchInput}
           onSearchChange={(value) => setSearchInput(value)}
@@ -332,7 +372,7 @@ export default function Departamentos() {
               onClick: handleOpenCreateModal,
               variant: "contained",
               color: "primary",
-            }
+            },
           ]}
         />
 
@@ -352,44 +392,22 @@ export default function Departamentos() {
         />
       </Stack>
 
-      <ModalForm
+      <ModalFormZod
+        key={editingDepartment?.id ?? "new"}
         open={modalOpen}
         onClose={handleCloseModal}
         title={editingDepartment ? "Editar departamento" : "Nuevo departamento"}
-        fields={departmentFormFields}
-        onConfirm={handleSaveDepartment}
+        fields={departmentModalFields}
+        defaultValues={departmentDefaultValues}
+        onSubmit={handleSaveDepartment}
         loading={saving}
-        initialValues={
-          Object.keys(formValues).length > 0
-            ? formValues
-            : editingDepartment
-              ? {
-                id: String(editingDepartment.id).padStart(2, "0"),
-                name: editingDepartment.name,
-                margin: editingDepartment.margin,
-                hasPromotion: Boolean(editingDepartment.promotion),
-                promotionPercentage: editingDepartment.promotion?.percentage,
-                promotionStartDate: editingDepartment.promotion?.startDate,
-                promotionEndDate: editingDepartment.promotion?.endDate,
-              }
-              : {
-                id: getNextId(),
-                hasPromotion: false,
-              }
-        }
         confirmLabel={editingDepartment ? "Guardar" : "Crear"}
-        cancelLabel="Cancelar"
         maxWidth="sm"
-        onValuesChange={handleFormValuesChange}
       >
-        {hasPromotion && affectedItemsCount !== null && (
-          <Box sx={{ mt: 2 }}>
-            <Alert severity="info" sx={{ borderRadius: 1 }}>
-              {affectedItemsCount} artículos serán afectados con esta promoción.
-            </Alert>
-          </Box>
+        {(values) => (
+          <AffectedPromotionBanner enabled={Boolean(values.hasPromotion)} />
         )}
-      </ModalForm>
+      </ModalFormZod>
     </MainLayout>
   );
 }

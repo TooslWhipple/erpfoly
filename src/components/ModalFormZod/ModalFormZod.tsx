@@ -19,7 +19,6 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
     onClose: () => void;
     title: string;
     description?: string;
-    /** Single source of truth: each field has schema + label + type + placeholder, etc. */
     fields: T;
     defaultValues: SchemaInputFromFields<T>;
     onSubmit: (value: SchemaOutputFromFields<T>) => void | Promise<void>;
@@ -28,7 +27,9 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
     maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
     fullWidth?: boolean;
     validateOn?: "change" | "blur" | "submit";
-    children?: React.ReactNode;
+    children?:
+    | React.ReactNode
+    | ((values: Record<string, unknown>) => React.ReactNode);
     headerContent?: React.ReactNode;
 }
 
@@ -96,7 +97,25 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
             fullWidth={fullWidth}
             disableClose={loading}
         >
-            <FormContent disabled={loading}>{children}</FormContent>
+            <FormContent disabled={loading}>
+                {
+                    typeof children === "function" ? (
+                        <form.Subscribe
+                            selector={(state: { values: Record<string, unknown> }) =>
+                                state.values
+                            }
+                        >
+                            {(values: Record<string, unknown>) =>
+                                (children as (v: Record<string, unknown>) => React.ReactNode)(
+                                    values,
+                                )
+                            }
+                        </form.Subscribe>
+                    ) : (
+                        children
+                    )
+                }
+            </FormContent>
         </SideModal>
     );
 }

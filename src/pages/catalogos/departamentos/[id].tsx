@@ -5,13 +5,12 @@ import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/ico
 import {
   MainLayout,
   Breadcrumbs,
-  ModalForm,
+  ModalFormZod,
   TableCrud,
   Title,
 } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { FormFieldConfig } from "@/components/Form";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { getDepartmentById } from "@/services/departments.service";
 import {
@@ -23,6 +22,8 @@ import {
 } from "@/services/product-lines.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { defineFormFields, messages, schemas } from "@/forms";
+import { z } from "zod";
 
 // ============================================================================
 // TYPES - Row with mock articles count for table display
@@ -31,6 +32,15 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 interface GroupRow extends ProductLineItem {
   articles: number;
 }
+
+type ProductLineModalFormValues = {
+  code: string;
+  name: string;
+  hasGroupPromotion: boolean;
+  promotionPercentage: string;
+  promotionStartDate: string;
+  promotionEndDate: string;
+};
 
 // ============================================================================
 // HELPERS - Affected items count for promotion info (can be replaced by API later)
@@ -41,6 +51,63 @@ async function getAffectedItemsCount(departmentId?: number): Promise<number> {
   if (departmentId === 1) return 43;
   if (departmentId === 2) return 28;
   return Math.floor(Math.random() * 50) + 10;
+}
+
+function validateGroupPromotionBlock(
+  data: ProductLineModalFormValues,
+  showError: (m: string) => void,
+) {
+  if (!data.hasGroupPromotion) return true;
+  const pct = String(data.promotionPercentage ?? "").trim();
+  const n = Number(pct);
+  if (!pct || Number.isNaN(n) || n < 0 || n > 100) {
+    showError("Indica un porcentaje de promoción válido (0-100).");
+    return false;
+  }
+  const start = data.promotionStartDate?.trim();
+  const end = data.promotionEndDate?.trim();
+  if (!start || !end) {
+    showError("Las fechas de promoción son obligatorias.");
+    return false;
+  }
+  if (new Date(end) < new Date(start)) {
+    showError("La fecha fin debe ser posterior a la fecha de inicio.");
+    return false;
+  }
+  return true;
+}
+
+function GroupAffectedBanner({
+  enabled,
+  departmentId,
+}: {
+  enabled: boolean;
+  departmentId: number;
+}) {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setCount(null);
+      return;
+    }
+    let cancelled = false;
+    getAffectedItemsCount(departmentId).then((n) => {
+      if (!cancelled) setCount(n);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, departmentId]);
+
+  if (!enabled || count === null) return null;
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Alert severity="info" sx={{ borderRadius: 1 }}>
+        {count} artículos serán afectados con esta promoción.
+      </Alert>
+    </Box>
+  );
 }
 
 // ============================================================================
@@ -77,9 +144,6 @@ export default function DepartmentDetailPage() {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<ProductLineItem | null>(null);
   const [savingLine, setSavingLine] = useState(false);
-  const [hasGroupPromotion, setHasGroupPromotion] = useState(false);
-  const [groupAffectedCount, setGroupAffectedCount] = useState<number | null>(null);
-  const [groupFormValues, setGroupFormValues] = useState<Record<string, unknown>>({});
 
   const fetchDepartment = useCallback(async () => {
     if (!isDepartmentReady) {
@@ -102,14 +166,6 @@ export default function DepartmentDetailPage() {
     fetchDepartment();
   }, [fetchDepartment]);
 
-  useEffect(() => {
-    if (hasGroupPromotion && groupModalOpen && department) {
-      getAffectedItemsCount(department.id).then(setGroupAffectedCount);
-    } else {
-      setGroupAffectedCount(null);
-    }
-  }, [hasGroupPromotion, groupModalOpen, department]);
-
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Departamentos", href: "/catalogos/departamentos" },
     { label: department ? department.name : "Detalle" },
@@ -117,37 +173,25 @@ export default function DepartmentDetailPage() {
 
   const handleOpenNewGroup = () => {
     setEditingLine(null);
-    setHasGroupPromotion(false);
-    setGroupAffectedCount(null);
-    setGroupFormValues({});
     setGroupModalOpen(true);
   };
 
   const handleOpenEditGroup = (row: GroupRow) => {
     setEditingLine(row);
-    setHasGroupPromotion(false);
-    setGroupFormValues({});
     setGroupModalOpen(true);
   };
 
   const handleCloseGroupModal = () => {
     setGroupModalOpen(false);
     setEditingLine(null);
-    setHasGroupPromotion(false);
-    setGroupAffectedCount(null);
-    setGroupFormValues({});
   };
 
-  const handleGroupFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    setGroupFormValues(values);
-    setHasGroupPromotion(Boolean(values.hasGroupPromotion));
-  }, []);
-
-  const handleSaveGroup = async (data: Record<string, unknown>) => {
+  const handleSaveGroup = async (data: ProductLineModalFormValues) => {
     if (departmentId == null || Number.isNaN(departmentId)) return;
+    if (!validateGroupPromotionBlock(data, showError)) return;
 
-    const name = (data.name as string)?.trim();
-    const code = (data.code as string)?.trim();
+    const name = data.name?.trim();
+    const code = data.code?.trim();
 
     setSavingLine(true);
     if (editingLine) {
@@ -174,9 +218,7 @@ export default function DepartmentDetailPage() {
   };
 
   const handleDeleteGroup = async (row: GroupRow) => {
-    const confirmed = window.confirm(
-      `¿Eliminar la línea "${row.name}"?`
-    );
+    const confirmed = window.confirm(`¿Eliminar la línea "${row.name}"?`);
     if (!confirmed) return;
 
     const result = await deleteProductLine(row.id);
@@ -240,85 +282,83 @@ export default function DepartmentDetailPage() {
     },
   ];
 
-  const groupFormFields: FormFieldConfig[] = useMemo(() => {
-    const base: FormFieldConfig[] = [
-      {
-        name: "code",
-        label: "Abreviación",
-        type: "text",
-        placeholder: "Ej. LB",
-        validation: { required: true, minLength: 1, maxLength: 32 },
-        disabled: !!editingLine,
-        transformInput: (v) => v.toUpperCase(),
-      },
-      {
-        name: "name",
-        label: "Nombre de la categoría",
-        type: "text",
-        placeholder: "Ej. Línea blanca",
-        validation: {
-          required: true,
-          minLength: 2,
-          maxLength: 128,
+  const groupModalFields = useMemo(
+    () =>
+      defineFormFields<ProductLineModalFormValues>()([
+        {
+          name: "code",
+          schema: z
+            .string()
+            .min(1, messages.required)
+            .max(32, messages.string.max(32)),
+          label: "Abreviación",
+          type: "text",
+          placeholder: "Ej. LB",
+          filter: (v: string) => v.toUpperCase(),
+          slotProps: editingLine
+            ? { input: { readOnly: true } as Record<string, unknown> }
+            : undefined,
         },
-        autoFocus: true,
-        showErrorOnlyAfterSubmit: true,
-      },
-      {
-        name: "hasGroupPromotion",
-        label: "Agregar Promoción para esta Línea",
-        type: "switch",
-        defaultValue: false,
-      },
-    ];
-    if (hasGroupPromotion) {
-      base.push(
+        {
+          name: "name",
+          schema: schemas.stringRange(2, 128),
+          label: "Nombre de la categoría",
+          type: "text",
+          placeholder: "Ej. Línea blanca",
+        },
+        {
+          name: "hasGroupPromotion",
+          schema: z.boolean(),
+          label: "Agregar Promoción para esta Línea",
+          type: "switch",
+        },
         {
           name: "promotionPercentage",
+          schema: z.string(),
           label: "Promoción",
           type: "number",
           placeholder: "32",
-          validation: { required: true, min: 0, max: 100 },
           helperText: "Porcentaje de descuento (0-100)",
+          visibleWhen: { field: "hasGroupPromotion", equals: true },
         },
         {
           name: "promotionStartDate",
+          schema: z.string(),
           label: "Fecha de inicio",
           type: "date",
-          validation: { required: true },
+          visibleWhen: { field: "hasGroupPromotion", equals: true },
         },
         {
           name: "promotionEndDate",
+          schema: z.string(),
           label: "Fecha fin",
           type: "date",
-          validation: {
-            required: true,
-            custom: (value, allValues) => {
-              const start = allValues.promotionStartDate as string | undefined;
-              const end = value as string | undefined;
-              if (start && end && new Date(end) < new Date(start)) {
-                return "La fecha fin debe ser posterior a la fecha de inicio";
-              }
-              return undefined;
-            },
-          },
-        }
-      );
-    }
-    return base;
-  }, [hasGroupPromotion, editingLine]);
+          visibleWhen: { field: "hasGroupPromotion", equals: true },
+        },
+      ] as const),
+    [editingLine],
+  );
 
-  const groupModalInitialValues = useMemo(() => {
-    if (Object.keys(groupFormValues).length > 0) return groupFormValues;
+  const groupModalDefaultValues = useMemo((): ProductLineModalFormValues => {
     if (editingLine) {
       return {
         code: (editingLine.code ?? "").toUpperCase(),
         name: editingLine.name,
         hasGroupPromotion: false,
+        promotionPercentage: "",
+        promotionStartDate: "",
+        promotionEndDate: "",
       };
     }
-    return { code: "", name: "", hasGroupPromotion: false };
-  }, [editingLine, groupFormValues]);
+    return {
+      code: "",
+      name: "",
+      hasGroupPromotion: false,
+      promotionPercentage: "",
+      promotionStartDate: "",
+      promotionEndDate: "",
+    };
+  }, [editingLine]);
 
   if (loading) {
     return (
@@ -373,27 +413,25 @@ export default function DepartmentDetailPage() {
         />
       </Stack>
 
-      <ModalForm
+      <ModalFormZod
+        key={editingLine?.id ?? "new-line"}
         open={groupModalOpen}
         onClose={handleCloseGroupModal}
         title={editingLine ? "Editar línea" : "Nueva línea"}
-        fields={groupFormFields}
-        onConfirm={handleSaveGroup}
+        fields={groupModalFields}
+        defaultValues={groupModalDefaultValues}
+        onSubmit={handleSaveGroup}
         loading={savingLine}
-        initialValues={groupModalInitialValues}
         confirmLabel={editingLine ? "Guardar" : "Crear"}
-        cancelLabel="Cancelar"
         maxWidth="sm"
-        onValuesChange={handleGroupFormValuesChange}
       >
-        {hasGroupPromotion && groupAffectedCount !== null && (
-          <Box sx={{ mt: 2 }}>
-            <Alert severity="info" sx={{ borderRadius: 1 }}>
-              {groupAffectedCount} artículos serán afectados con esta promoción.
-            </Alert>
-          </Box>
+        {(values) => (
+          <GroupAffectedBanner
+            enabled={Boolean(values.hasGroupPromotion)}
+            departmentId={department.id}
+          />
         )}
-      </ModalForm>
+      </ModalFormZod>
     </MainLayout>
   );
 }

@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Stack, Chip, Typography, Button } from "@mui/material";
-import { Plus } from "lucide-react";
-import { MainLayout, Breadcrumbs, Tabs, TabFilters, StatusChip } from "@/components";
+import { Stack, Typography } from "@mui/material";
+import { MainLayout, Breadcrumbs, TabFilters, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { SalesTab, GoalsTab, PromotionsTab, SettingsTab } from "@/components/BranchDetailTabs";
 import { getBranch } from "@/services/branchDetail.service";
@@ -27,8 +26,6 @@ export default function BranchDetailPage() {
 
   const [branch, setBranch] = useState<Branch | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_VENTAS);
-  const [newPromotionModalOpen, setNewPromotionModalOpen] = useState(false);
-
   const loadBranch = useCallback(async () => {
     if (!branchId || isNaN(branchId)) return;
     const data = await getBranch(branchId);
@@ -43,18 +40,6 @@ export default function BranchDetailPage() {
     { label: "Sucursales", href: "/catalogos/sucursales" },
     { label: branch?.name ?? branch?.city ?? "Cargando..." },
   ];
-
-  const tabRightContent =
-    activeTab === TAB_PROMOCIONES ? (
-      <Button
-        variant="contained"
-        size="small"
-        startIcon={<Plus size={16} />}
-        onClick={() => setNewPromotionModalOpen(true)}
-      >
-        Nueva promoción
-      </Button>
-    ) : null;
 
   const renderTabContent = () => {
     if (!branchId || isNaN(branchId)) {
@@ -73,13 +58,7 @@ export default function BranchDetailPage() {
       case TAB_METAS:
         return <GoalsTab branchId={branchId} />;
       case TAB_PROMOCIONES:
-        return (
-          <PromotionsTab
-            branchId={branchId}
-            openNewPromotionModal={newPromotionModalOpen}
-            onCloseNewPromotionModal={() => setNewPromotionModalOpen(false)}
-          />
-        );
+        return <PromotionsTab branchId={branchId} />;
       case TAB_CONFIGURACIONES:
         return <SettingsTab branchId={branchId} />;
       default:
@@ -95,6 +74,7 @@ export default function BranchDetailPage() {
           {
             branch &&
             <StatusChip
+              size="small"
               variant={(branch.status) === "active" ? "success" : "pending"}
               label={(branch.status) === "active" ? "Activo" : "Inactivo"}
             />

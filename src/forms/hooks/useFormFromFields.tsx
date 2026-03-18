@@ -84,25 +84,41 @@ export function useFormFromFields<T extends readonly FieldDef[]>(
                     sx={boxSx}
                 >
                     <FormBody>
-                        {fields.map((fieldConfig) => (
-                            <FormField
-                                key={String(fieldConfig.name)}
-                                form={form}
-                                name={
-                                    fieldConfig.name as keyof SchemaOutputFromFields<T> & string
-                                }
-                                label={fieldConfig.label}
-                                type={fieldConfig.type ?? "text"}
-                                placeholder={fieldConfig.placeholder}
-                                options={fieldConfig.options}
-                                items={fieldConfig.items}
-                                rows={fieldConfig.rows}
-                                helperText={fieldConfig.helperText}
-                                filter={fieldConfig.filter}
-                                slotProps={fieldConfig.slotProps}
-                                disabled={disabled}
-                            />
-                        ))}
+                        <form.Subscribe
+                            selector={(state: { values: Record<string, unknown> }) => state.values}
+                        >
+                            {(values: Record<string, unknown>) =>
+                                fields.map((fieldConfig) => {
+                                    const vw = fieldConfig.visibleWhen;
+                                    if (
+                                        vw != null &&
+                                        values[vw.field] !== vw.equals
+                                    ) {
+                                        return null;
+                                    }
+                                    return (
+                                        <FormField
+                                            key={String(fieldConfig.name)}
+                                            form={form}
+                                            name={
+                                                fieldConfig.name as keyof SchemaOutputFromFields<T> &
+                                                    string
+                                            }
+                                            label={fieldConfig.label}
+                                            type={fieldConfig.type ?? "text"}
+                                            placeholder={fieldConfig.placeholder}
+                                            options={fieldConfig.options}
+                                            items={fieldConfig.items}
+                                            rows={fieldConfig.rows}
+                                            helperText={fieldConfig.helperText}
+                                            filter={fieldConfig.filter}
+                                            slotProps={fieldConfig.slotProps}
+                                            disabled={disabled}
+                                        />
+                                    );
+                                })
+                            }
+                        </form.Subscribe>
                     </FormBody>
                     {contentChildren}
                 </Box>

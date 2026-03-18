@@ -55,8 +55,8 @@ export function FormFieldRender<TName extends string>({
     const errorMessage = Array.isArray(errors)
         ? (errors as string[]).join(", ")
         : errors != null
-          ? String(errors)
-          : undefined;
+            ? String(errors)
+            : undefined;
     const showError = showErrorOnlyAfterSubmit
         ? field.state.meta.isTouched && hasError
         : hasError;
@@ -102,20 +102,32 @@ export function FormFieldRender<TName extends string>({
             );
         case "switch":
             return (
-                <FormControl error={showError}>
+                <FormControl error={showError} fullWidth sx={{ alignItems: "flex-start" }}>
                     <FormControlLabel
+                        sx={(theme) => ({
+                            margin: 0,
+                            marginLeft: 0,
+                            marginRight: 0,
+                            width: "100%",
+                            justifyContent: "flex-start",
+                            alignItems: "center",
+                            gap: theme.spacing(1),
+                        })}
                         control={
                             <Switch
                                 checked={Boolean(value)}
                                 onChange={(e) => field.handleChange(e.target.checked)}
                                 disabled={disabled}
                                 color="primary"
+                                edge={false}
+                                sx={{ flexShrink: 0 }}
                             />
                         }
                         label={label}
+                        labelPlacement="end"
                     />
                     {finalHelperText && (
-                        <FormHelperText>{finalHelperText}</FormHelperText>
+                        <FormHelperText sx={{ ml: 0 }}>{finalHelperText}</FormHelperText>
                     )}
                 </FormControl>
             );
@@ -236,10 +248,6 @@ interface FormFieldComponentProps<TName extends string> {
     showErrorOnlyAfterSubmit?: boolean;
 }
 
-/**
- * Renders form.Field + FormFieldRender for a single field.
- * Used by useFormFromFields; can be used directly for custom layouts.
- */
 export function FormField<TName extends string>({
     form,
     name,

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { IconButton } from "@mui/material";
+import { IconButton, Stack, Button } from "@mui/material";
+import { Add as AddIcon } from "@mui/icons-material";
 import { MoreVertical } from "lucide-react";
 import { TableCrud, ModalForm } from "@/components";
 import type { Column } from "@/components/TableCrud";
@@ -13,6 +14,7 @@ import type { BranchPromotion } from "@/types/sucursales.types";
 
 interface PromotionsTabProps {
   branchId: number;
+  /** When true, opens the create modal (e.g. parent toolbar). Closing syncs via onCloseNewPromotionModal. */
   openNewPromotionModal?: boolean;
   onCloseNewPromotionModal?: () => void;
 }
@@ -44,9 +46,14 @@ export function PromotionsTab({
   const [promotions, setPromotions] = useState<BranchPromotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const modalOpen = openNewPromotionModal;
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const modalOpen = Boolean(openNewPromotionModal) || internalModalOpen;
   const handleCloseModal = () => {
+    setInternalModalOpen(false);
     onCloseNewPromotionModal?.();
+  };
+  const handleOpenCreateModal = () => {
+    setInternalModalOpen(true);
   };
 
   const fetchPromotions = useCallback(async () => {
@@ -223,13 +230,27 @@ export function PromotionsTab({
 
   return (
     <>
-      <TableCrud
-        columns={columns}
-        rows={promotions}
-        loading={loading}
-        rowKey="id"
-        emptyMessage="No hay promociones registradas para esta sucursal"
-      />
+      <Stack spacing={2} sx={{ width: "100%" }}>
+        <Stack direction="row" justifyContent="flex-end">
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreateModal}
+          >
+            Nueva promoción
+          </Button>
+        </Stack>
+        <TableCrud
+          columns={columns}
+          rows={promotions}
+          loading={loading}
+          rowKey="id"
+          emptyMessage="No hay promociones registradas para esta sucursal"
+        />
+      </Stack>
+
       <ModalForm
         open={modalOpen}
         onClose={handleCloseModal}

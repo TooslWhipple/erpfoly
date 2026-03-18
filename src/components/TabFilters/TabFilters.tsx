@@ -1,4 +1,4 @@
-import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
+import { InputAdornment, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 import {
@@ -50,11 +50,9 @@ export function TabFilters({
   tabs,
   activeTab,
   onTabChange,
-  showSearch = false,
   searchValue = "",
   onSearchChange,
   searchPlaceholder = "Buscar...",
-  selectFilter,
   actions,
 }: TabFiltersProps) {
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
@@ -65,10 +63,6 @@ export function TabFilters({
     onSearchChange?.(event.target.value);
   };
 
-  const handleSelectChange = (event: SelectChangeEvent<string>) => {
-    selectFilter?.onChange(event.target.value);
-  };
-
   const hasActions = actions && actions.length > 0;
   const singleAction = hasActions && actions.length === 1;
 
@@ -76,7 +70,7 @@ export function TabFilters({
     <Grid container spacing={2} alignItems="center" justifyContent={{ xs: "flex-start", md: "space-between" }}>
       <Grid size={{ xs: 12, md: 'auto' }}>
         {
-          tabs.length &&
+          tabs.length > 0 &&
           <TabsWrapper>
             <StyledTabs
               value={activeTab}

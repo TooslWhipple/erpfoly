@@ -24,6 +24,8 @@ export interface FormFieldDefinition<
     filter?: (value: string) => string;
     /** MUI TextField slotProps (e.g. { input: { startAdornment: <InputAdornment>$</InputAdornment> } }). */
     slotProps?: Record<string, unknown>;
+    /** Renders the field only when current form values match (e.g. show extra fields when a switch is on). */
+    visibleWhen?: { field: string; equals: unknown };
 }
 
 /**

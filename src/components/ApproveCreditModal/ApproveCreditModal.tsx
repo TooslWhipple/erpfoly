@@ -127,14 +127,10 @@ export function ApproveCreditModal({
               }}
             />
             <Stack
+              width="100%"
               direction="row"
-              sx={{
-                position: "relative",
-                width: "100%",
-                mt: 0.5,
-                alignItems: "flex-start",
-                minHeight: 18,
-              }}
+              minHeight="18px"
+              sx={{ position: "relative" }}
             >
               <Typography variant="body1" color="text.secondary" sx={{ flex: "1 1 0", textAlign: "left" }}>${formatCurrency(minAmount)}</Typography>
               {

@@ -1,0 +1,87 @@
+import { Divider, Grid, Stack, Typography } from "@mui/material";
+import { FormTextField } from "@/components";
+import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
+import { Check } from "lucide-react";
+import { colors } from "@/styles/theme";
+
+interface BasicInfoSectionProps {
+  detail: CreditApplicationDetail;
+}
+
+export function BasicInfoSection({ detail }: BasicInfoSectionProps) {
+  const { basicInfo } = detail;
+  return (
+    <Stack width="100%" spacing={3}>
+      <Stack>
+        <Typography variant="h6">Información básica</Typography>
+        <Typography variant="body2" color="text.secondary">Información básica sobre el cliente.</Typography>
+      </Stack>
+      <Divider />
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Nombres" value={basicInfo.firstName} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Primer Apellido" value={basicInfo.firstSurname} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Segundo Apellido" value={basicInfo.secondSurname} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Fecha de Nacimiento" value={basicInfo.birthDate} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Estado Civil" value={basicInfo.maritalStatus} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="CURP" value={basicInfo.curp} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="RFC" value={basicInfo.rfc} disabled fullWidth />
+        </Grid>
+      </Grid>
+      <Typography variant="subtitle1">Datos de contacto</Typography>
+      <FormTextField label="Correo electrónico" value={basicInfo.email} disabled fullWidth />
+      <Grid container spacing={2} wrap="nowrap" alignItems="flex-end">
+        <Grid size={{ xs: 12, md: 4 }}>
+          <FormTextField label="Número de Whatsapp" value={basicInfo.whatsapp} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          {
+            basicInfo.whatsappValidated && (
+              <div
+                style={{
+                  width: "100%",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "16px",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  backgroundColor: '#0596690F',
+                  color: colors.chip.variants.success.color,
+                  fontSize: 12,
+                  fontWeight: 500,
+                }}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  backgroundColor: '#05966929'
+                }}>
+                  <Check size={14} />
+                </div>
+                <Typography variant="body2" color="success">Whatsapp validado</Typography>
+              </div>
+            )
+          }
+        </Grid>
+      </Grid>
+    </Stack>
+  );
+}

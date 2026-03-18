@@ -6,6 +6,8 @@ export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";
 export type { TitleAction } from "./Title";
 export { TabFilters } from "./TabFilters";
 export type { TabOption, SelectFilterOption } from "./TabFilters";
+export { VerticalSidebarTabs } from "./VerticalSidebarTabs";
+export type { VerticalSidebarTabsProps, VerticalSidebarTabItem } from "./VerticalSidebarTabs";
 export { TableCrud, DataTable } from "./TableCrud";
 export type { Column, RowAction, DataTableColumn, DataTableColumnType, DataTableProps } from "./TableCrud";
 export { StatsCard, StatsCardGroup } from "./StatsCard";
@@ -72,5 +74,9 @@ export { LiquidationRuleCard } from "./LiquidationRuleCard";
 export type { LiquidationRuleCardProps } from "./LiquidationRuleCard";
 export { FileUpload } from "./FileUpload";
 export type { FileUploadProps, UploadedFileItem } from "./FileUpload";
+export { ImageViewerModal } from "./ImageViewerModal";
+export type { ImageViewerModalProps } from "./ImageViewerModal";
+export { ApproveCreditModal } from "./ApproveCreditModal";
+export type { ApproveCreditModalProps } from "./ApproveCreditModal";
 export * from "./Icons";
 

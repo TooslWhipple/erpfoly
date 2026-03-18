@@ -70,7 +70,6 @@ export function TabFilters({
   };
 
   const hasActions = actions && actions.length > 0;
-  const showRightSection = showSearch || selectFilter || hasActions;
   const singleAction = hasActions && actions.length === 1;
 
   return (

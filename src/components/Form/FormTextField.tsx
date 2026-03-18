@@ -1,10 +1,7 @@
 import { forwardRef } from "react";
 import { styled } from "@mui/material/styles";
 import { Box, TextField, TextFieldProps, Typography } from "@mui/material";
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
+import { colors } from "@/styles/theme";
 
 const FieldWrapper = styled(Box)({
     display: "flex",
@@ -39,9 +36,19 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
             borderColor: theme.palette.error.main,
         },
         "&.Mui-disabled": {
-            backgroundColor: theme.palette.action.disabledBackground,
+            backgroundColor: colors.form.inputDisabledBackground,
             "& fieldset": {
-                borderColor: theme.palette.divider,
+                borderColor: colors.form.inputDisabledBackground,
+            },
+            "&:hover fieldset": {
+                borderColor: colors.form.inputDisabledBackground,
+            },
+            color: theme.palette.text.primary,
+            WebkitTextFillColor: theme.palette.text.primary,
+            "& .MuiOutlinedInput-input": {
+                color: theme.palette.text.primary,
+                WebkitTextFillColor: theme.palette.text.primary,
+                opacity: 1,
             },
         },
     },
@@ -58,27 +65,16 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
         marginLeft: 0,
         marginTop: theme.spacing(0.5),
     },
-    // Reset height for multiline (textarea)
     "& .MuiOutlinedInput-root.MuiInputBase-multiline": {
         height: "auto",
         padding: 0,
     },
 }));
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface FormTextFieldProps extends Omit<TextFieldProps, "variant" | "label"> {
-    /** Field label displayed above the input */
     label?: string;
-    /** Show required asterisk next to label */
     required?: boolean;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
     ({ label, required, error, helperText, ...props }, ref) => {

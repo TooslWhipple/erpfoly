@@ -10,7 +10,7 @@ interface FamilySectionProps {
 export function FamilySection({ detail }: FamilySectionProps) {
   const { family } = detail;
   return (
-    <Stack width="100%" spacing={3}>
+    <Stack width="100%" spacing={3} paddingBottom={3}>
       <Stack>
         <Typography variant="h6">Familia</Typography>
         <Typography variant="body2" color="text.secondary">
@@ -37,7 +37,9 @@ export function FamilySection({ detail }: FamilySectionProps) {
       }
       <Typography variant="body2">Número de dependientes:</Typography>
       <Slider
-        sx={{ width: '100%' }}
+        sx={{
+          width: '100%'
+        }}
         value={family.numberOfDependents}
         min={0}
         max={10}

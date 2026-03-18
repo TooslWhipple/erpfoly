@@ -34,6 +34,10 @@ export const colors = {
     background: "#EBEBEB",
     textInactive: "#707070",
   },
+  form: {
+    /** Disabled text field surface and outline (matches neutral zinc-100) */
+    inputDisabledBackground: "#F4F4F5",
+  },
 };
 
 export const theme = createTheme({

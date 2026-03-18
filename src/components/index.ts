@@ -78,5 +78,7 @@ export { ImageViewerModal } from "./ImageViewerModal";
 export type { ImageViewerModalProps } from "./ImageViewerModal";
 export { ApproveCreditModal } from "./ApproveCreditModal";
 export type { ApproveCreditModalProps } from "./ApproveCreditModal";
+export { RejectCreditModal } from "./RejectCreditModal";
+export type { RejectCreditModalProps } from "./RejectCreditModal";
 export * from "./Icons";
 

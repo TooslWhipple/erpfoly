@@ -1,0 +1,76 @@
+import { Divider, Grid, Stack, Typography, FormControlLabel, Switch } from "@mui/material";
+import { FormTextField } from "@/components";
+import type { CreditApplicationDetail, EmploymentInfo } from "@/types/solicitud-credito-detail.types";
+import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
+
+interface EmploymentSectionProps {
+  detail: CreditApplicationDetail;
+}
+
+function EmploymentFields({ data }: { data: EmploymentInfo }) {
+  return (
+    <Grid container spacing={2}>
+      <Grid size={{ xs: 12 }}>
+        <FormTextField label="Empresa" value={data.company} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 6, md: 4 }}>
+        <FormTextField label="Código Postal" value={data.postalCode} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 6, md: 4 }}>
+        <FormTextField label="Estado" value={data.state} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 6, md: 4 }}>
+        <FormTextField label="Ciudad" value={data.city} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12 }}>
+        <FormTextField label="Calle y número" value={data.streetAndNumber} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <FormTextField label="Antigüedad (años)" value={String(data.tenureYears)} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <FormTextField label="Puesto" value={data.position} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <FormTextField label="Departamento" value={data.department} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        <FormTextField label="Ingreso mensual" value={data.monthlyIncome} disabled fullWidth />
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        <FormTextField label="Teléfono de la empresa" value={data.companyPhone} disabled fullWidth />
+      </Grid>
+    </Grid>
+  );
+}
+
+export function EmploymentSection({ detail }: EmploymentSectionProps) {
+  const { employment } = detail;
+  return (
+    <Stack width="100%" spacing={3}>
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+        <Stack>
+          <Typography variant="h6">Empleo</Typography>
+          <Typography variant="body2" color="text.secondary">Información sobre el empleo e ingresos del cliente.</Typography>
+        </Stack>
+        <Stack>
+          <Typography variant="body2" color="text.secondary" >Sum. ingresos</Typography>
+          <Typography variant="subtitle1">{employment.totalMonthlyIncome}</Typography>
+        </Stack>
+      </Stack>
+      <Divider />
+      <EmploymentFields data={employment.applicant} />
+      <FormControlLabel
+        sx={formControlLabelSpacingSx}
+        control={<Switch checked={employment.hasOtherIncome} disabled />}
+        label="¿Cuenta con otros ingresos?"
+      />
+      {employment.spouse && (
+        <>
+          <Typography variant="subtitle1">Empleo del cónyuge</Typography>
+          <EmploymentFields data={employment.spouse} />
+        </>
+      )}
+    </Stack>
+  );
+}

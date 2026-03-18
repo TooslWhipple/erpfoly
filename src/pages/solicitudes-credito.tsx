@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
@@ -227,6 +228,7 @@ const TIPO_CONFIG: Record<SolicitudTipo, { label: string; color: string }> = {
 };
 
 export default function SolicitudesCredito() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("todas");
   const [searchValue, setSearchValue] = useState("");
   const [solicitudes, setSolicitudes] = useState<SolicitudCredito[]>([]);
@@ -279,8 +281,8 @@ export default function SolicitudesCredito() {
     setPage(0);
   };
 
-  const handleVerDetalle = async (solicitud: SolicitudCredito) => {
-    await getSolicitudById(solicitud.id);
+  const handleVerDetalle = (solicitud: SolicitudCredito) => {
+    router.push(`/solicitudes-credito/${solicitud.id}`);
   };
 
   const handleAprobar = async (solicitud: SolicitudCredito) => {

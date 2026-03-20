@@ -9,7 +9,6 @@ import {
 export interface RejectCreditModalProps {
   open: boolean;
   onClose: () => void;
-  /** Months until the applicant can submit again (shown in the warning copy). */
   cooldownMonths?: number;
   onReject?: () => void;
 }

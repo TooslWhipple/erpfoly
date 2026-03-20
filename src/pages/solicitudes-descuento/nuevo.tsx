@@ -16,7 +16,14 @@ import {
 } from "@mui/material";
 import numeral from "numeral";
 import { Clock9 } from "lucide-react";
-import { MainLayout, Breadcrumbs, DiscountRequestItemCard, StatusChip } from "@/components";
+import {
+  MainLayout,
+  Breadcrumbs,
+  DiscountRequestItemCard,
+  StatusChip,
+  ApproveDiscountRequestModal,
+  RejectDiscountRequestModal,
+} from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
   ClientSummary,
@@ -77,6 +84,8 @@ export default function NuevaSolicitudDescuentoPage() {
   );
   const [deliveryEmail, setDeliveryEmail] = useState("jose.montes@gmail.com");
   const [receiverPhone, setReceiverPhone] = useState("667 333 4512");
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   const shipping = 240;
@@ -108,17 +117,50 @@ export default function NuevaSolicitudDescuentoPage() {
     setReceiverPhone("667 333 4512");
   }, []);
 
-  const handleCancel = useCallback(() => {
-    router.push("/solicitudes-descuento");
-  }, [router]);
+  const handleOpenRejectModal = useCallback(() => {
+    setRejectModalOpen(true);
+  }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!client) return;
-    // Mock: in production would call API to create discount request
-    console.log("[NuevaSolicitudDescuento] Submit", {
+  const handleOpenApproveModal = useCallback(() => {
+    setApproveModalOpen(true);
+  }, []);
+
+  const handleRejectDiscountRequest = useCallback(
+    (rejectionReason: string) => {
+      // Mock: in production would call API to reject the discount request
+      console.log("[NuevaSolicitudDescuento] Reject", {
+        rejectionReason,
+        clientId: client?.id,
+        total,
+      });
+      router.push("/solicitudes-descuento");
+    },
+    [client?.id, router, total]
+  );
+
+  const handleApproveDiscountRequest = useCallback(
+    (approvedDiscountPercent: number) => {
+      if (!client) return;
+      // Mock: in production would call API to approve with the authorized discount
+      console.log("[NuevaSolicitudDescuento] Approve", {
+        approvedDiscountPercent,
+        discountReason,
+        saleType,
+        client,
+        lineItems,
+        deliveryType,
+        deliveryAddress,
+        subtotal,
+        shipping,
+        total,
+        engancheAmount,
+      });
+      router.push("/solicitudes-descuento");
+    },
+    [
+      client,
       discountReason,
       saleType,
-      client,
       lineItems,
       deliveryType,
       deliveryAddress,
@@ -126,21 +168,9 @@ export default function NuevaSolicitudDescuentoPage() {
       shipping,
       total,
       engancheAmount,
-    });
-    router.push("/solicitudes-descuento");
-  }, [
-    client,
-    discountReason,
-    saleType,
-    lineItems,
-    deliveryType,
-    deliveryAddress,
-    subtotal,
-    shipping,
-    total,
-    engancheAmount,
-    router,
-  ]);
+      router,
+    ]
+  );
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Solicitudes de descuentos", href: "/solicitudes-descuento" },
@@ -149,6 +179,18 @@ export default function NuevaSolicitudDescuentoPage() {
 
   return (
     <MainLayout>
+      <RejectDiscountRequestModal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onReject={handleRejectDiscountRequest}
+      />
+      <ApproveDiscountRequestModal
+        open={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        saleTotal={total}
+        suggestedDiscountPercent={5}
+        onApprove={handleApproveDiscountRequest}
+      />
       <Stack spacing={2}>
         <Stack
           spacing={2}
@@ -176,14 +218,14 @@ export default function NuevaSolicitudDescuentoPage() {
                     variant="contained"
                     color="error"
                     style={{ width: 112 }}
-                    onClick={handleCancel}>
+                    onClick={handleOpenRejectModal}>
                     Rechazar
                   </Button>
                   <Button
                     variant="contained"
                     color="primary"
                     style={{ width: 112 }}
-                    onClick={handleSubmit}>
+                    onClick={handleOpenApproveModal}>
                     Aprobar
                   </Button>
                 </Fragment>

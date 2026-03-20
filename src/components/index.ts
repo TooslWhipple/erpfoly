@@ -80,5 +80,9 @@ export { ApproveCreditModal } from "./ApproveCreditModal";
 export type { ApproveCreditModalProps } from "./ApproveCreditModal";
 export { RejectCreditModal } from "./RejectCreditModal";
 export type { RejectCreditModalProps } from "./RejectCreditModal";
+export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
+export type { ApproveDiscountRequestModalProps } from "./ApproveDiscountRequestModal";
+export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";
+export type { RejectDiscountRequestModalProps } from "./RejectDiscountRequestModal";
 export * from "./Icons";
 

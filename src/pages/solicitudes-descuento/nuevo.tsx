@@ -1,20 +1,29 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, Fragment } from "react";
 import { useRouter } from "next/router";
 import {
-  Box,
+  Button,
+  Divider,
   FormControl,
-  InputLabel,
+  Grid,
   MenuItem,
   Select,
   SelectChangeEvent,
+  Skeleton,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { InfoOutlined as InfoOutlinedIcon, Map as MapIcon } from "@mui/icons-material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs, DiscountRequestItemCard } from "@/components";
+import { Clock9 } from "lucide-react";
+import {
+  MainLayout,
+  Breadcrumbs,
+  DiscountRequestItemCard,
+  StatusChip,
+  ApproveDiscountRequestModal,
+  RejectDiscountRequestModal,
+} from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
   ClientSummary,
@@ -22,47 +31,15 @@ import type {
   SaleTypeForm,
 } from "@/types/discount-requests.types";
 import {
-  PageContainer,
-  MainContent,
-  SidePanel,
-  HeaderSection,
-  TitleSection,
-  PageTitle,
-  ActionsSection,
-  ActionButton,
   DiscountCard,
-  DiscountCardFooter,
-  PendingBadge,
   SectionCard,
-  SectionTitle,
-  SectionSubtitle,
-  SectionHeader,
+  SectionGrayCard,
   ChangeLink,
-  ClientName,
-  ClientDetail,
-  ClientNotice,
-  ActiveChip,
   ItemsList,
-  SummaryRow,
-  SummaryLabel,
-  SummaryValue,
-  TotalRow,
-  TotalLabel,
-  TotalValue,
-  EngancheRow,
   MapPlaceholder,
-  DeliveryFieldBlock,
-  DeliveryFieldLabel,
-  DeliveryFieldRow,
-  DeliveryFieldValue,
-  DeliveryFieldText,
-  DeliveryFieldSecondary,
+  TotalCard
 } from "@/styles/solicitudes-descuento/nuevo.styles";
 import { colors } from "@/styles/theme";
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const MOCK_CLIENT: ClientSummary = {
   id: "1",
@@ -107,6 +84,8 @@ export default function NuevaSolicitudDescuentoPage() {
   );
   const [deliveryEmail, setDeliveryEmail] = useState("jose.montes@gmail.com");
   const [receiverPhone, setReceiverPhone] = useState("667 333 4512");
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   const shipping = 240;
@@ -138,17 +117,50 @@ export default function NuevaSolicitudDescuentoPage() {
     setReceiverPhone("667 333 4512");
   }, []);
 
-  const handleCancel = useCallback(() => {
-    router.push("/solicitudes-descuento");
-  }, [router]);
+  const handleOpenRejectModal = useCallback(() => {
+    setRejectModalOpen(true);
+  }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!client) return;
-    // Mock: in production would call API to create discount request
-    console.log("[NuevaSolicitudDescuento] Submit", {
+  const handleOpenApproveModal = useCallback(() => {
+    setApproveModalOpen(true);
+  }, []);
+
+  const handleRejectDiscountRequest = useCallback(
+    (rejectionReason: string) => {
+      // Mock: in production would call API to reject the discount request
+      console.log("[NuevaSolicitudDescuento] Reject", {
+        rejectionReason,
+        clientId: client?.id,
+        total,
+      });
+      router.push("/solicitudes-descuento");
+    },
+    [client?.id, router, total]
+  );
+
+  const handleApproveDiscountRequest = useCallback(
+    (approvedDiscountPercent: number) => {
+      if (!client) return;
+      // Mock: in production would call API to approve with the authorized discount
+      console.log("[NuevaSolicitudDescuento] Approve", {
+        approvedDiscountPercent,
+        discountReason,
+        saleType,
+        client,
+        lineItems,
+        deliveryType,
+        deliveryAddress,
+        subtotal,
+        shipping,
+        total,
+        engancheAmount,
+      });
+      router.push("/solicitudes-descuento");
+    },
+    [
+      client,
       discountReason,
       saleType,
-      client,
       lineItems,
       deliveryType,
       deliveryAddress,
@@ -156,21 +168,9 @@ export default function NuevaSolicitudDescuentoPage() {
       shipping,
       total,
       engancheAmount,
-    });
-    router.push("/solicitudes-descuento");
-  }, [
-    client,
-    discountReason,
-    saleType,
-    lineItems,
-    deliveryType,
-    deliveryAddress,
-    subtotal,
-    shipping,
-    total,
-    engancheAmount,
-    router,
-  ]);
+      router,
+    ]
+  );
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Solicitudes de descuentos", href: "/solicitudes-descuento" },
@@ -179,189 +179,216 @@ export default function NuevaSolicitudDescuentoPage() {
 
   return (
     <MainLayout>
-      <Breadcrumbs
-        items={breadcrumbs}
-        showBackButton
-        onBack={() => router.push("/solicitudes-descuento")}
+      <RejectDiscountRequestModal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onReject={handleRejectDiscountRequest}
       />
+      <ApproveDiscountRequestModal
+        open={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        saleTotal={total}
+        suggestedDiscountPercent={5}
+        onApprove={handleApproveDiscountRequest}
+      />
+      <Stack spacing={2}>
+        <Stack
+          spacing={2}
+          direction={{ xs: "column", md: "row" }}
+          alignItems={{ xs: "flex-start", md: "center" }}
+          justifyContent="space-between">
 
-      <HeaderSection>
-        <TitleSection>
-          <PageTitle>Nueva solicitud de descuento</PageTitle>
-        </TitleSection>
-        <ActionsSection>
-          <ActionButton variant="outlined" color="error" onClick={handleCancel}>
-            Rechazar
-          </ActionButton>
-          <ActionButton
-            variant="contained"
-            color="primary"
-            onClick={handleSubmit}
-            disabled={!client || lineItems.length === 0}
-          >
-            Aprobar
-          </ActionButton>
-        </ActionsSection>
-      </HeaderSection>
+          <Breadcrumbs
+            items={breadcrumbs}
+            showBackButton
+            onBack={() => router.push("/solicitudes-descuento")}
+          />
 
-      <PageContainer>
-        <MainContent>
-          <DiscountCard>
-            <Stack flex={1}>
-              <Typography variant="subtitle1">Descuento solicitado</Typography>
-              <Typography variant="body2" color="text.secondary">Motivo: Última pieza</Typography>
+
+          <Stack direction="row" spacing={2}>
+            {
+              (!client || lineItems.length === 0) ?
+                <Fragment>
+                  <Skeleton width={112} height={24} />
+                  <Skeleton width={112} height={24} />
+                </Fragment>
+                :
+                <Fragment>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    style={{ width: 112 }}
+                    onClick={handleOpenRejectModal}>
+                    Rechazar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ width: 112 }}
+                    onClick={handleOpenApproveModal}>
+                    Aprobar
+                  </Button>
+                </Fragment>
+            }
+          </Stack>
+
+        </Stack>
+        <Typography variant="h4" fontWeight={600}>Nueva solicitud de descuento</Typography>
+        <Divider />
+        <Grid container spacing={4}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Stack spacing={2}>
+              <DiscountCard>
+                <Stack flex={1}>
+                  <Typography variant="subtitle1">Descuento solicitado</Typography>
+                  <Typography variant="body2" color="text.secondary">Motivo: Última pieza</Typography>
+                </Stack>
+                <StatusChip
+                  label="Pendiente de autorización"
+                  variant="pending"
+                  size="small"
+                  startIcon={<Clock9 size={12} />}
+                />
+              </DiscountCard>
+              <SectionCard>
+                <Stack>
+                  <Typography variant="h6">Artículos</Typography>
+                  <Typography variant="body2" color="text.secondary">Agrega los artículos para este cliente.</Typography>
+                </Stack>
+
+                {
+                  lineItems.length == 0 ?
+                    [1, 2, 3].map((item) => (
+                      <Skeleton key={item} width="100%" height="144px" />
+                    ))
+                    :
+                    <ItemsList>
+                      {
+                        lineItems.map((item) => (
+                          <DiscountRequestItemCard key={item.id} item={item} />
+                        ))
+                      }
+                    </ItemsList>
+                }
+
+                <Stack spacing={3}>
+                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                    <Typography variant="body1">Subtotal</Typography>
+                    <Typography variant="subtitle1" fontWeight={600}>{formatCurrency(subtotal)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                    <Typography variant="body1">Envío</Typography>
+                    <Typography variant="subtitle1" fontWeight={600}>{formatCurrency(shipping)}</Typography>
+                  </Stack>
+                  <TotalCard>
+                    <Typography variant="body1" fontWeight={600}>Total</Typography>
+                    <Typography variant="h5" fontWeight={600}>{formatCurrency(total)}</Typography>
+                  </TotalCard>
+                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                    <Typography variant="body1">Enganche solicitado ({enganchePercent}%)</Typography>
+                    <Typography variant="subtitle1" fontWeight={600}>{formatCurrency(engancheAmount)}</Typography>
+                  </Stack>
+                </Stack>
+              </SectionCard>
             </Stack>
-            <PendingBadge>
-              <InfoOutlinedIcon sx={{ fontSize: 18 }} />
-              <Typography variant="body2" color="error">Pendiente de autorización</Typography>
-            </PendingBadge>
-          </DiscountCard>
-
-          <SectionCard>
-            <Typography variant="h6">Artículos</Typography>
-            <Typography variant="body2" color="text.secondary">Agrega los artículos para este cliente.</Typography>
-            <ItemsList>
-              {lineItems.map((item) => (
-                <DiscountRequestItemCard key={item.id} item={item} />
-              ))}
-            </ItemsList>
-
-            <Stack spacing={4} mt={2}>
-              <Stack direction="row" justifyContent="space-between" alignContent="center">
-                <Typography variant="body1">Subtotal</Typography>
-                <Typography variant="subtitle1">{formatCurrency(subtotal)}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignContent="center">
-                <Typography variant="body1">Envío</Typography>
-                <Typography variant="subtitle1">{formatCurrency(shipping)}</Typography>
-              </Stack>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignContent="center"
-                style={{
-                  background: colors.chip.background,
-                  borderRadius: '8px',
-                  marginLeft: '-12px',
-                  marginRight: '-12px',
-                  padding: '12px',
-                }}>
-                <Typography variant="body1" fontWeight={600}>Total</Typography>
-                <Typography variant="h5" fontWeight={600}>{formatCurrency(total)}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignContent="center">
-                <Typography variant="body1">Enganche solicitado ({enganchePercent}%)</Typography>
-                <Typography variant="subtitle1">{formatCurrency(engancheAmount)}</Typography>
-              </Stack>
-            </Stack>
-          </SectionCard>
-        </MainContent>
-
-        <SidePanel>
-          <SectionCard>
-            <SectionTitle>Tipo de venta</SectionTitle>
-            <ToggleButtonGroup
-              value={saleType}
-              exclusive
-              onChange={handleSaleTypeChange}
-              fullWidth
-              size="small"
-              sx={{
-                "& .MuiToggleButtonGroup-grouped": {
-                  border: `1px solid ${colors.border}`,
-                  "&.Mui-selected": {
-                    backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
-                    color: colors.sidebar?.textSelected ?? "#2663EB",
-                    "&:hover": {
-                      backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={2}>
+              <SectionGrayCard>
+                <Typography variant="h6">Tipo de venta</Typography>
+                <ToggleButtonGroup
+                  value={saleType}
+                  exclusive
+                  onChange={handleSaleTypeChange}
+                  fullWidth
+                  size="small"
+                  sx={{
+                    "& .MuiToggleButtonGroup-grouped": {
+                      border: `1px solid ${colors.border}`,
+                      "&.Mui-selected": {
+                        backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
+                        color: colors.sidebar?.textSelected ?? "#2663EB",
+                        "&:hover": {
+                          backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
+                        },
+                      },
                     },
-                  },
-                },
-              }}
-            >
-              <ToggleButton value="credito">Crédito</ToggleButton>
-              <ToggleButton value="contado">Contado</ToggleButton>
-              <ToggleButton value="apartado">Apartado</ToggleButton>
-            </ToggleButtonGroup>
-          </SectionCard>
+                  }}
+                >
+                  <ToggleButton value="credito">Crédito</ToggleButton>
+                  <ToggleButton value="contado">Contado</ToggleButton>
+                  <ToggleButton value="apartado">Apartado</ToggleButton>
+                </ToggleButtonGroup>
+              </SectionGrayCard>
 
-          <SectionCard>
-            <SectionHeader>
-              <SectionTitle sx={{ marginBottom: 0 }}>Cliente</SectionTitle>
-              <ChangeLink onClick={handleChangeClient}>Cambiar</ChangeLink>
-            </SectionHeader>
-            {client ? (
-              <>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                  <ClientName>{client.fullName}</ClientName>
-                  <ActiveChip label="Activo" size="small" />
-                </Box>
-                <ClientDetail>{client.phone}</ClientDetail>
-                <ClientDetail>{client.email}</ClientDetail>
-                {!client.hasActiveCredit && (
-                  <ClientNotice>Este cliente no cuenta con crédito activo.</ClientNotice>
-                )}
-              </>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Selecciona un cliente
-              </Typography>
-            )}
-          </SectionCard>
+              <SectionGrayCard>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="nowrap">
+                  <Typography variant="h6">Cliente</Typography>
+                  <ChangeLink onClick={handleChangeClient}>Cambiar</ChangeLink>
+                </Stack>
 
-          <SectionCard>
-            <SectionTitle sx={{ marginBottom: 2 }}>Entrega</SectionTitle>
-            <FormControl fullWidth size="small" sx={{ mb: 0 }}>
-              <InputLabel id="delivery-type-label">Tipo de entrega</InputLabel>
-              <Select
-                labelId="delivery-type-label"
-                value={deliveryType}
-                label="Tipo de entrega"
-                onChange={handleDeliveryChange}
-                sx={{
-                  backgroundColor: colors.background.sidebar,
-                  "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: colors.sidebar?.textSelected,
-                    borderWidth: 2,
-                  },
-                }}
-              >
-                {DELIVERY_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <MapPlaceholder>
-              <MapIcon sx={{ fontSize: 20, color: "#71717A" }} />
-              <Typography component="span" variant="body2" sx={{ color: "#71717A" }}>
-                Mapa de entrega
-              </Typography>
-            </MapPlaceholder>
-            <DeliveryFieldBlock>
-              <DeliveryFieldLabel>Dirección de entrega</DeliveryFieldLabel>
-              <DeliveryFieldRow>
-                <DeliveryFieldValue>
-                  <DeliveryFieldText>{deliveryAddress}</DeliveryFieldText>
-                  <DeliveryFieldSecondary>{deliveryEmail}</DeliveryFieldSecondary>
-                </DeliveryFieldValue>
-                <ChangeLink onClick={handleChangeAddress}>Cambiar</ChangeLink>
-              </DeliveryFieldRow>
-            </DeliveryFieldBlock>
-            <DeliveryFieldBlock>
-              <DeliveryFieldLabel>Teléfono de quien recibe</DeliveryFieldLabel>
-              <DeliveryFieldRow>
-                <DeliveryFieldValue>
-                  <DeliveryFieldText>{receiverPhone}</DeliveryFieldText>
-                </DeliveryFieldValue>
-                <ChangeLink onClick={handleChangeReceiverPhone}>Cambiar</ChangeLink>
-              </DeliveryFieldRow>
-            </DeliveryFieldBlock>
-          </SectionCard>
-        </SidePanel>
-      </PageContainer>
+                {
+                  client ?
+                    <Stack spacing={0.5}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="nowrap">
+                        <Typography variant="body1" fontWeight={500}>{client.fullName}</Typography>
+                        <StatusChip label="Activo" variant="success" size="small" />
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary">{client.phone}</Typography>
+                      <Typography variant="body2" color="text.secondary">{client.email}</Typography>
+                      {
+                        !client.hasActiveCredit &&
+                        <Typography variant="body2" color="text.secondary">Este cliente no cuenta con crédito activo.</Typography>
+                      }
+                    </Stack>
+                    :
+                    <Typography variant="body2" color="text.secondary">
+                      Selecciona un cliente
+                    </Typography>
+                }
+              </SectionGrayCard>
+
+              <SectionGrayCard>
+                <Typography variant="h6">Entrega</Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={deliveryType}
+                    onChange={handleDeliveryChange}
+                    sx={{
+                      backgroundColor: "transparent"
+                    }}
+                  >
+                    {
+                      DELIVERY_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))
+                    }
+                  </Select>
+                </FormControl>
+                <MapPlaceholder />
+                <Stack spacing={0.5}>
+                  <Stack direction="row" justifyContent="space-between" flexWrap="nowrap">
+                    <Typography variant="caption" fontWeight={500}>Dirección de entrega</Typography>
+                    <ChangeLink onClick={handleChangeAddress}>Cambiar</ChangeLink>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500}>{deliveryAddress}</Typography>
+                  <Typography variant="body2" color="text.secondary">{deliveryEmail}</Typography>
+                </Stack>
+
+                <Stack spacing={0.5}>
+                  <Stack direction="row" justifyContent="space-between" flexWrap="nowrap">
+                    <Typography variant="caption" fontWeight={500}>Teléfono de quien recibe</Typography>
+                    <ChangeLink onClick={handleChangeReceiverPhone}>Cambiar</ChangeLink>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500}>{receiverPhone}</Typography>
+                </Stack>
+              </SectionGrayCard>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Stack>
     </MainLayout>
   );
 }

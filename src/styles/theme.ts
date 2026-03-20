@@ -28,6 +28,8 @@ export const colors = {
       pending: { background: "#FFF7ED", color: "#EA580C" },
       error: { background: "#FEF2F2", color: "#DC2626" },
       warning: { background: "#F3E8FF", color: "#7E22CE" },
+      info: { background: "#DBEAFE", color: "#2563EB" },
+      infoAlt: { background: "#FEF3C7", color: "#D97706" },
     },
   },
   segmentControl: {

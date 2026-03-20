@@ -9,7 +9,6 @@ import {
 export interface RejectCreditModalProps {
   open: boolean;
   onClose: () => void;
-  /** Months until the applicant can submit again (shown in the warning copy). */
   cooldownMonths?: number;
   onReject?: () => void;
 }
@@ -31,10 +30,19 @@ export function RejectCreditModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
+      sx={{
+        "& .MuiDialog-container": {
+          alignItems: "flex-start",
+          justifyContent: "flex-end",
+        },
+      }}
       PaperProps={{
         sx: {
           borderRadius: "12px",
           overflow: "hidden",
+          m: 0,
+          mt: 2,
+          mr: 2,
         },
       }}
     >

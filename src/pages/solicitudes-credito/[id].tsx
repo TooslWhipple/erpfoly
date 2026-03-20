@@ -8,6 +8,7 @@ import {
   ImageViewerModal,
   ApproveCreditModal,
   RejectCreditModal,
+  RequestAdditionalInfoModal,
 } from "@/components";
 import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -61,6 +62,7 @@ export default function CreditApplicationDetailPage() {
   const [imageViewer, setImageViewer] = useState<{ title: string; subtitle: string; url: string } | null>(null);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [requestAdditionalInfoOpen, setRequestAdditionalInfoOpen] = useState(false);
 
   const loadDetail = useCallback(async (applicationId: string) => {
     setLoading(true);
@@ -141,9 +143,7 @@ export default function CreditApplicationDetailPage() {
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button
-              variant="outlined"
-              onClick={() => { }}>
+            <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
               Solicitar inf. adicional
             </Button>
             <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
@@ -205,6 +205,11 @@ export default function CreditApplicationDetailPage() {
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
         cooldownMonths={6}
+      />
+
+      <RequestAdditionalInfoModal
+        open={requestAdditionalInfoOpen}
+        onClose={() => setRequestAdditionalInfoOpen(false)}
       />
     </MainLayout>
   );

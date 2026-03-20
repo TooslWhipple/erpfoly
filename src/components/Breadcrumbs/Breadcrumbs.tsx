@@ -4,29 +4,16 @@ import { Box, Typography, IconButton } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export interface BreadcrumbItem {
-    /** Display label */
     label: string;
-    /** Navigation path (optional - if not provided, item is not clickable) */
     href?: string;
 }
 
 export interface BreadcrumbsProps {
-    /** Array of breadcrumb items */
     items: BreadcrumbItem[];
-    /** Show back arrow button */
     showBackButton?: boolean;
-    /** Custom back navigation handler */
     onBack?: () => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
 
 const Container = styled(Box)({
     display: "flex",
@@ -77,10 +64,6 @@ const Separator = styled(Typography)(({ theme }) => ({
     margin: "0 8px",
     userSelect: "none",
 }));
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function Breadcrumbs({
     items,

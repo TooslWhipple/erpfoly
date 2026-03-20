@@ -27,6 +27,13 @@ export const ModalDescription = styled(Typography)(({ theme }) => ({
 }));
 
 export const CloseButton = styled(IconButton)(({ theme }) => ({
+  width: "40px",
+  height: "40px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: "8px",
   color: theme.palette.text.secondary,
   "&:hover": {
     backgroundColor: theme.palette.action.hover,

@@ -5,12 +5,11 @@ import {
   Typography,
   Stack,
   Button,
-  Slider,
   InputAdornment,
   Grid,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
-import { colors } from "@/styles/theme";
+import { TrackSlider } from "@/components/TrackSlider";
 
 export interface ApproveCreditModalProps {
   open: boolean;
@@ -58,9 +57,6 @@ export function ApproveCreditModal({
 
   const midValue = Math.round((minAmount + maxAmount) / 2);
   const hasMidMark = midValue > minAmount && midValue < maxAmount;
-  const range = maxAmount - minAmount;
-  const midLabelLeftPercent =
-    range > 0 ? ((midValue - minAmount) / range) * 100 : 50;
 
   return (
     <Dialog
@@ -68,10 +64,19 @@ export function ApproveCreditModal({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      sx={{
+        "& .MuiDialog-container": {
+          alignItems: "flex-start",
+          justifyContent: "flex-end",
+        },
+      }}
       PaperProps={{
         sx: {
           borderRadius: "12px",
           overflow: "hidden",
+          m: 0,
+          mt: 2,
+          mr: 2,
         },
       }}
     >
@@ -114,32 +119,35 @@ export function ApproveCreditModal({
               />
             </Grid>
           </Grid>
-          <Stack spacing={1}>
-            <Slider
-              value={creditLine}
-              onChange={handleSliderChange}
-              min={minAmount}
-              max={maxAmount}
-              step={500}
-              valueLabelDisplay="off"
-              sx={{
-                color: colors.sidebar.textSelected,
-              }}
-            />
-            <Stack
-              width="100%"
-              direction="row"
-              minHeight="18px"
-              sx={{ position: "relative" }}
-            >
-              <Typography variant="body1" color="text.secondary" sx={{ flex: "1 1 0", textAlign: "left" }}>${formatCurrency(minAmount)}</Typography>
-              {
-                hasMidMark &&
-                <Typography variant="body1" sx={{ position: "absolute", left: `${midLabelLeftPercent}%`, transform: "translateX(-50%)" }}>${formatCurrency(midValue)}</Typography>
-              }
-              <Typography variant="body1" color="text.secondary" sx={{ flex: "1 1 0", textAlign: "right" }}>${formatCurrency(maxAmount)}</Typography>
-            </Stack>
-          </Stack>
+          <TrackSlider
+            value={creditLine}
+            onChange={handleSliderChange}
+            min={minAmount}
+            max={maxAmount}
+            step={500}
+            startLabel={
+              <Typography variant="body1" color="text.secondary">
+                ${formatCurrency(minAmount)}
+              </Typography>
+            }
+            endLabel={
+              <Typography variant="body1" color="text.secondary">
+                ${formatCurrency(maxAmount)}
+              </Typography>
+            }
+            middleLabel={
+              hasMidMark
+                ? {
+                    value: midValue,
+                    content: (
+                      <Typography variant="body1">
+                        ${formatCurrency(midValue)}
+                      </Typography>
+                    ),
+                  }
+                : undefined
+            }
+          />
 
           <Button
             variant="contained"

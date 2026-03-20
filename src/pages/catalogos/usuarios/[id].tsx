@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Box, Button, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
@@ -12,14 +12,8 @@ import {
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { SelectableItem } from "@/components/MultiSelectChips";
 import {
-    BreadcrumbsContainer,
-    PageHeader,
-    PageTitle,
     FormCard,
-    SectionTitle,
-    Section,
-    FieldsRow,
-    HelperTextLink,
+    HelperTextLink
 } from "@/styles/catalogos/usuarios.styles";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import {
@@ -76,7 +70,6 @@ export default function UserFormPage() {
     const userId = isNew ? null : Number(id);
 
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [sendingInvite, setSendingInvite] = useState(false);
 
     const [roles, setRoles] = useState<RoleItem[]>([]);
@@ -239,118 +232,118 @@ export default function UserFormPage() {
 
     return (
         <MainLayout>
-            <BreadcrumbsContainer>
+            <Stack spacing={3}>
                 <Breadcrumbs items={breadcrumbItems} />
-            </BreadcrumbsContainer>
-
-            <PageHeader>
-                <PageTitle>{isNew ? "Nuevo usuario" : "Editar usuario"}</PageTitle>
-                <Button
-                    variant="outlined"
-                    onClick={handleConfirm}
-                    disabled={!canSendInvite || sendingInvite || saving}
-                >
-                    {sendingInvite ? (
-                        <CircularProgress size={20} color="inherit" />
-                    ) : (
-                        (isNew) ? "Enviar invitación" : "Guardar cambios"
-                    )}
-                </Button>
-            </PageHeader>
-
-            <FormCard>
-                {/* General Data Section */}
-                <Section>
-                    <SectionTitle>Datos generales</SectionTitle>
-                    <FieldsRow>
-                        <FormTextField
-                            label="Nombre(s)"
-                            placeholder="Ej. Juan"
-                            value={user.firstName}
-                            onChange={(e) => setUserField("firstName", e.target.value)}
-                            error={Boolean(errors.firstName)}
-                            helperText={errors.firstName || undefined}
-                            autoFocus
-                        />
-                        <FormTextField
-                            label="Apellido(s)"
-                            placeholder="Ej. Pérez García"
-                            value={user.lastName}
-                            onChange={(e) => setUserField("lastName", e.target.value)}
-                            error={Boolean(errors.lastName)}
-                            helperText={errors.lastName || undefined}
-                        />
-                        <FormTextField
-                            label="Número de empleado"
-                            placeholder="Máx. 6 caracteres"
-                            value={user.username}
-                            onChange={(e) =>
-                                setUserField("username", e.target.value.replace(/\D/g, "").slice(0, USERNAME_MAX_LENGTH))
-                            }
-                            error={Boolean(errors.username)}
-                            helperText={errors.username || undefined}
-                            inputProps={{ maxLength: USERNAME_MAX_LENGTH, inputMode: "numeric" }}
-                        />
-                        {isNew && (
+                <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+                    <Typography variant="h5">{isNew ? "Nuevo usuario" : "Editar usuario"}</Typography>
+                    <Button
+                        variant="contained"
+                        onClick={handleConfirm}
+                        disabled={!canSendInvite || sendingInvite}>
+                        {
+                            (sendingInvite) ?
+                                <CircularProgress size={20} color="inherit" />
+                                :
+                                (isNew) ? "Enviar invitación" : "Guardar cambios"
+                        }
+                    </Button>
+                </Stack>
+                <Divider />
+                <FormCard>
+                    <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormTextField
-                                label="Contraseña"
-                                placeholder="Mínimo 10 caracteres"
-                                type="password"
-                                value={user.password}
-                                onChange={(e) => setUserField("password", e.target.value)}
-                                error={Boolean(errors.password)}
-                                helperText={errors.password || undefined}
+                                label="Nombre(s)"
+                                placeholder="Ej. Juan"
+                                value={user.firstName}
+                                onChange={(e) => setUserField("firstName", e.target.value)}
+                                error={Boolean(errors.firstName)}
+                                helperText={errors.firstName || undefined}
+                                autoFocus
                             />
-                        )}
-                    </FieldsRow>
-                </Section>
-
-                <Section>
-                    <SectionTitle>Rol y contacto</SectionTitle>
-                    <FieldsRow>
-                        <FormTextField
-                            label="Celular"
-                            placeholder="Ej. 8341234567"
-                            required
-                            value={user.cellphone}
-                            onChange={(e) => setUserField("cellphone", e.target.value.replace(/\D/g, "").slice(0, 15))}
-                            error={Boolean(errors.cellphone)}
-                            helperText={errors.cellphone || undefined}
-                            inputProps={{ inputMode: "tel", maxLength: 10 }}
-                        />
-                        <FormSelect
-                            label="Selecciona un rol"
-                            placeholder="Selecciona un rol"
-                            value={user.roleId}
-                            onChange={(e) => setUserField("roleId", e.target.value === "" ? "" : Number(e.target.value))}
-                            options={roles.map((role) => ({
-                                value: role.id,
-                                label: role.name,
-                            }))}
-                            error={Boolean(errors.roleId)}
-                            helperText={errors.roleId || undefined}
-                        />
-                    </FieldsRow>
-                    <HelperTextLink>
-                        Si deseas crear un rol nuevo, ve hacia el módulo{" "}
-                        <Link href="/catalogos/roles">Roles</Link>
-                    </HelperTextLink>
-                </Section>
-
-                {/* Branch Section */}
-                <Section>
-                    <SectionTitle>Sucursal</SectionTitle>
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <FormTextField
+                                label="Apellido(s)"
+                                placeholder="Ej. Pérez García"
+                                value={user.lastName}
+                                onChange={(e) => setUserField("lastName", e.target.value)}
+                                error={Boolean(errors.lastName)}
+                                helperText={errors.lastName || undefined}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <FormTextField
+                                label="Número de empleado"
+                                placeholder="Máx. 6 caracteres"
+                                value={user.username}
+                                onChange={(e) =>
+                                    setUserField("username", e.target.value.replace(/\D/g, "").slice(0, USERNAME_MAX_LENGTH))
+                                }
+                                error={Boolean(errors.username)}
+                                helperText={errors.username || undefined}
+                                inputProps={{ maxLength: USERNAME_MAX_LENGTH, inputMode: "numeric" }}
+                            />
+                        </Grid>
+                        {
+                            isNew &&
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <FormTextField
+                                    label="Contraseña"
+                                    placeholder="Mínimo 10 caracteres"
+                                    type="password"
+                                    value={user.password}
+                                    onChange={(e) => setUserField("password", e.target.value)}
+                                    error={Boolean(errors.password)}
+                                    helperText={errors.password || undefined}
+                                />
+                            </Grid>
+                        }
+                    </Grid>
+                    <Divider />
+                    <Typography variant="subtitle2" fontWeight={600}>Rol y contacto</Typography>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <FormTextField
+                                label="Celular"
+                                placeholder="Ej. 8341234567"
+                                required
+                                value={user.cellphone}
+                                onChange={(e) => setUserField("cellphone", e.target.value.replace(/\D/g, "").slice(0, 15))}
+                                error={Boolean(errors.cellphone)}
+                                helperText={errors.cellphone || undefined}
+                                inputProps={{ inputMode: "tel", maxLength: 10 }}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <FormSelect
+                                label="Selecciona un rol"
+                                placeholder="Selecciona un rol"
+                                value={user.roleId}
+                                onChange={(e) => setUserField("roleId", e.target.value === "" ? "" : Number(e.target.value))}
+                                options={roles.map((role) => ({
+                                    value: role.id,
+                                    label: role.name,
+                                }))}
+                                error={Boolean(errors.roleId)}
+                                helperText={errors.roleId || undefined}
+                            />
+                            <HelperTextLink>Si deseas crear un rol nuevo, ve hacia el módulo{" "}<Link href="/catalogos/roles">Roles</Link></HelperTextLink>
+                        </Grid>
+                    </Grid>
+                    <Divider />
+                    <Typography variant="subtitle2" fontWeight={600}>Sucursal asignada</Typography>
                     <MultiSelectChips
-                        label="Sucursal asignada"
                         items={branchItems}
                         selectedIds={user.branchIds}
                         onChange={handleBranchChange}
-                        disabled={saving || sendingInvite}
+                        disabled={sendingInvite}
                         error={Boolean(errors.branchIds)}
                         helperText={errors.branchIds || undefined}
                     />
-                </Section>
-            </FormCard>
+                </FormCard>
+            </Stack>
         </MainLayout>
     );
 }

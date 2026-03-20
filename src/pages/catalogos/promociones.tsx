@@ -1,21 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment, Stack } from "@mui/material";
+import { Stack } from "@mui/material";
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, FilterMenu } from "@/components";
+import { MainLayout, Title, TableCrud, FilterMenu, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { FilterOption } from "@/components/FilterMenu";
-import {
-  ControlsContainer,
-  SearchInput,
-  CreateButton,
-  SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
+
 
 export type PromotionType = "Crédito" | "Contado" | "Apartados";
 
@@ -257,8 +251,8 @@ export default function Promociones() {
     setPage(0);
   }, [searchValue, selectedBranches, selectedDepartments]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(event.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
   };
 
   const handleCreatePromotion = () => {
@@ -397,47 +391,43 @@ export default function Promociones() {
     <MainLayout>
       <Stack direction="column" spacing={3}>
         <Title title="Promociones" />
-        <ControlsContainer>
-          <FilterMenu
-            label="sucursales"
-            title="Sucursales"
-            options={BRANCH_OPTIONS.filter((opt) => opt.id !== "all")}
-            selectedIds={selectedBranches}
-            onChange={handleBranchFilterChange}
-            allOptionId="all"
-            allOptionLabel="Todas"
+        <Stack direction="row" spacing={2} alignContent="center" justifyContent="space-between">
+          <Stack direction="row" spacing={2} alignContent="center">
+            <FilterMenu
+              label="sucursales"
+              title="Sucursales"
+              options={BRANCH_OPTIONS.filter((opt) => opt.id !== "all")}
+              selectedIds={selectedBranches}
+              onChange={handleBranchFilterChange}
+              allOptionId="all"
+              allOptionLabel="Todas"
+            />
+            <FilterMenu
+              label="departamentos"
+              title="Departamentos"
+              options={DEPARTMENT_OPTIONS.filter((opt) => opt.id !== "all")}
+              selectedIds={selectedDepartments}
+              onChange={handleDepartmentFilterChange}
+              allOptionId="all"
+              allOptionLabel="Todos"
+            />
+          </Stack>
+          <TabFilters
+            tabs={[]}
+            activeTab={''}
+            onTabChange={() => { }}
+            showSearch
+            searchValue={searchValue}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="Buscar"
+            actions={[
+              {
+                label: "Nuevo",
+                onClick: handleCreatePromotion
+              },
+            ]}
           />
-          <FilterMenu
-            label="departamentos"
-            title="Departamentos"
-            options={DEPARTMENT_OPTIONS.filter((opt) => opt.id !== "all")}
-            selectedIds={selectedDepartments}
-            onChange={handleDepartmentFilterChange}
-            allOptionId="all"
-            allOptionLabel="Todos"
-          />
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchValue}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreatePromotion}
-          >
-            Nuevo
-          </CreateButton>
-        </ControlsContainer>
+        </Stack>
 
         <TableCrud
           columns={columns}

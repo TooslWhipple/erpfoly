@@ -76,7 +76,7 @@ export function TabFilters({
     <Grid container spacing={2} alignItems="center" justifyContent={{ xs: "flex-start", md: "space-between" }}>
       <Grid size={{ xs: 12, md: 'auto' }}>
         {
-          tabs.length &&
+          tabs.length > 0 &&
           <TabsWrapper>
             <StyledTabs
               value={activeTab}

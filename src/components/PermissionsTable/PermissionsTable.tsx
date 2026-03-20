@@ -11,10 +11,6 @@ import {
 } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export interface Permission {
     view: boolean;
     create: boolean;
@@ -29,17 +25,10 @@ export interface ModulePermission {
 }
 
 export interface PermissionsTableProps {
-    /** List of modules with their permissions */
     modules: ModulePermission[];
-    /** Callback when a permission changes */
     onChange: (moduleId: string, permission: keyof Permission, value: boolean) => void;
-    /** Disable all checkboxes */
     disabled?: boolean;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
 
 const TableContainer = styled(Box)({
     width: "100%",
@@ -49,16 +38,6 @@ const TableContainer = styled(Box)({
 const StyledTable = styled(Table)({
     width: "100%",
     borderCollapse: "collapse",
-});
-
-const StyledTableHead = styled(TableHead)({
-    "& th": {
-        borderBottom: `1px solid ${colors.border}`,
-        padding: "12px 16px",
-        fontWeight: 400,
-        fontSize: "0.875rem",
-        color: "#71717A",
-    },
 });
 
 const StyledTableRow = styled(TableRow)({
@@ -102,10 +81,6 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function PermissionsTable({
     modules,
     onChange,
@@ -121,16 +96,6 @@ export function PermissionsTable({
     return (
         <TableContainer>
             <StyledTable>
-                <StyledTableHead>
-                    <TableRow>
-                        <TableCell />
-                        {permissionColumns.map((col) => (
-                            <TableCell key={col.key} align="center">
-                                {col.label}
-                            </TableCell>
-                        ))}
-                    </TableRow>
-                </StyledTableHead>
                 <TableBody>
                     {modules.map((module) => (
                         <StyledTableRow key={module.id}>

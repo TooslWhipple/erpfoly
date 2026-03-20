@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
 import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
-import {
-  BreadcrumbsContainer,
-  PageHeader,
-  HeaderLeft,
-  PageTitle,
-  SaveButton,
-  FormCard,
-  SectionTitle,
-  Section,
-  FieldContainer,
-} from "@/styles/catalogos/roles.styles";
+import { FormCard } from "@/styles/catalogos/roles.styles";
 import {
   getRoleDetail,
   getPermissionsTemplate,
@@ -100,12 +90,12 @@ export default function RoleFormPage() {
         prev.map((m) =>
           m.id === moduleId
             ? {
-                ...m,
-                permissions: {
-                  ...m.permissions,
-                  [permission]: value,
-                },
-              }
+              ...m,
+              permissions: {
+                ...m.permissions,
+                [permission]: value,
+              },
+            }
             : m,
         ),
       );
@@ -217,56 +207,50 @@ export default function RoleFormPage() {
 
   return (
     <MainLayout>
-      <BreadcrumbsContainer>
+      <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbItems} />
-      </BreadcrumbsContainer>
-
-      <PageHeader>
-        <HeaderLeft>
-          <PageTitle>{isNew ? "Nuevo rol" : "Editar rol"}</PageTitle>
-        </HeaderLeft>
-        <SaveButton
-          variant="contained"
-          color="primary"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
-        </SaveButton>
-      </PageHeader>
-
-      <FormCard>
-        <Section>
-          <SectionTitle>Datos generales</SectionTitle>
-          <FieldContainer>
-            <FormTextField
-              label="Nombre"
-              placeholder="Ej. Administrador"
-              value={name}
-              onChange={handleNameChange}
-              error={Boolean(nameError)}
-              helperText={nameError}
-              autoFocus
-            />
-            <FormTextField
-              label="Descripción"
-              placeholder="Opcional"
-              value={description}
-              onChange={handleDescriptionChange}
-              sx={{ mt: 2 }}
-            />
-          </FieldContainer>
-        </Section>
-
-        <Section>
-          <SectionTitle>Permisos</SectionTitle>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+          <Typography variant="h5">{isNew ? "Nuevo rol" : "Editar rol"}</Typography>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
+          </Button>
+        </Stack>
+        <Divider />
+        <FormCard>
+          <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormTextField
+                label="Nombre"
+                placeholder="Ej. Administrador"
+                value={name}
+                onChange={handleNameChange}
+                error={Boolean(nameError)}
+                helperText={nameError}
+                autoFocus
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormTextField
+                label="Descripción"
+                placeholder="Opcional"
+                value={description}
+                onChange={handleDescriptionChange}
+              />
+            </Grid>
+          </Grid>
+          <Typography variant="subtitle2" fontWeight={600}>Permisos</Typography>
           <PermissionsTable
             modules={tableModules}
             onChange={handlePermissionChange}
             disabled={saving}
           />
-        </Section>
-      </FormCard>
+        </FormCard>
+      </Stack>
     </MainLayout>
   );
 }

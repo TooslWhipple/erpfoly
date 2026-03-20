@@ -26,6 +26,7 @@ import {
   UserInfoContainer,
   UserEmail,
 } from "./styles";
+import { BanknoteArrowDown } from "lucide-react";
 
 interface NavSubItem {
   label: string;
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
   { label: "Pedidos", path: "/pedidos", icon: <Van size={ICON_SIZE} /> },
   { label: "Pedidos (Sucursales)", path: "/pedidos/sucursales", icon: <Van size={ICON_SIZE} /> },
   { label: "Solicitudes (Sucursales)", path: "/solicitudes/sucursales", icon: <ClipboardList size={ICON_SIZE} /> },
+  { label: "Solicitudes de descuento", path: "/solicitudes-descuento", icon: <BanknoteArrowDown size={ICON_SIZE} /> },
   {
     label: "Inventario",
     path: "/inventario",

@@ -25,8 +25,8 @@ const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {
 };
 
 const TYPE_CHIP_VARIANTS: Record<DiscountRequestType, StatusChipVariant> = {
-  contado: "warning",
-  credito: "default",
+  contado: "info",
+  credito: "infoAlt",
 };
 
 function formatArticleCount(count: number): string {

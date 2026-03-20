@@ -80,9 +80,17 @@ export { ApproveCreditModal } from "./ApproveCreditModal";
 export type { ApproveCreditModalProps } from "./ApproveCreditModal";
 export { RejectCreditModal } from "./RejectCreditModal";
 export type { RejectCreditModalProps } from "./RejectCreditModal";
+export { RequestAdditionalInfoModal } from "./RequestAdditionalInfoModal";
+export type {
+  RequestAdditionalInfoModalProps,
+  AdditionalInfoRequestOption,
+  AdditionalInfoRequestKind,
+} from "./RequestAdditionalInfoModal";
 export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
 export type { ApproveDiscountRequestModalProps } from "./ApproveDiscountRequestModal";
 export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";
 export type { RejectDiscountRequestModalProps } from "./RejectDiscountRequestModal";
+export { TrackSlider } from "./TrackSlider";
+export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
 export * from "./Icons";
 

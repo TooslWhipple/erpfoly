@@ -30,10 +30,19 @@ export function RejectCreditModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
+      sx={{
+        "& .MuiDialog-container": {
+          alignItems: "flex-start",
+          justifyContent: "flex-end",
+        },
+      }}
       PaperProps={{
         sx: {
           borderRadius: "12px",
           overflow: "hidden",
+          m: 0,
+          mt: 2,
+          mr: 2,
         },
       }}
     >

@@ -2,7 +2,7 @@
 
 import { Dialog, useMediaQuery, useTheme, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { X as CloseIcon } from "lucide-react";
 import { DialogContent, CloseButton } from "../ModalForm/styles";
 import {
   PANEL_WIDTHS,
@@ -94,7 +94,7 @@ export function SideModal({
         <SideModalHeader>
           <Stack direction="column" alignItems="flex-start" spacing={2}>
             <CloseButton onClick={onClose} disabled={disableClose} size="small">
-              <CloseIcon />
+              <CloseIcon size={16} />
             </CloseButton>
             {header ?? defaultHeader}
           </Stack>

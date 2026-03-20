@@ -1,5 +1,5 @@
-import { Divider, Grid, Stack, Typography, FormControlLabel, Switch, Slider } from "@mui/material";
-import { FormTextField } from "@/components";
+import { Divider, Grid, Stack, Typography, FormControlLabel, Switch } from "@mui/material";
+import { FormTextField, TrackSlider } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
 
@@ -36,26 +36,17 @@ export function FamilySection({ detail }: FamilySectionProps) {
         )
       }
       <Typography variant="body2">Número de dependientes:</Typography>
-      <Slider
-        sx={{ width: '100%' }}
+      <TrackSlider
         value={family.numberOfDependents}
         min={0}
         max={10}
         step={1}
+        marks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
         disabled
-        marks={[
-          { value: 0, label: '0' },
-          { value: 1, label: '1' },
-          { value: 2, label: '2' },
-          { value: 3, label: '3' },
-          { value: 4, label: '4' },
-          { value: 5, label: '5' },
-          { value: 6, label: '6' },
-          { value: 7, label: '7' },
-          { value: 8, label: '8' },
-          { value: 9, label: '9' },
-          { value: 10, label: '+10' }
-        ]}
+        onChange={() => {
+          /* read-only display */
+        }}
+        getMarkLabel={(markValue) => (markValue === 10 ? "+10" : String(markValue))}
       />
     </Stack>
   );

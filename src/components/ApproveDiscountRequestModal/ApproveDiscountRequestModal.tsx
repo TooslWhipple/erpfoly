@@ -5,11 +5,11 @@ import {
   Typography,
   Stack,
   Button,
-  Slider,
   InputAdornment,
   Grid,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
+import { TrackSlider } from "@/components/TrackSlider";
 import { colors } from "@/styles/theme";
 import { PriceComparisonPanel } from "./styles";
 import { ChevronRight } from "lucide-react";
@@ -56,24 +56,6 @@ export function ApproveDiscountRequestModal({
   const discountedTotal = useMemo(
     () => saleTotal * (1 - discountPercent / 100),
     [saleTotal, discountPercent]
-  );
-
-  const sliderMarks = useMemo(
-    () =>
-      DISCOUNT_MARKS.map((value) => ({
-        value,
-        label: (
-          <Typography
-            component="span"
-            variant="caption"
-            fontWeight={value === discountPercent ? 700 : 400}
-            color="text.secondary"
-          >
-            {value}%
-          </Typography>
-        ),
-      })),
-    [discountPercent]
   );
 
   const syncPercentFromNumber = useCallback((value: number) => {
@@ -123,10 +105,19 @@ export function ApproveDiscountRequestModal({
       }}
       maxWidth="sm"
       fullWidth
+      sx={{
+        "& .MuiDialog-container": {
+          alignItems: "flex-start",
+          justifyContent: "flex-end",
+        },
+      }}
       PaperProps={{
         sx: {
           borderRadius: "12px",
           overflow: "hidden",
+          m: 0,
+          mt: 2,
+          mr: 2,
         },
       }}
     >
@@ -154,20 +145,23 @@ export function ApproveDiscountRequestModal({
             </Grid>
           </Grid>
 
-          <div style={{ display: "block" }}>
-            <Slider
-              value={discountPercent}
-              onChange={handleSliderChange}
-              min={DISCOUNT_MARKS[0]}
-              max={DISCOUNT_MARKS[DISCOUNT_MARKS.length - 1]}
-              step={null}
-              marks={sliderMarks}
-              valueLabelDisplay="off"
-              sx={{
-                color: colors.sidebar.textSelected,
-              }}
-            />
-          </div>
+          <TrackSlider
+            value={discountPercent}
+            onChange={handleSliderChange}
+            min={DISCOUNT_MARKS[0]}
+            max={DISCOUNT_MARKS[DISCOUNT_MARKS.length - 1]}
+            marks={DISCOUNT_MARKS}
+            getMarkLabel={(markValue) => (
+              <Typography
+                component="span"
+                variant="caption"
+                fontWeight={markValue === discountPercent ? 700 : 400}
+                color="text.secondary"
+              >
+                {markValue}%
+              </Typography>
+            )}
+          />
 
           <PriceComparisonPanel>
             <Stack spacing={0.5} flex={1}>

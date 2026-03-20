@@ -1,18 +1,7 @@
 import { Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import type { DiscountRequestLineItem } from "@/types/discount-requests.types";
-import {
-  ItemCard,
-  ItemImage,
-  ItemInfo,
-  ItemCode,
-  ItemName,
-  ItemPriceTable,
-  PriceColumn,
-  PriceLabel,
-  PriceValue,
-  DiscountValue,
-} from "@/styles/solicitudes-descuento/nuevo.styles";
+import { ItemCard, ItemImage } from "@/styles/solicitudes-descuento/nuevo.styles";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -33,7 +22,7 @@ export function DiscountRequestItemCard({ item }: DiscountRequestItemCardProps) 
           <Typography variant="caption" color="text.secondary">{item.brand}</Typography>
         </Stack>
       </Stack>
-      <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ paddingRight: 4}}>
+      <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ paddingRight: 4 }}>
         <Stack spacing={1}>
           <Typography variant="body2" color="text.secondary">Cantidad</Typography>
           <Typography variant="body1" fontWeight={600}>{item.quantity}</Typography>

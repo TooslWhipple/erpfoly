@@ -106,6 +106,10 @@ export interface ProductPackage {
     articleId?: string;
     articleName?: string;
     serviceName?: string;
+    /** Units included in the package (default 1 when adding from the modal). */
+    quantity: number;
+    /** Effective line price for articles; services use 0 when complimentary. */
+    packagePrice: number;
     branches: number[];
 }
 

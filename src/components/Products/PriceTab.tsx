@@ -3,7 +3,7 @@ import { Typography, Grid, Switch, Button, Stack, IconButton } from "@mui/materi
 import { Pencil } from "lucide-react";
 import numeral from "numeral";
 import { FormTextField, FormSelect } from "@/components";
-import { FormCard, Card } from "@/styles/catalogos/productos.styles";
+import { FormCard, Card, LuquidationCard, LiquidationSwitch } from "@/styles/catalogos/productos.styles";
 import type { PriceFormState, CostHistoryEntry, ProductBasePrice } from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
@@ -104,14 +104,18 @@ export function PriceTab({
                             <Typography variant="body2" color="text.secondary">Último costo:</Typography>
                             <Typography variant="h6">{numeral(listCostNumber).format("$0,0.00")}</Typography>
                         </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                            <Switch
-                                checked={formState.liquidation}
-                                onChange={(e) => onFieldChange("liquidation", e.target.checked)}
-                                color="primary"
-                            />
-                            <Typography>Liquidación</Typography>
-                        </Stack>
+
+                        <LuquidationCard checked={formState.liquidation}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <LiquidationSwitch
+                                    checked={formState.liquidation}
+                                    onChange={(e) => onFieldChange("liquidation", e.target.checked)}
+                                    color="primary"
+                                />
+                                <Typography variant="body1">Liquidación</Typography>
+                            </Stack>
+                            <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
+                        </LuquidationCard>
                     </FormCard>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>

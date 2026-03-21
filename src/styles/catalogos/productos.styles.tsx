@@ -1,6 +1,6 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
+import { Box, Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer, Switch } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
@@ -13,13 +13,37 @@ export const FormCard = styled('div')(({ theme }) => ({
     gap: "24px",
 }));
 
-export const Card = styled(FormCard)<{ backgroundColor?: string }>(({ backgroundColor }) => ({
+export const Card = styled('div')<{ backgroundColor?: string }>(({ backgroundColor }) => ({
     display: "flex",
     flexDirection: "column",
     backgroundColor: backgroundColor ?? colors.background.sidebar,
     borderRadius: "16px",
     padding: "16px",
     gap: "12px"
+}));
+
+export const LuquidationCard = styled('div')<{ checked: boolean }>(({ checked }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: checked ? "#FEE2E2" : colors.background.sidebar,
+    borderRadius: "8px",
+    padding: "8px 12px",
+    gap: "16px",
+}));
+
+export const LiquidationSwitch = styled(Switch)(({ theme }) => ({
+    "& .MuiSwitch-switchBase.Mui-checked": {
+        color: theme.palette.common.white,
+        "&:hover": {
+            backgroundColor: "rgba(239, 68, 68, 0.08)",
+        },
+    },
+    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+        backgroundColor: "#EF4444",
+        opacity: 1,
+    },
 }));
 
 export const SectionTitle = styled(Typography)(({ theme }) => ({
@@ -85,23 +109,18 @@ const RadioOptionIcon = styled(Box)<{ selected?: boolean }>(({ theme, selected }
 }));
 
 const StyledRadioOptionButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
-    margin: 0,
-    padding: theme.spacing(1, 2),
-    borderRadius: "12px",
-    border: `1px solid ${selected ? colors.sidebar.itemSelected : theme.palette.text.primary}`,
-    backgroundColor: selected ? colors.sidebar.itemSelected : colors.background.sidebar,
-    color: selected ? colors.sidebar.textSelected : theme.palette.text.primary,
-    fontWeight: selected ? 600 : 400,
-    textTransform: "none",
-    fontSize: "0.9375rem",
-    display: "inline-flex",
+    display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1.25),
-    transition: "all 0.2s ease",
-    "&:hover": {
-        backgroundColor: selected ? colors.sidebar.itemSelected : theme.palette.action.hover,
-        borderColor: selected ? colors.sidebar.itemSelected : theme.palette.text.primary,
-    },
+    padding: "12px",
+    borderRadius: "12px",
+    border: `1px solid ${(selected) ? colors.sidebar.itemSelected : "#E2E8F0"}`,
+    backgroundColor: (selected) ? colors.sidebar.itemSelected : "transparent",
+    color: (selected) ? colors.sidebar.textSelected : "#09090B",
+    fontSize: "14px",
+    fontWeight: (selected) ? 500 : 400,
+    textTransform: "none",
+    gap: "8px",
+    transition: "all 0.2s ease"
 }));
 
 export interface StyledFormControlLabelProps {
@@ -300,10 +319,61 @@ export const EmptyStateContainer = styled('div')({
     justifyContent: "center",
     padding: "24px",
     minHeight: "72px",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.background.content,
     borderRadius: "16px",
     textAlign: "center",
 });
+
+export const PackageRowCard = styled('div')({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: "12px",
+});
+
+export const PackageRowIconBox = styled('div')({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "56px",
+    height: "56px",
+    borderRadius: "12px",
+    backgroundColor: "#DBEAFE",
+    color: "#2563EB",
+});
+
+export const PackageRowMain = styled(Box)({
+    flex: 1,
+    minWidth: 200,
+});
+
+export const PackageStatusBadge = styled(Box)(({ theme }) => ({
+    flexShrink: 0,
+    maxWidth: "100%",
+    padding: theme.spacing(0.75, 2),
+    borderRadius: 999,
+    backgroundColor: colors.chip.background,
+    border: `1px solid ${colors.chip.border}`,
+}));
+
+export const PackageDeleteButton = styled(IconButton)(({ theme }) => ({
+    flexShrink: 0,
+    padding: "0px",
+    width: "24px",
+    height: "24px",
+    border: `1px solid ${colors.border}`,
+    color: theme.palette.text.secondary,
+    transition: "all 0.2s ease",
+    "&:hover": {
+        backgroundColor: theme.palette.action.hover,
+        color: theme.palette.error.main,
+        borderColor: theme.palette.error.light,
+    },
+}));
 
 export const EmptyStateText = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",

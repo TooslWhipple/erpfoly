@@ -5,13 +5,9 @@ import {
     MainLayout,
     Breadcrumbs,
     Title,
-    TabFilters,
     VerticalSidebarTabs,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import {
-    FormCard,
-} from "@/styles/catalogos/productos.styles";
 import type {
     GeneralDataFormState,
     PriceFormState,
@@ -280,17 +276,30 @@ export default function ProductFormPage() {
     };
 
     const handleAddPackage = async (data: PackageFormData) => {
+        const article =
+            data.type === "article" && data.articleId
+                ? MOCK_ARTICLES.find((a) => a.id === data.articleId)
+                : undefined;
+        const resolvedArticlePrice =
+            data.type === "article"
+                ? (data.packagePrice ?? article?.lastPrice ?? 0)
+                : 0;
+
         const newPackage: ProductPackage = {
             id: Date.now().toString(),
             type: data.type,
             articleId: data.articleId,
-            articleName: data.type === "article"
-                ? MOCK_ARTICLES.find(a => a.id === data.articleId)?.name
-                : undefined,
+            articleName: article?.name,
             serviceName: data.serviceName,
+            quantity: 1,
+            packagePrice: resolvedArticlePrice,
             branches: data.branches,
         };
-        setPackages([...packages, newPackage]);
+        setPackages((prev) => [...prev, newPackage]);
+    };
+
+    const handleRemovePackage = (packageId: string) => {
+        setPackages((prev) => prev.filter((p) => p.id !== packageId));
     };
 
     const handleAddImage = (files: FileList) => {
@@ -428,6 +437,7 @@ export default function ProductFormPage() {
                                 availableArticles={MOCK_ARTICLES}
                                 availableBranches={MOCK_PACKAGE_BRANCHES}
                                 onAddPackage={handleAddPackage}
+                                onRemovePackage={handleRemovePackage}
                             />
                         }
 

@@ -1,7 +1,7 @@
 import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box } from "@mui/material";
 import { Remove, Add } from "@mui/icons-material";
 import { FormTextField, FormSelect } from "@/components";
-import { InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
+import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 
 const MIN_PIECES = 1;
@@ -25,7 +25,7 @@ export function GeneralDataTab({
     lines,
 }: GeneralDataTabProps) {
     return (
-        <Stack width="100%" spacing={3} divider={<Divider />}>
+        <FormCard>
             <Stack spacing={0.5}>
                 <Typography variant="h6">Datos generales</Typography>
                 <Typography variant="body2" color="text.secondary">Registra los básicos del artículo</Typography>
@@ -199,6 +199,6 @@ export function GeneralDataTab({
                     />
                 }
             </Stack>
-        </Stack>
+        </FormCard>
     );
 }

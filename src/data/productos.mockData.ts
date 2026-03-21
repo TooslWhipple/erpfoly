@@ -1,4 +1,10 @@
-import type { Product, CostHistoryEntry, ProductBranch } from "@/types/productos.types";
+import type {
+    Product,
+    CostHistoryEntry,
+    ProductBranch,
+    ProductBasePrice,
+    CostBasisForCalculation,
+} from "@/types/productos.types";
 
 // ============================================================================
 // MOCK DATA
@@ -70,6 +76,16 @@ export const MOCK_BRANCHES = [
 export const CURRENCIES = [
     { value: "MXN", label: "MXN" },
     { value: "USD", label: "USD" },
+];
+
+export const COST_BASIS_FOR_PRICE_OPTIONS: Array<{ value: CostBasisForCalculation; label: string }> = [
+    { value: "last_cost", label: "Último costo" },
+    { value: "list_cost", label: "Costo de lista" },
+    { value: "average_cost", label: "Costo promedio" },
+];
+
+export const DEFAULT_PRODUCT_BASE_PRICES: ProductBasePrice[] = [
+    { id: "bp-default-1", name: "Contado", marginPercent: 35.75, lastEditedBy: "Gerente" },
 ];
 
 export const MOCK_COST_HISTORY: CostHistoryEntry[] = [

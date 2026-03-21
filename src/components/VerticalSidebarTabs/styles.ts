@@ -5,6 +5,7 @@ export const TabsList = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   width: "100%",
+  minWidth: "200px",
   justifyContent: "flex-start",
 }));
 

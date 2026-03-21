@@ -36,9 +36,13 @@ export async function getProduct(id: string): Promise<Product | null> {
                 currency: "MXN",
                 exchangeRate: 1.0,
                 iva: 16,
-                averageCost: 9200,
-                lastCost: 9200,
+                averageCost: 9100,
+                lastCost: 9150,
                 liquidation: false,
+                costBasisForCalculation: "last_cost",
+                basePrices: [
+                    { id: "bp-1", name: "Contado", marginPercent: 35.75, lastEditedBy: "Gerente" },
+                ],
             },
             branches: MOCK_BRANCHES.map((branch, index) => ({
                 id: `branch-${branch.id}`,

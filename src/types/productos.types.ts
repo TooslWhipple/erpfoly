@@ -11,6 +11,15 @@ export interface ProductSupplier {
     isDefault: boolean;
 }
 
+export type CostBasisForCalculation = "last_cost" | "list_cost" | "average_cost";
+
+export interface ProductBasePrice {
+    id: string;
+    name: string;
+    marginPercent: number;
+    lastEditedBy?: string;
+}
+
 export interface ProductPrice {
     listCost: number;
     currency: string;
@@ -19,6 +28,8 @@ export interface ProductPrice {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
+    costBasisForCalculation?: CostBasisForCalculation;
+    basePrices?: ProductBasePrice[];
 }
 
 export interface ProductBranch {
@@ -74,6 +85,9 @@ export interface PriceFormState {
     exchangeRate: string;
     iva: string;
     liquidation: boolean;
+    costBasisForCalculation: CostBasisForCalculation;
+    lastCost: string;
+    averageCost: string;
 }
 
 export interface FormErrors {

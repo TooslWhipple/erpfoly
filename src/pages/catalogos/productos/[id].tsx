@@ -1,19 +1,40 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, CircularProgress, Stack } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
     Title,
     TabFilters,
+    VerticalSidebarTabs,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
     FormCard,
 } from "@/styles/catalogos/productos.styles";
-import type { GeneralDataFormState, PriceFormState, FormErrors, ProductSupplier, ProductBranch, ProductPackage, PackageFormData } from "@/types/productos.types";
+import type {
+    GeneralDataFormState,
+    PriceFormState,
+    FormErrors,
+    ProductSupplier,
+    ProductBranch,
+    ProductPackage,
+    PackageFormData,
+    ProductBasePrice,
+} from "@/types/productos.types";
 import { getProduct, saveProduct } from "@/services/productos.service";
-import { MOCK_DEPARTMENTS, MOCK_LINES, CURRENCIES, MOCK_COST_HISTORY, getInitialBranches, MOCK_ARTICLES, MOCK_PACKAGE_BRANCHES, MOCK_SUPPLIERS_FOR_SELECTION } from "@/data/productos.mockData";
+import {
+    MOCK_DEPARTMENTS,
+    MOCK_LINES,
+    CURRENCIES,
+    MOCK_COST_HISTORY,
+    getInitialBranches,
+    MOCK_ARTICLES,
+    MOCK_PACKAGE_BRANCHES,
+    MOCK_SUPPLIERS_FOR_SELECTION,
+    COST_BASIS_FOR_PRICE_OPTIONS,
+    DEFAULT_PRODUCT_BASE_PRICES,
+} from "@/data/productos.mockData";
 import { GeneralDataTab } from "@/components/Products/GeneralDataTab";
 import { SuppliersTab } from "@/components/Products/SuppliersTab";
 import { PriceTab } from "@/components/Products/PriceTab";
@@ -51,7 +72,12 @@ export default function ProductFormPage() {
         exchangeRate: "1.00",
         iva: "16.00",
         liquidation: false,
+        costBasisForCalculation: "last_cost",
+        lastCost: "0.00",
+        averageCost: "0.00",
     });
+
+    const [basePrices, setBasePrices] = useState<ProductBasePrice[]>(() => [...DEFAULT_PRODUCT_BASE_PRICES]);
 
     const [branches, setBranches] = useState<ProductBranch[]>([]);
 
@@ -92,7 +118,11 @@ export default function ProductFormPage() {
                         exchangeRate: product.price.exchangeRate.toFixed(2),
                         iva: String(product.price.iva),
                         liquidation: product.price.liquidation,
+                        costBasisForCalculation: product.price.costBasisForCalculation ?? "last_cost",
+                        lastCost: product.price.lastCost.toFixed(2),
+                        averageCost: product.price.averageCost.toFixed(2),
                     });
+                    setBasePrices(product.price.basePrices ?? [...DEFAULT_PRODUCT_BASE_PRICES]);
                     setBranches(product.branches);
                     setImages(product.images);
                 }
@@ -163,9 +193,11 @@ export default function ProductFormPage() {
                     currency: priceData.currency,
                     exchangeRate: Number(priceData.exchangeRate),
                     iva: Number(priceData.iva),
-                    averageCost: Number(priceData.listCost),
-                    lastCost: Number(priceData.listCost),
+                    averageCost: Number(priceData.averageCost),
+                    lastCost: Number(priceData.lastCost),
                     liquidation: priceData.liquidation,
+                    costBasisForCalculation: priceData.costBasisForCalculation,
+                    basePrices,
                 },
                 branches,
                 images,
@@ -198,6 +230,10 @@ export default function ProductFormPage() {
 
     const handlePriceChange = (field: keyof PriceFormState, value: string | boolean) => {
         setPriceData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleAddBasePrice = (entry: Omit<ProductBasePrice, "id">) => {
+        setBasePrices((prev) => [...prev, { ...entry, id: `bp-${Date.now()}` }]);
     };
 
     const handleBranchToggle = (branchId: string) => {
@@ -316,10 +352,8 @@ export default function ProductFormPage() {
     return (
         <MainLayout>
             <Stack spacing={3}>
-                <Breadcrumbs items={breadcrumbItems} />
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Title
-                        title={(isNew) ? "Nuevo producto" : "Editar producto"} />
+                    <Breadcrumbs items={breadcrumbItems} />
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
                             variant="outlined"
@@ -337,81 +371,89 @@ export default function ProductFormPage() {
                         </Button>
                     </Stack>
                 </Stack>
-                <TabFilters
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                />
+                <Title title={(isNew) ? "Nuevo producto" : "Editar producto"} />
+                <Divider />
 
-                <FormCard>
-                    {
-                        activeTab === "general" &&
-                        <GeneralDataTab
-                            formState={generalData}
-                            errors={errors}
-                            onFieldChange={handleGeneralDataChange}
-                            onErrorClear={handleErrorClear}
-                            departments={MOCK_DEPARTMENTS}
-                            lines={MOCK_LINES}
+                <Grid container spacing={5} flexWrap="nowrap">
+                    <Grid size={{ xs: 'auto' }}>
+                        <VerticalSidebarTabs
+                            tabs={tabs}
+                            value={activeTab}
+                            onChange={setActiveTab}
                         />
-                    }
+                    </Grid>
+                    <Grid size={{ xs: 'grow' }}>
 
-                    {
-                        activeTab === "suppliers" &&
-                        <SuppliersTab
-                            suppliers={suppliers}
-                            availableSuppliers={MOCK_SUPPLIERS_FOR_SELECTION}
-                            onAddSupplier={handleAddSupplier}
-                        />
-                    }
+                        {
+                            activeTab === "general" &&
+                            <GeneralDataTab
+                                formState={generalData}
+                                errors={errors}
+                                onFieldChange={handleGeneralDataChange}
+                                onErrorClear={handleErrorClear}
+                                departments={MOCK_DEPARTMENTS}
+                                lines={MOCK_LINES}
+                            />
+                        }
 
-                    {
-                        activeTab === "price" &&
-                        <PriceTab
-                            formState={priceData}
-                            onFieldChange={handlePriceChange}
-                            lastModified="12 de Julio, 2025, Arturo Gonzalez"
-                            currencies={CURRENCIES}
-                            costHistory={MOCK_COST_HISTORY}
-                            costHistoryOpen={costHistoryOpen}
-                            onCostHistoryOpen={() => setCostHistoryOpen(true)}
-                            onCostHistoryClose={() => setCostHistoryOpen(false)}
-                        />
-                    }
+                        {
+                            activeTab === "suppliers" &&
+                            <SuppliersTab
+                                suppliers={suppliers}
+                                availableSuppliers={MOCK_SUPPLIERS_FOR_SELECTION}
+                                onAddSupplier={handleAddSupplier}
+                            />
+                        }
 
-                    {
-                        activeTab === "packages" &&
-                        <PackagesTab
-                            packages={packages}
-                            availableArticles={MOCK_ARTICLES}
-                            availableBranches={MOCK_PACKAGE_BRANCHES}
-                            onAddPackage={handleAddPackage}
-                        />
-                    }
+                        {
+                            activeTab === "price" &&
+                            <PriceTab
+                                formState={priceData}
+                                onFieldChange={handlePriceChange}
+                                currencies={CURRENCIES}
+                                costBasisOptions={COST_BASIS_FOR_PRICE_OPTIONS}
+                                basePrices={basePrices}
+                                onAddBasePrice={handleAddBasePrice}
+                                costHistory={MOCK_COST_HISTORY}
+                                costHistoryOpen={costHistoryOpen}
+                                onCostHistoryOpen={() => setCostHistoryOpen(true)}
+                                onCostHistoryClose={() => setCostHistoryOpen(false)}
+                            />
+                        }
 
-                    {
-                        activeTab === "gallery" &&
-                        <GalleryTab
-                            images={images}
-                            onAddImage={handleAddImage}
-                            onReplaceImage={handleReplaceImage}
-                            onRemoveImage={handleRemoveImage}
-                        />
-                    }
+                        {
+                            activeTab === "packages" &&
+                            <PackagesTab
+                                packages={packages}
+                                availableArticles={MOCK_ARTICLES}
+                                availableBranches={MOCK_PACKAGE_BRANCHES}
+                                onAddPackage={handleAddPackage}
+                            />
+                        }
 
-                    {
-                        activeTab === "branches" &&
-                        <BranchesTab
-                            branches={branches}
-                            onBranchToggle={handleBranchToggle}
-                            onInventoryChange={handleInventoryChange}
-                            onInventoryInputChange={handleInventoryInputChange}
-                        />
-                    }
+                        {
+                            activeTab === "gallery" &&
+                            <GalleryTab
+                                images={images}
+                                onAddImage={handleAddImage}
+                                onReplaceImage={handleReplaceImage}
+                                onRemoveImage={handleRemoveImage}
+                            />
+                        }
 
-                </FormCard>
+                        {
+                            activeTab === "branches" &&
+                            <BranchesTab
+                                branches={branches}
+                                onBranchToggle={handleBranchToggle}
+                                onInventoryChange={handleInventoryChange}
+                                onInventoryInputChange={handleInventoryInputChange}
+                            />
+                        }
+
+                    </Grid>
+                </Grid>
             </Stack>
-
         </MainLayout>
     );
 }

@@ -1,12 +1,11 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Paper, Typography, Button, IconButton, Switch, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
+import { Box, Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
     borderRadius: "16px",
@@ -14,6 +13,14 @@ export const FormCard = styled('div')(({ theme }) => ({
     gap: "24px",
 }));
 
+export const Card = styled(FormCard)<{ backgroundColor?: string }>(({ backgroundColor }) => ({
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: backgroundColor ?? colors.background.sidebar,
+    borderRadius: "16px",
+    padding: "16px",
+    gap: "12px"
+}));
 
 export const SectionTitle = styled(Typography)(({ theme }) => ({
     fontSize: "1rem",
@@ -34,10 +41,6 @@ export const Section = styled(Box)(({ theme }) => ({
         marginBottom: 0,
     },
 }));
-
-// ============================================================================
-// RADIO BUTTONS
-// ============================================================================
 
 export const RadioGroupContainer = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -130,10 +133,6 @@ export function StyledFormControlLabel({
         </StyledRadioOptionButton>
     );
 }
-
-// ============================================================================
-// GALLERY COMPONENTS
-// ============================================================================
 
 export const GalleryGrid = styled(Box)(({ theme }) => ({
     display: "grid",
@@ -235,10 +234,6 @@ export const HiddenFileInput = styled("input")({
     display: "none",
 });
 
-// ============================================================================
-// BRANCHES COMPONENTS
-// ============================================================================
-
 export const BranchListContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -298,66 +293,23 @@ export const InventoryButton = styled(IconButton)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// EMPTY STATES
-// ============================================================================
-
-export const EmptyStateContainer = styled(Box)(({ theme }) => ({
+export const EmptyStateContainer = styled('div')({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.spacing(6),
-    minHeight: 300,
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    padding: "24px",
+    minHeight: "72px",
+    backgroundColor: "#F8FAFC",
+    borderRadius: "16px",
     textAlign: "center",
-}));
+});
 
 export const EmptyStateText = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",
     color: theme.palette.text.secondary,
     marginTop: theme.spacing(1),
 }));
-
-// ============================================================================
-// COST SUMMARY COMPONENTS
-// ============================================================================
-
-export const CostSummaryContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(3),
-    padding: theme.spacing(2),
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    backgroundColor: colors.background.sidebar,
-    marginTop: theme.spacing(2),
-    flexWrap: "wrap",
-}));
-
-export const CostItem = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(0.5),
-}));
-
-export const CostLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.75rem",
-    color: theme.palette.text.secondary,
-    fontWeight: 400,
-}));
-
-export const CostValue = styled(Typography)(({ theme }) => ({
-    fontSize: "1.25rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
-
-// ============================================================================
-// COST HISTORY MODAL COMPONENTS
-// ============================================================================
 
 export const CostHistoryTimeline = styled(Box)(({ theme }) => ({
     position: "relative",
@@ -423,10 +375,6 @@ export const TimelineChange = styled(Box)(({ theme }) => ({
     fontSize: "0.875rem",
 }));
 
-// ============================================================================
-// SUPPLIER MODAL COMPONENTS
-// ============================================================================
-
 export const SupplierTableContainer = styled(TableContainer)(({ theme }) => ({
     flex: 1,
     border: `1px solid ${colors.border}`,
@@ -461,25 +409,4 @@ export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
     color: theme.palette.text.primary,
     padding: theme.spacing(1.5, 2),
     borderBottom: `1px solid ${colors.border}`,
-}));
-
-export const SupplierAddButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    color: theme.palette.primary.main,
-    padding: theme.spacing(0.5, 1),
-    minWidth: "auto",
-    "&:hover": {
-        backgroundColor: "transparent",
-        textDecoration: "underline",
-    },
-}));
-
-export const SupplierNewButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "0.875rem",
-    fontWeight: 600,
-    padding: theme.spacing(0.5, 2),
-    minWidth: "auto",
 }));

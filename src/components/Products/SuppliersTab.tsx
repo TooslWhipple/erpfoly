@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Box, Button, Typography } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { EmptyStateContainer } from "@/styles/catalogos/productos.styles";
+import { Button, Stack, Typography } from "@mui/material";
+import { EmptyStateContainer, FormCard } from "@/styles/catalogos/productos.styles";
 import { AddSupplierModal } from "./AddSupplierModal";
 import type { ProductSupplier } from "@/types/productos.types";
 import type { SupplierForSelection } from "@/data/productos.mockData";
+import { Plus } from "lucide-react";
 
 interface SuppliersTabProps {
     suppliers: ProductSupplier[];
@@ -44,32 +44,28 @@ export function SuppliersTab({
 
     return (
         <>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                <Box>
-                    <Typography variant="h6">Proveedores</Typography>
-                    <Typography variant="body1">
-                        Agrega los proveedores para este artículo
-                    </Typography>
-                </Box>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={handleOpenModal}
-                >
-                    Agregar proveedor
-                </Button>
-            </Box>
-            {suppliers.length === 0 ? (
-                <EmptyStateContainer>
-                    <Typography variant="body1">
-                        No tienes proveedores asignados para este artículo.
-                    </Typography>
-                </EmptyStateContainer>
-            ) : (
-                <Box>
-                </Box>
-            )}
+            <FormCard>
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent={{ xs: "flex-start", md: "space-between" }} alignItems="center">
+                    <Stack spacing={0.5}>
+                        <Typography variant="h6">Proveedores</Typography>
+                        <Typography variant="body2" color="text.secondary">Agrega los proveedores para este artículo</Typography>
+                    </Stack>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<Plus size={12} />}
+                        onClick={handleOpenModal}>
+                        Agregar proveedor
+                    </Button>
+                </Stack>
+
+                {
+                    suppliers.length === 0 &&
+                    <EmptyStateContainer>
+                        <Typography variant="body1">No tienes proveedores asignados para este artículo.</Typography>
+                    </EmptyStateContainer>
+                }
+            </FormCard>
 
             <AddSupplierModal
                 open={modalOpen}

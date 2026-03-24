@@ -480,3 +480,54 @@ export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
     padding: theme.spacing(1.5, 2),
     borderBottom: `1px solid ${colors.border}`,
 }));
+
+/** Assigned suppliers list (product form) — column headers */
+export const SupplierAssignedHeaderCell = styled(TableCell)(({ theme }) => ({
+    fontSize: "0.75rem",
+    fontWeight: 500,
+    color: theme.palette.text.secondary,
+    padding: theme.spacing(1.25, 2),
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.background.sidebar,
+}));
+
+export const SupplierAssignedBodyCell = styled(TableCell)(({ theme }) => ({
+    fontSize: "0.875rem",
+    color: theme.palette.text.primary,
+    padding: theme.spacing(1.5, 2),
+    borderBottom: `1px solid ${colors.border}`,
+    verticalAlign: "middle",
+}));
+
+export const SupplierAssignedTableWrap = styled(TableContainer)(({ theme }) => ({
+    overflow: "hidden"
+}));
+
+/** "Principal" status — amber / orange pill */
+export const SupplierPrimaryBadge = styled(Box)(({ theme }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(0.5, 1.5),
+    borderRadius: 999,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    lineHeight: 1.2,
+    backgroundColor: colors.chip.variants.infoAlt.background,
+    color: colors.chip.variants.infoAlt.color,
+}));
+
+export const SupplierRemoveIconButton = styled(IconButton)(({ theme }) => ({
+    width: 36,
+    height: 36,
+    padding: 0,
+    border: `1px solid ${colors.border}`,
+    borderRadius: "50%",
+    color: theme.palette.text.secondary,
+    backgroundColor: colors.background.sidebar,
+    "&:hover": {
+        backgroundColor: theme.palette.action.hover,
+        color: theme.palette.error.main,
+        borderColor: theme.palette.error.light,
+    },
+}));

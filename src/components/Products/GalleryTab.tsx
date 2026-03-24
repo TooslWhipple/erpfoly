@@ -13,21 +13,14 @@ import {
     GalleryIconButton,
     HiddenFileInput,
 } from "@/styles/catalogos/productos.styles";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import type { ProductGalleryImage } from "@/types/productos.types";
 
 interface GalleryTabProps {
-    images: string[];
+    images: ProductGalleryImage[];
     onAddImage: (files: FileList) => void;
     onReplaceImage: (index: number, file: File) => void;
     onRemoveImage?: (index: number) => void;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }: GalleryTabProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +34,6 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
         const files = e.target.files;
         if (files && files.length > 0) {
             onAddImage(files);
-            // Reset input to allow selecting the same file again
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -58,7 +50,6 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
         const files = e.target.files;
         if (files && files.length > 0) {
             onReplaceImage(index, files[0]);
-            // Reset input to allow selecting the same file again
             const input = editInputRefs.current.get(index);
             if (input) {
                 input.value = "";
@@ -87,8 +78,8 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
             </SectionDescription>
             <GalleryGrid>
                 {images.map((image, index) => (
-                    <GalleryItem key={index}>
-                        <GalleryImage src={image} alt={`Product image ${index + 1}`} />
+                    <GalleryItem key={image.id}>
+                        <GalleryImage src={image.previewUrl} alt={`Product image ${index + 1}`} />
                         <GalleryLabel>
                             {index === 0 ? "Principal" : "Adicional"}
                         </GalleryLabel>
@@ -108,7 +99,8 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
                         />
                     </GalleryItem>
                 ))}
-                {images.length < 6 && (
+                {
+                    images.length < 6 &&
                     <GalleryItem onClick={handleAddClick}>
                         <GalleryAddButton>
                             <AddIcon sx={{ fontSize: 40, color: "text.secondary" }} />
@@ -121,7 +113,7 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
                             onChange={handleFileChange}
                         />
                     </GalleryItem>
-                )}
+                }
             </GalleryGrid>
         </Section>
     );

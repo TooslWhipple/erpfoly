@@ -1,14 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { InputAdornment, Stack } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { Stack } from "@mui/material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import {
-  ControlsContainer,
-  SearchInput,
-  CreateButton,
-  SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
+
 import {
   MessageFormModal,
   type MessageFormData,
@@ -95,8 +89,8 @@ export default function Mensajes() {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(event.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
   };
 
   const handleOpenCreateModal = () => {
@@ -229,31 +223,23 @@ export default function Mensajes() {
     <MainLayout>
       <Stack direction="column" spacing={3}>
         <Title title="Mensajes" />
-        <ControlsContainer>
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchInput}
-            onChange={handleSearchChange}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIconStyled />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateModal}
-          >
-            Nuevo
-          </CreateButton>
-        </ControlsContainer>
+        <TabFilters
+          tabs={[]}
+          activeTab=""
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleOpenCreateModal,
+              variant: "contained",
+              color: "primary",
+            }
+          ]}
+        />
 
         <TableCrud
           columns={columns}
@@ -280,10 +266,10 @@ export default function Mensajes() {
         initialValues={
           editingMessage
             ? {
-                name: editingMessage.name,
-                content: editingMessage.content,
-                status: editingMessage.status,
-              }
+              name: editingMessage.name,
+              content: editingMessage.content,
+              status: editingMessage.status,
+            }
             : undefined
         }
         inUse={editingMessage ? editingMessage.inUse : undefined}

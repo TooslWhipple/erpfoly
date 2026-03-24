@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment, Stack } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { Stack } from "@mui/material";
+import { Edit as EditIcon } from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import {
-    ControlsContainer,
-    SearchInput,
-    CreateButton,
-    SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
+
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSuppliers } from "@/services/suppliers.service";
@@ -53,8 +48,8 @@ export default function Proveedores() {
         setSearch(debouncedSearch);
     }, [debouncedSearch, setSearch]);
 
-    const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchInput(event.target.value);
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchInput(value);
     }, [setSearchInput]);
 
     const handleCreateSupplier = useCallback(() => {
@@ -118,29 +113,23 @@ export default function Proveedores() {
         <MainLayout>
             <Stack direction="column" spacing={3}>
                 <Title title="Proveedores" />
-                <ControlsContainer>
-                    <SearchInput
-                        size="small"
-                        placeholder="Buscar"
-                        value={searchInput}
-                        onChange={handleSearchChange}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIconStyled />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <CreateButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleCreateSupplier}
-                    >
-                        Nuevo
-                    </CreateButton>
-                </ControlsContainer>
+                <TabFilters
+                    tabs={[]}
+                    activeTab=""
+                    onTabChange={() => { }}
+                    showSearch
+                    searchValue={searchInput}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreateSupplier,
+                            variant: "contained",
+                            color: "primary",
+                        }
+                    ]}
+                />
 
                 <TableCrud
                     columns={columns}

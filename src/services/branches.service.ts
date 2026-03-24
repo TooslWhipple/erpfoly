@@ -84,3 +84,18 @@ export async function updateBranchesShippingPrice(
 ): Promise<ApiResult<unknown>> {
   return patch<unknown>(`${BASE}/shipping-price`, payload);
 }
+
+// ============================================================================
+// CATALOG (GET /branches/catalog — Branches.Read)
+// ============================================================================
+
+export interface BranchCatalogItem {
+  id: number;
+  name: string;
+}
+
+export async function getBranchesCatalog(): Promise<
+  ApiResult<BranchCatalogItem[]>
+> {
+  return get<BranchCatalogItem[]>(`${BASE}/catalog`);
+}

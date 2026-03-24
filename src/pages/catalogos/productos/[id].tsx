@@ -17,17 +17,23 @@ import type {
     ProductPackage,
     PackageFormData,
     ProductBasePrice,
+    ProductGalleryImage,
 } from "@/types/productos.types";
-import { getProduct, saveProduct } from "@/services/productos.service";
 import {
-    MOCK_DEPARTMENTS,
-    MOCK_LINES,
+    getProduct,
+    saveProduct,
+    createProduct,
+    buildCreateProductRequest,
+    resolveGalleryImageUrlsForCreate,
+} from "@/services/productos.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
+import { branchCatalogToProductBranches } from "@/lib/productFormCatalogMappers";
+import {
     CURRENCIES,
     MOCK_COST_HISTORY,
-    getInitialBranches,
     MOCK_ARTICLES,
     MOCK_PACKAGE_BRANCHES,
-    MOCK_SUPPLIERS_FOR_SELECTION,
     COST_BASIS_FOR_PRICE_OPTIONS,
     DEFAULT_PRODUCT_BASE_PRICES,
 } from "@/data/productos.mockData";
@@ -41,11 +47,13 @@ import { BranchesTab } from "@/components/Products/BranchesTab";
 export default function ProductFormPage() {
     const router = useRouter();
     const { id } = router.query;
+    const showSuccess = useSnackbarStore((s) => s.showSuccess);
+    const showError = useSnackbarStore((s) => s.showError);
 
     const isNew = id === "nuevo";
     const productId = isNew ? null : String(id);
 
-    const [loading, setLoading] = useState(!isNew);
+    const [productLoading, setProductLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("general");
 
@@ -58,7 +66,19 @@ export default function ProductFormPage() {
         piecesCount: "1",
         warrantyType: "months",
         warrantyMonths: "12",
+        warrantyPolicy: "",
     });
+
+    const {
+        catalogsLoading,
+        departmentOptions,
+        lineOptions,
+        suppliersCatalog,
+        branchCatalogItems,
+        warrantyOptions,
+    } = useProductFormCatalogs(generalData.departmentId);
+
+    const pageLoading = catalogsLoading || productLoading;
 
     const [suppliers, setSuppliers] = useState<ProductSupplier[]>([]);
 
@@ -77,7 +97,7 @@ export default function ProductFormPage() {
 
     const [branches, setBranches] = useState<ProductBranch[]>([]);
 
-    const [images, setImages] = useState<string[]>([]);
+    const [galleryImages, setGalleryImages] = useState<ProductGalleryImage[]>([]);
 
     const [packages, setPackages] = useState<ProductPackage[]>([]);
 
@@ -87,13 +107,12 @@ export default function ProductFormPage() {
 
     useEffect(() => {
         if (isNew || !productId) {
-            setLoading(false);
-            setBranches(getInitialBranches());
+            setProductLoading(false);
             return;
         }
 
         async function loadProduct() {
-            setLoading(true);
+            setProductLoading(true);
             try {
                 const product = await getProduct(productId!);
                 if (product) {
@@ -106,6 +125,7 @@ export default function ProductFormPage() {
                         piecesCount: "1",
                         warrantyType: product.warrantyType,
                         warrantyMonths: String(product.warrantyMonths),
+                        warrantyPolicy: "",
                     });
                     setSuppliers(product.suppliers);
                     setPriceData({
@@ -120,17 +140,32 @@ export default function ProductFormPage() {
                     });
                     setBasePrices(product.price.basePrices ?? [...DEFAULT_PRODUCT_BASE_PRICES]);
                     setBranches(product.branches);
-                    setImages(product.images);
+                    setGalleryImages(
+                        product.images.map((url, index) => ({
+                            id: `loaded-${product.id}-${index}`,
+                            previewUrl: url,
+                            file: null,
+                        }))
+                    );
                 }
             } catch (err) {
                 console.error("[ProductForm] Error loading product:", err);
             } finally {
-                setLoading(false);
+                setProductLoading(false);
             }
         }
 
         loadProduct();
     }, [isNew, productId]);
+
+    useEffect(() => {
+        if (!isNew || catalogsLoading || branchCatalogItems.length === 0) {
+            return;
+        }
+        setBranches((prev) =>
+            prev.length === 0 ? branchCatalogToProductBranches(branchCatalogItems) : prev
+        );
+    }, [isNew, catalogsLoading, branchCatalogItems]);
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
@@ -141,6 +176,12 @@ export default function ProductFormPage() {
 
         if (!generalData.lineId) {
             newErrors.lineId = "La línea es requerida";
+        } else if (!Number.isFinite(Number(generalData.lineId))) {
+            newErrors.lineId = "La línea debe ser un identificador válido";
+        }
+
+        if (!Number.isFinite(Number(generalData.departmentId))) {
+            newErrors.departmentId = "El departamento debe ser un identificador válido";
         }
 
         if (!generalData.description.trim()) {
@@ -153,6 +194,10 @@ export default function ProductFormPage() {
 
         if (generalData.warrantyType === "months" && (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)) {
             newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
+        }
+
+        if (generalData.warrantyType === "policy" && !generalData.warrantyPolicy.trim()) {
+            newErrors.warrantyPolicy = "Describe la garantía por póliza anexa";
         }
 
         const piecesNum = parseInt(generalData.piecesCount, 10);
@@ -174,30 +219,54 @@ export default function ProductFormPage() {
 
         setSaving(true);
         try {
-            await saveProduct({
-                id: productId || undefined,
-                code: generalData.code || "ART-000",
-                departmentId: Number(generalData.departmentId),
-                lineId: generalData.lineId,
-                description: generalData.description.trim(),
-                shortName: generalData.shortName.trim(),
-                warrantyType: generalData.warrantyType,
-                warrantyMonths: generalData.warrantyType === "months" ? Number(generalData.warrantyMonths) : 0,
-                suppliers,
-                price: {
-                    listCost: Number(priceData.listCost),
-                    currency: priceData.currency,
-                    exchangeRate: Number(priceData.exchangeRate),
-                    iva: Number(priceData.iva),
-                    averageCost: Number(priceData.averageCost),
-                    lastCost: Number(priceData.lastCost),
-                    liquidation: priceData.liquidation,
-                    costBasisForCalculation: priceData.costBasisForCalculation,
-                    basePrices,
-                },
-                branches,
-                images,
-            });
+            if (isNew) {
+                let resolvedImageUrls: string[];
+                try {
+                    resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
+                } catch (readErr) {
+                    console.error("[ProductForm] Error reading gallery files:", readErr);
+                    showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
+                    return;
+                }
+                const payload = buildCreateProductRequest({
+                    generalData,
+                    suppliers,
+                    branches,
+                    images: resolvedImageUrls,
+                });
+                const result = await createProduct(payload);
+                if (result.error) {
+                    console.error("[ProductForm] Error creating product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                showSuccess("Producto creado correctamente.");
+            } else {
+                await saveProduct({
+                    id: productId || undefined,
+                    code: generalData.code || "ART-000",
+                    departmentId: Number(generalData.departmentId),
+                    lineId: generalData.lineId,
+                    description: generalData.description.trim(),
+                    shortName: generalData.shortName.trim(),
+                    warrantyType: generalData.warrantyType,
+                    warrantyMonths: generalData.warrantyType === "months" ? Number(generalData.warrantyMonths) : 0,
+                    suppliers,
+                    price: {
+                        listCost: Number(priceData.listCost),
+                        currency: priceData.currency,
+                        exchangeRate: Number(priceData.exchangeRate),
+                        iva: Number(priceData.iva),
+                        averageCost: Number(priceData.averageCost),
+                        lastCost: Number(priceData.lastCost),
+                        liquidation: priceData.liquidation,
+                        costBasisForCalculation: priceData.costBasisForCalculation,
+                        basePrices,
+                    },
+                    branches,
+                    images: galleryImages.map((g) => g.previewUrl),
+                });
+            }
             router.push("/catalogos/productos");
         } catch (err) {
             console.error("[ProductForm] Error saving:", err);
@@ -213,7 +282,12 @@ export default function ProductFormPage() {
     };
 
     const handleGeneralDataChange = (field: keyof GeneralDataFormState, value: string | "months" | "policy") => {
-        setGeneralData((prev) => ({ ...prev, [field]: value }));
+        setGeneralData((prev) => {
+            if (field === "departmentId" && value !== prev.departmentId) {
+                return { ...prev, departmentId: value as string, lineId: "" };
+            }
+            return { ...prev, [field]: value };
+        });
     };
 
     const handleErrorClear = (field: string) => {
@@ -263,16 +337,32 @@ export default function ProductFormPage() {
     };
 
     const handleAddSupplier = async (supplierId: number) => {
-        const supplier = MOCK_SUPPLIERS_FOR_SELECTION.find((s) => s.id === supplierId);
+        const supplier = suppliersCatalog.find((s) => s.id === supplierId);
         if (supplier) {
             const newSupplier: ProductSupplier = {
                 id: Date.now().toString(),
                 supplierId: supplier.id,
-                supplierName: supplier.name,
+                supplierName: supplier.businessName?.trim() || supplier.name,
                 isDefault: suppliers.length === 0,
             };
             setSuppliers([...suppliers, newSupplier]);
         }
+    };
+
+    const handleRemoveSupplier = (supplierRowId: string) => {
+        setSuppliers((prev) => {
+            const next = prev.filter((s) => s.id !== supplierRowId);
+            if (next.length === 0) {
+                return next;
+            }
+            if (!next.some((s) => s.isDefault)) {
+                return next.map((s, index) => ({
+                    ...s,
+                    isDefault: index === 0,
+                }));
+            }
+            return next;
+        });
     };
 
     const handleAddPackage = async (data: PackageFormData) => {
@@ -303,28 +393,45 @@ export default function ProductFormPage() {
     };
 
     const handleAddImage = (files: FileList) => {
-        const newImages: string[] = [];
-        Array.from(files).forEach((file) => {
-            if (images.length + newImages.length < 6) {
-                const imageUrl = URL.createObjectURL(file);
-                newImages.push(imageUrl);
-            }
+        setGalleryImages((prev) => {
+            const additions: ProductGalleryImage[] = [];
+            Array.from(files).forEach((file) => {
+                if (prev.length + additions.length < 6) {
+                    additions.push({
+                        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                        previewUrl: URL.createObjectURL(file),
+                        file,
+                    });
+                }
+            });
+            return [...prev, ...additions];
         });
-        setImages([...images, ...newImages]);
     };
 
     const handleReplaceImage = (index: number, file: File) => {
-        const imageUrl = URL.createObjectURL(file);
-        const newImages = [...images];
-        if (newImages[index] && newImages[index].startsWith("blob:")) {
-            URL.revokeObjectURL(newImages[index]);
-        }
-        newImages[index] = imageUrl;
-        setImages(newImages);
+        setGalleryImages((prev) => {
+            const next = [...prev];
+            const old = next[index];
+            if (old?.previewUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(old.previewUrl);
+            }
+            next[index] = {
+                id: old?.id ?? `img-${Date.now()}`,
+                previewUrl: URL.createObjectURL(file),
+                file,
+            };
+            return next;
+        });
     };
 
     const handleRemoveImage = (index: number) => {
-        setImages(images.filter((_, i) => i !== index));
+        setGalleryImages((prev) => {
+            const removed = prev[index];
+            if (removed?.previewUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(removed.previewUrl);
+            }
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const breadcrumbItems: BreadcrumbItem[] = [
@@ -341,7 +448,7 @@ export default function ProductFormPage() {
         { value: "branches", label: "Sucursales" },
     ];
 
-    if (loading) {
+    if (pageLoading) {
         return (
             <MainLayout>
                 <Box
@@ -400,8 +507,9 @@ export default function ProductFormPage() {
                                 errors={errors}
                                 onFieldChange={handleGeneralDataChange}
                                 onErrorClear={handleErrorClear}
-                                departments={MOCK_DEPARTMENTS}
-                                lines={MOCK_LINES}
+                                departments={departmentOptions}
+                                lines={lineOptions}
+                                warrantyOptions={warrantyOptions}
                             />
                         }
 
@@ -409,8 +517,9 @@ export default function ProductFormPage() {
                             activeTab === "suppliers" &&
                             <SuppliersTab
                                 suppliers={suppliers}
-                                availableSuppliers={MOCK_SUPPLIERS_FOR_SELECTION}
+                                availableSuppliers={suppliersCatalog}
                                 onAddSupplier={handleAddSupplier}
+                                onRemoveSupplier={handleRemoveSupplier}
                             />
                         }
 
@@ -444,7 +553,7 @@ export default function ProductFormPage() {
                         {
                             activeTab === "gallery" &&
                             <GalleryTab
-                                images={images}
+                                images={galleryImages}
                                 onAddImage={handleAddImage}
                                 onReplaceImage={handleReplaceImage}
                                 onRemoveImage={handleRemoveImage}

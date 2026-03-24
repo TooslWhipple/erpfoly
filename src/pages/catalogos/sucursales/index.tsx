@@ -1,16 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { InputAdornment, Stack } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm } from "@/components";
+import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { FormFieldConfig } from "@/components/Form";
-import {
-  ControlsContainer,
-  SearchInput,
-  CreateButton,
-  SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
+
 import {
   getBranches as fetchBranchesApi,
   createBranch,
@@ -88,8 +82,8 @@ export default function Sucursales() {
     },
   ];
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(event.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
   };
 
   const handleOpenCreateModal = () => {
@@ -192,7 +186,7 @@ export default function Sucursales() {
   const handleViewDiscounts = (branch: Branch) => {
     router.push(`/catalogos/sucursales/${branch.id}`);
   };
-  
+
   const actions: RowAction<Branch>[] = [
     {
       id: "discounts",
@@ -216,30 +210,23 @@ export default function Sucursales() {
     <MainLayout>
       <Stack direction="column" spacing={3}>
         <Title title="Sucursales" />
-        <ControlsContainer>
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchValue}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateModal}
-          >
-            Nueva sucursal
-          </CreateButton>
-        </ControlsContainer>
-
+        <TabFilters
+          tabs={[]}
+          activeTab=""
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleOpenCreateModal,
+              variant: "contained"
+            }
+          ]}
+        />
+       
         <TableCrud
           columns={columns}
           rows={branches}

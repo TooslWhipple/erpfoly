@@ -81,3 +81,19 @@ export async function deleteDepartment(
 ): Promise<ApiResult<DeleteDepartmentResponse>> {
   return del<DeleteDepartmentResponse>(`${BASE}/${id}`);
 }
+
+// ============================================================================
+// CATALOG (GET /departments/catalog — Departments.Read)
+// ============================================================================
+
+export interface DepartmentCatalogItem {
+  id: number;
+  name: string;
+  code: string | null;
+}
+
+export async function getDepartmentsCatalog(): Promise<
+  ApiResult<DepartmentCatalogItem[]>
+> {
+  return get<DepartmentCatalogItem[]>(`${BASE}/catalog`);
+}

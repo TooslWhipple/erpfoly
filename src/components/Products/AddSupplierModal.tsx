@@ -18,7 +18,12 @@ import {
     SupplierTableRow,
     SupplierTableCell
 } from "@/styles/catalogos/productos.styles";
-import type { SupplierForSelection } from "@/data/productos.mockData";
+import type { SupplierCatalogItem } from "@/services/suppliers.service";
+
+function supplierDisplayName(s: SupplierCatalogItem): string {
+    const business = s.businessName?.trim();
+    return business || s.name;
+}
 
 interface AddSupplierModalProps {
     open: boolean;
@@ -26,7 +31,7 @@ interface AddSupplierModalProps {
     onAddSupplier: (supplierId: number) => Promise<void>;
     onNewSupplier?: () => void;
     loading?: boolean;
-    availableSuppliers: SupplierForSelection[];
+    availableSuppliers: SupplierCatalogItem[];
     existingSupplierIds?: number[];
 }
 
@@ -43,7 +48,11 @@ export function AddSupplierModal({
 
     const filteredSuppliers = useMemo(() => {
         return availableSuppliers.filter((supplier) => {
-            const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const q = searchTerm.toLowerCase();
+            const display = supplierDisplayName(supplier).toLowerCase();
+            const matchesSearch =
+                display.includes(q) ||
+                supplier.name.toLowerCase().includes(q) ||
                 supplier.id.toString().includes(searchTerm);
             const notAlreadyAdded = !existingSupplierIds.includes(supplier.id);
             return matchesSearch && notAlreadyAdded;
@@ -118,9 +127,9 @@ export function AddSupplierModal({
                             </TableRow>
                         ) : (
                             filteredSuppliers.map((supplier) => (
-                                <SupplierTableRow key={`${supplier.id}-${supplier.name}`}>
+                                <SupplierTableRow key={supplier.id}>
                                     <SupplierTableCell>{supplier.id}</SupplierTableCell>
-                                    <SupplierTableCell>{supplier.name}</SupplierTableCell>
+                                    <SupplierTableCell>{supplierDisplayName(supplier)}</SupplierTableCell>
                                     <SupplierTableCell align="right">
                                         <Button
                                             variant="text"

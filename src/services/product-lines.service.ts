@@ -66,3 +66,24 @@ export async function deleteProductLine(
 ): Promise<ApiResult<DeleteProductLineResponse>> {
   return del<DeleteProductLineResponse>(`${BASE}/${id}`);
 }
+
+// ============================================================================
+// CATALOG (GET /product-lines/catalog — Departments.Read)
+// ============================================================================
+
+export interface ProductLineCatalogItem {
+  id: number;
+  departmentId: number;
+  name: string;
+  code: string | null;
+}
+
+export interface GetProductLinesCatalogParams {
+  departmentId?: number;
+}
+
+export async function getProductLinesCatalog(
+  params: GetProductLinesCatalogParams = {}
+): Promise<ApiResult<ProductLineCatalogItem[]>> {
+  return get<ProductLineCatalogItem[]>(buildListUrl(`${BASE}/catalog`, params));
+}

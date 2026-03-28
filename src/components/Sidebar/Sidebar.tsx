@@ -89,6 +89,7 @@ const navItems: NavItem[] = [
       { label: "Folypuntos", path: "/catalogos/folypuntos" },
       { label: "Roles", path: "/catalogos/roles" },
       { label: "Usuarios", path: "/catalogos/usuarios" },
+      { label: "Vendedores", path: "/catalogos/vendedores" },
     ],
   },
 ];
@@ -234,7 +235,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
                     <List component="div" disablePadding>
                       {item.subItems!.map((subItem) => {
-                        const subActive = router.pathname === subItem.path;
+                        const subActive =
+                          router.pathname === subItem.path ||
+                          router.pathname.startsWith(`${subItem.path}/`);
                         return (
                           <SubItemButton
                             key={subItem.path}

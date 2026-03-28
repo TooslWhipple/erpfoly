@@ -19,7 +19,6 @@ interface GeneralDataTabProps {
     onErrorClear: (field: string) => void;
     departments: Array<{ value: string; label: string }>;
     lines: Array<{ value: string; label: string }>;
-    /** From GET /products/catalog; falls back to default labels when omitted or empty */
     warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
 }
 

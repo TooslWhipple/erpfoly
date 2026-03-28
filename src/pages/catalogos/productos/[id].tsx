@@ -20,15 +20,20 @@ import type {
     ProductGalleryImage,
 } from "@/types/productos.types";
 import {
-    getProduct,
-    saveProduct,
     createProduct,
     buildCreateProductRequest,
     resolveGalleryImageUrlsForCreate,
+    getProductById,
+    updateProduct,
+    productDetailDtoToFormSnapshot,
+    type ProductDetailBranchDto,
 } from "@/services/productos.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
-import { branchCatalogToProductBranches } from "@/lib/productFormCatalogMappers";
+import {
+    branchCatalogToProductBranches,
+    mergeBranchCatalogWithProductDetail,
+} from "@/lib/productFormCatalogMappers";
 import {
     CURRENCIES,
     MOCK_COST_HISTORY,
@@ -97,6 +102,8 @@ export default function ProductFormPage() {
 
     const [branches, setBranches] = useState<ProductBranch[]>([]);
 
+    const [detailBranchRows, setDetailBranchRows] = useState<ProductDetailBranchDto[] | null>(null);
+
     const [galleryImages, setGalleryImages] = useState<ProductGalleryImage[]>([]);
 
     const [packages, setPackages] = useState<ProductPackage[]>([]);
@@ -108,48 +115,37 @@ export default function ProductFormPage() {
     useEffect(() => {
         if (isNew || !productId) {
             setProductLoading(false);
+            setDetailBranchRows(null);
             return;
         }
 
         async function loadProduct() {
             setProductLoading(true);
+            setDetailBranchRows(null);
             try {
-                const product = await getProduct(productId!);
-                if (product) {
-                    setGeneralData({
-                        departmentId: String(product.departmentId),
-                        lineId: product.lineId,
-                        code: product.code,
-                        description: product.description,
-                        shortName: product.shortName,
-                        piecesCount: "1",
-                        warrantyType: product.warrantyType,
-                        warrantyMonths: String(product.warrantyMonths),
-                        warrantyPolicy: "",
-                    });
-                    setSuppliers(product.suppliers);
-                    setPriceData({
-                        listCost: product.price.listCost.toFixed(2),
-                        currency: product.price.currency,
-                        exchangeRate: product.price.exchangeRate.toFixed(2),
-                        iva: String(product.price.iva),
-                        liquidation: product.price.liquidation,
-                        costBasisForCalculation: product.price.costBasisForCalculation ?? "last_cost",
-                        lastCost: product.price.lastCost.toFixed(2),
-                        averageCost: product.price.averageCost.toFixed(2),
-                    });
-                    setBasePrices(product.price.basePrices ?? [...DEFAULT_PRODUCT_BASE_PRICES]);
-                    setBranches(product.branches);
-                    setGalleryImages(
-                        product.images.map((url, index) => ({
-                            id: `loaded-${product.id}-${index}`,
-                            previewUrl: url,
-                            file: null,
-                        }))
-                    );
+                const idNum = Number(productId);
+                if (!Number.isFinite(idNum)) {
+                    showError("Identificador de producto inválido.");
+                    return;
+                }
+                const result = await getProductById(idNum);
+                if (result.error) {
+                    console.error("[ProductForm] Error loading product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                if (result.data) {
+                    const snap = productDetailDtoToFormSnapshot(result.data);
+                    setGeneralData(snap.generalData);
+                    setSuppliers(snap.suppliers);
+                    setPriceData(snap.priceData);
+                    setBasePrices(snap.basePrices);
+                    setGalleryImages(snap.galleryImages);
+                    setDetailBranchRows(result.data.branches ?? []);
                 }
             } catch (err) {
                 console.error("[ProductForm] Error loading product:", err);
+                showError("No se pudo cargar el producto.");
             } finally {
                 setProductLoading(false);
             }
@@ -159,13 +155,28 @@ export default function ProductFormPage() {
     }, [isNew, productId]);
 
     useEffect(() => {
+        if (!isNew) {
+            return;
+        }
+        setDetailBranchRows(null);
+    }, [isNew]);
+
+    useEffect(() => {
         if (!isNew || catalogsLoading || branchCatalogItems.length === 0) {
             return;
         }
-        setBranches((prev) =>
-            prev.length === 0 ? branchCatalogToProductBranches(branchCatalogItems) : prev
-        );
+        setBranches(branchCatalogToProductBranches(branchCatalogItems));
     }, [isNew, catalogsLoading, branchCatalogItems]);
+
+    useEffect(() => {
+        if (isNew || detailBranchRows === null) {
+            return;
+        }
+        if (branchCatalogItems.length === 0) {
+            return;
+        }
+        setBranches(mergeBranchCatalogWithProductDetail(branchCatalogItems, detailBranchRows));
+    }, [isNew, detailBranchRows, branchCatalogItems]);
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
@@ -219,21 +230,22 @@ export default function ProductFormPage() {
 
         setSaving(true);
         try {
+            let resolvedImageUrls: string[];
+            try {
+                resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
+            } catch (readErr) {
+                console.error("[ProductForm] Error reading gallery files:", readErr);
+                showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
+                return;
+            }
+            const payload = buildCreateProductRequest({
+                generalData,
+                suppliers,
+                branches,
+                images: resolvedImageUrls,
+            });
+
             if (isNew) {
-                let resolvedImageUrls: string[];
-                try {
-                    resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
-                } catch (readErr) {
-                    console.error("[ProductForm] Error reading gallery files:", readErr);
-                    showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
-                    return;
-                }
-                const payload = buildCreateProductRequest({
-                    generalData,
-                    suppliers,
-                    branches,
-                    images: resolvedImageUrls,
-                });
                 const result = await createProduct(payload);
                 if (result.error) {
                     console.error("[ProductForm] Error creating product:", result.error.message);
@@ -242,30 +254,18 @@ export default function ProductFormPage() {
                 }
                 showSuccess("Producto creado correctamente.");
             } else {
-                await saveProduct({
-                    id: productId || undefined,
-                    code: generalData.code || "ART-000",
-                    departmentId: Number(generalData.departmentId),
-                    lineId: generalData.lineId,
-                    description: generalData.description.trim(),
-                    shortName: generalData.shortName.trim(),
-                    warrantyType: generalData.warrantyType,
-                    warrantyMonths: generalData.warrantyType === "months" ? Number(generalData.warrantyMonths) : 0,
-                    suppliers,
-                    price: {
-                        listCost: Number(priceData.listCost),
-                        currency: priceData.currency,
-                        exchangeRate: Number(priceData.exchangeRate),
-                        iva: Number(priceData.iva),
-                        averageCost: Number(priceData.averageCost),
-                        lastCost: Number(priceData.lastCost),
-                        liquidation: priceData.liquidation,
-                        costBasisForCalculation: priceData.costBasisForCalculation,
-                        basePrices,
-                    },
-                    branches,
-                    images: galleryImages.map((g) => g.previewUrl),
-                });
+                const idNum = Number(productId);
+                if (!Number.isFinite(idNum)) {
+                    showError("Identificador de producto inválido.");
+                    return;
+                }
+                const result = await updateProduct(idNum, payload);
+                if (result.error) {
+                    console.error("[ProductForm] Error updating product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                showSuccess("Producto actualizado correctamente.");
             }
             router.push("/catalogos/productos");
         } catch (err) {

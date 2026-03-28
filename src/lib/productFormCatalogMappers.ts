@@ -1,6 +1,7 @@
 import type { BranchCatalogItem } from "@/services/branches.service";
 import type { DepartmentCatalogItem } from "@/services/departments.service";
 import type { ProductLineCatalogItem } from "@/services/product-lines.service";
+import type { ProductDetailBranchDto } from "@/services/productos.service";
 import type { ProductBranch, WarrantyType } from "@/types/productos.types";
 
 export function departmentCatalogToSelectOptions(
@@ -53,4 +54,36 @@ export function branchCatalogToProductBranches(items: BranchCatalogItem[]): Prod
         minInventory: 0,
         maxInventory: 20,
     }));
+}
+
+/**
+ * Build branch rows from the active catalog, overlaying stock/availability from product detail by `branchId`.
+ * Catalog defines which branches exist and their display names; unmatched catalog rows keep defaults.
+ */
+export function mergeBranchCatalogWithProductDetail(
+    catalogItems: BranchCatalogItem[],
+    detailRows: ProductDetailBranchDto[]
+): ProductBranch[] {
+    const byBranchId = new Map(detailRows.map((row) => [row.branchId, row]));
+    return catalogItems.map((catalog) => {
+        const match = byBranchId.get(catalog.id);
+        if (match) {
+            return {
+                id: `branch-${catalog.id}`,
+                branchId: catalog.id,
+                branchName: catalog.name,
+                enabled: Boolean(match.isAvailable),
+                minInventory: Number.isFinite(match.minStock) ? match.minStock : 0,
+                maxInventory: Number.isFinite(match.maxStock) ? match.maxStock : 0,
+            };
+        }
+        return {
+            id: `branch-${catalog.id}`,
+            branchId: catalog.id,
+            branchName: catalog.name,
+            enabled: false,
+            minInventory: 0,
+            maxInventory: 20,
+        };
+    });
 }

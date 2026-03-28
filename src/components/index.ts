@@ -92,5 +92,7 @@ export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";
 export type { RejectDiscountRequestModalProps } from "./RejectDiscountRequestModal";
 export { TrackSlider } from "./TrackSlider";
 export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
+export { MonthlySalesGoalsModal } from "./Sellers";
+export type { MonthlySalesGoalsModalProps } from "./Sellers";
 export * from "./Icons";
 

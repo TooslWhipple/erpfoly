@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Typography, Grid, Switch, Button, Stack, IconButton } from "@mui/material";
+import { Typography, Grid, Switch, Button, Stack, IconButton, Divider } from "@mui/material";
 import { Pencil } from "lucide-react";
 import numeral from "numeral";
 import { FormTextField, FormSelect } from "@/components";
-import { FormCard, Card, LuquidationCard, LiquidationSwitch } from "@/styles/catalogos/productos.styles";
+import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
 import type { PriceFormState, CostHistoryEntry, ProductBasePrice } from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
@@ -100,11 +100,32 @@ export function PriceTab({
                                 />
                             </Grid>
                         </Grid>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
-                            <Typography variant="body2" color="text.secondary">Último costo:</Typography>
-                            <Typography variant="h6">{numeral(listCostNumber).format("$0,0.00")}</Typography>
-                        </Stack>
 
+                        <LastCostCard>
+                            <Stack
+                                spacing={3}
+                                width="100%"
+                                direction="row"
+                                alignItems="center"
+                                flexWrap="nowrap"
+                                divider={<Divider orientation="vertical" flexItem />}>
+                                <Stack>
+                                    <Typography variant="body2" color="text.secondary">Costo promedio:</Typography>
+                                    <Typography variant="h6">{numeral(formState.averageCost).format("$0,0.00")}</Typography>
+                                </Stack>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={3} flexGrow={1}>
+                                    <Stack>
+                                        <Typography variant="body2" color="text.secondary">Costo último:</Typography>
+                                        <Typography variant="h6">{numeral(formState.lastCost).format("$0,0.00")}</Typography>
+                                    </Stack>
+                                    <Button
+                                        variant="text"
+                                        onClick={onCostHistoryOpen}>
+                                        Ver historial de costos
+                                    </Button>
+                                </Stack>
+                            </Stack>
+                        </LastCostCard>
                         <LuquidationCard checked={formState.liquidation}>
                             <Stack direction="row" alignItems="center" spacing={1}>
                                 <LiquidationSwitch
@@ -121,13 +142,14 @@ export function PriceTab({
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Card backgroundColor="#E2E8F0">
                         <Stack spacing={1.5}>
+                            <Typography variant="body1">Costo a considerar para el cálculo</Typography>
                             <FormSelect
-                                label="Costo a considerar para el cálculo"
                                 value={formState.costBasisForCalculation}
                                 onChange={(e) =>
                                     onFieldChange("costBasisForCalculation", String(e.target.value))
                                 }
                                 options={costBasisOptions}
+                                sx={{ backgroundColor: "transparent" }}
                             />
                         </Stack>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">

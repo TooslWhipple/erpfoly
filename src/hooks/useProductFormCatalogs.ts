@@ -69,6 +69,7 @@ export function useProductFormCatalogs(
             setSuppliersCatalog(supRes.data ?? []);
             setBranchCatalogItems(branchRes.data ?? []);
             const warrantyFromApi = prodRes.data?.warrantyTypes ?? [];
+            const currenciesFromApi = prodRes.data?.currencies ?? [];
             setWarrantyOptions(warrantyCatalogToFormOptions(warrantyFromApi));
 
             setCatalogsLoading(false);

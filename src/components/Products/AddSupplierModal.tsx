@@ -1,23 +1,29 @@
 import { useState, useMemo } from "react";
-import { Dialog, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, InputAdornment } from "@mui/material";
-import { Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
-import { FormTextField } from "@/components";
 import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    ModalDescription,
-    CloseButton,
-} from "@/components/ModalForm/styles";
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    InputAdornment,
+    Typography,
+    Button,
+} from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
+import { FormTextField } from "@/components";
+import { SideModal } from "@/components/SideModal";
 import {
     SupplierTableContainer,
     SupplierTableHeader,
     SupplierTableRow,
-    SupplierTableCell,
-    SupplierAddButton,
-    SupplierNewButton,
+    SupplierTableCell
 } from "@/styles/catalogos/productos.styles";
-import type { SupplierForSelection } from "@/data/productos.mockData";
+import type { SupplierCatalogItem } from "@/services/suppliers.service";
+
+function supplierDisplayName(s: SupplierCatalogItem): string {
+    const business = s.businessName?.trim();
+    return business || s.name;
+}
 
 interface AddSupplierModalProps {
     open: boolean;
@@ -25,7 +31,7 @@ interface AddSupplierModalProps {
     onAddSupplier: (supplierId: number) => Promise<void>;
     onNewSupplier?: () => void;
     loading?: boolean;
-    availableSuppliers: SupplierForSelection[];
+    availableSuppliers: SupplierCatalogItem[];
     existingSupplierIds?: number[];
 }
 
@@ -42,7 +48,11 @@ export function AddSupplierModal({
 
     const filteredSuppliers = useMemo(() => {
         return availableSuppliers.filter((supplier) => {
-            const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const q = searchTerm.toLowerCase();
+            const display = supplierDisplayName(supplier).toLowerCase();
+            const matchesSearch =
+                display.includes(q) ||
+                supplier.name.toLowerCase().includes(q) ||
                 supplier.id.toString().includes(searchTerm);
             const notAlreadyAdded = !existingSupplierIds.includes(supplier.id);
             return matchesSearch && notAlreadyAdded;
@@ -61,96 +71,79 @@ export function AddSupplierModal({
     };
 
     return (
-        <Dialog
+        <SideModal
             open={open}
             onClose={handleClose}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "95vh",
-                    height: "90vh",
-                },
-            }}
-        >
-            <DialogContent sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                {/* Header */}
-                <ModalHeader>
-                    <ModalTitle>Agregar proveedor</ModalTitle>
-                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                        <SupplierNewButton
-                            variant="contained"
-                            color="primary"
-                            onClick={onNewSupplier}
-                            disabled={loading}
-                        >
-                            Nuevo
-                        </SupplierNewButton>
-                        <CloseButton onClick={handleClose} disabled={loading} size="small">
-                            <CloseIcon />
-                        </CloseButton>
-                    </Box>
-                </ModalHeader>
+            maxWidth="lg"
+            disableClose={loading}
+            title="Agregar proveedor"
+            description="Selecciona un proveedor para agregar a este artículo"
+            headerActions={
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={onNewSupplier}
+                    disabled={loading}>
+                    Nuevo
+                </Button>
+            }
+            contentSx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+            }}>
+            <FormTextField
+                placeholder="Buscar"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                        </InputAdornment>
+                    ),
+                }}
+            />
 
-                {/* Description */}
-                <ModalDescription sx={{ mb: 3 }}>
-                    Selecciona un proveedor para agregar a este artículo
-                </ModalDescription>
-
-                {/* Search Field */}
-                <Box sx={{ mb: 3 }}>
-                    <FormTextField
-                        placeholder="Buscar"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                </Box>
-
-                {/* Suppliers Table */}
-                <SupplierTableContainer sx={{ flex: 1, minHeight: 0 }}>
-                    <Table>
-                        <TableHead>
+            <SupplierTableContainer sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <SupplierTableHeader>ID</SupplierTableHeader>
+                            <SupplierTableHeader>Proveedor</SupplierTableHeader>
+                            <SupplierTableHeader align="right"></SupplierTableHeader>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filteredSuppliers.length === 0 ? (
                             <TableRow>
-                                <SupplierTableHeader>ID</SupplierTableHeader>
-                                <SupplierTableHeader>Proveedor</SupplierTableHeader>
-                                <SupplierTableHeader align="right"></SupplierTableHeader>
+                                <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {
+                                            (searchTerm) ? "No se encontraron proveedores" : "No hay proveedores disponibles"
+                                        }
+                                    </Typography>
+                                </TableCell>
                             </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredSuppliers.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} align="center" sx={{ py: 4, color: "text.secondary" }}>
-                                        {searchTerm ? "No se encontraron proveedores" : "No hay proveedores disponibles"}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredSuppliers.map((supplier) => (
-                                    <SupplierTableRow key={`${supplier.id}-${supplier.name}`}>
-                                        <SupplierTableCell>{supplier.id}</SupplierTableCell>
-                                        <SupplierTableCell>{supplier.name}</SupplierTableCell>
-                                        <SupplierTableCell align="right">
-                                            <SupplierAddButton
-                                                onClick={() => handleAddSupplier(supplier.id)}
-                                                disabled={loading}
-                                            >
-                                                Agregar
-                                            </SupplierAddButton>
-                                        </SupplierTableCell>
-                                    </SupplierTableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </SupplierTableContainer>
-            </DialogContent>
-        </Dialog>
+                        ) : (
+                            filteredSuppliers.map((supplier) => (
+                                <SupplierTableRow key={supplier.id}>
+                                    <SupplierTableCell>{supplier.id}</SupplierTableCell>
+                                    <SupplierTableCell>{supplierDisplayName(supplier)}</SupplierTableCell>
+                                    <SupplierTableCell align="right">
+                                        <Button
+                                            variant="text"
+                                            onClick={() => handleAddSupplier(supplier.id)}
+                                            disabled={loading}>
+                                            Agregar
+                                        </Button>
+                                    </SupplierTableCell>
+                                </SupplierTableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </SupplierTableContainer>
+        </SideModal>
     );
 }

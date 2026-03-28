@@ -7,3 +7,4 @@ export { BranchesTab } from "./BranchesTab";
 export { CostHistoryModal } from "./CostHistoryModal";
 export { AddPackageModal } from "./AddPackageModal";
 export { AddSupplierModal } from "./AddSupplierModal";
+export { AddBasePriceModal } from "./AddBasePriceModal";

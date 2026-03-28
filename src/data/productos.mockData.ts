@@ -1,4 +1,10 @@
-import type { Product, CostHistoryEntry, ProductBranch } from "@/types/productos.types";
+import type {
+    Product,
+    CostHistoryEntry,
+    ProductBranch,
+    ProductBasePrice,
+    CostBasisForCalculation,
+} from "@/types/productos.types";
 
 // ============================================================================
 // MOCK DATA
@@ -11,18 +17,19 @@ export const MOCK_DEPARTMENTS = [
     { value: "4", label: "06 - Electrónica" },
 ];
 
+/** Numeric `value` matches backend product line ids (POST /products `lineId`). */
 export const MOCK_LINES = [
-    { value: "LV", label: "LV - Lavadora" },
-    { value: "RF", label: "RF - Refrigerador" },
-    { value: "CM", label: "CM - Comedor" },
-    { value: "RC", label: "RC - Recámara" },
-    { value: "TV", label: "TV - Televisores" },
-    { value: "SL", label: "SL - Sala" },
-    { value: "MW", label: "MW - Microondas" },
-    { value: "ES", label: "ES - Estufa" },
-    { value: "HO", label: "HO - Horno" },
-    { value: "LA", label: "LA - Lavavajillas" },
-    { value: "SE", label: "SE - Secadora" },
+    { value: "1", label: "LV - Lavadora" },
+    { value: "2", label: "RF - Refrigerador" },
+    { value: "3", label: "CM - Comedor" },
+    { value: "4", label: "RC - Recámara" },
+    { value: "5", label: "TV - Televisores" },
+    { value: "6", label: "SL - Sala" },
+    { value: "7", label: "MW - Microondas" },
+    { value: "8", label: "ES - Estufa" },
+    { value: "9", label: "HO - Horno" },
+    { value: "10", label: "LA - Lavavajillas" },
+    { value: "11", label: "SE - Secadora" },
 ];
 
 export const MOCK_SUPPLIERS = [
@@ -70,6 +77,16 @@ export const MOCK_BRANCHES = [
 export const CURRENCIES = [
     { value: "MXN", label: "MXN" },
     { value: "USD", label: "USD" },
+];
+
+export const COST_BASIS_FOR_PRICE_OPTIONS: Array<{ value: CostBasisForCalculation; label: string }> = [
+    { value: "last_cost", label: "Último costo" },
+    { value: "list_cost", label: "Costo de lista" },
+    { value: "average_cost", label: "Costo promedio" },
+];
+
+export const DEFAULT_PRODUCT_BASE_PRICES: ProductBasePrice[] = [
+    { id: "bp-default-1", name: "Contado", marginPercent: 35.75, lastEditedBy: "Gerente" },
 ];
 
 export const MOCK_COST_HISTORY: CostHistoryEntry[] = [

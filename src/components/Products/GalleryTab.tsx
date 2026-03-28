@@ -12,22 +12,18 @@ import {
     GalleryOverlay,
     GalleryIconButton,
     HiddenFileInput,
+    FormCard,
 } from "@/styles/catalogos/productos.styles";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import type { ProductGalleryImage } from "@/types/productos.types";
+import { Divider, Stack, Typography } from "@mui/material";
+import { ImagePlus } from "lucide-react";
 
 interface GalleryTabProps {
-    images: string[];
+    images: ProductGalleryImage[];
     onAddImage: (files: FileList) => void;
     onReplaceImage: (index: number, file: File) => void;
     onRemoveImage?: (index: number) => void;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }: GalleryTabProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +37,6 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
         const files = e.target.files;
         if (files && files.length > 0) {
             onAddImage(files);
-            // Reset input to allow selecting the same file again
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -58,7 +53,6 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
         const files = e.target.files;
         if (files && files.length > 0) {
             onReplaceImage(index, files[0]);
-            // Reset input to allow selecting the same file again
             const input = editInputRefs.current.get(index);
             if (input) {
                 input.value = "";
@@ -80,39 +74,43 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
     };
 
     return (
-        <Section>
-            <SectionTitle>Galería</SectionTitle>
-            <SectionDescription>
-                Agrega las imágenes del producto
-            </SectionDescription>
+        <FormCard>
+            <Stack spacing={0.5}>
+                <Typography variant="h6">Galería</Typography>
+                <Typography variant="body2" color="text.secondary">Agrega las imágenes del producto</Typography>
+            </Stack>
+            <Divider />
             <GalleryGrid>
-                {images.map((image, index) => (
-                    <GalleryItem key={index}>
-                        <GalleryImage src={image} alt={`Product image ${index + 1}`} />
-                        <GalleryLabel>
-                            {index === 0 ? "Principal" : "Adicional"}
-                        </GalleryLabel>
-                        <GalleryOverlay data-gallery-overlay>
-                            <GalleryIconButton onClick={(e) => handleEditClick(e, index)}>
-                                <EditIcon />
-                            </GalleryIconButton>
-                            <GalleryIconButton onClick={(e) => handleRemoveClick(e, index)}>
-                                <CloseIcon />
-                            </GalleryIconButton>
-                        </GalleryOverlay>
-                        <HiddenFileInput
-                            ref={(el) => setEditInputRef(index, el)}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleEditFileChange(e, index)}
-                        />
-                    </GalleryItem>
-                ))}
-                {images.length < 6 && (
+                {
+                    images.map((image, index) => (
+                        <GalleryItem key={image.id}>
+                            <GalleryImage src={image.previewUrl} alt={`Product image ${index + 1}`} />
+                            <Typography variant="body1" textAlign="center">{index === 0 ? "Principal" : "Adicional"}</Typography>
+                            <GalleryOverlay data-gallery-overlay>
+                                <GalleryIconButton onClick={(e) => handleEditClick(e, index)}>
+                                    <EditIcon />
+                                </GalleryIconButton>
+                                <GalleryIconButton onClick={(e) => handleRemoveClick(e, index)}>
+                                    <CloseIcon />
+                                </GalleryIconButton>
+                            </GalleryOverlay>
+                            <HiddenFileInput
+                                ref={(el) => setEditInputRef(index, el)}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleEditFileChange(e, index)}
+                            />
+                        </GalleryItem>
+                    ))
+                }
+                {
+                    images.length < 6 &&
                     <GalleryItem onClick={handleAddClick}>
                         <GalleryAddButton>
-                            <AddIcon sx={{ fontSize: 40, color: "text.secondary" }} />
+                            <ImagePlus size={24} strokeWidth={2} />
+                            <Typography variant="body1" textAlign="center">Agregar imagen</Typography>
                         </GalleryAddButton>
+                        <Typography variant="body1" textAlign="center">{images.length === 0 ? "Principal" : "Adicional"}</Typography>
                         <HiddenFileInput
                             ref={fileInputRef}
                             type="file"
@@ -121,8 +119,8 @@ export function GalleryTab({ images, onAddImage, onReplaceImage, onRemoveImage }
                             onChange={handleFileChange}
                         />
                     </GalleryItem>
-                )}
+                }
             </GalleryGrid>
-        </Section>
+        </FormCard>
     );
 }

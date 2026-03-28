@@ -1,11 +1,16 @@
 import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box } from "@mui/material";
 import { Remove, Add } from "@mui/icons-material";
 import { FormTextField, FormSelect } from "@/components";
-import { InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
+import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 
 const MIN_PIECES = 1;
 const MAX_PIECES = 9999;
+
+const DEFAULT_WARRANTY_OPTIONS: Array<{ value: WarrantyType; label: string }> = [
+    { value: "months", label: "Meses" },
+    { value: "policy", label: "Póliza anexa" },
+];
 
 interface GeneralDataTabProps {
     formState: GeneralDataFormState;
@@ -14,6 +19,7 @@ interface GeneralDataTabProps {
     onErrorClear: (field: string) => void;
     departments: Array<{ value: string; label: string }>;
     lines: Array<{ value: string; label: string }>;
+    warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
 }
 
 export function GeneralDataTab({
@@ -23,9 +29,13 @@ export function GeneralDataTab({
     onErrorClear,
     departments,
     lines,
+    warrantyOptions,
 }: GeneralDataTabProps) {
+    const warrantyChoices =
+        warrantyOptions && warrantyOptions.length > 0 ? warrantyOptions : DEFAULT_WARRANTY_OPTIONS;
+
     return (
-        <Stack width="100%" spacing={3} divider={<Divider />}>
+        <FormCard>
             <Stack spacing={0.5}>
                 <Typography variant="h6">Datos generales</Typography>
                 <Typography variant="body2" color="text.secondary">Registra los básicos del artículo</Typography>
@@ -57,7 +67,11 @@ export function GeneralDataTab({
                         }}
                         options={lines}
                         error={Boolean(errors.lineId)}
-                        helperText={errors.lineId}
+                        helperText={
+                            errors.lineId ||
+                            (!formState.departmentId ? "Selecciona un departamento primero" : undefined)
+                        }
+                        disabled={!formState.departmentId}
                         required
                     />
                 </Grid>
@@ -169,18 +183,15 @@ export function GeneralDataTab({
                     <Typography variant="body2" color="text.secondary">Selecciona el tipo de garantía</Typography>
                 </Stack>
                 <RadioGroup row>
-                    <FormControlLabel
-                        control={<Radio />}
-                        label="Meses"
-                        checked={formState.warrantyType === "months"}
-                        onChange={() => onFieldChange("warrantyType", "months")}
-                    />
-                    <FormControlLabel
-                        control={<Radio />}
-                        label="Póliza anexa"
-                        checked={formState.warrantyType === "policy"}
-                        onChange={() => onFieldChange("warrantyType", "policy")}
-                    />
+                    {warrantyChoices.map((opt) => (
+                        <FormControlLabel
+                            key={opt.value}
+                            control={<Radio />}
+                            label={opt.label}
+                            checked={formState.warrantyType === opt.value}
+                            onChange={() => onFieldChange("warrantyType", opt.value)}
+                        />
+                    ))}
                 </RadioGroup>
                 {
                     formState.warrantyType === "months" &&
@@ -198,7 +209,24 @@ export function GeneralDataTab({
                         required
                     />
                 }
+                {
+                    formState.warrantyType === "policy" &&
+                    <FormTextField
+                        label="Texto de póliza anexa"
+                        placeholder="Ej. Garantía según póliza anexa al comprobante de compra."
+                        multiline
+                        minRows={2}
+                        value={formState.warrantyPolicy}
+                        onChange={(e) => {
+                            onFieldChange("warrantyPolicy", e.target.value);
+                            onErrorClear("warrantyPolicy");
+                        }}
+                        error={Boolean(errors.warrantyPolicy)}
+                        helperText={errors.warrantyPolicy}
+                        required
+                    />
+                }
             </Stack>
-        </Stack>
+        </FormCard>
     );
 }

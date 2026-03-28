@@ -128,6 +128,7 @@ export function TableCrud<T>({
     if (column.size) {
       return COLUMN_SIZES[column.size];
     }
+    
     switch (column.type) {
       case "id":
         return COLUMN_SIZES.xs;

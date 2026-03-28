@@ -9,10 +9,6 @@ import {
     Typography,
 } from "@mui/material";
 
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
 const FieldWrapper = styled(Box)({
     display: "flex",
     flexDirection: "column",
@@ -62,33 +58,19 @@ const StyledFormHelperText = styled(FormHelperText)(({ theme }) => ({
     marginLeft: 0,
     marginTop: theme.spacing(0.5),
 }));
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
+    
 export interface SelectOption {
     value: string | number;
     label: string;
 }
 
 export interface FormSelectProps extends Omit<SelectProps, "variant" | "label" | "placeholder"> {
-    /** Field label displayed above the input */
     label?: string;
-    /** Select options */
     options: SelectOption[];
-    /** Show required asterisk next to label */
     required?: boolean;
-    /** Helper text displayed below the select */
     helperText?: string;
-    /** Placeholder text for empty selection */
     placeholder?: string;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
     ({ label, options, required, error, helperText, placeholder, ...props }, ref) => {
         return (

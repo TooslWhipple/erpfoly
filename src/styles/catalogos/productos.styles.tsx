@@ -1,12 +1,11 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Paper, Typography, Button, IconButton, Switch, TextField, TableCell, TableRow, TableContainer } from "@mui/material";
+import { Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer, Switch } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
     borderRadius: "16px",
@@ -14,6 +13,48 @@ export const FormCard = styled('div')(({ theme }) => ({
     gap: "24px",
 }));
 
+export const Card = styled('div')<{ backgroundColor?: string }>(({ backgroundColor }) => ({
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: backgroundColor ?? colors.background.sidebar,
+    borderRadius: "16px",
+    padding: "16px",
+    gap: "12px"
+}));
+
+export const LastCostCard = styled('div')(({ theme }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F1F5F9",
+    borderRadius: "8px",
+    padding: "8px 12px",
+}));
+
+export const LuquidationCard = styled('div')<{ checked: boolean }>(({ checked }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: checked ? "#FEE2E2" : colors.background.sidebar,
+    borderRadius: "8px",
+    padding: "8px 12px",
+    gap: "16px",
+}));
+
+export const LiquidationSwitch = styled(Switch)(({ theme }) => ({
+    "& .MuiSwitch-switchBase.Mui-checked": {
+        color: theme.palette.common.white,
+        "&:hover": {
+            backgroundColor: "rgba(239, 68, 68, 0.08)",
+        },
+    },
+    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+        backgroundColor: "#EF4444",
+        opacity: 1,
+    },
+}));
 
 export const SectionTitle = styled(Typography)(({ theme }) => ({
     fontSize: "1rem",
@@ -28,18 +69,14 @@ export const SectionDescription = styled(Typography)(({ theme }) => ({
     marginBottom: theme.spacing(2),
 }));
 
-export const Section = styled(Box)(({ theme }) => ({
+export const Section = styled('div')(({ theme }) => ({
     marginBottom: theme.spacing(4),
     "&:last-child": {
         marginBottom: 0,
     },
 }));
 
-// ============================================================================
-// RADIO BUTTONS
-// ============================================================================
-
-export const RadioGroupContainer = styled(Box)(({ theme }) => ({
+export const RadioGroupContainer = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(1),
@@ -52,13 +89,13 @@ export const RadioLabel = styled(Typography)(({ theme }) => ({
     marginBottom: theme.spacing(1),
 }));
 
-export const StyledRadioGroup = styled(Box)(({ theme }) => ({
+export const StyledRadioGroup = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "row",
     gap: theme.spacing(2),
 }));
 
-const RadioOptionIcon = styled(Box)<{ selected?: boolean }>(({ theme, selected }) => ({
+const RadioOptionIcon = styled('div')<{ selected?: boolean }>(({ theme, selected }) => ({
     width: 20,
     height: 20,
     borderRadius: "50%",
@@ -82,23 +119,18 @@ const RadioOptionIcon = styled(Box)<{ selected?: boolean }>(({ theme, selected }
 }));
 
 const StyledRadioOptionButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
-    margin: 0,
-    padding: theme.spacing(1, 2),
-    borderRadius: "12px",
-    border: `1px solid ${selected ? colors.sidebar.itemSelected : theme.palette.text.primary}`,
-    backgroundColor: selected ? colors.sidebar.itemSelected : colors.background.sidebar,
-    color: selected ? colors.sidebar.textSelected : theme.palette.text.primary,
-    fontWeight: selected ? 600 : 400,
-    textTransform: "none",
-    fontSize: "0.9375rem",
-    display: "inline-flex",
+    display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1.25),
-    transition: "all 0.2s ease",
-    "&:hover": {
-        backgroundColor: selected ? colors.sidebar.itemSelected : theme.palette.action.hover,
-        borderColor: selected ? colors.sidebar.itemSelected : theme.palette.text.primary,
-    },
+    padding: "12px",
+    borderRadius: "12px",
+    border: `1px solid ${(selected) ? colors.sidebar.itemSelected : "#E2E8F0"}`,
+    backgroundColor: (selected) ? colors.sidebar.itemSelected : "transparent",
+    color: (selected) ? colors.sidebar.textSelected : "#09090B",
+    fontSize: "14px",
+    fontWeight: (selected) ? 500 : 400,
+    textTransform: "none",
+    gap: "8px",
+    transition: "all 0.2s ease"
 }));
 
 export interface StyledFormControlLabelProps {
@@ -131,27 +163,32 @@ export function StyledFormControlLabel({
     );
 }
 
-// ============================================================================
-// GALLERY COMPONENTS
-// ============================================================================
-
-export const GalleryGrid = styled(Box)(({ theme }) => ({
+export const GalleryGrid = styled('div')(({ theme }) => ({
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
 }));
 
-export const GalleryItem = styled(Box)(({ theme }) => ({
+export const GalleryItem = styled('div')(({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
     position: "relative",
     aspectRatio: "1",
-    borderRadius: 8,
+    borderRadius: "8px",
     overflow: "hidden",
     border: `1px solid ${colors.border}`,
     backgroundColor: colors.background.sidebar,
     cursor: "pointer",
+    padding: "12px",
     "&:hover": {
         borderColor: colors.sidebar.textSelected,
+        "& > div": {
+            border: `1px dashed ${colors.sidebar.textSelected}`,
+        },
         "& > div[data-gallery-overlay]": {
             opacity: 1,
         },
@@ -162,39 +199,25 @@ export const GalleryImage = styled("img")({
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    borderRadius: "8px",
 });
 
-export const GalleryAddButton = styled(Box)(({ theme }) => ({
-    width: "100%",
-    height: "100%",
+export const GalleryAddButton = styled('div')({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    border: `2px dashed ${colors.border}`,
-    borderRadius: 8,
+    gap: "12px",
+    width: "100%",
+    height: "240px",
+    backgroundColor: "#F1F5F9",
+    border: `1px dashed #BFDBFE`,
+    borderRadius: "8px",
     cursor: "pointer",
     transition: "border-color 0.2s ease",
-    "&:hover": {
-        borderColor: colors.sidebar.textSelected,
-    },
-}));
+});
 
-export const GalleryLabel = styled(Typography)(({ theme }) => ({
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    color: "white",
-    padding: theme.spacing(0.5, 1),
-    fontSize: "0.75rem",
-    fontWeight: 500,
-    textAlign: "center",
-    zIndex: 1,
-}));
-
-export const GalleryOverlay = styled(Box)(({ theme }) => ({
+export const GalleryOverlay = styled('div')(({ theme }) => ({
     position: "absolute",
     top: 0,
     left: 0,
@@ -210,7 +233,7 @@ export const GalleryOverlay = styled(Box)(({ theme }) => ({
     zIndex: 2,
 }));
 
-export const GalleryIconButton = styled(Box)(({ theme }) => ({
+export const GalleryIconButton = styled('div')(({ theme }) => ({
     width: 40,
     height: 40,
     borderRadius: 8,
@@ -235,18 +258,14 @@ export const HiddenFileInput = styled("input")({
     display: "none",
 });
 
-// ============================================================================
-// BRANCHES COMPONENTS
-// ============================================================================
-
-export const BranchListContainer = styled(Box)(({ theme }) => ({
+export const BranchListContainer = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
 }));
 
-export const BranchItem = styled(Box)(({ theme }) => ({
+export const BranchItem = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(2),
@@ -264,7 +283,7 @@ export const BranchName = styled(Typography)(({ theme }) => ({
     flex: 1,
 }));
 
-export const InventoryControl = styled(Box)(({ theme }) => ({
+export const InventoryControl = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
@@ -298,21 +317,67 @@ export const InventoryButton = styled(IconButton)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// EMPTY STATES
-// ============================================================================
-
-export const EmptyStateContainer = styled(Box)(({ theme }) => ({
+export const EmptyStateContainer = styled('div')({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.spacing(6),
-    minHeight: 300,
+    padding: "24px",
+    minHeight: "72px",
+    backgroundColor: colors.background.content,
+    borderRadius: "16px",
+    textAlign: "center",
+});
+
+export const PackageRowCard = styled('div')({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    textAlign: "center",
+    borderRadius: "12px",
+});
+
+export const PackageRowIconBox = styled('div')({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "56px",
+    height: "56px",
+    borderRadius: "12px",
+    backgroundColor: "#DBEAFE",
+    color: "#2563EB",
+});
+
+export const PackageRowMain = styled('div')({
+    flex: 1,
+    minWidth: 200,
+});
+
+export const PackageStatusBadge = styled('div')(({ theme }) => ({
+    flexShrink: 0,
+    maxWidth: "100%",
+    padding: theme.spacing(0.75, 2),
+    borderRadius: 999,
+    backgroundColor: colors.chip.background,
+    border: `1px solid ${colors.chip.border}`,
+}));
+
+export const PackageDeleteButton = styled(IconButton)(({ theme }) => ({
+    flexShrink: 0,
+    padding: "0px",
+    width: "24px",
+    height: "24px",
+    border: `1px solid ${colors.border}`,
+    color: theme.palette.text.secondary,
+    transition: "all 0.2s ease",
+    "&:hover": {
+        backgroundColor: theme.palette.action.hover,
+        color: theme.palette.error.main,
+        borderColor: theme.palette.error.light,
+    },
 }));
 
 export const EmptyStateText = styled(Typography)(({ theme }) => ({
@@ -321,111 +386,39 @@ export const EmptyStateText = styled(Typography)(({ theme }) => ({
     marginTop: theme.spacing(1),
 }));
 
-// ============================================================================
-// COST SUMMARY COMPONENTS
-// ============================================================================
-
-export const CostSummaryContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(3),
-    padding: theme.spacing(2),
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    backgroundColor: colors.background.sidebar,
-    marginTop: theme.spacing(2),
-    flexWrap: "wrap",
-}));
-
-export const CostItem = styled(Box)(({ theme }) => ({
+export const CostHistoryTimeline = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(0.5),
-}));
-
-export const CostLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.75rem",
-    color: theme.palette.text.secondary,
-    fontWeight: 400,
-}));
-
-export const CostValue = styled(Typography)(({ theme }) => ({
-    fontSize: "1.25rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-}));
-
-// ============================================================================
-// COST HISTORY MODAL COMPONENTS
-// ============================================================================
-
-export const CostHistoryTimeline = styled(Box)(({ theme }) => ({
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: "16px",
+    padding: "24px",
     position: "relative",
-    paddingLeft: theme.spacing(3),
-    marginTop: theme.spacing(2),
+    gap: "24px"
 }));
 
-export const TimelineLine = styled(Box)(({ theme }) => ({
+export const TimelineLine = styled('div')(({ theme }) => ({
     position: "absolute",
-    left: 7,
-    top: 0,
-    bottom: 0,
-    width: 2,
+    left: 30,
+    top: 34,
+    bottom: 48,
+    width: 1,
     backgroundColor: colors.border,
 }));
 
-export const TimelineItem = styled(Box)(({ theme }) => ({
-    position: "relative",
-    paddingBottom: theme.spacing(3),
-    "&:last-child": {
-        paddingBottom: 0,
-    },
+export const TimelineItem = styled('div')(({ theme }) => ({
+    position: "relative"
 }));
 
-export const TimelineDot = styled(Box)(({ theme }) => ({
+export const TimelineDot = styled('div')(({ theme }) => ({
     position: "absolute",
-    left: -theme.spacing(3.5),
-    top: 4,
-    width: 14,
-    height: 14,
+    top: "10px",
+    left: "1px",
+    width: "11px",
+    height: "11px",
     borderRadius: "50%",
     backgroundColor: colors.border,
-    border: `2px solid ${colors.background.sidebar}`,
-    zIndex: 1,
 }));
-
-export const TimelineContent = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: theme.spacing(2),
-}));
-
-export const TimelineDate = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    minWidth: 150,
-    marginLeft: theme.spacing(2.5),
-}));
-
-export const TimelinePrice = styled(Typography)(({ theme }) => ({
-    fontSize: "1rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    flex: 1,
-}));
-
-export const TimelineChange = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(0.5),
-    color: theme.palette.text.secondary,
-    fontSize: "0.875rem",
-}));
-
-// ============================================================================
-// SUPPLIER MODAL COMPONENTS
-// ============================================================================
 
 export const SupplierTableContainer = styled(TableContainer)(({ theme }) => ({
     flex: 1,
@@ -463,23 +456,53 @@ export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
     borderBottom: `1px solid ${colors.border}`,
 }));
 
-export const SupplierAddButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "0.875rem",
+/** Assigned suppliers list (product form) — column headers */
+export const SupplierAssignedHeaderCell = styled(TableCell)(({ theme }) => ({
+    fontSize: "0.75rem",
     fontWeight: 500,
-    color: theme.palette.primary.main,
-    padding: theme.spacing(0.5, 1),
-    minWidth: "auto",
-    "&:hover": {
-        backgroundColor: "transparent",
-        textDecoration: "underline",
-    },
+    color: theme.palette.text.secondary,
+    padding: theme.spacing(1.25, 2),
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.background.sidebar,
 }));
 
-export const SupplierNewButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
+export const SupplierAssignedBodyCell = styled(TableCell)(({ theme }) => ({
     fontSize: "0.875rem",
+    color: theme.palette.text.primary,
+    padding: theme.spacing(1.5, 2),
+    borderBottom: `1px solid ${colors.border}`,
+    verticalAlign: "middle",
+}));
+
+export const SupplierAssignedTableWrap = styled(TableContainer)(({ theme }) => ({
+    overflow: "hidden"
+}));
+
+/** "Principal" status — amber / orange pill */
+export const SupplierPrimaryBadge = styled('div')(({ theme }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(0.5, 1.5),
+    borderRadius: 999,
+    fontSize: "0.75rem",
     fontWeight: 600,
-    padding: theme.spacing(0.5, 2),
-    minWidth: "auto",
+    lineHeight: 1.2,
+    backgroundColor: colors.chip.variants.infoAlt.background,
+    color: colors.chip.variants.infoAlt.color,
+}));
+
+export const SupplierRemoveIconButton = styled(IconButton)(({ theme }) => ({
+    width: 36,
+    height: 36,
+    padding: 0,
+    border: `1px solid ${colors.border}`,
+    borderRadius: "50%",
+    color: theme.palette.text.secondary,
+    backgroundColor: colors.background.sidebar,
+    "&:hover": {
+        backgroundColor: theme.palette.action.hover,
+        color: theme.palette.error.main,
+        borderColor: theme.palette.error.light,
+    },
 }));

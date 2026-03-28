@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment, Stack } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { Stack } from "@mui/material";
+import { Edit as EditIcon } from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import {
-    ControlsContainer,
-    SearchInput,
-    CreateButton,
-    SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
 
 type User = UserListItem;
@@ -60,8 +54,8 @@ export default function Usuarios() {
         setPage(0);
     }, [searchValue]);
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchValue(event.target.value);
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
     };
 
     const handleCreateUser = () => {
@@ -80,7 +74,7 @@ export default function Usuarios() {
         setRowsPerPage(newRowsPerPage);
         setPage(0);
     };
-        
+
     const columns: Column<User>[] = [
         {
             id: "id",
@@ -148,29 +142,21 @@ export default function Usuarios() {
         <MainLayout>
             <Stack direction="column" spacing={3}>
                 <Title title="Usuarios" />
-                <ControlsContainer>
-                    <SearchInput
-                        size="small"
-                        placeholder="Buscar"
-                        value={searchValue}
-                        onChange={handleSearchChange}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIconStyled />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <CreateButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleCreateUser}
-                    >
-                        Nuevo
-                    </CreateButton>
-                </ControlsContainer>
+                <TabFilters
+                    tabs={[]}
+                    activeTab={''}
+                    onTabChange={() => { }}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreateUser
+                        }
+                    ]}
+                />
                 <TableCrud
                     columns={columns}
                     rows={users}
@@ -186,7 +172,6 @@ export default function Usuarios() {
                     emptyMessage="No hay usuarios registrados"
                 />
             </Stack>
-
         </MainLayout>
     );
 }

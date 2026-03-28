@@ -7,10 +7,9 @@ export const Card = styled('div')(({ padding }: { padding?: string }) => ({
   alignItems: "flex-start",
   backgroundColor: colors.background.sidebar,
   border: `1px solid ${colors.border}`,
-  borderRadius: "16px",
+  borderRadius: "12px",
   gap: "16px",
-  padding: padding || "24px",
-  height: "100%",
+  padding: padding || "16px"
 }));
 
 export const ChartWrapper = styled('div')(({ theme }) => ({

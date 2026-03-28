@@ -9,7 +9,7 @@ export const colors = {
     sidebar: "#FFFFFF",
     content: "#F8FAFC",
   },
-  border: "#E4E4E7",
+  border: "#D4D4D8",
   text: {
     primary: "#232325",
     secondary: "#71717A",

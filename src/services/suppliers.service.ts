@@ -142,3 +142,19 @@ export async function getContactJobTitles(): Promise<
 > {
   return get<ContactJobTitleOption[]>(`${CATALOG_BASE}/contact-job-titles`);
 }
+
+// ============================================================================
+// CATALOG (GET /suppliers/catalog — Suppliers.Read)
+// ============================================================================
+
+export interface SupplierCatalogItem {
+  id: number;
+  name: string;
+  businessName: string | null;
+}
+
+export async function getSuppliersCatalog(): Promise<
+  ApiResult<SupplierCatalogItem[]>
+> {
+  return get<SupplierCatalogItem[]>(`${SUPPLIERS_BASE}/catalog`);
+}

@@ -1,19 +1,47 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, CircularProgress, Stack } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
     Title,
-    TabFilters,
+    VerticalSidebarTabs,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import type {
+    GeneralDataFormState,
+    PriceFormState,
+    FormErrors,
+    ProductSupplier,
+    ProductBranch,
+    ProductPackage,
+    PackageFormData,
+    ProductBasePrice,
+    ProductGalleryImage,
+} from "@/types/productos.types";
 import {
-    FormCard,
-} from "@/styles/catalogos/productos.styles";
-import type { GeneralDataFormState, PriceFormState, FormErrors, ProductSupplier, ProductBranch, ProductPackage, PackageFormData } from "@/types/productos.types";
-import { getProduct, saveProduct } from "@/services/productos.service";
-import { MOCK_DEPARTMENTS, MOCK_LINES, CURRENCIES, MOCK_COST_HISTORY, getInitialBranches, MOCK_ARTICLES, MOCK_PACKAGE_BRANCHES, MOCK_SUPPLIERS_FOR_SELECTION } from "@/data/productos.mockData";
+    createProduct,
+    buildCreateProductRequest,
+    resolveGalleryImageUrlsForCreate,
+    getProductById,
+    updateProduct,
+    productDetailDtoToFormSnapshot,
+    type ProductDetailBranchDto,
+} from "@/services/productos.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
+import {
+    branchCatalogToProductBranches,
+    mergeBranchCatalogWithProductDetail,
+} from "@/lib/productFormCatalogMappers";
+import {
+    CURRENCIES,
+    MOCK_COST_HISTORY,
+    MOCK_ARTICLES,
+    MOCK_PACKAGE_BRANCHES,
+    COST_BASIS_FOR_PRICE_OPTIONS,
+    DEFAULT_PRODUCT_BASE_PRICES,
+} from "@/data/productos.mockData";
 import { GeneralDataTab } from "@/components/Products/GeneralDataTab";
 import { SuppliersTab } from "@/components/Products/SuppliersTab";
 import { PriceTab } from "@/components/Products/PriceTab";
@@ -24,11 +52,13 @@ import { BranchesTab } from "@/components/Products/BranchesTab";
 export default function ProductFormPage() {
     const router = useRouter();
     const { id } = router.query;
+    const showSuccess = useSnackbarStore((s) => s.showSuccess);
+    const showError = useSnackbarStore((s) => s.showError);
 
     const isNew = id === "nuevo";
     const productId = isNew ? null : String(id);
 
-    const [loading, setLoading] = useState(!isNew);
+    const [productLoading, setProductLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("general");
 
@@ -41,7 +71,19 @@ export default function ProductFormPage() {
         piecesCount: "1",
         warrantyType: "months",
         warrantyMonths: "12",
+        warrantyPolicy: "",
     });
+
+    const {
+        catalogsLoading,
+        departmentOptions,
+        lineOptions,
+        suppliersCatalog,
+        branchCatalogItems,
+        warrantyOptions,
+    } = useProductFormCatalogs(generalData.departmentId);
+
+    const pageLoading = catalogsLoading || productLoading;
 
     const [suppliers, setSuppliers] = useState<ProductSupplier[]>([]);
 
@@ -51,11 +93,18 @@ export default function ProductFormPage() {
         exchangeRate: "1.00",
         iva: "16.00",
         liquidation: false,
+        costBasisForCalculation: "last_cost",
+        lastCost: "0.00",
+        averageCost: "0.00",
     });
+
+    const [basePrices, setBasePrices] = useState<ProductBasePrice[]>(() => [...DEFAULT_PRODUCT_BASE_PRICES]);
 
     const [branches, setBranches] = useState<ProductBranch[]>([]);
 
-    const [images, setImages] = useState<string[]>([]);
+    const [detailBranchRows, setDetailBranchRows] = useState<ProductDetailBranchDto[] | null>(null);
+
+    const [galleryImages, setGalleryImages] = useState<ProductGalleryImage[]>([]);
 
     const [packages, setPackages] = useState<ProductPackage[]>([]);
 
@@ -65,46 +114,69 @@ export default function ProductFormPage() {
 
     useEffect(() => {
         if (isNew || !productId) {
-            setLoading(false);
-            setBranches(getInitialBranches());
+            setProductLoading(false);
+            setDetailBranchRows(null);
             return;
         }
 
         async function loadProduct() {
-            setLoading(true);
+            setProductLoading(true);
+            setDetailBranchRows(null);
             try {
-                const product = await getProduct(productId!);
-                if (product) {
-                    setGeneralData({
-                        departmentId: String(product.departmentId),
-                        lineId: product.lineId,
-                        code: product.code,
-                        description: product.description,
-                        shortName: product.shortName,
-                        piecesCount: "1",
-                        warrantyType: product.warrantyType,
-                        warrantyMonths: String(product.warrantyMonths),
-                    });
-                    setSuppliers(product.suppliers);
-                    setPriceData({
-                        listCost: product.price.listCost.toFixed(2),
-                        currency: product.price.currency,
-                        exchangeRate: product.price.exchangeRate.toFixed(2),
-                        iva: String(product.price.iva),
-                        liquidation: product.price.liquidation,
-                    });
-                    setBranches(product.branches);
-                    setImages(product.images);
+                const idNum = Number(productId);
+                if (!Number.isFinite(idNum)) {
+                    showError("Identificador de producto inválido.");
+                    return;
+                }
+                const result = await getProductById(idNum);
+                if (result.error) {
+                    console.error("[ProductForm] Error loading product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                if (result.data) {
+                    const snap = productDetailDtoToFormSnapshot(result.data);
+                    setGeneralData(snap.generalData);
+                    setSuppliers(snap.suppliers);
+                    setPriceData(snap.priceData);
+                    setBasePrices(snap.basePrices);
+                    setGalleryImages(snap.galleryImages);
+                    setDetailBranchRows(result.data.branches ?? []);
                 }
             } catch (err) {
                 console.error("[ProductForm] Error loading product:", err);
+                showError("No se pudo cargar el producto.");
             } finally {
-                setLoading(false);
+                setProductLoading(false);
             }
         }
 
         loadProduct();
     }, [isNew, productId]);
+
+    useEffect(() => {
+        if (!isNew) {
+            return;
+        }
+        setDetailBranchRows(null);
+    }, [isNew]);
+
+    useEffect(() => {
+        if (!isNew || catalogsLoading || branchCatalogItems.length === 0) {
+            return;
+        }
+        setBranches(branchCatalogToProductBranches(branchCatalogItems));
+    }, [isNew, catalogsLoading, branchCatalogItems]);
+
+    useEffect(() => {
+        if (isNew || detailBranchRows === null) {
+            return;
+        }
+        if (branchCatalogItems.length === 0) {
+            return;
+        }
+        setBranches(mergeBranchCatalogWithProductDetail(branchCatalogItems, detailBranchRows));
+    }, [isNew, detailBranchRows, branchCatalogItems]);
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
@@ -115,6 +187,12 @@ export default function ProductFormPage() {
 
         if (!generalData.lineId) {
             newErrors.lineId = "La línea es requerida";
+        } else if (!Number.isFinite(Number(generalData.lineId))) {
+            newErrors.lineId = "La línea debe ser un identificador válido";
+        }
+
+        if (!Number.isFinite(Number(generalData.departmentId))) {
+            newErrors.departmentId = "El departamento debe ser un identificador válido";
         }
 
         if (!generalData.description.trim()) {
@@ -127,6 +205,10 @@ export default function ProductFormPage() {
 
         if (generalData.warrantyType === "months" && (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)) {
             newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
+        }
+
+        if (generalData.warrantyType === "policy" && !generalData.warrantyPolicy.trim()) {
+            newErrors.warrantyPolicy = "Describe la garantía por póliza anexa";
         }
 
         const piecesNum = parseInt(generalData.piecesCount, 10);
@@ -148,28 +230,43 @@ export default function ProductFormPage() {
 
         setSaving(true);
         try {
-            await saveProduct({
-                id: productId || undefined,
-                code: generalData.code || "ART-000",
-                departmentId: Number(generalData.departmentId),
-                lineId: generalData.lineId,
-                description: generalData.description.trim(),
-                shortName: generalData.shortName.trim(),
-                warrantyType: generalData.warrantyType,
-                warrantyMonths: generalData.warrantyType === "months" ? Number(generalData.warrantyMonths) : 0,
+            let resolvedImageUrls: string[];
+            try {
+                resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
+            } catch (readErr) {
+                console.error("[ProductForm] Error reading gallery files:", readErr);
+                showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
+                return;
+            }
+            const payload = buildCreateProductRequest({
+                generalData,
                 suppliers,
-                price: {
-                    listCost: Number(priceData.listCost),
-                    currency: priceData.currency,
-                    exchangeRate: Number(priceData.exchangeRate),
-                    iva: Number(priceData.iva),
-                    averageCost: Number(priceData.listCost),
-                    lastCost: Number(priceData.listCost),
-                    liquidation: priceData.liquidation,
-                },
                 branches,
-                images,
+                images: resolvedImageUrls,
             });
+
+            if (isNew) {
+                const result = await createProduct(payload);
+                if (result.error) {
+                    console.error("[ProductForm] Error creating product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                showSuccess("Producto creado correctamente.");
+            } else {
+                const idNum = Number(productId);
+                if (!Number.isFinite(idNum)) {
+                    showError("Identificador de producto inválido.");
+                    return;
+                }
+                const result = await updateProduct(idNum, payload);
+                if (result.error) {
+                    console.error("[ProductForm] Error updating product:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                showSuccess("Producto actualizado correctamente.");
+            }
             router.push("/catalogos/productos");
         } catch (err) {
             console.error("[ProductForm] Error saving:", err);
@@ -185,7 +282,12 @@ export default function ProductFormPage() {
     };
 
     const handleGeneralDataChange = (field: keyof GeneralDataFormState, value: string | "months" | "policy") => {
-        setGeneralData((prev) => ({ ...prev, [field]: value }));
+        setGeneralData((prev) => {
+            if (field === "departmentId" && value !== prev.departmentId) {
+                return { ...prev, departmentId: value as string, lineId: "" };
+            }
+            return { ...prev, [field]: value };
+        });
     };
 
     const handleErrorClear = (field: string) => {
@@ -198,6 +300,10 @@ export default function ProductFormPage() {
 
     const handlePriceChange = (field: keyof PriceFormState, value: string | boolean) => {
         setPriceData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleAddBasePrice = (entry: Omit<ProductBasePrice, "id">) => {
+        setBasePrices((prev) => [...prev, { ...entry, id: `bp-${Date.now()}` }]);
     };
 
     const handleBranchToggle = (branchId: string) => {
@@ -231,55 +337,101 @@ export default function ProductFormPage() {
     };
 
     const handleAddSupplier = async (supplierId: number) => {
-        const supplier = MOCK_SUPPLIERS_FOR_SELECTION.find((s) => s.id === supplierId);
+        const supplier = suppliersCatalog.find((s) => s.id === supplierId);
         if (supplier) {
             const newSupplier: ProductSupplier = {
                 id: Date.now().toString(),
                 supplierId: supplier.id,
-                supplierName: supplier.name,
+                supplierName: supplier.businessName?.trim() || supplier.name,
                 isDefault: suppliers.length === 0,
             };
             setSuppliers([...suppliers, newSupplier]);
         }
     };
 
+    const handleRemoveSupplier = (supplierRowId: string) => {
+        setSuppliers((prev) => {
+            const next = prev.filter((s) => s.id !== supplierRowId);
+            if (next.length === 0) {
+                return next;
+            }
+            if (!next.some((s) => s.isDefault)) {
+                return next.map((s, index) => ({
+                    ...s,
+                    isDefault: index === 0,
+                }));
+            }
+            return next;
+        });
+    };
+
     const handleAddPackage = async (data: PackageFormData) => {
+        const article =
+            data.type === "article" && data.articleId
+                ? MOCK_ARTICLES.find((a) => a.id === data.articleId)
+                : undefined;
+        const resolvedArticlePrice =
+            data.type === "article"
+                ? (data.packagePrice ?? article?.lastPrice ?? 0)
+                : 0;
+
         const newPackage: ProductPackage = {
             id: Date.now().toString(),
             type: data.type,
             articleId: data.articleId,
-            articleName: data.type === "article"
-                ? MOCK_ARTICLES.find(a => a.id === data.articleId)?.name
-                : undefined,
+            articleName: article?.name,
             serviceName: data.serviceName,
+            quantity: 1,
+            packagePrice: resolvedArticlePrice,
             branches: data.branches,
         };
-        setPackages([...packages, newPackage]);
+        setPackages((prev) => [...prev, newPackage]);
+    };
+
+    const handleRemovePackage = (packageId: string) => {
+        setPackages((prev) => prev.filter((p) => p.id !== packageId));
     };
 
     const handleAddImage = (files: FileList) => {
-        const newImages: string[] = [];
-        Array.from(files).forEach((file) => {
-            if (images.length + newImages.length < 6) {
-                const imageUrl = URL.createObjectURL(file);
-                newImages.push(imageUrl);
-            }
+        setGalleryImages((prev) => {
+            const additions: ProductGalleryImage[] = [];
+            Array.from(files).forEach((file) => {
+                if (prev.length + additions.length < 6) {
+                    additions.push({
+                        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                        previewUrl: URL.createObjectURL(file),
+                        file,
+                    });
+                }
+            });
+            return [...prev, ...additions];
         });
-        setImages([...images, ...newImages]);
     };
 
     const handleReplaceImage = (index: number, file: File) => {
-        const imageUrl = URL.createObjectURL(file);
-        const newImages = [...images];
-        if (newImages[index] && newImages[index].startsWith("blob:")) {
-            URL.revokeObjectURL(newImages[index]);
-        }
-        newImages[index] = imageUrl;
-        setImages(newImages);
+        setGalleryImages((prev) => {
+            const next = [...prev];
+            const old = next[index];
+            if (old?.previewUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(old.previewUrl);
+            }
+            next[index] = {
+                id: old?.id ?? `img-${Date.now()}`,
+                previewUrl: URL.createObjectURL(file),
+                file,
+            };
+            return next;
+        });
     };
 
     const handleRemoveImage = (index: number) => {
-        setImages(images.filter((_, i) => i !== index));
+        setGalleryImages((prev) => {
+            const removed = prev[index];
+            if (removed?.previewUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(removed.previewUrl);
+            }
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const breadcrumbItems: BreadcrumbItem[] = [
@@ -296,7 +448,7 @@ export default function ProductFormPage() {
         { value: "branches", label: "Sucursales" },
     ];
 
-    if (loading) {
+    if (pageLoading) {
         return (
             <MainLayout>
                 <Box
@@ -316,10 +468,8 @@ export default function ProductFormPage() {
     return (
         <MainLayout>
             <Stack spacing={3}>
-                <Breadcrumbs items={breadcrumbItems} />
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Title
-                        title={(isNew) ? "Nuevo producto" : "Editar producto"} />
+                    <Breadcrumbs items={breadcrumbItems} />
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
                             variant="outlined"
@@ -337,81 +487,92 @@ export default function ProductFormPage() {
                         </Button>
                     </Stack>
                 </Stack>
-                <TabFilters
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                />
+                <Title title={(isNew) ? "Nuevo producto" : "Editar producto"} />
+                <Divider />
 
-                <FormCard>
-                    {
-                        activeTab === "general" &&
-                        <GeneralDataTab
-                            formState={generalData}
-                            errors={errors}
-                            onFieldChange={handleGeneralDataChange}
-                            onErrorClear={handleErrorClear}
-                            departments={MOCK_DEPARTMENTS}
-                            lines={MOCK_LINES}
+                <Grid container spacing={5} flexWrap="nowrap">
+                    <Grid size={{ xs: 'auto' }}>
+                        <VerticalSidebarTabs
+                            tabs={tabs}
+                            value={activeTab}
+                            onChange={setActiveTab}
                         />
-                    }
+                    </Grid>
+                    <Grid size={{ xs: 'grow' }}>
 
-                    {
-                        activeTab === "suppliers" &&
-                        <SuppliersTab
-                            suppliers={suppliers}
-                            availableSuppliers={MOCK_SUPPLIERS_FOR_SELECTION}
-                            onAddSupplier={handleAddSupplier}
-                        />
-                    }
+                        {
+                            activeTab === "general" &&
+                            <GeneralDataTab
+                                formState={generalData}
+                                errors={errors}
+                                onFieldChange={handleGeneralDataChange}
+                                onErrorClear={handleErrorClear}
+                                departments={departmentOptions}
+                                lines={lineOptions}
+                                warrantyOptions={warrantyOptions}
+                            />
+                        }
 
-                    {
-                        activeTab === "price" &&
-                        <PriceTab
-                            formState={priceData}
-                            onFieldChange={handlePriceChange}
-                            lastModified="12 de Julio, 2025, Arturo Gonzalez"
-                            currencies={CURRENCIES}
-                            costHistory={MOCK_COST_HISTORY}
-                            costHistoryOpen={costHistoryOpen}
-                            onCostHistoryOpen={() => setCostHistoryOpen(true)}
-                            onCostHistoryClose={() => setCostHistoryOpen(false)}
-                        />
-                    }
+                        {
+                            activeTab === "suppliers" &&
+                            <SuppliersTab
+                                suppliers={suppliers}
+                                availableSuppliers={suppliersCatalog}
+                                onAddSupplier={handleAddSupplier}
+                                onRemoveSupplier={handleRemoveSupplier}
+                            />
+                        }
 
-                    {
-                        activeTab === "packages" &&
-                        <PackagesTab
-                            packages={packages}
-                            availableArticles={MOCK_ARTICLES}
-                            availableBranches={MOCK_PACKAGE_BRANCHES}
-                            onAddPackage={handleAddPackage}
-                        />
-                    }
+                        {
+                            activeTab === "price" &&
+                            <PriceTab
+                                formState={priceData}
+                                onFieldChange={handlePriceChange}
+                                currencies={CURRENCIES}
+                                costBasisOptions={COST_BASIS_FOR_PRICE_OPTIONS}
+                                basePrices={basePrices}
+                                onAddBasePrice={handleAddBasePrice}
+                                costHistory={MOCK_COST_HISTORY}
+                                costHistoryOpen={costHistoryOpen}
+                                onCostHistoryOpen={() => setCostHistoryOpen(true)}
+                                onCostHistoryClose={() => setCostHistoryOpen(false)}
+                            />
+                        }
 
-                    {
-                        activeTab === "gallery" &&
-                        <GalleryTab
-                            images={images}
-                            onAddImage={handleAddImage}
-                            onReplaceImage={handleReplaceImage}
-                            onRemoveImage={handleRemoveImage}
-                        />
-                    }
+                        {
+                            activeTab === "packages" &&
+                            <PackagesTab
+                                packages={packages}
+                                availableArticles={MOCK_ARTICLES}
+                                availableBranches={MOCK_PACKAGE_BRANCHES}
+                                onAddPackage={handleAddPackage}
+                                onRemovePackage={handleRemovePackage}
+                            />
+                        }
 
-                    {
-                        activeTab === "branches" &&
-                        <BranchesTab
-                            branches={branches}
-                            onBranchToggle={handleBranchToggle}
-                            onInventoryChange={handleInventoryChange}
-                            onInventoryInputChange={handleInventoryInputChange}
-                        />
-                    }
+                        {
+                            activeTab === "gallery" &&
+                            <GalleryTab
+                                images={galleryImages}
+                                onAddImage={handleAddImage}
+                                onReplaceImage={handleReplaceImage}
+                                onRemoveImage={handleRemoveImage}
+                            />
+                        }
 
-                </FormCard>
+                        {
+                            activeTab === "branches" &&
+                            <BranchesTab
+                                branches={branches}
+                                onBranchToggle={handleBranchToggle}
+                                onInventoryChange={handleInventoryChange}
+                                onInventoryInputChange={handleInventoryInputChange}
+                            />
+                        }
+
+                    </Grid>
+                </Grid>
             </Stack>
-
         </MainLayout>
     );
 }

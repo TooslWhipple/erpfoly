@@ -4,11 +4,62 @@
 
 export type WarrantyType = "months" | "policy";
 
+/** Backend warranty values for POST /products */
+export type ProductWarrantyTypeApi = "MONTHS" | "ANNEX_POLICY";
+
+export interface CreateProductSupplierPayload {
+    supplierId: number;
+    supplierProductCode: string;
+    isPrimary: boolean;
+}
+
+export interface CreateProductImagePayload {
+    imageUrl: string;
+    sortOrder: number;
+}
+
+export interface CreateProductBranchPayload {
+    branchId: number;
+    minStock: number;
+    maxStock: number;
+    isAvailable: boolean;
+}
+
+export type CreateProductRequest = {
+    departmentId: number;
+    lineId: number;
+    code: string;
+    shortName: string;
+    description: string;
+    pieceCount: number;
+    suppliers: CreateProductSupplierPayload[];
+    images: CreateProductImagePayload[];
+    branches: CreateProductBranchPayload[];
+} & (
+    | { warrantyType: "MONTHS"; warrantyMonths: number }
+    | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
+);
+
+export interface CreateProductResponse {
+    id: number;
+}
+
 export interface ProductSupplier {
     id: string;
     supplierId: number;
     supplierName: string;
     isDefault: boolean;
+    /** Supplier reference code sent to POST /products */
+    supplierProductCode?: string;
+}
+
+export type CostBasisForCalculation = "last_cost" | "list_cost" | "average_cost";
+
+export interface ProductBasePrice {
+    id: string;
+    name: string;
+    marginPercent: number;
+    lastEditedBy?: string;
 }
 
 export interface ProductPrice {
@@ -19,6 +70,8 @@ export interface ProductPrice {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
+    costBasisForCalculation?: CostBasisForCalculation;
+    basePrices?: ProductBasePrice[];
 }
 
 export interface ProductBranch {
@@ -45,6 +98,13 @@ export interface Product {
     images: string[];
 }
 
+/** Gallery row: preview URL (blob or https) plus optional file for API payload */
+export interface ProductGalleryImage {
+    id: string;
+    previewUrl: string;
+    file: File | null;
+}
+
 export interface CostHistoryEntry {
     id: string;
     date: string;
@@ -66,6 +126,8 @@ export interface GeneralDataFormState {
     piecesCount: string;
     warrantyType: WarrantyType;
     warrantyMonths: string;
+    /** Free text when warrantyType is policy (maps to ANNEX_POLICY + warrantyPolicy) */
+    warrantyPolicy: string;
 }
 
 export interface PriceFormState {
@@ -74,6 +136,9 @@ export interface PriceFormState {
     exchangeRate: string;
     iva: string;
     liquidation: boolean;
+    costBasisForCalculation: CostBasisForCalculation;
+    lastCost: string;
+    averageCost: string;
 }
 
 export interface FormErrors {
@@ -92,6 +157,10 @@ export interface ProductPackage {
     articleId?: string;
     articleName?: string;
     serviceName?: string;
+    /** Units included in the package (default 1 when adding from the modal). */
+    quantity: number;
+    /** Effective line price for articles; services use 0 when complimentary. */
+    packagePrice: number;
     branches: number[];
 }
 

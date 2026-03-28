@@ -1,6 +1,14 @@
-import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box } from "@mui/material";
+import { useState, useCallback } from "react";
+import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Box, Button } from "@mui/material";
 import { Remove, Add } from "@mui/icons-material";
-import { FormTextField, FormSelect } from "@/components";
+import {
+    FormTextField,
+    FormSelect,
+    CreateDepartmentSideModal,
+    CreateProductLineSideModal,
+} from "@/components";
+import type { Department } from "@/services/departments.service";
+import type { ProductLineItem } from "@/services/product-lines.service";
 import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 
@@ -20,6 +28,10 @@ interface GeneralDataTabProps {
     departments: Array<{ value: string; label: string }>;
     lines: Array<{ value: string; label: string }>;
     warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
+    reloadDepartments: () => Promise<void>;
+    reloadLines: () => Promise<void>;
+    onCatalogDepartmentCreated: (department: Department) => void | Promise<void>;
+    onCatalogLineCreated: (line: ProductLineItem) => void | Promise<void>;
 }
 
 export function GeneralDataTab({
@@ -30,9 +42,36 @@ export function GeneralDataTab({
     departments,
     lines,
     warrantyOptions,
+    reloadDepartments,
+    reloadLines,
+    onCatalogDepartmentCreated,
+    onCatalogLineCreated,
 }: GeneralDataTabProps) {
+    const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+    const [lineModalOpen, setLineModalOpen] = useState(false);
+
     const warrantyChoices =
         warrantyOptions && warrantyOptions.length > 0 ? warrantyOptions : DEFAULT_WARRANTY_OPTIONS;
+
+    const departmentIdNum = Number(formState.departmentId);
+    const hasValidDepartment =
+        formState.departmentId.trim() !== "" && Number.isFinite(departmentIdNum);
+
+    const handleDepartmentCreated = useCallback(
+        async (created: Department) => {
+            await reloadDepartments();
+            await onCatalogDepartmentCreated(created);
+        },
+        [reloadDepartments, onCatalogDepartmentCreated]
+    );
+
+    const handleLineCreated = useCallback(
+        async (created: ProductLineItem) => {
+            await reloadLines();
+            await onCatalogLineCreated(created);
+        },
+        [reloadLines, onCatalogLineCreated]
+    );
 
     return (
         <FormCard>
@@ -42,38 +81,57 @@ export function GeneralDataTab({
             </Stack>
             <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 4 }}>
-                    <FormSelect
-                        label="Departamento"
-                        placeholder="Selecciona"
-                        value={formState.departmentId}
-                        onChange={(e) => {
-                            onFieldChange("departmentId", String(e.target.value));
-                            onErrorClear("departmentId");
-                        }}
-                        options={departments}
-                        error={Boolean(errors.departmentId)}
-                        helperText={errors.departmentId}
-                        required
-                    />
+                    <Stack spacing={1} alignItems="flex-start">
+                        <FormSelect
+                            label="Departamento"
+                            placeholder="Selecciona"
+                            value={formState.departmentId}
+                            onChange={(e) => {
+                                onFieldChange("departmentId", String(e.target.value));
+                                onErrorClear("departmentId");
+                            }}
+                            options={departments}
+                            error={Boolean(errors.departmentId)}
+                            helperText={errors.departmentId}
+                            required
+                        />
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => setDepartmentModalOpen(true)}
+                        >
+                            Nuevo departamento
+                        </Button>
+                    </Stack>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
-                    <FormSelect
-                        label="Línea"
-                        placeholder="Selecciona"
-                        value={formState.lineId}
-                        onChange={(e) => {
-                            onFieldChange("lineId", String(e.target.value));
-                            onErrorClear("lineId");
-                        }}
-                        options={lines}
-                        error={Boolean(errors.lineId)}
-                        helperText={
-                            errors.lineId ||
-                            (!formState.departmentId ? "Selecciona un departamento primero" : undefined)
-                        }
-                        disabled={!formState.departmentId}
-                        required
-                    />
+                    <Stack spacing={1} alignItems="flex-start">
+                        <FormSelect
+                            label="Línea"
+                            placeholder="Selecciona"
+                            value={formState.lineId}
+                            onChange={(e) => {
+                                onFieldChange("lineId", String(e.target.value));
+                                onErrorClear("lineId");
+                            }}
+                            options={lines}
+                            error={Boolean(errors.lineId)}
+                            helperText={
+                                errors.lineId ||
+                                (!formState.departmentId ? "Selecciona un departamento primero" : undefined)
+                            }
+                            disabled={!formState.departmentId}
+                            required
+                        />
+                        <Button
+                            variant="text"
+                            size="small"
+                            disabled={!hasValidDepartment}
+                            onClick={() => setLineModalOpen(true)}
+                        >
+                            Nueva línea
+                        </Button>
+                    </Stack>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <FormTextField
@@ -227,6 +285,19 @@ export function GeneralDataTab({
                     />
                 }
             </Stack>
+
+            <CreateDepartmentSideModal
+                open={departmentModalOpen}
+                onClose={() => setDepartmentModalOpen(false)}
+                onCreated={handleDepartmentCreated}
+            />
+
+            <CreateProductLineSideModal
+                open={lineModalOpen && hasValidDepartment}
+                onClose={() => setLineModalOpen(false)}
+                departmentId={hasValidDepartment ? departmentIdNum : -1}
+                onCreated={handleLineCreated}
+            />
         </FormCard>
     );
 }

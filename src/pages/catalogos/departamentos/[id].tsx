@@ -8,6 +8,7 @@ import {
   ModalForm,
   TableCrud,
   Title,
+  CreateProductLineSideModal,
 } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -16,7 +17,6 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { getDepartmentById } from "@/services/departments.service";
 import {
   getProductLines,
-  createProductLine,
   updateProductLine,
   deleteProductLine,
   type ProductLineItem,
@@ -74,6 +74,7 @@ export default function DepartmentDetailPage() {
     enabled: isDepartmentReady,
   });
 
+  const [createLineModalOpen, setCreateLineModalOpen] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<ProductLineItem | null>(null);
   const [savingLine, setSavingLine] = useState(false);
@@ -116,11 +117,7 @@ export default function DepartmentDetailPage() {
   ];
 
   const handleOpenNewGroup = () => {
-    setEditingLine(null);
-    setHasGroupPromotion(false);
-    setGroupAffectedCount(null);
-    setGroupFormValues({});
-    setGroupModalOpen(true);
+    setCreateLineModalOpen(true);
   };
 
   const handleOpenEditGroup = (row: GroupRow) => {
@@ -145,30 +142,20 @@ export default function DepartmentDetailPage() {
 
   const handleSaveGroup = async (data: Record<string, unknown>) => {
     if (departmentId == null || Number.isNaN(departmentId)) return;
+    if (!editingLine) return;
 
     const name = (data.name as string)?.trim();
     const code = (data.code as string)?.trim();
 
     setSavingLine(true);
-    if (editingLine) {
-      const result = await updateProductLine(editingLine.id, { name, code });
-      setSavingLine(false);
-      if (result.error) {
-        console.error("[DepartmentDetail] Error saving line:", result.error.message);
-        showError(result.error.message);
-        return;
-      }
-      showSnackbar("Línea actualizada correctamente.");
-    } else {
-      const result = await createProductLine({ departmentId, name, code });
-      setSavingLine(false);
-      if (result.error) {
-        console.error("[DepartmentDetail] Error saving line:", result.error.message);
-        showError(result.error.message);
-        return;
-      }
-      showSnackbar("Línea creada correctamente.");
+    const result = await updateProductLine(editingLine.id, { name, code });
+    setSavingLine(false);
+    if (result.error) {
+      console.error("[DepartmentDetail] Error saving line:", result.error.message);
+      showError(result.error.message);
+      return;
     }
+    showSnackbar("Línea actualizada correctamente.");
     handleCloseGroupModal();
     await Promise.all([refetchProductLines(), fetchDepartment()]);
   };
@@ -376,12 +363,12 @@ export default function DepartmentDetailPage() {
       <ModalForm
         open={groupModalOpen}
         onClose={handleCloseGroupModal}
-        title={editingLine ? "Editar línea" : "Nueva línea"}
+        title="Editar línea"
         fields={groupFormFields}
         onConfirm={handleSaveGroup}
         loading={savingLine}
         initialValues={groupModalInitialValues}
-        confirmLabel={editingLine ? "Guardar" : "Crear"}
+        confirmLabel="Guardar"
         cancelLabel="Cancelar"
         maxWidth="sm"
         onValuesChange={handleGroupFormValuesChange}
@@ -394,6 +381,15 @@ export default function DepartmentDetailPage() {
           </Box>
         )}
       </ModalForm>
+
+      <CreateProductLineSideModal
+        open={createLineModalOpen}
+        onClose={() => setCreateLineModalOpen(false)}
+        departmentId={department.id}
+        onCreated={async () => {
+          await Promise.all([refetchProductLines(), fetchDepartment()]);
+        }}
+      />
     </MainLayout>
   );
 }

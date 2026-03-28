@@ -2,17 +2,19 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Alert, Stack } from "@mui/material";
 import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
+import {
+  MainLayout,
+  Title,
+  TableCrud,
+  ModalForm,
+  TabFilters,
+  CreateDepartmentSideModal,
+} from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { FormFieldConfig } from "@/components/Form";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import {
-  getDepartments,
-  createDepartment,
-  updateDepartment,
-  deleteDepartment,
-} from "@/services/departments.service";
+import { getDepartments, updateDepartment, deleteDepartment } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
@@ -60,6 +62,7 @@ export default function Departamentos() {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
 
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [saving, setSaving] = useState(false);
@@ -171,11 +174,7 @@ export default function Departamentos() {
   };
 
   const handleOpenCreateModal = () => {
-    setEditingDepartment(null);
-    setHasPromotion(false);
-    setAffectedItemsCount(null);
-    setFormValues({});
-    setModalOpen(true);
+    setCreateModalOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -187,31 +186,19 @@ export default function Departamentos() {
   };
 
   const handleSaveDepartment = async (data: Record<string, unknown>) => {
+    if (!editingDepartment) return;
+
     setSaving(true);
-    if (editingDepartment) {
-      const result = await updateDepartment(editingDepartment.id, {
-        name: data.name as string,
-        margin: Number(data.margin),
-      });
-      if (result.error) {
-        setSaving(false);
-        console.error("[Departamentos] Error saving:", result.error.message);
-        showError(result.error.message);
-        return;
-      }
-    } else {
-      const result = await createDepartment({
-        name: data.name as string,
-        margin: Number(data.margin),
-      });
-      if (result.error) {
-        setSaving(false);
-        console.error("[Departamentos] Error saving:", result.error.message);
-        showError(result.error.message);
-        return;
-      }
-    }
+    const result = await updateDepartment(editingDepartment.id, {
+      name: data.name as string,
+      margin: Number(data.margin),
+    });
     setSaving(false);
+    if (result.error) {
+      console.error("[Departamentos] Error saving:", result.error.message);
+      showError(result.error.message);
+      return;
+    }
     handleCloseModal();
     refetch();
   };
@@ -355,7 +342,7 @@ export default function Departamentos() {
       <ModalForm
         open={modalOpen}
         onClose={handleCloseModal}
-        title={editingDepartment ? "Editar departamento" : "Nuevo departamento"}
+        title="Editar departamento"
         fields={departmentFormFields}
         onConfirm={handleSaveDepartment}
         loading={saving}
@@ -377,7 +364,7 @@ export default function Departamentos() {
                 hasPromotion: false,
               }
         }
-        confirmLabel={editingDepartment ? "Guardar" : "Crear"}
+        confirmLabel="Guardar"
         cancelLabel="Cancelar"
         maxWidth="sm"
         onValuesChange={handleFormValuesChange}
@@ -390,6 +377,12 @@ export default function Departamentos() {
           </Box>
         )}
       </ModalForm>
+
+      <CreateDepartmentSideModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={() => refetch()}
+      />
     </MainLayout>
   );
 }

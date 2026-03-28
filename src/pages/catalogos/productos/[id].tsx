@@ -30,6 +30,8 @@ import {
 } from "@/services/productos.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
+import type { Department } from "@/services/departments.service";
+import type { ProductLineItem } from "@/services/product-lines.service";
 import {
     branchCatalogToProductBranches,
     mergeBranchCatalogWithProductDetail,
@@ -81,6 +83,8 @@ export default function ProductFormPage() {
         suppliersCatalog,
         branchCatalogItems,
         warrantyOptions,
+        reloadDepartments,
+        reloadLines,
     } = useProductFormCatalogs(generalData.departmentId);
 
     const pageLoading = catalogsLoading || productLoading;
@@ -288,6 +292,14 @@ export default function ProductFormPage() {
             }
             return { ...prev, [field]: value };
         });
+    };
+
+    const handleCatalogDepartmentCreated = async (department: Department) => {
+        handleGeneralDataChange("departmentId", String(department.id));
+    };
+
+    const handleCatalogLineCreated = async (line: ProductLineItem) => {
+        handleGeneralDataChange("lineId", String(line.id));
     };
 
     const handleErrorClear = (field: string) => {
@@ -510,6 +522,10 @@ export default function ProductFormPage() {
                                 departments={departmentOptions}
                                 lines={lineOptions}
                                 warrantyOptions={warrantyOptions}
+                                reloadDepartments={reloadDepartments}
+                                reloadLines={reloadLines}
+                                onCatalogDepartmentCreated={handleCatalogDepartmentCreated}
+                                onCatalogLineCreated={handleCatalogLineCreated}
                             />
                         }
 

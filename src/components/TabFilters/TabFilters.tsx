@@ -101,23 +101,27 @@ export function TabFilters({
           </TabsWrapper>
         }
       </Grid>
+
       <Grid container size={{ xs: 12, md: 'auto' }} alignContent={{ xs: 'flex-start', md: 'flex-end' }}>
-        <Grid size={{ xs: 6, md: 'auto' }}>
-          <FormTextField
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={handleSearchChange}
-            fullWidth={!singleAction}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={18} color={colors.text.secondary} />
-                </InputAdornment>
-              )
-            }}
-          />
-        </Grid>
+        {
+          showSearch &&
+          <Grid size={{ xs: 6, md: 'auto' }}>
+            <FormTextField
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={handleSearchChange}
+              fullWidth={!singleAction}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} color={colors.text.secondary} />
+                  </InputAdornment>
+                )
+              }}
+            />
+          </Grid>
+        }
         {
           hasActions && actions.map((action, index) => (
             <Grid size={{ xs: 6, md: 'auto' }}>

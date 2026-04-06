@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { CheckCircle2, Fingerprint, PenSquare } from "lucide-react";
+import { Button, Stack, Typography } from "@mui/material";
+import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { colors } from "@/styles/theme";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
@@ -12,14 +12,18 @@ interface CreditApplicationIntakeModalProps {
   onCompleted: (payload: CreditApplicationBiometricsData) => void;
 }
 
-type IntakeStepId = "ine-front" | "selfie" | "fingerprint" | "signature";
+type IntakeStepId = "ine-front" | "ine-back" | "selfie" | "fingerprint" | "signature";
 
-const STEP_ORDER: IntakeStepId[] = ["ine-front", "selfie", "fingerprint", "signature"];
+const STEP_ORDER: IntakeStepId[] = ["ine-front", "ine-back", "selfie", "fingerprint", "signature"];
 
 const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
   "ine-front": {
     title: "Nuevo cliente",
-    subtitle: "Captura una imagen de la INE del cliente",
+    subtitle: "Captura la parte frontal de la INE del cliente",
+  },
+  "ine-back": {
+    title: "Nuevo cliente",
+    subtitle: "Captura la parte posterior de la INE del cliente",
   },
   selfie: {
     title: "Nuevo cliente",
@@ -42,6 +46,7 @@ export function CreditApplicationIntakeModal({
 }: CreditApplicationIntakeModalProps) {
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-front");
   const [ineImageDataUrl, setIneImageDataUrl] = useState<string | null>(null);
+  const [ineBackImageDataUrl, setIneBackImageDataUrl] = useState<string | null>(null);
   const [selfieImageDataUrl, setSelfieImageDataUrl] = useState<string | null>(null);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [signatureDrawn, setSignatureDrawn] = useState(false);
@@ -57,10 +62,11 @@ export function CreditApplicationIntakeModal({
 
   const canContinue = useMemo(() => {
     if (activeStep === "ine-front") return Boolean(ineImageDataUrl);
+    if (activeStep === "ine-back") return Boolean(ineBackImageDataUrl);
     if (activeStep === "selfie") return Boolean(selfieImageDataUrl);
     if (activeStep === "fingerprint") return fingerprintConfirmed;
     return signatureDrawn;
-  }, [activeStep, fingerprintConfirmed, ineImageDataUrl, selfieImageDataUrl, signatureDrawn]);
+  }, [activeStep, fingerprintConfirmed, ineBackImageDataUrl, ineImageDataUrl, selfieImageDataUrl, signatureDrawn]);
 
   const goToNextStep = async () => {
     if (!canContinue) return;
@@ -70,6 +76,7 @@ export function CreditApplicationIntakeModal({
       try {
         onCompleted({
           ineFrontImage: ineImageDataUrl,
+          ineBackImage: ineBackImageDataUrl,
           selfieImage: selfieImageDataUrl,
           fingerprintConfirmed,
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
@@ -88,6 +95,7 @@ export function CreditApplicationIntakeModal({
   const resetModalState = () => {
     setActiveStep("ine-front");
     setIneImageDataUrl(null);
+    setIneBackImageDataUrl(null);
     setSelfieImageDataUrl(null);
     setFingerprintConfirmed(false);
     setSignatureDrawn(false);
@@ -175,6 +183,19 @@ export function CreditApplicationIntakeModal({
             />
           </Stack>
         }
+        {
+          activeStep === "ine-back" &&
+          <Stack spacing={3}>
+            <DeviceCameraCapture
+              facingMode="environment"
+              capturedImage={ineBackImageDataUrl}
+              onCapture={setIneBackImageDataUrl}
+              onRetake={() => setIneBackImageDataUrl(null)}
+              imageAlt="INE posterior"
+              cameraIndication="Asegúrate de capturar claramente el reverso de la INE"
+            />
+          </Stack>
+        }
 
         {activeStep === "selfie" && (
           <Stack spacing={3}>
@@ -252,7 +273,7 @@ interface DeviceCameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
   onRetake: () => void;
   imageAlt: string;
-  cameraIndication: string | null;
+  cameraIndication?: string | null;
 }
 
 function DeviceCameraCapture({

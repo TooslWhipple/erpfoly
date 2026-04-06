@@ -1,4 +1,4 @@
-import { Grid, Button, MenuItem, Stack, Typography } from "@mui/material";
+import { Grid, Button, MenuItem, Typography } from "@mui/material";
 import { Check, ShieldCheck } from "lucide-react";
 import { FormTextField } from "@/components/Form";
 import type {
@@ -34,43 +34,50 @@ export function BasicInformationTab({
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <FormTextField
+            fullWidth
+            required
             label="Nombres"
+            placeholder="Ingresa"
             value={values.firstName}
             onChange={(event) => onFieldChange("firstName", event.target.value)}
             error={Boolean(errors.firstName)}
             helperText={errors.firstName}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
+            fullWidth
+            required
             label="Primer Apellido"
+            placeholder="Ingresa"
             value={values.lastName}
             onChange={(event) => onFieldChange("lastName", event.target.value)}
             error={Boolean(errors.lastName)}
             helperText={errors.lastName}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
+            fullWidth
             label="Segundo Apellido"
+            placeholder="Ingresa"
             value={values.secondLastName}
             onChange={(event) => onFieldChange("secondLastName", event.target.value)}
             error={Boolean(errors.secondLastName)}
             helperText={errors.secondLastName}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
+            fullWidth
+            required
             label="Fecha de nacimiento"
+            placeholder="Selecciona"
             type="date"
             value={values.birthDate}
             onChange={(event) => onFieldChange("birthDate", event.target.value)}
             error={Boolean(errors.birthDate)}
             helperText={errors.birthDate}
-            fullWidth
             InputLabelProps={{ shrink: true }}
           />
         </Grid>
@@ -93,22 +100,26 @@ export function BasicInformationTab({
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
+            fullWidth
+            required
             label="CURP"
+            placeholder="Ingresa"
             value={values.curp}
             onChange={(event) => onFieldChange("curp", event.target.value)}
             error={Boolean(errors.curp)}
             helperText={errors.curp}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
+            fullWidth
+            required
             label="RFC"
+            placeholder="Ingresa"
             value={values.rfc}
             onChange={(event) => onFieldChange("rfc", event.target.value)}
             error={Boolean(errors.rfc)}
             helperText={errors.rfc}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -116,32 +127,38 @@ export function BasicInformationTab({
         </Grid>
         <Grid size={{ xs: 12 }}>
           <FormTextField
+            fullWidth
+            required
             label="Correo electrónico"
+            placeholder="Ingresa"
             value={values.email}
             onChange={(event) => onFieldChange("email", event.target.value)}
             error={Boolean(errors.email)}
             helperText={errors.email}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 'grow' }}>
           <FormTextField
+            fullWidth
+            required
             label="Número de Whatsapp"
+            placeholder="Ingresa"
             value={values.whatsappNumber}
             onChange={(event) => onFieldChange("whatsappNumber", event.target.value)}
             error={Boolean(errors.whatsappNumber)}
             helperText={errors.whatsappNumber}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 'grow' }}>
           <FormTextField
+            fullWidth
+            required
             label="Código de seguridad"
+            placeholder="Ingresa"
             value={values.securityCode}
             onChange={(event) => onFieldChange("securityCode", event.target.value)}
             error={Boolean(errors.securityCode)}
             helperText={errors.securityCode}
-            fullWidth
           />
         </Grid>
         <Grid size={{ xs: 'auto' }} alignSelf="flex-end">
@@ -153,6 +170,19 @@ export function BasicInformationTab({
             sx={{ minWidth: 108, alignSelf: "stretch" }}>
             Validar
           </Button>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          {isSecurityCodeValid !== null && (
+            <Typography
+              variant="body2"
+              color={isSecurityCodeValid ? "success.main" : "error.main"}
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              {isSecurityCodeValid ? <Check size={14} /> : null}
+              {isSecurityCodeValid ? "Código validado correctamente" : "Código inválido"}
+            </Typography>
+          )}
         </Grid>
 
         <Grid size={{ xs: 12 }}>

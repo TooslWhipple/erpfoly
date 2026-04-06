@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { CreditApplicationEditorPage } from "@/components/CreditApplicationForm";
+import { CreditApplicationFormPage } from "@/components/CreditApplicationForm";
 
 export default function CreditApplicationDetailPage() {
   const router = useRouter();
@@ -7,5 +7,5 @@ export default function CreditApplicationDetailPage() {
 
   if (typeof id !== "string") return null;
 
-  return <CreditApplicationEditorPage isCreateMode={false} applicationId={id} />;
+  return <CreditApplicationFormPage isCreateMode={false} applicationId={id} />;
 }

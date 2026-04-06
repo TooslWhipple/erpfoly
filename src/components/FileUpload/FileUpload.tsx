@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { Stack, Typography, IconButton, Button, useTheme } from "@mui/material";
-import { Upload, Trash2, Download, Image, Clock9 } from "lucide-react";
+import { Upload, Trash2, Download, Image as ImageIcon, Clock9 } from "lucide-react";
 import {
   DropZoneRoot,
   FileItemRow,
@@ -29,12 +29,6 @@ export interface FileUploadProps {
 const DEFAULT_ACCEPT = ["image/*", "image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
 const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-function getMimeCategory(mime: string): "image" | "pdf" | "other" {
-  if (mime.startsWith("image/")) return "image";
-  if (mime === "application/pdf") return "pdf";
-  return "other";
-}
-
 function isAccepted(file: File, accept: string[]): boolean {
   const mime = file.type;
   for (const pattern of accept) {
@@ -57,6 +51,7 @@ export function FileUpload({
   error,
 }: FileUploadProps) {
   const theme = useTheme();
+  const inputId = useId();
 
   const [isDragActive, setIsDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -170,10 +165,10 @@ export function FileUpload({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onClick={() => !disabled && document.getElementById("file-upload-input")?.click()}
+          onClick={() => !disabled && document.getElementById(inputId)?.click()}
         >
           <input
-            id="file-upload-input"
+            id={inputId}
             type="file"
             accept={accept.join(",")}
             onChange={handleInputChange}
@@ -183,7 +178,7 @@ export function FileUpload({
           <Stack alignItems="center" spacing={0.5}>
             <Upload size={16} color={theme.palette.primary.main} strokeWidth={2} />
             <Typography variant="body1" fontWeight={500} color="primary.main">{placeholder}</Typography>
-            <Typography variant="body1" fontWeight={400} color="primary.main">Images and PDF. Max {Math.round(maxFileSizeBytes / 1024 / 1024)} MB.</Typography>
+            <Typography variant="body1" fontWeight={400} color="primary.main">Imagenes y PDF. Max {Math.round(maxFileSizeBytes / 1024 / 1024)} MB.</Typography>
           </Stack>
         </DropZoneRoot>
       )}
@@ -192,7 +187,7 @@ export function FileUpload({
         <FileItemRow>
           <Stack direction="row" alignItems="center" gap="12px">
             <FileIconContainer>
-              <Image size={20} />
+              <ImageIcon size={20} />
             </FileIconContainer>
             <Stack spacing={0.5}>
               <Stack minWidth={0}>

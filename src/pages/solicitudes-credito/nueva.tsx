@@ -1,5 +1,5 @@
-import { CreditApplicationEditorPage } from "@/components/CreditApplicationForm";
+import { CreditApplicationFormPage } from "@/components/CreditApplicationForm";
 
 export default function LegacyNewCreditApplicationPage() {
-  return <CreditApplicationEditorPage isCreateMode />;
+  return <CreditApplicationFormPage isCreateMode />;
 }

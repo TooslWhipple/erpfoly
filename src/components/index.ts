@@ -95,6 +95,15 @@ export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
 export { MonthlySalesGoalsModal } from "./Sellers";
 export type { MonthlySalesGoalsModalProps } from "./Sellers";
 export { CreditApplicationIntakeModal } from "./CreditApplicationIntakeModal";
-export { CreditApplicationEditorPage, BasicInformationTab } from "./CreditApplicationForm";
+export {
+  CreditApplicationFormPage,
+  BasicInformationTab,
+  FamilyTab,
+  AddressTab,
+  EmploymentTab,
+  ReferencesTab,
+  DocumentationTab,
+  GuarantorTab,
+} from "./CreditApplicationForm";
 export * from "./Icons";
 

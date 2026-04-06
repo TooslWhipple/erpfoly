@@ -27,6 +27,12 @@ import {
   UserEmail,
 } from "./styles";
 import { BanknoteArrowDown } from "lucide-react";
+import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
+import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
+import type {
+  CreditApplicationBiometricsData,
+  DocumentationTabValues,
+} from "@/types/credit-application-form.types";
 
 interface NavSubItem {
   label: string;
@@ -118,9 +124,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const upsertBiometrics = useCreditApplicationDraftStore((state) => state.upsertBiometrics);
+  const upsertDocumentation = useCreditApplicationDraftStore((state) => state.upsertDocumentation);
+  const getDraftById = useCreditApplicationDraftStore((state) => state.getDraftById);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
     getInitialOpenMenus(router.pathname)
   );
+  const [intakeModalOpen, setIntakeModalOpen] = useState(false);
   const previousPathname = useRef(router.pathname);
 
   useEffect(() => {
@@ -182,6 +192,58 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     }));
   };
 
+  const handleOpenNewCreditApplicationIntake = () => {
+    if (isMobile) {
+      onClose();
+    }
+    setIntakeModalOpen(true);
+  };
+
+  const mapDocumentationFromBiometrics = (
+    biometrics: CreditApplicationBiometricsData,
+    currentDocumentation: DocumentationTabValues
+  ): DocumentationTabValues => ({
+    ...currentDocumentation,
+    ineFrontFiles: biometrics.ineFrontImage
+      ? [
+          {
+            id: `ine-front-${Date.now()}`,
+            name: "ine-frontal-capturada.png",
+            url: biometrics.ineFrontImage,
+            uploadedAt: "Capturada",
+          },
+        ]
+      : currentDocumentation.ineFrontFiles,
+    ineBackFiles: biometrics.ineBackImage
+      ? [
+          {
+            id: `ine-back-${Date.now()}`,
+            name: "ine-posterior-capturada.png",
+            url: biometrics.ineBackImage,
+            uploadedAt: "Capturada",
+          },
+        ]
+      : currentDocumentation.ineBackFiles,
+  });
+
+  const handleIntakeCompleted = (payload: Parameters<typeof upsertBiometrics>[1]) => {
+    const draftId = "new-credit-application";
+    const currentDraft = getDraftById(draftId);
+    const currentDocumentation: DocumentationTabValues = currentDraft?.documentation ?? {
+      requiredAlertVisible: true,
+      requiredAlertMessage: "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
+      incomeProofFiles: [],
+      ineFrontFiles: [],
+      ineBackFiles: [],
+    };
+    const nextDocumentation = mapDocumentationFromBiometrics(payload, currentDocumentation);
+
+    upsertDocumentation(draftId, nextDocumentation);
+    upsertBiometrics("new-credit-application", payload);
+    setIntakeModalOpen(false);
+    router.push("/solicitudes-credito/nuevo");
+  };
+
   const drawerContent = (
     <>
       <NavigationContainer>
@@ -196,7 +258,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <Button
           variant="outlined"
           startIcon={<Plus size={18} />}
-          onClick={() => handleNavigation("/solicitudes-credito/nuevo")}
+          onClick={handleOpenNewCreditApplicationIntake}
         >
           Nueva solicitud
         </Button>
@@ -278,13 +340,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   );
 
   return (
-    <StyledDrawer
-      variant={isMobile ? "temporary" : "permanent"}
-      open={isMobile ? open : true}
-      onClose={onClose}
-      isMobile={isMobile}
-    >
-      {drawerContent}
-    </StyledDrawer>
+    <>
+      <StyledDrawer
+        variant={isMobile ? "temporary" : "permanent"}
+        open={isMobile ? open : true}
+        onClose={onClose}
+        isMobile={isMobile}
+      >
+        {drawerContent}
+      </StyledDrawer>
+
+      <CreditApplicationIntakeModal
+        open={intakeModalOpen}
+        onClose={() => setIntakeModalOpen(false)}
+        onCompleted={handleIntakeCompleted}
+      />
+    </>
   );
 }

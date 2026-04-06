@@ -196,7 +196,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <Button
           variant="outlined"
           startIcon={<Plus size={18} />}
-          onClick={() => handleNavigation("/solicitudes-credito/nueva")}
+          onClick={() => handleNavigation("/solicitudes-credito/nuevo")}
         >
           Nueva solicitud
         </Button>

@@ -94,5 +94,7 @@ export { TrackSlider } from "./TrackSlider";
 export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
 export { MonthlySalesGoalsModal } from "./Sellers";
 export type { MonthlySalesGoalsModalProps } from "./Sellers";
+export { CreditApplicationIntakeModal } from "./CreditApplicationIntakeModal";
+export { CreditApplicationEditorPage, BasicInformationTab } from "./CreditApplicationForm";
 export * from "./Icons";
 

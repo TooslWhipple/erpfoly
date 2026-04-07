@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -29,7 +29,7 @@ export interface GetDepartmentsParams {
   search?: string;
 }
 
-export type GetDepartmentsResponse = PaginatedResponse<Department>;
+export type GetDepartmentsResponse = PaginatedRowsResponse<Department>;
 
 export interface CreateDepartmentPayload {
   name: string;
@@ -72,14 +72,10 @@ export async function getDepartmentById(id: number): Promise<ApiResult<Departmen
   return get<Department>(`${BASE}/${id}`);
 }
 
-export interface DeleteDepartmentResponse {
-  message: string;
-}
-
 export async function deleteDepartment(
   id: number
-): Promise<ApiResult<DeleteDepartmentResponse>> {
-  return del<DeleteDepartmentResponse>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }
 
 // ============================================================================

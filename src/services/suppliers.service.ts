@@ -1,5 +1,5 @@
 import { get, post, patch } from "@/lib/axios";
-import type { ApiResult, ApiSuccessPayload, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 export type SupplierTypeApi = "national" | "foreign";
@@ -68,7 +68,7 @@ export interface GetSuppliersParams {
   search?: string;
 }
 
-export type GetSuppliersResponse = PaginatedResponse<SupplierListItem>;
+export type GetSuppliersResponse = PaginatedRowsResponse<SupplierListItem>;
 
 export interface CreateSupplierPayload {
   name: string;

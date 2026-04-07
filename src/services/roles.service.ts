@@ -1,5 +1,5 @@
 import { get, post, patch } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   RoleListItem,
@@ -18,8 +18,8 @@ const ROLES_BASE = "/role";
 
 export async function getRolesList(
   params: GetRolesListParams
-): Promise<ApiResult<PaginatedResponse<RoleListItem>>> {
-  return get<PaginatedResponse<RoleListItem>>(buildListUrl(ROLES_BASE, params));
+): Promise<ApiResult<PaginatedRowsResponse<RoleListItem>>> {
+  return get<PaginatedRowsResponse<RoleListItem>>(buildListUrl(ROLES_BASE, params));
 }
 
 export async function getRoleDetail(roleId: number): Promise<ApiResult<RoleDetailResponse>> {

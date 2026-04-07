@@ -10,7 +10,7 @@ export interface PaginatedListParams {
 }
 
 export interface PaginatedListPayload<T> {
-    data: T[];
+    rows: T[];
     total: number;
     page: number;
     limit: number;
@@ -98,7 +98,7 @@ export function usePaginatedList<T>({
     }, []);
 
     return {
-        data: data?.data ?? [],
+        data: data?.rows ?? [],
         total: data?.total ?? 0,
         totalPages: data?.totalPages ?? 0,
         page,

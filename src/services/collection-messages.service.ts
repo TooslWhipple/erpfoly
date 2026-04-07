@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 export interface CollectionMessage {
@@ -16,7 +16,8 @@ export interface GetCollectionMessagesParams {
   search?: string;
 }
 
-export type GetCollectionMessagesResponse = PaginatedResponse<CollectionMessage>;
+export type GetCollectionMessagesResponse =
+  PaginatedRowsResponse<CollectionMessage>;
 
 export interface CreateCollectionMessagePayload {
   name: string;
@@ -28,10 +29,6 @@ export interface UpdateCollectionMessagePayload {
   name?: string;
   content?: string;
   status?: "ACTIVE" | "INACTIVE";
-}
-
-export interface DeleteCollectionMessageResponse {
-  message: string;
 }
 
 const BASE = "/collection-messages";
@@ -63,6 +60,6 @@ export async function getCollectionMessageById(
 
 export async function deleteCollectionMessage(
   id: number
-): Promise<ApiResult<DeleteCollectionMessageResponse>> {
-  return del<DeleteCollectionMessageResponse>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }

@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -19,7 +19,7 @@ export interface GetProductLinesParams {
   search?: string;
 }
 
-export type GetProductLinesResponse = PaginatedResponse<ProductLineItem>;
+export type GetProductLinesResponse = PaginatedRowsResponse<ProductLineItem>;
 
 export interface CreateProductLinePayload {
   departmentId: number;
@@ -30,10 +30,6 @@ export interface CreateProductLinePayload {
 export interface UpdateProductLinePayload {
   name?: string;
   code?: string;
-}
-
-export interface DeleteProductLineResponse {
-  message: string;
 }
 
 // ============================================================================
@@ -63,8 +59,8 @@ export async function updateProductLine(
 
 export async function deleteProductLine(
   id: number
-): Promise<ApiResult<DeleteProductLineResponse>> {
-  return del<DeleteProductLineResponse>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }
 
 // ============================================================================

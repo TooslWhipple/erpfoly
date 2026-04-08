@@ -22,7 +22,7 @@ api.interceptors.request.use(
 );
 
 type BackendBody<T> =
-	| { data: T; error?: never }
+	| { success?: boolean; message?: string; errorCode?: unknown; data: T; error?: never }
 	| { error: { message: string;[k: string]: unknown }; data?: never };
 
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
@@ -67,7 +67,13 @@ api.interceptors.response.use(
 			return response;
 		}
 
-		if (body?.success === true && body.data !== undefined) {
+		const shouldUnwrapEnvelope =
+			typeof body === "object" &&
+			body !== null &&
+			"data" in body &&
+			"success" in body;
+
+		if (shouldUnwrapEnvelope) {
 			response.data = body.data;
 		}
 
@@ -150,12 +156,20 @@ export interface ApiError {
 }
 
 export interface ApiSuccessPayload {
-	success: true;
+	success?: true;
 	message?: string;
 }
 
 export interface PaginatedResponse<T> {
 	data: T[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}
+
+export interface PaginatedRowsResponse<T> {
+	rows: T[];
 	total: number;
 	page: number;
 	limit: number;

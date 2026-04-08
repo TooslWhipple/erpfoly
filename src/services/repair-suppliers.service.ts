@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/axios";
-import type { ApiResult, ApiSuccessPayload, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -27,7 +27,7 @@ export interface GetRepairSuppliersParams {
   search?: string;
 }
 
-export type GetRepairSuppliersResponse = PaginatedResponse<RepairSupplier>;
+export type GetRepairSuppliersResponse = PaginatedRowsResponse<RepairSupplier>;
 
 export interface CreateRepairSupplierPayload {
   name: string;

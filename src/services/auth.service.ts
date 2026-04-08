@@ -1,4 +1,4 @@
-import { get, post, type ApiResult } from "@/lib/axios";
+import { get, post, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
 
 /** Credentials needed so the browser sends and stores cookies (e.g. refresh token) */
 const AUTH_CREDENTIALS = { withCredentials: true } as const;
@@ -127,8 +127,8 @@ export const authService = {
 	 * Resends OTP to the same identifier used at login (username or cellphone).
 	 * Uses credentials so session/cookies are sent.
 	 */
-	async resendOtp(identifier?: ResendOtpRequest): Promise<ApiResult<void | { message?: string }>> {
-		return post<void | { message?: string }>(
+	async resendOtp(identifier?: ResendOtpRequest): Promise<ApiResult<ApiSuccessPayload>> {
+		return post<ApiSuccessPayload>(
 			"/auth/login/otp/resend",
 			identifier ?? {},
 			AUTH_CREDENTIALS
@@ -154,8 +154,8 @@ export const authService = {
 		return { data: mapBackendUserToFrontend(result.data!), error: null };
 	},
 
-	async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResult<void | { success: true; message?: string }>> {
-		return post<void | { success: true; message?: string }>("/auth/password/recovery", data);
+	async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResult<ApiSuccessPayload>> {
+		return post<ApiSuccessPayload>("/auth/password/recovery", data);
 	},
 };
 

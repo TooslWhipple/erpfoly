@@ -1,4 +1,4 @@
-import { get, patch, post, type ApiResult, type PaginatedResponse } from "@/lib/axios";
+import { get, patch, post, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
     CreateProductRequest,
@@ -290,8 +290,8 @@ export interface GetProductsQueryParams {
 
 export async function getProducts(
     params: GetProductsQueryParams
-): Promise<ApiResult<PaginatedResponse<ProductListItem>>> {
-    return get<PaginatedResponse<ProductListItem>>(
+): Promise<ApiResult<PaginatedRowsResponse<ProductListItem>>> {
+    return get<PaginatedRowsResponse<ProductListItem>>(
         buildListUrl(PRODUCTS_BASE, params)
     );
 }

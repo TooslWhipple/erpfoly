@@ -1,4 +1,4 @@
-import { get, post, patch, del, type ApiResult } from "@/lib/axios";
+import { get, post, patch, del, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -75,8 +75,8 @@ export async function updateBranch(
 
 export async function deleteBranch(
   id: number
-): Promise<ApiResult<{ success?: boolean; message?: string }>> {
-  return del<{ success?: boolean; message?: string }>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }
 
 export async function updateBranchesShippingPrice(

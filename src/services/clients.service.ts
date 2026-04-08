@@ -1,5 +1,5 @@
 import { get } from "@/lib/axios";
-import type { ApiResult, PaginatedResponse } from "@/lib/axios";
+import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 export type ClientStatus = "active" | "inactive" | "blocked";
@@ -35,7 +35,7 @@ export interface GetClientsParams {
   status?: ClientStatus;
 }
 
-export type GetClientsResponse = PaginatedResponse<Client>;
+export type GetClientsResponse = PaginatedRowsResponse<Client>;
 
 const BASE = "/clients";
 

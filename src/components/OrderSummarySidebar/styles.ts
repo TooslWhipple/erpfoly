@@ -107,7 +107,6 @@ export const RemoveButton = styled(IconButton)(({ theme }) => ({
         color: theme.palette.error.main,
     },
 }));
-
 // ============================================================================
 // FOOTER
 // ============================================================================
@@ -129,3 +128,4 @@ export const ContinueButtonContent = styled(Box)({
         fontWeight: 600,
     },
 });
+

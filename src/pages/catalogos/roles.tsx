@@ -1,16 +1,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
+import { Stack } from "@mui/material";
+import { Edit as EditIcon } from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import {
-  HeaderContainer,
-  ControlsContainer,
-  SearchInput,
-  CreateButton,
-  SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getRolesList } from "@/services/roles.service";
@@ -39,8 +32,8 @@ export default function Roles() {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(event.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
   };
 
   const handleCreateRole = () => {
@@ -84,47 +77,40 @@ export default function Roles() {
 
   return (
     <MainLayout>
-      <HeaderContainer>
+      <Stack direction="column" spacing={3}>
         <Title title="Roles" />
-        <ControlsContainer>
-          <SearchInput
-            size="small"
-            placeholder="Buscar"
-            value={searchInput}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIconStyled />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <CreateButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreateRole}
-          >
-            Nuevo
-          </CreateButton>
-        </ControlsContainer>
-      </HeaderContainer>
-
-      <TableCrud
-        columns={columns}
-        rows={list.data}
-        actions={actions}
-        loading={list.isLoading}
-        rowKey="id"
-        page={list.page}
-        rowsPerPage={list.rowsPerPage}
-        totalRows={list.total}
-        onPageChange={list.setPage}
-        onRowsPerPageChange={list.setRowsPerPage}
-        onRowClick={handleEditRole}
-        emptyMessage="No hay roles registrados"
-      />
+        <TabFilters
+          tabs={[]}
+          activeTab={''}
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleCreateRole,
+              variant: "contained",
+              color: "primary",
+            }
+          ]}
+        />
+        <TableCrud
+          columns={columns}
+          rows={list.data}
+          actions={actions}
+          loading={list.isLoading}
+          rowKey="id"
+          page={list.page}
+          rowsPerPage={list.rowsPerPage}
+          totalRows={list.total}
+          onPageChange={list.setPage}
+          onRowsPerPageChange={list.setRowsPerPage}
+          onRowClick={handleEditRole}
+          emptyMessage="No hay roles registrados"
+        />
+      </Stack>
     </MainLayout>
   );
 }

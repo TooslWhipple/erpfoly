@@ -18,7 +18,11 @@ import {
   BranchRow,
   ShippingCostInput,
 } from "@/styles/catalogos/shipping-costs.styles";
-import { getBranchShippingCosts, saveBranchShippingCosts } from "@/services/shipping-costs.service";
+import {
+  getBranches,
+  updateBranchesShippingPrice,
+  UpdateBranchShippingPricePayload,
+} from "@/services/branches.service";
 import type { BranchShippingCost } from "@/types/shipping-costs.types";
 
 // ============================================================================
@@ -51,18 +55,31 @@ export default function CostosEnvioPage() {
 
   const fetchBranches = useCallback(async () => {
     setLoading(true);
-    try {
-      const data = await getBranchShippingCosts();
-      setBranches(data);
-    } catch (error) {
-      console.error("[CostosEnvio] Error fetching branches:", error);
+    const result = await getBranches({
+      page: 1,
+      limit: 500,
+    });
+    setLoading(false);
+
+    if (result.error) {
+      setBranches([]);
       setSnackbar({
         open: true,
         message: "Error al cargar la configuración de costos de envío",
         severity: "error",
       });
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    if (result.data?.rows) {
+      const mapped: BranchShippingCost[] = result.data.rows.map((b) => ({
+        id: String(b.id),
+        name: b.name,
+        shippingCost: 0,
+      }));
+      setBranches(mapped);
+    } else {
+      setBranches([]);
     }
   }, []);
 
@@ -80,35 +97,33 @@ export default function CostosEnvioPage() {
   }, []);
 
   const handleSave = useCallback(async () => {
+    const branchesPayload = branches.map((b) => ({
+      id: Number(b.id),
+      shippingPrice: b.shippingCost,
+    }));
+
+    const payload: UpdateBranchShippingPricePayload = {
+      branches: branchesPayload,
+    };
+    
     setSaving(true);
-    try {
-      const response = await saveBranchShippingCosts({
-        branches: branches.map((b) => ({ id: b.id, shippingCost: b.shippingCost })),
-      });
-      if (response.success) {
-        if (response.data) setBranches(response.data);
-        setSnackbar({
-          open: true,
-          message: response.message ?? "Cambios guardados correctamente",
-          severity: "success",
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: response.message ?? "Error al guardar",
-          severity: "error",
-        });
-      }
-    } catch (error) {
-      console.error("[CostosEnvio] Error saving:", error);
+    const result = await updateBranchesShippingPrice(payload);
+    setSaving(false);
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: "Error al guardar los costos de envío",
+        message: result.error.message ?? "Error al guardar los costos de envío",
         severity: "error",
       });
-    } finally {
-      setSaving(false);
+      return;
     }
+
+    setSnackbar({
+      open: true,
+      message: "Cambios guardados correctamente",
+      severity: "success",
+    });
   }, [branches]);
 
   const handleViewMap = useCallback(() => {

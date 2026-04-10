@@ -1,21 +1,15 @@
-import { Dialog, DialogContent, Box, Typography, IconButton } from "@mui/material";
-import { Close as CloseIcon, ArrowUpward as ArrowUpIcon, ArrowDownward as ArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
+import { SideModal } from "@/components/SideModal";
 import {
     CostHistoryTimeline,
     TimelineLine,
     TimelineItem,
     TimelineDot,
-    TimelineContent,
-    TimelineDate,
-    TimelinePrice,
-    TimelineChange,
 } from "@/styles/catalogos/productos.styles";
 import type { CostHistoryEntry } from "@/types/productos.types";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { Stack, Typography } from "@mui/material";
+import { colors } from "@/styles/theme";
 
 interface CostHistoryModalProps {
     open: boolean;
@@ -23,66 +17,43 @@ interface CostHistoryModalProps {
     history: CostHistoryEntry[];
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function CostHistoryModal({ open, onClose, history }: CostHistoryModalProps) {
     return (
-        <Dialog
+        <SideModal
             open={open}
             onClose={onClose}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
-        >
-            <DialogContent sx={{ p: 3 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        Historial de costos de este artículo.
-                    </Typography>
-                    <IconButton
-                        size="small"
-                        onClick={onClose}
-                        sx={{
-                            backgroundColor: "action.hover",
-                            "&:hover": {
-                                backgroundColor: "action.selected",
-                            },
-                        }}
-                    >
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </Box>
+            maxWidth="md"
+            title="Historial de costos de este artículo.">
+            {
+                history.length > 0 ?
+                    <CostHistoryTimeline>
+                        <TimelineLine />
+                        {
+                            history.map((entry) => (
+                                <TimelineItem key={entry.id}>
+                                    <TimelineDot />
+                                    <Stack style={{ paddingLeft: "24px" }}>
+                                        <Typography variant="body2" color="text.secondary">{entry.date}</Typography>
+                                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                                            <Typography variant="body1">{numeral(entry.price).format("$0,0.00")}</Typography>
+                                            {
+                                                entry.changeType === "increase"
+                                                    ? <ArrowUp size={12} strokeWidth={2} color={colors.text.secondary} />
+                                                    : <ArrowDown size={12} strokeWidth={2} color={colors.text.secondary} />
+                                            }
+                                            <Typography variant="body2" color="text.secondary" fontWeight={500}> {numeral(entry.changePercentage).format("0.00")}%</Typography>
+                                        </Stack>
+                                    </Stack>
+                                </TimelineItem>
+                            ))
+                        }
+                    </CostHistoryTimeline>
+                    :
+                    <CostHistoryTimeline>
+                        <Typography variant="body2" color="text.secondary" textAlign="center" fontWeight={500}>Este artículo aún no cuenta con histórico de costos.</Typography>
+                    </CostHistoryTimeline>
+            }
 
-                <CostHistoryTimeline>
-                    <TimelineLine />
-                    {history.map((entry) => (
-                        <TimelineItem key={entry.id}>
-                            <TimelineDot />
-                            <TimelineContent>
-                                <TimelineDate>{entry.date}</TimelineDate>
-                                <TimelinePrice>
-                                    {numeral(entry.price).format("$0,0.00")}
-                                </TimelinePrice>
-                                <TimelineChange>
-                                    {entry.changeType === "increase" ? (
-                                        <ArrowUpIcon fontSize="small" />
-                                    ) : (
-                                        <ArrowDownIcon fontSize="small" />
-                                    )}
-                                    {numeral(entry.changePercentage).format("0.00")}%
-                                </TimelineChange>
-                            </TimelineContent>
-                        </TimelineItem>
-                    ))}
-                </CostHistoryTimeline>
-            </DialogContent>
-        </Dialog>
+        </SideModal>
     );
 }

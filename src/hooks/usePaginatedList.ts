@@ -1,10 +1,20 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { ApiResult } from "@/lib/axios";
 
 export interface PaginatedListParams {
     page: number;
     limit: number;
     search?: string;
+    [key: string]: unknown;
+}
+
+export interface PaginatedListPayload<T> {
+    rows: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 export interface PaginatedListResult<T> {
@@ -25,22 +35,27 @@ export interface PaginatedListResult<T> {
 
 export interface UsePaginatedListOptions<T> {
     queryKey: string[];
-    queryFn: (params: PaginatedListParams) => Promise<{
-        data: T[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
+    /** API function that returns ApiResult; the hook unwraps and throws on error for React Query. */
+    queryFn: (params: PaginatedListParams) => Promise<ApiResult<PaginatedListPayload<T>>>;
     initialPage?: number;
     initialRowsPerPage?: number;
     initialSearch?: string;
+    /** Extra params (e.g. status) included in queryKey and passed to queryFn. Changes trigger refetch. */
+    extraParams?: Record<string, unknown>;
+    /** When false, the query is not run (e.g. when a required parent id is not yet available). */
+    enabled?: boolean;
+}
+
+function unwrapApiResult<T>(result: ApiResult<T>): T {
+    if (result.error) throw new Error(result.error.message);
+    if (result.data === null) throw new Error("No data");
+    return result.data;
 }
 
 /**
- * Generic hook for paginated list data. Manages page, rowsPerPage and search state,
- * and runs a TanStack Query with params derived from that state.
- * API is expected to use 1-based page; this hook converts from 0-based UI state.
+ * Paginated list hook. Manages page, rowsPerPage and search state, and runs a TanStack Query.
+ * Accepts a service that returns ApiResult<PaginatedResponse> and unwraps internally.
+ * API is expected to use 1-based page; the hook uses 0-based UI state.
  */
 export function usePaginatedList<T>({
     queryKey,
@@ -48,21 +63,28 @@ export function usePaginatedList<T>({
     initialPage = 0,
     initialRowsPerPage = 10,
     initialSearch = "",
+    extraParams,
+    enabled = true,
 }: UsePaginatedListOptions<T>): PaginatedListResult<T> {
     const [page, setPage] = useState(initialPage);
     const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
     const [search, setSearch] = useState(initialSearch);
 
     const apiPage = page + 1;
+    const extraKey = extraParams ? Object.entries(extraParams).flat() : [];
 
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: [...queryKey, apiPage, rowsPerPage, search],
-        queryFn: () =>
-            queryFn({
+        queryKey: [...queryKey, apiPage, rowsPerPage, search, ...extraKey],
+        enabled,
+        queryFn: async () => {
+            const result = await queryFn({
                 page: apiPage,
                 limit: rowsPerPage,
                 search: search || undefined,
-            }),
+                ...extraParams,
+            });
+            return unwrapApiResult(result);
+        },
     });
 
     const setRowsPerPageAndResetPage = useCallback((newRowsPerPage: number) => {
@@ -76,7 +98,7 @@ export function usePaginatedList<T>({
     }, []);
 
     return {
-        data: data?.data ?? [],
+        data: data?.rows ?? [],
         total: data?.total ?? 0,
         totalPages: data?.totalPages ?? 0,
         page,

@@ -1,28 +1,18 @@
 import { styled } from "@mui/material/styles";
-import { Box, Typography, Button, Chip } from "@mui/material";
+import { Box } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-// ============================================================================
-// SALES CHART STYLES
-// ============================================================================
-
-export const SalesChartContainer = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(3),
-    marginBottom: theme.spacing(3),
-}));
-
-export const SalesHeader = styled(Box)({
+export const SalesChartContainer = styled('div')({
     display: "flex",
     flexDirection: "row",
-    gap: "16px",
-    alignItems: "flex-start",
-    marginBottom: "24px",
+    alignItems: "center",
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: "8px",
+    padding: "16px"
 });
 
-export const SalesIcon = styled(Box)(({ theme }) => ({
+export const SalesIcon = styled('div')({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -34,25 +24,7 @@ export const SalesIcon = styled(Box)(({ theme }) => ({
     "& svg": {
         fontSize: 18,
     },
-}));
-
-export const SalesMetric = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    marginBottom: 24,
 });
-
-export const ChartContainer = styled(Box)({
-    position: "relative",
-    width: "100%",
-    height: 200,
-    marginTop: 0,
-});
-
-// ============================================================================
-// ACTIVITY LOG STYLES
-// ============================================================================
 
 export const ActivityLogContainer = styled(Box)(({ theme }) => ({
     backgroundColor: colors.background.sidebar,
@@ -105,45 +77,12 @@ export const ActivityContent = styled(Box)({
     flex: 1,
 });
 
-
-// ============================================================================
-// PRODUCT INFO CARD STYLES
-// ============================================================================
-
-export const InfoCardContainer = styled(Box)(({ theme }) => ({
+export const CardContainer = styled('div')({
+    display: "flex",
+    flexDirection: "column",
     backgroundColor: colors.background.sidebar,
     border: `1px solid ${colors.border}`,
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(3),
-    marginBottom: theme.spacing(3),
-    display: "flex",
-    flexDirection: "column",
-}));
-
-export const InfoCardHeader = styled(Box)({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-});
-
-
-export const EditButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontSize: "14px",
-    fontWeight: 600,
-    minWidth: "auto",
-    padding: "6px 16px",
-}));
-
-export const InfoCardContent = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-});
-
-export const InfoField = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
+    borderRadius: "16px",
+    padding: "24px",
+    gap: "24px"
 });

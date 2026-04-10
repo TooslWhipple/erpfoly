@@ -87,6 +87,10 @@ export interface FormFieldConfig {
     currencySymbol?: string;
     /** Auto focus this field */
     autoFocus?: boolean;
+    /** Transform value on change (e.g. toUpperCase for code fields) */
+    transformInput?: (value: string) => string;
+    /** Show validation error only after form submit, not on blur */
+    showErrorOnlyAfterSubmit?: boolean;
 }
 
 export interface FormProps {
@@ -235,26 +239,32 @@ export function Form({
     const [values, setValues] = useState<FormValues>(defaultValues);
     const [errors, setErrors] = useState<FormErrors>({});
     const [touched, setTouched] = useState<TouchedFields>({});
+    const [hasSubmitted, setHasSubmitted] = useState(false);
 
     // Handle value change
     const handleChange = useCallback(
         (fieldName: string, newValue: unknown) => {
+            const field = fields.find((f) => f.name === fieldName);
+            if (field?.transformInput && typeof newValue === "string") {
+                newValue = field.transformInput(newValue);
+            }
+
             setValues((prev) => {
                 const updated = { ...prev, [fieldName]: newValue };
-                
+
                 // Notify parent of value changes
                 if (onValuesChange) {
                     onValuesChange(updated);
                 }
-                
+
                 return updated;
             });
 
             // Clear error on change if field was touched
             if (touched[fieldName] && errors[fieldName]) {
-                const field = fields.find((f) => f.name === fieldName);
-                if (field) {
-                    const newError = validateField(field, newValue, { ...values, [fieldName]: newValue });
+                const fieldForError = fields.find((f) => f.name === fieldName);
+                if (fieldForError) {
+                    const newError = validateField(fieldForError, newValue, { ...values, [fieldName]: newValue });
                     setErrors((prev) => {
                         if (newError) {
                             return { ...prev, [fieldName]: newError };
@@ -292,6 +302,7 @@ export function Form({
     const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
             e.preventDefault();
+            setHasSubmitted(true);
 
             // Validate all fields
             const validationErrors = validateForm(fields, values);
@@ -331,7 +342,9 @@ export function Form({
         } = field;
 
         const value = values[name];
-        const error = touched[name] ? errors[name] : undefined;
+        const error = field.showErrorOnlyAfterSubmit
+            ? (hasSubmitted ? errors[name] : undefined)
+            : (touched[name] ? errors[name] : undefined);
         const hasError = Boolean(error);
         const isRequired = validation?.required ?? false;
 

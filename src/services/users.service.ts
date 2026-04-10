@@ -1,4 +1,5 @@
-import { get, post, patch, del, type ApiResult } from "@/lib/axios";
+import { get, post, patch, del, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -85,13 +86,7 @@ const CATALOG = "/catalog";
 export async function getUsers(
     params: GetUsersParams = {}
 ): Promise<ApiResult<GetUsersResponse>> {
-    const searchParams = new URLSearchParams();
-    if (params.page != null) searchParams.set("page", String(params.page));
-    if (params.limit != null) searchParams.set("limit", String(params.limit));
-    if (params.search?.trim()) searchParams.set("search", params.search.trim());
-    const query = searchParams.toString();
-    const url = query ? `${BASE}?${query}` : BASE;
-    return get<GetUsersResponse>(url);
+  return get<GetUsersResponse>(buildListUrl(BASE, params));
 }
 
 export async function getUser(id: number): Promise<ApiResult<UserDetail>> {
@@ -108,7 +103,7 @@ export async function getBranches(): Promise<ApiResult<BranchItem[]>> {
 
 export async function createUser(
     payload: CreateUserPayload
-): Promise<ApiResult<UserListItem | { success: true; message?: string }>> {
+): Promise<ApiResult<UserListItem & ApiSuccessPayload>> {
     const body = {
         firstName: payload.firstName,
         lastName: payload.lastName,
@@ -119,13 +114,13 @@ export async function createUser(
         roleId: payload.roleId,
         branchIds: payload.branchIds,
     };
-    return post<UserListItem | { success: true; message?: string }>(BASE, body);
+    return post<UserListItem & ApiSuccessPayload>(BASE, body);
 }
 
 export async function updateUser(
     id: number,
     payload: UpdateUserPayload
-): Promise<ApiResult<UserDetail | { success: true; message?: string }>> {
+): Promise<ApiResult<UserDetail & ApiSuccessPayload>> {
     const body: Record<string, unknown> = {};
     if (payload.firstName !== undefined) body.firstName = payload.firstName;
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
@@ -135,7 +130,7 @@ export async function updateUser(
     if (payload.password !== undefined) body.password = payload.password;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
-    return patch<UserDetail | { success: true; message?: string }>(`${BASE}/${id}`, body);
+    return patch<UserDetail & ApiSuccessPayload>(`${BASE}/${id}`, body);
 }
 
 export async function deleteUser(id: number): Promise<ApiResult<{ id: number; message: string }>> {

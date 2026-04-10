@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
 import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
-import {
-  BreadcrumbsContainer,
-  PageHeader,
-  HeaderLeft,
-  PageTitle,
-  SaveButton,
-  FormCard,
-  SectionTitle,
-  Section,
-  FieldContainer,
-} from "@/styles/catalogos/roles.styles";
+import { FormCard } from "@/styles/catalogos/roles.styles";
 import {
   getRoleDetail,
   getPermissionsTemplate,
@@ -53,22 +43,31 @@ export default function RoleFormPage() {
   useEffect(() => {
     if (isNew) {
       getPermissionsTemplate()
-        .then((modules) => {
-          setApiModules(modules);
-          setTableModules(apiModulesToTableModules(modules));
+        .then((result) => {
+          if (result.error) {
+            console.error("[RoleForm] Error loading permissions template:", result.error.message);
+            return;
+          }
+          if (result.data) {
+            setApiModules(result.data);
+            setTableModules(apiModulesToTableModules(result.data));
+          }
         })
-        .catch((err) =>
-          console.error("[RoleForm] Error loading permissions template:", err),
-        )
         .finally(() => setLoading(false));
       return;
     }
     if (!roleId || Number.isNaN(roleId)) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     getRoleDetail(roleId)
-      .then((res) => {
+      .then((result) => {
+        if (result.error) {
+          console.error("[RoleForm] Error loading role:", result.error.message);
+          return;
+        }
+        if (!result.data) return;
+        const res = result.data;
         const roleName = res.role.name;
         const roleDescription = res.role.description ?? "";
         const modules = apiModulesToTableModules(res.modules);
@@ -82,7 +81,6 @@ export default function RoleFormPage() {
           tableModules: modules,
         };
       })
-      .catch((err) => console.error("[RoleForm] Error loading role:", err))
       .finally(() => setLoading(false));
   }, [isNew, roleId]);
 
@@ -92,12 +90,12 @@ export default function RoleFormPage() {
         prev.map((m) =>
           m.id === moduleId
             ? {
-                ...m,
-                permissions: {
-                  ...m.permissions,
-                  [permission]: value,
-                },
-              }
+              ...m,
+              permissions: {
+                ...m.permissions,
+                [permission]: value,
+              },
+            }
             : m,
         ),
       );
@@ -144,27 +142,43 @@ export default function RoleFormPage() {
     }
 
     setSaving(true);
-    try {
-      if (isNew) {
-        const created = await createRole({
-          name: trimmedName,
-          description: trimmedDescription || undefined,
-        });
-        const payload = tableModulesToPayload(apiModules, tableModules);
-        await updateRolePermissions(created.id, { permissions: payload });
-        router.push("/catalogos/roles");
-      } else if (roleId) {
-        await updateRole(roleId, {
-          name: trimmedName,
-          description: trimmedDescription || undefined,
-        });
-        const payload = tableModulesToPayload(apiModules, tableModules);
-        await updateRolePermissions(roleId, { permissions: payload });
-        router.push("/catalogos/roles");
+    if (isNew) {
+      const created = await createRole({
+        name: trimmedName,
+        description: trimmedDescription || undefined,
+      });
+      if (created.error || !created.data) {
+        setSaving(false);
+        console.error("[RoleForm] Error saving:", created.error?.message);
+        return;
       }
-    } catch (err) {
-      console.error("[RoleForm] Error saving:", err);
-    } finally {
+      const payload = tableModulesToPayload(apiModules, tableModules);
+      const permResult = await updateRolePermissions(created.data.id, { permissions: payload });
+      setSaving(false);
+      if (permResult.error) {
+        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        return;
+      }
+      router.push("/catalogos/roles");
+    } else if (roleId) {
+      const updateResult = await updateRole(roleId, {
+        name: trimmedName,
+        description: trimmedDescription || undefined,
+      });
+      if (updateResult.error) {
+        setSaving(false);
+        console.error("[RoleForm] Error saving:", updateResult.error.message);
+        return;
+      }
+      const payload = tableModulesToPayload(apiModules, tableModules);
+      const permResult = await updateRolePermissions(roleId, { permissions: payload });
+      setSaving(false);
+      if (permResult.error) {
+        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        return;
+      }
+      router.push("/catalogos/roles");
+    } else {
       setSaving(false);
     }
   };
@@ -193,56 +207,50 @@ export default function RoleFormPage() {
 
   return (
     <MainLayout>
-      <BreadcrumbsContainer>
+      <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbItems} />
-      </BreadcrumbsContainer>
-
-      <PageHeader>
-        <HeaderLeft>
-          <PageTitle>{isNew ? "Nuevo rol" : "Editar rol"}</PageTitle>
-        </HeaderLeft>
-        <SaveButton
-          variant="contained"
-          color="primary"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
-        </SaveButton>
-      </PageHeader>
-
-      <FormCard>
-        <Section>
-          <SectionTitle>Datos generales</SectionTitle>
-          <FieldContainer>
-            <FormTextField
-              label="Nombre"
-              placeholder="Ej. Administrador"
-              value={name}
-              onChange={handleNameChange}
-              error={Boolean(nameError)}
-              helperText={nameError}
-              autoFocus
-            />
-            <FormTextField
-              label="Descripción"
-              placeholder="Opcional"
-              value={description}
-              onChange={handleDescriptionChange}
-              sx={{ mt: 2 }}
-            />
-          </FieldContainer>
-        </Section>
-
-        <Section>
-          <SectionTitle>Permisos</SectionTitle>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+          <Typography variant="h5">{isNew ? "Nuevo rol" : "Editar rol"}</Typography>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
+          </Button>
+        </Stack>
+        <Divider />
+        <FormCard>
+          <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormTextField
+                label="Nombre"
+                placeholder="Ej. Administrador"
+                value={name}
+                onChange={handleNameChange}
+                error={Boolean(nameError)}
+                helperText={nameError}
+                autoFocus
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormTextField
+                label="Descripción"
+                placeholder="Opcional"
+                value={description}
+                onChange={handleDescriptionChange}
+              />
+            </Grid>
+          </Grid>
+          <Typography variant="subtitle2" fontWeight={600}>Permisos</Typography>
           <PermissionsTable
             modules={tableModules}
             onChange={handlePermissionChange}
             disabled={saving}
           />
-        </Section>
-      </FormCard>
+        </FormCard>
+      </Stack>
     </MainLayout>
   );
 }

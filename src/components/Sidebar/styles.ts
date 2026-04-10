@@ -1,8 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Avatar, Box, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { ChevronDown, ChevronUp } from "@/components/Icons";
 import { SIDEBAR_WIDTH, colors } from "@/styles/theme";
-
 interface StyledDrawerProps {
   isMobile?: boolean;
 }
@@ -20,37 +19,12 @@ export const StyledDrawer = styled(Drawer, {
   },
 }));
 
-export const HeaderContainer = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(1),
-  padding: theme.spacing(2, 1.5),
-  borderBottom: `1px solid ${colors.border}`,
-}));
-
-export const LogoBox = styled(Box)({
-  width: 36,
-  height: 36,
-  borderRadius: 4,
-  backgroundColor: "#EF4444",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-});
-
-export const LogoText = styled(Typography)({
-  color: "white",
-  fontWeight: 700,
-});
-
-export const BrandName = styled(Typography)({
-  whiteSpace: "nowrap",
-});
-
 export const NavigationContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
   flex: 1,
-  padding: theme.spacing(2, 1.5),
+  padding: "16px 8px 0px",
+  gap: "24px",
   overflowY: "auto",
 }));
 
@@ -80,9 +54,10 @@ export const NavItemIcon = styled(ListItemIcon, {
   minWidth: 24,
   marginRight: 8,
   color: active ? colors.sidebar.textSelected : "inherit",
-  "& .MuiSvgIcon-root": {
+  "& svg": {
     width: 16,
     height: 16,
+    flexShrink: 0,
   },
 }));
 
@@ -101,14 +76,16 @@ export const SubItemButton = styled(ListItemButton, {
   },
 }));
 
-export const ExpandIcon = styled(ExpandMore)({
+export const ExpandIcon = styled(ChevronDown)({
   width: 16,
   height: 16,
+  flexShrink: 0,
 });
 
-export const CollapseIcon = styled(ExpandLess)({
+export const CollapseIcon = styled(ChevronUp)({
   width: 16,
   height: 16,
+  flexShrink: 0,
 });
 
 export const UserProfileContainer = styled(Box)(({ theme }) => ({

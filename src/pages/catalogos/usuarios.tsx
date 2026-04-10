@@ -1,23 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ChipStyleConfig } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
-import {
-    HeaderContainer,
-    ControlsContainer,
-    SearchInput,
-    CreateButton,
-    SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
+import { Stack } from "@mui/material";
+import { Edit as EditIcon } from "@mui/icons-material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
 
 type User = UserListItem;
 
-const ESTATUS_CHIP_CONFIG: Record<string, ChipStyleConfig> = {
-    "ACTIVE": { label: "Activo", bgColor: "#DCFCE7", textColor: "#1B8854" },
-    "INACTIVE": { label: "Inactivo", bgColor: "#FCE4E4", textColor: "#E91E1F" },
+const ESTATUS_CHIP_LABELS: Record<string, string> = {
+    ACTIVE: "Activo",
+    INACTIVE: "Inactivo",
+};
+const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+    ACTIVE: "success",
+    INACTIVE: "error",
 };
 
 export default function Usuarios() {
@@ -30,7 +27,6 @@ export default function Usuarios() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
 
-    // Fetch users
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         const result = await getUsersApi({
@@ -58,9 +54,8 @@ export default function Usuarios() {
         setPage(0);
     }, [searchValue]);
 
-    // Event handlers
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchValue(event.target.value);
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
     };
 
     const handleCreateUser = () => {
@@ -80,7 +75,6 @@ export default function Usuarios() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<User>[] = [
         {
             id: "id",
@@ -118,7 +112,8 @@ export default function Usuarios() {
             label: "Estatus",
             type: "chip",
             size: "sm",
-            chipConfig: ESTATUS_CHIP_CONFIG,
+            chipLabelMap: ESTATUS_CHIP_LABELS,
+            chipVariantMap: ESTATUS_CHIP_VARIANTS,
         },
         {
             id: "createdAt",
@@ -145,47 +140,38 @@ export default function Usuarios() {
 
     return (
         <MainLayout>
-            <HeaderContainer>
+            <Stack direction="column" spacing={3}>
                 <Title title="Usuarios" />
-                <ControlsContainer>
-                    <SearchInput
-                        size="small"
-                        placeholder="Buscar"
-                        value={searchValue}
-                        onChange={handleSearchChange}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIconStyled />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <CreateButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleCreateUser}
-                    >
-                        Nuevo
-                    </CreateButton>
-                </ControlsContainer>
-            </HeaderContainer>
-
-            <TableCrud
-                columns={columns}
-                rows={users}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleEditUser}
-                emptyMessage="No hay usuarios registrados"
-            />
+                <TabFilters
+                    tabs={[]}
+                    activeTab={''}
+                    onTabChange={() => { }}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreateUser
+                        }
+                    ]}
+                />
+                <TableCrud
+                    columns={columns}
+                    rows={users}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEditUser}
+                    emptyMessage="No hay usuarios registrados"
+                />
+            </Stack>
         </MainLayout>
     );
 }

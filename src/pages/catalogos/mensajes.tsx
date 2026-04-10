@@ -1,370 +1,280 @@
-import { useState, useEffect, useCallback } from "react";
-import { InputAdornment } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
-import {
-    HeaderContainer,
-    ControlsContainer,
-    SearchInput,
-    CreateButton,
-    SearchIconStyled,
-} from "@/styles/catalogos/catalogos.styledComponents";
-import { MessageFormModal, type MessageFormData } from "@/components/Messages";
+import { useState, useEffect, useMemo } from "react";
+import { Stack } from "@mui/material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import {
+  MessageFormModal,
+  type MessageFormData,
+  type MessageVariableItem,
+} from "@/components/Messages";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import {
+  getCollectionMessages,
+  createCollectionMessage,
+  updateCollectionMessage,
+  deleteCollectionMessage,
+} from "@/services/collection-messages.service";
+import type { CollectionMessage } from "@/services/collection-messages.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 interface Message {
-    id: number;
-    name: string;
-    content: string;
-    status: "active" | "inactive";
+  id: number;
+  name: string;
+  content: string;
+  status: "active" | "inactive";
+  inUse: boolean;
 }
 
-interface GetMessagesParams {
-    page: number;
-    limit: number;
-    search?: string;
+function apiToMessage(row: CollectionMessage): Message {
+  return {
+    id: row.id,
+    name: row.name,
+    content: row.content,
+    status: row.status === "ACTIVE" ? "active" : "inactive",
+    inUse: row.inUse,
+  };
 }
 
-interface GetMessagesResponse {
-    data: Message[];
-    total: number;
-    page: number;
-    limit: number;
-}
-
-// ============================================================================
-// MOCK DATA - Collection messages for payment reminders
-// ============================================================================
-
-const DUMMY_MESSAGES: Message[] = [
-    {
-        id: 1,
-        name: "Mensaje recordatorio de pago",
-        content: "¡Hola! Te recordamos que la fecha límite de pago es el próximo *fecha_limite*, te invitamos a realizar tu pago antes de esa fecha para evitar recargos.",
-        status: "active",
-    },
-    {
-        id: 2,
-        name: "Mensaje de invitación de pago",
-        content: "¡Hola! Te invitamos a realizar tu pago el día de hoy por cualquiera de nuestros medios de pago disponibles. Recuerda que puedes pagar en sucursal, transferencia o en línea.",
-        status: "active",
-    },
-    {
-        id: 3,
-        name: "Mensaje advertencia judicial",
-        content: "No hemos recibido el pago correspondiente a *factura_descripcion* en la fecha establecida. Te recordamos que el incumplimiento puede derivar en acciones legales.",
-        status: "active",
-    },
-    {
-        id: 4,
-        name: "Mensaje de invitación de pago",
-        content: "¡Hola! Te invitamos a realizar tu pago el día de hoy por cualquiera de nuestros medios de pago. Aprovecha nuestras promociones especiales para clientes puntuales.",
-        status: "inactive",
-    },
-    {
-        id: 5,
-        name: "Mensaje de agradecimiento",
-        content: "¡Gracias por tu pago! Tu cuenta ha sido actualizada correctamente. Te esperamos pronto en nuestras sucursales.",
-        status: "active",
-    },
-    {
-        id: 6,
-        name: "Mensaje de mora leve",
-        content: "Notamos que tu pago tiene algunos días de retraso. Te invitamos a regularizar tu situación lo antes posible para evitar cargos adicionales.",
-        status: "inactive",
-    },
-    {
-        id: 7,
-        name: "Mensaje promoción pago anticipado",
-        content: "¡Aprovecha! Si realizas tu pago antes del *fecha_limite* obtienes un descuento especial del 5% en tu próxima compra.",
-        status: "active",
-    },
-    {
-        id: 8,
-        name: "Mensaje recordatorio semanal",
-        content: "Esta es tu recordatorio semanal: Tu próximo pago vence el *fecha_limite*. Monto pendiente: *monto_pendiente*.",
-        status: "active",
-    },
+const MESSAGE_VARIABLES_CATALOG: MessageVariableItem[] = [
+  { key: "fecha_limite", label: "Fecha límite", value: "*fecha_limite*" },
+  { key: "num_factura", label: "Número de factura", value: "*num_factura*" },
+  {
+    key: "descripcion_factura",
+    label: "Descripción de factura",
+    value: "*descripcion_factura*",
+  },
+  { key: "total_adeudo", label: "Total adeudo", value: "*total_adeudo*" },
+  { key: "proximo_pag", label: "Próximo pago", value: "*proximo_pag*" },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getMessages(params: GetMessagesParams): Promise<GetMessagesResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    let filteredData = [...DUMMY_MESSAGES];
-
-    // Filter by search
-    if (params.search) {
-        const searchLower = params.search.toLowerCase();
-        filteredData = filteredData.filter(
-            (m) =>
-                m.name.toLowerCase().includes(searchLower) ||
-                m.content.toLowerCase().includes(searchLower)
-        );
-    }
-
-    const total = filteredData.length;
-    const start = params.page * params.limit;
-    const end = start + params.limit;
-    const paginatedData = filteredData.slice(start, end);
-
-    return {
-        data: paginatedData,
-        total,
-        page: params.page,
-        limit: params.limit,
-    };
-}
-
-async function createMessage(data: Omit<Message, "id">): Promise<Message> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const newMessage: Message = {
-        id: Date.now(),
-        ...data,
-    };
-    console.log("[API] Created message:", newMessage);
-    return newMessage;
-}
-
-async function deleteMessage(id: number): Promise<{ success: boolean }> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    console.log("[API] Deleted message:", id);
-    return { success: true };
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Mensajes() {
-    // State management
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchValue, setSearchValue] = useState("");
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalRows, setTotalRows] = useState(0);
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
 
-    // Modal state
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-    const [saving, setSaving] = useState(false);
+  const {
+    data: apiMessages,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+    refetch,
+  } = usePaginatedList<CollectionMessage>({
+    queryKey: ["collection-messages"],
+    queryFn: getCollectionMessages,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+  });
 
-    // Fetch messages
-    const fetchMessages = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await getMessages({
-                page,
-                limit: rowsPerPage,
-                search: searchValue,
-            });
-            setMessages(response.data);
-            setTotalRows(response.total);
-        } catch (err) {
-            console.error("[Mensajes] Error fetching:", err);
-        } finally {
-            setLoading(false);
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
+  const messages = useMemo(() => (apiMessages ?? []).map(apiToMessage), [apiMessages]);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  const handleOpenCreateModal = () => {
+    setEditingMessage(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (message: Message) => {
+    setEditingMessage(message);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingMessage(null);
+  };
+
+  const handleSaveMessage = async (data: MessageFormData) => {
+    setSaving(true);
+    try {
+      const status = data.status === "active" ? "ACTIVE" : "INACTIVE";
+      if (editingMessage) {
+        const result = await updateCollectionMessage(editingMessage.id, {
+          name: data.name,
+          content: data.content,
+          status,
+        });
+        if (result.error) {
+          showError(result.error.message);
+          return;
         }
-    }, [page, rowsPerPage, searchValue]);
-
-    useEffect(() => {
-        fetchMessages();
-    }, [fetchMessages]);
-
-    useEffect(() => {
-        setPage(0);
-    }, [searchValue]);
-
-    // Event handlers
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchValue(event.target.value);
-    };
-
-    const handleOpenCreateModal = () => {
-        setEditingMessage(null);
-        setModalOpen(true);
-    };
-
-    const handleOpenEditModal = (message: Message) => {
-        setEditingMessage(message);
-        setModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setModalOpen(false);
-        setEditingMessage(null);
-    };
-
-    const handleSaveMessage = async (data: MessageFormData) => {
-        setSaving(true);
-        try {
-            if (editingMessage) {
-                // Update existing message
-                console.log("[Mensajes] Updating message:", editingMessage.id, data);
-                // await updateMessage(editingMessage.id, data);
-            } else {
-                // Create new message
-                await createMessage({
-                    name: data.name,
-                    content: data.content,
-                    status: data.status,
-                });
-            }
-            handleCloseModal();
-            fetchMessages();
-        } catch (err) {
-            console.error("[Mensajes] Error saving:", err);
-        } finally {
-            setSaving(false);
+        showSuccess("Mensaje actualizado correctamente");
+      } else {
+        const result = await createCollectionMessage({
+          name: data.name,
+          content: data.content,
+          status,
+        });
+        if (result.error) {
+          showError(result.error.message);
+          return;
         }
-    };
+        showSuccess("Mensaje creado correctamente");
+      }
+      handleCloseModal();
+      refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al guardar";
+      showError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const handleDeleteMessage = async (message: Message) => {
-        const confirmed = window.confirm(
-            `¿Estás seguro de eliminar el mensaje "${message.name}"?`
-        );
-        if (!confirmed) return;
-
-        try {
-            await deleteMessage(message.id);
-            fetchMessages();
-        } catch (err) {
-            console.error("[Mensajes] Error deleting:", err);
-        }
-    };
-
-    const handlePageChange = (newPage: number) => {
-        setPage(newPage);
-    };
-
-    const handleRowsPerPageChange = (newRowsPerPage: number) => {
-        setRowsPerPage(newRowsPerPage);
-        setPage(0);
-    };
-
-    // Table columns
-    const columns: Column<Message>[] = [
-        {
-            id: "id",
-            label: "ID",
-            type: "id",
-            size: "xs",
-            maxSize: "xs",
-            idPadding: 2,
-        },
-        {
-            id: "name",
-            label: "Nombre",
-            size: "lg",
-            truncate: true,
-        },
-        {
-            id: "content",
-            label: "Mensaje",
-            size: "xl",
-            truncate: true,
-        },
-        {
-            id: "status",
-            label: "Estatus",
-            size: "sm",
-            type: "chip",
-            chipConfig: {
-                active: {
-                    label: "En uso",
-                    bgColor: "#DCFCE7",
-                    textColor: "#166534",
-                },
-                inactive: {
-                    label: "Sin uso",
-                    bgColor: "#F1F5F9",
-                    textColor: "#64748B",
-                },
-            },
-        },
-    ];
-
-    // Row actions
-    const actions: RowAction<Message>[] = [
-        {
-            id: "edit",
-            label: "Editar",
-            onClick: handleOpenEditModal,
-        },
-        {
-            id: "delete",
-            label: "Eliminar",
-            onClick: handleDeleteMessage,
-            color: "error",
-        },
-    ];
-
-    return (
-        <MainLayout>
-            <HeaderContainer>
-                <Title title="Mensajes" />
-                <ControlsContainer>
-                    <SearchInput
-                        size="small"
-                        placeholder="Buscar"
-                        value={searchValue}
-                        onChange={handleSearchChange}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIconStyled />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <CreateButton
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleOpenCreateModal}
-                    >
-                        Nuevo
-                    </CreateButton>
-                </ControlsContainer>
-            </HeaderContainer>
-            <TableCrud
-                columns={columns}
-                rows={messages}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleOpenEditModal}
-                emptyMessage="No hay mensajes registrados"
-            />
-
-            <MessageFormModal
-                open={modalOpen}
-                onClose={handleCloseModal}
-                onConfirm={handleSaveMessage}
-                initialValues={
-                    editingMessage
-                        ? {
-                              name: editingMessage.name,
-                              content: editingMessage.content,
-                              status: editingMessage.status,
-                          }
-                        : undefined
-                }
-                loading={saving}
-            />
-        </MainLayout>
+  const handleDeleteMessage = async (message: Message) => {
+    if (message.inUse) {
+      showError(
+        "No se puede eliminar el mensaje porque está en uso en una o más cobranzas automáticas.",
+      );
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Estás seguro de eliminar el mensaje "${message.name}"?`,
     );
+    if (!confirmed) return;
+
+    try {
+      const result = await deleteCollectionMessage(message.id);
+      if (result.error) {
+        showError(result.error.message);
+        return;
+      }
+      showSuccess("Mensaje eliminado correctamente");
+      refetch();
+    } catch {
+      showError("Error al eliminar el mensaje");
+    }
+  };
+
+  const columns: Column<Message>[] = [
+    {
+      id: "id",
+      label: "ID",
+      type: "id",
+      size: "xs",
+      maxSize: "xs",
+      idPadding: 2,
+    },
+    {
+      id: "name",
+      label: "Nombre",
+      size: "lg",
+      truncate: true,
+    },
+    {
+      id: "content",
+      label: "Mensaje",
+      size: "xl",
+      truncate: true,
+    },
+    {
+      id: "inUse",
+      label: "Estatus",
+      size: "sm",
+      type: "chip",
+      chipLabelMap: { true: "En uso", false: "Sin uso" },
+      chipVariantMap: { true: "success", false: "default" } as Record<
+        string,
+        StatusChipVariant
+      >,
+    },
+  ];
+
+  const actions: RowAction<Message>[] = [
+    {
+      id: "edit",
+      label: "Editar",
+      onClick: handleOpenEditModal,
+    },
+    {
+      id: "delete",
+      label: "Eliminar",
+      onClick: handleDeleteMessage,
+      color: "error",
+      disabled: (row) => row.inUse,
+    },
+  ];
+
+  return (
+    <MainLayout>
+      <Stack direction="column" spacing={3}>
+        <Title title="Mensajes" />
+        <TabFilters
+          tabs={[]}
+          activeTab=""
+          onTabChange={() => { }}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar"
+          actions={[
+            {
+              label: "Nuevo",
+              onClick: handleOpenCreateModal,
+              variant: "contained",
+              color: "primary",
+            }
+          ]}
+        />
+
+        <TableCrud
+          columns={columns}
+          rows={messages}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onRowClick={handleOpenEditModal}
+          emptyMessage="No hay mensajes registrados"
+        />
+      </Stack>
+
+      <MessageFormModal
+        key={modalOpen ? (editingMessage?.id ?? "new") : "closed"}
+        open={modalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleSaveMessage}
+        messageVariables={MESSAGE_VARIABLES_CATALOG}
+        initialValues={
+          editingMessage
+            ? {
+              name: editingMessage.name,
+              content: editingMessage.content,
+              status: editingMessage.status,
+            }
+            : undefined
+        }
+        inUse={editingMessage ? editingMessage.inUse : undefined}
+        loading={saving}
+      />
+    </MainLayout>
+  );
 }

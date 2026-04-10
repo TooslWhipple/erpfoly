@@ -1,66 +1,158 @@
-const DAY_NAMES_ES = [
-  "Domingo",
-  "Lunes",
-  "Martes",
-  "Miércoles",
-  "Jueves",
-  "Viernes",
-  "Sábado",
-];
+import type { Dayjs } from "dayjs";
+import dayjs from "@/lib/dayjs";
 
-const SHORT_MONTHS_ES = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
+export type DateInput = string | number | Date | Dayjs | null | undefined;
+
+const DEFAULT_FALLBACK = "—";
 
 /**
- * Formats an ISO date string for display: "Lunes 19 de Feb. 12:30 pm".
- * Returns "—" for invalid or empty input.
+ * Presets de formato (tokens dayjs con locale `es-mx` en `@/lib/dayjs`).
+ * Al autocompletar verás la descripción de cada opción.
  */
-export function formatDateTime(dateStr: string | null | undefined): string {
-  if (dateStr == null || dateStr === "") return "—";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "—";
+export type DateFormatPreset =
+  /** Fecha y hora legible (24h). Ej.: `8 de abril de 2026 14:30` */
+  | "localized"
+  /** Igual que `localized` con am/pm. Ej.: `8 de abril de 2026 2:30 pm` */
+  | "localized12h"
+  /** Con día de la semana (24h). Ej.: `miércoles, 8 de abril de 2026 14:30` */
+  | "localizedWithWeekday"
+  /** Igual con am/pm. Ej.: `miércoles, 8 de abril de 2026 2:30 pm` */
+  | "localizedWithWeekday12h"
+  /** Solo fecha numérica. Ej.: `08/04/2026` */
+  | "dateNumeric"
+  /** Solo fecha extendida. Ej.: `8 de abril de 2026` */
+  | "dateLong"
+  /** Solo hora 24h. Ej.: `14:30` */
+  | "time"
+  /** Solo hora 12h con am/pm. Ej.: `2:30 pm` */
+  | "time12h"
+  /** Fecha + hora numéricas (24h). Ej.: `08/04/2026 14:30` */
+  | "datetimeNumeric"
+  /** Fecha numérica + hora 12h. Ej.: `08/04/2026 2:30 pm` */
+  | "datetimeNumeric12h"
+  /** Fecha + hora compactas (24h). Ej.: `8 abr 2026, 14:30` */
+  | "datetimeShort"
+  /** Compacto con am/pm. Ej.: `8 abr 2026, 2:30 pm` */
+  | "datetimeShort12h"
+  /** Fecha ISO. Ej.: `2026-04-08` */
+  | "isoDate"
+  /** Fecha y hora ISO (24h). Ej.: `2026-04-08 14:30:00` */
+  | "isoDatetime"
+  /** ISO con hora 12h y am/pm. Ej.: `2026-04-08 2:30:00 pm` */
+  | "isoDatetime12h";
 
-  const dayName = DAY_NAMES_ES[date.getDay()];
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = SHORT_MONTHS_ES[date.getMonth()];
-  const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const ampm = hours >= 12 ? "pm" : "am";
-  const hour12 = hours % 12 || 12;
+/** Mapa preset → patrón dayjs (mantener alineado con {@link DateFormatPreset}). */
+export const dateFormatPresets: Record<DateFormatPreset, string> = {
+  localized: "LLL",
+  localized12h: "D [de] MMMM [de] YYYY h:mm a",
+  localizedWithWeekday: "LLLL",
+  localizedWithWeekday12h: "dddd, D [de] MMMM [de] YYYY h:mm a",
+  dateNumeric: "L",
+  dateLong: "LL",
+  time: "LT",
+  time12h: "h:mm a",
+  datetimeNumeric: "L LT",
+  datetimeNumeric12h: "L h:mm a",
+  datetimeShort: "D MMM YYYY, H:mm",
+  datetimeShort12h: "D MMM YYYY, h:mm a",
+  isoDate: "YYYY-MM-DD",
+  isoDatetime: "YYYY-MM-DD HH:mm:ss",
+  isoDatetime12h: "YYYY-MM-DD h:mm:ss a",
+};
 
-  return `${dayName} ${day} de ${month}. ${hour12}:${minutes} ${ampm}`;
+/**
+ * Preset con documentación en IDE, o patrón dayjs libre (cualquier string).
+ * `string & {}` evita que `string` absorba los literales y así conservas autocompletado de presets.
+ */
+export type DateFormatArg = DateFormatPreset | (string & {});
+
+function toDayjs(value: DateInput): Dayjs | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  const d = dayjs(value as string | number | Date);
+  return d.isValid() ? d : null;
+}
+
+function capitalizeWord(s: string): string {
+  if (!s) {
+    return s;
+  }
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function isPreset(format: string): format is DateFormatPreset {
+  return format in dateFormatPresets;
+}
+
+function resolvePattern(format: DateFormatArg): string {
+  return isPreset(format) ? dateFormatPresets[format] : format;
+}
+
+export type FormatDateOptions = {
+  /** Valor si la fecha no es válida o viene vacía (por defecto "—"). */
+  fallback?: string;
+};
+
+/**
+ * Formatea una fecha con un **preset** (autocompletado con ejemplo en la descripción) o un **patrón dayjs** personalizado.
+ *
+ * @param value - ISO, `Date`, timestamp, etc.
+ * @param format - Elige un preset (`"localized"`, `"isoDate"`, …) o escribe un patrón dayjs entre comillas.
+ *
+ * @example Preset
+ * ```ts
+ * formatDate(createdAt, "localized");
+ * ```
+ *
+ * @example Patrón personalizado (corchetes escapan texto literal en dayjs)
+ * ```ts
+ * formatDate(createdAt, "dddd DD/MM/YYYY[,] HH:mm");
+ * formatDate(createdAt, "dddd DD/MM/YYYY[,] h:mm a"); // 12 h con am/pm
+ * ```
+ */
+export function formatDate(
+  value: DateInput,
+  format: DateFormatArg,
+  options?: FormatDateOptions,
+): string {
+  const fallback = options?.fallback ?? DEFAULT_FALLBACK;
+  const d = toDayjs(value);
+  if (!d) {
+    return fallback;
+  }
+  return d.format(resolvePattern(format));
 }
 
 /**
- * Short format: "19 Feb, 2025 12:30 pm". For invalid/empty returns the original string or "—".
+ * ISO de solicitud / API: preset `localized`; si no parsea, devuelve el string original.
+ */
+export function formatRequestedAt(iso: string): string {
+  const d = toDayjs(iso);
+  return d ? d.format(dateFormatPresets.localized) : iso;
+}
+
+/**
+ * "Lunes 19 de feb. 12:30 pm" (compatibilidad con el formato previo de esta utilidad).
+ */
+export function formatDateTime(dateStr: DateInput): string {
+  const d = toDayjs(dateStr);
+  if (!d) {
+    return DEFAULT_FALLBACK;
+  }
+  return `${capitalizeWord(d.format("dddd"))} ${d.format("D [de]")} ${capitalizeWord(d.format("MMM"))}. ${d.format("h:mm a")}`;
+}
+
+/**
+ * "19 Feb, 2025 12:30 pm" (compatibilidad con el formato previo).
  */
 export function formatDateTimeShort(
-  isoString: string | null | undefined,
-  fallback = "—",
+  isoString: DateInput,
+  fallback = DEFAULT_FALLBACK,
 ): string {
-  if (isoString == null || isoString === "") return fallback;
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return fallback;
-
-  const day = d.getDate();
-  const month = SHORT_MONTHS_ES[d.getMonth()];
-  const year = d.getFullYear();
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  const ampm = hours >= 12 ? "pm" : "am";
-  const h = hours % 12 || 12;
-  const min = minutes < 10 ? `0${minutes}` : minutes;
-  return `${day} ${month}, ${year} ${h}:${min} ${ampm}`;
+  const d = toDayjs(isoString);
+  if (!d) {
+    return fallback;
+  }
+  return `${d.format("D")} ${capitalizeWord(d.format("MMM"))}, ${d.format("YYYY h:mm a")}`;
 }

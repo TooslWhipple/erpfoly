@@ -78,6 +78,11 @@ export const CATALOGOS_USUARIOS_CREAR = "catalogos.usuarios.crear";
 export const CATALOGOS_USUARIOS_EDITAR = "catalogos.usuarios.editar";
 export const CATALOGOS_USUARIOS_ELIMINAR = "catalogos.usuarios.eliminar";
 
+export const CATALOGOS_VENDEDORES_VER = "catalogos.vendedores.ver";
+export const CATALOGOS_VENDEDORES_CREAR = "catalogos.vendedores.crear";
+export const CATALOGOS_VENDEDORES_EDITAR = "catalogos.vendedores.editar";
+export const CATALOGOS_VENDEDORES_ELIMINAR = "catalogos.vendedores.eliminar";
+
 export const CATALOGOS_ROLES_VER = "catalogos.roles.ver";
 export const CATALOGOS_ROLES_CREAR = "catalogos.roles.crear";
 export const CATALOGOS_ROLES_EDITAR = "catalogos.roles.editar";
@@ -155,6 +160,12 @@ export const PERMISSIONS_BY_MODULE = {
       CATALOGOS_USUARIOS_CREAR,
       CATALOGOS_USUARIOS_EDITAR,
       CATALOGOS_USUARIOS_ELIMINAR,
+    ],
+    vendedores: [
+      CATALOGOS_VENDEDORES_VER,
+      CATALOGOS_VENDEDORES_CREAR,
+      CATALOGOS_VENDEDORES_EDITAR,
+      CATALOGOS_VENDEDORES_ELIMINAR,
     ],
     roles: [
       CATALOGOS_ROLES_VER,

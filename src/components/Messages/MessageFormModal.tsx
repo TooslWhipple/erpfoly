@@ -1,19 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Box, Typography } from "@mui/material";
-import { ContentCopy as CopyIcon } from "@mui/icons-material";
-import { ModalForm } from "@/components/ModalForm";
-import type { FormFieldConfig } from "@/components/Form";
+import { useState, useCallback, useRef } from "react";
+import { Typography, CircularProgress, Stack, Button } from "@mui/material";
+import { SideModal } from "@/components/SideModal";
 import {
-  StatusIndicator,
   VariablesSection,
-  VariablesInstruction,
   VariablesContainer,
   VariableChip,
+  ContentTextarea,
+  MessageNameInput,
 } from "@/styles/catalogos/mensajes.styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { MessageVariablesProvider } from "./MessageVariablesContext";
+import HighlightedContentInput from "./HighlightedContentInput";
+import { StatusChip } from "../StatusChip";
+import { Copy } from "lucide-react";
+import { theme } from "@/styles/theme";
 
 export interface MessageFormData {
   name: string;
@@ -21,228 +20,172 @@ export interface MessageFormData {
   status: "active" | "inactive";
 }
 
-export interface MessageFormModalProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (data: MessageFormData) => Promise<void>;
-  initialValues?: Partial<MessageFormData>;
-  loading?: boolean;
-}
-
-interface MessageVariable {
+export interface MessageVariableItem {
   key: string;
   label: string;
   value: string;
 }
 
-// ============================================================================
-// MESSAGE VARIABLES
-// ============================================================================
-
-const MESSAGE_VARIABLES: MessageVariable[] = [
-  { key: "fecha_limite", label: "Fecha límite", value: "*fecha_limite*" },
-  { key: "num_factura", label: "Número de factura", value: "*num_factura*" },
-  { key: "descripcion_factura", label: "Descripción de factura", value: "*descripcion_factura*" },
-  { key: "total_adeudo", label: "Total adeudo", value: "*total_adeudo*" },
-  { key: "proximo_pag", label: "Próximo pago", value: "*proximo_pag*" },
-];
-
-// ============================================================================
-// MESSAGE FORM MODAL COMPONENT
-// ============================================================================
+export interface MessageFormModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (data: MessageFormData) => Promise<void>;
+  initialValues?: Partial<MessageFormData>;
+  /** When defined (editing), shows "En uso" / "Sin uso" in header. When undefined (new), no chip is shown. */
+  inUse?: boolean;
+  loading?: boolean;
+  messageVariables?: MessageVariableItem[];
+}
 
 export function MessageFormModal({
   open,
   onClose,
   onConfirm,
   initialValues,
+  inUse,
   loading = false,
+  messageVariables = [],
 }: MessageFormModalProps) {
-  const [formValues, setFormValues] = useState<Record<string, unknown>>({
-    name: initialValues?.name || "",
-    content: initialValues?.content || "",
-    status: initialValues?.status || "active",
-  });
+  const [name, setName] = useState(initialValues?.name ?? "");
+  const [content, setContent] = useState(initialValues?.content ?? "");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const cursorPositionRef = useRef<number>(0);
 
-  // Find and store textarea reference when modal opens
-  useEffect(() => {
-    if (open) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        const textarea = document.querySelector(
-          'textarea[name="content"]'
-        ) as HTMLTextAreaElement | null;
-        if (textarea) {
-          textareaRef.current = textarea;
-          
-          // Store cursor position on selection change
-          const handleSelectionChange = () => {
-            if (textarea === document.activeElement) {
-              cursorPositionRef.current = textarea.selectionStart;
-            }
-          };
-          
-          textarea.addEventListener("click", handleSelectionChange);
-          textarea.addEventListener("keyup", handleSelectionChange);
-          
-          return () => {
-            textarea.removeEventListener("click", handleSelectionChange);
-            textarea.removeEventListener("keyup", handleSelectionChange);
-          };
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [open]);
-
-  // Handle form values change
-  const handleValuesChange = useCallback((values: Record<string, unknown>) => {
-    setFormValues(values);
-  }, []);
-
-  // Handle variable insertion
-  const handleInsertVariable = useCallback((variable: string) => {
-    const textarea = textareaRef.current;
-    const currentContent = (formValues.content as string) || "";
-    
-    if (textarea && document.activeElement === textarea) {
-      // Insert at cursor position
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newContent =
-        currentContent.substring(0, start) + variable + currentContent.substring(end);
-      
-      setFormValues((prev) => ({
-        ...prev,
-        content: newContent,
-      }));
-
-      // Set cursor position after inserted variable
+  const handleInsertVariable = useCallback(
+    (variable: string) => {
+      const ta = textareaRef.current;
+      const start =
+        ta && document.activeElement === ta ? ta.selectionStart : content.length;
+      const end = ta && document.activeElement === ta ? ta.selectionEnd : content.length;
+      const newContent = content.substring(0, start) + variable + content.substring(end);
+      setContent(newContent);
       setTimeout(() => {
-        const newPosition = start + variable.length;
-        textarea.setSelectionRange(newPosition, newPosition);
-        textarea.focus();
-      }, 0);
-    } else {
-      // Insert at end if textarea is not focused
-      const newContent = currentContent + (currentContent ? " " : "") + variable;
-      setFormValues((prev) => ({
-        ...prev,
-        content: newContent,
-      }));
-      
-      // Focus textarea after insertion
-      setTimeout(() => {
-        if (textarea) {
-          const newPosition = newContent.length;
-          textarea.setSelectionRange(newPosition, newPosition);
-          textarea.focus();
+        if (ta) {
+          const newPosition = start + variable.length;
+          ta.setSelectionRange(newPosition, newPosition);
+          ta.focus();
         }
       }, 0);
-    }
-  }, [formValues.content]);
-
-  // Handle form confirm
-  const handleConfirm = useCallback(
-    async (data: Record<string, unknown>) => {
-      await onConfirm({
-        name: data.name as string,
-        content: data.content as string,
-        status: (data.status as "active" | "inactive") || "active",
-      });
     },
-    [onConfirm]
+    [content],
   );
 
-  // Reset form when modal closes or initialValues change
-  useEffect(() => {
-    if (open) {
-      setFormValues({
-        name: initialValues?.name || "",
-        content: initialValues?.content || "",
-        status: initialValues?.status || "active",
-      });
-    }
-  }, [open, initialValues]);
+  const handleSave = useCallback(async () => {
+    const trimmedName = name.trim();
+    const trimmedContent = content.trim();
+    if (!trimmedName || !trimmedContent) return;
+    await onConfirm({
+      name: trimmedName,
+      content: trimmedContent,
+      status: initialValues?.status ?? "active",
+    });
+  }, [name, content, initialValues?.status, onConfirm]);
 
-  // Form fields configuration
-  const fields: FormFieldConfig[] = [
-    {
-      name: "name",
-      label: "Nombre del mensaje",
-      type: "text",
-      placeholder: "Ingresa el nombre del mensaje",
-      validation: {
-        required: true,
-        minLength: 1,
-        maxLength: 255,
-      },
-      autoFocus: true,
-    },
-    {
-      name: "content",
-      label: "Contenido del mensaje",
-      type: "textarea",
-      placeholder: "Escribe el contenido del mensaje aquí...",
-      rows: 6,
-      validation: {
-        required: true,
-        minLength: 1,
-      },
-    },
-  ];
-
-  const isActive = formValues.status === "active";
+  const canSave = name.trim().length > 0 && content.trim().length > 0;
+  const isEditing = inUse !== undefined;
+  const title = isEditing ? name.trim() || "Nuevo mensaje" : "Nuevo mensaje";
 
   return (
-    <ModalForm
+    <SideModal
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      disableClose={loading}
+      maxWidth="lg"
       fullWidth
-      fields={fields}
-      onConfirm={handleConfirm}
-      onValuesChange={handleValuesChange}
-      initialValues={formValues}
-      loading={loading}
-      confirmLabel="Guardar"
-      cancelLabel="Cancelar"
-      showActions={true}
-      title={initialValues?.name ? "Editar mensaje" : "Nuevo mensaje"}
-      headerContent={
-        isActive ? (
-          <StatusIndicator>En uso</StatusIndicator>
-        ) : undefined
+      header={
+        <Stack
+          direction="row"
+          width="100%"
+          spacing={2}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Stack spacing={1} alignItems="flex-start">
+            {isEditing && (
+              <StatusChip
+                size="small"
+                label={inUse ? "En uso" : "Sin uso"}
+                variant={inUse ? "success" : "default"}
+              />
+            )}
+            <Typography variant="h6">{title}</Typography>
+          </Stack>
+          <Button variant="contained" onClick={handleSave} disabled={!canSave || loading}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : "Guardar"}
+          </Button>
+        </Stack>
       }
     >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+          border: "1px solid #e0e0e0",
+          borderRadius: "16px",
+          padding: "24px",
+          backgroundColor: "white",
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Nombre del mensaje
+        </Typography>
+        <MessageNameInput
+          fullWidth
+          size="small"
+          placeholder="Ingresa el nombre del mensaje"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          name="message-name"
+          slotProps={{
+            input: { style: { backgroundColor: theme.palette.background.content } },
+          }}
+        />
 
-      {/* Variables section */}
-      <VariablesSection>
-        <VariablesInstruction>
-          Puedes incrustar datos variables del cliente en tu mensaje como:
-        </VariablesInstruction>
-        <VariablesContainer>
-          {MESSAGE_VARIABLES.map((variable) => (
-            <VariableChip
-              key={variable.key}
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <Typography component="span" sx={{ fontSize: "0.875rem" }}>
-                    {variable.value}
-                  </Typography>
-                  <CopyIcon sx={{ fontSize: "1rem" }} />
-                </Box>
-              }
-              onClick={() => handleInsertVariable(variable.value)}
-              clickable
-            />
-          ))}
-        </VariablesContainer>
-      </VariablesSection>
-    </ModalForm>
+        <Typography variant="body2" color="text.secondary">
+          Contenido del mensaje.
+        </Typography>
+        <MessageVariablesProvider value={messageVariables.map((v) => v.value)}>
+          <ContentTextarea
+            fullWidth
+            multiline
+            minRows={6}
+            placeholder="Escribe el contenido del mensaje aquí..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            name="message-content"
+            inputRef={(el) => {
+              if (el) textareaRef.current = el;
+            }}
+            slotProps={{
+              input: { inputComponent: HighlightedContentInput, style: { backgroundColor: theme.palette.background.content } },
+            }}
+          />
+        </MessageVariablesProvider>
+
+        <VariablesSection>
+          <Typography variant="body2" color="text.secondary">
+            Puedes incrustar datos variables del cliente en tu mensaje como:
+          </Typography>
+          <VariablesContainer>
+            {messageVariables.map((variable) => (
+              <VariableChip
+                key={variable.key}
+                label={
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography component="span" sx={{ fontSize: "0.875rem" }}>
+                      {variable.value}
+                    </Typography>
+                    <Copy size={16} />
+                  </Stack>
+                }
+                onClick={() => handleInsertVariable(variable.value)}
+                clickable
+              />
+            ))}
+          </VariablesContainer>
+        </VariablesSection>
+      </div>
+    </SideModal>
   );
 }

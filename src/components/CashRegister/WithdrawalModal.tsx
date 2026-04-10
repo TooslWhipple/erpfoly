@@ -4,7 +4,7 @@ import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "
 import numeral from "numeral";
 import { NumberInput } from "@/components/Folypuntos";
 import {
-  StyledDialogContent,
+  DialogContent,
   ModalHeader,
   ModalTitle,
   CloseButton,
@@ -108,7 +108,7 @@ export function WithdrawalModal({
         },
       }}
     >
-      <StyledDialogContent>
+      <DialogContent>
         <ModalHeader>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
             <ModalTitle>{cashRegisterName}</ModalTitle>
@@ -189,7 +189,7 @@ export function WithdrawalModal({
             Realizar retiro parcial
           </WithdrawalButton>
         </WithdrawalModalActions>
-      </StyledDialogContent>
+        </DialogContent>
     </Dialog>
   );
 }

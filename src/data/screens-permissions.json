@@ -164,6 +164,18 @@
       "actions": ["view", "edit"]
     },
     {
+      "code": "catalogos-vendedores",
+      "name": "Vendedores",
+      "path": "/catalogos/vendedores",
+      "actions": ["view", "create", "edit", "delete"]
+    },
+    {
+      "code": "catalogos-vendedores-detalle",
+      "name": "Detalle de vendedor",
+      "path": "/catalogos/vendedores/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
       "code": "catalogos-roles",
       "name": "Roles",
       "path": "/catalogos/roles",

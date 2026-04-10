@@ -2,34 +2,36 @@
 // TYPES & INTERFACES
 // ============================================================================
 
-export type PaymentType = "cash" | "credit" | "layaway";
-
-export interface FolypuntosConfiguration {
-    /** Payment type this configuration applies to */
-    paymentType: PaymentType;
-    /** Amount in pesos to earn 1 Folypunto */
-    purchaseEquivalence: number;
-    /** Value in pesos of 1 Folypunto when redeemed */
-    saleEquivalence: number;
+export interface PurchaseType {
+  id: number;
+  code: string;
+  name: string;
 }
 
-export interface FolypuntosFormState {
-    cash: {
-        purchaseEquivalence: number;
-        saleEquivalence: number;
-    };
-    credit: {
-        purchaseEquivalence: number;
-        saleEquivalence: number;
-    };
-    layaway: {
-        purchaseEquivalence: number;
-        saleEquivalence: number;
-    };
+export interface PointEarningRuleConfig {
+  purchaseTypeId: number;
+  amountToSpend: number;
+  pointsAwarded: number;
+  amountPerPoint: number;
 }
 
-export interface FolypuntosApiResponse {
-    success: boolean;
-    data?: FolypuntosFormState;
-    message?: string;
+export interface PointsConfigResponse {
+  purchaseTypes: PurchaseType[];
+  config: PointEarningRuleConfig[];
+}
+
+export interface PointsFormState {
+  [purchaseTypeId: string]: {
+    amountToSpend: number;
+    pointsAwarded: number;
+    amountPerPoint: number;
+  };
+}
+
+export interface SavePointsConfigPayload {
+  rules: PointEarningRuleConfig[];
+}
+
+export interface SavePointsConfigResponse {
+  message: string;
 }

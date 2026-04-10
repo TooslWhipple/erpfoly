@@ -22,7 +22,7 @@ api.interceptors.request.use(
 );
 
 type BackendBody<T> =
-	| { data: T; error?: never }
+	| { success?: boolean; message?: string; errorCode?: unknown; data: T; error?: never }
 	| { error: { message: string;[k: string]: unknown }; data?: never };
 
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
@@ -67,7 +67,13 @@ api.interceptors.response.use(
 			return response;
 		}
 
-		if (body?.success === true && body.data !== undefined) {
+		const shouldUnwrapEnvelope =
+			typeof body === "object" &&
+			body !== null &&
+			"data" in body &&
+			"success" in body;
+
+		if (shouldUnwrapEnvelope) {
 			response.data = body.data;
 		}
 
@@ -150,12 +156,20 @@ export interface ApiError {
 }
 
 export interface ApiSuccessPayload {
-	success: true;
+	success?: true;
 	message?: string;
 }
 
 export interface PaginatedResponse<T> {
 	data: T[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}
+
+export interface PaginatedRowsResponse<T> {
+	rows: T[];
 	total: number;
 	page: number;
 	limit: number;
@@ -180,16 +194,25 @@ function isBackendErrorBody(
 	);
 }
 
+function messageFromPayload(data: unknown): string | null {
+	if (data == null || typeof data !== "object") return null;
+	if ("error" in data && data.error != null && typeof data.error === "object" && "message" in data.error) {
+		const msg = (data.error as { message?: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+	}
+	if ("message" in data) {
+		const msg = (data as { message: unknown }).message;
+		if (typeof msg === "string" && msg.trim()) return msg;
+		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+	}
+	return null;
+}
+
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
-	if (data != null && typeof data === "object" && "error" in data) {
-		const err = (data as { error: { message?: string } }).error;
-		if (err?.message) return { message: err.message };
-	}
-	if (data != null && typeof data === "object" && "message" in data) {
-		const msg = (data as { message: string }).message;
-		if (typeof msg === "string") return { message: msg };
-	}
+	const message = messageFromPayload(data);
+	if (message) return { message };
 	return {
 		message: error.message || "Network or server error",
 	};
@@ -254,4 +277,16 @@ export function unwrapOrThrow<T>(result: ApiResult<T>): T {
 		throw new Error("Unexpected null data");
 	}
 	return result.data;
+}
+
+export function getApiErrorMessage(err: unknown): string {
+	if (axios.isAxiosError(err)) {
+		const msg = messageFromPayload(err.response?.data);
+		if (msg) return msg;
+		return err.message || "Error de red o servidor.";
+	}
+	const withApi = err as Error & { apiError?: ApiError };
+	if (err instanceof Error && withApi.apiError?.message) return withApi.apiError.message;
+	if (err instanceof Error && err.message) return err.message;
+	return "Ha ocurrido un error.";
 }

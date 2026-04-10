@@ -11,20 +11,35 @@ import {
   NumberCell,
   EmptyStateContainer,
 } from "./styles";
+import { ChipGroup } from "../ChipGroup";
+import { StatusChip } from "../StatusChip";
+import { getStatusChipVariant } from "./TableCrud";
+import type { StatusChipVariant } from "../StatusChip";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type DataTableColumnType = "text" | "number" | "currency";
+export type DataTableColumnType =
+  | "text"
+  | "number"
+  | "currency"
+  | "percentage"
+  | "date"
+  | "boolean"
+  | "chip"
+  | "chipGroup"
+  | "id";
 
 export interface DataTableColumn<T> {
   id: keyof T | string;
   label: string;
   align?: "left" | "center" | "right";
   type?: DataTableColumnType;
-  /** Custom formatter; overrides type-based formatting when provided */
   format?: (value: unknown, row: T) => React.ReactNode;
+  chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
+  chipVariantMap?: Record<string, StatusChipVariant>;
+  chipLabelMap?: Record<string, string>;
+  chipGroupKey?: string;
+  chipGroupMaxVisible?: number;
+  currencySymbol?: string;
+  idPadding?: number;
 }
 
 export interface DataTableProps<T> {
@@ -33,10 +48,6 @@ export interface DataTableProps<T> {
   rowKey: keyof T;
   emptyMessage?: string;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function getValue<T>(row: T, columnId: keyof T | string): unknown {
   return row[columnId as keyof T];
@@ -50,28 +61,69 @@ function formatCellValue<T>(
   if (column.format) {
     return column.format(value, row);
   }
+  const rawValue = value;
   switch (column.type) {
-    case "currency":
-      return typeof value === "number"
-        ? numeral(value).format("$0,0.00")
-        : String(value ?? "");
+    case "id":
+      const padding = column.idPadding ?? 2;
+      return typeof rawValue === "number"
+        ? String(rawValue).padStart(padding, "0")
+        : String(rawValue ?? "");
+
     case "number":
-      return typeof value === "number"
-        ? numeral(value).format("0,0")
-        : String(value ?? "");
+      return typeof rawValue === "number"
+        ? numeral(rawValue).format("0,0")
+        : String(rawValue ?? "");
+
+    case "currency": {
+      const symbol = column.currencySymbol ?? "$";
+      return typeof rawValue === "number"
+        ? `${symbol}${numeral(rawValue).format("0,0.00")}`
+        : String(rawValue ?? "");
+    }
+
+    case "percentage":
+      return typeof rawValue === "number"
+        ? numeral(rawValue).format("0.00") + "%"
+        : String(rawValue ?? "");
+
+    case "date":
+      if (rawValue instanceof Date) {
+        return rawValue.toLocaleDateString();
+      }
+      if (typeof rawValue === "string") {
+        return new Date(rawValue).toLocaleDateString();
+      }
+      return String(rawValue ?? "");
+
+    case "boolean":
+      return rawValue ? "Sí" : "No";
+
+    case "chip": {
+      const chipKey = String(rawValue);
+      const label = column.chipLabelMap?.[chipKey] ?? chipKey;
+      const variant =
+        column.chipVariantMap?.[chipKey] ?? getStatusChipVariant(column.chipColor);
+      return <StatusChip label={label} variant={variant} size="small" />;
+    }
+
+    case "chipGroup":
+      if (Array.isArray(rawValue)) {
+        const key = column.chipGroupKey || "name";
+        const maxVisible = column.chipGroupMaxVisible ?? 6;
+        const items = rawValue.map((item) =>
+          typeof item === "object" && item !== null
+            ? String(item[key as keyof typeof item] ?? "")
+            : String(item)
+        );
+        return <ChipGroup items={items} maxVisible={maxVisible} />;
+      }
+      return null;
+
     default:
-      return String(value ?? "");
+      return String(rawValue ?? "");
   }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-/**
- * Reusable data table with the same styles as TableCrud.
- * Use for read-only tables without actions or pagination.
- */
 export function DataTable<T>({
   columns,
   rows,
@@ -111,7 +163,10 @@ export function DataTable<T>({
                   {columns.map((col) => {
                     const value = getValue(row, col.id);
                     const content = formatCellValue(value, col, row);
-                    const isNumeric = col.type === "currency" || col.type === "number";
+                    const isNumeric =
+                      col.type === "currency" ||
+                      col.type === "number" ||
+                      col.type === "percentage";
                     const Cell = isNumeric ? NumberCell : StyledTableCell;
                     return (
                       <Cell

@@ -4,21 +4,12 @@ import {
     TrendingUp as TrendingUpIcon,
     Edit as EditIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
+import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
+import { Box, Grid, Skeleton, Stack } from "@mui/material";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import {
-    StatsSection,
-    StatusText,
-    TimeCell,
-    WarningIconStyled,
-    DamageStatus,
-} from "@/styles/inventario/styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { DamageStatus } from "@/styles/inventario/styles";
 
 interface DamagedItem {
     id: number;
@@ -56,10 +47,6 @@ interface DamagedStats {
     costChange: number;
     valueChange: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_DAMAGED_ITEMS: DamagedItem[] = [
     {
@@ -168,10 +155,6 @@ const DUMMY_DAMAGED_ITEMS: DamagedItem[] = [
     },
 ];
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getDamagedStats(): Promise<DamagedStats> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
@@ -191,12 +174,10 @@ async function getDamagedItems(
 
     let filteredData = [...DUMMY_DAMAGED_ITEMS];
 
-    // Filter by status
     if (params.status && params.status !== "all") {
         filteredData = filteredData.filter((item) => item.status === params.status);
     }
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -222,10 +203,6 @@ async function getDamagedItems(
     };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: DamageStatus): string {
     const labels: Record<DamageStatus, string> = {
         pending: "Por realizar",
@@ -236,14 +213,40 @@ function getStatusLabel(status: DamageStatus): string {
     return labels[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+function buildTimeElapsedChipMaps(): {
+    chipLabelMap: Record<string, string>;
+    chipVariantMap: Record<string, StatusChipVariant>;
+} {
+    const labels: Record<string, string> = {};
+    const variants: Record<string, StatusChipVariant> = {};
+    for (let i = 1; i <= 10; i++) {
+        const key = i === 1 ? "1 año" : `${i} años`;
+        labels[key] = key;
+        variants[key] = "error";
+    }
+    for (let i = 6; i <= 11; i++) {
+        const key = `${i} meses`;
+        labels[key] = key;
+        variants[key] = "warning";
+    }
+    const normalKeys = ["1 mes", "2 meses", "3 meses", "4 meses", "5 meses", "1 día"];
+    for (const key of normalKeys) {
+        labels[key] = key;
+        variants[key] = "default";
+    }
+    for (let i = 2; i <= 31; i++) {
+        const key = `${i} días`;
+        labels[key] = key;
+        variants[key] = "default";
+    }
+    return { chipLabelMap: labels, chipVariantMap: variants };
+}
+
+const TIME_ELAPSED_CHIP_MAPS = buildTimeElapsedChipMaps();
 
 export default function MercanciaDanada() {
     const router = useRouter();
 
-    // State
     const [stats, setStats] = useState<DamagedStats | null>(null);
     const [items, setItems] = useState<DamagedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -252,8 +255,8 @@ export default function MercanciaDanada() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [addModalOpen, setAddModalOpen] = useState(false);
 
-    // Tab options
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Por realizar", value: "pending" },
@@ -262,12 +265,10 @@ export default function MercanciaDanada() {
         { label: "Canceladas", value: "cancelled" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | DamageStatus => {
         return activeTab as "all" | DamageStatus;
     }, [activeTab]);
 
-    // Fetch stats
     useEffect(() => {
         async function loadStats() {
             try {
@@ -280,7 +281,6 @@ export default function MercanciaDanada() {
         loadStats();
     }, []);
 
-    // Fetch items
     const fetchItems = useCallback(async () => {
         setLoading(true);
         try {
@@ -307,7 +307,6 @@ export default function MercanciaDanada() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -317,7 +316,7 @@ export default function MercanciaDanada() {
     };
 
     const handleCreate = () => {
-        router.push("/inventario/mercancia-danada/ingresar");
+        setAddModalOpen(true);
     };
 
     const handleEdit = (item: DamagedItem) => {
@@ -333,7 +332,6 @@ export default function MercanciaDanada() {
         setPage(0);
     };
 
-    // Stats cards data
     const statsCards: StatsCardData[] = stats
         ? [
             {
@@ -374,7 +372,6 @@ export default function MercanciaDanada() {
         ]
         : [];
 
-    // Table columns
     const columns: Column<DamagedItem>[] = [
         {
             id: "folio",
@@ -418,26 +415,30 @@ export default function MercanciaDanada() {
             id: "status",
             label: "Estatus",
             size: "md",
-            format: (value) => (
-                <StatusText status={value as DamageStatus}>
-                    {getStatusLabel(value as DamageStatus)}
-                </StatusText>
-            ),
+            type: "chip",
+            chipLabelMap: {
+                pending: "Por realizar",
+                in_progress: "Realizando",
+                completed: "Finalizada",
+                cancelled: "Cancelada",
+            },
+            chipVariantMap: {
+                pending: "pending",
+                in_progress: "pending",
+                completed: "success",
+                cancelled: "error",
+            } as Record<string, StatusChipVariant>,
         },
         {
             id: "timeElapsed",
             label: "Tiempo",
             size: "md",
-            format: (value, row) => (
-                <TimeCell>
-                    {row.hasWarning && <WarningIconStyled />}
-                    {String(value)}
-                </TimeCell>
-            ),
+            type: "chip",
+            chipLabelMap: TIME_ELAPSED_CHIP_MAPS.chipLabelMap,
+            chipVariantMap: TIME_ELAPSED_CHIP_MAPS.chipVariantMap,
         },
     ];
 
-    // Row actions
     const actions: RowAction<DamagedItem>[] = [
         {
             id: "edit",
@@ -449,44 +450,71 @@ export default function MercanciaDanada() {
 
     return (
         <MainLayout>
-            <Title title="Mercancía dañada" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Mercancía dañada" />
 
-            <StatsSection>
-                <StatsCardGroup cards={statsCards} />
-            </StatsSection>
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar"
+                    actions={[
+                        {
+                            label: "Ingresar",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                        },
+                    ]}
+                />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
-                actions={[
-                    {
-                        label: "Ingresar",
-                        onClick: handleCreate,
-                        variant: "contained",
-                        color: "primary",
-                    },
-                ]}
-            />
+                {
+                    stats ? <StatsCardGroup cards={statsCards} />
+                        :
+                        <Grid container spacing={2}>
+                            {[1, 2, 3].map((i) => (
+                                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                                    <Skeleton
+                                        variant="rectangular"
+                                        width="100%"
+                                        height="128px"
+                                        style={{ borderRadius: 8 }}
+                                        animation="wave"
+                                    />
+                                </Grid>
+                            ))}
+                        </Grid>
 
-            <TableCrud
-                columns={columns}
-                rows={items}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleEdit}
-                emptyMessage="No hay mercancía dañada registrada"
-            />
+                }
+
+                <TableCrud
+                    columns={columns}
+                    rows={items}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleEdit}
+                    emptyMessage="No hay mercancía dañada registrada"
+                />
+
+                <AddDamagedGoodsModal
+                    open={addModalOpen}
+                    onClose={() => setAddModalOpen(false)}
+                    onSubmit={async () => {
+                        await new Promise((r) => setTimeout(r, 800));
+                        fetchItems();
+                    }}
+                />
+            </Stack>
+
         </MainLayout>
     );
 }

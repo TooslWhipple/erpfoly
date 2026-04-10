@@ -11,14 +11,14 @@ import { ArrowBack as ArrowBackIcon, Pin as PinIcon } from "@mui/icons-material"
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, type ResendOtpRequest } from "@/services/auth.service";
 import {
-	PageContainer,
+	SimplePageContainer,
 	LoginCard,
 	LogoContainer,
 	BrandName,
 	WelcomeText,
 	Form,
 	StyledTextField,
-	AlertContainer
+	AlertContainer,
 } from "@/styles/login/styles";
 
 const OTP_LENGTH = 6;
@@ -84,8 +84,8 @@ export default function ValidateOtpPage() {
 	};
 
 	return (
-		<PageContainer>
-			<LoginCard elevation={0}>
+		<SimplePageContainer>
+			<LoginCard>
 				<LogoContainer>
 					<BrandName>Folysoft</BrandName>
 					<WelcomeText variant="body2">
@@ -192,6 +192,6 @@ export default function ValidateOtpPage() {
 					</Button>
 				</Form>
 			</LoginCard>
-		</PageContainer>
+		</SimplePageContainer>
 	);
 }

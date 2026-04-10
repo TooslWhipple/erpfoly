@@ -1,15 +1,13 @@
-import { InputAdornment, MenuItem, Select, SelectChangeEvent, Button, TextField } from "@mui/material";
-import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material";
+import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
+import { Add as AddIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
 import {
-  Container,
   TabsWrapper,
   StyledTabs,
-  StyledTab,
-  SearchContainer,
-  SearchIconStyled,
-  FiltersRightSection,
+  StyledTab
 } from "./styles";
+import { FormTextField } from "../Form";
+import { Search } from "lucide-react";
 
 export interface TabOption {
   label: string;
@@ -23,17 +21,11 @@ export interface SelectFilterOption {
 }
 
 export interface ActionButtonConfig {
-  /** Button label text */
   label: string;
-  /** Click handler */
   onClick: () => void;
-  /** Button variant */
   variant?: "text" | "outlined" | "contained";
-  /** Button color */
   color?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
-  /** Show add icon */
   showIcon?: boolean;
-  /** Disabled state */
   disabled?: boolean;
 }
 
@@ -51,7 +43,6 @@ interface TabFiltersProps {
     onChange: (value: string) => void;
     label?: string;
   };
-  /** Action buttons configuration */
   actions?: ActionButtonConfig[];
 }
 
@@ -79,135 +70,75 @@ export function TabFilters({
   };
 
   const hasActions = actions && actions.length > 0;
-  const showRightSection = showSearch || selectFilter || hasActions;
   const singleAction = hasActions && actions.length === 1;
-  const multipleActions = hasActions && actions.length > 1;
 
   return (
-    <Container>
-      <TabsWrapper>
-        <StyledTabs 
-          value={activeTab} 
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons={false}
-        >
-          {tabs.map((tab) => (
-            <StyledTab
-              key={tab.value}
-              label={
-                tab.count !== undefined
-                  ? `${tab.label} (${tab.count})`
-                  : tab.label
+    <Grid container spacing={2} alignItems="center" justifyContent={{ xs: "flex-start", md: "space-between" }}>
+      <Grid size={{ xs: 12, md: 'auto' }}>
+        {
+          tabs.length > 0 &&
+          <TabsWrapper>
+            <StyledTabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons={false}
+            >
+              {
+                tabs.map((tab) => (
+                  <StyledTab
+                    key={tab.value}
+                    label={
+                      tab.count !== undefined
+                        ? `${tab.label} (${tab.count})`
+                        : tab.label
+                    }
+                    value={tab.value}
+                  />
+                ))
               }
-              value={tab.value}
-            />
-          ))}
-        </StyledTabs>
-      </TabsWrapper>
+            </StyledTabs>
+          </TabsWrapper>
+        }
+      </Grid>
 
-      {showRightSection && (
-        <FiltersRightSection singleAction={singleAction}>
-          {selectFilter && (
-            <Select
+      <Grid container size={{ xs: 12, md: 'auto' }} alignContent={{ xs: 'flex-start', md: 'flex-end' }}>
+        {
+          showSearch &&
+          <Grid size={{ xs: 6, md: 'auto' }}>
+            <FormTextField
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={handleSearchChange}
+              fullWidth={!singleAction}
               size="small"
-              value={selectFilter.value}
-              onChange={handleSelectChange}
-              displayEmpty
-              sx={{
-                minWidth: 140,
-                backgroundColor: colors.background.sidebar,
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: colors.border,
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: colors.border,
-                },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: colors.sidebar.textSelected,
-                },
-                "@media (max-width: 899px)": {
-                  width: "100%",
-                },
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} color={colors.text.secondary} />
+                  </InputAdornment>
+                )
               }}
-            >
-              {selectFilter.options.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          )}
-          {showSearch && (
-            <SearchContainer singleAction={singleAction}>
-              <TextField
-                size="small"
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={handleSearchChange}
-                fullWidth={!singleAction}
-                sx={{
-                  width: 280,
-                  "@media (max-width: 899px)": {
-                    width: singleAction ? "auto" : "100%",
-                    minWidth: singleAction ? 200 : "auto",
-                  },
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: colors.background.sidebar,
-                    "& fieldset": {
-                      borderColor: colors.border,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: colors.border,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: colors.sidebar.textSelected,
-                    },
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ width: 18, height: 18, color: "#71717A" }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </SearchContainer>
-          )}
-          {hasActions && actions.map((action, index) => (
-            <Button
-              key={index}
-              variant={action.variant ?? "contained"}
-              color={action.color ?? "primary"}
-              onClick={action.onClick}
-              disabled={action.disabled}
-              startIcon={action.showIcon ? <AddIcon /> : undefined}
-              sx={{
-                height: 40,
-                minWidth: 100,
-                textTransform: "none",
-                fontWeight: 500,
-                flexShrink: 0,
-                marginBottom: (theme) => theme.spacing(1),
-                "@media (max-width: 899px)": {
-                  marginBottom: 0,
-                  ...(singleAction && {
-                    flexShrink: 0,
-                    marginLeft: (theme) => theme.spacing(1.5),
-                  }),
-                  ...(multipleActions && {
-                    flex: "1 1 calc(50% - 8px)",
-                    minWidth: "calc(50% - 8px)",
-                  }),
-                },
-              }}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </FiltersRightSection>
-      )}
-    </Container>
+            />
+          </Grid>
+        }
+        {
+          hasActions && actions.map((action, index) => (
+            <Grid size={{ xs: 6, md: 'auto' }}>
+              <Button
+                fullWidth
+                key={index}
+                variant={action.variant ?? "contained"}
+                color={action.color ?? "primary"}
+                onClick={action.onClick}
+                disabled={action.disabled}
+                startIcon={action.showIcon ? <AddIcon /> : undefined}>
+                {action.label}
+              </Button>
+            </Grid>
+          ))
+        }
+      </Grid>
+    </Grid>
   );
 }

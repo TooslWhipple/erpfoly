@@ -4,10 +4,7 @@ import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { Stack } from "@mui/material";
 
 type OrderStatus = "pending" | "delivered";
 
@@ -35,10 +32,6 @@ interface GetBranchOrdersResponse {
     page: number;
     limit: number;
 }
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
 
 const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
     {
@@ -144,9 +137,6 @@ const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
 ];
 
 // ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getBranchOrders(
     params: GetBranchOrdersParams
 ): Promise<GetBranchOrdersResponse> {
@@ -154,12 +144,10 @@ async function getBranchOrders(
 
     let filteredData = [...DUMMY_BRANCH_ORDERS];
 
-    // Filter by status
     if (params.status && params.status !== "all") {
         filteredData = filteredData.filter((order) => order.status === params.status);
     }
 
-    // Filter by search
     if (params.search) {
         const searchLower = params.search.toLowerCase();
         filteredData = filteredData.filter(
@@ -183,10 +171,6 @@ async function getBranchOrders(
     };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
         pending: "Pendiente",
@@ -203,14 +187,9 @@ function getStatusColor(status: OrderStatus): string {
     return colors[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function SolicitudesSucursales() {
     const router = useRouter();
 
-    // State
     const [orders, setOrders] = useState<BranchOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
@@ -226,12 +205,10 @@ export default function SolicitudesSucursales() {
         { label: "Entregados", value: "delivered" },
     ];
 
-    // Get status filter from tab
     const getStatusFilter = useCallback((): "all" | OrderStatus => {
         return activeTab as "all" | OrderStatus;
     }, [activeTab]);
 
-    // Fetch orders
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
@@ -258,7 +235,6 @@ export default function SolicitudesSucursales() {
         setPage(0);
     }, [searchValue, activeTab]);
 
-    // Event handlers
     const handleTabChange = (value: string) => {
         setActiveTab(value);
     };
@@ -280,7 +256,6 @@ export default function SolicitudesSucursales() {
         setPage(0);
     };
 
-    // Table columns
     const columns: Column<BranchOrder>[] = [
         {
             id: "folio",
@@ -330,7 +305,6 @@ export default function SolicitudesSucursales() {
         },
     ];
 
-    // Row actions
     const actions: RowAction<BranchOrder>[] = [
         {
             id: "view",
@@ -342,32 +316,34 @@ export default function SolicitudesSucursales() {
 
     return (
         <MainLayout>
-            <Title title="Pedidos" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Pedidos" />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar (folio, sucursal, solicitante)"
-            />
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    searchPlaceholder="Buscar (folio, sucursal, solicitante)"
+                />
 
-            <TableCrud
-                columns={columns}
-                rows={orders}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleViewOrder}
-                emptyMessage="No hay pedidos de sucursales"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={orders}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleViewOrder}
+                    emptyMessage="No hay pedidos de sucursales"
+                />
+            </Stack>
         </MainLayout>
     );
 }

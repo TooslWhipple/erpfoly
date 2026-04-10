@@ -1,4 +1,5 @@
-import { get, post, patch, del, type ApiResult } from "@/lib/axios";
+import { get, post, patch, del, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -35,6 +36,14 @@ export interface UpdateBranchPayload {
   status?: "ACTIVE" | "INACTIVE";
 }
 
+export interface UpdateBranchShippingPricePayload {
+  branches: BranchShippingPriceItem[];
+}
+export interface BranchShippingPriceItem {
+  id: number;
+  shippingPrice: number;
+}
+
 // ============================================================================
 // API
 // ============================================================================
@@ -44,13 +53,7 @@ const BASE = "/branches";
 export async function getBranches(
   params: GetBranchesParams = {}
 ): Promise<ApiResult<GetBranchesResponse>> {
-  const searchParams = new URLSearchParams();
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.limit != null) searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) searchParams.set("search", params.search.trim());
-  const query = searchParams.toString();
-  const url = query ? `${BASE}?${query}` : BASE;
-  return get<GetBranchesResponse>(url);
+  return get<GetBranchesResponse>(buildListUrl(BASE, params));
 }
 
 export async function getBranch(id: number): Promise<ApiResult<Branch>> {
@@ -72,6 +75,27 @@ export async function updateBranch(
 
 export async function deleteBranch(
   id: number
-): Promise<ApiResult<{ success?: boolean; message?: string }>> {
-  return del<{ success?: boolean; message?: string }>(`${BASE}/${id}`);
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
+}
+
+export async function updateBranchesShippingPrice(
+  payload: UpdateBranchShippingPricePayload
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/shipping-price`, payload);
+}
+
+// ============================================================================
+// CATALOG (GET /branches/catalog — Branches.Read)
+// ============================================================================
+
+export interface BranchCatalogItem {
+  id: number;
+  name: string;
+}
+
+export async function getBranchesCatalog(): Promise<
+  ApiResult<BranchCatalogItem[]>
+> {
+  return get<BranchCatalogItem[]>(`${BASE}/catalog`);
 }

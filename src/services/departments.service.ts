@@ -1,5 +1,6 @@
-import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
-import type { PaginatedResponse } from "@/lib/axios";
+import { del, get, patch, post } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -28,7 +29,7 @@ export interface GetDepartmentsParams {
   search?: string;
 }
 
-export type GetDepartmentsResponse = PaginatedResponse<Department>;
+export type GetDepartmentsResponse = PaginatedRowsResponse<Department>;
 
 export interface CreateDepartmentPayload {
   name: string;
@@ -50,35 +51,45 @@ const BASE = "/departments";
 
 export async function getDepartments(
   params: GetDepartmentsParams
-): Promise<GetDepartmentsResponse> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("page", String(params.page));
-  searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = query ? `${BASE}?${query}` : BASE;
-  const result = await get<GetDepartmentsResponse>(url);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<GetDepartmentsResponse>> {
+  return get<GetDepartmentsResponse>(buildListUrl(BASE, params));
 }
 
 export async function createDepartment(
   payload: CreateDepartmentPayload
-): Promise<Department> {
-  const result = await post<Department>(BASE, payload);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<Department>> {
+  return post<Department>(BASE, payload);
 }
 
 export async function updateDepartment(
   id: number,
   payload: UpdateDepartmentPayload
-): Promise<Department> {
-  const result = await patch<Department>(`${BASE}/${id}`, payload);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<Department>> {
+  return patch<Department>(`${BASE}/${id}`, payload);
 }
 
-export async function getDepartmentById(id: number): Promise<Department> {
-  const result = await get<Department>(`${BASE}/${id}`);
-  return unwrapOrThrow(result);
+export async function getDepartmentById(id: number): Promise<ApiResult<Department>> {
+  return get<Department>(`${BASE}/${id}`);
+}
+
+export async function deleteDepartment(
+  id: number
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
+}
+
+// ============================================================================
+// CATALOG (GET /departments/catalog — Departments.Read)
+// ============================================================================
+
+export interface DepartmentCatalogItem {
+  id: number;
+  name: string;
+  code: string | null;
+}
+
+export async function getDepartmentsCatalog(): Promise<
+  ApiResult<DepartmentCatalogItem[]>
+> {
+  return get<DepartmentCatalogItem[]>(`${BASE}/catalog`);
 }

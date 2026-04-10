@@ -4,7 +4,7 @@ import { Close as CloseIcon, ArrowUpward as ArrowUpIcon } from "@mui/icons-mater
 import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
 import {
-    StyledDialogContent,
+    DialogContent,
     ModalHeader,
     ModalTitle,
     CloseButton,
@@ -134,7 +134,7 @@ export function AddArticleToOrderModal({
                 },
             }}
         >
-            <StyledDialogContent>
+            <DialogContent>
                 <ModalHeader>
                     <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
                         <ModalTitle>Agregar artículo al pedido</ModalTitle>
@@ -235,7 +235,7 @@ export function AddArticleToOrderModal({
                         </HistoryTimeline>
                     </HistorySection>
                 </AddArticleModalContainer>
-            </StyledDialogContent>
+            </DialogContent>
         </Dialog>
     );
 }

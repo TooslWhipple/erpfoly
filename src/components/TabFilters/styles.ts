@@ -1,42 +1,37 @@
 import { styled } from "@mui/material/styles";
-import { Box, Button, Select, Tab, Tabs, TextField } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
+import { Tab, Tabs } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const Container = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-end",
-  flexDirection: "row",
-  marginBottom: theme.spacing(3),
-  borderBottom: `1px solid ${colors.border}`,
-  gap: theme.spacing(2),
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column-reverse",
-    alignItems: "stretch",
-    gap: theme.spacing(1.5),
-  },
-}));
 
-export const TabsWrapper = styled(Box)(({ theme }) => ({
+export const TabsWrapper = styled('div')(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  height: 36,
+  backgroundColor: colors.segmentControl.background,
+  borderRadius: 10,
+  padding: "0 4px",
   overflow: "auto",
   maxWidth: "100%",
   "&::-webkit-scrollbar": {
     display: "none",
   },
   scrollbarWidth: "none",
+  [theme.breakpoints.down("md")]: {
+    width: '100%'
+  }
 }));
 
 export const StyledTabs = styled(Tabs)(({ theme }) => ({
-  minHeight: 40,
+  minHeight: 28,
+  height: 28,
   "& .MuiTabs-indicator": {
-    backgroundColor: colors.sidebar.textSelected,
-    bottom: 0,
+    display: "none",
   },
   "& .MuiTabs-flexContainer": {
-    [theme.breakpoints.down("sm")]: {
-      gap: 0,
-    },
+    gap: 0,
+    height: 28,
+    alignItems: "center",
   },
   "& .MuiTabs-scroller": {
     overflow: "auto !important",
@@ -45,58 +40,44 @@ export const StyledTabs = styled(Tabs)(({ theme }) => ({
     },
     scrollbarWidth: "none",
   },
+  [theme.breakpoints.down("md")]: {
+    "& .MuiTabs-flexContainer": {
+      width: "100%",
+    },
+    "& .MuiTabs-scroller": {
+      overflow: "hidden !important",
+    },
+  },
 }));
 
 export const StyledTab = styled(Tab)(({ theme }) => ({
-  minHeight: 40,
-  padding: "8px 16px",
+  minHeight: 28,
+  height: 28,
+  padding: "0 16px",
   textTransform: "none",
   fontSize: 14,
-  fontWeight: 500,
-  color: "text.secondary",
+  lineHeight: 20,
+  fontWeight: 400,
+  color: colors.segmentControl.textInactive,
   whiteSpace: "nowrap",
   minWidth: "auto",
+  borderRadius: 8,
+  transition: "background-color 0.2s ease, color 0.2s ease, font-weight 0.2s ease, box-shadow 0.2s ease",
   "&.Mui-selected": {
-    color: colors.sidebar.textSelected,
+    backgroundColor: colors.background.sidebar,
+    color: colors.text.primary,
+    fontWeight: 600,
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "8px 12px",
+    padding: "0 12px",
     fontSize: 13,
   },
-}));
-
-export const SearchContainer = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
-  paddingBottom: theme.spacing(1),
-  flexShrink: 0,
   [theme.breakpoints.down("md")]: {
-    paddingBottom: 0,
-    width: singleAction ? "auto" : "100%",
-    flex: singleAction ? "1 1 auto" : "none",
+    flex: 1,
+    minWidth: 0,
+    maxWidth: "none",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 }));
-
-// SearchInput uses TextField with inline styles from theme
-
-export const SearchIconStyled = styled(SearchIcon)({
-  width: 18,
-  height: 18,
-  color: "#71717A",
-});
-
-export const FiltersRightSection = styled(Box)<{ singleAction?: boolean }>(({ theme, singleAction }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: theme.spacing(1.5),
-  paddingBottom: theme.spacing(1),
-  [theme.breakpoints.down("md")]: {
-    paddingBottom: 0,
-    width: "100%",
-    flexDirection: singleAction ? "row" : "column",
-    flexWrap: singleAction ? "nowrap" : "wrap",
-  },
-}));
-
-// ActionButton uses Button with inline styles from theme
-
-// StyledSelect uses Select with inline styles from theme

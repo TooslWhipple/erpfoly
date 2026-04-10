@@ -1,311 +1,143 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, RowAction, ChipStyleConfig } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import {
+  getCreditApplications,
+  type CreditApplicationListItem,
+  type CreditApplicationListStatusTab,
+  type CreditApplicationStatus,
+} from "@/services/creditApplicationList.service";
+import { Stack } from "@mui/material";
+import { formatDateTimeShort, formatDate } from "@/utils/date";
 
-type SolicitudEstatus = "pendiente" | "aceptada" | "rechazada";
-type SolicitudTipo = "nuevo" | "aumento";
+const SEARCH_DEBOUNCE_MS = 300;
 
-interface SolicitudCredito {
-  id: number;
-  estatus: SolicitudEstatus;
-  fullName: string;
-  cellphone: string;
-  createdAt: string;
-  address: string;
-  type: SolicitudTipo;
-}
+type ApplicationTypeCode = "NEW" | "LINE_INCREASE";
 
-interface GetSolicitudesParams {
-  page: number;
-  limit: number;
-  estatus?: SolicitudEstatus | "todas";
-  search?: string;
-}
-
-interface GetSolicitudesResponse {
-  data: SolicitudCredito[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-const DUMMY_SOLICITUDES: SolicitudCredito[] = [
-  {
-    id: 2241,
-    estatus: "pendiente",
-    fullName: "Saúl Arturo Quintero Solís",
-    cellphone: "667 123 4567",
-    createdAt: "Hace 2 horas",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2242,
-    estatus: "pendiente",
-    fullName: "Daniela Margarita Fuentes Robles",
-    cellphone: "667 123 4567",
-    createdAt: "Hace 30 min",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2243,
-    estatus: "pendiente",
-    fullName: "Ricardo Aguilera Montañez",
-    cellphone: "667 123 4567",
-    createdAt: "Hace 20 min",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2244,
-    estatus: "pendiente",
-    fullName: "Sofía Estrada Hernández",
-    cellphone: "667 123 4567",
-    createdAt: "Hace 5 min",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "aumento"
-  },
-  {
-    id: 2245,
-    estatus: "aceptada",
-    fullName: "Jose Antonio Fuentes Molina",
-    cellphone: "667 123 4567",
-    createdAt: "Hace 1 día",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2246,
-    estatus: "aceptada",
-    fullName: "Cristian Morales Morales",
-    cellphone: "667 123 4567",
-    createdAt: "7 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2247,
-    estatus: "aceptada",
-    fullName: "Karla Lucía Nuñez López",
-    cellphone: "667 123 4567",
-    createdAt: "7 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2248,
-    estatus: "aceptada",
-    fullName: "Angélica Pérez Montalvo",
-    cellphone: "667 123 4567",
-    createdAt: "7 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "aumento"
-  },
-  {
-    id: 2249,
-    estatus: "aceptada",
-    fullName: "Daniel Alejandro Torres Urquijo",
-    cellphone: "667 123 4567",
-    createdAt: "7 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2250,
-    estatus: "aceptada",
-    fullName: "Alejandro Paredes Bustamante",
-    cellphone: "667 123 4567",
-    createdAt: "8 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2251,
-    estatus: "aceptada",
-    fullName: "Ricardo Torres Wong",
-    cellphone: "667 123 4567",
-    createdAt: "8 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2252,
-    estatus: "rechazada",
-    fullName: "María Elena García López",
-    cellphone: "667 123 4567",
-    createdAt: "5 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "nuevo"
-  },
-  {
-    id: 2253,
-    estatus: "rechazada",
-    fullName: "Juan Carlos Mendoza Ruiz",
-    cellphone: "667 123 4567",
-    createdAt: "4 de sep, 2025",
-    address: "Circuito Universitario 2322. Colonia Universitarios",
-    type: "aumento"
-  },
+const STATUS_TABS: TabOption[] = [
+  { label: "Todas", value: "all" },
+  { label: "Pendiente", value: "in_review" },
+  { label: "Aceptadas", value: "approved" },
+  { label: "Rechazadas", value: "rejected" },
 ];
 
-async function getSolicitudesCredito(
-  params: GetSolicitudesParams
-): Promise<GetSolicitudesResponse> {
-  // Simular latencia de red
-  await new Promise((resolve) => setTimeout(resolve, 500));
+const STATUS_CHIP_LABELS: Record<CreditApplicationStatus, string> = {
+  DRAFT: "Borrador",
+  SUBMITTED: "Enviada",
+  IN_REVIEW: "Pendiente",
+  APPROVED: "Aceptada",
+  REJECTED: "Rechazada",
+  CANCELLED: "Cancelada",
+};
 
-  let filteredData = [...DUMMY_SOLICITUDES];
+const STATUS_CHIP_VARIANTS: Record<CreditApplicationStatus, StatusChipVariant> = {
+  DRAFT: "default",
+  SUBMITTED: "default",
+  IN_REVIEW: "default",
+  APPROVED: "success",
+  REJECTED: "error",
+  CANCELLED: "error",
+};
 
-  if (params.estatus && params.estatus !== "todas") {
-    filteredData = filteredData.filter((s) => s.estatus === params.estatus);
-  }
+const TIPO_CONFIG: Record<ApplicationTypeCode, { label: string; color: string }> = {
+  NEW: { label: "Nuevo", color: "#22c55e" },
+  LINE_INCREASE: { label: "Aumento", color: "#ef4444" },
+};
 
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter((s) =>
-      s.fullName.toLowerCase().includes(searchLower)
-    );
-  }
-
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
-
-  return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
-  };
-}
-
-async function getSolicitudById(id: number): Promise<SolicitudCredito | null> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return DUMMY_SOLICITUDES.find((s) => s.id === id) || null;
-}
-
-async function aprobarSolicitud(id: number): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  console.log(`[API] Aprobando solicitud ${id}`);
+async function approveCreditApplication(id: number): Promise<{ success: boolean }> {
+  void id;
+  await new Promise((r) => setTimeout(r, 400));
   return { success: true };
 }
 
-async function rechazarSolicitud(
-  id: number,
-  motivo: string
-): Promise<{ success: boolean }> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  console.log(`[API] Rechazando solicitud ${id}. Motivo: ${motivo}`);
+async function rejectCreditApplication(id: number, reason: string): Promise<{ success: boolean }> {
+  void id;
+  void reason;
+  await new Promise((r) => setTimeout(r, 400));
   return { success: true };
 }
-
-const TABS: TabOption[] = [
-  { label: "Todas", value: "todas" },
-  { label: "Pendientes", value: "pendiente" },
-  { label: "Aceptadas", value: "aceptada" },
-  { label: "Rechazadas", value: "rechazada" },
-];
-
-const ESTATUS_CHIP_CONFIG: Record<SolicitudEstatus, ChipStyleConfig> = {
-  pendiente: { label: "Pendiente", bgColor: "#F4F4F5", textColor: "#ACACB1" },
-  aceptada: { label: "Aceptada", bgColor: "#DCFCE7", textColor: "#1B8854" },
-  rechazada: { label: "Rechazada", bgColor: "#FCE4E4", textColor: "#E91E1F" },
-};
-
-const TIPO_CONFIG: Record<SolicitudTipo, { label: string; color: string }> = {
-  nuevo: { label: "Nuevo", color: "#22c55e" },
-  aumento: { label: "Aumento", color: "#ef4444" },
-};
 
 export default function SolicitudesCredito() {
-  const [activeTab, setActiveTab] = useState("todas");
-  const [searchValue, setSearchValue] = useState("");
-  const [solicitudes, setSolicitudes] = useState<SolicitudCredito[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("all");
 
-  const fetchSolicitudes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getSolicitudesCredito({
-        page,
-        limit: rowsPerPage,
-        estatus: activeTab as SolicitudEstatus | "todas",
-        search: searchValue,
-      });
-      
-      setSolicitudes(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, activeTab, searchValue]);
+  const statusTabExtra: { statusTab?: CreditApplicationListStatusTab } | undefined =
+    activeTab === "all" ? undefined : { statusTab: activeTab as CreditApplicationListStatusTab };
+
+  const {
+    data: solicitudes,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+    refetch,
+  } = usePaginatedList<CreditApplicationListItem>({
+    queryKey: ["credit-applications", activeTab],
+    queryFn: getCreditApplications,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: statusTabExtra,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS
+  );
 
   useEffect(() => {
-    fetchSolicitudes();
-  }, [fetchSolicitudes]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [activeTab, searchValue]);
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
     setPage(0);
   };
 
-  const handleVerDetalle = async (solicitud: SolicitudCredito) => {
-    await getSolicitudById(solicitud.id);
+  const tabs = STATUS_TABS.map((t) => ({
+    ...t,
+    count: t.value === activeTab ? totalRows : undefined,
+  }));
+
+  const handleVerDetalle = (row: CreditApplicationListItem) => {
+    router.push(`/solicitudes-credito/${row.id}`);
   };
 
-  const handleAprobar = async (solicitud: SolicitudCredito) => {
-    const result = await aprobarSolicitud(solicitud.id);
+  const handleAprobar = async (row: CreditApplicationListItem) => {
+    const result = await approveCreditApplication(row.id);
     if (result.success) {
-      fetchSolicitudes();
+      refetch();
     }
   };
 
-  const handleRechazar = async (solicitud: SolicitudCredito) => {
-    const result = await rechazarSolicitud(
-      solicitud.id,
-      "Motivo de ejemplo"
-    );
+  const handleRechazar = async (row: CreditApplicationListItem) => {
+    const result = await rejectCreditApplication(row.id, "Motivo de ejemplo");
     if (result.success) {
-      fetchSolicitudes(); 
+      refetch();
     }
   };
 
-  const columns: Column<SolicitudCredito>[] = [
+  const columns: Column<CreditApplicationListItem>[] = [
     {
       id: "id",
       label: "ID",
       size: "sm",
     },
     {
-      id: "estatus",
+      id: "status",
       label: "Estatus",
       size: "sm",
       type: "chip",
-      chipConfig: ESTATUS_CHIP_CONFIG,
+      chipLabelMap: STATUS_CHIP_LABELS,
+      chipVariantMap: STATUS_CHIP_VARIANTS,
     },
     {
       id: "fullName",
@@ -313,39 +145,47 @@ export default function SolicitudesCredito() {
       size: "lg",
     },
     {
-      id: "cellphone",
+      id: "phone",
       label: "Teléfono",
       size: "md",
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
     },
     {
-      id: "createdAt",
+      id: "requestedAt",
       label: "Solicitado",
       size: "md",
+      format: (value) => formatDate(String(value ?? ""), "datetimeShort12h"),
     },
     {
-      id: "address",
+      id: "formattedAddress",
       label: "Domicilio",
       size: "xl",
-      truncate: true
+      truncate: true,
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
     },
     {
-      id: "type",
+      id: "applicationTypeCode",
       label: "Tipo",
       size: "sm",
       format: (value) => {
-        const config = TIPO_CONFIG[value as SolicitudTipo];
-        if (!config) return String(value ?? "");
+        const normalized = String(value ?? "")
+          .trim()
+          .toUpperCase();
+        const config =
+          normalized === "NEW" || normalized === "LINE_INCREASE"
+            ? TIPO_CONFIG[normalized]
+            : undefined;
+        if (!config) {
+          return "—";
+        }
         return (
-          <span style={{ color: config.color, fontWeight: 500 }}>
-            {config.label}
-          </span>
+          <span style={{ color: config.color, fontWeight: 500 }}>{config.label}</span>
         );
       },
     },
   ];
 
-  // Acciones de fila
-  const actions: RowAction<SolicitudCredito>[] = [
+  const actions: RowAction<CreditApplicationListItem>[] = [
     {
       id: "ver",
       label: "Ver detalle",
@@ -367,31 +207,33 @@ export default function SolicitudesCredito() {
 
   return (
     <MainLayout>
-      <Title title="Solicitudes de crédito" />
+      <Stack direction="column" spacing={3}>
+        <Title title="Solicitudes de crédito" />
 
-      <TabFilters
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        showSearch
-        searchValue={searchValue}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por nombre"
-      />
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Buscar por nombre, teléfono o folio"
+        />
 
-      <TableCrud
-        columns={columns}
-        rows={solicitudes}
-        actions={actions}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        emptyMessage="No hay solicitudes de crédito"
-      />
+        <TableCrud
+          columns={columns}
+          rows={solicitudes}
+          actions={actions}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          emptyMessage="No hay solicitudes de crédito"
+        />
+      </Stack>
     </MainLayout>
   );
 }

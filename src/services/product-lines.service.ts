@@ -1,5 +1,6 @@
-import { get, unwrapOrThrow } from "@/lib/axios";
-import type { PaginatedResponse } from "@/lib/axios";
+import { del, get, patch, post } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
 // TYPES
@@ -18,7 +19,18 @@ export interface GetProductLinesParams {
   search?: string;
 }
 
-export type GetProductLinesResponse = PaginatedResponse<ProductLineItem>;
+export type GetProductLinesResponse = PaginatedRowsResponse<ProductLineItem>;
+
+export interface CreateProductLinePayload {
+  departmentId: number;
+  name: string;
+  code: string;
+}
+
+export interface UpdateProductLinePayload {
+  name?: string;
+  code?: string;
+}
 
 // ============================================================================
 // API
@@ -28,16 +40,46 @@ const BASE = "/product-lines";
 
 export async function getProductLines(
   params: GetProductLinesParams
-): Promise<GetProductLinesResponse> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("departmentId", String(params.departmentId));
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.limit != null) searchParams.set("limit", String(params.limit));
-  if (params.search?.trim()) {
-    searchParams.set("search", params.search.trim());
-  }
-  const query = searchParams.toString();
-  const url = `${BASE}?${query}`;
-  const result = await get<GetProductLinesResponse>(url);
-  return unwrapOrThrow(result);
+): Promise<ApiResult<GetProductLinesResponse>> {
+  return get<GetProductLinesResponse>(buildListUrl(BASE, params));
+}
+
+export async function createProductLine(
+  payload: CreateProductLinePayload
+): Promise<ApiResult<ProductLineItem>> {
+  return post<ProductLineItem>(BASE, payload);
+}
+
+export async function updateProductLine(
+  id: number,
+  payload: UpdateProductLinePayload
+): Promise<ApiResult<ProductLineItem>> {
+  return patch<ProductLineItem>(`${BASE}/${id}`, payload);
+}
+
+export async function deleteProductLine(
+  id: number
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return del<ApiSuccessPayload>(`${BASE}/${id}`);
+}
+
+// ============================================================================
+// CATALOG (GET /product-lines/catalog — Departments.Read)
+// ============================================================================
+
+export interface ProductLineCatalogItem {
+  id: number;
+  departmentId: number;
+  name: string;
+  code: string | null;
+}
+
+export interface GetProductLinesCatalogParams {
+  departmentId?: number;
+}
+
+export async function getProductLinesCatalog(
+  params: GetProductLinesCatalogParams = {}
+): Promise<ApiResult<ProductLineCatalogItem[]>> {
+  return get<ProductLineCatalogItem[]>(buildListUrl(`${BASE}/catalog`, params));
 }

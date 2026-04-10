@@ -7,8 +7,13 @@ export const colors = {
   background: {
     main: "#FAFAFA",
     sidebar: "#FFFFFF",
+    content: "#F8FAFC",
   },
-  border: "#E4E4E7",
+  border: "#D4D4D8",
+  text: {
+    primary: "#232325",
+    secondary: "#71717A",
+  },
   sidebar: {
     itemSelected: "#F0F6FF",
     textSelected: "#2663EB",
@@ -17,6 +22,19 @@ export const colors = {
     background: "#F1F5F9",
     border: "#F9FAFC",
     text: "#475569",
+    variants: {
+      default: { background: "#F8FAFC", color: "#475569" },
+      success: { background: "#DCFCE7", color: "#15803D" },
+      pending: { background: "#FFF7ED", color: "#EA580C" },
+      error: { background: "#FEF2F2", color: "#DC2626" },
+      warning: { background: "#F3E8FF", color: "#7E22CE" },
+      info: { background: "#DBEAFE", color: "#2563EB" },
+      infoAlt: { background: "#FEF3C7", color: "#D97706" },
+    },
+  },
+  segmentControl: {
+    background: "#EBEBEB",
+    textInactive: "#707070",
   },
 };
 
@@ -45,6 +63,7 @@ export const theme = createTheme({
     background: {
       default: colors.background.main,
       paper: colors.background.sidebar,
+      content: colors.background.content,
     },
     text: {
       primary: "#232325",
@@ -193,5 +212,52 @@ export const theme = createTheme({
         },
       },
     },
+    MuiSwitch: {
+      styleOverrides: {
+        root: {
+          width: 44,
+          height: 24,
+          padding: 0,
+        },
+        switchBase: ({ theme }) => ({
+          padding: 2,
+          "&.Mui-checked": {
+            transform: "translateX(20px)",
+            "& + .MuiSwitch-track": {
+              backgroundColor: theme.palette.primary.main,
+              opacity: 1,
+            },
+            "& .MuiSwitch-thumb": {
+              boxShadow: "none",
+              border: "none",
+            },
+          },
+        }),
+        thumb: {
+          width: 20,
+          height: 20,
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          "&.Mui-checked": {
+            backgroundColor: "#FFFFFF",
+          },
+        },
+        track: {
+          borderRadius: 12,
+          backgroundColor: "#E5E7EB",
+          opacity: 1,
+          "&:after, &:before": {
+            display: "none",
+          },
+        },
+      },
+    },
   },
 });
+
+declare module "@mui/material/styles" {
+  interface TypeBackground {
+    content: string;
+  }
+}

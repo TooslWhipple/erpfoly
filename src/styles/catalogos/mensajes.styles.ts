@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box, TextField, Typography, Chip, Button } from "@mui/material";
+import { Box, TextField, Chip } from "@mui/material";
 import { colors } from "@/styles/theme";
 
 export const MessageFormContainer = styled(Box)(({ theme }) => ({
@@ -22,27 +22,7 @@ export const MessageFormTopRow = styled(Box)(({ theme }) => ({
   flex: 1,
 }));
 
-export const StatusIndicator = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(0.75),
-  padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: "#DCFCE7",
-  color: "#166534",
-  fontSize: "0.875rem",
-  fontWeight: 500,
-  "&::before": {
-    content: '""',
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    backgroundColor: "#22C55E",
-    flexShrink: 0,
-  },
-}));
-
-export const MessageNameInput = styled(TextField)(({ theme }) => ({
+export const MessageNameInput = styled(TextField)(() => ({
   flex: 1,
   "& .MuiOutlinedInput-root": {
     backgroundColor: colors.background.sidebar,
@@ -56,24 +36,6 @@ export const MessageNameInput = styled(TextField)(({ theme }) => ({
       borderColor: colors.sidebar.textSelected,
     },
   },
-}));
-
-export const SaveButton = styled(Button)(({ theme }) => ({
-  height: 40,
-  minWidth: 100,
-  fontWeight: 600,
-}));
-
-export const ContentSection = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(1.5),
-}));
-
-export const ContentTitle = styled(Typography)(({ theme }) => ({
-  fontSize: "1rem",
-  fontWeight: 600,
-  color: theme.palette.text.primary,
 }));
 
 export const ContentTextarea = styled(TextField)(({ theme }) => ({
@@ -92,6 +54,7 @@ export const ContentTextarea = styled(TextField)(({ theme }) => ({
   "& .MuiInputBase-input": {
     minHeight: "120px",
     padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.background.content,
   },
 }));
 
@@ -102,11 +65,6 @@ export const VariablesSection = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
 
-export const VariablesInstruction = styled(Typography)(({ theme }) => ({
-  fontSize: "0.875rem",
-  color: theme.palette.text.secondary,
-}));
-
 export const VariablesContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
@@ -114,24 +72,52 @@ export const VariablesContainer = styled(Box)(({ theme }) => ({
 }));
 
 export const VariableChip = styled(Chip)(({ theme }) => ({
-  height: 32,
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
-  color: theme.palette.text.primary,
-  fontSize: "0.875rem",
-  fontWeight: 500,
-  "&:hover": {
-    backgroundColor: theme.palette.action.hover,
-    borderColor: colors.sidebar.textSelected,
+  height: "28px",
+  backgroundColor: "#F1F5F9",
+  color: theme.palette.text.secondary,
+  fontSize: "14px",
+  fontWeight: 400,
+  padding: "4px 8px",
+  borderRadius: "4px",
+}));
+
+export const VariableHighlight = styled("span")(({ theme }) => ({
+  display: "inline",
+  backgroundColor: theme.palette.primary.main + "20",
+  color: theme.palette.primary.dark,
+  padding: 0,
+  borderRadius: 2,
+  fontWeight: "inherit",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  verticalAlign: "baseline",
+}));
+
+export const HighlightOverlay = styled(Box)(() => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  overflow: "auto",
+  pointerEvents: "none",
+  whiteSpace: "pre-wrap",
+  wordWrap: "break-word",
+  font: "inherit",
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  letterSpacing: "inherit",
+  "& *": {
+    font: "inherit",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    fontWeight: "inherit",
   },
-  "& .MuiChip-label": {
-    paddingLeft: theme.spacing(1),
-    paddingRight: theme.spacing(1),
-  },
-  "& .MuiChip-icon": {
-    marginLeft: theme.spacing(0.5),
-    marginRight: 0,
-    color: theme.palette.text.secondary,
-    fontSize: "1rem",
+}));
+
+export const HighlightOverlayWrapper = styled(Box)(() => ({
+  position: "relative",
+  "& .highlight-input-overlay": {
+    minHeight: 120,
   },
 }));

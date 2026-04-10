@@ -1,3 +1,6 @@
 export { MessageFormModal } from "./MessageFormModal";
-export type { MessageFormData, MessageFormModalProps } from "./MessageFormModal";
-export { MessageForm } from "./MessageForm";
+export type {
+    MessageFormData,
+    MessageFormModalProps,
+    MessageVariableItem,
+} from "./MessageFormModal";

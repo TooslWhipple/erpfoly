@@ -203,8 +203,14 @@ export default function NuevoPedidoSucursal() {
     };
 
     const handleContinue = () => {
-        // TODO: Navigate to next step or save order
-        console.log("[NuevoPedidoSucursal] Continue with order:", orderItems);
+        if (orderItems.length === 0) return;
+        const state = {
+            orderItems,
+            supplierId: supplier?.id,
+            supplierName: supplier?.name,
+        };
+        sessionStorage.setItem("pedidos-confirmar-state", JSON.stringify(state));
+        router.push("/pedidos/sucursales/nuevo/confirmar");
     };
 
     const handleSupplierChange = (event: any) => {

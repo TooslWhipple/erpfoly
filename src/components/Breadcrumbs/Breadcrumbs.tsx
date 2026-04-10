@@ -2,30 +2,18 @@ import { useRouter } from "next/router";
 import { styled } from "@mui/material/styles";
 import { Box, Typography, IconButton } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { colors } from "@/styles/theme";
 
 export interface BreadcrumbItem {
-    /** Display label */
     label: string;
-    /** Navigation path (optional - if not provided, item is not clickable) */
     href?: string;
 }
 
 export interface BreadcrumbsProps {
-    /** Array of breadcrumb items */
     items: BreadcrumbItem[];
-    /** Show back arrow button */
     showBackButton?: boolean;
-    /** Custom back navigation handler */
     onBack?: () => void;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
 
 const Container = styled(Box)({
     display: "flex",
@@ -34,11 +22,23 @@ const Container = styled(Box)({
 });
 
 const BackButton = styled(IconButton)(({ theme }) => ({
-    padding: 4,
-    marginRight: 4,
-    color: theme.palette.text.secondary,
+    width: 36,
+    height: 36,
+    marginRight: theme.spacing(1),
+    padding: 0,
+    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    color: colors.text.primary,
+    boxShadow: "none",
     "&:hover": {
-        backgroundColor: theme.palette.action.hover,
+        backgroundColor: colors.background.sidebar,
+        borderColor: colors.border,
+        boxShadow: "none",
+        opacity: 0.9,
+    },
+    "& .MuiSvgIcon-root": {
+        fontSize: 20,
     },
 }));
 
@@ -64,10 +64,6 @@ const Separator = styled(Typography)(({ theme }) => ({
     margin: "0 8px",
     userSelect: "none",
 }));
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function Breadcrumbs({
     items,

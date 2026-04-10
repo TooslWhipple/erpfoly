@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type {
   AddressTabValues,
   BasicInformationFormValues,
@@ -279,14 +279,7 @@ export const useCreditApplicationDraftStore = create<CreditApplicationDraftState
     }),
     {
       name: "credit-application-drafts",
-      storage:
-        typeof window !== "undefined"
-          ? {
-              getItem: (name: string) => localStorage.getItem(name),
-              setItem: (name: string, value: string) => localStorage.setItem(name, value),
-              removeItem: (name: string) => localStorage.removeItem(name),
-            }
-          : undefined,
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

@@ -85,7 +85,7 @@ export default function ValidateOtpPage() {
 
 	return (
 		<SimplePageContainer>
-			<LoginCard elevation={0}>
+			<LoginCard>
 				<LogoContainer>
 					<BrandName>Folysoft</BrandName>
 					<WelcomeText variant="body2">

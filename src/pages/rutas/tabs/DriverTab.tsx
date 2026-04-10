@@ -77,3 +77,7 @@ export function DriverTab({
     </Stack>
   );
 }
+
+const RouteDriverTabPage = () => null;
+
+export default RouteDriverTabPage;

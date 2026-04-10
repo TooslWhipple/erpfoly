@@ -8,3 +8,7 @@ export interface PaymentsTabProps {
 export function PaymentsTab({ client }: PaymentsTabProps) {
   return <MovementsTable movements={client.payments} />;
 }
+
+const PaymentsTabPage = () => null;
+
+export default PaymentsTabPage;

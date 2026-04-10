@@ -109,7 +109,7 @@ export default function ConfirmarArticulosPage() {
         );
     }
 
-    if (!state && status !== "empty") {
+    if (!state) {
         return (
             <MainLayout>
                 <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>

@@ -9,6 +9,7 @@ import type {
     PromotionSupplier,
     Promotion,
 } from "@/types/promociones.types";
+import type { SupplierCatalogItem } from "@/services/suppliers.service";
 
 export const MOCK_DEPARTMENTS: PromotionDepartment[] = [
     { id: "01", code: "01", name: "Muebles" },
@@ -92,19 +93,16 @@ export const MOCK_BRANCHES: PromotionBranch[] = [
     { id: 13, name: "Foly Muebles Coatzacoalcos" },
 ];
 
-export const MOCK_SUPPLIERS_FOR_SELECTION: Array<{
-    id: number;
-    name: string;
-}> = [
-    { id: 34340, name: "Arlix Muebles y Electrodomésticos S.A. de C.V." },
-    { id: 12345, name: "Mirage - Norage S.A. De C.V." },
-    { id: 34341, name: "Hogar Integral de Occidente S.A. de C.V." },
-    { id: 9323, name: "Eztra Equipos del Hogar S.A. de C.V." },
-    { id: 9324, name: "Equipos Domésticos Modernos S. de R.L. de C.V." },
-    { id: 12346, name: "Frosen Línea Blanca S. de R.L. de C.V." },
-    { id: 34342, name: "Nevora Distribuidora Doméstica S.A. de C.V." },
-    { id: 12347, name: "Sereno Línea Blanca y Hogar S.A. de C.V." },
-    { id: 34343, name: "Morvik Soluciones Domésticas S.A. de C.V." },
+export const MOCK_SUPPLIERS_FOR_SELECTION: SupplierCatalogItem[] = [
+    { id: 34340, name: "Arlix Muebles y Electrodomésticos S.A. de C.V.", businessName: null },
+    { id: 12345, name: "Mirage - Norage S.A. De C.V.", businessName: null },
+    { id: 34341, name: "Hogar Integral de Occidente S.A. de C.V.", businessName: null },
+    { id: 9323, name: "Eztra Equipos del Hogar S.A. de C.V.", businessName: null },
+    { id: 9324, name: "Equipos Domésticos Modernos S. de R.L. de C.V.", businessName: null },
+    { id: 12346, name: "Frosen Línea Blanca S. de R.L. de C.V.", businessName: null },
+    { id: 34342, name: "Nevora Distribuidora Doméstica S.A. de C.V.", businessName: null },
+    { id: 12347, name: "Sereno Línea Blanca y Hogar S.A. de C.V.", businessName: null },
+    { id: 34343, name: "Morvik Soluciones Domésticas S.A. de C.V.", businessName: null },
 ];
 
 export const MOCK_PROMOTION: Promotion = {

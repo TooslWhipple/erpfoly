@@ -76,3 +76,7 @@ export function ConfigurationsTab({
         </CardContainer>
     );
 }
+
+const SkuConfigurationsTabPage = () => null;
+
+export default SkuConfigurationsTabPage;

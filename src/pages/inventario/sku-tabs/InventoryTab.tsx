@@ -74,3 +74,7 @@ export function InventoryTab({ summary, branchInventory, loading }: InventoryTab
         </Stack>
     );
 }
+
+const SkuInventoryTabPage = () => null;
+
+export default SkuInventoryTabPage;

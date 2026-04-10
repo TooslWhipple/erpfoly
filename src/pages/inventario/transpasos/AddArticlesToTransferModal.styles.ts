@@ -59,3 +59,7 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(6),
   minHeight: 200,
 }));
+
+const AddArticlesToTransferModalStylesPage = () => null;
+
+export default AddArticlesToTransferModalStylesPage;

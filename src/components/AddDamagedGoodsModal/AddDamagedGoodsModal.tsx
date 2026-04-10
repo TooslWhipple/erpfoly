@@ -249,7 +249,7 @@ export function AddDamagedGoodsModal({
                             placeholder="Seleccione"
                             options={DAMAGE_TYPE_OPTIONS}
                             value={values.damageType || "incomplete"}
-                            onChange={(e) => updateField("damageType", e.target.value)}
+                            onChange={(e) => updateField("damageType", String(e.target.value))}
                         />
                         <FormTextField
                             label="Número de serie"
@@ -387,7 +387,7 @@ export function AddDamagedGoodsModal({
                                     placeholder="Seleccione"
                                     options={SOLUTION_OPTIONS}
                                     value={values.solution}
-                                    onChange={(e) => updateField("solution", e.target.value)}
+                                    onChange={(e) => updateField("solution", String(e.target.value))}
                                 />
                                 <FormTextField
                                     label="Fecha de finalización"

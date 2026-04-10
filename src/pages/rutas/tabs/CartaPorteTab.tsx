@@ -16,3 +16,7 @@ export function CartaPorteTab({ value, onChange }: CartaPorteTabProps) {
     />
   );
 }
+
+const RouteCartaPorteTabPage = () => null;
+
+export default RouteCartaPorteTabPage;

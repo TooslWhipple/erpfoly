@@ -171,3 +171,7 @@ export function ActivityTab({ client }: ActivityTabProps) {
     </>
   );
 }
+
+const ActivityTabPage = () => null;
+
+export default ActivityTabPage;

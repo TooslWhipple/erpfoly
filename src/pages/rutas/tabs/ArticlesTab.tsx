@@ -59,3 +59,7 @@ export function ArticlesTab({ articles }: ArticlesTabProps) {
     />
   );
 }
+
+const RouteArticlesTabPage = () => null;
+
+export default RouteArticlesTabPage;

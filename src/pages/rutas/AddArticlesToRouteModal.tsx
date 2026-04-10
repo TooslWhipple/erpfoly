@@ -220,3 +220,7 @@ export function AddArticlesToRouteModal({
     </SideModal>
   );
 }
+
+const AddArticlesToRouteModalPage = () => null;
+
+export default AddArticlesToRouteModalPage;

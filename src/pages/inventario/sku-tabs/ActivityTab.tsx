@@ -15,3 +15,7 @@ export function ActivityTab({ salesData, activityLog }: ActivityTabProps) {
         </Stack>
     );
 }
+
+const SkuActivityTabPage = () => null;
+
+export default SkuActivityTabPage;

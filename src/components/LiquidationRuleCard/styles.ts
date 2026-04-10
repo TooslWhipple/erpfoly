@@ -44,7 +44,7 @@ export const RuleOperatorSelect = styled(Select)(({ theme }) => ({
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
   },
-})) as typeof Select;
+}));
 
 export const RuleValueInput = styled(TextField)(({ theme }) => ({
   width: 72,
@@ -61,7 +61,7 @@ export const RulePeriodSelect = styled(Select)(({ theme }) => ({
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
   },
-})) as typeof Select;
+}));
 
 export const RulePromotionInput = styled(TextField)(({ theme }) => ({
   width: 80,

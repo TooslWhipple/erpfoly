@@ -1,14 +1,10 @@
 import { useRef } from "react";
-import { Add as AddIcon, Edit as EditIcon, Close as CloseIcon } from "@mui/icons-material";
+import { Edit as EditIcon, Close as CloseIcon } from "@mui/icons-material";
 import {
-    Section,
-    SectionTitle,
-    SectionDescription,
     GalleryGrid,
     GalleryItem,
     GalleryImage,
     GalleryAddButton,
-    GalleryLabel,
     GalleryOverlay,
     GalleryIconButton,
     HiddenFileInput,

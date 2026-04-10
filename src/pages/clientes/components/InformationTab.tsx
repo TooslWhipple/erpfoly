@@ -54,3 +54,7 @@ export function InformationTab() {
     </Stack>
   );
 }
+
+const InformationTabPage = () => null;
+
+export default InformationTabPage;

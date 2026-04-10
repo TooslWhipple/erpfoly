@@ -8,3 +8,7 @@ export interface PurchasesTabProps {
 export function PurchasesTab({ client }: PurchasesTabProps) {
   return <MovementsTable movements={client.purchases} />;
 }
+
+const PurchasesTabPage = () => null;
+
+export default PurchasesTabPage;

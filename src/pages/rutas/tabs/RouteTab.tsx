@@ -7,3 +7,7 @@ import { MapPlaceholderLarge } from "@/styles/rutas.styles";
 export function RouteTab() {
   return <MapPlaceholderLarge />;
 }
+
+const RouteTabPage = () => null;
+
+export default RouteTabPage;

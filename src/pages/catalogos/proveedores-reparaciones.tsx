@@ -185,9 +185,9 @@ export default function ProveedoresReparaciones() {
     });
 
     const departmentItems: AutocompleteItem[] = useMemo(() => {
-        const list = departmentsResponse?.data ?? [];
+        const list = departmentsResponse?.rows ?? [];
         return list.map((d: Department) => ({ id: d.id, label: d.name }));
-    }, [departmentsResponse?.data]);
+    }, [departmentsResponse?.rows]);
 
     const repairSupplierFields = useMemo(
         () => buildRepairSupplierFields(departmentItems),

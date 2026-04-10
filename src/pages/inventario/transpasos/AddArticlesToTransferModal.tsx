@@ -253,3 +253,7 @@ export function AddArticlesToTransferModal({
     </SideModal>
   );
 }
+
+const AddArticlesToTransferModalPage = () => null;
+
+export default AddArticlesToTransferModalPage;

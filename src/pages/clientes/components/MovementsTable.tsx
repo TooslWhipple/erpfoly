@@ -41,3 +41,7 @@ export function MovementsTable({ movements }: MovementsTableProps) {
     />
   );
 }
+
+const MovementsTablePage = () => null;
+
+export default MovementsTablePage;

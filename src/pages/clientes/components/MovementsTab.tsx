@@ -8,3 +8,7 @@ export interface MovementsTabProps {
 export function MovementsTab({ client }: MovementsTabProps) {
   return <MovementsTable movements={client.movements} />;
 }
+
+const MovementsTabPage = () => null;
+
+export default MovementsTabPage;

@@ -172,3 +172,7 @@ export function TechnicalTab({
         </>
     );
 }
+
+const SkuTechnicalTabPage = () => null;
+
+export default SkuTechnicalTabPage;

@@ -5,3 +5,7 @@ export { CartaPorteTab } from "./CartaPorteTab";
 export type { CartaPorteTabProps } from "./CartaPorteTab";
 export { DriverTab } from "./DriverTab";
 export type { DriverTabProps } from "./DriverTab";
+
+const RouteTabsIndexPage = () => null;
+
+export default RouteTabsIndexPage;

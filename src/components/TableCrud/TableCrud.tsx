@@ -424,7 +424,6 @@ export function TableCrud<T>({
 
       {total > 0 && (
         <StyledTablePagination
-          component="div"
           rowsPerPageOptions={rowsPerPageOptions}
           count={total}
           rowsPerPage={rowsPerPage}

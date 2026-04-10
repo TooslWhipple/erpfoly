@@ -56,3 +56,5 @@ export interface ClientInfoCategory {
   label: string;
   icon: string;
 }
+
+export type GetClientesResponse = ClientDetail[];

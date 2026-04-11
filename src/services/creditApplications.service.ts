@@ -1,59 +1,105 @@
-import type {
-  BasicInformationFormValues,
-  CreditApplicationFormPayload,
-} from "@/types/credit-application-form.types";
+import { get, unwrapOrThrow } from "@/lib/axios";
+import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
-interface CreditApplicationRecord {
-  id: string;
-  basicInformation: BasicInformationFormValues;
+interface CreditApplicationCatalogItem {
+  id: number | null;
+  name: string;
 }
 
-const CREDIT_APPLICATIONS_MOCK_DB: CreditApplicationRecord[] = [
-  {
-    id: "2245",
-    basicInformation: {
-      firstName: "Jose Antonio",
-      lastName: "Montes",
-      secondLastName: "Molina",
-      birthDate: "1995-01-15",
-      maritalStatus: "Casado",
-      curp: "MOMJ113003TY5",
-      rfc: "MOMJ113003TY5",
-      email: "jose.montes@correo.com",
-      whatsappNumber: "6671234567",
-      securityCode: "321654",
-    },
-  },
-  {
-    id: "2250",
-    basicInformation: {
-      firstName: "Alejandro",
-      lastName: "Paredes",
-      secondLastName: "Bustamante",
-      birthDate: "1992-08-09",
-      maritalStatus: "Soltero",
-      curp: "PABA920809HSRLLN01",
-      rfc: "PABA9208094A1",
-      email: "alejandro.paredes@correo.com",
-      whatsappNumber: "6672349876",
-      securityCode: "998877",
-    },
-  },
-];
+interface CreditApplicationNeighborhood {
+  code: string;
+  name: string;
+  state: string;
+  municipality: string;
+}
+
+interface CreditApplicationPersonalInformationResponse {
+  name: string;
+  lastName: string;
+  secondLastName: string;
+  birthDate: string;
+  curp: string;
+  rfc: string;
+  phoneNumber: string;
+  email: string;
+  maritalStatus: CreditApplicationCatalogItem;
+}
+
+interface CreditApplicationFamilyResponse {
+  hasSpouse: boolean;
+  spouseName: string | null;
+  spousePhone: string | null;
+  economicDependents: number;
+}
+
+interface CreditApplicationAddressResponse {
+  id: number;
+  postalCode: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
+  neighborhood: CreditApplicationNeighborhood;
+  betweenStreets: string;
+  latitude: string;
+  longitude: string;
+  receiverName: string;
+  receiverPhone: string;
+  useClientPhone: boolean;
+  housingType: CreditApplicationCatalogItem;
+  previousAddress: string;
+  previousAddressDuration: string;
+}
+
+interface CreditApplicationEmploymentResponse {
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  position: string;
+  department: string;
+  seniorityYears: number;
+  monthlyIncome: number;
+  hasOtherIncome: boolean;
+  otherIncomeAmount: number;
+  otherIncomeDescription: string;
+}
+
+interface CreditApplicationWorkReferencesResponse {
+  companyName: string;
+  companyPhone: string;
+  applicantPosition: string;
+  seniorityYears: number;
+  answeredBy: string;
+  answeredByPosition: string;
+}
+
+interface CreditApplicationFamilyReferenceResponse {
+  firstName: string;
+  lastName: string;
+  relationship: CreditApplicationCatalogItem;
+  address: string;
+  phone: string;
+}
+
+export interface CreditApplicationDetailResponse {
+  personalInformation: CreditApplicationPersonalInformationResponse;
+  family: CreditApplicationFamilyResponse;
+  address: CreditApplicationAddressResponse;
+  employment: CreditApplicationEmploymentResponse;
+  workReferences: CreditApplicationWorkReferencesResponse;
+  familyReferences: CreditApplicationFamilyReferenceResponse[];
+}
+
+const BASE = "/credit-applications";
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function getCreditApplicationBasicInformation(
+export async function getCreditApplicationById(
   applicationId: string
-): Promise<BasicInformationFormValues | null> {
-  await wait(700);
-  if (applicationId === "500") {
-    throw new Error("Simulated server failure");
-  }
-  const record = CREDIT_APPLICATIONS_MOCK_DB.find((item) => item.id === applicationId);
-  return record?.basicInformation ?? null;
+): Promise<CreditApplicationDetailResponse> {
+  const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`);
+  return unwrapOrThrow(result);
 }
 
 export async function validateSecurityCode(code: string): Promise<boolean> {

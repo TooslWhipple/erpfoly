@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { getCreditApplicationBasicInformation, saveCreditApplication } from "@/services/creditApplications.service";
+import {
+  getCreditApplicationById,
+  saveCreditApplication,
+} from "@/services/creditApplications.service";
+import type { CreditApplicationDetailResponse } from "@/services/creditApplications.service";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
@@ -129,6 +133,144 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   hasSpouse: false,
 };
 
+function normalizeMaritalStatus(maritalStatusName: string): string {
+  const normalizedValue = maritalStatusName.trim().toLowerCase();
+  if (normalizedValue.includes("soltero")) return "Soltero";
+  if (normalizedValue.includes("casad")) return "Casado";
+  if (normalizedValue.includes("divorciad")) return "Divorciado";
+  if (normalizedValue.includes("viud")) return "Viudo";
+  if (normalizedValue.includes("union")) return "Unión libre";
+  return maritalStatusName;
+}
+
+function mapHousingTypeToFormValue(
+  housingTypeName: string | null | undefined
+): AddressTabValues["housingType"] {
+  const normalizedValue = housingTypeName?.trim().toLowerCase() ?? "";
+  if (normalizedValue.includes("prop")) return "owned";
+  if (normalizedValue.includes("rent") || normalizedValue.includes("alq")) return "rented";
+  if (normalizedValue.includes("pag")) return "paying";
+  if (normalizedValue.includes("fam")) return "relatives";
+  return "owned";
+}
+
+function mapCreditApplicationToFormValues(
+  creditApplication: CreditApplicationDetailResponse
+): {
+  basicInformation: BasicInformationFormValues;
+  family: FamilyTabValues;
+  address: AddressTabValues;
+  employment: EmploymentTabValues;
+  references: ReferencesTabValues;
+} {
+  const fullStreet = [
+    creditApplication.address.street,
+    creditApplication.address.externalNumber,
+    creditApplication.address.internalNumber
+      ? `Int. ${creditApplication.address.internalNumber}`
+      : "",
+  ]
+    .filter((value) => value.trim().length > 0)
+    .join(" ")
+    .trim();
+
+  const basicInformation: BasicInformationFormValues = {
+    firstName: creditApplication.personalInformation.name ?? "",
+    lastName: creditApplication.personalInformation.lastName ?? "",
+    secondLastName: creditApplication.personalInformation.secondLastName ?? "",
+    birthDate: creditApplication.personalInformation.birthDate ?? "",
+    maritalStatus: normalizeMaritalStatus(
+      creditApplication.personalInformation.maritalStatus.name ?? ""
+    ),
+    curp: creditApplication.personalInformation.curp ?? "",
+    rfc: creditApplication.personalInformation.rfc ?? "",
+    email: creditApplication.personalInformation.email ?? "",
+    whatsappNumber: creditApplication.personalInformation.phoneNumber ?? "",
+    securityCode: "",
+  };
+
+  const family: FamilyTabValues = {
+    hasSpouse: Boolean(creditApplication.family.hasSpouse),
+    spouseName: creditApplication.family.spouseName ?? "",
+    spousePhone: creditApplication.family.spousePhone ?? "",
+    dependentsCount: creditApplication.family.economicDependents ?? 0,
+  };
+
+  const address: AddressTabValues = {
+    postalCode: creditApplication.address.postalCode ?? "",
+    state: creditApplication.address.neighborhood.state ?? "",
+    city: creditApplication.address.neighborhood.municipality ?? "",
+    streetAndNumber: fullStreet,
+    betweenStreets: creditApplication.address.betweenStreets ?? "",
+    receiverPhone: creditApplication.address.receiverPhone ?? "",
+    receiverName: creditApplication.address.receiverName ?? "",
+    useClientPhone: Boolean(creditApplication.address.useClientPhone),
+    housingType: mapHousingTypeToFormValue(creditApplication.address.housingType.name),
+    residenceTime: "",
+    previousAddress: creditApplication.address.previousAddress ?? "",
+    previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",
+  };
+
+  const employment: EmploymentTabValues = {
+    company: creditApplication.employment.companyName ?? "",
+    postalCode: "",
+    state: "",
+    city: "",
+    streetAndNumber: creditApplication.employment.companyAddress ?? "",
+    seniorityYears: String(creditApplication.employment.seniorityYears ?? ""),
+    position: creditApplication.employment.position ?? "",
+    department: creditApplication.employment.department ?? "",
+    monthlyIncome: String(creditApplication.employment.monthlyIncome ?? ""),
+    companyPhone: creditApplication.employment.companyPhone ?? "",
+    hasOtherIncome: Boolean(creditApplication.employment.hasOtherIncome),
+    otherIncomeAmount: String(creditApplication.employment.otherIncomeAmount ?? ""),
+    otherIncomeSource: creditApplication.employment.otherIncomeDescription ?? "",
+    spouseCompany: "",
+    spousePostalCode: "",
+    spouseState: "",
+    spouseCity: "",
+    spouseStreetAndNumber: "",
+    spouseSeniorityYears: "",
+    spousePosition: "",
+    spouseDepartment: "",
+    spouseMonthlyIncome: "",
+    spouseCompanyPhone: "",
+  };
+
+  const references: ReferencesTabValues = {
+    company: creditApplication.workReferences.companyName ?? "",
+    phone: creditApplication.workReferences.companyPhone ?? "",
+    clientPosition: creditApplication.workReferences.applicantPosition ?? "",
+    seniorityYears: String(creditApplication.workReferences.seniorityYears ?? ""),
+    respondentNameAndPosition: [
+      creditApplication.workReferences.answeredBy,
+      creditApplication.workReferences.answeredByPosition,
+    ]
+      .filter((value) => value.trim().length > 0)
+      .join(" - "),
+    familyReferences:
+      creditApplication.familyReferences.length > 0
+        ? creditApplication.familyReferences.map((reference, index) => ({
+            id: `reference-${index + 1}`,
+            name: [reference.firstName, reference.lastName]
+              .filter((value) => value.trim().length > 0)
+              .join(" "),
+            relationship: reference.relationship.name ?? "",
+            address: reference.address ?? "",
+            phone: reference.phone ?? "",
+          }))
+        : [{ id: "reference-1", name: "", relationship: "", address: "", phone: "" }],
+  };
+
+  return {
+    basicInformation,
+    family,
+    address,
+    employment,
+    references,
+  };
+}
+
 function mapDocumentationFromBiometrics(
   biometrics: CreditApplicationBiometricsData,
   currentDocumentation: DocumentationTabValues
@@ -244,19 +386,26 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       setIsEmptyState(false);
 
       try {
-        const basicInformation = await getCreditApplicationBasicInformation(applicationId!);
+        const loadedApplication = await getCreditApplicationById(applicationId!);
         if (isCancelled) return;
 
-        if (!basicInformation) {
-          setIsEmptyState(true);
-          return;
-        }
+        const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
 
-        setBasicInformationValuesFromExternal(basicInformation);
-        upsertBasicInformation(draftKey, basicInformation);
+        setBasicInformationValuesFromExternal(mappedValues.basicInformation);
+        setFamilyValuesFromExternal(mappedValues.family);
+        setAddressValuesFromExternal(mappedValues.address);
+        setEmploymentValuesFromExternal(mappedValues.employment);
+        setReferencesValuesFromExternal(mappedValues.references);
+
+        upsertBasicInformation(draftKey, mappedValues.basicInformation);
+        upsertFamily(draftKey, mappedValues.family);
+        upsertAddress(draftKey, mappedValues.address);
+        upsertEmployment(draftKey, mappedValues.employment);
+        upsertReferences(draftKey, mappedValues.references);
       } catch (loadError) {
         console.error("[CreditApplicationForm] Unable to load credit application", loadError);
         if (!isCancelled) {
+          setIsEmptyState(true);
           setError("No se pudo cargar la solicitud, intenta nuevamente.");
         }
       } finally {
@@ -284,6 +433,10 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     setDocumentationValuesFromExternal,
     setGuarantorValuesFromExternal,
     upsertBasicInformation,
+    upsertFamily,
+    upsertAddress,
+    upsertEmployment,
+    upsertReferences,
     upsertDocumentation,
   ]);
 

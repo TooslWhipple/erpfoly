@@ -1,7 +1,8 @@
-import { Button, Grid, Stack, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Button, Grid, RadioGroup, Stack, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
+import { RadioButton } from "../RadioButton";
 
 interface AddressTabProps {
   values: AddressTabValues;
@@ -115,21 +116,34 @@ export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTab
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Stack spacing={1.5}>
+          <Stack spacing={3}>
             <Typography variant="h6">Propiedad de la vivienda</Typography>
-            <ToggleButtonGroup
-              exclusive
-              value={values.housingType}
-              onChange={(_, value) => {
-                if (value) onFieldChange("housingType", value);
-              }}
-              size="small"
-            >
-              <ToggleButton value="owned">Casa propia</ToggleButton>
-              <ToggleButton value="rented">Alquilada</ToggleButton>
-              <ToggleButton value="paying">Pagandola</ToggleButton>
-              <ToggleButton value="relatives">Familiares</ToggleButton>
-            </ToggleButtonGroup>
+            <Stack direction="row" spacing={2}>
+              <RadioButton
+                value="owned"
+                label="Casa propia"
+                checked={values.housingType === "owned"}
+                onChange={(event) => onFieldChange("housingType", event.target.value)}
+              />
+              <RadioButton
+                value="rented"
+                label="Alquilada"
+                checked={values.housingType === "rented"}
+                onChange={(event) => onFieldChange("housingType", event.target.value)}
+              />
+              <RadioButton
+                value="paying"
+                label="Pagandola"
+                checked={values.housingType === "paying"}
+                onChange={(event) => onFieldChange("housingType", event.target.value)}
+              />
+              <RadioButton
+                value="relatives"
+                label="Familiares"
+                checked={values.housingType === "relatives"}
+                onChange={(event) => onFieldChange("housingType", event.target.value)}
+              />
+            </Stack>
           </Stack>
         </Grid>
 

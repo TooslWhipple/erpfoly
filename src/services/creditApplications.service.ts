@@ -1,4 +1,5 @@
-import { get, unwrapOrThrow } from "@/lib/axios";
+import { get, post, unwrapOrThrow } from "@/lib/axios";
+import type { CreateCreditApplicationIntakeRequestBody } from "@/utils/creditApplicationIntake";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
 interface CreditApplicationCatalogItem {
@@ -90,6 +91,25 @@ export interface CreditApplicationDetailResponse {
 }
 
 const BASE = "/credit-applications";
+
+const INTAKE_CREATE_TIMEOUT_MS = 120_000;
+
+export interface CreateCreditApplicationFromIntakeResult {
+  id: number;
+  folio: string;
+  message: string;
+}
+
+export async function createCreditApplicationFromIntake(
+  body: CreateCreditApplicationIntakeRequestBody
+): Promise<CreateCreditApplicationFromIntakeResult> {
+  const result = await post<CreateCreditApplicationFromIntakeResult>(
+    BASE,
+    body,
+    { timeout: INTAKE_CREATE_TIMEOUT_MS }
+  );
+  return unwrapOrThrow(result);
+}
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

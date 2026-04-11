@@ -28,11 +28,14 @@ import {
 } from "./styles";
 import { BanknoteArrowDown } from "lucide-react";
 import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
-import type {
-  CreditApplicationBiometricsData,
-  DocumentationTabValues,
-} from "@/types/credit-application-form.types";
+import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
+import {
+  buildCreateCreditApplicationIntakeBody,
+  type CreateCreditApplicationIntakeRequestBody,
+} from "@/utils/creditApplicationIntake";
+import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 
 interface NavSubItem {
   label: string;
@@ -124,9 +127,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const upsertBiometrics = useCreditApplicationDraftStore((state) => state.upsertBiometrics);
-  const upsertDocumentation = useCreditApplicationDraftStore((state) => state.upsertDocumentation);
-  const getDraftById = useCreditApplicationDraftStore((state) => state.getDraftById);
+  const clearDraftById = useCreditApplicationDraftStore((state) => state.clearDraftById);
+  const showError = useSnackbarStore((state) => state.showError);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
     getInitialOpenMenus(router.pathname)
   );
@@ -199,49 +201,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     setIntakeModalOpen(true);
   };
 
-  const mapDocumentationFromBiometrics = (
-    biometrics: CreditApplicationBiometricsData,
-    currentDocumentation: DocumentationTabValues
-  ): DocumentationTabValues => ({
-    ...currentDocumentation,
-    ineFrontFiles: biometrics.ineFrontImage
-      ? [
-          {
-            id: `ine-front-${Date.now()}`,
-            name: "ine-frontal-capturada.png",
-            url: biometrics.ineFrontImage,
-            uploadedAt: "Capturada",
-          },
-        ]
-      : currentDocumentation.ineFrontFiles,
-    ineBackFiles: biometrics.ineBackImage
-      ? [
-          {
-            id: `ine-back-${Date.now()}`,
-            name: "ine-posterior-capturada.png",
-            url: biometrics.ineBackImage,
-            uploadedAt: "Capturada",
-          },
-        ]
-      : currentDocumentation.ineBackFiles,
-  });
+  const NEW_CREDIT_APPLICATION_DRAFT_ID = "new-credit-application";
 
-  const handleIntakeCompleted = (payload: Parameters<typeof upsertBiometrics>[1]) => {
-    const draftId = "new-credit-application";
-    const currentDraft = getDraftById(draftId);
-    const currentDocumentation: DocumentationTabValues = currentDraft?.documentation ?? {
-      requiredAlertVisible: true,
-      requiredAlertMessage: "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
-      incomeProofFiles: [],
-      ineFrontFiles: [],
-      ineBackFiles: [],
-    };
-    const nextDocumentation = mapDocumentationFromBiometrics(payload, currentDocumentation);
+  const handleIntakeFinalize = async (payload: CreditApplicationBiometricsData) => {
+    let body: CreateCreditApplicationIntakeRequestBody;
+    try {
+      body = buildCreateCreditApplicationIntakeBody(payload);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Datos incompletos.";
+      showError(message);
+      throw e;
+    }
 
-    upsertDocumentation(draftId, nextDocumentation);
-    upsertBiometrics("new-credit-application", payload);
-    setIntakeModalOpen(false);
-    router.push("/solicitudes-credito/nuevo");
+    const { id } = await createCreditApplicationFromIntake(body);
+    clearDraftById(NEW_CREDIT_APPLICATION_DRAFT_ID);
+    await router.push(`/solicitudes-credito/${id}`);
   };
 
   const drawerContent = (
@@ -353,7 +327,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <CreditApplicationIntakeModal
         open={intakeModalOpen}
         onClose={() => setIntakeModalOpen(false)}
-        onCompleted={handleIntakeCompleted}
+        onFinalize={handleIntakeFinalize}
       />
     </>
   );

@@ -1,9 +1,5 @@
 import { CashRegisterStatus } from "@/styles/cajas.styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export interface CashRegisterState {
   id: string;
   name: string;
@@ -17,10 +13,8 @@ export interface CashRegisterState {
 export interface OpenCashRegisterFormProps {
   initialFund: number;
   exchangeRate: number;
-  rememberDevice: boolean;
   onInitialFundChange: (value: string) => void;
   onExchangeRateChange: (value: string) => void;
-  onRememberDeviceChange: (value: boolean) => void;
   onOpen: () => void;
 }
 

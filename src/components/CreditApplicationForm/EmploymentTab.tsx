@@ -1,16 +1,21 @@
 import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
+import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
+import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 
 interface EmploymentTabProps {
   values: EmploymentTabValues;
   errors: EmploymentTabErrors;
+  mergeFieldValues: (patch: Partial<EmploymentTabValues>) => EmploymentTabValues;
   onFieldChange: (field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-export function EmploymentTab({ values, errors, onFieldChange, onSave }: EmploymentTabProps) {
+export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange, onSave }: EmploymentTabProps) {
+  const mainNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
+  const spouseNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.spousePostalCode);
   return (
     <Card>
       <Typography variant="h5">Empleo</Typography>
@@ -27,19 +32,24 @@ export function EmploymentTab({ values, errors, onFieldChange, onSave }: Employm
             helperText={errors.company}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Código Postal"
-            placeholder="Ingresa"
-            value={values.postalCode}
-            onChange={(event) => onFieldChange("postalCode", event.target.value)}
-            error={Boolean(errors.postalCode)}
-            helperText={errors.postalCode}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <PostalCodeSettlementFields
+          postalCode={values.postalCode}
+          neighborhoodFullCode={values.neighborhoodFullCode}
+          postalCodeError={errors.postalCode}
+          neighborhoodError={errors.neighborhoodFullCode}
+          neighborhoods={mainNeighborhoodsQuery.data ?? []}
+          neighborhoodsLoading={mainNeighborhoodsQuery.isFetching}
+          fieldKeys={{
+            postalCode: "postalCode",
+            neighborhoodFullCode: "neighborhoodFullCode",
+            state: "state",
+            city: "city",
+          }}
+          mergePatch={(patch) => {
+            mergeFieldValues(patch as Partial<EmploymentTabValues>);
+          }}
+        />
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -51,7 +61,7 @@ export function EmploymentTab({ values, errors, onFieldChange, onSave }: Employm
             helperText={errors.state}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -170,16 +180,24 @@ export function EmploymentTab({ values, errors, onFieldChange, onSave }: Employm
             onChange={(event) => onFieldChange("spouseCompany", event.target.value)}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField
-            fullWidth
-            label="Código Postal"
-            placeholder="Ingresa"
-            value={values.spousePostalCode}
-            onChange={(event) => onFieldChange("spousePostalCode", event.target.value)}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <PostalCodeSettlementFields
+          postalCode={values.spousePostalCode}
+          neighborhoodFullCode={values.spouseNeighborhoodFullCode}
+          postalCodeError={errors.spousePostalCode}
+          neighborhoodError={errors.spouseNeighborhoodFullCode}
+          neighborhoods={spouseNeighborhoodsQuery.data ?? []}
+          neighborhoodsLoading={spouseNeighborhoodsQuery.isFetching}
+          fieldKeys={{
+            postalCode: "spousePostalCode",
+            neighborhoodFullCode: "spouseNeighborhoodFullCode",
+            state: "spouseState",
+            city: "spouseCity",
+          }}
+          mergePatch={(patch) => {
+            mergeFieldValues(patch as Partial<EmploymentTabValues>);
+          }}
+        />
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -187,9 +205,11 @@ export function EmploymentTab({ values, errors, onFieldChange, onSave }: Employm
             placeholder="Selecciona"
             value={values.spouseState}
             onChange={(event) => onFieldChange("spouseState", event.target.value)}
+            error={Boolean(errors.spouseState)}
+            helperText={errors.spouseState}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -197,6 +217,8 @@ export function EmploymentTab({ values, errors, onFieldChange, onSave }: Employm
             placeholder="Selecciona"
             value={values.spouseCity}
             onChange={(event) => onFieldChange("spouseCity", event.target.value)}
+            error={Boolean(errors.spouseCity)}
+            helperText={errors.spouseCity}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>

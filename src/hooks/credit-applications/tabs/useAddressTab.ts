@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
+import { isValidMxPostalCode } from "@/forms/validation/schemas";
 
 export function useAddressTab(initialValues: AddressTabValues) {
   const [values, setValues] = useState<AddressTabValues>(initialValues);
@@ -12,6 +13,21 @@ export function useAddressTab(initialValues: AddressTabValues) {
     return nextValues;
   }, [values]);
 
+  const mergeFieldValues = useCallback((patch: Partial<AddressTabValues>) => {
+    const nextValues = { ...values, ...patch };
+    setValues(nextValues);
+    setErrors((prev) => {
+      const next: AddressTabErrors = { ...prev };
+      (Object.keys(patch) as string[]).forEach((key) => {
+        if (key in next) {
+          delete next[key as keyof AddressTabErrors];
+        }
+      });
+      return next;
+    });
+    return nextValues;
+  }, [values]);
+
   const setValuesFromExternalSource = useCallback((nextValues: AddressTabValues) => {
     setValues(nextValues);
     setErrors({});
@@ -21,6 +37,12 @@ export function useAddressTab(initialValues: AddressTabValues) {
     const nextErrors: AddressTabErrors = {};
 
     if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
+    else if (!isValidMxPostalCode(values.postalCode)) {
+      nextErrors.postalCode = "El código postal debe tener 5 dígitos";
+    }
+    if (!values.neighborhoodFullCode.trim()) {
+      nextErrors.neighborhoodFullCode = "Selecciona una colonia";
+    }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
@@ -39,6 +61,7 @@ export function useAddressTab(initialValues: AddressTabValues) {
     values,
     errors,
     setFieldValue,
+    mergeFieldValues,
     setValuesFromExternalSource,
     validateValues,
   };

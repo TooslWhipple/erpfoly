@@ -9,6 +9,7 @@ interface CreditApplicationCatalogItem {
 
 interface CreditApplicationNeighborhood {
   code: string;
+  fullCode?: string;
   name: string;
   state: string;
   municipality: string;

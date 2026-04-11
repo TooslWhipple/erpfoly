@@ -1,6 +1,7 @@
 import { Grid, Button, MenuItem, Typography } from "@mui/material";
 import { Check, ShieldCheck } from "lucide-react";
 import { FormTextField } from "@/components/Form";
+import type { MaritalStatusCatalogItem } from "@/services/catalog.service";
 import type {
   BasicInformationFormErrors,
   BasicInformationFormValues,
@@ -12,18 +13,20 @@ interface BasicInformationTabProps {
   errors: BasicInformationFormErrors;
   validatingSecurityCode: boolean;
   isSecurityCodeValid: boolean | null;
+  maritalStatusOptions: MaritalStatusCatalogItem[];
+  maritalStatusesLoading: boolean;
   onFieldChange: (field: keyof BasicInformationFormValues, value: string) => void;
   onValidateSecurityCode: () => Promise<boolean>;
   onContinue: () => Promise<boolean>;
 }
-
-const MARITAL_STATUS_OPTIONS = ["Soltero", "Casado", "Divorciado", "Viudo", "Unión libre"];
 
 export function BasicInformationTab({
   values,
   errors,
   validatingSecurityCode,
   isSecurityCodeValid,
+  maritalStatusOptions,
+  maritalStatusesLoading,
   onFieldChange,
   onValidateSecurityCode,
   onContinue,
@@ -90,10 +93,14 @@ export function BasicInformationTab({
             error={Boolean(errors.maritalStatus)}
             helperText={errors.maritalStatus}
             fullWidth
+            disabled={maritalStatusesLoading}
           >
-            {MARITAL_STATUS_OPTIONS.map((statusOption) => (
-              <MenuItem key={statusOption} value={statusOption}>
-                {statusOption}
+            <MenuItem value="">
+              {maritalStatusesLoading ? "Cargando…" : "Selecciona"}
+            </MenuItem>
+            {maritalStatusOptions.map((item) => (
+              <MenuItem key={item.id} value={String(item.id)}>
+                {item.name}
               </MenuItem>
             ))}
           </FormTextField>

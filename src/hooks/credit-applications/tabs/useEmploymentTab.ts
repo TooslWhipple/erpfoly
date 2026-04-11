@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
+import { isValidMxPostalCode } from "@/forms/validation/schemas";
 
 export function useEmploymentTab(initialValues: EmploymentTabValues) {
   const [values, setValues] = useState<EmploymentTabValues>(initialValues);
@@ -12,6 +13,21 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     return nextValues;
   }, [values]);
 
+  const mergeFieldValues = useCallback((patch: Partial<EmploymentTabValues>) => {
+    const nextValues = { ...values, ...patch };
+    setValues(nextValues);
+    setErrors((prev) => {
+      const next: EmploymentTabErrors = { ...prev };
+      (Object.keys(patch) as string[]).forEach((key) => {
+        if (key in next) {
+          delete next[key as keyof EmploymentTabErrors];
+        }
+      });
+      return next;
+    });
+    return nextValues;
+  }, [values]);
+
   const setValuesFromExternalSource = useCallback((nextValues: EmploymentTabValues) => {
     setValues(nextValues);
     setErrors({});
@@ -21,10 +37,24 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     const nextErrors: EmploymentTabErrors = {};
     if (!values.company.trim()) nextErrors.company = "Empresa es requerida";
     if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
+    else if (!isValidMxPostalCode(values.postalCode)) {
+      nextErrors.postalCode = "El código postal debe tener 5 dígitos";
+    }
+    if (!values.neighborhoodFullCode.trim()) {
+      nextErrors.neighborhoodFullCode = "Selecciona una colonia";
+    }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
     if (!values.monthlyIncome.trim()) nextErrors.monthlyIncome = "Ingreso mensual es requerido";
+
+    if (isValidMxPostalCode(values.spousePostalCode)) {
+      if (!values.spouseNeighborhoodFullCode.trim()) {
+        nextErrors.spouseNeighborhoodFullCode = "Selecciona una colonia";
+      }
+      if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";
+      if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -34,6 +64,7 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     values,
     errors,
     setFieldValue,
+    mergeFieldValues,
     setValuesFromExternalSource,
     validateValues,
   };

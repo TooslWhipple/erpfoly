@@ -57,6 +57,7 @@ const EMPTY_FAMILY_VALUES: FamilyTabValues = {
 
 const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -73,6 +74,7 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
 const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   company: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -86,6 +88,7 @@ const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   otherIncomeSource: "",
   spouseCompany: "",
   spousePostalCode: "",
+  spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
   spouseStreetAndNumber: "",
@@ -119,6 +122,7 @@ const EMPTY_DOCUMENTATION_VALUES: DocumentationTabValues = {
 const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   fullName: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -132,16 +136,6 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   identificationBackFiles: [],
   hasSpouse: false,
 };
-
-function normalizeMaritalStatus(maritalStatusName: string): string {
-  const normalizedValue = maritalStatusName.trim().toLowerCase();
-  if (normalizedValue.includes("soltero")) return "Soltero";
-  if (normalizedValue.includes("casad")) return "Casado";
-  if (normalizedValue.includes("divorciad")) return "Divorciado";
-  if (normalizedValue.includes("viud")) return "Viudo";
-  if (normalizedValue.includes("union")) return "Unión libre";
-  return maritalStatusName;
-}
 
 function mapHousingTypeToFormValue(
   housingTypeName: string | null | undefined
@@ -179,9 +173,10 @@ function mapCreditApplicationToFormValues(
     lastName: creditApplication.personalInformation.lastName ?? "",
     secondLastName: creditApplication.personalInformation.secondLastName ?? "",
     birthDate: creditApplication.personalInformation.birthDate ?? "",
-    maritalStatus: normalizeMaritalStatus(
-      creditApplication.personalInformation.maritalStatus.name ?? ""
-    ),
+    maritalStatus:
+      creditApplication.personalInformation.maritalStatus.id != null
+        ? String(creditApplication.personalInformation.maritalStatus.id)
+        : "",
     curp: creditApplication.personalInformation.curp ?? "",
     rfc: creditApplication.personalInformation.rfc ?? "",
     email: creditApplication.personalInformation.email ?? "",
@@ -198,6 +193,7 @@ function mapCreditApplicationToFormValues(
 
   const address: AddressTabValues = {
     postalCode: creditApplication.address.postalCode ?? "",
+    neighborhoodFullCode: creditApplication.address.neighborhood.fullCode ?? "",
     state: creditApplication.address.neighborhood.state ?? "",
     city: creditApplication.address.neighborhood.municipality ?? "",
     streetAndNumber: fullStreet,
@@ -214,6 +210,7 @@ function mapCreditApplicationToFormValues(
   const employment: EmploymentTabValues = {
     company: creditApplication.employment.companyName ?? "",
     postalCode: "",
+    neighborhoodFullCode: "",
     state: "",
     city: "",
     streetAndNumber: creditApplication.employment.companyAddress ?? "",
@@ -227,6 +224,7 @@ function mapCreditApplicationToFormValues(
     otherIncomeSource: creditApplication.employment.otherIncomeDescription ?? "",
     spouseCompany: "",
     spousePostalCode: "",
+    spouseNeighborhoodFullCode: "",
     spouseState: "",
     spouseCity: "",
     spouseStreetAndNumber: "",

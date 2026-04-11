@@ -34,6 +34,7 @@ const EMPTY_FAMILY: FamilyTabValues = {
 
 const EMPTY_ADDRESS: AddressTabValues = {
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -50,6 +51,7 @@ const EMPTY_ADDRESS: AddressTabValues = {
 const EMPTY_EMPLOYMENT: EmploymentTabValues = {
   company: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -63,6 +65,7 @@ const EMPTY_EMPLOYMENT: EmploymentTabValues = {
   otherIncomeSource: "",
   spouseCompany: "",
   spousePostalCode: "",
+  spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
   spouseStreetAndNumber: "",
@@ -96,6 +99,7 @@ const EMPTY_DOCUMENTATION: DocumentationTabValues = {
 const EMPTY_GUARANTOR: GuarantorTabValues = {
   fullName: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",

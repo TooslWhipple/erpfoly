@@ -1,33 +1,42 @@
-import { Button, Grid, RadioGroup, Stack, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
+import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
 import { Card } from "./styles";
 import { RadioButton } from "../RadioButton";
+import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
+  mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
   onFieldChange: (field: keyof AddressTabValues, value: AddressTabValues[keyof AddressTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTabProps) {
+export function AddressTab({ values, errors, mergeFieldValues, onFieldChange, onSave }: AddressTabProps) {
+  const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
+
   return (
     <Card>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Código Postal"
-            placeholder="Ingresa"
-            value={values.postalCode}
-            onChange={(event) => onFieldChange("postalCode", event.target.value)}
-            error={Boolean(errors.postalCode)}
-            helperText={errors.postalCode}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }} />
+        <PostalCodeSettlementFields
+          postalCode={values.postalCode}
+          neighborhoodFullCode={values.neighborhoodFullCode}
+          postalCodeError={errors.postalCode}
+          neighborhoodError={errors.neighborhoodFullCode}
+          neighborhoods={neighborhoodsQuery.data ?? []}
+          neighborhoodsLoading={neighborhoodsQuery.isFetching}
+          fieldKeys={{
+            postalCode: "postalCode",
+            neighborhoodFullCode: "neighborhoodFullCode",
+            state: "state",
+            city: "city",
+          }}
+          mergePatch={(patch) => {
+            mergeFieldValues(patch as Partial<AddressTabValues>);
+          }}
+        />
 
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField

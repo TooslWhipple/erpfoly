@@ -10,6 +10,7 @@ import { FamilyTab } from "./FamilyTab";
 import { GuarantorTab } from "./GuarantorTab";
 import { ReferencesTab } from "./ReferencesTab";
 import { useCreditApplicationForm } from "@/hooks/credit-applications";
+import { useMaritalStatuses } from "@/hooks/useMaritalStatuses";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 
@@ -46,6 +47,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     handleSave,
     handleSaveActiveTab,
   } = useCreditApplicationForm({ applicationId, isCreateMode });
+
+  const { data: maritalStatuses = [], isPending: maritalStatusesLoading } = useMaritalStatuses();
 
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
     { label: "Solicitudes de crédito", href: "/solicitudes-credito" },
@@ -117,6 +120,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={basicInformationTab.errors}
             validatingSecurityCode={basicInformationTab.validatingSecurityCode}
             isSecurityCodeValid={basicInformationTab.isSecurityCodeValid}
+            maritalStatusOptions={maritalStatuses}
+            maritalStatusesLoading={maritalStatusesLoading}
             onFieldChange={handleBasicFieldChange}
             onValidateSecurityCode={basicInformationTab.validateCurrentSecurityCode}
             onContinue={handleContinueToNextTab}
@@ -139,6 +144,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <AddressTab
             values={addressTab.values}
             errors={addressTab.errors}
+            mergeFieldValues={(patch) => {
+              const nextValues = addressTab.mergeFieldValues(patch);
+              persistAddress(nextValues);
+              return nextValues;
+            }}
             onFieldChange={(field, value) => {
               const nextValues = addressTab.setFieldValue(field, value);
               persistAddress(nextValues);
@@ -151,6 +161,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <EmploymentTab
             values={employmentTab.values}
             errors={employmentTab.errors}
+            mergeFieldValues={(patch) => {
+              const nextValues = employmentTab.mergeFieldValues(patch);
+              persistEmployment(nextValues);
+              return nextValues;
+            }}
             onFieldChange={(field, value) => {
               const nextValues = employmentTab.setFieldValue(field, value);
               persistEmployment(nextValues);
@@ -206,6 +221,13 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <GuarantorTab
             values={guarantorTab.values}
             errors={guarantorTab.errors}
+            maritalStatusOptions={maritalStatuses}
+            maritalStatusesLoading={maritalStatusesLoading}
+            mergeFieldValues={(patch) => {
+              const nextValues = guarantorTab.mergeFieldValues(patch);
+              persistGuarantor(nextValues);
+              return nextValues;
+            }}
             onFieldChange={(field, value) => {
               const nextValues = guarantorTab.setFieldValue(field, value);
               persistGuarantor(nextValues);

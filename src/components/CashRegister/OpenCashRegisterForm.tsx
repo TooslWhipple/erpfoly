@@ -1,28 +1,17 @@
-import { Button, Checkbox, FormControlLabel, InputAdornment } from "@mui/material";
+import { Button, InputAdornment, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import {
-  OpenCashRegisterCard,
-  DateDisplay,
+  Card,
   FormFieldsContainer,
 } from "@/styles/cajas.styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 import type { OpenCashRegisterFormProps } from "./types";
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function OpenCashRegisterForm({
   initialFund,
   exchangeRate,
-  rememberDevice,
   onInitialFundChange,
   onExchangeRateChange,
-  onRememberDeviceChange,
   onOpen,
 }: OpenCashRegisterFormProps) {
   const formatDate = () => {
@@ -36,8 +25,8 @@ export function OpenCashRegisterForm({
   };
 
   return (
-    <OpenCashRegisterCard>
-      <DateDisplay>{formatDate()}</DateDisplay>
+    <Card>
+      <Typography variant="body1" fontWeight={500} textAlign="center">{formatDate()}</Typography>
 
       <FormFieldsContainer>
         <FormTextField
@@ -79,25 +68,12 @@ export function OpenCashRegisterForm({
         />
       </FormFieldsContainer>
 
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={rememberDevice}
-            onChange={(e) => onRememberDeviceChange(e.target.checked)}
-            size="small"
-          />
-        }
-        label="Recordar caja abierta en este equipo"
-        sx={{
-          "& .MuiFormControlLabel-label": {
-            fontSize: "0.875rem",
-          },
-        }}
-      />
-
-      <Button variant="contained" onClick={onOpen} fullWidth>
+      <Button
+        variant="contained"
+        onClick={onOpen}
+        fullWidth>
         Abrir caja
       </Button>
-    </OpenCashRegisterCard>
+    </Card>
   );
 }

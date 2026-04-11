@@ -23,49 +23,30 @@ export const StatusChip = styled(Chip)<{ statusType: CashRegisterStatus }>(({ st
     };
 });
 
-// ============================================================================
-// CENTERED TITLE
-// ============================================================================
-
-export const CenteredTitleContainer = styled(Box)(({ theme }) => ({
+export const CashRegisterIconContainer = styled('div')({
+    width: "48px",
+    height: "48px",
+    backgroundColor: "#E0F2FE",
+    borderRadius: "12px",
     display: "flex",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing(3),
-    width: "100%",
-}));
-
-export const CenteredTitleContent = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1.5),
-    "& .MuiTypography-h2": {
-        margin: 0,
-    },
-}));
-
-// ============================================================================
-// OPEN CASH REGISTER FORM (CLOSED STATE)
-// ============================================================================
-
-export const OpenCashRegisterCard = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
-    padding: theme.spacing(4),
+    padding: "12px",
+    '& svg': {
+        stroke: "#0284C7"
+    }
+})
+export const Card = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(3),
-    width: 672,
+    borderRadius: "12px",
+    border: `1px solid ${colors.border}`,
+    padding: "24px",
+    gap: "16px",
+    width: "274px",
+    minWidth: "274px",
     maxWidth: "100%",
     margin: "0 auto",
-}));
-
-export const DateDisplay = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    textAlign: "center",
-    marginBottom: theme.spacing(1),
 }));
 
 export const FormFieldsContainer = styled(Box)(({ theme }) => ({
@@ -73,10 +54,6 @@ export const FormFieldsContainer = styled(Box)(({ theme }) => ({
     flexDirection: "column",
     gap: theme.spacing(2.5),
 }));
-
-// ============================================================================
-// OPEN CASH REGISTER VIEW (OPEN STATE)
-// ============================================================================
 
 export const DashboardContainer = styled(Box)(({ theme }) => ({
     width: 672,
@@ -136,10 +113,6 @@ export const SearchButton = styled(Button)(({ theme }) => ({
     minWidth: 100,
     fontWeight: 600,
 }));
-
-// ============================================================================
-// CASH BALANCE SECTION
-// ============================================================================
 
 export const BalanceCard = styled(Box)(({ theme }) => ({
     backgroundColor: colors.background.sidebar,
@@ -205,10 +178,6 @@ export const BalanceValue = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.primary,
 }));
 
-// ============================================================================
-// ACTION BUTTONS
-// ============================================================================
-
 export const ActionsContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     gap: theme.spacing(2),
@@ -223,10 +192,6 @@ export const ActionButton = styled(Button)(({ theme }) => ({
     height: 40,
     fontWeight: 600,
 }));
-
-// ============================================================================
-// ACTIVITY HISTORY
-// ============================================================================
 
 export const HistorySection = styled(Box)(({ theme }) => ({
     backgroundColor: colors.background.sidebar,
@@ -287,10 +252,6 @@ export const EmptyHistoryMessage = styled(Typography)(({ theme }) => ({
     textAlign: "center",
     padding: theme.spacing(3),
 }));
-
-// ============================================================================
-// CUT MODAL STYLES
-// ============================================================================
 
 export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
     padding: theme.spacing(3),
@@ -422,10 +383,6 @@ export const CutButton = styled(Button)(({ theme }) => ({
     fontWeight: 600,
 }));
 
-// ============================================================================
-// WITHDRAWAL MODAL STYLES
-// ============================================================================
-
 export const WithdrawalSection = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -550,10 +507,6 @@ export const WithdrawalButton = styled(Button)(({ theme }) => ({
     height: 40,
     fontWeight: 600,
 }));
-
-// ============================================================================
-// CASH WITHDRAWAL MODAL STYLES
-// ============================================================================
 
 export const WithdrawalAmountInput = styled(TextField)(({ theme }) => ({
     width: "100%",

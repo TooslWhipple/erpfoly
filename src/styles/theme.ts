@@ -30,6 +30,7 @@ export const colors = {
       warning: { background: "#F3E8FF", color: "#7E22CE" },
       info: { background: "#DBEAFE", color: "#2563EB" },
       infoAlt: { background: "#FEF3C7", color: "#D97706" },
+      disabled: { background: "#E2E8F0", color: "#475569" },
     },
   },
   segmentControl: {

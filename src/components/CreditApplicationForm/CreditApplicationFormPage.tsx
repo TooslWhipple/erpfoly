@@ -10,6 +10,7 @@ import { FamilyTab } from "./FamilyTab";
 import { GuarantorTab } from "./GuarantorTab";
 import { ReferencesTab } from "./ReferencesTab";
 import { useCreditApplicationForm } from "@/hooks/credit-applications";
+import { useHousingTypes } from "@/hooks/useHousingTypes";
 import { useMaritalStatuses } from "@/hooks/useMaritalStatuses";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -49,6 +50,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   } = useCreditApplicationForm({ applicationId, isCreateMode });
 
   const { data: maritalStatuses = [], isPending: maritalStatusesLoading } = useMaritalStatuses();
+  const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
 
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
     { label: "Solicitudes de crédito", href: "/solicitudes-credito" },
@@ -144,6 +146,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <AddressTab
             values={addressTab.values}
             errors={addressTab.errors}
+            housingTypeOptions={housingTypes}
+            housingTypesLoading={housingTypesLoading}
             mergeFieldValues={(patch) => {
               const nextValues = addressTab.mergeFieldValues(patch);
               persistAddress(nextValues);

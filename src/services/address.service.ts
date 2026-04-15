@@ -16,3 +16,14 @@ export async function getNeighborhoodsByPostalCode(
   });
   return unwrapOrThrow(result);
 }
+
+export interface HousingTypeCatalogItem {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export async function getHousingTypes(): Promise<HousingTypeCatalogItem[]> {
+  const result = await get<HousingTypeCatalogItem[]>("/addresses/housing-types");
+  return unwrapOrThrow(result);
+}

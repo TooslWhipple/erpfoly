@@ -64,7 +64,8 @@ export interface AddressTabValues {
   receiverPhone: string;
   receiverName: string;
   useClientPhone: boolean;
-  housingType: "owned" | "rented" | "paying" | "relatives";
+  /** Housing type catalog id as string (empty until selected). */
+  housingType: string;
   residenceTime: string;
   previousAddress: string;
   previousResidenceTime: string;
@@ -82,6 +83,7 @@ export interface AddressTabErrors {
   previousAddress?: string;
   previousResidenceTime?: string;
   betweenStreets?: string;
+  housingType?: string;
 }
 
 export interface EmploymentTabValues {

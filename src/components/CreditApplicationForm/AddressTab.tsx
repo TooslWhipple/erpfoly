@@ -1,20 +1,31 @@
 import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
+import type { HousingTypeCatalogItem } from "@/services/address.service";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
+import { RadioButton } from "@/components";
 import { Card } from "./styles";
-import { RadioButton } from "../RadioButton";
 import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
+  housingTypeOptions: HousingTypeCatalogItem[];
+  housingTypesLoading: boolean;
   mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
   onFieldChange: (field: keyof AddressTabValues, value: AddressTabValues[keyof AddressTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-export function AddressTab({ values, errors, mergeFieldValues, onFieldChange, onSave }: AddressTabProps) {
+export function AddressTab({
+  values,
+  errors,
+  housingTypeOptions,
+  housingTypesLoading,
+  mergeFieldValues,
+  onFieldChange,
+  onSave,
+}: AddressTabProps) {
   const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
 
   return (
@@ -125,34 +136,31 @@ export function AddressTab({ values, errors, mergeFieldValues, onFieldChange, on
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Stack spacing={3}>
+          <Stack spacing={2}>
             <Typography variant="h6">Propiedad de la vivienda</Typography>
-            <Stack direction="row" spacing={2}>
-              <RadioButton
-                value="owned"
-                label="Casa propia"
-                checked={values.housingType === "owned"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="rented"
-                label="Alquilada"
-                checked={values.housingType === "rented"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="paying"
-                label="Pagandola"
-                checked={values.housingType === "paying"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="relatives"
-                label="Familiares"
-                checked={values.housingType === "relatives"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
+            <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
+              {housingTypesLoading ? (
+                <Typography variant="body2" color="text.secondary">
+                  Cargando…
+                </Typography>
+              ) : (
+                housingTypeOptions.map((item) => (
+                  <RadioButton
+                    key={item.id}
+                    value={String(item.id)}
+                    label={item.name}
+                    checked={values.housingType === String(item.id)}
+                    disabled={housingTypesLoading}
+                    onChange={(event) => onFieldChange("housingType", event.target.value)}
+                  />
+                ))
+              )}
             </Stack>
+            {errors.housingType ? (
+              <Typography variant="caption" color="error">
+                {errors.housingType}
+              </Typography>
+            ) : null}
           </Stack>
         </Grid>
 

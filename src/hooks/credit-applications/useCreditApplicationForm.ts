@@ -65,7 +65,7 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   receiverPhone: "",
   receiverName: "",
   useClientPhone: false,
-  housingType: "owned",
+  housingType: "",
   residenceTime: "",
   previousAddress: "",
   previousResidenceTime: "",
@@ -137,17 +137,6 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   hasSpouse: false,
 };
 
-function mapHousingTypeToFormValue(
-  housingTypeName: string | null | undefined
-): AddressTabValues["housingType"] {
-  const normalizedValue = housingTypeName?.trim().toLowerCase() ?? "";
-  if (normalizedValue.includes("prop")) return "owned";
-  if (normalizedValue.includes("rent") || normalizedValue.includes("alq")) return "rented";
-  if (normalizedValue.includes("pag")) return "paying";
-  if (normalizedValue.includes("fam")) return "relatives";
-  return "owned";
-}
-
 function mapCreditApplicationToFormValues(
   creditApplication: CreditApplicationDetailResponse
 ): {
@@ -201,7 +190,10 @@ function mapCreditApplicationToFormValues(
     receiverPhone: creditApplication.address.receiverPhone ?? "",
     receiverName: creditApplication.address.receiverName ?? "",
     useClientPhone: Boolean(creditApplication.address.useClientPhone),
-    housingType: mapHousingTypeToFormValue(creditApplication.address.housingType.name),
+    housingType:
+      creditApplication.address.housingType.id != null
+        ? String(creditApplication.address.housingType.id)
+        : "",
     residenceTime: "",
     previousAddress: creditApplication.address.previousAddress ?? "",
     previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",

@@ -52,6 +52,7 @@ export function useAddressTab(initialValues: AddressTabValues) {
     if (!values.previousAddress.trim()) nextErrors.previousAddress = "Domicilio anterior es requerido";
     if (!values.previousResidenceTime.trim()) nextErrors.previousResidenceTime = "Tiempo en el domicilio anterior es requerido";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
+    if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;

@@ -42,7 +42,7 @@ const EMPTY_ADDRESS: AddressTabValues = {
   receiverPhone: "",
   receiverName: "",
   useClientPhone: false,
-  housingType: "owned",
+  housingType: "",
   residenceTime: "",
   previousAddress: "",
   previousResidenceTime: "",

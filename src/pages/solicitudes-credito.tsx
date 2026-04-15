@@ -108,7 +108,7 @@ export default function SolicitudesCredito() {
   }));
 
   const handleVerDetalle = (row: CreditApplicationListItem) => {
-    router.push(`/solicitudes-credito/${row.id}`);
+    void router.push(`/solicitudes-credito/${row.id}/revision`);
   };
 
   const handleAprobar = async (row: CreditApplicationListItem) => {

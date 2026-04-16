@@ -121,7 +121,11 @@ export interface EmploymentTabErrors {
   state?: string;
   city?: string;
   streetAndNumber?: string;
+  seniorityYears?: string;
+  position?: string;
+  department?: string;
   monthlyIncome?: string;
+  companyPhone?: string;
   spousePostalCode?: string;
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;
@@ -131,7 +135,7 @@ export interface EmploymentTabErrors {
 export interface FamilyReference {
   id: string;
   name: string;
-  relationship: string;
+  relationshipId: string;
   address: string;
   phone: string;
 }
@@ -151,6 +155,7 @@ export interface ReferencesTabErrors {
   clientPosition?: string;
   seniorityYears?: string;
   respondentNameAndPosition?: string;
+  familyReferences?: string;
 }
 
 export interface DocumentationTabValues {
@@ -164,6 +169,8 @@ export interface DocumentationTabValues {
 export interface CreditApplicationDocumentFile {
   id: string;
   name: string;
+  file?: File;
+  filePath?: string;
   url?: string;
   uploadedAt?: string;
 }

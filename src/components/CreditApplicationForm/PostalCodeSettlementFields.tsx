@@ -17,6 +17,7 @@ interface PostalCodeSettlementFieldsProps {
   neighborhoodError?: string;
   neighborhoods: NeighborhoodPostalLookupItem[];
   neighborhoodsLoading: boolean;
+  disabled?: boolean;
   fieldKeys: PostalSettlementFieldKeys;
   mergePatch: (patch: Record<string, string>) => void;
 }
@@ -28,6 +29,7 @@ export function PostalCodeSettlementFields({
   neighborhoodError,
   neighborhoods,
   neighborhoodsLoading,
+  disabled = false,
   fieldKeys,
   mergePatch,
 }: PostalCodeSettlementFieldsProps) {
@@ -37,6 +39,7 @@ export function PostalCodeSettlementFields({
   const cityKey = fieldKeys.city;
 
   const handlePostalChange = (raw: string) => {
+    if (disabled) return;
     const sanitized = sanitizeMxPostalCodeInput(raw);
     if (sanitized !== postalCode) {
       mergePatch({
@@ -51,6 +54,7 @@ export function PostalCodeSettlementFields({
   };
 
   const handleNeighborhoodChange = (fullCode: string) => {
+    if (disabled) return;
     const row = neighborhoods.find((item) => item.full_code === fullCode);
     mergePatch({
       [neighborhoodKey]: fullCode,
@@ -75,6 +79,7 @@ export function PostalCodeSettlementFields({
           error={Boolean(postalCodeError)}
           helperText={postalCodeError}
           inputProps={{ inputMode: "numeric", maxLength: 5 }}
+          disabled={disabled}
         />
       </Grid>
       <Grid size={{ xs: 12, md: 8 }}>
@@ -90,7 +95,7 @@ export function PostalCodeSettlementFields({
             neighborhoodError ??
             (showNoResults ? "No hay colonias para este código postal." : undefined)
           }
-          disabled={!postalReady || neighborhoodsLoading}
+          disabled={disabled || !postalReady || neighborhoodsLoading}
         >
           <MenuItem value="">
             {neighborhoodsLoading ? "Cargando…" : postalReady ? "Selecciona colonia" : "Ingresa código postal"}

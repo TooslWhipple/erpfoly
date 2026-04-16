@@ -30,6 +30,7 @@ export function DocumentationTab({
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));
@@ -38,6 +39,7 @@ export function DocumentationTab({
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));

@@ -5,7 +5,7 @@ function createEmptyReference(index: number): FamilyReference {
   return {
     id: `reference-${Date.now()}-${index}`,
     name: "",
-    relationship: "",
+    relationshipId: "",
     address: "",
     phone: "",
   };
@@ -60,7 +60,21 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     if (!values.company.trim()) nextErrors.company = "Empresa es requerida";
     if (!values.phone.trim()) nextErrors.phone = "Teléfono es requerido";
     if (!values.clientPosition.trim()) nextErrors.clientPosition = "Puesto del cliente es requerido";
+    if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
     if (!values.respondentNameAndPosition.trim()) nextErrors.respondentNameAndPosition = "Este campo es requerido";
+
+    const hasCompleteFamilyReference = values.familyReferences.some(
+      (reference) =>
+        reference.name.trim().length > 0 &&
+        reference.relationshipId.trim().length > 0 &&
+        reference.address.trim().length > 0 &&
+        reference.phone.trim().length > 0
+    );
+    if (!hasCompleteFamilyReference) {
+      nextErrors.familyReferences =
+        "Debes capturar al menos una referencia familiar completa (nombre, parentesco, dirección y teléfono).";
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }, [values]);

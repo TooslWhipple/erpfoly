@@ -1,6 +1,7 @@
-import { Button, Grid, IconButton, Stack, Typography } from "@mui/material";
+import { Button, Grid, IconButton, MenuItem, Stack, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 import { FormTextField } from "@/components/Form";
+import type { FamilyRelationshipCatalogItem } from "@/services/catalog.service";
 import type { ReferencesTabErrors, ReferencesTabValues } from "@/types/credit-application-form.types";
 import { Card, ReferenceCard } from "./styles";
 
@@ -10,9 +11,11 @@ interface ReferencesTabProps {
   onFieldChange: (field: keyof Omit<ReferencesTabValues, "familyReferences">, value: string) => void;
   onReferenceFieldChange: (
     referenceId: string,
-    field: "name" | "relationship" | "address" | "phone",
+    field: "name" | "relationshipId" | "address" | "phone",
     value: string
   ) => void;
+  relationshipOptions: FamilyRelationshipCatalogItem[];
+  relationshipsLoading: boolean;
   onAddReference: () => void;
   onRemoveReference: (referenceId: string) => void;
   onSave: () => Promise<boolean>;
@@ -23,6 +26,8 @@ export function ReferencesTab({
   errors,
   onFieldChange,
   onReferenceFieldChange,
+  relationshipOptions,
+  relationshipsLoading,
   onAddReference,
   onRemoveReference,
   onSave,
@@ -94,6 +99,11 @@ export function ReferencesTab({
       </Grid>
 
       <Typography variant="h5">Referencias familiares</Typography>
+      {errors.familyReferences ? (
+        <Typography variant="body2" color="error.main">
+          {errors.familyReferences}
+        </Typography>
+      ) : null}
       <Stack spacing={2} width="100%">
         {values.familyReferences.map((reference, index) => (
           <ReferenceCard key={reference.id}>
@@ -121,11 +131,27 @@ export function ReferencesTab({
                 <FormTextField
                   fullWidth
                   required
+                  select
                   label="Parentesco"
-                  placeholder="Ingresa"
-                  value={reference.relationship}
-                  onChange={(event) => onReferenceFieldChange(reference.id, "relationship", event.target.value)}
-                />
+                  value={reference.relationshipId}
+                  onChange={(event) =>
+                    onReferenceFieldChange(
+                      reference.id,
+                      "relationshipId",
+                      event.target.value
+                    )
+                  }
+                  disabled={relationshipsLoading}
+                >
+                  <MenuItem value="">
+                    {relationshipsLoading ? "Cargando..." : "Selecciona"}
+                  </MenuItem>
+                  {relationshipOptions.map((option) => (
+                    <MenuItem key={option.id} value={String(option.id)}>
+                      {option.name}
+                    </MenuItem>
+                  ))}
+                </FormTextField>
               </Grid>
               <Grid size={{ xs: 12, md: 8 }}>
                 <FormTextField

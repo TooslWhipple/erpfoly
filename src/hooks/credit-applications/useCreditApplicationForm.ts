@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import {
   getCreditApplicationById,
   saveCreditApplication,
+  saveCreditApplicationSection,
 } from "@/services/creditApplications.service";
 import type { CreditApplicationDetailResponse } from "@/services/creditApplications.service";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
@@ -106,8 +107,8 @@ const EMPTY_REFERENCES_VALUES: ReferencesTabValues = {
   seniorityYears: "",
   respondentNameAndPosition: "",
   familyReferences: [
-    { id: "reference-1", name: "", relationship: "", address: "", phone: "" },
-    { id: "reference-2", name: "", relationship: "", address: "", phone: "" },
+    { id: "reference-1", name: "", relationshipId: "", address: "", phone: "" },
+    { id: "reference-2", name: "", relationshipId: "", address: "", phone: "" },
   ],
 };
 
@@ -145,6 +146,8 @@ function mapCreditApplicationToFormValues(
   address: AddressTabValues;
   employment: EmploymentTabValues;
   references: ReferencesTabValues;
+  documentation: DocumentationTabValues;
+  guarantor: GuarantorTabValues;
 } {
   const fullStreet = [
     creditApplication.address.street,
@@ -245,11 +248,78 @@ function mapCreditApplicationToFormValues(
             name: [reference.firstName, reference.lastName]
               .filter((value) => value.trim().length > 0)
               .join(" "),
-            relationship: reference.relationship.name ?? "",
+            relationshipId:
+              reference.relationship.id != null
+                ? String(reference.relationship.id)
+                : "",
             address: reference.address ?? "",
             phone: reference.phone ?? "",
           }))
-        : [{ id: "reference-1", name: "", relationship: "", address: "", phone: "" }],
+        : [{ id: "reference-1", name: "", relationshipId: "", address: "", phone: "" }],
+  };
+
+  const mapDocumentItems = (
+    list:
+      | Array<{
+          id: number;
+          typeCode: string;
+          typeName: string;
+          filePath: string;
+          fileUrl: string;
+        }>
+      | undefined
+  ) =>
+    (list ?? []).map((item) => ({
+      id: String(item.id),
+      name: `${item.typeName} (${item.typeCode})`,
+      filePath: item.filePath,
+      url: item.fileUrl,
+      uploadedAt: "Cargado",
+    }));
+
+  const documentation: DocumentationTabValues = {
+    requiredAlertVisible: true,
+    requiredAlertMessage:
+      "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
+    incomeProofFiles: mapDocumentItems(creditApplication.documentation?.incomeProofFiles),
+    ineFrontFiles: mapDocumentItems(creditApplication.documentation?.ineFrontFiles),
+    ineBackFiles: mapDocumentItems(creditApplication.documentation?.ineBackFiles),
+  };
+
+  const guarantorStreet = [
+    creditApplication.guarantor?.address.street ?? "",
+    creditApplication.guarantor?.address.externalNumber ?? "",
+    creditApplication.guarantor?.address.internalNumber
+      ? `Int. ${creditApplication.guarantor.address.internalNumber}`
+      : "",
+  ]
+    .filter((value) => value.trim().length > 0)
+    .join(" ")
+    .trim();
+
+  const guarantor: GuarantorTabValues = {
+    fullName: creditApplication.guarantor?.fullName ?? "",
+    postalCode: creditApplication.guarantor?.address.postalCode ?? "",
+    neighborhoodFullCode: creditApplication.guarantor?.address.neighborhoodFullCode ?? "",
+    state: creditApplication.guarantor?.address.state ?? "",
+    city: creditApplication.guarantor?.address.city ?? "",
+    streetAndNumber: guarantorStreet,
+    betweenStreets: creditApplication.guarantor?.address.betweenStreets ?? "",
+    birthDate: creditApplication.guarantor?.birthDate ?? "",
+    maritalStatus:
+      creditApplication.guarantor?.maritalStatus.id != null
+        ? String(creditApplication.guarantor.maritalStatus.id)
+        : "",
+    curp: creditApplication.guarantor?.curp ?? "",
+    rfc: creditApplication.guarantor?.rfc ?? "",
+    phone: creditApplication.guarantor?.phone ?? "",
+    identificationFrontFiles: mapDocumentItems(
+      creditApplication.documentation?.guarantorIneFrontFiles
+    ),
+    identificationBackFiles: mapDocumentItems(
+      creditApplication.documentation?.guarantorIneBackFiles
+    ),
+    hasSpouse: Boolean(creditApplication.guarantor?.hasSpouse),
   };
 
   return {
@@ -258,6 +328,8 @@ function mapCreditApplicationToFormValues(
     address,
     employment,
     references,
+    documentation,
+    guarantor,
   };
 }
 
@@ -386,12 +458,16 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         setAddressValuesFromExternal(mappedValues.address);
         setEmploymentValuesFromExternal(mappedValues.employment);
         setReferencesValuesFromExternal(mappedValues.references);
+        setDocumentationValuesFromExternal(mappedValues.documentation);
+        setGuarantorValuesFromExternal(mappedValues.guarantor);
 
         upsertBasicInformation(draftKey, mappedValues.basicInformation);
         upsertFamily(draftKey, mappedValues.family);
         upsertAddress(draftKey, mappedValues.address);
         upsertEmployment(draftKey, mappedValues.employment);
         upsertReferences(draftKey, mappedValues.references);
+        upsertDocumentation(draftKey, mappedValues.documentation);
+        upsertGuarantor(draftKey, mappedValues.guarantor);
       } catch (loadError) {
         console.error("[CreditApplicationForm] Unable to load credit application", loadError);
         if (!isCancelled) {
@@ -504,7 +580,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     setSaveSuccess(false);
     setError(null);
     try {
-      const result = await saveCreditApplication({
+      const formPayload = {
         id: isCreateMode ? undefined : applicationId,
         basicInformation: basicInformationTab.values,
         family: familyTab.values,
@@ -514,15 +590,16 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         documentation: documentationTab.values,
         guarantor: guarantorTab.values,
         biometrics: biometricsData,
-      });
+      };
+      const result = await saveCreditApplication(formPayload);
 
-      persistBasicInformation(basicInformationTab.values);
-      persistFamily(familyTab.values);
-      persistAddress(addressTab.values);
-      persistEmployment(employmentTab.values);
-      persistReferences(referencesTab.values);
-      persistDocumentation(documentationTab.values);
-      persistGuarantor(guarantorTab.values);
+      persistBasicInformation(formPayload.basicInformation);
+      persistFamily(formPayload.family);
+      persistAddress(formPayload.address);
+      persistEmployment(formPayload.employment);
+      persistReferences(formPayload.references);
+      persistDocumentation(formPayload.documentation);
+      persistGuarantor(formPayload.guarantor);
       setSaveSuccess(true);
 
       if (isCreateMode && result.id) {
@@ -570,13 +647,55 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     if (activeTab === "guarantor") isValid = guarantorTab.validateValues();
     if (!isValid) return false;
 
-    persistBasicInformation(basicInformationTab.values);
-    persistFamily(familyTab.values);
-    persistAddress(addressTab.values);
-    persistEmployment(employmentTab.values);
-    persistReferences(referencesTab.values);
-    persistDocumentation(documentationTab.values);
-    persistGuarantor(guarantorTab.values);
+    const currentPayload = {
+      id: isCreateMode ? undefined : applicationId,
+      basicInformation: basicInformationTab.values,
+      family: familyTab.values,
+      address: addressTab.values,
+      employment: employmentTab.values,
+      references: referencesTab.values,
+      documentation: documentationTab.values,
+      guarantor: guarantorTab.values,
+      biometrics: biometricsData,
+    };
+
+    if (!isCreateMode && applicationId) {
+      try {
+        if (activeTab === "basic-information") {
+          await saveCreditApplicationSection(applicationId, "basicInformation", currentPayload);
+        }
+        if (activeTab === "family") {
+          await saveCreditApplicationSection(applicationId, "family", currentPayload);
+        }
+        if (activeTab === "address") {
+          await saveCreditApplicationSection(applicationId, "address", currentPayload);
+        }
+        if (activeTab === "employment") {
+          await saveCreditApplicationSection(applicationId, "employment", currentPayload);
+        }
+        if (activeTab === "references") {
+          await saveCreditApplicationSection(applicationId, "references", currentPayload);
+        }
+        if (activeTab === "documentation") {
+          await saveCreditApplicationSection(applicationId, "documentation", currentPayload);
+        }
+        if (activeTab === "guarantor") {
+          await saveCreditApplicationSection(applicationId, "guarantor", currentPayload);
+        }
+      } catch (saveError) {
+        console.error("[CreditApplicationForm] Unable to save active section", saveError);
+        setError("No se pudo guardar la sección.");
+        return false;
+      }
+    }
+
+    persistBasicInformation(currentPayload.basicInformation);
+    persistFamily(currentPayload.family);
+    persistAddress(currentPayload.address);
+    persistEmployment(currentPayload.employment);
+    persistReferences(currentPayload.references);
+    persistDocumentation(currentPayload.documentation);
+    persistGuarantor(currentPayload.guarantor);
     setSaveSuccess(true);
     return true;
   }, [

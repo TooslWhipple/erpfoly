@@ -83,8 +83,8 @@ const EMPTY_REFERENCES: ReferencesTabValues = {
   seniorityYears: "",
   respondentNameAndPosition: "",
   familyReferences: [
-    { id: "reference-1", name: "", relationship: "", address: "", phone: "" },
-    { id: "reference-2", name: "", relationship: "", address: "", phone: "" },
+    { id: "reference-1", name: "", relationshipId: "", address: "", phone: "" },
+    { id: "reference-2", name: "", relationshipId: "", address: "", phone: "" },
   ],
 };
 

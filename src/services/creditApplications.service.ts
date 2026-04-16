@@ -1,5 +1,6 @@
 import { get, post, unwrapOrThrow } from "@/lib/axios";
-import type { CreateCreditApplicationIntakeRequestBody } from "@/utils/creditApplicationIntake";
+import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
+import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
 interface CreditApplicationCatalogItem {
@@ -102,12 +103,40 @@ export interface CreateCreditApplicationFromIntakeResult {
 }
 
 export async function createCreditApplicationFromIntake(
-  body: CreateCreditApplicationIntakeRequestBody
+  payload: CreditApplicationBiometricsData
 ): Promise<CreateCreditApplicationFromIntakeResult> {
+  const ineFront = payload.ineFrontImage?.trim();
+  const ineBack = payload.ineBackImage?.trim();
+  const faceCapture = payload.selfieImage?.trim();
+  const signature = payload.signatureDataUrl?.trim();
+
+  if (!ineFront || !ineBack || !faceCapture || !signature) {
+    throw new Error("Faltan capturas obligatorias para crear la solicitud.");
+  }
+
+  const formData = new FormData();
+  formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
+  formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));
+  formData.append("faceCapture", dataUrlToFile(faceCapture, "face-capture"));
+  formData.append(
+    "fingerprint",
+    dataUrlToFile(
+      SIMULATED_FINGERPRINT_DATA_URL,
+      "fingerprint",
+    ),
+  );
+  formData.append(
+    "bureauAuthorizationSignature",
+    dataUrlToFile(signature, "bureau-authorization-signature"),
+  );
+
   const result = await post<CreateCreditApplicationFromIntakeResult>(
     BASE,
-    body,
-    { timeout: INTAKE_CREATE_TIMEOUT_MS }
+    formData,
+    {
+      timeout: INTAKE_CREATE_TIMEOUT_MS,
+      headers: { "Content-Type": "multipart/form-data" },
+    },
   );
   return unwrapOrThrow(result);
 }

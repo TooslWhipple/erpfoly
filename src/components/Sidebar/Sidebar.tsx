@@ -31,10 +31,6 @@ import { CreditApplicationIntakeModal } from "@/components/CreditApplicationInta
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
-import {
-  buildCreateCreditApplicationIntakeBody,
-  type CreateCreditApplicationIntakeRequestBody,
-} from "@/utils/creditApplicationIntake";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 
 interface NavSubItem {
@@ -204,16 +200,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const NEW_CREDIT_APPLICATION_DRAFT_ID = "new-credit-application";
 
   const handleIntakeFinalize = async (payload: CreditApplicationBiometricsData) => {
-    let body: CreateCreditApplicationIntakeRequestBody;
     try {
-      body = buildCreateCreditApplicationIntakeBody(payload);
+      // Service will validate required captures and build multipart payload.
     } catch (e) {
       const message = e instanceof Error ? e.message : "Datos incompletos.";
       showError(message);
       throw e;
     }
 
-    const { id } = await createCreditApplicationFromIntake(body);
+    const { id } = await createCreditApplicationFromIntake(payload);
     clearDraftById(NEW_CREDIT_APPLICATION_DRAFT_ID);
     await router.push(`/solicitudes-credito/${id}`);
   };

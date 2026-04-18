@@ -10,6 +10,8 @@ import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
+  clientWhatsappNumber: string;
+  canUseClientPhone: boolean;
   housingTypeOptions: HousingTypeCatalogItem[];
   housingTypesLoading: boolean;
   mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
@@ -20,6 +22,8 @@ interface AddressTabProps {
 export function AddressTab({
   values,
   errors,
+  clientWhatsappNumber,
+  canUseClientPhone,
   housingTypeOptions,
   housingTypesLoading,
   mergeFieldValues,
@@ -54,7 +58,6 @@ export function AddressTab({
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.state}
             onChange={(event) => onFieldChange("state", event.target.value)}
             error={Boolean(errors.state)}
@@ -66,7 +69,6 @@ export function AddressTab({
             fullWidth
             disabled
             label="Ciudad"
-            placeholder="Selecciona"
             value={values.city}
             onChange={(event) => onFieldChange("city", event.target.value)}
             error={Boolean(errors.city)}
@@ -108,8 +110,9 @@ export function AddressTab({
             placeholder="Ingresa"
             value={values.receiverPhone}
             onChange={(event) => onFieldChange("receiverPhone", event.target.value)}
-            error={Boolean(errors.receiverName)}
-            helperText={errors.receiverName}
+            disabled={values.useClientPhone}
+            error={Boolean(errors.receiverPhone)}
+            helperText={errors.receiverPhone}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -129,7 +132,22 @@ export function AddressTab({
           <Stack direction="row" alignItems="center" spacing={1}>
             <Switch
               checked={values.useClientPhone}
-              onChange={(event) => onFieldChange("useClientPhone", event.target.checked)}
+              disabled={!canUseClientPhone}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                if (checked) {
+                  mergeFieldValues({
+                    useClientPhone: true,
+                    receiverPhone: clientWhatsappNumber,
+                  });
+                  return;
+                }
+
+                mergeFieldValues({
+                  useClientPhone: false,
+                  receiverPhone: "",
+                });
+              }}
             />
             <Typography variant="body1">Utilizar número del cliente</Typography>
           </Stack>

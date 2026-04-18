@@ -46,7 +46,11 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+    if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antiguedad es requerida";
+    if (!values.position.trim()) nextErrors.position = "Puesto es requerido";
+    if (!values.department.trim()) nextErrors.department = "Departamento es requerido";
     if (!values.monthlyIncome.trim()) nextErrors.monthlyIncome = "Ingreso mensual es requerido";
+    if (!values.companyPhone.trim()) nextErrors.companyPhone = "Teléfono de la empresa es requerido";
 
     if (isValidMxPostalCode(values.spousePostalCode)) {
       if (!values.spouseNeighborhoodFullCode.trim()) {

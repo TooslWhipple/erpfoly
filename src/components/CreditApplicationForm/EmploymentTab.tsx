@@ -8,12 +8,20 @@ import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 interface EmploymentTabProps {
   values: EmploymentTabValues;
   errors: EmploymentTabErrors;
+  spouseSectionEnabled: boolean;
   mergeFieldValues: (patch: Partial<EmploymentTabValues>) => EmploymentTabValues;
   onFieldChange: (field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange, onSave }: EmploymentTabProps) {
+export function EmploymentTab({
+  values,
+  errors,
+  spouseSectionEnabled,
+  mergeFieldValues,
+  onFieldChange,
+  onSave,
+}: EmploymentTabProps) {
   const mainNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const spouseNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.spousePostalCode);
   return (
@@ -54,7 +62,6 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.state}
             onChange={(event) => onFieldChange("state", event.target.value)}
             error={Boolean(errors.state)}
@@ -66,7 +73,6 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             fullWidth
             disabled
             label="Ciudad"
-            placeholder="Selecciona"
             value={values.city}
             onChange={(event) => onFieldChange("city", event.target.value)}
             error={Boolean(errors.city)}
@@ -93,6 +99,8 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.seniorityYears}
             onChange={(event) => onFieldChange("seniorityYears", event.target.value)}
+            error={Boolean(errors.seniorityYears)}
+            helperText={errors.seniorityYears}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -103,6 +111,8 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.position}
             onChange={(event) => onFieldChange("position", event.target.value)}
+            error={Boolean(errors.position)}
+            helperText={errors.position}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -113,6 +123,8 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.department}
             onChange={(event) => onFieldChange("department", event.target.value)}
+            error={Boolean(errors.department)}
+            helperText={errors.department}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -135,6 +147,8 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.companyPhone}
             onChange={(event) => onFieldChange("companyPhone", event.target.value)}
+            error={Boolean(errors.companyPhone)}
+            helperText={errors.companyPhone}
           />
         </Grid>
 
@@ -178,6 +192,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseCompany}
             onChange={(event) => onFieldChange("spouseCompany", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <PostalCodeSettlementFields
@@ -187,6 +202,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
           neighborhoodError={errors.spouseNeighborhoodFullCode}
           neighborhoods={spouseNeighborhoodsQuery.data ?? []}
           neighborhoodsLoading={spouseNeighborhoodsQuery.isFetching}
+          disabled={!spouseSectionEnabled}
           fieldKeys={{
             postalCode: "spousePostalCode",
             neighborhoodFullCode: "spouseNeighborhoodFullCode",
@@ -202,7 +218,6 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.spouseState}
             onChange={(event) => onFieldChange("spouseState", event.target.value)}
             error={Boolean(errors.spouseState)}
@@ -214,7 +229,6 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             fullWidth
             disabled
             label="Ciudad"
-            placeholder="Selecciona"
             value={values.spouseCity}
             onChange={(event) => onFieldChange("spouseCity", event.target.value)}
             error={Boolean(errors.spouseCity)}
@@ -228,6 +242,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseStreetAndNumber}
             onChange={(event) => onFieldChange("spouseStreetAndNumber", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -237,6 +252,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseSeniorityYears}
             onChange={(event) => onFieldChange("spouseSeniorityYears", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -246,6 +262,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spousePosition}
             onChange={(event) => onFieldChange("spousePosition", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -255,6 +272,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseDepartment}
             onChange={(event) => onFieldChange("spouseDepartment", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -264,6 +282,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseMonthlyIncome}
             onChange={(event) => onFieldChange("spouseMonthlyIncome", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -273,6 +292,7 @@ export function EmploymentTab({ values, errors, mergeFieldValues, onFieldChange,
             placeholder="Ingresa"
             value={values.spouseCompanyPhone}
             onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value)}
+            disabled={!spouseSectionEnabled}
           />
         </Grid>
       </Grid>

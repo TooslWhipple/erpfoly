@@ -49,8 +49,6 @@ export function useAddressTab(initialValues: AddressTabValues) {
     if (!values.receiverPhone.trim()) nextErrors.receiverPhone = "Teléfono es requerido";
     if (!values.receiverName.trim()) nextErrors.receiverName = "Nombre de quien recibe es requerido";
     if (!values.residenceTime.trim()) nextErrors.residenceTime = "Tiempo en el domicilio es requerido";
-    if (!values.previousAddress.trim()) nextErrors.previousAddress = "Domicilio anterior es requerido";
-    if (!values.previousResidenceTime.trim()) nextErrors.previousResidenceTime = "Tiempo en el domicilio anterior es requerido";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";
 

@@ -36,6 +36,7 @@ export function GuarantorTab({
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));
@@ -44,6 +45,7 @@ export function GuarantorTab({
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));
@@ -87,7 +89,6 @@ export function GuarantorTab({
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.state}
             onChange={(event) => onFieldChange("state", event.target.value)}
             error={Boolean(errors.state)}

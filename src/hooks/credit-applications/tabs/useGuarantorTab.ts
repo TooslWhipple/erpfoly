@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { GuarantorTabErrors, GuarantorTabValues } from "@/types/credit-application-form.types";
+import { isValidMxPostalCode } from "@/forms/validation/schemas";
 
 function cleanAlphaNumeric(value: string): string {
   return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -20,6 +21,21 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
     return nextValues;
   }, [values]);
 
+  const mergeFieldValues = useCallback((patch: Partial<GuarantorTabValues>) => {
+    const nextValues = { ...values, ...patch };
+    setValues(nextValues);
+    setErrors((prev) => {
+      const next: GuarantorTabErrors = { ...prev };
+      (Object.keys(patch) as string[]).forEach((key) => {
+        if (key in next) {
+          delete next[key as keyof GuarantorTabErrors];
+        }
+      });
+      return next;
+    });
+    return nextValues;
+  }, [values]);
+
   const setValuesFromExternalSource = useCallback((nextValues: GuarantorTabValues) => {
     setValues({
       ...nextValues,
@@ -33,6 +49,12 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
     const nextErrors: GuarantorTabErrors = {};
     if (!values.fullName.trim()) nextErrors.fullName = "Nombre completo es requerido";
     if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
+    else if (!isValidMxPostalCode(values.postalCode)) {
+      nextErrors.postalCode = "El código postal debe tener 5 dígitos";
+    }
+    if (!values.neighborhoodFullCode.trim()) {
+      nextErrors.neighborhoodFullCode = "Selecciona una colonia";
+    }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
@@ -55,6 +77,7 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
     values,
     errors,
     setFieldValue,
+    mergeFieldValues,
     setValuesFromExternalSource,
     validateValues,
   };

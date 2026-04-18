@@ -1,40 +1,63 @@
-import { Button, Grid, RadioGroup, Stack, Switch, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
+import type { HousingTypeCatalogItem } from "@/services/address.service";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
+import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
+import { RadioButton } from "@/components";
 import { Card } from "./styles";
-import { RadioButton } from "../RadioButton";
+import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
+  clientWhatsappNumber: string;
+  canUseClientPhone: boolean;
+  housingTypeOptions: HousingTypeCatalogItem[];
+  housingTypesLoading: boolean;
+  mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
   onFieldChange: (field: keyof AddressTabValues, value: AddressTabValues[keyof AddressTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTabProps) {
+export function AddressTab({
+  values,
+  errors,
+  clientWhatsappNumber,
+  canUseClientPhone,
+  housingTypeOptions,
+  housingTypesLoading,
+  mergeFieldValues,
+  onFieldChange,
+  onSave,
+}: AddressTabProps) {
+  const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
+
   return (
     <Card>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Código Postal"
-            placeholder="Ingresa"
-            value={values.postalCode}
-            onChange={(event) => onFieldChange("postalCode", event.target.value)}
-            error={Boolean(errors.postalCode)}
-            helperText={errors.postalCode}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }} />
+        <PostalCodeSettlementFields
+          postalCode={values.postalCode}
+          neighborhoodFullCode={values.neighborhoodFullCode}
+          postalCodeError={errors.postalCode}
+          neighborhoodError={errors.neighborhoodFullCode}
+          neighborhoods={neighborhoodsQuery.data ?? []}
+          neighborhoodsLoading={neighborhoodsQuery.isFetching}
+          fieldKeys={{
+            postalCode: "postalCode",
+            neighborhoodFullCode: "neighborhoodFullCode",
+            state: "state",
+            city: "city",
+          }}
+          mergePatch={(patch) => {
+            mergeFieldValues(patch as Partial<AddressTabValues>);
+          }}
+        />
 
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.state}
             onChange={(event) => onFieldChange("state", event.target.value)}
             error={Boolean(errors.state)}
@@ -46,7 +69,6 @@ export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTab
             fullWidth
             disabled
             label="Ciudad"
-            placeholder="Selecciona"
             value={values.city}
             onChange={(event) => onFieldChange("city", event.target.value)}
             error={Boolean(errors.city)}
@@ -88,8 +110,9 @@ export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTab
             placeholder="Ingresa"
             value={values.receiverPhone}
             onChange={(event) => onFieldChange("receiverPhone", event.target.value)}
-            error={Boolean(errors.receiverName)}
-            helperText={errors.receiverName}
+            disabled={values.useClientPhone}
+            error={Boolean(errors.receiverPhone)}
+            helperText={errors.receiverPhone}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -109,41 +132,52 @@ export function AddressTab({ values, errors, onFieldChange, onSave }: AddressTab
           <Stack direction="row" alignItems="center" spacing={1}>
             <Switch
               checked={values.useClientPhone}
-              onChange={(event) => onFieldChange("useClientPhone", event.target.checked)}
+              disabled={!canUseClientPhone}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                if (checked) {
+                  mergeFieldValues({
+                    useClientPhone: true,
+                    receiverPhone: clientWhatsappNumber,
+                  });
+                  return;
+                }
+
+                mergeFieldValues({
+                  useClientPhone: false,
+                  receiverPhone: "",
+                });
+              }}
             />
             <Typography variant="body1">Utilizar número del cliente</Typography>
           </Stack>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Stack spacing={3}>
+          <Stack spacing={2}>
             <Typography variant="h6">Propiedad de la vivienda</Typography>
-            <Stack direction="row" spacing={2}>
-              <RadioButton
-                value="owned"
-                label="Casa propia"
-                checked={values.housingType === "owned"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="rented"
-                label="Alquilada"
-                checked={values.housingType === "rented"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="paying"
-                label="Pagandola"
-                checked={values.housingType === "paying"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
-              <RadioButton
-                value="relatives"
-                label="Familiares"
-                checked={values.housingType === "relatives"}
-                onChange={(event) => onFieldChange("housingType", event.target.value)}
-              />
+            <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
+              {
+                housingTypesLoading ?
+                  <Typography variant="body2" color="text.secondary">Cargando...</Typography>
+                  :
+                  housingTypeOptions.map((item) => (
+                    <RadioButton
+                      key={item.id}
+                      value={String(item.id)}
+                      label={item.name}
+                      checked={values.housingType === String(item.id)}
+                      disabled={housingTypesLoading}
+                      onChange={(event) => onFieldChange("housingType", event.target.value)}
+                    />
+                  ))
+              }
             </Stack>
+            {errors.housingType ? (
+              <Typography variant="caption" color="error">
+                {errors.housingType}
+              </Typography>
+            ) : null}
           </Stack>
         </Grid>
 

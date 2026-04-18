@@ -66,7 +66,11 @@ export interface FormTextFieldProps extends Omit<TextFieldProps, "variant" | "la
 }
 
 export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
-    ({ label, required, error, helperText, ...props }, ref) => {
+    ({ label, required, error, helperText, select, SelectProps, ...props }, ref) => {
+        const mergedSelectProps = select
+            ? { displayEmpty: true, ...SelectProps }
+            : SelectProps;
+
         return (
             <FieldWrapper>
                 {
@@ -85,6 +89,8 @@ export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
                     fullWidth
                     error={error}
                     helperText={helperText}
+                    select={select}
+                    SelectProps={mergedSelectProps}
                     {...props}
                 />
             </FieldWrapper>

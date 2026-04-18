@@ -3,8 +3,12 @@ import { useRouter } from "next/router";
 import {
   getCreditApplicationById,
   saveCreditApplication,
+  saveCreditApplicationSection,
 } from "@/services/creditApplications.service";
-import type { CreditApplicationDetailResponse } from "@/services/creditApplications.service";
+import type {
+  AdditionalInformationRequestedItem,
+  CreditApplicationDetailResponse,
+} from "@/services/creditApplications.service";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
@@ -25,15 +29,19 @@ import type {
   ReferencesTabValues,
 } from "@/types/credit-application-form.types";
 
-const TAB_LIST: { label: string; value: CreditApplicationTabId }[] = [
+const BASE_TAB_LIST: { label: string; value: CreditApplicationTabId }[] = [
   { label: "Información básica", value: "basic-information" },
   { label: "Familia", value: "family" },
   { label: "Dirección", value: "address" },
   { label: "Empleo", value: "employment" },
   { label: "Referencias", value: "references" },
   { label: "Documentación", value: "documentation" },
-  { label: "Aval", value: "guarantor" },
 ];
+
+const GUARANTOR_TAB_ITEM: { label: string; value: CreditApplicationTabId } = {
+  label: "Aval",
+  value: "guarantor",
+};
 
 const EMPTY_BASIC_INFORMATION_VALUES: BasicInformationFormValues = {
   firstName: "",
@@ -57,6 +65,7 @@ const EMPTY_FAMILY_VALUES: FamilyTabValues = {
 
 const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -64,7 +73,7 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   receiverPhone: "",
   receiverName: "",
   useClientPhone: false,
-  housingType: "owned",
+  housingType: "",
   residenceTime: "",
   previousAddress: "",
   previousResidenceTime: "",
@@ -73,6 +82,7 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
 const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   company: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -86,6 +96,7 @@ const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   otherIncomeSource: "",
   spouseCompany: "",
   spousePostalCode: "",
+  spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
   spouseStreetAndNumber: "",
@@ -103,8 +114,8 @@ const EMPTY_REFERENCES_VALUES: ReferencesTabValues = {
   seniorityYears: "",
   respondentNameAndPosition: "",
   familyReferences: [
-    { id: "reference-1", name: "", relationship: "", address: "", phone: "" },
-    { id: "reference-2", name: "", relationship: "", address: "", phone: "" },
+    { id: "reference-1", name: "", relationshipId: "", address: "", phone: "" },
+    { id: "reference-2", name: "", relationshipId: "", address: "", phone: "" },
   ],
 };
 
@@ -119,6 +130,7 @@ const EMPTY_DOCUMENTATION_VALUES: DocumentationTabValues = {
 const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   fullName: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -133,25 +145,13 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   hasSpouse: false,
 };
 
-function normalizeMaritalStatus(maritalStatusName: string): string {
-  const normalizedValue = maritalStatusName.trim().toLowerCase();
-  if (normalizedValue.includes("soltero")) return "Soltero";
-  if (normalizedValue.includes("casad")) return "Casado";
-  if (normalizedValue.includes("divorciad")) return "Divorciado";
-  if (normalizedValue.includes("viud")) return "Viudo";
-  if (normalizedValue.includes("union")) return "Unión libre";
-  return maritalStatusName;
-}
+const DRAFT_STALE_AFTER_MS = 5 * 60 * 1000;
 
-function mapHousingTypeToFormValue(
-  housingTypeName: string | null | undefined
-): AddressTabValues["housingType"] {
-  const normalizedValue = housingTypeName?.trim().toLowerCase() ?? "";
-  if (normalizedValue.includes("prop")) return "owned";
-  if (normalizedValue.includes("rent") || normalizedValue.includes("alq")) return "rented";
-  if (normalizedValue.includes("pag")) return "paying";
-  if (normalizedValue.includes("fam")) return "relatives";
-  return "owned";
+function isDraftStale(updatedAt: string | undefined): boolean {
+  if (!updatedAt) return true;
+  const parsedTimestamp = Date.parse(updatedAt);
+  if (!Number.isFinite(parsedTimestamp)) return true;
+  return Date.now() - parsedTimestamp > DRAFT_STALE_AFTER_MS;
 }
 
 function mapCreditApplicationToFormValues(
@@ -162,6 +162,8 @@ function mapCreditApplicationToFormValues(
   address: AddressTabValues;
   employment: EmploymentTabValues;
   references: ReferencesTabValues;
+  documentation: DocumentationTabValues;
+  guarantor: GuarantorTabValues;
 } {
   const fullStreet = [
     creditApplication.address.street,
@@ -179,9 +181,10 @@ function mapCreditApplicationToFormValues(
     lastName: creditApplication.personalInformation.lastName ?? "",
     secondLastName: creditApplication.personalInformation.secondLastName ?? "",
     birthDate: creditApplication.personalInformation.birthDate ?? "",
-    maritalStatus: normalizeMaritalStatus(
-      creditApplication.personalInformation.maritalStatus.name ?? ""
-    ),
+    maritalStatus:
+      creditApplication.personalInformation.maritalStatus.id != null
+        ? String(creditApplication.personalInformation.maritalStatus.id)
+        : "",
     curp: creditApplication.personalInformation.curp ?? "",
     rfc: creditApplication.personalInformation.rfc ?? "",
     email: creditApplication.personalInformation.email ?? "",
@@ -198,6 +201,7 @@ function mapCreditApplicationToFormValues(
 
   const address: AddressTabValues = {
     postalCode: creditApplication.address.postalCode ?? "",
+    neighborhoodFullCode: creditApplication.address.neighborhood.fullCode ?? "",
     state: creditApplication.address.neighborhood.state ?? "",
     city: creditApplication.address.neighborhood.municipality ?? "",
     streetAndNumber: fullStreet,
@@ -205,7 +209,10 @@ function mapCreditApplicationToFormValues(
     receiverPhone: creditApplication.address.receiverPhone ?? "",
     receiverName: creditApplication.address.receiverName ?? "",
     useClientPhone: Boolean(creditApplication.address.useClientPhone),
-    housingType: mapHousingTypeToFormValue(creditApplication.address.housingType.name),
+    housingType:
+      creditApplication.address.housingType.id != null
+        ? String(creditApplication.address.housingType.id)
+        : "",
     residenceTime: "",
     previousAddress: creditApplication.address.previousAddress ?? "",
     previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",
@@ -214,6 +221,7 @@ function mapCreditApplicationToFormValues(
   const employment: EmploymentTabValues = {
     company: creditApplication.employment.companyName ?? "",
     postalCode: "",
+    neighborhoodFullCode: "",
     state: "",
     city: "",
     streetAndNumber: creditApplication.employment.companyAddress ?? "",
@@ -227,6 +235,7 @@ function mapCreditApplicationToFormValues(
     otherIncomeSource: creditApplication.employment.otherIncomeDescription ?? "",
     spouseCompany: "",
     spousePostalCode: "",
+    spouseNeighborhoodFullCode: "",
     spouseState: "",
     spouseCity: "",
     spouseStreetAndNumber: "",
@@ -255,11 +264,78 @@ function mapCreditApplicationToFormValues(
             name: [reference.firstName, reference.lastName]
               .filter((value) => value.trim().length > 0)
               .join(" "),
-            relationship: reference.relationship.name ?? "",
+            relationshipId:
+              reference.relationship.id != null
+                ? String(reference.relationship.id)
+                : "",
             address: reference.address ?? "",
             phone: reference.phone ?? "",
           }))
-        : [{ id: "reference-1", name: "", relationship: "", address: "", phone: "" }],
+        : [{ id: "reference-1", name: "", relationshipId: "", address: "", phone: "" }],
+  };
+
+  const mapDocumentItems = (
+    list:
+      | Array<{
+          id: number;
+          typeCode: string;
+          typeName: string;
+          filePath: string;
+          fileUrl: string;
+        }>
+      | undefined
+  ) =>
+    (list ?? []).map((item) => ({
+      id: String(item.id),
+      name: `${item.typeName} (${item.typeCode})`,
+      filePath: item.filePath,
+      url: item.fileUrl,
+      uploadedAt: "Cargado",
+    }));
+
+  const documentation: DocumentationTabValues = {
+    requiredAlertVisible: true,
+    requiredAlertMessage:
+      "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
+    incomeProofFiles: mapDocumentItems(creditApplication.documentation?.incomeProofFiles),
+    ineFrontFiles: mapDocumentItems(creditApplication.documentation?.ineFrontFiles),
+    ineBackFiles: mapDocumentItems(creditApplication.documentation?.ineBackFiles),
+  };
+
+  const guarantorStreet = [
+    creditApplication.guarantor?.address.street ?? "",
+    creditApplication.guarantor?.address.externalNumber ?? "",
+    creditApplication.guarantor?.address.internalNumber
+      ? `Int. ${creditApplication.guarantor.address.internalNumber}`
+      : "",
+  ]
+    .filter((value) => value.trim().length > 0)
+    .join(" ")
+    .trim();
+
+  const guarantor: GuarantorTabValues = {
+    fullName: creditApplication.guarantor?.fullName ?? "",
+    postalCode: creditApplication.guarantor?.address.postalCode ?? "",
+    neighborhoodFullCode: creditApplication.guarantor?.address.neighborhoodFullCode ?? "",
+    state: creditApplication.guarantor?.address.state ?? "",
+    city: creditApplication.guarantor?.address.city ?? "",
+    streetAndNumber: guarantorStreet,
+    betweenStreets: creditApplication.guarantor?.address.betweenStreets ?? "",
+    birthDate: creditApplication.guarantor?.birthDate ?? "",
+    maritalStatus:
+      creditApplication.guarantor?.maritalStatus.id != null
+        ? String(creditApplication.guarantor.maritalStatus.id)
+        : "",
+    curp: creditApplication.guarantor?.curp ?? "",
+    rfc: creditApplication.guarantor?.rfc ?? "",
+    phone: creditApplication.guarantor?.phone ?? "",
+    identificationFrontFiles: mapDocumentItems(
+      creditApplication.documentation?.guarantorIneFrontFiles
+    ),
+    identificationBackFiles: mapDocumentItems(
+      creditApplication.documentation?.guarantorIneBackFiles
+    ),
+    hasSpouse: Boolean(creditApplication.guarantor?.hasSpouse),
   };
 
   return {
@@ -268,6 +344,8 @@ function mapCreditApplicationToFormValues(
     address,
     employment,
     references,
+    documentation,
+    guarantor,
   };
 }
 
@@ -315,6 +393,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const [activeTab, setActiveTab] = useState<CreditApplicationTabId>("basic-information");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [biometricsData, setBiometricsData] = useState<CreditApplicationBiometricsData | null>(null);
+  const [additionalInformationRequested, setAdditionalInformationRequested] = useState<
+    AdditionalInformationRequestedItem[]
+  >([]);
 
   const upsertBasicInformation = useCreditApplicationDraftStore((state) => state.upsertBasicInformation);
   const upsertFamily = useCreditApplicationDraftStore((state) => state.upsertFamily);
@@ -330,6 +411,20 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     if (isCreateMode) return "new-credit-application";
     return applicationId ?? "unknown-credit-application";
   }, [applicationId, isCreateMode]);
+
+  const shouldShowGuarantorTab = useMemo(() => {
+    if (isCreateMode) return true;
+    return additionalInformationRequested.some(
+      (item) => item.requestFlag && item.code.trim() === "GUARANTOR_INFORMATION"
+    );
+  }, [additionalInformationRequested, isCreateMode]);
+
+  const tabs = useMemo(() => {
+    if (!shouldShowGuarantorTab) {
+      return BASE_TAB_LIST;
+    }
+    return [...BASE_TAB_LIST, GUARANTOR_TAB_ITEM];
+  }, [shouldShowGuarantorTab]);
 
   const basicInformationTab = useBasicInformationTab(EMPTY_BASIC_INFORMATION_VALUES);
   const familyTab = useFamilyTab(EMPTY_FAMILY_VALUES);
@@ -355,7 +450,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     }
 
     const draft = getDraftById(draftKey);
+    const draftIsStale = draft ? isDraftStale(draft.updatedAt) : true;
     if (draft) {
+      setAdditionalInformationRequested([]);
       setBasicInformationValuesFromExternal(draft.basicInformation);
       setFamilyValuesFromExternal(draft.family);
       setAddressValuesFromExternal(draft.address);
@@ -371,42 +468,54 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         upsertDocumentation(draftKey, hydratedDocumentation);
       }
       setLoading(false);
-      return;
     }
 
     if (isCreateMode) {
+      setAdditionalInformationRequested([]);
       setLoading(false);
       return;
     }
 
     let isCancelled = false;
     const loadExistingApplication = async () => {
-      setLoading(true);
+      setLoading(!draft);
       setError(null);
       setIsEmptyState(false);
 
       try {
         const loadedApplication = await getCreditApplicationById(applicationId!);
         if (isCancelled) return;
+        setAdditionalInformationRequested(loadedApplication.additionalInformationRequested ?? []);
 
         const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
+        const shouldApplyServerValues = !draft || draftIsStale;
 
-        setBasicInformationValuesFromExternal(mappedValues.basicInformation);
-        setFamilyValuesFromExternal(mappedValues.family);
-        setAddressValuesFromExternal(mappedValues.address);
-        setEmploymentValuesFromExternal(mappedValues.employment);
-        setReferencesValuesFromExternal(mappedValues.references);
+        if (shouldApplyServerValues) {
+          setBasicInformationValuesFromExternal(mappedValues.basicInformation);
+          setFamilyValuesFromExternal(mappedValues.family);
+          setAddressValuesFromExternal(mappedValues.address);
+          setEmploymentValuesFromExternal(mappedValues.employment);
+          setReferencesValuesFromExternal(mappedValues.references);
+          setDocumentationValuesFromExternal(mappedValues.documentation);
+          setGuarantorValuesFromExternal(mappedValues.guarantor);
+          setBiometricsData(null);
 
-        upsertBasicInformation(draftKey, mappedValues.basicInformation);
-        upsertFamily(draftKey, mappedValues.family);
-        upsertAddress(draftKey, mappedValues.address);
-        upsertEmployment(draftKey, mappedValues.employment);
-        upsertReferences(draftKey, mappedValues.references);
+          upsertBasicInformation(draftKey, mappedValues.basicInformation);
+          upsertFamily(draftKey, mappedValues.family);
+          upsertAddress(draftKey, mappedValues.address);
+          upsertEmployment(draftKey, mappedValues.employment);
+          upsertReferences(draftKey, mappedValues.references);
+          upsertDocumentation(draftKey, mappedValues.documentation);
+          upsertGuarantor(draftKey, mappedValues.guarantor);
+        }
       } catch (loadError) {
         console.error("[CreditApplicationForm] Unable to load credit application", loadError);
         if (!isCancelled) {
-          setIsEmptyState(true);
-          setError("No se pudo cargar la solicitud, intenta nuevamente.");
+          setAdditionalInformationRequested([]);
+          if (!draft) {
+            setIsEmptyState(true);
+            setError("No se pudo cargar la solicitud, intenta nuevamente.");
+          }
         }
       } finally {
         if (!isCancelled) {
@@ -438,7 +547,14 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     upsertEmployment,
     upsertReferences,
     upsertDocumentation,
+    upsertGuarantor,
   ]);
+
+  useEffect(() => {
+    if (activeTab === "guarantor" && !shouldShowGuarantorTab) {
+      setActiveTab("basic-information");
+    }
+  }, [activeTab, shouldShowGuarantorTab]);
 
   const persistBasicInformation = useCallback(
     (values: BasicInformationFormValues) => {
@@ -498,7 +614,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     const employmentFormIsValid = employmentTab.validateValues();
     const referencesFormIsValid = referencesTab.validateValues();
     const documentationFormIsValid = documentationTab.validateValues();
-    const guarantorFormIsValid = guarantorTab.validateValues();
+    const guarantorFormIsValid =
+      !shouldShowGuarantorTab || guarantorTab.validateValues();
 
     const formIsValid =
       basicFormIsValid &&
@@ -514,7 +631,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     setSaveSuccess(false);
     setError(null);
     try {
-      const result = await saveCreditApplication({
+      const formPayload = {
         id: isCreateMode ? undefined : applicationId,
         basicInformation: basicInformationTab.values,
         family: familyTab.values,
@@ -524,15 +641,16 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         documentation: documentationTab.values,
         guarantor: guarantorTab.values,
         biometrics: biometricsData,
-      });
+      };
+      const result = await saveCreditApplication(formPayload);
 
-      persistBasicInformation(basicInformationTab.values);
-      persistFamily(familyTab.values);
-      persistAddress(addressTab.values);
-      persistEmployment(employmentTab.values);
-      persistReferences(referencesTab.values);
-      persistDocumentation(documentationTab.values);
-      persistGuarantor(guarantorTab.values);
+      persistBasicInformation(formPayload.basicInformation);
+      persistFamily(formPayload.family);
+      persistAddress(formPayload.address);
+      persistEmployment(formPayload.employment);
+      persistReferences(formPayload.references);
+      persistDocumentation(formPayload.documentation);
+      persistGuarantor(formPayload.guarantor);
       setSaveSuccess(true);
 
       if (isCreateMode && result.id) {
@@ -556,6 +674,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     referencesTab,
     documentationTab,
     guarantorTab,
+    shouldShowGuarantorTab,
     biometricsData,
     isCreateMode,
     persistBasicInformation,
@@ -577,16 +696,60 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     if (activeTab === "employment") isValid = employmentTab.validateValues();
     if (activeTab === "references") isValid = referencesTab.validateValues();
     if (activeTab === "documentation") isValid = documentationTab.validateValues();
-    if (activeTab === "guarantor") isValid = guarantorTab.validateValues();
+    if (activeTab === "guarantor" && shouldShowGuarantorTab) {
+      isValid = guarantorTab.validateValues();
+    }
     if (!isValid) return false;
 
-    persistBasicInformation(basicInformationTab.values);
-    persistFamily(familyTab.values);
-    persistAddress(addressTab.values);
-    persistEmployment(employmentTab.values);
-    persistReferences(referencesTab.values);
-    persistDocumentation(documentationTab.values);
-    persistGuarantor(guarantorTab.values);
+    const currentPayload = {
+      id: isCreateMode ? undefined : applicationId,
+      basicInformation: basicInformationTab.values,
+      family: familyTab.values,
+      address: addressTab.values,
+      employment: employmentTab.values,
+      references: referencesTab.values,
+      documentation: documentationTab.values,
+      guarantor: guarantorTab.values,
+      biometrics: biometricsData,
+    };
+
+    if (!isCreateMode && applicationId) {
+      try {
+        if (activeTab === "basic-information") {
+          await saveCreditApplicationSection(applicationId, "basicInformation", currentPayload);
+        }
+        if (activeTab === "family") {
+          await saveCreditApplicationSection(applicationId, "family", currentPayload);
+        }
+        if (activeTab === "address") {
+          await saveCreditApplicationSection(applicationId, "address", currentPayload);
+        }
+        if (activeTab === "employment") {
+          await saveCreditApplicationSection(applicationId, "employment", currentPayload);
+        }
+        if (activeTab === "references") {
+          await saveCreditApplicationSection(applicationId, "references", currentPayload);
+        }
+        if (activeTab === "documentation") {
+          await saveCreditApplicationSection(applicationId, "documentation", currentPayload);
+        }
+        if (activeTab === "guarantor" && shouldShowGuarantorTab) {
+          await saveCreditApplicationSection(applicationId, "guarantor", currentPayload);
+        }
+      } catch (saveError) {
+        console.error("[CreditApplicationForm] Unable to save active section", saveError);
+        setError("No se pudo guardar la sección.");
+        return false;
+      }
+    }
+
+    persistBasicInformation(currentPayload.basicInformation);
+    persistFamily(currentPayload.family);
+    persistAddress(currentPayload.address);
+    persistEmployment(currentPayload.employment);
+    persistReferences(currentPayload.references);
+    persistDocumentation(currentPayload.documentation);
+    persistGuarantor(currentPayload.guarantor);
     setSaveSuccess(true);
     return true;
   }, [
@@ -598,6 +761,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     referencesTab,
     documentationTab,
     guarantorTab,
+    shouldShowGuarantorTab,
     persistBasicInformation,
     persistFamily,
     persistAddress,
@@ -613,8 +777,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     error,
     saveSuccess,
     isEmptyState,
+    additionalInformationRequested,
     activeTab,
-    tabs: TAB_LIST,
+    tabs,
     biometricsData,
     setActiveTab,
     basicInformationTab,

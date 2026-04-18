@@ -2,27 +2,41 @@ import { Button, Grid, MenuItem, Stack, Switch, Typography } from "@mui/material
 import { FormTextField } from "@/components/Form";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
+import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
+import type { MaritalStatusCatalogItem } from "@/services/catalog.service";
 import type {
   CreditApplicationDocumentFile,
   GuarantorTabErrors,
   GuarantorTabValues,
 } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
+import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 
 interface GuarantorTabProps {
   values: GuarantorTabValues;
   errors: GuarantorTabErrors;
+  maritalStatusOptions: MaritalStatusCatalogItem[];
+  maritalStatusesLoading: boolean;
+  mergeFieldValues: (patch: Partial<GuarantorTabValues>) => GuarantorTabValues;
   onFieldChange: (field: keyof GuarantorTabValues, value: GuarantorTabValues[keyof GuarantorTabValues]) => void;
   onSave: () => Promise<boolean>;
 }
 
-const MARITAL_STATUS_OPTIONS = ["Selecciona una opción", "Soltero", "Casado", "Divorciado", "Viudo", "Unión libre"];
-
-export function GuarantorTab({ values, errors, onFieldChange, onSave }: GuarantorTabProps) {
+export function GuarantorTab({
+  values,
+  errors,
+  maritalStatusOptions,
+  maritalStatusesLoading,
+  mergeFieldValues,
+  onFieldChange,
+  onSave,
+}: GuarantorTabProps) {
+  const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const mapStoredToUploadItems = (files: CreditApplicationDocumentFile[]): UploadedFileItem[] =>
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));
@@ -31,6 +45,7 @@ export function GuarantorTab({ values, errors, onFieldChange, onSave }: Guaranto
     files.map((file) => ({
       id: file.id,
       name: file.name,
+      file: file.file,
       url: file.url,
       uploadedAt: file.uploadedAt,
     }));
@@ -51,31 +66,36 @@ export function GuarantorTab({ values, errors, onFieldChange, onSave }: Guaranto
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Código Postal"
-            placeholder="Ingresa"
-            value={values.postalCode}
-            onChange={(event) => onFieldChange("postalCode", event.target.value)}
-            error={Boolean(errors.postalCode)}
-            helperText={errors.postalCode}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <PostalCodeSettlementFields
+          postalCode={values.postalCode}
+          neighborhoodFullCode={values.neighborhoodFullCode}
+          postalCodeError={errors.postalCode}
+          neighborhoodError={errors.neighborhoodFullCode}
+          neighborhoods={neighborhoodsQuery.data ?? []}
+          neighborhoodsLoading={neighborhoodsQuery.isFetching}
+          fieldKeys={{
+            postalCode: "postalCode",
+            neighborhoodFullCode: "neighborhoodFullCode",
+            state: "state",
+            city: "city",
+          }}
+          mergePatch={(patch) => {
+            mergeFieldValues(patch as Partial<GuarantorTabValues>);
+          }}
+        />
+
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
             label="Estado"
-            placeholder="Selecciona"
             value={values.state}
             onChange={(event) => onFieldChange("state", event.target.value)}
             error={Boolean(errors.state)}
             helperText={errors.state}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -129,21 +149,22 @@ export function GuarantorTab({ values, errors, onFieldChange, onSave }: Guaranto
           <FormTextField
             fullWidth
             required
-            label="Estado Civil"
-            defaultValue={MARITAL_STATUS_OPTIONS[0]}
+            label="Estado civil"
             select
             value={values.maritalStatus}
             onChange={(event) => onFieldChange("maritalStatus", event.target.value)}
             error={Boolean(errors.maritalStatus)}
             helperText={errors.maritalStatus}
+            disabled={maritalStatusesLoading}
           >
-            {
-              MARITAL_STATUS_OPTIONS.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))
-            }
+            <MenuItem value="">
+              {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
+            </MenuItem>
+            {maritalStatusOptions.map((item) => (
+              <MenuItem key={item.id} value={String(item.id)}>
+                {item.name}
+              </MenuItem>
+            ))}
           </FormTextField>
         </Grid>
 

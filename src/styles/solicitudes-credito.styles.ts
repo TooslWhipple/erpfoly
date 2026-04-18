@@ -134,3 +134,18 @@ export const SummaryRow = styled("div")<{ withBackground?: boolean }>(({ withBac
   backgroundColor: (withBackground) ? colors.chip.background : "transparent",
   borderRadius: "12px"
 }));
+
+/** Read-only credit application review page content shell */
+export const RevisionContentWrapper = styled("div")(({ theme }) => ({
+  backgroundColor: colors.background.sidebar,
+  border: `1px solid ${colors.border}`,
+  borderRadius: theme.spacing(1),
+  padding: theme.spacing(3),
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+}));
+
+export const RevisionErrorContainer = styled("div")(({ theme }) => ({
+  padding: theme.spacing(6),
+  textAlign: "center",
+  color: colors.text.secondary,
+}));

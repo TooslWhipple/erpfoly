@@ -56,6 +56,7 @@ export interface FamilyTabErrors {
 
 export interface AddressTabValues {
   postalCode: string;
+  neighborhoodFullCode: string;
   state: string;
   city: string;
   streetAndNumber: string;
@@ -63,7 +64,8 @@ export interface AddressTabValues {
   receiverPhone: string;
   receiverName: string;
   useClientPhone: boolean;
-  housingType: "owned" | "rented" | "paying" | "relatives";
+  /** Housing type catalog id as string (empty until selected). */
+  housingType: string;
   residenceTime: string;
   previousAddress: string;
   previousResidenceTime: string;
@@ -71,6 +73,7 @@ export interface AddressTabValues {
 
 export interface AddressTabErrors {
   postalCode?: string;
+  neighborhoodFullCode?: string;
   state?: string;
   city?: string;
   streetAndNumber?: string;
@@ -80,11 +83,13 @@ export interface AddressTabErrors {
   previousAddress?: string;
   previousResidenceTime?: string;
   betweenStreets?: string;
+  housingType?: string;
 }
 
 export interface EmploymentTabValues {
   company: string;
   postalCode: string;
+  neighborhoodFullCode: string;
   state: string;
   city: string;
   streetAndNumber: string;
@@ -98,6 +103,7 @@ export interface EmploymentTabValues {
   otherIncomeSource: string;
   spouseCompany: string;
   spousePostalCode: string;
+  spouseNeighborhoodFullCode: string;
   spouseState: string;
   spouseCity: string;
   spouseStreetAndNumber: string;
@@ -111,16 +117,25 @@ export interface EmploymentTabValues {
 export interface EmploymentTabErrors {
   company?: string;
   postalCode?: string;
+  neighborhoodFullCode?: string;
   state?: string;
   city?: string;
   streetAndNumber?: string;
+  seniorityYears?: string;
+  position?: string;
+  department?: string;
   monthlyIncome?: string;
+  companyPhone?: string;
+  spousePostalCode?: string;
+  spouseNeighborhoodFullCode?: string;
+  spouseState?: string;
+  spouseCity?: string;
 }
 
 export interface FamilyReference {
   id: string;
   name: string;
-  relationship: string;
+  relationshipId: string;
   address: string;
   phone: string;
 }
@@ -140,6 +155,7 @@ export interface ReferencesTabErrors {
   clientPosition?: string;
   seniorityYears?: string;
   respondentNameAndPosition?: string;
+  familyReferences?: string;
 }
 
 export interface DocumentationTabValues {
@@ -153,6 +169,8 @@ export interface DocumentationTabValues {
 export interface CreditApplicationDocumentFile {
   id: string;
   name: string;
+  file?: File;
+  filePath?: string;
   url?: string;
   uploadedAt?: string;
 }
@@ -160,6 +178,7 @@ export interface CreditApplicationDocumentFile {
 export interface GuarantorTabValues {
   fullName: string;
   postalCode: string;
+  neighborhoodFullCode: string;
   state: string;
   city: string;
   streetAndNumber: string;
@@ -177,6 +196,7 @@ export interface GuarantorTabValues {
 export interface GuarantorTabErrors {
   fullName?: string;
   postalCode?: string;
+  neighborhoodFullCode?: string;
   state?: string;
   city?: string;
   streetAndNumber?: string;

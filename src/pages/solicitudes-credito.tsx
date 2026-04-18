@@ -107,6 +107,10 @@ export default function SolicitudesCredito() {
     count: t.value === activeTab ? totalRows : undefined,
   }));
 
+  const handleEditar = (row: CreditApplicationListItem) => {
+    void router.push(`/solicitudes-credito/${row.id}`);
+  };
+
   const handleVerDetalle = (row: CreditApplicationListItem) => {
     void router.push(`/solicitudes-credito/${row.id}/revision`);
   };
@@ -190,6 +194,11 @@ export default function SolicitudesCredito() {
       id: "ver",
       label: "Ver detalle",
       onClick: handleVerDetalle,
+    },
+    {
+      id: "editar",
+      label: "Editar",
+      onClick: handleEditar,
     },
     {
       id: "aprobar",

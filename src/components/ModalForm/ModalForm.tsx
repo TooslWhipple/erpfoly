@@ -1,8 +1,8 @@
-import { Dialog, IconButton, Box, Button, CircularProgress } from "@mui/material";
+import { Dialog, Box, CircularProgress } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import { useRef } from "react";
 import { Form } from "../Form";
-import type { FormProps, FormFieldConfig } from "../Form";
+import type { FormProps } from "../Form";
 import {
   DialogContent,
   ModalHeader,

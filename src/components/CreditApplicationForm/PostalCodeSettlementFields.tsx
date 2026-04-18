@@ -41,7 +41,7 @@ export function PostalCodeSettlementFields({
     if (sanitized !== postalCode) {
       mergePatch({
         [postalKey]: sanitized,
-        [neighborhoodKey]: "",
+        [neighborhoodKey]: "-1",
         [stateKey]: "",
         [cityKey]: "",
       });
@@ -64,7 +64,7 @@ export function PostalCodeSettlementFields({
 
   return (
     <>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <FormTextField
           fullWidth
           required
@@ -77,11 +77,12 @@ export function PostalCodeSettlementFields({
           inputProps={{ inputMode: "numeric", maxLength: 5 }}
         />
       </Grid>
-      <Grid size={{ xs: 12, md: 8 }}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <FormTextField
           fullWidth
           required
           select
+          defaultValue="-1"
           label="Colonia"
           value={neighborhoodFullCode}
           onChange={(event) => handleNeighborhoodChange(event.target.value)}
@@ -92,8 +93,10 @@ export function PostalCodeSettlementFields({
           }
           disabled={!postalReady || neighborhoodsLoading}
         >
-          <MenuItem value="">
-            {neighborhoodsLoading ? "Cargando…" : postalReady ? "Selecciona colonia" : "Ingresa código postal"}
+          <MenuItem value="-1">
+            {
+              neighborhoodsLoading ? "Cargando..." : postalReady ? "Selecciona una colonia" : "Ingresa el código postal"
+            }
           </MenuItem>
           {neighborhoods.map((row) => (
             <MenuItem key={row.full_code} value={row.full_code}>

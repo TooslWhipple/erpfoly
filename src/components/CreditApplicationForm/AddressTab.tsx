@@ -139,22 +139,21 @@ export function AddressTab({
           <Stack spacing={2}>
             <Typography variant="h6">Propiedad de la vivienda</Typography>
             <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
-              {housingTypesLoading ? (
-                <Typography variant="body2" color="text.secondary">
-                  Cargando…
-                </Typography>
-              ) : (
-                housingTypeOptions.map((item) => (
-                  <RadioButton
-                    key={item.id}
-                    value={String(item.id)}
-                    label={item.name}
-                    checked={values.housingType === String(item.id)}
-                    disabled={housingTypesLoading}
-                    onChange={(event) => onFieldChange("housingType", event.target.value)}
-                  />
-                ))
-              )}
+              {
+                housingTypesLoading ?
+                  <Typography variant="body2" color="text.secondary">Cargando...</Typography>
+                  :
+                  housingTypeOptions.map((item) => (
+                    <RadioButton
+                      key={item.id}
+                      value={String(item.id)}
+                      label={item.name}
+                      checked={values.housingType === String(item.id)}
+                      disabled={housingTypesLoading}
+                      onChange={(event) => onFieldChange("housingType", event.target.value)}
+                    />
+                  ))
+              }
             </Stack>
             {errors.housingType ? (
               <Typography variant="caption" color="error">

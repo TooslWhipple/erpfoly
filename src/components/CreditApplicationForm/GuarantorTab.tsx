@@ -157,7 +157,7 @@ export function GuarantorTab({
             disabled={maritalStatusesLoading}
           >
             <MenuItem value="">
-              {maritalStatusesLoading ? "Cargando…" : "Selecciona"}
+              {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
             </MenuItem>
             {maritalStatusOptions.map((item) => (
               <MenuItem key={item.id} value={String(item.id)}>

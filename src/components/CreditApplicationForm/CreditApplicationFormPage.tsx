@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button, Divider, Stack } from "@mui/material";
+import { CircleAlert } from "lucide-react";
 import { Breadcrumbs, MainLayout, TabFilters } from "@/components";
 import { AddressTab } from "./AddressTab";
 import { BasicInformationTab } from "./BasicInformationTab";
@@ -9,6 +10,7 @@ import { EmploymentTab } from "./EmploymentTab";
 import { FamilyTab } from "./FamilyTab";
 import { GuarantorTab } from "./GuarantorTab";
 import { ReferencesTab } from "./ReferencesTab";
+import { StatusAlertCard } from "./StatusAlertCard";
 import { useCreditApplicationForm } from "@/hooks/credit-applications";
 import { useHousingTypes } from "@/hooks/useHousingTypes";
 import { useFamilyRelationships } from "@/hooks/useFamilyRelationships";
@@ -29,6 +31,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
   const {
     saving,
+    additionalInformationRequested,
     activeTab,
     tabs,
     setActiveTab,
@@ -59,6 +62,27 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     { label: "Solicitudes de crédito", href: "/solicitudes-credito" },
     { label: isCreateMode ? "Nueva solicitud" : "Editar solicitud" },
   ], [isCreateMode]);
+
+  const additionalInformationItems = useMemo(
+    () => additionalInformationRequested.filter((item) => item.requestFlag),
+    [additionalInformationRequested]
+  );
+
+  const additionalInformationAlertMessage = useMemo(() => {
+    if (additionalInformationItems.length === 0) {
+      return "";
+    }
+
+    const requestedNames = additionalInformationItems
+      .map((item) => item.name.trim())
+      .filter((name) => name.length > 0);
+
+    if (requestedNames.length === 0) {
+      return "Se requiere cargar la información adicional solicitada para continuar.";
+    }
+
+    return requestedNames.join(", ");
+  }, [additionalInformationItems]);
 
   const handleGoBack = () => {
     router.push("/solicitudes-credito");
@@ -119,6 +143,16 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
         </Stack>
 
         <Divider />
+
+        {
+          additionalInformationItems.length > 0 &&
+          <StatusAlertCard
+            variant="error"
+            title="Documentación adicional requerida"
+            message={additionalInformationAlertMessage}
+            icon={<CircleAlert size={18} />}
+          />
+        }
 
         <TabFilters
           showSearch={false}

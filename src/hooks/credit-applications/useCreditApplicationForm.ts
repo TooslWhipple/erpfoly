@@ -5,7 +5,10 @@ import {
   saveCreditApplication,
   saveCreditApplicationSection,
 } from "@/services/creditApplications.service";
-import type { CreditApplicationDetailResponse } from "@/services/creditApplications.service";
+import type {
+  AdditionalInformationRequestedItem,
+  CreditApplicationDetailResponse,
+} from "@/services/creditApplications.service";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
@@ -26,15 +29,19 @@ import type {
   ReferencesTabValues,
 } from "@/types/credit-application-form.types";
 
-const TAB_LIST: { label: string; value: CreditApplicationTabId }[] = [
+const BASE_TAB_LIST: { label: string; value: CreditApplicationTabId }[] = [
   { label: "Información básica", value: "basic-information" },
   { label: "Familia", value: "family" },
   { label: "Dirección", value: "address" },
   { label: "Empleo", value: "employment" },
   { label: "Referencias", value: "references" },
   { label: "Documentación", value: "documentation" },
-  { label: "Aval", value: "guarantor" },
 ];
+
+const GUARANTOR_TAB_ITEM: { label: string; value: CreditApplicationTabId } = {
+  label: "Aval",
+  value: "guarantor",
+};
 
 const EMPTY_BASIC_INFORMATION_VALUES: BasicInformationFormValues = {
   firstName: "",
@@ -137,6 +144,15 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   identificationBackFiles: [],
   hasSpouse: false,
 };
+
+const DRAFT_STALE_AFTER_MS = 5 * 60 * 1000;
+
+function isDraftStale(updatedAt: string | undefined): boolean {
+  if (!updatedAt) return true;
+  const parsedTimestamp = Date.parse(updatedAt);
+  if (!Number.isFinite(parsedTimestamp)) return true;
+  return Date.now() - parsedTimestamp > DRAFT_STALE_AFTER_MS;
+}
 
 function mapCreditApplicationToFormValues(
   creditApplication: CreditApplicationDetailResponse
@@ -377,6 +393,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const [activeTab, setActiveTab] = useState<CreditApplicationTabId>("basic-information");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [biometricsData, setBiometricsData] = useState<CreditApplicationBiometricsData | null>(null);
+  const [additionalInformationRequested, setAdditionalInformationRequested] = useState<
+    AdditionalInformationRequestedItem[]
+  >([]);
 
   const upsertBasicInformation = useCreditApplicationDraftStore((state) => state.upsertBasicInformation);
   const upsertFamily = useCreditApplicationDraftStore((state) => state.upsertFamily);
@@ -392,6 +411,20 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     if (isCreateMode) return "new-credit-application";
     return applicationId ?? "unknown-credit-application";
   }, [applicationId, isCreateMode]);
+
+  const shouldShowGuarantorTab = useMemo(() => {
+    if (isCreateMode) return true;
+    return additionalInformationRequested.some(
+      (item) => item.requestFlag && item.code.trim() === "GUARANTOR_INFORMATION"
+    );
+  }, [additionalInformationRequested, isCreateMode]);
+
+  const tabs = useMemo(() => {
+    if (!shouldShowGuarantorTab) {
+      return BASE_TAB_LIST;
+    }
+    return [...BASE_TAB_LIST, GUARANTOR_TAB_ITEM];
+  }, [shouldShowGuarantorTab]);
 
   const basicInformationTab = useBasicInformationTab(EMPTY_BASIC_INFORMATION_VALUES);
   const familyTab = useFamilyTab(EMPTY_FAMILY_VALUES);
@@ -417,7 +450,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     }
 
     const draft = getDraftById(draftKey);
+    const draftIsStale = draft ? isDraftStale(draft.updatedAt) : true;
     if (draft) {
+      setAdditionalInformationRequested([]);
       setBasicInformationValuesFromExternal(draft.basicInformation);
       setFamilyValuesFromExternal(draft.family);
       setAddressValuesFromExternal(draft.address);
@@ -433,46 +468,54 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         upsertDocumentation(draftKey, hydratedDocumentation);
       }
       setLoading(false);
-      return;
     }
 
     if (isCreateMode) {
+      setAdditionalInformationRequested([]);
       setLoading(false);
       return;
     }
 
     let isCancelled = false;
     const loadExistingApplication = async () => {
-      setLoading(true);
+      setLoading(!draft);
       setError(null);
       setIsEmptyState(false);
 
       try {
         const loadedApplication = await getCreditApplicationById(applicationId!);
         if (isCancelled) return;
+        setAdditionalInformationRequested(loadedApplication.additionalInformationRequested ?? []);
 
         const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
+        const shouldApplyServerValues = !draft || draftIsStale;
 
-        setBasicInformationValuesFromExternal(mappedValues.basicInformation);
-        setFamilyValuesFromExternal(mappedValues.family);
-        setAddressValuesFromExternal(mappedValues.address);
-        setEmploymentValuesFromExternal(mappedValues.employment);
-        setReferencesValuesFromExternal(mappedValues.references);
-        setDocumentationValuesFromExternal(mappedValues.documentation);
-        setGuarantorValuesFromExternal(mappedValues.guarantor);
+        if (shouldApplyServerValues) {
+          setBasicInformationValuesFromExternal(mappedValues.basicInformation);
+          setFamilyValuesFromExternal(mappedValues.family);
+          setAddressValuesFromExternal(mappedValues.address);
+          setEmploymentValuesFromExternal(mappedValues.employment);
+          setReferencesValuesFromExternal(mappedValues.references);
+          setDocumentationValuesFromExternal(mappedValues.documentation);
+          setGuarantorValuesFromExternal(mappedValues.guarantor);
+          setBiometricsData(null);
 
-        upsertBasicInformation(draftKey, mappedValues.basicInformation);
-        upsertFamily(draftKey, mappedValues.family);
-        upsertAddress(draftKey, mappedValues.address);
-        upsertEmployment(draftKey, mappedValues.employment);
-        upsertReferences(draftKey, mappedValues.references);
-        upsertDocumentation(draftKey, mappedValues.documentation);
-        upsertGuarantor(draftKey, mappedValues.guarantor);
+          upsertBasicInformation(draftKey, mappedValues.basicInformation);
+          upsertFamily(draftKey, mappedValues.family);
+          upsertAddress(draftKey, mappedValues.address);
+          upsertEmployment(draftKey, mappedValues.employment);
+          upsertReferences(draftKey, mappedValues.references);
+          upsertDocumentation(draftKey, mappedValues.documentation);
+          upsertGuarantor(draftKey, mappedValues.guarantor);
+        }
       } catch (loadError) {
         console.error("[CreditApplicationForm] Unable to load credit application", loadError);
         if (!isCancelled) {
-          setIsEmptyState(true);
-          setError("No se pudo cargar la solicitud, intenta nuevamente.");
+          setAdditionalInformationRequested([]);
+          if (!draft) {
+            setIsEmptyState(true);
+            setError("No se pudo cargar la solicitud, intenta nuevamente.");
+          }
         }
       } finally {
         if (!isCancelled) {
@@ -504,7 +547,14 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     upsertEmployment,
     upsertReferences,
     upsertDocumentation,
+    upsertGuarantor,
   ]);
+
+  useEffect(() => {
+    if (activeTab === "guarantor" && !shouldShowGuarantorTab) {
+      setActiveTab("basic-information");
+    }
+  }, [activeTab, shouldShowGuarantorTab]);
 
   const persistBasicInformation = useCallback(
     (values: BasicInformationFormValues) => {
@@ -564,7 +614,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     const employmentFormIsValid = employmentTab.validateValues();
     const referencesFormIsValid = referencesTab.validateValues();
     const documentationFormIsValid = documentationTab.validateValues();
-    const guarantorFormIsValid = guarantorTab.validateValues();
+    const guarantorFormIsValid =
+      !shouldShowGuarantorTab || guarantorTab.validateValues();
 
     const formIsValid =
       basicFormIsValid &&
@@ -623,6 +674,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     referencesTab,
     documentationTab,
     guarantorTab,
+    shouldShowGuarantorTab,
     biometricsData,
     isCreateMode,
     persistBasicInformation,
@@ -644,7 +696,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     if (activeTab === "employment") isValid = employmentTab.validateValues();
     if (activeTab === "references") isValid = referencesTab.validateValues();
     if (activeTab === "documentation") isValid = documentationTab.validateValues();
-    if (activeTab === "guarantor") isValid = guarantorTab.validateValues();
+    if (activeTab === "guarantor" && shouldShowGuarantorTab) {
+      isValid = guarantorTab.validateValues();
+    }
     if (!isValid) return false;
 
     const currentPayload = {
@@ -679,7 +733,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         if (activeTab === "documentation") {
           await saveCreditApplicationSection(applicationId, "documentation", currentPayload);
         }
-        if (activeTab === "guarantor") {
+        if (activeTab === "guarantor" && shouldShowGuarantorTab) {
           await saveCreditApplicationSection(applicationId, "guarantor", currentPayload);
         }
       } catch (saveError) {
@@ -707,6 +761,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     referencesTab,
     documentationTab,
     guarantorTab,
+    shouldShowGuarantorTab,
     persistBasicInformation,
     persistFamily,
     persistAddress,
@@ -722,8 +777,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     error,
     saveSuccess,
     isEmptyState,
+    additionalInformationRequested,
     activeTab,
-    tabs: TAB_LIST,
+    tabs,
     biometricsData,
     setActiveTab,
     basicInformationTab,

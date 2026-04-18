@@ -23,16 +23,6 @@ export const ReferenceCard = styled("div")(({ theme }) => ({
   backgroundColor: colors.background.sidebar,
 }));
 
-export const DocumentationAlert = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  width: "100%",
-  borderRadius: "8px",
-  backgroundColor: "#FFF1F2",
-  padding: "12px",
-  gap: "12px"
-}));
-
 export const VerifiedDocumentRow = styled("div")(({ theme }) => ({
   width: "100%",
   borderRadius: "12px",

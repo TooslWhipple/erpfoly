@@ -1,4 +1,5 @@
 import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
+import type { ApiSuccessPayload } from "@/lib/axios";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
 import type {
@@ -124,6 +125,31 @@ interface CreditApplicationGuarantorResponse {
   };
 }
 
+export interface AdditionalInformationCatalogItem {
+  code: string;
+  name: string;
+  description: string | null;
+  requestKind: "file_upload" | "form";
+}
+
+export interface AdditionalInformationRequestedItem {
+  code: string;
+  name: string;
+  description: string | null;
+  requestFlag: boolean;
+  requestedAt: string;
+}
+
+interface AdditionalInformationCatalogApiItem {
+  code?: unknown;
+  name?: unknown;
+  description?: unknown;
+  helperText?: unknown;
+  requestKind?: unknown;
+  kind?: unknown;
+  type?: unknown;
+}
+
 export interface CreditApplicationDetailResponse {
   personalInformation: CreditApplicationPersonalInformationResponse;
   family: CreditApplicationFamilyResponse;
@@ -133,6 +159,7 @@ export interface CreditApplicationDetailResponse {
   familyReferences: CreditApplicationFamilyReferenceResponse[];
   documentation?: CreditApplicationDocumentationResponse;
   guarantor?: CreditApplicationGuarantorResponse;
+  additionalInformationRequested?: AdditionalInformationRequestedItem[];
 }
 
 const BASE = "/credit-applications";
@@ -475,6 +502,41 @@ export async function getCreditApplicationById(
   applicationId: string
 ): Promise<CreditApplicationDetailResponse> {
   const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`);
+  return unwrapOrThrow(result);
+}
+
+export async function getAdditionalInformationCatalog(): Promise<AdditionalInformationCatalogItem[]> {
+  const result = await get<AdditionalInformationCatalogApiItem[]>(`${BASE}/additional-information/catalog`);
+  const catalogItems = unwrapOrThrow(result);
+
+  return catalogItems.reduce<AdditionalInformationCatalogItem[]>((acc, item) => {
+    const code = typeof item.code === "string" ? item.code.trim() : "";
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    const descriptionValue =
+      typeof item.description === "string" ? item.description : typeof item.helperText === "string" ? item.helperText : null;
+    const requestKindValue = item.requestKind ?? item.kind ?? item.type;
+    const requestKind = requestKindValue === "form" ? "form" : "file_upload";
+
+    if (!code || !name) {
+      return acc;
+    }
+
+    acc.push({
+      code,
+      name,
+      description: descriptionValue?.trim() || null,
+      requestKind,
+    });
+
+    return acc;
+  }, []);
+}
+
+export async function requestCreditApplicationAdditionalInformation(
+  applicationId: string,
+  codes: string[]
+): Promise<ApiSuccessPayload> {
+  const result = await post<ApiSuccessPayload>(`${BASE}/${applicationId}/additional-information`, { codes });
   return unwrapOrThrow(result);
 }
 

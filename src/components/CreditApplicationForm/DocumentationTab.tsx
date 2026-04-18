@@ -1,9 +1,8 @@
-import { Button, Grid, Stack, Typography } from "@mui/material";
-import { CircleAlert } from "lucide-react";
+import { Button } from "@mui/material";
 import { FileUpload } from "@/components/FileUpload";
 import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
 import type { UploadedFileItem } from "@/components/FileUpload";
-import { Card, DocumentationAlert } from "./styles";
+import { Card } from "./styles";
 
 interface DocumentationTabProps {
   values: {
@@ -46,17 +45,6 @@ export function DocumentationTab({
 
   return (
     <Card>
-      {
-        values.requiredAlertVisible &&
-        <DocumentationAlert>
-          <CircleAlert size={18} color="#DC2626" />
-          <Stack spacing={0.5}>
-            <Typography variant="subtitle1">Documentación adicional requerida</Typography>
-            <Typography variant="body2" color="text.secondary">{values.requiredAlertMessage}</Typography>
-          </Stack>
-        </DocumentationAlert>
-      }
-
       <FileUpload
         value={mapStoredToUploadItems(values.incomeProofFiles)}
         onChange={(files) => onIncomeProofChange(mapUploadToStoredItems(files))}

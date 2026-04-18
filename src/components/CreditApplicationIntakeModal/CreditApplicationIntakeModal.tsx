@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Button, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { colors } from "@/styles/theme";
@@ -246,12 +246,7 @@ export function CreditApplicationIntakeModal({
               Para continuar con el proceso, solicita la autorización para revisar el
               historial crediticio del cliente a través del Buró de Crédito.
             </Typography>
-            <Stack
-              style={{
-                borderRadius: "16px",
-                overflow: "hidden",
-              }}
-            >
+            <Stack style={{ borderRadius: "16px", overflow: "hidden" }}>
               <canvas
                 ref={signatureCanvasRef}
                 width={900}
@@ -259,12 +254,12 @@ export function CreditApplicationIntakeModal({
                 style={{
                   width: "100%",
                   backgroundColor: colors.background.sidebar,
-                  cursor: "crosshair",
+                  cursor: saving ? "not-allowed" : "crosshair",
                 }}
-                onMouseDown={handleStartDrawing}
-                onMouseMove={handleDraw}
-                onMouseUp={handleEndDrawing}
-                onMouseLeave={handleEndDrawing}
+                onMouseDown={saving ? undefined : handleStartDrawing}
+                onMouseMove={saving ? undefined : handleDraw}
+                onMouseUp={saving ? undefined : handleEndDrawing}
+                onMouseLeave={saving ? undefined : handleEndDrawing}
               />
             </Stack>
             <Typography variant="body1" textAlign="center" alignSelf="center">
@@ -275,7 +270,7 @@ export function CreditApplicationIntakeModal({
               variant="text"
               startIcon={<PenSquare size={16} />}
               onClick={clearSignatureCanvas}
-            >
+              disabled={saving}>
               Limpiar firma
             </Button>
           </Stack>
@@ -285,9 +280,13 @@ export function CreditApplicationIntakeModal({
           fullWidth
           variant="contained"
           onClick={goToNextStep}
-          disabled={!canContinue || saving}
-        >
-          {isLastStep ? "Finalizar" : "Continuar"}
+          disabled={!canContinue || saving}>
+          {
+            (saving) ?
+              <CircularProgress size={20} color="inherit" />
+              :
+              (isLastStep) ? "Finalizar" : "Siguiente"
+          }
         </Button>
       </Stack>
     </SideModal>

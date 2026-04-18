@@ -218,6 +218,8 @@ export default function CreditApplicationReviewPage() {
       />
 
       <RequestAdditionalInfoModal
+        applicationId={idString}
+        requestedItems={detailQuery.data.additionalInformationRequested ?? []}
         open={requestAdditionalInfoOpen}
         onClose={() => setRequestAdditionalInfoOpen(false)}
       />

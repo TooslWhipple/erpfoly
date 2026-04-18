@@ -292,6 +292,8 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseCompanyPhone}
             onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value)}
+            error={Boolean(errors.spouseCompanyPhone)}
+            helperText={errors.spouseCompanyPhone}
             disabled={!spouseSectionEnabled}
           />
         </Grid>

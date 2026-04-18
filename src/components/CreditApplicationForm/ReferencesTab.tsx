@@ -125,6 +125,8 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.name}
                   onChange={(event) => onReferenceFieldChange(reference.id, "name", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.name)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.name}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -142,6 +144,8 @@ export function ReferencesTab({
                     )
                   }
                   disabled={relationshipsLoading}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.relationshipId)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.relationshipId}
                 >
                   <MenuItem value="">
                     {relationshipsLoading ? "Cargando..." : "Selecciona"}
@@ -161,6 +165,8 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.address}
                   onChange={(event) => onReferenceFieldChange(reference.id, "address", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.address)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.address}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -171,6 +177,8 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.phone}
                   onChange={(event) => onReferenceFieldChange(reference.id, "phone", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.phone)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.phone}
                 />
               </Grid>
             </Grid>

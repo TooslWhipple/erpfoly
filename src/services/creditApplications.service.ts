@@ -1,5 +1,7 @@
 import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
 import type { ApiSuccessPayload } from "@/lib/axios";
+import type { PaginatedRowsResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
 import type {
@@ -20,7 +22,7 @@ interface CreditApplicationNeighborhood {
   municipality: string;
 }
 
-interface CreditApplicationPersonalInformationResponse {
+interface CreditApplicationBasicInformationResponse {
   name: string;
   lastName: string;
   secondLastName: string;
@@ -53,12 +55,20 @@ interface CreditApplicationAddressResponse {
   receiverPhone: string;
   useClientPhone: boolean;
   housingType: CreditApplicationCatalogItem;
+  residenceTime: string;
   previousAddress: string;
   previousAddressDuration: string;
 }
 
-interface CreditApplicationEmploymentResponse {
+interface CreditApplicationEmploymentPersonResponse {
   companyName: string;
+  postalCode: string;
+  neighborhoodFullCode: string;
+  state: string;
+  city: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   companyAddress: string;
   companyPhone: string;
   position: string;
@@ -70,21 +80,27 @@ interface CreditApplicationEmploymentResponse {
   otherIncomeDescription: string;
 }
 
-interface CreditApplicationWorkReferencesResponse {
-  companyName: string;
-  companyPhone: string;
-  applicantPosition: string;
-  seniorityYears: number;
-  answeredBy: string;
-  answeredByPosition: string;
+interface CreditApplicationEmploymentResponse {
+  applicant: CreditApplicationEmploymentPersonResponse;
+  spouse: CreditApplicationEmploymentPersonResponse;
 }
 
-interface CreditApplicationFamilyReferenceResponse {
-  firstName: string;
-  lastName: string;
-  relationship: CreditApplicationCatalogItem;
-  address: string;
-  phone: string;
+interface CreditApplicationReferencesResponse {
+  work: {
+    companyName: string;
+    companyPhone: string;
+    applicantPosition: string;
+    seniorityYears: number;
+    answeredBy: string;
+    answeredByPosition: string;
+  };
+  family: Array<{
+    firstName: string;
+    lastName: string;
+    relationship: CreditApplicationCatalogItem;
+    address: string;
+    phone: string;
+  }>;
 }
 
 interface CreditApplicationDocumentItemResponse {
@@ -97,6 +113,7 @@ interface CreditApplicationDocumentItemResponse {
 
 interface CreditApplicationDocumentationResponse {
   incomeProofFiles: CreditApplicationDocumentItemResponse[];
+  employmentProofLetterFiles: CreditApplicationDocumentItemResponse[];
   ineFrontFiles: CreditApplicationDocumentItemResponse[];
   ineBackFiles: CreditApplicationDocumentItemResponse[];
   guarantorIneFrontFiles: CreditApplicationDocumentItemResponse[];
@@ -151,15 +168,19 @@ interface AdditionalInformationCatalogApiItem {
 }
 
 export interface CreditApplicationDetailResponse {
-  personalInformation: CreditApplicationPersonalInformationResponse;
+  basicInformation: CreditApplicationBasicInformationResponse;
   family: CreditApplicationFamilyResponse;
   address: CreditApplicationAddressResponse;
   employment: CreditApplicationEmploymentResponse;
-  workReferences: CreditApplicationWorkReferencesResponse;
-  familyReferences: CreditApplicationFamilyReferenceResponse[];
+  references: CreditApplicationReferencesResponse;
   documentation?: CreditApplicationDocumentationResponse;
   guarantor?: CreditApplicationGuarantorResponse;
   additionalInformationRequested?: AdditionalInformationRequestedItem[];
+}
+
+export interface IdentityConflictsResult {
+  hasExistingClient: boolean;
+  hasExistingApplication: boolean;
 }
 
 const BASE = "/credit-applications";
@@ -187,6 +208,13 @@ type SaveSectionResponse = {
   message: string;
 };
 
+type SubmitCreditApplicationResponse = {
+  success: boolean;
+  message: string;
+  status: string;
+  creditApplicationId: number;
+};
+
 type UploadDocumentResponse = {
   success: boolean;
   message: string;
@@ -203,6 +231,7 @@ type CreditApplicationDocumentTypeCode =
   | "BUREAU_AUTHORIZATION_SIGNATURE"
   | "FINGERPRINT"
   | "INCOME_PROOF"
+  | "EMPLOYMENT_PROOF_LETTER"
   | "GUARANTOR_INE_FRONT"
   | "GUARANTOR_INE_BACK";
 
@@ -378,6 +407,7 @@ function buildSectionPayload(
       return {
         documentation: {
           incomeProofFiles: payload.documentation.incomeProofFiles,
+          employmentProofLetterFiles: payload.documentation.employmentProofLetterFiles,
           ineFrontFiles: payload.documentation.ineFrontFiles,
           ineBackFiles: payload.documentation.ineBackFiles,
         },
@@ -505,6 +535,50 @@ export async function getCreditApplicationById(
   return unwrapOrThrow(result);
 }
 
+export async function checkIdentityConflicts(
+  identityValue: string,
+  currentApplicationId?: string
+): Promise<IdentityConflictsResult> {
+  const normalizedIdentityValue = identityValue.trim();
+  if (!normalizedIdentityValue) {
+    return {
+      hasExistingClient: false,
+      hasExistingApplication: false,
+    };
+  }
+
+  const [clientsResponse, applicationsResponse] = await Promise.all([
+    get<PaginatedRowsResponse<{ id: number }>>(
+      buildListUrl("/clients", {
+        page: 1,
+        limit: 1,
+        search: normalizedIdentityValue,
+      })
+    ),
+    get<PaginatedRowsResponse<{ id: number }>>(
+      buildListUrl(BASE, {
+        page: 1,
+        limit: 5,
+        search: normalizedIdentityValue,
+      })
+    ),
+  ]);
+
+  const clients = unwrapOrThrow(clientsResponse);
+  const applications = unwrapOrThrow(applicationsResponse);
+  const parsedCurrentApplicationId = Number.parseInt(currentApplicationId ?? "", 10);
+  const hasCurrentApplicationId = Number.isFinite(parsedCurrentApplicationId);
+
+  const hasExistingApplication = applications.rows.some(
+    (application) => !hasCurrentApplicationId || application.id !== parsedCurrentApplicationId
+  );
+
+  return {
+    hasExistingClient: clients.rows.length > 0,
+    hasExistingApplication,
+  };
+}
+
 export async function getAdditionalInformationCatalog(): Promise<AdditionalInformationCatalogItem[]> {
   const result = await get<AdditionalInformationCatalogApiItem[]>(`${BASE}/additional-information/catalog`);
   const catalogItems = unwrapOrThrow(result);
@@ -545,13 +619,17 @@ export async function validateSecurityCode(code: string): Promise<boolean> {
   return code.trim().length >= 6;
 }
 
-export async function saveCreditApplication(payload: CreditApplicationFormPayload): Promise<{ id: string }> {
+export async function saveCreditApplication(
+  payload: CreditApplicationFormPayload,
+  options?: { includeGuarantorSection?: boolean }
+): Promise<{ id: string }> {
   const applicationId = payload.id?.trim();
   if (!applicationId) {
     await wait(800);
     return { id: `new-${Date.now()}` };
   }
 
+  const includeGuarantorSection = options?.includeGuarantorSection ?? true;
   const sections: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">> = [
     "basicInformation",
     "family",
@@ -559,7 +637,7 @@ export async function saveCreditApplication(payload: CreditApplicationFormPayloa
     "employment",
     "references",
     "documentation",
-    "guarantor",
+    ...(includeGuarantorSection ? ["guarantor" as const] : []),
   ];
 
   for (const section of sections) {
@@ -581,6 +659,11 @@ export async function saveCreditApplicationSection(
         applicationId,
         payload.documentation.incomeProofFiles,
         "INCOME_PROOF"
+      ),
+      employmentProofLetterFiles: await ensureDocumentFilesUploaded(
+        applicationId,
+        payload.documentation.employmentProofLetterFiles,
+        "EMPLOYMENT_PROOF_LETTER"
       ),
       ineFrontFiles: await ensureDocumentFilesUploaded(
         applicationId,
@@ -613,5 +696,15 @@ export async function saveCreditApplicationSection(
 
   const requestPayload = buildSectionPayload(section, payload);
   const result = await patch<SaveSectionResponse>(`${BASE}/${applicationId}`, requestPayload);
+  return unwrapOrThrow(result);
+}
+
+export async function submitCreditApplicationForReview(
+  applicationId: string
+): Promise<SubmitCreditApplicationResponse> {
+  const result = await patch<SubmitCreditApplicationResponse>(
+    `${BASE}/${applicationId}/submit`,
+    {}
+  );
   return unwrapOrThrow(result);
 }

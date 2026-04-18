@@ -1,15 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
-import { validateSecurityCode } from "@/services/creditApplications.service";
+import { checkIdentityConflicts, validateSecurityCode } from "@/services/creditApplications.service";
 import type {
   BasicInformationFormErrors,
   BasicInformationFormValues,
 } from "@/types/credit-application-form.types";
+import {
+  cleanAlphaNumeric,
+  isAdultBirthDate,
+  isValidCurp,
+  isValidMxPhone,
+  isValidRfc,
+  normalizeMxPhone,
+} from "./fieldValidation";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function cleanAlphaNumeric(value: string): string {
-  return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-}
 
 export function useBasicInformationTab(initialValues: BasicInformationFormValues) {
   const [values, setValues] = useState<BasicInformationFormValues>(initialValues);
@@ -23,7 +27,13 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
 
   const setFieldValue = useCallback((field: keyof BasicInformationFormValues, value: string) => {
     const nextValue =
-      field === "curp" || field === "rfc" ? cleanAlphaNumeric(value) : value;
+      field === "curp"
+        ? cleanAlphaNumeric(value).slice(0, 18)
+        : field === "rfc"
+          ? cleanAlphaNumeric(value).slice(0, 13)
+        : field === "whatsappNumber"
+          ? normalizeMxPhone(value)
+          : value;
     const nextValues = { ...values, [field]: nextValue };
 
     setValues(nextValues);
@@ -47,9 +57,14 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
     if (!values.lastName.trim()) nextErrors.lastName = "Primer apellido es requerido";
     if (!values.secondLastName.trim()) nextErrors.secondLastName = "Segundo apellido es requerido";
     if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
+    else if (!isAdultBirthDate(values.birthDate)) {
+      nextErrors.birthDate = "La fecha de nacimiento debe corresponder a una persona mayor de edad";
+    }
     if (!values.maritalStatus.trim()) nextErrors.maritalStatus = "Estado civil es requerido";
     if (!values.curp.trim()) nextErrors.curp = "CURP es requerido";
+    else if (!isValidCurp(values.curp)) nextErrors.curp = "CURP inválido";
     if (!values.rfc.trim()) nextErrors.rfc = "RFC es requerido";
+    else if (!isValidRfc(values.rfc)) nextErrors.rfc = "RFC inválido";
 
     if (!values.email.trim()) {
       nextErrors.email = "Correo electrónico es requerido";
@@ -59,10 +74,14 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
 
     if (!values.whatsappNumber.trim()) {
       nextErrors.whatsappNumber = "Número de Whatsapp es requerido";
+    } else if (!isValidMxPhone(values.whatsappNumber)) {
+      nextErrors.whatsappNumber = "El número de Whatsapp debe tener 10 dígitos";
     }
 
     if (!values.securityCode.trim()) {
       nextErrors.securityCode = "Código de seguridad es requerido";
+    } else if (values.securityCode.trim().length < 6) {
+      nextErrors.securityCode = "El código de seguridad debe tener al menos 6 caracteres";
     }
 
     setErrors(nextErrors);
@@ -90,6 +109,69 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
     }
   }, [values.securityCode]);
 
+  const getIdentityConflictError = useCallback(
+    (
+      field: keyof Pick<BasicInformationFormValues, "curp" | "rfc">,
+      hasExistingClient: boolean,
+      hasExistingApplication: boolean
+    ): string | undefined => {
+      if (!hasExistingClient && !hasExistingApplication) {
+        return undefined;
+      }
+
+      const fieldLabel = field.toUpperCase();
+      if (hasExistingClient && hasExistingApplication) {
+        return `Ya existe un cliente y una solicitud con este ${fieldLabel}.`;
+      }
+      if (hasExistingClient) {
+        return `Ya existe un cliente con este ${fieldLabel}.`;
+      }
+      return `Ya existe una solicitud con este ${fieldLabel}.`;
+    },
+    []
+  );
+
+  const validateIdentityField = useCallback(
+    async (
+      field: keyof Pick<BasicInformationFormValues, "curp" | "rfc">,
+      currentApplicationId?: string
+    ): Promise<boolean> => {
+      const currentValue = values[field].trim();
+      if (!currentValue) return false;
+
+      try {
+        const conflicts = await checkIdentityConflicts(currentValue, currentApplicationId);
+        const conflictError = getIdentityConflictError(
+          field,
+          conflicts.hasExistingClient,
+          conflicts.hasExistingApplication
+        );
+
+        setErrors((prev) => ({ ...prev, [field]: conflictError }));
+        return !conflictError;
+      } catch {
+        setErrors((prev) => ({
+          ...prev,
+          [field]: `No se pudo validar el ${field.toUpperCase()}, intenta nuevamente.`,
+        }));
+        return false;
+      }
+    },
+    [getIdentityConflictError, values]
+  );
+
+  const validateIdentityUniqueness = useCallback(
+    async (currentApplicationId?: string): Promise<boolean> => {
+      const [curpIsValid, rfcIsValid] = await Promise.all([
+        validateIdentityField("curp", currentApplicationId),
+        validateIdentityField("rfc", currentApplicationId),
+      ]);
+
+      return curpIsValid && rfcIsValid;
+    },
+    [validateIdentityField]
+  );
+
   return {
     values,
     errors,
@@ -100,5 +182,7 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
     setValuesFromExternalSource,
     validateValues,
     validateCurrentSecurityCode,
+    validateIdentityField,
+    validateIdentityUniqueness,
   };
 }

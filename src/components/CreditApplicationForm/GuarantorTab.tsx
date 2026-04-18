@@ -128,6 +128,8 @@ export function GuarantorTab({
             placeholder="Ingresa"
             value={values.betweenStreets}
             onChange={(event) => onFieldChange("betweenStreets", event.target.value)}
+            error={Boolean(errors.betweenStreets)}
+            helperText={errors.betweenStreets}
           />
         </Grid>
 

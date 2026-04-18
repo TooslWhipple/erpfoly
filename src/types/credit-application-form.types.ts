@@ -126,6 +126,7 @@ export interface EmploymentTabErrors {
   department?: string;
   monthlyIncome?: string;
   companyPhone?: string;
+  spouseCompanyPhone?: string;
   spousePostalCode?: string;
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;
@@ -156,12 +157,22 @@ export interface ReferencesTabErrors {
   seniorityYears?: string;
   respondentNameAndPosition?: string;
   familyReferences?: string;
+  familyReferenceItems?: Record<
+    string,
+    {
+      name?: string;
+      relationshipId?: string;
+      address?: string;
+      phone?: string;
+    }
+  >;
 }
 
 export interface DocumentationTabValues {
   requiredAlertVisible: boolean;
   requiredAlertMessage: string;
   incomeProofFiles: CreditApplicationDocumentFile[];
+  employmentProofLetterFiles: CreditApplicationDocumentFile[];
   ineFrontFiles: CreditApplicationDocumentFile[];
   ineBackFiles: CreditApplicationDocumentFile[];
 }
@@ -200,6 +211,7 @@ export interface GuarantorTabErrors {
   state?: string;
   city?: string;
   streetAndNumber?: string;
+  betweenStreets?: string;
   birthDate?: string;
   maritalStatus?: string;
   curp?: string;

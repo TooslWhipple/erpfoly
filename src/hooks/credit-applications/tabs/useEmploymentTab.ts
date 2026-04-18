@@ -1,13 +1,22 @@
 import { useCallback, useState } from "react";
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
 import { isValidMxPostalCode } from "@/forms/validation/schemas";
+import { isValidMxPhone, normalizeMxPhone } from "./fieldValidation";
+
+function parseNumericValue(value: string): number {
+  return Number.parseFloat(value.replace(/,/g, "").trim());
+}
 
 export function useEmploymentTab(initialValues: EmploymentTabValues) {
   const [values, setValues] = useState<EmploymentTabValues>(initialValues);
   const [errors, setErrors] = useState<EmploymentTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => {
-    const nextValues = { ...values, [field]: value };
+    const nextValue =
+      field === "companyPhone" || field === "spouseCompanyPhone"
+        ? normalizeMxPhone(String(value))
+        : value;
+    const nextValues = { ...values, [field]: nextValue };
     setValues(nextValues);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     return nextValues;
@@ -46,11 +55,29 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
-    if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antiguedad es requerida";
+    if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
+    else {
+      const seniorityYears = parseNumericValue(values.seniorityYears);
+      if (!Number.isFinite(seniorityYears) || seniorityYears < 0) {
+        nextErrors.seniorityYears = "La antigüedad debe ser un número mayor o igual a 0";
+      }
+    }
     if (!values.position.trim()) nextErrors.position = "Puesto es requerido";
     if (!values.department.trim()) nextErrors.department = "Departamento es requerido";
     if (!values.monthlyIncome.trim()) nextErrors.monthlyIncome = "Ingreso mensual es requerido";
+    else {
+      const monthlyIncome = parseNumericValue(values.monthlyIncome);
+      if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) {
+        nextErrors.monthlyIncome = "El ingreso mensual debe ser mayor a 0";
+      }
+    }
     if (!values.companyPhone.trim()) nextErrors.companyPhone = "Teléfono de la empresa es requerido";
+    else if (!isValidMxPhone(values.companyPhone)) {
+      nextErrors.companyPhone = "El teléfono de la empresa debe tener 10 dígitos";
+    }
+    if (values.spouseCompanyPhone.trim() && !isValidMxPhone(values.spouseCompanyPhone)) {
+      nextErrors.spouseCompanyPhone = "El teléfono de la empresa del cónyuge debe tener 10 dígitos";
+    }
 
     if (isValidMxPostalCode(values.spousePostalCode)) {
       if (

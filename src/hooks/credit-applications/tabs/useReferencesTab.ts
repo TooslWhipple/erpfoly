@@ -1,5 +1,10 @@
 import { useCallback, useState } from "react";
 import type { FamilyReference, ReferencesTabErrors, ReferencesTabValues } from "@/types/credit-application-form.types";
+import { isValidMxPhone, normalizeMxPhone } from "./fieldValidation";
+
+function parseNumericValue(value: string): number {
+  return Number.parseFloat(value.replace(/,/g, "").trim());
+}
 
 function createEmptyReference(index: number): FamilyReference {
   return {
@@ -16,15 +21,17 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
   const [errors, setErrors] = useState<ReferencesTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof Omit<ReferencesTabValues, "familyReferences">, value: string) => {
-    const nextValues = { ...values, [field]: value };
+    const nextValue = field === "phone" ? normalizeMxPhone(value) : value;
+    const nextValues = { ...values, [field]: nextValue };
     setValues(nextValues);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     return nextValues;
   }, [values]);
 
   const setReferenceFieldValue = useCallback((referenceId: string, field: keyof Omit<FamilyReference, "id">, value: string) => {
+    const nextValue = field === "phone" ? normalizeMxPhone(value) : value;
     const nextReferences = values.familyReferences.map((reference) =>
-      reference.id === referenceId ? { ...reference, [field]: value } : reference
+      reference.id === referenceId ? { ...reference, [field]: nextValue } : reference
     );
     const nextValues = { ...values, familyReferences: nextReferences };
     setValues(nextValues);
@@ -85,8 +92,15 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     const nextErrors: ReferencesTabErrors = {};
     if (!values.company.trim()) nextErrors.company = "Empresa es requerida";
     if (!values.phone.trim()) nextErrors.phone = "Teléfono es requerido";
+    else if (!isValidMxPhone(values.phone)) nextErrors.phone = "El teléfono debe tener 10 dígitos";
     if (!values.clientPosition.trim()) nextErrors.clientPosition = "Puesto del cliente es requerido";
     if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
+    else {
+      const seniorityYears = parseNumericValue(values.seniorityYears);
+      if (!Number.isFinite(seniorityYears) || seniorityYears < 0) {
+        nextErrors.seniorityYears = "La antigüedad debe ser un número mayor o igual a 0";
+      }
+    }
     if (!values.respondentNameAndPosition.trim()) nextErrors.respondentNameAndPosition = "Este campo es requerido";
 
     const hasCompleteFamilyReference = values.familyReferences.some(
@@ -107,6 +121,9 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
       if (!reference.relationshipId.trim()) referenceErrors.relationshipId = "Parentesco es requerido";
       if (!reference.address.trim()) referenceErrors.address = "Dirección es requerida";
       if (!reference.phone.trim()) referenceErrors.phone = "Teléfono es requerido";
+      else if (!isValidMxPhone(reference.phone)) {
+        referenceErrors.phone = "El teléfono debe tener 10 dígitos";
+      }
       if (Object.keys(referenceErrors).length > 0) {
         acc[reference.id] = referenceErrors;
       }

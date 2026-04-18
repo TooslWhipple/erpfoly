@@ -146,6 +146,24 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
 };
 
 const DRAFT_STALE_AFTER_MS = 5 * 60 * 1000;
+const inFlightCreditApplicationRequests = new Map<
+  string,
+  Promise<CreditApplicationDetailResponse>
+>();
+
+function getCreditApplicationDetailOnce(applicationId: string): Promise<CreditApplicationDetailResponse> {
+  const existingRequest = inFlightCreditApplicationRequests.get(applicationId);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const nextRequest = getCreditApplicationById(applicationId).finally(() => {
+    inFlightCreditApplicationRequests.delete(applicationId);
+  });
+
+  inFlightCreditApplicationRequests.set(applicationId, nextRequest);
+  return nextRequest;
+}
 
 function isDraftStale(updatedAt: string | undefined): boolean {
   if (!updatedAt) return true;
@@ -495,7 +513,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       setIsEmptyState(false);
 
       try {
-        const loadedApplication = await getCreditApplicationById(applicationId!);
+        const loadedApplication = await getCreditApplicationDetailOnce(applicationId!);
         if (isCancelled) return;
         setAdditionalInformationRequested(loadedApplication.additionalInformationRequested ?? []);
 
@@ -621,6 +639,11 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
 
   const handleSave = useCallback(async () => {
     const basicFormIsValid = basicInformationTab.validateValues();
+    const basicIdentityIsValid = basicFormIsValid
+      ? await basicInformationTab.validateIdentityUniqueness(
+          isCreateMode ? undefined : applicationId
+        )
+      : false;
     const familyFormIsValid = familyTab.validateValues();
     const addressFormIsValid = addressTab.validateValues();
     const employmentFormIsValid = employmentTab.validateValues();
@@ -631,6 +654,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
 
     const formIsValid =
       basicFormIsValid &&
+      basicIdentityIsValid &&
       familyFormIsValid &&
       addressFormIsValid &&
       employmentFormIsValid &&
@@ -702,7 +726,14 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const handleSaveActiveTab = useCallback(async () => {
     let isValid = true;
 
-    if (activeTab === "basic-information") isValid = basicInformationTab.validateValues();
+    if (activeTab === "basic-information") {
+      isValid = basicInformationTab.validateValues();
+      if (isValid) {
+        isValid = await basicInformationTab.validateIdentityUniqueness(
+          isCreateMode ? undefined : applicationId
+        );
+      }
+    }
     if (activeTab === "family") isValid = familyTab.validateValues();
     if (activeTab === "address") isValid = addressTab.validateValues();
     if (activeTab === "employment") isValid = employmentTab.validateValues();

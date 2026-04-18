@@ -1,5 +1,7 @@
 import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
 import type { ApiSuccessPayload } from "@/lib/axios";
+import type { PaginatedRowsResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
 import type {
@@ -173,6 +175,11 @@ export interface CreditApplicationDetailResponse {
   documentation?: CreditApplicationDocumentationResponse;
   guarantor?: CreditApplicationGuarantorResponse;
   additionalInformationRequested?: AdditionalInformationRequestedItem[];
+}
+
+export interface IdentityConflictsResult {
+  hasExistingClient: boolean;
+  hasExistingApplication: boolean;
 }
 
 const BASE = "/credit-applications";
@@ -516,6 +523,50 @@ export async function getCreditApplicationById(
 ): Promise<CreditApplicationDetailResponse> {
   const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`);
   return unwrapOrThrow(result);
+}
+
+export async function checkIdentityConflicts(
+  identityValue: string,
+  currentApplicationId?: string
+): Promise<IdentityConflictsResult> {
+  const normalizedIdentityValue = identityValue.trim();
+  if (!normalizedIdentityValue) {
+    return {
+      hasExistingClient: false,
+      hasExistingApplication: false,
+    };
+  }
+
+  const [clientsResponse, applicationsResponse] = await Promise.all([
+    get<PaginatedRowsResponse<{ id: number }>>(
+      buildListUrl("/clients", {
+        page: 1,
+        limit: 1,
+        search: normalizedIdentityValue,
+      })
+    ),
+    get<PaginatedRowsResponse<{ id: number }>>(
+      buildListUrl(BASE, {
+        page: 1,
+        limit: 5,
+        search: normalizedIdentityValue,
+      })
+    ),
+  ]);
+
+  const clients = unwrapOrThrow(clientsResponse);
+  const applications = unwrapOrThrow(applicationsResponse);
+  const parsedCurrentApplicationId = Number.parseInt(currentApplicationId ?? "", 10);
+  const hasCurrentApplicationId = Number.isFinite(parsedCurrentApplicationId);
+
+  const hasExistingApplication = applications.rows.some(
+    (application) => !hasCurrentApplicationId || application.id !== parsedCurrentApplicationId
+  );
+
+  return {
+    hasExistingClient: clients.rows.length > 0,
+    hasExistingApplication,
+  };
 }
 
 export async function getAdditionalInformationCatalog(): Promise<AdditionalInformationCatalogItem[]> {

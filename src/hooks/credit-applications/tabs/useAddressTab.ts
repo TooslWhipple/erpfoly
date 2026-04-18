@@ -1,13 +1,16 @@
 import { useCallback, useState } from "react";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
 import { isValidMxPostalCode } from "@/forms/validation/schemas";
+import { isValidMxPhone, normalizeMxPhone } from "./fieldValidation";
 
 export function useAddressTab(initialValues: AddressTabValues) {
   const [values, setValues] = useState<AddressTabValues>(initialValues);
   const [errors, setErrors] = useState<AddressTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof AddressTabValues, value: AddressTabValues[keyof AddressTabValues]) => {
-    const nextValues = { ...values, [field]: value };
+    const nextValue =
+      field === "receiverPhone" ? normalizeMxPhone(String(value)) : value;
+    const nextValues = { ...values, [field]: nextValue };
     setValues(nextValues);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     return nextValues;
@@ -47,6 +50,9 @@ export function useAddressTab(initialValues: AddressTabValues) {
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
     if (!values.receiverPhone.trim()) nextErrors.receiverPhone = "Teléfono es requerido";
+    else if (!isValidMxPhone(values.receiverPhone)) {
+      nextErrors.receiverPhone = "El teléfono debe tener 10 dígitos";
+    }
     if (!values.receiverName.trim()) nextErrors.receiverName = "Nombre de quien recibe es requerido";
     if (!values.residenceTime.trim()) nextErrors.residenceTime = "Tiempo en el domicilio es requerido";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";

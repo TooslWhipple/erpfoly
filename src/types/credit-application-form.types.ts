@@ -126,6 +126,7 @@ export interface EmploymentTabErrors {
   department?: string;
   monthlyIncome?: string;
   companyPhone?: string;
+  spouseCompanyPhone?: string;
   spousePostalCode?: string;
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;

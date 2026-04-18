@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Button, Divider, Stack } from "@mui/material";
 import { CircleAlert } from "lucide-react";
@@ -16,7 +16,9 @@ import { useHousingTypes } from "@/hooks/useHousingTypes";
 import { useFamilyRelationships } from "@/hooks/useFamilyRelationships";
 import { useMaritalStatuses } from "@/hooks/useMaritalStatuses";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { colors } from "@/styles/theme";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import type { CreditApplicationTabId } from "@/types/credit-application-form.types";
 
 interface CreditApplicationFormPageProps {
   isCreateMode: boolean;
@@ -25,15 +27,24 @@ interface CreditApplicationFormPageProps {
 
 export function CreditApplicationFormPage({ isCreateMode, applicationId }: CreditApplicationFormPageProps) {
   const router = useRouter();
+  const [tabsWithSubmissionValidationErrors, setTabsWithSubmissionValidationErrors] = useState<
+    CreditApplicationTabId[]
+  >([]);
 
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
 
   const {
+    loading,
+    loadingApplicationDetail,
     saving,
-    additionalInformationRequested,
     activeTab,
     tabs,
+    requiresIncomeProof,
+    requiresEmploymentProofLetter,
+    requiresGuarantorInformation,
+    missingAdditionalInformationLabels,
+    tabsWithMissingRequestedInformation,
     setActiveTab,
     basicInformationTab,
     familyTab,
@@ -51,6 +62,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     persistGuarantor,
     handleSave,
     handleSaveActiveTab,
+    validateSubmissionTabs,
+    handleSubmitForReview,
   } = useCreditApplicationForm({ applicationId, isCreateMode });
 
   const { data: maritalStatuses = [], isPending: maritalStatusesLoading } = useMaritalStatuses();
@@ -63,40 +76,86 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     { label: isCreateMode ? "Nueva solicitud" : "Editar solicitud" },
   ], [isCreateMode]);
 
-  const additionalInformationItems = useMemo(
-    () => additionalInformationRequested.filter((item) => item.requestFlag),
-    [additionalInformationRequested]
-  );
-
   const additionalInformationAlertMessage = useMemo(() => {
-    if (additionalInformationItems.length === 0) {
+    if (missingAdditionalInformationLabels.length === 0) {
       return "";
     }
 
-    const requestedNames = additionalInformationItems
-      .map((item) => item.name.trim())
-      .filter((name) => name.length > 0);
+    return missingAdditionalInformationLabels.join(", ");
+  }, [missingAdditionalInformationLabels]);
 
-    if (requestedNames.length === 0) {
-      return "Se requiere cargar la información adicional solicitada para continuar.";
-    }
+  const tabsWithErrorStateSet = useMemo(
+    () =>
+      new Set<CreditApplicationTabId>([
+        ...tabsWithMissingRequestedInformation,
+        ...tabsWithSubmissionValidationErrors,
+      ]),
+    [tabsWithMissingRequestedInformation, tabsWithSubmissionValidationErrors]
+  );
 
-    return requestedNames.join(", ");
-  }, [additionalInformationItems]);
+  const tabsWithErrorState = useMemo(
+    () =>
+      tabs.map((tab) => ({
+        ...tab,
+        label:
+          tabsWithErrorStateSet.has(tab.value as CreditApplicationTabId)
+            ? (
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <CircleAlert size={14} />
+                <span>{tab.label}</span>
+              </Stack>
+            )
+            : tab.label,
+        textColor:
+          tabsWithErrorStateSet.has(tab.value as CreditApplicationTabId)
+            ? colors.chip.variants.error.color
+            : undefined,
+      })),
+    [tabs, tabsWithErrorStateSet]
+  );
 
   const handleGoBack = () => {
     router.push("/solicitudes-credito");
   };
 
   const handleContinueBasicTab = async () => {
-    const wasSaved = await handleSave();
-    if (wasSaved) {
-      showSuccess("Solicitud guardada correctamente.");
-    } else {
-      showError("No fue posible guardar la solicitud.");
+    const invalidTabs = await validateSubmissionTabs();
+    if (invalidTabs.length > 0) {
+      setTabsWithSubmissionValidationErrors(invalidTabs);
+      const invalidTabLabels = invalidTabs
+        .map((tabId) => tabs.find((tab) => tab.value === tabId)?.label)
+        .filter((label): label is string => typeof label === "string");
+      const uniqueInvalidTabLabels = Array.from(new Set(invalidTabLabels));
+
+      if (invalidTabs[0]) {
+        setActiveTab(invalidTabs[0]);
+      }
+
+      showError(
+        uniqueInvalidTabLabels.length > 0
+          ? `Completa los campos requeridos en: ${uniqueInvalidTabLabels.join(", ")}.`
+          : "Completa los campos requeridos para continuar."
+      );
+      return false;
     }
 
-    return wasSaved;
+    setTabsWithSubmissionValidationErrors([]);
+
+    const wasSaved = await handleSave({ skipValidation: true });
+    if (!wasSaved) {
+      showError("No fue posible guardar la solicitud.");
+      return false;
+    }
+
+    const submitResult = await handleSubmitForReview();
+    if (!submitResult) {
+      showError("No fue posible enviar la solicitud a revisión.");
+      return false;
+    }
+
+    showSuccess(submitResult.message || "Solicitud enviada a revisión correctamente.");
+    router.push("/solicitudes-credito");
+    return true;
   };
 
   const handleBasicFieldChange = (field: Parameters<typeof basicInformationTab.setFieldValue>[0], value: string) => {
@@ -119,12 +178,24 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
       showError("Completa los campos requeridos para continuar.");
       return false;
     }
+
+    setTabsWithSubmissionValidationErrors((previousTabs) =>
+      previousTabs.filter((tabId) => tabId !== activeTab)
+    );
+
     const currentTabIndex = tabs.findIndex((tab) => tab.value === activeTab);
     const nextTab = tabs[currentTabIndex + 1];
     if (nextTab) {
       setActiveTab(nextTab.value);
     }
     return true;
+  };
+
+  const handleGuarantorSave = async () => {
+    if (!requiresGuarantorInformation) {
+      return handleContinueBasicTab();
+    }
+    return handleContinueToNextTab();
   };
 
   return (
@@ -137,7 +208,12 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           spacing={2}
         >
           <Breadcrumbs items={breadcrumbItems} showBackButton onBack={handleGoBack} />
-          <Button variant="contained" color="inherit" disabled={saving} onClick={handleContinueBasicTab}>
+          <Button
+            variant="contained"
+            color="inherit"
+            disabled={saving || loading || loadingApplicationDetail}
+            onClick={handleContinueBasicTab}
+          >
             Enviar a C&C
           </Button>
         </Stack>
@@ -145,7 +221,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
         <Divider />
 
         {
-          additionalInformationItems.length > 0 &&
+          missingAdditionalInformationLabels.length > 0 &&
           <StatusAlertCard
             variant="error"
             title="Documentación adicional requerida"
@@ -156,7 +232,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
         <TabFilters
           showSearch={false}
-          tabs={tabs}
+          tabs={tabsWithErrorState}
           activeTab={activeTab}
           onTabChange={(value) => setActiveTab(value as typeof activeTab)}
         />
@@ -277,8 +353,16 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           activeTab === "documentation" &&
           <DocumentationTab
             values={documentationTab.values}
+            showIncomeProof
+            showEmploymentProofLetter
+            requireIncomeProof={requiresIncomeProof}
+            requireEmploymentProofLetter={requiresEmploymentProofLetter}
             onIncomeProofChange={(files) => {
               const nextValues = documentationTab.setFieldValue("incomeProofFiles", files);
+              persistDocumentation(nextValues);
+            }}
+            onEmploymentProofLetterChange={(files) => {
+              const nextValues = documentationTab.setFieldValue("employmentProofLetterFiles", files);
               persistDocumentation(nextValues);
             }}
             onIneFrontChange={(files) => {
@@ -308,7 +392,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               const nextValues = guarantorTab.setFieldValue(field, value);
               persistGuarantor(nextValues);
             }}
-            onSave={handleContinueBasicTab}
+            onSave={handleGuarantorSave}
           />
         }
 

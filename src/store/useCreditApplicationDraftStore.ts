@@ -90,8 +90,9 @@ const EMPTY_REFERENCES: ReferencesTabValues = {
 
 const EMPTY_DOCUMENTATION: DocumentationTabValues = {
   requiredAlertVisible: true,
-  requiredAlertMessage: "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
+  requiredAlertMessage: "Agrega la documentación solicitada para continuar con la solicitud.",
   incomeProofFiles: [],
+  employmentProofLetterFiles: [],
   ineFrontFiles: [],
   ineBackFiles: [],
 };

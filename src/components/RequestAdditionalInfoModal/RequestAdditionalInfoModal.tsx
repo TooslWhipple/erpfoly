@@ -43,7 +43,7 @@ function mapCatalogItemToOption(item: AdditionalInformationCatalogItem): Additio
   return {
     id: item.code,
     label: item.name,
-    helperText: item.description?.trim() || helperTextByKind[requestKind],
+    helperText: helperTextByKind[requestKind],
     kind: requestKind,
   };
 }

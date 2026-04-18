@@ -10,6 +10,44 @@ import {
   normalizeMxPhone,
 } from "./fieldValidation";
 
+function buildGuarantorValidationErrors(values: GuarantorTabValues): GuarantorTabErrors {
+  const nextErrors: GuarantorTabErrors = {};
+  if (!values.fullName.trim()) nextErrors.fullName = "Nombre completo es requerido";
+  if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
+  else if (!isValidMxPostalCode(values.postalCode)) {
+    nextErrors.postalCode = "El código postal debe tener 5 dígitos";
+  }
+  if (!values.neighborhoodFullCode.trim() || values.neighborhoodFullCode === "-1") {
+    nextErrors.neighborhoodFullCode = "Selecciona una colonia";
+  }
+  if (!values.state.trim()) nextErrors.state = "Estado es requerido";
+  if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
+  if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+  if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
+  if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
+  else if (!isAdultBirthDate(values.birthDate)) {
+    nextErrors.birthDate = "La fecha de nacimiento debe corresponder a una persona mayor de edad";
+  }
+  if (!values.maritalStatus.trim()) nextErrors.maritalStatus = "Estado civil es requerido";
+  if (!values.curp.trim()) nextErrors.curp = "CURP es requerido";
+  else if (!isValidCurp(values.curp)) nextErrors.curp = "CURP inválido";
+  if (!values.rfc.trim()) nextErrors.rfc = "RFC es requerido";
+  else if (!isValidRfc(values.rfc)) nextErrors.rfc = "RFC inválido";
+  if (!values.phone.trim()) nextErrors.phone = "Teléfono es requerido";
+  else if (!isValidMxPhone(values.phone)) nextErrors.phone = "El teléfono debe tener 10 dígitos";
+  if (values.identificationFrontFiles.length === 0) {
+    nextErrors.identificationFrontFiles = "INE frontal es requerida";
+  }
+  if (values.identificationBackFiles.length === 0) {
+    nextErrors.identificationBackFiles = "INE posterior es requerida";
+  }
+  return nextErrors;
+}
+
+export function hasValidGuarantorInformation(values: GuarantorTabValues): boolean {
+  return Object.keys(buildGuarantorValidationErrors(values)).length === 0;
+}
+
 export function useGuarantorTab(initialValues: GuarantorTabValues) {
   const [values, setValues] = useState<GuarantorTabValues>(initialValues);
   const [errors, setErrors] = useState<GuarantorTabErrors>({});
@@ -56,36 +94,7 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
   }, []);
 
   const validateValues = useCallback(() => {
-    const nextErrors: GuarantorTabErrors = {};
-    if (!values.fullName.trim()) nextErrors.fullName = "Nombre completo es requerido";
-    if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
-    else if (!isValidMxPostalCode(values.postalCode)) {
-      nextErrors.postalCode = "El código postal debe tener 5 dígitos";
-    }
-    if (!values.neighborhoodFullCode.trim() || values.neighborhoodFullCode === "-1") {
-      nextErrors.neighborhoodFullCode = "Selecciona una colonia";
-    }
-    if (!values.state.trim()) nextErrors.state = "Estado es requerido";
-    if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
-    if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
-    if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
-    if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
-    else if (!isAdultBirthDate(values.birthDate)) {
-      nextErrors.birthDate = "La fecha de nacimiento debe corresponder a una persona mayor de edad";
-    }
-    if (!values.maritalStatus.trim()) nextErrors.maritalStatus = "Estado civil es requerido";
-    if (!values.curp.trim()) nextErrors.curp = "CURP es requerido";
-    else if (!isValidCurp(values.curp)) nextErrors.curp = "CURP inválido";
-    if (!values.rfc.trim()) nextErrors.rfc = "RFC es requerido";
-    else if (!isValidRfc(values.rfc)) nextErrors.rfc = "RFC inválido";
-    if (!values.phone.trim()) nextErrors.phone = "Teléfono es requerido";
-    else if (!isValidMxPhone(values.phone)) nextErrors.phone = "El teléfono debe tener 10 dígitos";
-    if (values.identificationFrontFiles.length === 0) {
-      nextErrors.identificationFrontFiles = "INE frontal es requerida";
-    }
-    if (values.identificationBackFiles.length === 0) {
-      nextErrors.identificationBackFiles = "INE posterior es requerida";
-    }
+    const nextErrors = buildGuarantorValidationErrors(values);
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }, [values]);

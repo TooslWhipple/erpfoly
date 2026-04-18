@@ -113,6 +113,7 @@ interface CreditApplicationDocumentItemResponse {
 
 interface CreditApplicationDocumentationResponse {
   incomeProofFiles: CreditApplicationDocumentItemResponse[];
+  employmentProofLetterFiles: CreditApplicationDocumentItemResponse[];
   ineFrontFiles: CreditApplicationDocumentItemResponse[];
   ineBackFiles: CreditApplicationDocumentItemResponse[];
   guarantorIneFrontFiles: CreditApplicationDocumentItemResponse[];
@@ -207,6 +208,13 @@ type SaveSectionResponse = {
   message: string;
 };
 
+type SubmitCreditApplicationResponse = {
+  success: boolean;
+  message: string;
+  status: string;
+  creditApplicationId: number;
+};
+
 type UploadDocumentResponse = {
   success: boolean;
   message: string;
@@ -223,6 +231,7 @@ type CreditApplicationDocumentTypeCode =
   | "BUREAU_AUTHORIZATION_SIGNATURE"
   | "FINGERPRINT"
   | "INCOME_PROOF"
+  | "EMPLOYMENT_PROOF_LETTER"
   | "GUARANTOR_INE_FRONT"
   | "GUARANTOR_INE_BACK";
 
@@ -398,6 +407,7 @@ function buildSectionPayload(
       return {
         documentation: {
           incomeProofFiles: payload.documentation.incomeProofFiles,
+          employmentProofLetterFiles: payload.documentation.employmentProofLetterFiles,
           ineFrontFiles: payload.documentation.ineFrontFiles,
           ineBackFiles: payload.documentation.ineBackFiles,
         },
@@ -609,13 +619,17 @@ export async function validateSecurityCode(code: string): Promise<boolean> {
   return code.trim().length >= 6;
 }
 
-export async function saveCreditApplication(payload: CreditApplicationFormPayload): Promise<{ id: string }> {
+export async function saveCreditApplication(
+  payload: CreditApplicationFormPayload,
+  options?: { includeGuarantorSection?: boolean }
+): Promise<{ id: string }> {
   const applicationId = payload.id?.trim();
   if (!applicationId) {
     await wait(800);
     return { id: `new-${Date.now()}` };
   }
 
+  const includeGuarantorSection = options?.includeGuarantorSection ?? true;
   const sections: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">> = [
     "basicInformation",
     "family",
@@ -623,7 +637,7 @@ export async function saveCreditApplication(payload: CreditApplicationFormPayloa
     "employment",
     "references",
     "documentation",
-    "guarantor",
+    ...(includeGuarantorSection ? ["guarantor" as const] : []),
   ];
 
   for (const section of sections) {
@@ -645,6 +659,11 @@ export async function saveCreditApplicationSection(
         applicationId,
         payload.documentation.incomeProofFiles,
         "INCOME_PROOF"
+      ),
+      employmentProofLetterFiles: await ensureDocumentFilesUploaded(
+        applicationId,
+        payload.documentation.employmentProofLetterFiles,
+        "EMPLOYMENT_PROOF_LETTER"
       ),
       ineFrontFiles: await ensureDocumentFilesUploaded(
         applicationId,
@@ -677,5 +696,15 @@ export async function saveCreditApplicationSection(
 
   const requestPayload = buildSectionPayload(section, payload);
   const result = await patch<SaveSectionResponse>(`${BASE}/${applicationId}`, requestPayload);
+  return unwrapOrThrow(result);
+}
+
+export async function submitCreditApplicationForReview(
+  applicationId: string
+): Promise<SubmitCreditApplicationResponse> {
+  const result = await patch<SubmitCreditApplicationResponse>(
+    `${BASE}/${applicationId}/submit`,
+    {}
+  );
   return unwrapOrThrow(result);
 }

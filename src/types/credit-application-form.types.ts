@@ -172,6 +172,7 @@ export interface DocumentationTabValues {
   requiredAlertVisible: boolean;
   requiredAlertMessage: string;
   incomeProofFiles: CreditApplicationDocumentFile[];
+  employmentProofLetterFiles: CreditApplicationDocumentFile[];
   ineFrontFiles: CreditApplicationDocumentFile[];
   ineBackFiles: CreditApplicationDocumentFile[];
 }

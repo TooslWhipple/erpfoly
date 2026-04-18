@@ -45,10 +45,10 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   applicationId: number,
   api: CreditApplicationDetailResponse
 ): CreditApplicationDetail {
-  const { personalInformation, family, address, employment, workReferences, familyReferences } = api;
+  const { basicInformation, family, address, employment, references } = api;
 
-  const baseIncome = employment.monthlyIncome ?? 0;
-  const otherIncome = employment.hasOtherIncome ? (employment.otherIncomeAmount ?? 0) : 0;
+  const baseIncome = employment.applicant.monthlyIncome ?? 0;
+  const otherIncome = employment.applicant.hasOtherIncome ? (employment.applicant.otherIncomeAmount ?? 0) : 0;
   const totalIncome = baseIncome + otherIncome;
 
   return {
@@ -56,15 +56,15 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     riskScore: 0,
     riskLevel: "medium",
     basicInfo: {
-      firstName: personalInformation.name ?? "",
-      firstSurname: personalInformation.lastName ?? "",
-      secondSurname: personalInformation.secondLastName ?? "",
-      birthDate: personalInformation.birthDate ?? "",
-      maritalStatus: personalInformation.maritalStatus?.name ?? "",
-      curp: personalInformation.curp ?? "",
-      rfc: personalInformation.rfc ?? "",
-      email: personalInformation.email ?? "",
-      whatsapp: personalInformation.phoneNumber ?? "",
+      firstName: basicInformation.name ?? "",
+      firstSurname: basicInformation.lastName ?? "",
+      secondSurname: basicInformation.secondLastName ?? "",
+      birthDate: basicInformation.birthDate ?? "",
+      maritalStatus: basicInformation.maritalStatus?.name ?? "",
+      curp: basicInformation.curp ?? "",
+      rfc: basicInformation.rfc ?? "",
+      email: basicInformation.email ?? "",
+      whatsapp: basicInformation.phoneNumber ?? "",
       whatsappValidated: false,
     },
     address: {
@@ -77,7 +77,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       receiverName: address.receiverName ?? "",
       useClientPhone: Boolean(address.useClientPhone),
       housingOwnership: mapHousingTypeToOwnership(address.housingType?.name),
-      timeAtAddress: "",
+      timeAtAddress: address.residenceTime ?? "",
       previousAddress: address.previousAddress ?? "",
       previousTime: address.previousAddressDuration ?? "",
     },
@@ -89,31 +89,38 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     },
     employment: {
       totalMonthlyIncome: `$${formatMxCurrency(totalIncome)}/mes`,
-      hasOtherIncome: Boolean(employment.hasOtherIncome),
+      hasOtherIncome: Boolean(employment.applicant.hasOtherIncome),
       applicant: {
-        company: employment.companyName ?? "",
-        postalCode: "",
-        state: "",
-        city: "",
-        streetAndNumber: employment.companyAddress ?? "",
-        tenureYears: employment.seniorityYears ?? 0,
-        position: employment.position ?? "",
-        department: employment.department ?? "",
+        company: employment.applicant.companyName ?? "",
+        postalCode: employment.applicant.postalCode ?? "",
+        state: employment.applicant.state ?? "",
+        city: employment.applicant.city ?? "",
+        streetAndNumber: [
+          employment.applicant.street,
+          employment.applicant.externalNumber,
+          employment.applicant.internalNumber ? `Int. ${employment.applicant.internalNumber}` : "",
+        ]
+          .filter((value) => value.trim().length > 0)
+          .join(" ")
+          .trim(),
+        tenureYears: employment.applicant.seniorityYears ?? 0,
+        position: employment.applicant.position ?? "",
+        department: employment.applicant.department ?? "",
         monthlyIncome: formatMxCurrency(baseIncome),
-        companyPhone: employment.companyPhone ?? "",
+        companyPhone: employment.applicant.companyPhone ?? "",
       },
     },
     references: {
       work: {
-        company: workReferences.companyName ?? "",
-        phone: workReferences.companyPhone ?? "",
-        clientPosition: workReferences.applicantPosition ?? "",
-        tenureYears: workReferences.seniorityYears ?? 0,
-        contactNameAndPosition: [workReferences.answeredBy, workReferences.answeredByPosition]
+        company: references.work.companyName ?? "",
+        phone: references.work.companyPhone ?? "",
+        clientPosition: references.work.applicantPosition ?? "",
+        tenureYears: references.work.seniorityYears ?? 0,
+        contactNameAndPosition: [references.work.answeredBy, references.work.answeredByPosition]
           .filter((value) => value.trim().length > 0)
           .join(" - "),
       },
-      family: familyReferences.map((reference, index) => ({
+      family: references.family.map((reference, index) => ({
         name: [reference.firstName, reference.lastName].filter((value) => value.trim().length > 0).join(" "),
         relationship: reference.relationship?.name ?? "",
         address: reference.address ?? "",

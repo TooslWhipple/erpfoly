@@ -52,12 +52,13 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
     else if (!isValidMxPostalCode(values.postalCode)) {
       nextErrors.postalCode = "El código postal debe tener 5 dígitos";
     }
-    if (!values.neighborhoodFullCode.trim()) {
+    if (!values.neighborhoodFullCode.trim() || values.neighborhoodFullCode === "-1") {
       nextErrors.neighborhoodFullCode = "Selecciona una colonia";
     }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+    if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
     if (!values.maritalStatus.trim()) nextErrors.maritalStatus = "Estado civil es requerido";
     if (!values.curp.trim()) nextErrors.curp = "CURP es requerido";

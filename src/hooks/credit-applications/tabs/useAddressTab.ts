@@ -40,7 +40,7 @@ export function useAddressTab(initialValues: AddressTabValues) {
     else if (!isValidMxPostalCode(values.postalCode)) {
       nextErrors.postalCode = "El código postal debe tener 5 dígitos";
     }
-    if (!values.neighborhoodFullCode.trim()) {
+    if (!values.neighborhoodFullCode.trim() || values.neighborhoodFullCode === "-1") {
       nextErrors.neighborhoodFullCode = "Selecciona una colonia";
     }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";

@@ -28,6 +28,22 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     );
     const nextValues = { ...values, familyReferences: nextReferences };
     setValues(nextValues);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (next.familyReferenceItems?.[referenceId]) {
+        next.familyReferenceItems = {
+          ...next.familyReferenceItems,
+          [referenceId]: {
+            ...next.familyReferenceItems[referenceId],
+            [field]: undefined,
+          },
+        };
+      }
+      if (field === "name" || field === "relationshipId" || field === "address" || field === "phone") {
+        next.familyReferences = undefined;
+      }
+      return next;
+    });
     return nextValues;
   }, [values]);
 
@@ -37,6 +53,7 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
       familyReferences: [...values.familyReferences, createEmptyReference(values.familyReferences.length + 1)],
     };
     setValues(nextValues);
+    setErrors((prev) => ({ ...prev, familyReferences: undefined }));
     return nextValues;
   }, [values]);
 
@@ -47,6 +64,15 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
       familyReferences: values.familyReferences.filter((reference) => reference.id !== referenceId),
     };
     setValues(nextValues);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (next.familyReferenceItems?.[referenceId]) {
+        const { [referenceId]: _removed, ...restItems } = next.familyReferenceItems;
+        next.familyReferenceItems = restItems;
+      }
+      next.familyReferences = undefined;
+      return next;
+    });
     return nextValues;
   }, [values]);
 
@@ -73,6 +99,21 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     if (!hasCompleteFamilyReference) {
       nextErrors.familyReferences =
         "Debes capturar al menos una referencia familiar completa (nombre, parentesco, dirección y teléfono).";
+    }
+
+    const familyReferenceItems = values.familyReferences.reduce<NonNullable<ReferencesTabErrors["familyReferenceItems"]>>((acc, reference) => {
+      const referenceErrors: NonNullable<ReferencesTabErrors["familyReferenceItems"]>[string] = {};
+      if (!reference.name.trim()) referenceErrors.name = "Nombre es requerido";
+      if (!reference.relationshipId.trim()) referenceErrors.relationshipId = "Parentesco es requerido";
+      if (!reference.address.trim()) referenceErrors.address = "Dirección es requerida";
+      if (!reference.phone.trim()) referenceErrors.phone = "Teléfono es requerido";
+      if (Object.keys(referenceErrors).length > 0) {
+        acc[reference.id] = referenceErrors;
+      }
+      return acc;
+    }, {});
+    if (Object.keys(familyReferenceItems).length > 0) {
+      nextErrors.familyReferenceItems = familyReferenceItems;
     }
 
     setErrors(nextErrors);

@@ -20,7 +20,7 @@ interface CreditApplicationNeighborhood {
   municipality: string;
 }
 
-interface CreditApplicationPersonalInformationResponse {
+interface CreditApplicationBasicInformationResponse {
   name: string;
   lastName: string;
   secondLastName: string;
@@ -53,12 +53,20 @@ interface CreditApplicationAddressResponse {
   receiverPhone: string;
   useClientPhone: boolean;
   housingType: CreditApplicationCatalogItem;
+  residenceTime: string;
   previousAddress: string;
   previousAddressDuration: string;
 }
 
-interface CreditApplicationEmploymentResponse {
+interface CreditApplicationEmploymentPersonResponse {
   companyName: string;
+  postalCode: string;
+  neighborhoodFullCode: string;
+  state: string;
+  city: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   companyAddress: string;
   companyPhone: string;
   position: string;
@@ -70,21 +78,27 @@ interface CreditApplicationEmploymentResponse {
   otherIncomeDescription: string;
 }
 
-interface CreditApplicationWorkReferencesResponse {
-  companyName: string;
-  companyPhone: string;
-  applicantPosition: string;
-  seniorityYears: number;
-  answeredBy: string;
-  answeredByPosition: string;
+interface CreditApplicationEmploymentResponse {
+  applicant: CreditApplicationEmploymentPersonResponse;
+  spouse: CreditApplicationEmploymentPersonResponse;
 }
 
-interface CreditApplicationFamilyReferenceResponse {
-  firstName: string;
-  lastName: string;
-  relationship: CreditApplicationCatalogItem;
-  address: string;
-  phone: string;
+interface CreditApplicationReferencesResponse {
+  work: {
+    companyName: string;
+    companyPhone: string;
+    applicantPosition: string;
+    seniorityYears: number;
+    answeredBy: string;
+    answeredByPosition: string;
+  };
+  family: Array<{
+    firstName: string;
+    lastName: string;
+    relationship: CreditApplicationCatalogItem;
+    address: string;
+    phone: string;
+  }>;
 }
 
 interface CreditApplicationDocumentItemResponse {
@@ -151,12 +165,11 @@ interface AdditionalInformationCatalogApiItem {
 }
 
 export interface CreditApplicationDetailResponse {
-  personalInformation: CreditApplicationPersonalInformationResponse;
+  basicInformation: CreditApplicationBasicInformationResponse;
   family: CreditApplicationFamilyResponse;
   address: CreditApplicationAddressResponse;
   employment: CreditApplicationEmploymentResponse;
-  workReferences: CreditApplicationWorkReferencesResponse;
-  familyReferences: CreditApplicationFamilyReferenceResponse[];
+  references: CreditApplicationReferencesResponse;
   documentation?: CreditApplicationDocumentationResponse;
   guarantor?: CreditApplicationGuarantorResponse;
   additionalInformationRequested?: AdditionalInformationRequestedItem[];

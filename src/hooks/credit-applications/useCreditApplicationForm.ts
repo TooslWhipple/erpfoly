@@ -177,18 +177,18 @@ function mapCreditApplicationToFormValues(
     .trim();
 
   const basicInformation: BasicInformationFormValues = {
-    firstName: creditApplication.personalInformation.name ?? "",
-    lastName: creditApplication.personalInformation.lastName ?? "",
-    secondLastName: creditApplication.personalInformation.secondLastName ?? "",
-    birthDate: creditApplication.personalInformation.birthDate ?? "",
+    firstName: creditApplication.basicInformation.name ?? "",
+    lastName: creditApplication.basicInformation.lastName ?? "",
+    secondLastName: creditApplication.basicInformation.secondLastName ?? "",
+    birthDate: creditApplication.basicInformation.birthDate ?? "",
     maritalStatus:
-      creditApplication.personalInformation.maritalStatus.id != null
-        ? String(creditApplication.personalInformation.maritalStatus.id)
+      creditApplication.basicInformation.maritalStatus.id != null
+        ? String(creditApplication.basicInformation.maritalStatus.id)
         : "",
-    curp: creditApplication.personalInformation.curp ?? "",
-    rfc: creditApplication.personalInformation.rfc ?? "",
-    email: creditApplication.personalInformation.email ?? "",
-    whatsappNumber: creditApplication.personalInformation.phoneNumber ?? "",
+    curp: creditApplication.basicInformation.curp ?? "",
+    rfc: creditApplication.basicInformation.rfc ?? "",
+    email: creditApplication.basicInformation.email ?? "",
+    whatsappNumber: creditApplication.basicInformation.phoneNumber ?? "",
     securityCode: "",
   };
 
@@ -213,53 +213,65 @@ function mapCreditApplicationToFormValues(
       creditApplication.address.housingType.id != null
         ? String(creditApplication.address.housingType.id)
         : "",
-    residenceTime: "",
+    residenceTime: creditApplication.address.residenceTime ?? "",
     previousAddress: creditApplication.address.previousAddress ?? "",
     previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",
   };
 
+  const buildEmploymentStreet = (employmentPerson: CreditApplicationDetailResponse["employment"]["applicant"]) =>
+    [
+      employmentPerson.street,
+      employmentPerson.externalNumber,
+      employmentPerson.internalNumber
+        ? `Int. ${employmentPerson.internalNumber}`
+        : "",
+    ]
+      .filter((value) => value.trim().length > 0)
+      .join(" ")
+      .trim();
+
   const employment: EmploymentTabValues = {
-    company: creditApplication.employment.companyName ?? "",
-    postalCode: "",
-    neighborhoodFullCode: "",
-    state: "",
-    city: "",
-    streetAndNumber: creditApplication.employment.companyAddress ?? "",
-    seniorityYears: String(creditApplication.employment.seniorityYears ?? ""),
-    position: creditApplication.employment.position ?? "",
-    department: creditApplication.employment.department ?? "",
-    monthlyIncome: String(creditApplication.employment.monthlyIncome ?? ""),
-    companyPhone: creditApplication.employment.companyPhone ?? "",
-    hasOtherIncome: Boolean(creditApplication.employment.hasOtherIncome),
-    otherIncomeAmount: String(creditApplication.employment.otherIncomeAmount ?? ""),
-    otherIncomeSource: creditApplication.employment.otherIncomeDescription ?? "",
-    spouseCompany: "",
-    spousePostalCode: "",
-    spouseNeighborhoodFullCode: "",
-    spouseState: "",
-    spouseCity: "",
-    spouseStreetAndNumber: "",
-    spouseSeniorityYears: "",
-    spousePosition: "",
-    spouseDepartment: "",
-    spouseMonthlyIncome: "",
-    spouseCompanyPhone: "",
+    company: creditApplication.employment.applicant.companyName ?? "",
+    postalCode: creditApplication.employment.applicant.postalCode ?? "",
+    neighborhoodFullCode: creditApplication.employment.applicant.neighborhoodFullCode ?? "",
+    state: creditApplication.employment.applicant.state ?? "",
+    city: creditApplication.employment.applicant.city ?? "",
+    streetAndNumber: buildEmploymentStreet(creditApplication.employment.applicant),
+    seniorityYears: String(creditApplication.employment.applicant.seniorityYears ?? ""),
+    position: creditApplication.employment.applicant.position ?? "",
+    department: creditApplication.employment.applicant.department ?? "",
+    monthlyIncome: String(creditApplication.employment.applicant.monthlyIncome ?? ""),
+    companyPhone: creditApplication.employment.applicant.companyPhone ?? "",
+    hasOtherIncome: Boolean(creditApplication.employment.applicant.hasOtherIncome),
+    otherIncomeAmount: String(creditApplication.employment.applicant.otherIncomeAmount ?? ""),
+    otherIncomeSource: creditApplication.employment.applicant.otherIncomeDescription ?? "",
+    spouseCompany: creditApplication.employment.spouse.companyName ?? "",
+    spousePostalCode: creditApplication.employment.spouse.postalCode ?? "",
+    spouseNeighborhoodFullCode: creditApplication.employment.spouse.neighborhoodFullCode ?? "",
+    spouseState: creditApplication.employment.spouse.state ?? "",
+    spouseCity: creditApplication.employment.spouse.city ?? "",
+    spouseStreetAndNumber: buildEmploymentStreet(creditApplication.employment.spouse),
+    spouseSeniorityYears: String(creditApplication.employment.spouse.seniorityYears ?? ""),
+    spousePosition: creditApplication.employment.spouse.position ?? "",
+    spouseDepartment: creditApplication.employment.spouse.department ?? "",
+    spouseMonthlyIncome: String(creditApplication.employment.spouse.monthlyIncome ?? ""),
+    spouseCompanyPhone: creditApplication.employment.spouse.companyPhone ?? "",
   };
 
   const references: ReferencesTabValues = {
-    company: creditApplication.workReferences.companyName ?? "",
-    phone: creditApplication.workReferences.companyPhone ?? "",
-    clientPosition: creditApplication.workReferences.applicantPosition ?? "",
-    seniorityYears: String(creditApplication.workReferences.seniorityYears ?? ""),
+    company: creditApplication.references.work.companyName ?? "",
+    phone: creditApplication.references.work.companyPhone ?? "",
+    clientPosition: creditApplication.references.work.applicantPosition ?? "",
+    seniorityYears: String(creditApplication.references.work.seniorityYears ?? ""),
     respondentNameAndPosition: [
-      creditApplication.workReferences.answeredBy,
-      creditApplication.workReferences.answeredByPosition,
+      creditApplication.references.work.answeredBy,
+      creditApplication.references.work.answeredByPosition,
     ]
       .filter((value) => value.trim().length > 0)
       .join(" - "),
     familyReferences:
-      creditApplication.familyReferences.length > 0
-        ? creditApplication.familyReferences.map((reference, index) => ({
+      creditApplication.references.family.length > 0
+        ? creditApplication.references.family.map((reference, index) => ({
             id: `reference-${index + 1}`,
             name: [reference.firstName, reference.lastName]
               .filter((value) => value.trim().length > 0)
@@ -754,7 +766,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     return true;
   }, [
     activeTab,
+    applicationId,
     basicInformationTab,
+    biometricsData,
     familyTab,
     addressTab,
     employmentTab,
@@ -769,6 +783,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     persistReferences,
     persistDocumentation,
     persistGuarantor,
+    isCreateMode,
   ]);
 
   return {

@@ -40,7 +40,7 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     else if (!isValidMxPostalCode(values.postalCode)) {
       nextErrors.postalCode = "El código postal debe tener 5 dígitos";
     }
-    if (!values.neighborhoodFullCode.trim()) {
+    if (!values.neighborhoodFullCode.trim() || values.neighborhoodFullCode === "-1") {
       nextErrors.neighborhoodFullCode = "Selecciona una colonia";
     }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
@@ -53,7 +53,10 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     if (!values.companyPhone.trim()) nextErrors.companyPhone = "Teléfono de la empresa es requerido";
 
     if (isValidMxPostalCode(values.spousePostalCode)) {
-      if (!values.spouseNeighborhoodFullCode.trim()) {
+      if (
+        !values.spouseNeighborhoodFullCode.trim() ||
+        values.spouseNeighborhoodFullCode === "-1"
+      ) {
         nextErrors.spouseNeighborhoodFullCode = "Selecciona una colonia";
       }
       if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";

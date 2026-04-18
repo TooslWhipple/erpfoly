@@ -3,7 +3,7 @@ import { colors } from "@/styles/theme";
 
 export type StatusAlertCardVariant = "default" | "info" | "error" | "success";
 
-const variantStyles: Record<StatusAlertCardVariant, { backgroundColor: string; color: string }> = {
+const variantStyles: Record<StatusAlertCardVariant, { background: string; color: string }> = {
   default: colors.chip.variants.default,
   info: colors.chip.variants.info,
   error: colors.chip.variants.error,

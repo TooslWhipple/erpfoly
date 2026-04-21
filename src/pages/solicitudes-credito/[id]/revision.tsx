@@ -55,6 +55,7 @@ export default function CreditApplicationReviewPage() {
     title: string;
     subtitle: string;
     url: string;
+    backgroundColor?: string;
   } | null>(null);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -87,9 +88,12 @@ export default function CreditApplicationReviewPage() {
     void router.push("/solicitudes-credito");
   };
 
-  const handleOpenImageViewer = useCallback((title: string, subtitle: string, url: string) => {
-    setImageViewer({ title, subtitle, url });
-  }, []);
+  const handleOpenImageViewer = useCallback(
+    (title: string, subtitle: string, url: string, backgroundColor?: string) => {
+      setImageViewer({ title, subtitle, url, backgroundColor });
+    },
+    [],
+  );
 
   if (!router.isReady) {
     return null;
@@ -200,6 +204,7 @@ export default function CreditApplicationReviewPage() {
           title={imageViewer.title}
           subtitle={imageViewer.subtitle}
           imageUrl={imageViewer.url}
+          previewBackgroundColor={imageViewer.backgroundColor}
         />
       )}
 

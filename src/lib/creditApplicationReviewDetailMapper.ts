@@ -1,5 +1,42 @@
 import type { CreditApplicationDetailResponse } from "@/services/creditApplications.service";
-import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
+import type {
+  BiometricItem,
+  CreditApplicationDetail,
+  DocumentItem,
+} from "@/types/solicitud-credito-detail.types";
+
+type DocumentFileApiItem = {
+  id: number;
+  typeCode: string;
+  typeName: string;
+  filePath: string;
+  fileUrl: string;
+};
+
+/** Names used when rendering requested documents in the review screen. */
+const REQUESTED_DOCUMENT_LABELS: Record<string, string> = {
+  INCOME_PROOF: "Comprobante de ingresos",
+  EMPLOYMENT_PROOF_LETTER: "Carta de comprobante laboral",
+  GUARANTOR_INE_FRONT: "INE del aval (frente)",
+  GUARANTOR_INE_BACK: "INE del aval (reverso)",
+};
+
+function toDocumentItems(
+  files: DocumentFileApiItem[] | undefined,
+  fallbackName: string,
+  verifiedBy: string,
+): DocumentItem[] {
+  if (!files?.length) {
+    return [];
+  }
+  return files.map((file, index) => ({
+    id: `${file.typeCode}-${file.id}`,
+    name: files.length > 1 ? `${fallbackName} (${index + 1})` : fallbackName,
+    verifiedBy,
+    thumbnailUrl: file.fileUrl,
+    fullImageUrl: file.fileUrl,
+  }));
+}
 
 /** Detail API does not return credit line bounds; used only for approval modal UI until backend exposes them. */
 const DEFAULT_CREDIT_LINE_BOUNDS = {
@@ -50,6 +87,74 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   const baseIncome = employment.applicant.monthlyIncome ?? 0;
   const otherIncome = employment.applicant.hasOtherIncome ? (employment.applicant.otherIncomeAmount ?? 0) : 0;
   const totalIncome = baseIncome + otherIncome;
+
+  const requestedCodes = new Set(
+    (api.additionalInformationRequested ?? [])
+      .filter((item) => item.requestFlag)
+      .map((item) => item.code.toUpperCase()),
+  );
+  const documentation = api.documentation;
+  const verifiedByLabel = "Verificado por el sistema";
+
+  const requestedDocuments: DocumentItem[] = [];
+  if (requestedCodes.has("INCOME_PROOF")) {
+    requestedDocuments.push(
+      ...toDocumentItems(
+        documentation?.incomeProofFiles,
+        REQUESTED_DOCUMENT_LABELS.INCOME_PROOF,
+        verifiedByLabel,
+      ),
+    );
+  }
+  if (requestedCodes.has("EMPLOYMENT_PROOF_LETTER")) {
+    requestedDocuments.push(
+      ...toDocumentItems(
+        documentation?.employmentProofLetterFiles,
+        REQUESTED_DOCUMENT_LABELS.EMPLOYMENT_PROOF_LETTER,
+        verifiedByLabel,
+      ),
+    );
+  }
+  if (requestedCodes.has("GUARANTOR_INFORMATION")) {
+    requestedDocuments.push(
+      ...toDocumentItems(
+        documentation?.guarantorIneFrontFiles,
+        REQUESTED_DOCUMENT_LABELS.GUARANTOR_INE_FRONT,
+        verifiedByLabel,
+      ),
+    );
+    requestedDocuments.push(
+      ...toDocumentItems(
+        documentation?.guarantorIneBackFiles,
+        REQUESTED_DOCUMENT_LABELS.GUARANTOR_INE_BACK,
+        verifiedByLabel,
+      ),
+    );
+  }
+
+  const signatureFile = documentation?.bureauAuthorizationSignatureFiles?.[0];
+  const faceCaptureFile = documentation?.faceCaptureFiles?.[0];
+  const fingerprintFile = documentation?.fingerprintFiles?.[0];
+
+  const biometricItems: BiometricItem[] = [];
+  if (faceCaptureFile) {
+    biometricItems.push({
+      id: `FACE_CAPTURE-${faceCaptureFile.id}`,
+      name: "Foto facial",
+      verifiedBy: verifiedByLabel,
+      thumbnailUrl: faceCaptureFile.fileUrl,
+      type: "photo",
+    });
+  }
+  if (fingerprintFile) {
+    biometricItems.push({
+      id: `FINGERPRINT-${fingerprintFile.id}`,
+      name: "Huella dactilar",
+      verifiedBy: verifiedByLabel,
+      thumbnailUrl: fingerprintFile.fileUrl,
+      type: "fingerprint",
+    });
+  }
 
   return {
     id: applicationId,
@@ -127,13 +232,14 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         phone: reference.phone ?? "",
       })),
     },
-    documentation: { documents: [] },
+    documentation: { documents: requestedDocuments },
     creditBureau: {
       clientAuthorized: false,
       scoreLabel: "—",
       scoreLevel: "fair",
+      signatureUrl: signatureFile?.fileUrl,
     },
-    biometrics: { items: [] },
+    biometrics: { items: biometricItems },
     purchaseIntention: { items: [], subtotal: 0, total: 0 },
     ...DEFAULT_CREDIT_LINE_BOUNDS,
   };

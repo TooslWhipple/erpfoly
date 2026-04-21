@@ -93,6 +93,7 @@ export interface CreditApplicationCreditBureau {
   clientAuthorized: boolean;
   scoreLabel: string;
   scoreLevel: "excellent" | "good" | "fair" | "poor";
+  signatureUrl?: string;
 }
 
 export interface BiometricItem {

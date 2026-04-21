@@ -10,6 +10,8 @@ export interface ImageViewerModalProps {
   subtitle?: string;
   imageUrl: string;
   imageAlt?: string;
+  /** Background color for the preview area. Useful for transparent PNGs (e.g. dark signatures). */
+  previewBackgroundColor?: string;
 }
 
 export function ImageViewerModal({
@@ -19,6 +21,7 @@ export function ImageViewerModal({
   subtitle,
   imageUrl,
   imageAlt = title,
+  previewBackgroundColor = "#1a1a1a",
 }: ImageViewerModalProps) {
   return (
     <Dialog
@@ -78,7 +81,7 @@ export function ImageViewerModal({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#1a1a1a",
+          backgroundColor: previewBackgroundColor,
           minHeight: 400,
         }}
       >

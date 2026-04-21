@@ -118,6 +118,9 @@ interface CreditApplicationDocumentationResponse {
   ineBackFiles: CreditApplicationDocumentItemResponse[];
   guarantorIneFrontFiles: CreditApplicationDocumentItemResponse[];
   guarantorIneBackFiles: CreditApplicationDocumentItemResponse[];
+  bureauAuthorizationSignatureFiles?: CreditApplicationDocumentItemResponse[];
+  faceCaptureFiles?: CreditApplicationDocumentItemResponse[];
+  fingerprintFiles?: CreditApplicationDocumentItemResponse[];
 }
 
 interface CreditApplicationGuarantorResponse {

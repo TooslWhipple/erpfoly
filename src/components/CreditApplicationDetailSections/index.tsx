@@ -25,7 +25,12 @@ export { PurchaseIntentionSection } from "./PurchaseIntentionSection";
 export interface SectionContentProps {
   detail: CreditApplicationDetail;
   activeSection: CreditApplicationDetailSection;
-  onOpenImageViewer: (title: string, subtitle: string, url: string) => void;
+  onOpenImageViewer: (
+    title: string,
+    subtitle: string,
+    url: string,
+    backgroundColor?: string,
+  ) => void;
 }
 
 const SECTION_MAP: Record<
@@ -40,8 +45,12 @@ const SECTION_MAP: Record<
   documentation: (props) => (
     <DocumentationSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
   ),
-  "credit-bureau": (props) => <CreditBureauSection detail={props.detail} />,
-  biometrics: (props) => <BiometricsSection detail={props.detail} />,
+  "credit-bureau": (props) => (
+    <CreditBureauSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
+  ),
+  biometrics: (props) => (
+    <BiometricsSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
+  ),
   "purchase-intention": (props) => <PurchaseIntentionSection detail={props.detail} />,
 };
 

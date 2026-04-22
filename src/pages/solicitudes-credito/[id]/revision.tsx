@@ -213,9 +213,10 @@ export default function CreditApplicationReviewPage() {
       <ApproveCreditModal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
-        suggestedAmount={detail.suggestedCreditLine}
-        minAmount={detail.minCreditLine}
-        maxAmount={detail.maxCreditLine}
+        applicationId={idString}
+        onApproveSuccess={() => {
+          void router.push("/solicitudes-credito");
+        }}
       />
 
       <RejectCreditModal

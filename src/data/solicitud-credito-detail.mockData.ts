@@ -13,9 +13,6 @@ export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
   id: 2241,
   riskScore: 67,
   riskLevel: "medium",
-  suggestedCreditLine: 9000,
-  minCreditLine: 7000,
-  maxCreditLine: 20000,
   basicInfo: {
     firstName: "Saúl Arturo",
     firstSurname: "Quintero",

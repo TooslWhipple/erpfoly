@@ -38,13 +38,6 @@ function toDocumentItems(
   }));
 }
 
-/** Detail API does not return credit line bounds; used only for approval modal UI until backend exposes them. */
-const DEFAULT_CREDIT_LINE_BOUNDS = {
-  minCreditLine: 7000,
-  suggestedCreditLine: 9000,
-  maxCreditLine: 20000,
-} as const;
-
 function buildStreetAndNumber(address: CreditApplicationDetailResponse["address"]): string {
   return [
     address.street,
@@ -251,6 +244,5 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     },
     biometrics: { items: biometricItems },
     purchaseIntention: { items: [], subtotal: 0, total: 0 },
-    ...DEFAULT_CREDIT_LINE_BOUNDS,
   };
 }

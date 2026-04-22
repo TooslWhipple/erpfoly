@@ -9,7 +9,6 @@ import type {
   FamilyReference,
 } from "@/types/credit-application-form.types";
 import type {
-  RejectCreditApplicationRequest,
   RejectCreditApplicationResponse,
 } from "@/types/solicitud-credito-detail.types";
 
@@ -190,6 +189,28 @@ export interface CreditApplicationDetailResponse {
 export interface IdentityConflictsResult {
   hasExistingClient: boolean;
   hasExistingApplication: boolean;
+}
+
+export interface CreditApplicationApprovalOptionsResponse {
+  creditApplicationId: number;
+  minApprovedAmount: number;
+  suggestedApprovedAmount: number;
+  maxApprovedAmount: number;
+  interestRate: number;
+}
+
+export interface ApproveCreditApplicationRequest {
+  approvedAmount: number;
+  interestRate: number;
+  comments?: string;
+}
+
+export interface ApproveCreditApplicationResponse {
+  success: boolean;
+  message: string;
+  status: "APPROVED";
+  creditApplicationId: number;
+  clientId: number;
 }
 
 const BASE = "/credit-applications";
@@ -722,5 +743,25 @@ export async function rejectCreditApplication(
   applicationId: string,
 ): Promise<RejectCreditApplicationResponse> {
   const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`);
+  return unwrapOrThrow(result);
+}
+
+export async function getCreditApplicationApprovalOptions(
+  applicationId: string,
+): Promise<CreditApplicationApprovalOptionsResponse> {
+  const result = await get<CreditApplicationApprovalOptionsResponse>(
+    `${BASE}/${applicationId}/approval-options`,
+  );
+  return unwrapOrThrow(result);
+}
+
+export async function approveCreditApplication(
+  applicationId: string,
+  payload: ApproveCreditApplicationRequest,
+): Promise<ApproveCreditApplicationResponse> {
+  const result = await patch<ApproveCreditApplicationResponse>(
+    `${BASE}/${applicationId}/approve`,
+    payload,
+  );
   return unwrapOrThrow(result);
 }

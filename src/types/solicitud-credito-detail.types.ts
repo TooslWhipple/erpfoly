@@ -142,9 +142,6 @@ export interface CreditApplicationDetail {
   creditBureau: CreditApplicationCreditBureau;
   biometrics: CreditApplicationBiometrics;
   purchaseIntention: CreditApplicationPurchaseIntention;
-  suggestedCreditLine: number;
-  minCreditLine: number;
-  maxCreditLine: number;
 }
 
 export type CreditApplicationDetailSection =

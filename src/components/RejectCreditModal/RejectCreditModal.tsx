@@ -1,33 +1,68 @@
+import { useCallback, useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
   Typography,
   Stack,
   Button,
+  CircularProgress,
 } from "@mui/material";
+import { FormTextField } from "@/components/Form";
+import { getApiErrorMessage } from "@/lib/axios";
+import { rejectCreditApplication } from "@/services/creditApplications.service";
 
 export interface RejectCreditModalProps {
   open: boolean;
   onClose: () => void;
+  applicationId: string;
   cooldownMonths?: number;
-  onReject?: () => void;
+  /** Called after the API rejects the application successfully */
+  onRejectSuccess?: () => void;
 }
 
 export function RejectCreditModal({
   open,
   onClose,
+  applicationId,
   cooldownMonths = 6,
-  onReject,
+  onRejectSuccess,
 }: RejectCreditModalProps) {
-  const handleConfirmReject = () => {
-    onReject?.();
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setReason("");
+    setSubmitting(false);
+  }, [open, applicationId]);
+
+  const handleDialogClose = useCallback(() => {
+    if (submitting) {
+      return;
+    }
     onClose();
+  }, [onClose, submitting]);
+
+  const handleConfirmReject = async () => {
+    setSubmitting(true);
+    try {
+      await rejectCreditApplication(applicationId);
+      onRejectSuccess?.();
+      onClose();
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleDialogClose}
       maxWidth="xs"
       fullWidth
       sx={{
@@ -64,8 +99,11 @@ export function RejectCreditModal({
             variant="contained"
             color="error"
             sx={{ width: "208px" }}
-            onClick={handleConfirmReject}>
-            Sí, rechazar solicitud
+            onClick={() => void handleConfirmReject()}
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress color="inherit" size={18} /> : undefined}
+          >
+            {submitting ? "Rechazando…" : "Sí, rechazar solicitud"}
           </Button>
         </Stack>
       </DialogContent>

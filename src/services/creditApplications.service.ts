@@ -8,6 +8,10 @@ import type {
   CreditApplicationFormPayload,
   FamilyReference,
 } from "@/types/credit-application-form.types";
+import type {
+  RejectCreditApplicationRequest,
+  RejectCreditApplicationResponse,
+} from "@/types/solicitud-credito-detail.types";
 
 interface CreditApplicationCatalogItem {
   id: number | null;
@@ -171,6 +175,8 @@ interface AdditionalInformationCatalogApiItem {
 }
 
 export interface CreditApplicationDetailResponse {
+  id: number;
+  status: string;
   basicInformation: CreditApplicationBasicInformationResponse;
   family: CreditApplicationFamilyResponse;
   address: CreditApplicationAddressResponse;
@@ -709,5 +715,12 @@ export async function submitCreditApplicationForReview(
     `${BASE}/${applicationId}/submit`,
     {}
   );
+  return unwrapOrThrow(result);
+}
+
+export async function rejectCreditApplication(
+  applicationId: string,
+): Promise<RejectCreditApplicationResponse> {
+  const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`);
   return unwrapOrThrow(result);
 }

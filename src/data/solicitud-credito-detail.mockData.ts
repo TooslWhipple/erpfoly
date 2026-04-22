@@ -30,8 +30,13 @@ export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
   },
   address: {
     postalCode: "80000",
-    state: "Tamaulipas",
-    city: "Tampico",
+    neighborhood: {
+      code: "0001",
+      fullCode: "280010001",
+      name: "Centro",
+      state: "Tamaulipas",
+      municipality: "Tampico",
+    },
     streetAndNumber: "Calle Merida 1235",
     betweenStreets: "Universidad y Maestros Ilustres",
     deliveryPhone: "667 123 4567",

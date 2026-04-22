@@ -72,10 +72,9 @@ export default function CreditApplicationReviewPage() {
   });
 
   const detail = useMemo(
-    () =>
-      idIsValid && detailQuery.data
-        ? mapCreditApplicationDetailResponseToReviewDetail(numericId, detailQuery.data)
-        : null,
+    () => idIsValid && detailQuery.data
+      ? mapCreditApplicationDetailResponseToReviewDetail(numericId, detailQuery.data)
+      : null,
     [detailQuery.data, idIsValid, numericId]
   );
 
@@ -158,17 +157,20 @@ export default function CreditApplicationReviewPage() {
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
-              Solicitar inf. adicional
-            </Button>
-            <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
-              Rechazar solicitud
-            </Button>
-            <Button variant="contained" onClick={() => setApproveModalOpen(true)}>
-              Aprobar solicitud
-            </Button>
-          </Stack>
+          {
+            detail.status !== "REJECTED" && detail.status !== "APPROVED" &&
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
+                Solicitar inf. adicional
+              </Button>
+              <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
+                Rechazar solicitud
+              </Button>
+              <Button variant="contained" onClick={() => setApproveModalOpen(true)}>
+                Aprobar solicitud
+              </Button>
+            </Stack>
+          }
         </Stack>
 
         <DetailLayout>
@@ -219,7 +221,11 @@ export default function CreditApplicationReviewPage() {
       <RejectCreditModal
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
+        applicationId={idString}
         cooldownMonths={6}
+        onRejectSuccess={() => {
+          void router.push("/solicitudes-credito");
+        }}
       />
 
       <RequestAdditionalInfoModal

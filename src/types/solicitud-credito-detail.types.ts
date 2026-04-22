@@ -131,6 +131,8 @@ export interface CreditApplicationPurchaseIntention {
 export interface CreditApplicationDetail {
   id: number;
   status: string;
+  approvedClientId: number | null;
+  approvedBaseCreditLineAmount: number | null;
   riskScore: number;
   riskLevel: "low" | "medium" | "high";
   basicInfo: CreditApplicationBasicInfo;

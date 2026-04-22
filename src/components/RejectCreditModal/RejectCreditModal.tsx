@@ -10,6 +10,7 @@ import {
 import { FormTextField } from "@/components/Form";
 import { getApiErrorMessage } from "@/lib/axios";
 import { rejectCreditApplication } from "@/services/creditApplications.service";
+import type { RejectCreditApplicationResponse } from "@/types/solicitud-credito-detail.types";
 
 export interface RejectCreditModalProps {
   open: boolean;
@@ -17,7 +18,7 @@ export interface RejectCreditModalProps {
   applicationId: string;
   cooldownMonths?: number;
   /** Called after the API rejects the application successfully */
-  onRejectSuccess?: () => void;
+  onRejectSuccess?: (response: RejectCreditApplicationResponse) => void;
 }
 
 export function RejectCreditModal({
@@ -49,8 +50,8 @@ export function RejectCreditModal({
   const handleConfirmReject = async () => {
     setSubmitting(true);
     try {
-      await rejectCreditApplication(applicationId);
-      onRejectSuccess?.();
+      const response = await rejectCreditApplication(applicationId);
+      onRejectSuccess?.(response);
       onClose();
     } catch (err) {
       console.log(err);

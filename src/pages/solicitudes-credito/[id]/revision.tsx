@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, Button, Typography, Skeleton } from "@mui/material";
 import {
   MainLayout,
@@ -10,6 +10,7 @@ import {
   ApproveCreditModal,
   RejectCreditModal,
   RequestAdditionalInfoModal,
+  CreditApplicationStatusCard,
 } from "@/components";
 import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -49,6 +50,7 @@ const RISK_LABELS: Record<string, string> = {
 
 export default function CreditApplicationReviewPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = router.query;
   const [activeSection, setActiveSection] = useState<CreditApplicationDetailSection>("basic");
   const [imageViewer, setImageViewer] = useState<{
@@ -93,6 +95,13 @@ export default function CreditApplicationReviewPage() {
     },
     [],
   );
+
+  const handleGoToClientProfile = () => {
+    if (!detail?.approvedClientId) {
+      return;
+    }
+    void router.push(`/clientes/${detail.approvedClientId}`);
+  };
 
   if (!router.isReady) {
     return null;
@@ -157,8 +166,16 @@ export default function CreditApplicationReviewPage() {
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-          {
-            detail.status !== "REJECTED" && detail.status !== "APPROVED" &&
+          {detail.status === "APPROVED" ? (
+            <CreditApplicationStatusCard
+              variant="approved"
+              approvedBaseCreditLineAmount={detail.approvedBaseCreditLineAmount}
+              onGoToProfile={handleGoToClientProfile}
+              disableGoToProfile={!detail.approvedClientId}
+            />
+          ) : detail.status === "REJECTED" ? (
+            <CreditApplicationStatusCard variant="rejected" />
+          ) : (
             <Stack direction="row" spacing={1} flexWrap="wrap">
               <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
                 Solicitar inf. adicional
@@ -170,7 +187,7 @@ export default function CreditApplicationReviewPage() {
                 Aprobar solicitud
               </Button>
             </Stack>
-          }
+          )}
         </Stack>
 
         <DetailLayout>
@@ -215,7 +232,8 @@ export default function CreditApplicationReviewPage() {
         onClose={() => setApproveModalOpen(false)}
         applicationId={idString}
         onApproveSuccess={() => {
-          void router.push("/solicitudes-credito");
+          void queryClient.invalidateQueries({ queryKey: ["credit-application", "review", idString] });
+          void detailQuery.refetch();
         }}
       />
 
@@ -225,7 +243,8 @@ export default function CreditApplicationReviewPage() {
         applicationId={idString}
         cooldownMonths={6}
         onRejectSuccess={() => {
-          void router.push("/solicitudes-credito");
+          void queryClient.invalidateQueries({ queryKey: ["credit-application", "review", idString] });
+          void detailQuery.refetch();
         }}
       />
 

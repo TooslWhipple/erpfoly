@@ -11,6 +11,9 @@ const SOFA_IMAGE = "https://placehold.co/80x80/e8dcc8/5c4a32?text=Sofa";
 
 export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
   id: 2241,
+  status: "SUBMITTED",
+  approvedClientId: null,
+  approvedBaseCreditLineAmount: null,
   riskScore: 67,
   riskLevel: "medium",
   basicInfo: {

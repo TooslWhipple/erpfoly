@@ -22,7 +22,7 @@ export interface ApproveCreditModalProps {
   open: boolean;
   onClose: () => void;
   applicationId: string;
-  onApproveSuccess?: () => void;
+  onApproveSuccess?: (clientId: number) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -54,8 +54,8 @@ export function ApproveCreditModal({
         approvedAmount,
         interestRate: approvalOptionsQuery.data?.interestRate ?? 0,
       }),
-    onSuccess: () => {
-      onApproveSuccess?.();
+    onSuccess: (response) => {
+      onApproveSuccess?.(response.clientId);
       onClose();
     },
   });

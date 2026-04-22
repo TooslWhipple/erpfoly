@@ -176,6 +176,10 @@ interface AdditionalInformationCatalogApiItem {
 export interface CreditApplicationDetailResponse {
   id: number;
   status: string;
+  approvalSummary?: {
+    clientId: number | null;
+    baseCreditLineAmount: number | null;
+  };
   basicInformation: CreditApplicationBasicInformationResponse;
   family: CreditApplicationFamilyResponse;
   address: CreditApplicationAddressResponse;

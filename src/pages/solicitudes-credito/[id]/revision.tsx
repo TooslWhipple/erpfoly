@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, Button, Typography, Skeleton } from "@mui/material";
 import {
   MainLayout,
@@ -10,6 +10,7 @@ import {
   ApproveCreditModal,
   RejectCreditModal,
   RequestAdditionalInfoModal,
+  CreditApplicationStatusCard,
 } from "@/components";
 import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -49,6 +50,7 @@ const RISK_LABELS: Record<string, string> = {
 
 export default function CreditApplicationReviewPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = router.query;
   const [activeSection, setActiveSection] = useState<CreditApplicationDetailSection>("basic");
   const [imageViewer, setImageViewer] = useState<{
@@ -72,10 +74,9 @@ export default function CreditApplicationReviewPage() {
   });
 
   const detail = useMemo(
-    () =>
-      idIsValid && detailQuery.data
-        ? mapCreditApplicationDetailResponseToReviewDetail(numericId, detailQuery.data)
-        : null,
+    () => idIsValid && detailQuery.data
+      ? mapCreditApplicationDetailResponseToReviewDetail(numericId, detailQuery.data)
+      : null,
     [detailQuery.data, idIsValid, numericId]
   );
 
@@ -94,6 +95,13 @@ export default function CreditApplicationReviewPage() {
     },
     [],
   );
+
+  const handleGoToClientProfile = () => {
+    if (!detail?.approvedClientId) {
+      return;
+    }
+    void router.push(`/clientes/${detail.approvedClientId}`);
+  };
 
   if (!router.isReady) {
     return null;
@@ -158,17 +166,28 @@ export default function CreditApplicationReviewPage() {
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
-              Solicitar inf. adicional
-            </Button>
-            <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
-              Rechazar solicitud
-            </Button>
-            <Button variant="contained" onClick={() => setApproveModalOpen(true)}>
-              Aprobar solicitud
-            </Button>
-          </Stack>
+          {detail.status === "APPROVED" ? (
+            <CreditApplicationStatusCard
+              variant="approved"
+              approvedBaseCreditLineAmount={detail.approvedBaseCreditLineAmount}
+              onGoToProfile={handleGoToClientProfile}
+              disableGoToProfile={!detail.approvedClientId}
+            />
+          ) : detail.status === "REJECTED" ? (
+            <CreditApplicationStatusCard variant="rejected" />
+          ) : (
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
+                Solicitar inf. adicional
+              </Button>
+              <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
+                Rechazar solicitud
+              </Button>
+              <Button variant="contained" onClick={() => setApproveModalOpen(true)}>
+                Aprobar solicitud
+              </Button>
+            </Stack>
+          )}
         </Stack>
 
         <DetailLayout>
@@ -211,15 +230,22 @@ export default function CreditApplicationReviewPage() {
       <ApproveCreditModal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
-        suggestedAmount={detail.suggestedCreditLine}
-        minAmount={detail.minCreditLine}
-        maxAmount={detail.maxCreditLine}
+        applicationId={idString}
+        onApproveSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ["credit-application", "review", idString] });
+          void detailQuery.refetch();
+        }}
       />
 
       <RejectCreditModal
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
+        applicationId={idString}
         cooldownMonths={6}
+        onRejectSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ["credit-application", "review", idString] });
+          void detailQuery.refetch();
+        }}
       />
 
       <RequestAdditionalInfoModal

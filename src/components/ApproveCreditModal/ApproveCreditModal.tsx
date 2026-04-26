@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -7,17 +8,21 @@ import {
   Button,
   InputAdornment,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { TrackSlider } from "@/components/TrackSlider";
+import { getApiErrorMessage } from "@/lib/axios";
+import {
+  approveCreditApplication,
+  getCreditApplicationApprovalOptions,
+} from "@/services/creditApplications.service";
 
 export interface ApproveCreditModalProps {
   open: boolean;
   onClose: () => void;
-  suggestedAmount: number;
-  minAmount: number;
-  maxAmount: number;
-  onApprove?: (approvedAmount: number) => void;
+  applicationId: string;
+  onApproveSuccess?: (clientId: number) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -30,18 +35,40 @@ function formatCurrency(value: number): string {
 export function ApproveCreditModal({
   open,
   onClose,
-  suggestedAmount,
-  minAmount,
-  maxAmount,
-  onApprove,
+  applicationId,
+  onApproveSuccess,
 }: ApproveCreditModalProps) {
-  const [creditLine, setCreditLine] = useState(suggestedAmount);
+  const [creditLine, setCreditLine] = useState(0);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
+
+  const approvalOptionsQuery = useQuery({
+    queryKey: ["credit-application", "approval-options", applicationId],
+    queryFn: () => getCreditApplicationApprovalOptions(applicationId),
+    enabled: open && Boolean(applicationId),
+    staleTime: 60_000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (approvedAmount: number) =>
+      approveCreditApplication(applicationId, {
+        approvedAmount,
+        interestRate: approvalOptionsQuery.data?.interestRate ?? 0,
+      }),
+    onSuccess: (response) => {
+      onApproveSuccess?.(response.clientId);
+      onClose();
+    },
+  });
 
   useEffect(() => {
-    if (open) {
-      setCreditLine(suggestedAmount);
+    if (!open) {
+      return;
     }
-  }, [open, suggestedAmount]);
+    setSubmitErrorMessage(null);
+    if (approvalOptionsQuery.data) {
+      setCreditLine(approvalOptionsQuery.data.suggestedApprovedAmount);
+    }
+  }, [open, approvalOptionsQuery.data]);
 
   const handleSliderChange = useCallback(
     (_: Event, value: number | number[]) => {
@@ -50,11 +77,23 @@ export function ApproveCreditModal({
     []
   );
 
-  const handleApproveClick = () => {
-    onApprove?.(creditLine);
-    onClose();
+  const handleApproveClick = async () => {
+    setSubmitErrorMessage(null);
+    try {
+      await approveMutation.mutateAsync(creditLine);
+    } catch (error) {
+      const parsedErrorMessage = getApiErrorMessage(error);
+      setSubmitErrorMessage(
+        parsedErrorMessage || "No fue posible aprobar la solicitud. Intenta de nuevo.",
+      );
+    }
   };
 
+  const minAmount = approvalOptionsQuery.data?.minApprovedAmount ?? 0;
+  const maxAmount = approvalOptionsQuery.data?.maxApprovedAmount ?? 0;
+  const suggestedAmount = approvalOptionsQuery.data?.suggestedApprovedAmount ?? 0;
+  const isLoadingOptions = approvalOptionsQuery.isPending;
+  const disableApproveButton = isLoadingOptions || approveMutation.isPending;
   const midValue = Math.round((minAmount + maxAmount) / 2);
   const hasMidMark = midValue > minAmount && midValue < maxAmount;
 
@@ -152,11 +191,23 @@ export function ApproveCreditModal({
           <Button
             variant="contained"
             fullWidth
-            onClick={handleApproveClick}
+            onClick={() => void handleApproveClick()}
             sx={{ mt: 1 }}
+            disabled={disableApproveButton || approvalOptionsQuery.isError}
+            startIcon={approveMutation.isPending ? <CircularProgress color="inherit" size={18} /> : undefined}
           >
-            Aprobar solicitud
+            {approveMutation.isPending ? "Aprobando..." : "Aprobar solicitud"}
           </Button>
+          {approvalOptionsQuery.isError && (
+            <Typography variant="body2" color="error">
+              No fue posible cargar los montos de aprobación. Cierra y vuelve a intentar.
+            </Typography>
+          )}
+          {submitErrorMessage && (
+            <Typography variant="body2" color="error">
+              {submitErrorMessage}
+            </Typography>
+          )}
         </Stack>
       </DialogContent >
     </Dialog >

@@ -38,13 +38,6 @@ function toDocumentItems(
   }));
 }
 
-/** Detail API does not return credit line bounds; used only for approval modal UI until backend exposes them. */
-const DEFAULT_CREDIT_LINE_BOUNDS = {
-  minCreditLine: 7000,
-  suggestedCreditLine: 9000,
-  maxCreditLine: 20000,
-} as const;
-
 function buildStreetAndNumber(address: CreditApplicationDetailResponse["address"]): string {
   return [
     address.street,
@@ -74,24 +67,32 @@ function formatMxCurrency(amount: number): string {
   }).format(amount);
 }
 
-/**
- * Maps the credit application detail API payload (same as edit form) into the
- * read-only review layout model. Sections not returned by the API use empty or neutral placeholders.
- */
+function normalizeNeighborhood(
+  neighborhood: CreditApplicationDetailResponse["address"]["neighborhood"] | undefined
+): CreditApplicationDetail["address"]["neighborhood"] {
+  return {
+    code: neighborhood?.code ?? "",
+    fullCode: neighborhood?.fullCode ?? "",
+    name: neighborhood?.name ?? "",
+    state: neighborhood?.state ?? "",
+    municipality: neighborhood?.municipality ?? "",
+  };
+}
+
 export function mapCreditApplicationDetailResponseToReviewDetail(
   applicationId: number,
   api: CreditApplicationDetailResponse
 ): CreditApplicationDetail {
-  const { basicInformation, family, address, employment, references } = api;
+  const { id, status, basicInformation, family, address, employment, references } = api;
+  const neighborhood = normalizeNeighborhood(address.neighborhood);
 
   const baseIncome = employment.applicant.monthlyIncome ?? 0;
   const otherIncome = employment.applicant.hasOtherIncome ? (employment.applicant.otherIncomeAmount ?? 0) : 0;
   const totalIncome = baseIncome + otherIncome;
 
-  const requestedCodes = new Set(
-    (api.additionalInformationRequested ?? [])
-      .filter((item) => item.requestFlag)
-      .map((item) => item.code.toUpperCase()),
+  const requestedCodes = new Set((api.additionalInformationRequested ?? [])
+    .filter((item) => item.requestFlag)
+    .map((item) => item.code.toUpperCase()),
   );
   const documentation = api.documentation;
   const verifiedByLabel = "Verificado por el sistema";
@@ -137,6 +138,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   const fingerprintFile = documentation?.fingerprintFiles?.[0];
 
   const biometricItems: BiometricItem[] = [];
+ 
   if (faceCaptureFile) {
     biometricItems.push({
       id: `FACE_CAPTURE-${faceCaptureFile.id}`,
@@ -146,6 +148,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       type: "photo",
     });
   }
+  
   if (fingerprintFile) {
     biometricItems.push({
       id: `FINGERPRINT-${fingerprintFile.id}`,
@@ -158,6 +161,9 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
 
   return {
     id: applicationId,
+    status,
+    approvedClientId: api.approvalSummary?.clientId ?? null,
+    approvedBaseCreditLineAmount: api.approvalSummary?.baseCreditLineAmount ?? null,
     riskScore: 0,
     riskLevel: "medium",
     basicInfo: {
@@ -174,8 +180,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     },
     address: {
       postalCode: address.postalCode ?? "",
-      state: address.neighborhood.state ?? "",
-      city: address.neighborhood.municipality ?? "",
+      neighborhood,
       streetAndNumber: buildStreetAndNumber(address),
       betweenStreets: address.betweenStreets ?? "",
       deliveryPhone: address.receiverPhone ?? "",
@@ -225,7 +230,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
           .filter((value) => value.trim().length > 0)
           .join(" - "),
       },
-      family: references.family.map((reference, index) => ({
+      family: references.family.map((reference) => ({
         name: [reference.firstName, reference.lastName].filter((value) => value.trim().length > 0).join(" "),
         relationship: reference.relationship?.name ?? "",
         address: reference.address ?? "",
@@ -241,6 +246,5 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     },
     biometrics: { items: biometricItems },
     purchaseIntention: { items: [], subtotal: 0, total: 0 },
-    ...DEFAULT_CREDIT_LINE_BOUNDS,
   };
 }

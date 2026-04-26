@@ -11,11 +11,11 @@ const SOFA_IMAGE = "https://placehold.co/80x80/e8dcc8/5c4a32?text=Sofa";
 
 export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
   id: 2241,
+  status: "SUBMITTED",
+  approvedClientId: null,
+  approvedBaseCreditLineAmount: null,
   riskScore: 67,
   riskLevel: "medium",
-  suggestedCreditLine: 9000,
-  minCreditLine: 7000,
-  maxCreditLine: 20000,
   basicInfo: {
     firstName: "Saúl Arturo",
     firstSurname: "Quintero",
@@ -30,8 +30,13 @@ export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
   },
   address: {
     postalCode: "80000",
-    state: "Tamaulipas",
-    city: "Tampico",
+    neighborhood: {
+      code: "0001",
+      fullCode: "280010001",
+      name: "Centro",
+      state: "Tamaulipas",
+      municipality: "Tampico",
+    },
     streetAndNumber: "Calle Merida 1235",
     betweenStreets: "Universidad y Maestros Ilustres",
     deliveryPhone: "667 123 4567",

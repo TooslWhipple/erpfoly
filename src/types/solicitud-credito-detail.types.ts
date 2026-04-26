@@ -1,7 +1,3 @@
-// ============================================================================
-// Credit application detail - read-only module types
-// ============================================================================
-
 export interface CreditApplicationBasicInfo {
   firstName: string;
   firstSurname: string;
@@ -15,10 +11,16 @@ export interface CreditApplicationBasicInfo {
   whatsappValidated: boolean;
 }
 
+export interface CreditApplicationNeighborhood {
+  code: string;
+  fullCode?: string;
+  name: string;
+  state: string;
+  municipality: string;
+}
 export interface CreditApplicationAddress {
   postalCode: string;
-  state: string;
-  city: string;
+  neighborhood: CreditApplicationNeighborhood;
   streetAndNumber: string;
   betweenStreets: string;
   deliveryPhone: string;
@@ -128,6 +130,9 @@ export interface CreditApplicationPurchaseIntention {
 
 export interface CreditApplicationDetail {
   id: number;
+  status: string;
+  approvedClientId: number | null;
+  approvedBaseCreditLineAmount: number | null;
   riskScore: number;
   riskLevel: "low" | "medium" | "high";
   basicInfo: CreditApplicationBasicInfo;
@@ -139,9 +144,6 @@ export interface CreditApplicationDetail {
   creditBureau: CreditApplicationCreditBureau;
   biometrics: CreditApplicationBiometrics;
   purchaseIntention: CreditApplicationPurchaseIntention;
-  suggestedCreditLine: number;
-  minCreditLine: number;
-  maxCreditLine: number;
 }
 
 export type CreditApplicationDetailSection =
@@ -154,3 +156,18 @@ export type CreditApplicationDetailSection =
   | "credit-bureau"
   | "biometrics"
   | "purchase-intention";
+
+export interface RejectCreditApplicationParams {
+  applicationId: string;
+}
+
+export interface RejectCreditApplicationRequest {
+  reason: string;
+}
+
+export interface RejectCreditApplicationResponse {
+  success: boolean;
+  message: string;
+  status: "REJECTED";
+  creditApplicationId: number;
+}

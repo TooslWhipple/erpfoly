@@ -86,6 +86,8 @@ export type {
   AdditionalInfoRequestOption,
   AdditionalInfoRequestKind,
 } from "./RequestAdditionalInfoModal";
+export { CreditApplicationStatusCard } from "./CreditApplicationStatusCard";
+export type { CreditApplicationStatusCardProps } from "./CreditApplicationStatusCard";
 export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
 export type { ApproveDiscountRequestModalProps } from "./ApproveDiscountRequestModal";
 export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";

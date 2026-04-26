@@ -1,17 +1,31 @@
-// ============================================================================
-// TYPES & INTERFACES - Client Detail Module
-// ============================================================================
+export type CollectionActivityTypeCode =
+  | "CALL"
+  | "MESSAGE"
+  | "EMAIL"
+  | "VISIT"
+  | "NOTE";
 
-export type ActivityType = "call" | "message" | "email" | "visit" | "note";
+export interface ClientCollectionActivityType {
+  id: number;
+  code: CollectionActivityTypeCode | string;
+  name: string;
+  description: string | null;
+}
 
-export interface ClientActivity {
-  id: string;
-  type: ActivityType;
-  author: string;
-  date: string;
-  time: string;
-  description: string;
-  toolName?: string;
+export interface ClientCollectionActivity {
+  id: number;
+  comment: string;
+  createdAt: string;
+  activityType: ClientCollectionActivityType;
+  createdBy: {
+    id: number | null;
+    name: string;
+  };
+}
+
+export interface CreateClientCollectionActivityPayload {
+  activityTypeId: number;
+  comment: string;
 }
 
 export type MovementType = "payment" | "purchase";
@@ -34,6 +48,37 @@ export interface ActiveCase {
   orderType: string;
 }
 
+export interface ClientDetailHeader {
+  id: number;
+  fullName: string;
+  curp: string;
+  creditLine: {
+    authorized: number;
+    available: number | null;
+    availablePercentage: number | null;
+  };
+}
+
+export interface ClientDetailView {
+  header: ClientDetailHeader;
+  movements: ClientMovement[];
+  purchases: ClientMovement[];
+  payments: ClientMovement[];
+  activeCases: ActiveCase[];
+}
+
+export type ActivityType = "call" | "message" | "email" | "visit" | "note";
+
+export interface ClientActivity {
+  id: string;
+  type: ActivityType;
+  author: string;
+  date: string;
+  time: string;
+  description: string;
+  toolName?: string;
+}
+
 export interface ClientDetail {
   id: string;
   clientId: string;
@@ -49,12 +94,6 @@ export interface ClientDetail {
   purchases: ClientMovement[];
   payments: ClientMovement[];
   activeCases: ActiveCase[];
-}
-
-export interface ClientInfoCategory {
-  id: string;
-  label: string;
-  icon: string;
 }
 
 export type GetClientesResponse = ClientDetail[];

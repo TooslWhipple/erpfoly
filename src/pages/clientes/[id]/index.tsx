@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Skeleton, Typography, Button, Stack, Divider } from "@mui/material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs, Tabs, CreditLimitBar, TabFilters } from "@/components";
+import { MainLayout, Breadcrumbs, CreditLimitBar, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ClientDetail } from "@/types/clientes.types";
-import { getClientDetail } from "@/data/clientes.mockData";
+import { getClientDetail as getClientDetailMock } from "@/data/clientes.mockData";
 import {
   ActivityTab,
   MovementsTab,
@@ -17,6 +17,14 @@ import {
   ErrorState,
 } from "@/styles/clientes/detalle.styles";
 import { useTheme } from "@mui/material/styles";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createClientCollectionActivity,
+  getClientCollectionActivities,
+  getClientCollectionActivityTypes,
+  getClientDetail,
+} from "@/services/clients.service";
+import { unwrapOrThrow } from "@/lib/axios";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -33,6 +41,7 @@ const TABS = [
 export default function ClientDetailPage() {
   const router = useRouter();
   const theme = useTheme();
+  const queryClient = useQueryClient();
 
   const { id } = router.query;
 
@@ -47,11 +56,16 @@ export default function ClientDetailPage() {
     }
   }, [id]);
 
+  const numericClientId =
+    typeof id === "string" && Number.isFinite(Number(id))
+      ? Number(id)
+      : null;
+
   const loadClient = async (clientId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getClientDetail(clientId);
+      const data = await getClientDetailMock(clientId);
       setClient(data ?? null);
       if (!data) setError("Cliente no encontrado");
     } catch (err) {
@@ -62,9 +76,52 @@ export default function ClientDetailPage() {
     }
   };
 
+  const activityListQuery = useQuery({
+    queryKey: ["clients", "collection-activities", numericClientId],
+    enabled: numericClientId !== null,
+    queryFn: async () => {
+      const result = await getClientCollectionActivities(numericClientId as number);
+      return unwrapOrThrow(result);
+    },
+  });
+
+  const clientHeaderQuery = useQuery({
+    queryKey: ["clients", "detail", numericClientId],
+    enabled: numericClientId !== null,
+    queryFn: async () => {
+      const result = await getClientDetail(numericClientId as number);
+      return unwrapOrThrow(result);
+    },
+  });
+
+  const activityTypesQuery = useQuery({
+    queryKey: ["clients", "collection-activity-types"],
+    queryFn: async () => {
+      const result = await getClientCollectionActivityTypes();
+      return unwrapOrThrow(result);
+    },
+    staleTime: 6 * 60 * 60 * 1000,
+    gcTime: 12 * 60 * 60 * 1000,
+  });
+
+  const createActivityMutation = useMutation({
+    mutationFn: async (payload: { activityTypeId: number; comment: string }) => {
+      const result = await createClientCollectionActivity(numericClientId as number, payload);
+      return unwrapOrThrow(result);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["clients", "collection-activities", numericClientId],
+      });
+    },
+  });
+
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Clientes", href: "/clientes" },
-    { label: client?.fullName ?? "...", href: client ? `/clientes/${client.id}` : undefined },
+    {
+      label: clientHeaderQuery.data?.fullName ?? client?.fullName ?? "...",
+      href: client ? `/clientes/${client.id}` : undefined,
+    },
   ];
 
   if (loading) {
@@ -100,7 +157,17 @@ export default function ClientDetailPage() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "actividad":
-        return <ActivityTab client={client} />;
+        return (
+          <ActivityTab
+            client={client}
+            activities={activityListQuery.data ?? []}
+            activityTypes={activityTypesQuery.data ?? []}
+            loadingActivities={activityListQuery.isLoading}
+            onCreateActivity={async (payload) => {
+              await createActivityMutation.mutateAsync(payload);
+            }}
+          />
+        );
       case "movimientos":
         return <MovementsTab client={client} />;
       case "compras":
@@ -120,18 +187,41 @@ export default function ClientDetailPage() {
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
           <Stack spacing={0.5} flex={1}>
-            <Typography variant="body2" color="text.secondary">{client.clientId}</Typography>
-            <Typography variant="h5">{client.fullName}</Typography>
-            <Typography variant="body2" color="text.secondary">Línea de crédito: <span style={{ color: theme.palette.primary.main }}>{formatCurrency(client.creditLine)}</span></Typography>
+            <Typography variant="body2" color="text.secondary">
+              {clientHeaderQuery.data?.curp || client.clientId}
+            </Typography>
+            <Typography variant="h5">
+              {clientHeaderQuery.data?.fullName ?? client.fullName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Línea de crédito:{" "}
+              <span style={{ color: theme.palette.primary.main }}>
+                {formatCurrency(
+                  clientHeaderQuery.data?.creditLine.authorized ?? client.creditLine,
+                )}
+              </span>
+            </Typography>
             <Typography variant="body2" color="text.primary">
               Pago requerido <strong>{formatCurrency(client.requiredPayment)}</strong>{" "}
               <span style={{ color: theme.palette.error.main }}>{client.requiredPaymentDate} ({client.requiredPaymentLabel})</span>
             </Typography>
           </Stack>
           <CreditLimitBar
-            creditLimit={client.creditLine}
-            creditUsed={client.creditUsed}
-            creditAvailable={client.creditAvailable}
+            creditLimit={
+              clientHeaderQuery.data?.creditLine.authorized ?? client.creditLine
+            }
+            creditUsed={
+              clientHeaderQuery.data
+                ? Math.max(
+                    clientHeaderQuery.data.creditLine.authorized -
+                      (clientHeaderQuery.data.creditLine.available ?? 0),
+                    0,
+                  )
+                : client.creditUsed
+            }
+            creditAvailable={
+              clientHeaderQuery.data?.creditLine.available ?? client.creditAvailable
+            }
           />
         </Stack>
         <Divider />

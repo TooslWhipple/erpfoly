@@ -1,14 +1,14 @@
 import {
   InfoCard,
   InfoCardIcon,
-  InfoCardLabel,
   Card
 } from "@/styles/clientes/detalle.styles";
+import { useRouter } from "next/router";
 import { Grid, Stack, Typography } from "@mui/material";
 import { Briefcase, FolderOpen, Heart, Map, User, Users } from "lucide-react";
 
 const INFO_CATEGORIES = [
-  { id: "basic", label: "Información básica", icon: <User /> },
+  { id: "basic-information", label: "Información básica", icon: <User /> },
   { id: "family", label: "Familia", icon: <Heart /> },
   { id: "address", label: "Dirección", icon: <Map /> },
   { id: "employment", label: "Empleo", icon: <Briefcase /> },
@@ -17,8 +17,13 @@ const INFO_CATEGORIES = [
 ];
 
 export function InformationTab() {
+  const router = useRouter();
+
   const handleCategoryClick = (categoryId: string) => {
-    console.log("[ClientDetail] Info category clicked:", categoryId);
+    const { id } = router.query;
+    if (typeof id !== "string") return;
+
+    router.push(`/clientes/${id}/editar?tab=${categoryId}`);
   };
 
   return (

@@ -12,7 +12,7 @@ import {
   PurchasesTab,
   PaymentsTab,
   InformationTab,
-} from "./components";
+} from "../components";
 import {
   ErrorState,
 } from "@/styles/clientes/detalle.styles";

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Skeleton, Typography, Button, Stack } from "@mui/material";
+import { Skeleton, Typography, Button, Stack, Divider } from "@mui/material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs, Tabs, CreditLimitBar } from "@/components";
+import { MainLayout, Breadcrumbs, Tabs, CreditLimitBar, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ClientDetail } from "@/types/clientes.types";
 import { getClientDetail } from "@/data/clientes.mockData";
@@ -14,18 +14,9 @@ import {
   InformationTab,
 } from "./components";
 import {
-  ClientCard,
-  ClientCardContent,
-  ClientHeaderRow,
-  ClientId,
-  ClientName,
-  RequiredPaymentRow,
-  CreditSummaryColumn,
-  TabsSection,
-  TabContentCard,
-  TabContentInner,
   ErrorState,
 } from "@/styles/clientes/detalle.styles";
+import { useTheme } from "@mui/material/styles";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -41,6 +32,8 @@ const TABS = [
 
 export default function ClientDetailPage() {
   const router = useRouter();
+  const theme = useTheme();
+
   const { id } = router.query;
 
   const [client, setClient] = useState<ClientDetail | null>(null);
@@ -125,48 +118,33 @@ export default function ClientDetailPage() {
     <MainLayout>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
-        <ClientCard>
-          <ClientCardContent>
-            <ClientHeaderRow>
-              <Stack spacing={1}>
-                <Stack>
-                  <ClientName>{client.fullName}</ClientName>
-                  <ClientId>{client.clientId}</ClientId>
-                </Stack>
-                <RequiredPaymentRow>
-                  Pago requerido{" "}
-                  <strong>{formatCurrency(client.requiredPayment)}</strong>{" "}
-                  {client.requiredPaymentDate}
-                  {client.requiredPaymentLabel && (
-                    <span className="due-label"> ({client.requiredPaymentLabel})</span>
-                  )}
-                </RequiredPaymentRow>
-              </Stack>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+          <Stack spacing={0.5} flex={1}>
+            <Typography variant="body2" color="text.secondary">{client.clientId}</Typography>
+            <Typography variant="h5">{client.fullName}</Typography>
+            <Typography variant="body2" color="text.secondary">Línea de crédito: <span style={{ color: theme.palette.primary.main }}>{formatCurrency(client.creditLine)}</span></Typography>
+            <Typography variant="body2" color="text.primary">
+              Pago requerido <strong>{formatCurrency(client.requiredPayment)}</strong>{" "}
+              <span style={{ color: theme.palette.error.main }}>{client.requiredPaymentDate} ({client.requiredPaymentLabel})</span>
+            </Typography>
+          </Stack>
+          <CreditLimitBar
+            creditLimit={client.creditLine}
+            creditUsed={client.creditUsed}
+            creditAvailable={client.creditAvailable}
+          />
+        </Stack>
+        <Divider />
+        <TabFilters
+          showSearch={false}
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={(value: string) => setActiveTab(value)}
+        />
 
-              <CreditSummaryColumn>
-                <CreditLimitBar
-                  creditLimit={client.creditLine}
-                  creditUsed={client.creditUsed}
-                  creditAvailable={client.creditAvailable}
-                />
-              </CreditSummaryColumn>
-
-            </ClientHeaderRow>
-          </ClientCardContent>
-          <TabsSection>
-            <Tabs
-              tabs={TABS}
-              value={activeTab}
-              onChange={(value) => setActiveTab(value)}
-              withBorder={false}
-              fullWidth
-            />
-          </TabsSection>
-        </ClientCard>
-
-        <TabContentCard>
-          <TabContentInner>{renderTabContent()}</TabContentInner>
-        </TabContentCard>
+        {
+          renderTabContent()
+        }
       </Stack>
 
     </MainLayout>

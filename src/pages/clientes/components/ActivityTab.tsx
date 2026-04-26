@@ -1,41 +1,23 @@
 import { useState } from "react";
-import { Box, TextField, Button, MenuItem, Select, FormControl } from "@mui/material";
-import {
-  Phone as PhoneIcon,
-  Message as MessageIcon,
-  Email as EmailIcon,
-  Person as PersonIcon,
-  Description as DescriptionIcon,
-} from "@mui/icons-material";
+import { TextField, Button, MenuItem, Select, FormControl, Grid, Stack, Typography } from "@mui/material";
 import type { ClientDetail, ClientActivity, ActivityType } from "@/types/clientes.types";
 import {
-  ActivityFormCard,
-  ActivityFormActions,
-  SectionTitle,
-  ActivityList,
-  ActivityItemCard,
-  ActivityItemIcon,
-  ActivityItemContent,
-  ActivityItemMeta,
-  ActivityItemDescription,
-  ActiveCasesList,
-  ActiveCaseCard,
-  CaseStatusChip,
-  CaseId,
-  CaseDescription,
-  CaseOrderType,
-  EmptyState,
+  Card,
+  ActivityItemCard
 } from "@/styles/clientes/detalle.styles";
+import { FileText, Mail, Phone, User } from "lucide-react";
+import { colors } from "@/styles/theme";
+import { StatusChip } from "@/components";
 
 function getActivityIcon(type: ActivityType) {
   switch (type) {
     case "call":
-      return <PhoneIcon fontSize="small" />;
+      return <Phone size={16} color={colors.text.secondary} />;
     case "message":
     case "email":
-      return <MessageIcon fontSize="small" />;
+      return <Mail size={16} color={colors.text.secondary} />;
     default:
-      return <PhoneIcon fontSize="small" />;
+      return <Phone size={16} color={colors.text.secondary} />;
   }
 }
 
@@ -51,11 +33,11 @@ function getActivityTypeLabel(type: ActivityType): string {
 }
 
 const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: React.ReactNode }[] = [
-  { value: "call", label: "Llamada", icon: <PhoneIcon fontSize="small" /> },
-  { value: "message", label: "Mensaje", icon: <MessageIcon fontSize="small" /> },
-  { value: "email", label: "Correo", icon: <EmailIcon fontSize="small" /> },
-  { value: "visit", label: "Visita", icon: <PersonIcon fontSize="small" /> },
-  { value: "note", label: "Nota", icon: <DescriptionIcon fontSize="small" /> },
+  { value: "call", label: "Llamada", icon: <Phone size={16} color={colors.text.secondary} /> },
+  { value: "message", label: "Mensaje", icon: <Mail size={16} color={colors.text.secondary} /> },
+  { value: "email", label: "Correo", icon: <Mail size={16} color={colors.text.secondary} /> },
+  { value: "visit", label: "Visita", icon: <User size={16} color={colors.text.secondary} /> },
+  { value: "note", label: "Nota", icon: <FileText size={16} color={colors.text.secondary} /> },
 ];
 
 export interface ActivityTabProps {
@@ -80,94 +62,114 @@ export function ActivityTab({ client }: ActivityTabProps) {
 
   return (
     <>
-      <ActivityFormCard>
-        <FormControl size="small" fullWidth sx={{ mb: 2 }}>
-          <Select
-            value={activityType}
-            onChange={(e) => setActivityType(e.target.value as ActivityType)}
-            displayEmpty
-            renderValue={(value) => {
-              const opt = ACTIVITY_TYPES.find((o) => o.value === value);
-              return (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {opt ? getActivityIcon(opt.value) : null}
-                  <span>{opt?.label ?? value}</span>
-                </Box>
-              );
-            }}
-            sx={{ minHeight: 44 }}
-          >
-            {ACTIVITY_TYPES.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {opt.icon}
-                  {opt.label}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          placeholder="Escribe aquí..."
-          value={activityNotes}
-          onChange={(e) => setActivityNotes(e.target.value)}
-          variant="outlined"
-          size="small"
-        />
-        <ActivityFormActions>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={activitySaving || !activityNotes.trim()}
-          >
-            Guardar
-          </Button>
-          <Button variant="outlined" onClick={handleCancel}>
-            Cancelar
-          </Button>
-        </ActivityFormActions>
-      </ActivityFormCard>
-
-      <SectionTitle>Historial de actividad</SectionTitle>
-      <ActivityList>
-        {client.activities.length === 0 ? (
-          <EmptyState>No hay actividad registrada</EmptyState>
-        ) : (
-          client.activities.map((activity: ClientActivity) => (
-            <ActivityItemCard key={activity.id}>
-              <ActivityItemIcon>{getActivityIcon(activity.type)}</ActivityItemIcon>
-              <ActivityItemContent>
-                <ActivityItemMeta>
-                  {activity.type === "message" && activity.toolName
-                    ? `Mensaje enviado automáticamente a través de ${activity.toolName}`
-                    : `${getActivityTypeLabel(activity.type)} realizada por ${activity.author}`}{" "}
-                  · {activity.date} {activity.time}
-                </ActivityItemMeta>
-                <ActivityItemDescription>{activity.description}</ActivityItemDescription>
-              </ActivityItemContent>
-            </ActivityItemCard>
-          ))
-        )}
-      </ActivityList>
-
-      <SectionTitle sx={{ mt: 3 }}>Casos activos</SectionTitle>
-      <ActiveCasesList>
-        {client.activeCases.length === 0 ? (
-          <EmptyState>No hay casos activos</EmptyState>
-        ) : (
-          client.activeCases.map((c) => (
-            <ActiveCaseCard key={c.id}>
-              <CaseStatusChip label={c.statusLabel} size="small" />
-              <CaseId>{c.id}</CaseId>
-              <CaseDescription>{c.description}</CaseDescription>
-              <CaseOrderType>{c.orderType}</CaseOrderType>
-            </ActiveCaseCard>
-          ))
-        )}
-      </ActiveCasesList>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card>
+            <Stack spacing={2}>
+              <FormControl fullWidth>
+                <Select
+                  size="small"
+                  value={activityType}
+                  onChange={(e) => setActivityType(e.target.value as ActivityType)}
+                  displayEmpty
+                  renderValue={(value) => {
+                    const opt = ACTIVITY_TYPES.find((o) => o.value === value);
+                    return (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {(opt) ? opt.icon : null}
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>{opt?.label ?? value}</Typography>
+                      </Stack>
+                    );
+                  }}
+                >
+                  {
+                    ACTIVITY_TYPES.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          {(opt) ? opt.icon : null}
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>{opt?.label}</Typography>
+                        </Stack>
+                      </MenuItem>
+                    ))
+                  }
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Escribe aquí..."
+                value={activityNotes}
+                onChange={(e) => setActivityNotes(e.target.value)}
+                variant="outlined"
+                size="small"
+              />
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  onClick={handleSave}
+                  disabled={activitySaving}>
+                  Guardar
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleCancel}>
+                  Cancelar
+                </Button>
+              </Stack>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Historial de actividad</Typography>
+            <Stack spacing={4} style={{ position: "relative" }}>
+              {
+                client.activities.map((activity: ClientActivity) => (
+                  <ActivityItemCard key={activity.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      {
+                        getActivityIcon(activity.type)
+                      }
+                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        {
+                          activity.type === "message" && activity.toolName
+                            ? `Mensaje enviado automáticamente a través de ${activity.toolName}`
+                            : `${getActivityTypeLabel(activity.type)} realizada por ${activity.author}`
+                        }
+                      </Typography>
+                    </Stack>
+                    <Stack>
+                      <Typography variant="body2" color="text.secondary">{activity.date} {activity.time}</Typography>
+                      <Typography variant="body1">{activity.description}</Typography>
+                    </Stack>
+                  </ActivityItemCard>
+                ))
+              }
+              <div
+                style={{ width: "1px", backgroundColor: colors.border, position: "absolute", top: 8, left: "56px", bottom: 8 }}
+              />
+            </Stack>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Casos activos</Typography>
+            {
+              client.activeCases.map((c) => (
+                <ActivityItemCard key={c.id}>
+                  <Stack spacing={1} alignItems="flex-start">
+                    <StatusChip
+                      variant="info"
+                      size="small"
+                      label={c.statusLabel}
+                    />
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>{c.id}</Typography>
+                    <Typography variant="body1" fontWeight={600}><span style={{ color: colors.text.secondary }}>[1]</span> {c.description}</Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>{c.orderType}</Typography>
+                  </Stack>
+                </ActivityItemCard>
+              ))
+            }
+          </Card>
+        </Grid>
+      </Grid>
     </>
   );
 }

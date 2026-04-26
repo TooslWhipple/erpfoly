@@ -1,6 +1,12 @@
-import { get } from "@/lib/axios";
+import { get, post } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
+import type {
+  ClientCollectionActivity,
+  ClientCollectionActivityType,
+  ClientDetailHeader,
+  CreateClientCollectionActivityPayload,
+} from "@/types/clientes.types";
 
 export type ClientStatus = "active" | "inactive" | "blocked";
 
@@ -43,4 +49,34 @@ export async function getClients(
   params: GetClientsParams
 ): Promise<ApiResult<GetClientsResponse>> {
   return get<GetClientsResponse>(buildListUrl(BASE, params));
+}
+
+export async function getClientDetail(
+  clientId: number
+): Promise<ApiResult<ClientDetailHeader>> {
+  return get<ClientDetailHeader>(`${BASE}/${clientId}/detail`);
+}
+
+export async function getClientCollectionActivities(
+  clientId: number
+): Promise<ApiResult<ClientCollectionActivity[]>> {
+  return get<ClientCollectionActivity[]>(
+    `${BASE}/${clientId}/collection-activities`
+  );
+}
+
+export async function getClientCollectionActivityTypes(): Promise<
+  ApiResult<ClientCollectionActivityType[]>
+> {
+  return get<ClientCollectionActivityType[]>(`${BASE}/collection-activity-types`);
+}
+
+export async function createClientCollectionActivity(
+  clientId: number,
+  payload: CreateClientCollectionActivityPayload
+): Promise<ApiResult<ClientCollectionActivity>> {
+  return post<ClientCollectionActivity>(
+    `${BASE}/${clientId}/collection-activities`,
+    payload
+  );
 }

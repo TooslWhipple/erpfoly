@@ -108,9 +108,10 @@ export const InfoCard = styled('div')(({ theme }) => ({
 export const InfoCardIcon = styled('div')(({ theme }) => ({
   width: "40px",
   height: "40px",
+  padding: "12px",
   borderRadius: "50%",
-  backgroundColor: colors.chip.background,
-  color: theme.palette.text.secondary,
+  backgroundColor: "#DBEAFE",
+  color: theme.palette.primary.main,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

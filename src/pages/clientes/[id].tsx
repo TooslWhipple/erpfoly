@@ -135,12 +135,18 @@ export default function ClientDetailPage() {
           />
         </Stack>
         <Divider />
-        <TabFilters
-          showSearch={false}
-          tabs={TABS}
-          activeTab={activeTab}
-          onTabChange={(value: string) => setActiveTab(value)}
-        />
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems="center">
+          <TabFilters
+            showSearch={false}
+            tabs={TABS}
+            activeTab={activeTab}
+            onTabChange={(value: string) => setActiveTab(value)}
+          />
+
+          <Button variant="contained" color="primary">
+            Agregar abono
+          </Button>
+        </Stack>
 
         {
           renderTabContent()

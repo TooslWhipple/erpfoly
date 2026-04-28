@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Button, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { colors } from "@/styles/theme";
@@ -9,12 +9,19 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 interface CreditApplicationIntakeModalProps {
   open: boolean;
   onClose: () => void;
-  onCompleted: (payload: CreditApplicationBiometricsData) => void;
+  /** Persist intake to the server; on failure, throw so the modal stays open for retry. */
+  onFinalize: (payload: CreditApplicationBiometricsData) => Promise<void>;
 }
 
 type IntakeStepId = "ine-front" | "ine-back" | "selfie" | "fingerprint" | "signature";
 
-const STEP_ORDER: IntakeStepId[] = ["ine-front", "ine-back", "selfie", "fingerprint", "signature"];
+const STEP_ORDER: IntakeStepId[] = [
+  "ine-front",
+  "ine-back",
+  "selfie",
+  "fingerprint",
+  "signature",
+];
 
 const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
   "ine-front": {
@@ -42,7 +49,7 @@ const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
 export function CreditApplicationIntakeModal({
   open,
   onClose,
-  onCompleted,
+  onFinalize,
 }: CreditApplicationIntakeModalProps) {
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-front");
   const [ineImageDataUrl, setIneImageDataUrl] = useState<string | null>(null);
@@ -66,15 +73,22 @@ export function CreditApplicationIntakeModal({
     if (activeStep === "selfie") return Boolean(selfieImageDataUrl);
     if (activeStep === "fingerprint") return fingerprintConfirmed;
     return signatureDrawn;
-  }, [activeStep, fingerprintConfirmed, ineBackImageDataUrl, ineImageDataUrl, selfieImageDataUrl, signatureDrawn]);
+  }, [
+    activeStep,
+    fingerprintConfirmed,
+    ineBackImageDataUrl,
+    ineImageDataUrl,
+    selfieImageDataUrl,
+    signatureDrawn,
+  ]);
 
-  const goToNextStep = async () => {
+  const goToNextStep = async (): Promise<void> => {
     if (!canContinue) return;
 
     if (isLastStep) {
       setSaving(true);
       try {
-        onCompleted({
+        await onFinalize({
           ineFrontImage: ineImageDataUrl,
           ineBackImage: ineBackImageDataUrl,
           selfieImage: selfieImageDataUrl,
@@ -82,6 +96,9 @@ export function CreditApplicationIntakeModal({
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
           completedAt: new Date().toISOString(),
         });
+        resetModalState();
+        onClose();
+      } catch {
       } finally {
         setSaving(false);
       }
@@ -170,8 +187,7 @@ export function CreditApplicationIntakeModal({
       fullWidth
     >
       <Stack spacing={3} sx={{ minHeight: 600 }}>
-        {
-          activeStep === "ine-front" &&
+        {activeStep === "ine-front" && (
           <Stack spacing={3}>
             <DeviceCameraCapture
               facingMode="environment"
@@ -182,9 +198,8 @@ export function CreditApplicationIntakeModal({
               cameraIndication="Acerca más la INE para que sea más legible"
             />
           </Stack>
-        }
-        {
-          activeStep === "ine-back" &&
+        )}
+        {activeStep === "ine-back" && (
           <Stack spacing={3}>
             <DeviceCameraCapture
               facingMode="environment"
@@ -195,7 +210,7 @@ export function CreditApplicationIntakeModal({
               cameraIndication="Asegúrate de capturar claramente el reverso de la INE"
             />
           </Stack>
-        }
+        )}
 
         {activeStep === "selfie" && (
           <Stack spacing={3}>
@@ -228,28 +243,34 @@ export function CreditApplicationIntakeModal({
         {activeStep === "signature" && (
           <Stack spacing={3} alignItems="flex-end">
             <Typography variant="h5">
-              Para continuar con el proceso, solicita la autorización para revisar el historial
-              crediticio del cliente a través del Buró de Crédito.
+              Para continuar con el proceso, solicita la autorización para revisar el
+              historial crediticio del cliente a través del Buró de Crédito.
             </Typography>
-            <Stack
-              style={{
-                borderRadius: "16px",
-                overflow: "hidden"
-              }}
-            >
+            <Stack style={{ borderRadius: "16px", overflow: "hidden" }}>
               <canvas
                 ref={signatureCanvasRef}
                 width={900}
                 height={400}
-                style={{ width: "100%", backgroundColor: colors.background.sidebar, cursor: "crosshair" }}
-                onMouseDown={handleStartDrawing}
-                onMouseMove={handleDraw}
-                onMouseUp={handleEndDrawing}
-                onMouseLeave={handleEndDrawing}
+                style={{
+                  width: "100%",
+                  backgroundColor: colors.background.sidebar,
+                  cursor: saving ? "not-allowed" : "crosshair",
+                }}
+                onMouseDown={saving ? undefined : handleStartDrawing}
+                onMouseMove={saving ? undefined : handleDraw}
+                onMouseUp={saving ? undefined : handleEndDrawing}
+                onMouseLeave={saving ? undefined : handleEndDrawing}
               />
             </Stack>
-            <Typography variant="body1" textAlign="center" alignSelf="center">Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles S.A. de C.V.</Typography>
-            <Button variant="text" startIcon={<PenSquare size={16} />} onClick={clearSignatureCanvas}>
+            <Typography variant="body1" textAlign="center" alignSelf="center">
+              Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
+              S.A. de C.V.
+            </Typography>
+            <Button
+              variant="text"
+              startIcon={<PenSquare size={16} />}
+              onClick={clearSignatureCanvas}
+              disabled={saving}>
               Limpiar firma
             </Button>
           </Stack>
@@ -260,7 +281,12 @@ export function CreditApplicationIntakeModal({
           variant="contained"
           onClick={goToNextStep}
           disabled={!canContinue || saving}>
-          {isLastStep ? "Finalizar" : "Continuar"}
+          {
+            (saving) ?
+              <CircularProgress size={20} color="inherit" />
+              :
+              (isLastStep) ? "Finalizar" : "Siguiente"
+          }
         </Button>
       </Stack>
     </SideModal>
@@ -282,7 +308,7 @@ function DeviceCameraCapture({
   onCapture,
   onRetake,
   imageAlt,
-  cameraIndication
+  cameraIndication,
 }: DeviceCameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -330,7 +356,9 @@ function DeviceCameraCapture({
       } catch (error) {
         console.error("[DeviceCameraCapture] Unable to access camera", error);
         if (!isCancelled) {
-          setCameraError("No fue posible acceder a la cámara. Revisa permisos del dispositivo.");
+          setCameraError(
+            "No fue posible acceder a la cámara. Revisa permisos del dispositivo.",
+          );
         }
       }
     };
@@ -378,51 +406,52 @@ function DeviceCameraCapture({
           width: "100%",
           minHeight: "400px",
           backgroundColor: colors.background.main,
-          overflow: "hidden"
-        }}>
-        {
-          capturedImage ? (
-            <Image
-              src={capturedImage}
-              alt={imageAlt}
-              width={920}
-              height={400}
-              unoptimized
-              style={{
-                width: "100%",
-                maxHeight: "400px",
-                objectFit: "cover",
-                borderRadius: "16px",
-                height: "auto",
-              }}
-            />
-          ) : (
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: "100%",
-                maxHeight: "400px",
-                borderRadius: "16px",
-                backgroundColor: "#111827",
-                objectFit: "cover",
-              }}
-            />
-          )
-        }
+          overflow: "hidden",
+        }}
+      >
+        {capturedImage ? (
+          <Image
+            src={capturedImage}
+            alt={imageAlt}
+            width={920}
+            height={400}
+            unoptimized
+            style={{
+              width: "100%",
+              maxHeight: "400px",
+              objectFit: "cover",
+              borderRadius: "16px",
+              height: "auto",
+            }}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              width: "100%",
+              maxHeight: "400px",
+              borderRadius: "16px",
+              backgroundColor: "#111827",
+              objectFit: "cover",
+            }}
+          />
+        )}
       </Stack>
 
-      {
-        cameraError &&
-        <Typography variant="body2" color="error.main">{cameraError}</Typography>
-      }
+      {cameraError && (
+        <Typography variant="body2" color="error.main">
+          {cameraError}
+        </Typography>
+      )}
 
-      {
-        cameraIndication &&
-        <Typography variant="subtitle2" textAlign="center">{cameraIndication}</Typography>
-      }
+      {cameraIndication && (
+        <Typography variant="subtitle2" textAlign="center">
+          {cameraIndication}
+        </Typography>
+      )}
 
       <button
         type="button"

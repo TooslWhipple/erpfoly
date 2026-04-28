@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Typography } from "@mui/material";
-import { MainLayout } from "@/components";
+import { Stack, Typography } from "@mui/material";
+import { MainLayout, StatusChip } from "@/components";
+import { Monitor } from "lucide-react";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
@@ -11,15 +12,9 @@ import {
   type Denomination,
 } from "@/components/CashRegister";
 import {
-  StatusChip,
-  CenteredTitleContainer,
-  CenteredTitleContent,
   type CashRegisterStatus,
+  CashRegisterIconContainer,
 } from "@/styles/cajas.styles";
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export default function Cajas() {
   const [cashRegister, setCashRegister] = useState<CashRegisterState>({
@@ -33,7 +28,6 @@ export default function Cajas() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [rememberDevice, setRememberDevice] = useState(true);
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
 
@@ -115,37 +109,42 @@ export default function Cajas() {
 
   return (
     <MainLayout>
-      <CenteredTitleContainer>
-        <CenteredTitleContent>
-          <Typography variant="h2">{cashRegister.name}</Typography>
+      <Stack spacing={3} justifyContent="center" alignItems="center" style={{ marginTop: "112px" }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          alignSelf="center"
+          alignItems="center">
+          <CashRegisterIconContainer>
+            <Monitor size={24} />
+          </CashRegisterIconContainer>
+          <Typography variant="h4">{cashRegister.name}</Typography>
           <StatusChip
-            statusType={cashRegister.status}
             label={getStatusLabel(cashRegister.status)}
-            size="small"
-          />
-        </CenteredTitleContent>
-      </CenteredTitleContainer>
+            variant={cashRegister.status === "open" ? "success" : "disabled"}
+            size="small" />
+        </Stack>
+        {
+          cashRegister.status === "closed" ?
+            <OpenCashRegisterForm
+              initialFund={cashRegister.initialFund}
+              exchangeRate={cashRegister.exchangeRate}
+              onInitialFundChange={handleInitialFundChange}
+              onExchangeRateChange={handleExchangeRateChange}
+              onOpen={handleOpenCashRegister}
+            />
+            :
+            <CashRegisterDashboard
+              cashRegister={cashRegister}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onCut={handleCut}
+              onWithdrawal={handleWithdrawal}
+              onViewAllHistory={handleViewAllHistory}
+            />
+        }
+      </Stack>
 
-      {cashRegister.status === "closed" ? (
-        <OpenCashRegisterForm
-          initialFund={cashRegister.initialFund}
-          exchangeRate={cashRegister.exchangeRate}
-          rememberDevice={rememberDevice}
-          onInitialFundChange={handleInitialFundChange}
-          onExchangeRateChange={handleExchangeRateChange}
-          onRememberDeviceChange={setRememberDevice}
-          onOpen={handleOpenCashRegister}
-        />
-      ) : (
-        <CashRegisterDashboard
-          cashRegister={cashRegister}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onCut={handleCut}
-          onWithdrawal={handleWithdrawal}
-          onViewAllHistory={handleViewAllHistory}
-        />
-      )}
 
       <CutModal
         open={cutModalOpen}

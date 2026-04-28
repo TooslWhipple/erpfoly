@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { Stack, Typography, Button } from "@mui/material";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Stack, Typography, Button, CircularProgress } from "@mui/material";
 import { SideModal } from "@/components/SideModal";
 import {
   Card,
@@ -7,7 +8,14 @@ import {
   FooterActions,
 } from "./styles";
 import { Check, FileText, ListTodo } from "lucide-react";
-import { colors } from "@/styles/theme";
+import {
+  getAdditionalInformationCatalog,
+  requestCreditApplicationAdditionalInformation,
+  type AdditionalInformationCatalogItem,
+  type AdditionalInformationRequestedItem,
+} from "@/services/creditApplications.service";
+import { getApiErrorMessage } from "@/lib/axios";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export type AdditionalInfoRequestKind = "file_upload" | "form";
 
@@ -19,40 +27,69 @@ export interface AdditionalInfoRequestOption {
 }
 
 export interface RequestAdditionalInfoModalProps {
+  applicationId: string;
+  requestedItems?: AdditionalInformationRequestedItem[];
   open: boolean;
   onClose: () => void;
-  options?: AdditionalInfoRequestOption[];
-  onSubmit?: (selectedOptionIds: string[]) => void;
 }
 
-const DEFAULT_OPTIONS: AdditionalInfoRequestOption[] = [
-  {
-    id: "income_proof",
-    label: "Comprobante de Ingresos",
-    helperText: "Se deberá cargar un archivo",
-    kind: "file_upload",
-  },
-  {
-    id: "employment_letter",
-    label: "Carta comprobante laboral",
-    helperText: "Se deberá cargar un archivo",
-    kind: "file_upload",
-  },
-  {
-    id: "guarantor_info",
-    label: "Información sobre aval",
-    helperText: "Se deberá completar un formulario",
-    kind: "form",
-  },
-];
+function mapCatalogItemToOption(item: AdditionalInformationCatalogItem): AdditionalInfoRequestOption {
+  const helperTextByKind: Record<AdditionalInfoRequestKind, string> = {
+    file_upload: "Se deberá cargar un archivo",
+    form: "Se deberá completar un formulario",
+  };
+  const requestKind: AdditionalInfoRequestKind = item.requestKind === "form" ? "form" : "file_upload";
+
+  return {
+    id: item.code,
+    label: item.name,
+    helperText: helperTextByKind[requestKind],
+    kind: requestKind,
+  };
+}
 
 export function RequestAdditionalInfoModal({
+  applicationId,
+  requestedItems = [],
   open,
   onClose,
-  options = DEFAULT_OPTIONS,
-  onSubmit,
 }: RequestAdditionalInfoModalProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const showError = useSnackbarStore((state) => state.showError);
+
+  const requestedCodes = useMemo(
+    () =>
+      new Set(
+        requestedItems
+          .filter((item) => item.requestFlag && item.code.trim().length > 0)
+          .map((item) => item.code.trim())
+      ),
+    [requestedItems]
+  );
+
+  const {
+    data: options = [],
+    isPending: catalogLoading,
+    isError: catalogError,
+    refetch: refetchCatalog,
+  } = useQuery({
+    queryKey: ["credit-application-additional-information-catalog"],
+    queryFn: getAdditionalInformationCatalog,
+    enabled: open,
+    select: (catalogItems) => catalogItems.map(mapCatalogItemToOption),
+  });
+
+  const requestAdditionalInfoMutation = useMutation({
+    mutationFn: (codes: string[]) => requestCreditApplicationAdditionalInformation(applicationId, codes),
+    onSuccess: () => {
+      showSuccess("La solicitud de información adicional se envió correctamente.");
+      onClose();
+    },
+    onError: (error) => {
+      showError(getApiErrorMessage(error));
+    },
+  });
 
   useEffect(() => {
     if (!open) {
@@ -60,33 +97,81 @@ export function RequestAdditionalInfoModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    setSelectedIds((previousSelection) => {
+      const nextSelection = new Set(
+        Array.from(previousSelection).filter((code) => !requestedCodes.has(code))
+      );
+      if (nextSelection.size === previousSelection.size) {
+        return previousSelection;
+      }
+      return nextSelection;
+    });
+  }, [requestedCodes]);
+
   const toggleOption = useCallback((id: string) => {
+    if (requestedCodes.has(id)) {
+      return;
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }, []);
+  }, [requestedCodes]);
 
   const handleSubmit = useCallback(() => {
-    onSubmit?.(Array.from(selectedIds));
-    onClose();
-  }, [onSubmit, onClose, selectedIds]);
+    const selectedCodes = Array.from(selectedIds);
+    if (selectedCodes.length === 0 || requestAdditionalInfoMutation.isPending) {
+      return;
+    }
+    requestAdditionalInfoMutation.mutate(selectedCodes);
+  }, [requestAdditionalInfoMutation, selectedIds]);
 
-  const canSubmit = selectedIds.size > 0;
+  const canSubmit =
+    selectedIds.size > 0 &&
+    !catalogLoading &&
+    !requestAdditionalInfoMutation.isPending &&
+    options.length > 0;
 
   return (
     <SideModal
       open={open}
       onClose={onClose}
+      disableClose={requestAdditionalInfoMutation.isPending}
       maxWidth="md"
       title="Solicitar información adicional"
       description="Selecciona los documentos o datos adicionales que deseas solicitar al cliente.">
       <Stack spacing={1.5} sx={{ flex: 1, overflow: "auto", minHeight: 0, pb: 1 }}>
-        {
+        {catalogLoading && (
+          <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+            <CircularProgress size={28} />
+          </Stack>
+        )}
+
+        {!catalogLoading && catalogError && (
+          <Stack spacing={1.5} alignItems="center" sx={{ py: 6 }}>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              No se pudo cargar el catálogo de información adicional.
+            </Typography>
+            <Button variant="outlined" onClick={() => void refetchCatalog()}>
+              Reintentar
+            </Button>
+          </Stack>
+        )}
+
+        {!catalogLoading && !catalogError && options.length === 0 && (
+          <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 6 }}>
+            No hay información adicional disponible para solicitar.
+          </Typography>
+        )}
+
+        {!catalogLoading &&
+          !catalogError &&
           options.map((option) => {
             const selected = selectedIds.has(option.id);
+            const isRequested = requestedCodes.has(option.id);
 
             return (
               <Card key={option.id} selected={selected}>
@@ -110,15 +195,15 @@ export function RequestAdditionalInfoModal({
                 </Stack>
                 <Button
                   variant="outlined"
-                  color="primary"
+                  color={isRequested ? "inherit" : "primary"}
+                  disabled={isRequested}
                   onClick={() => toggleOption(option.id)}
                 >
-                  {selected ? "Quitar" : "Seleccionar"}
+                  {isRequested ? "Ya solicitado" : selected ? "Quitar" : "Seleccionar"}
                 </Button>
               </Card>
             );
-          })
-        }
+          })}
       </Stack>
 
       <FooterActions>
@@ -128,7 +213,7 @@ export function RequestAdditionalInfoModal({
           size="large"
           disabled={!canSubmit}
           onClick={handleSubmit}>
-          Solicitar
+          {requestAdditionalInfoMutation.isPending ? <CircularProgress size={20} color="inherit" /> : "Solicitar"}
         </Button>
       </FooterActions>
     </SideModal>

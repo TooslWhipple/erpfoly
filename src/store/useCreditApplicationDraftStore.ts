@@ -34,6 +34,7 @@ const EMPTY_FAMILY: FamilyTabValues = {
 
 const EMPTY_ADDRESS: AddressTabValues = {
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -41,7 +42,7 @@ const EMPTY_ADDRESS: AddressTabValues = {
   receiverPhone: "",
   receiverName: "",
   useClientPhone: false,
-  housingType: "owned",
+  housingType: "",
   residenceTime: "",
   previousAddress: "",
   previousResidenceTime: "",
@@ -50,6 +51,7 @@ const EMPTY_ADDRESS: AddressTabValues = {
 const EMPTY_EMPLOYMENT: EmploymentTabValues = {
   company: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",
@@ -63,6 +65,7 @@ const EMPTY_EMPLOYMENT: EmploymentTabValues = {
   otherIncomeSource: "",
   spouseCompany: "",
   spousePostalCode: "",
+  spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
   spouseStreetAndNumber: "",
@@ -80,15 +83,16 @@ const EMPTY_REFERENCES: ReferencesTabValues = {
   seniorityYears: "",
   respondentNameAndPosition: "",
   familyReferences: [
-    { id: "reference-1", name: "", relationship: "", address: "", phone: "" },
-    { id: "reference-2", name: "", relationship: "", address: "", phone: "" },
+    { id: "reference-1", name: "", relationshipId: "", address: "", phone: "" },
+    { id: "reference-2", name: "", relationshipId: "", address: "", phone: "" },
   ],
 };
 
 const EMPTY_DOCUMENTATION: DocumentationTabValues = {
   requiredAlertVisible: true,
-  requiredAlertMessage: "Agrega información del Aval y Comprobante de ingresos para continuar con la solicitud.",
+  requiredAlertMessage: "Agrega la documentación solicitada para continuar con la solicitud.",
   incomeProofFiles: [],
+  employmentProofLetterFiles: [],
   ineFrontFiles: [],
   ineBackFiles: [],
 };
@@ -96,6 +100,7 @@ const EMPTY_DOCUMENTATION: DocumentationTabValues = {
 const EMPTY_GUARANTOR: GuarantorTabValues = {
   fullName: "",
   postalCode: "",
+  neighborhoodFullCode: "",
   state: "",
   city: "",
   streetAndNumber: "",

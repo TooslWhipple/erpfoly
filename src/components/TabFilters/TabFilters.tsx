@@ -1,6 +1,7 @@
 import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { colors } from "@/styles/theme";
+import type { ReactNode } from "react";
 import {
   TabsWrapper,
   StyledTabs,
@@ -10,9 +11,10 @@ import { FormTextField } from "../Form";
 import { Search } from "lucide-react";
 
 export interface TabOption {
-  label: string;
+  label: ReactNode;
   value: string;
   count?: number;
+  textColor?: string;
 }
 
 export interface SelectFilterOption {
@@ -94,6 +96,7 @@ export function TabFilters({
                         : tab.label
                     }
                     value={tab.value}
+                    sx={tab.textColor ? { color: tab.textColor, "&.Mui-selected": { color: tab.textColor } } : undefined}
                   />
                 ))
               }

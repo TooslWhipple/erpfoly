@@ -48,19 +48,6 @@ const TIPO_CONFIG: Record<ApplicationTypeCode, { label: string; color: string }>
   LINE_INCREASE: { label: "Aumento", color: "#ef4444" },
 };
 
-async function approveCreditApplication(id: number): Promise<{ success: boolean }> {
-  void id;
-  await new Promise((r) => setTimeout(r, 400));
-  return { success: true };
-}
-
-async function rejectCreditApplication(id: number, reason: string): Promise<{ success: boolean }> {
-  void id;
-  void reason;
-  await new Promise((r) => setTimeout(r, 400));
-  return { success: true };
-}
-
 export default function SolicitudesCredito() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
@@ -107,22 +94,12 @@ export default function SolicitudesCredito() {
     count: t.value === activeTab ? totalRows : undefined,
   }));
 
+  const handleEditar = (row: CreditApplicationListItem) => {
+    void router.push(`/solicitudes-credito/${row.id}`);
+  };
+
   const handleVerDetalle = (row: CreditApplicationListItem) => {
-    router.push(`/solicitudes-credito/${row.id}`);
-  };
-
-  const handleAprobar = async (row: CreditApplicationListItem) => {
-    const result = await approveCreditApplication(row.id);
-    if (result.success) {
-      refetch();
-    }
-  };
-
-  const handleRechazar = async (row: CreditApplicationListItem) => {
-    const result = await rejectCreditApplication(row.id, "Motivo de ejemplo");
-    if (result.success) {
-      refetch();
-    }
+    void router.push(`/solicitudes-credito/${row.id}/revision`);
   };
 
   const columns: Column<CreditApplicationListItem>[] = [
@@ -192,17 +169,10 @@ export default function SolicitudesCredito() {
       onClick: handleVerDetalle,
     },
     {
-      id: "aprobar",
-      label: "Aprobar",
-      onClick: handleAprobar,
-      color: "primary",
-    },
-    {
-      id: "rechazar",
-      label: "Rechazar",
-      onClick: handleRechazar,
-      color: "error",
-    },
+      id: "editar",
+      label: "Editar",
+      onClick: handleEditar,
+    }
   ];
 
   return (

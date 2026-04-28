@@ -1,15 +1,23 @@
 import { Divider, Stack, Typography } from "@mui/material";
-import { VerifiedRow, VerifiedCheck } from "@/styles/solicitudes-credito.styles";
+import { VerifiedRow, VerifiedCheck, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { Check } from "lucide-react";
-import { colors } from "@/styles/theme";
 
 interface CreditBureauSectionProps {
   detail: CreditApplicationDetail;
+  onOpenImageViewer: (
+    title: string,
+    subtitle: string,
+    url: string,
+    backgroundColor?: string,
+  ) => void;
 }
 
-export function CreditBureauSection({ detail }: CreditBureauSectionProps) {
+export function CreditBureauSection({ detail, onOpenImageViewer }: CreditBureauSectionProps) {
   const { creditBureau } = detail;
+  const signatureUrl = creditBureau.signatureUrl;
+  const signatureSubtitle = "Firma capturada por el sistema";
+
   return (
     <Stack width="100%" spacing={3}>
       <Stack>
@@ -20,28 +28,54 @@ export function CreditBureauSection({ detail }: CreditBureauSectionProps) {
       </Stack>
       <Divider />
       <Stack spacing={2}>
-        <VerifiedRow style={{ marginBottom: 0 }}>
+        <VerifiedRow
+          style={{
+            marginBottom: 0,
+            cursor: signatureUrl ? "pointer" : "default",
+          }}
+          onClick={
+            signatureUrl
+              ? () =>
+                  onOpenImageViewer(
+                    "Firma de autorización de buró",
+                    signatureSubtitle,
+                    signatureUrl,
+                    "#fff",
+                  )
+              : undefined
+          }
+        >
           <VerifiedCheck>
-            <Check size={14} color="#fff" strokeWidth={3} />
+            <Check size={18} color="#059669" strokeWidth={2} />
           </VerifiedCheck>
-          <Typography variant="body2">El cliente ha autorizado la revisión de buró de Crédito</Typography>
-          <div
-            style={{
-              width: 80,
-              height: 40,
-              marginLeft: "auto",
-              border: `1px solid ${colors.border}`,
-              borderRadius: 4,
-            }}
-          />
+          <Stack>
+            <Typography variant="subtitle2" fontWeight={600}>
+              El cliente ha autorizado la revisión de buró de Crédito
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {signatureSubtitle}
+            </Typography>
+          </Stack>
+          {signatureUrl ? (
+            <VerifiedThumb
+              src={signatureUrl}
+              alt="Firma de autorización de buró"
+              style={{ objectFit: "contain", backgroundColor: "#fff" }}
+            />
+          ) : null}
         </VerifiedRow>
         <VerifiedRow style={{ marginBottom: 0 }}>
           <VerifiedCheck>
-            <Check size={14} color="#fff" strokeWidth={3} />
+            <Check size={18} color="#059669" strokeWidth={2} />
           </VerifiedCheck>
-          <Typography variant="body2">
-            Buró de Crédito ha regresado un puntaje <strong>{creditBureau.scoreLabel}</strong> para este cliente.
-          </Typography>
+          <Stack>
+            <Typography variant="subtitle2" fontWeight={600}>
+              Buró de Crédito ha regresado un puntaje <strong>{creditBureau.scoreLabel}</strong>
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Consulta vigente para este cliente
+            </Typography>
+          </Stack>
           <div
             style={{
               width: 120,

@@ -8,6 +8,8 @@ import {
     Switch,
     FormControlLabel,
     CircularProgress,
+    Stack,
+    Typography,
 } from "@mui/material";
 import {
     FormContainer,
@@ -210,12 +212,12 @@ export function Form({
     onConfirm,
     confirmLabel = "Guardar",
     cancelLabel = "Cancelar",
-  loading = false,
-  initialValues = {},
-  spacing = 2,
-  showHeader = true,
-  showActions = true,
-  onValuesChange,
+    loading = false,
+    initialValues = {},
+    spacing = 2,
+    showHeader = true,
+    showActions = true,
+    onValuesChange,
 }: FormProps) {
     // Initialize form values with defaults
     const defaultValues = useMemo(() => {
@@ -392,22 +394,15 @@ export function Form({
 
             case "switch":
                 return (
-                    <FormControl error={hasError}>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={Boolean(value)}
-                                    onChange={(e) => handleChange(name, e.target.checked)}
-                                    disabled={disabled || loading}
-                                    color="primary"
-                                />
-                            }
-                            label={label}
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Switch
+                            checked={Boolean(value)}
+                            onChange={(e) => handleChange(name, e.target.checked)}
+                            disabled={disabled || loading}
+                            color="primary"
                         />
-                        {(error || helperText) && (
-                            <FormHelperText>{error || helperText}</FormHelperText>
-                        )}
-                    </FormControl>
+                        <Typography variant="body2" color={(hasError) ? 'red' : 'text.primary'}>{label}</Typography>
+                    </Stack>
                 );
 
             case "textarea":

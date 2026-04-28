@@ -2,10 +2,6 @@ import { forwardRef } from "react";
 import { styled } from "@mui/material/styles";
 import { Box, TextField, TextFieldProps, Typography } from "@mui/material";
 
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
 const FieldWrapper = styled(Box)({
     display: "flex",
     flexDirection: "column",
@@ -13,10 +9,10 @@ const FieldWrapper = styled(Box)({
 });
 
 const FieldLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    fontWeight: 400,
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(1),
+    fontSize: "14px",
+    fontWeight: 500,
+    color: theme.palette.text.primary,
+    marginBottom: "4px"
 }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -58,51 +54,43 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
         marginLeft: 0,
         marginTop: theme.spacing(0.5),
     },
-    // Reset height for multiline (textarea)
     "& .MuiOutlinedInput-root.MuiInputBase-multiline": {
         height: "auto",
         padding: 0,
     },
 }));
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface FormTextFieldProps extends Omit<TextFieldProps, "variant" | "label"> {
-    /** Field label displayed above the input */
     label?: string;
-    /** Show required asterisk next to label */
     required?: boolean;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
-    ({ label, required, error, helperText, ...props }, ref) => {
+    ({ label, required, error, helperText, select, SelectProps, ...props }, ref) => {
+        const mergedSelectProps = select
+            ? { displayEmpty: true, ...SelectProps }
+            : SelectProps;
+
         return (
             <FieldWrapper>
-                {label && (
+                {
+                    label &&
                     <FieldLabel>
                         {label}
-                        {required && (
-                            <Typography
-                                component="span"
-                                sx={{ color: "error.main", ml: 0.5 }}
-                            >
-                                *
-                            </Typography>
-                        )}
+                        {
+                            required &&
+                            <Typography component="span" sx={{ color: "error.main", ml: 0.5 }}>*</Typography>
+                        }
                     </FieldLabel>
-                )}
+                }
                 <StyledTextField
                     ref={ref}
                     variant="outlined"
                     fullWidth
                     error={error}
                     helperText={helperText}
+                    select={select}
+                    SelectProps={mergedSelectProps}
                     {...props}
                 />
             </FieldWrapper>

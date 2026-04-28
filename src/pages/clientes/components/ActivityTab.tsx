@@ -1,173 +1,233 @@
 import { useState } from "react";
-import { Box, TextField, Button, MenuItem, Select, FormControl } from "@mui/material";
 import {
-  Phone as PhoneIcon,
-  Message as MessageIcon,
-  Email as EmailIcon,
-  Person as PersonIcon,
-  Description as DescriptionIcon,
-} from "@mui/icons-material";
-import type { ClientDetail, ClientActivity, ActivityType } from "@/types/clientes.types";
+  Alert,
+  Button,
+  FormControl,
+  Grid,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import {
-  ActivityFormCard,
-  ActivityFormActions,
-  SectionTitle,
-  ActivityList,
+  Card,
   ActivityItemCard,
-  ActivityItemIcon,
-  ActivityItemContent,
-  ActivityItemMeta,
-  ActivityItemDescription,
-  ActiveCasesList,
-  ActiveCaseCard,
-  CaseStatusChip,
-  CaseId,
-  CaseDescription,
-  CaseOrderType,
-  EmptyState,
 } from "@/styles/clientes/detalle.styles";
+import { FileText, Mail, Phone, User } from "lucide-react";
+import { colors } from "@/styles/theme";
+import { StatusChip } from "@/components";
+import type {
+  ClientCollectionActivity,
+  ClientCollectionActivityType,
+  ClientDetail,
+} from "@/types/clientes.types";
+import { formatDate } from "@/utils/date";
+import { getApiErrorMessage } from "@/lib/axios";
 
-function getActivityIcon(type: ActivityType) {
-  switch (type) {
-    case "call":
-      return <PhoneIcon fontSize="small" />;
-    case "message":
-    case "email":
-      return <MessageIcon fontSize="small" />;
+function getActivityIcon(code: string) {
+  switch (code) {
+    case "CALL":
+      return <Phone size={16} color={colors.text.secondary} />;
+    case "MESSAGE":
+      return <Mail size={16} color={colors.text.secondary} />;
+    case "EMAIL":
+      return <Mail size={16} color={colors.text.secondary} />;
+    case "VISIT":
+      return <User size={16} color={colors.text.secondary} />;
+    case "NOTE":
+      return <FileText size={16} color={colors.text.secondary} />;
     default:
-      return <PhoneIcon fontSize="small" />;
+      return <Phone size={16} color={colors.text.secondary} />;
   }
 }
 
-function getActivityTypeLabel(type: ActivityType): string {
-  const labels: Record<ActivityType, string> = {
-    call: "Llamada",
-    message: "Mensaje",
-    email: "Correo",
-    visit: "Visita",
-    note: "Nota",
-  };
-  return labels[type] ?? type;
-}
-
-const ACTIVITY_TYPES: { value: ActivityType; label: string; icon: React.ReactNode }[] = [
-  { value: "call", label: "Llamada", icon: <PhoneIcon fontSize="small" /> },
-  { value: "message", label: "Mensaje", icon: <MessageIcon fontSize="small" /> },
-  { value: "email", label: "Correo", icon: <EmailIcon fontSize="small" /> },
-  { value: "visit", label: "Visita", icon: <PersonIcon fontSize="small" /> },
-  { value: "note", label: "Nota", icon: <DescriptionIcon fontSize="small" /> },
-];
-
 export interface ActivityTabProps {
   client: ClientDetail;
+  activities: ClientCollectionActivity[];
+  activityTypes: ClientCollectionActivityType[];
+  loadingActivities: boolean;
+  onCreateActivity: (payload: { activityTypeId: number; comment: string }) => Promise<void>;
 }
 
-export function ActivityTab({ client }: ActivityTabProps) {
-  const [activityType, setActivityType] = useState<ActivityType>("call");
+export function ActivityTab({
+  client,
+  activities,
+  activityTypes,
+  loadingActivities,
+  onCreateActivity,
+}: ActivityTabProps) {
+  const [activityTypeId, setActivityTypeId] = useState<number | null>(null);
   const [activityNotes, setActivityNotes] = useState("");
   const [activitySaving, setActivitySaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    if (!activityNotes.trim()) return;
+  const handleSave = async () => {
+    const comment = activityNotes.trim();
+    if (!activityTypeId) {
+      setFormError("Selecciona un tipo de actividad.");
+      return;
+    }
+    if (!comment) {
+      setFormError("Escribe un comentario para guardar la actividad.");
+      return;
+    }
+
+    setFormError(null);
     setActivitySaving(true);
-    setTimeout(() => {
+    try {
+      await onCreateActivity({
+        activityTypeId,
+        comment,
+      });
       setActivityNotes("");
+      setActivityTypeId(null);
+    } catch (error) {
+      setFormError(getApiErrorMessage(error));
+    } finally {
       setActivitySaving(false);
-    }, 500);
+    }
   };
 
-  const handleCancel = () => setActivityNotes("");
+  const handleCancel = () => {
+    setActivityNotes("");
+    setActivityTypeId(null);
+    setFormError(null);
+  };
 
   return (
     <>
-      <ActivityFormCard>
-        <FormControl size="small" fullWidth sx={{ mb: 2 }}>
-          <Select
-            value={activityType}
-            onChange={(e) => setActivityType(e.target.value as ActivityType)}
-            displayEmpty
-            renderValue={(value) => {
-              const opt = ACTIVITY_TYPES.find((o) => o.value === value);
-              return (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {opt ? getActivityIcon(opt.value) : null}
-                  <span>{opt?.label ?? value}</span>
-                </Box>
-              );
-            }}
-            sx={{ minHeight: 44 }}
-          >
-            {ACTIVITY_TYPES.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {opt.icon}
-                  {opt.label}
-                </Box>
-              </MenuItem>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card>
+            <Stack spacing={2}>
+              <FormControl fullWidth>
+                <Select
+                  size="small"
+                  value={activityTypeId ?? ""}
+                  onChange={(event) => setActivityTypeId(Number(event.target.value))}
+                  displayEmpty
+                  disabled={activitySaving || activityTypes.length === 0}
+                  renderValue={(value) => {
+                    const selected =
+                      activityTypes.find((item) => item.id === Number(value)) ?? null;
+                    if (!selected) {
+                      return (
+                        <Typography variant="body2" color="text.secondary">
+                          Selecciona tipo de actividad
+                        </Typography>
+                      );
+                    }
+                    return (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {getActivityIcon(selected.code)}
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                          {selected.name}
+                        </Typography>
+                      </Stack>
+                    );
+                  }}
+                >
+                  {activityTypes.map((type) => (
+                    <MenuItem key={type.id} value={type.id}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {getActivityIcon(type.code)}
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                          {type.name}
+                        </Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Escribe aquí..."
+                value={activityNotes}
+                onChange={(e) => setActivityNotes(e.target.value)}
+                variant="outlined"
+                size="small"
+                disabled={activitySaving}
+              />
+              {formError ? <Alert severity="error">{formError}</Alert> : null}
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" onClick={handleSave} disabled={activitySaving}>
+                  Guardar
+                </Button>
+                <Button variant="outlined" onClick={handleCancel} disabled={activitySaving}>
+                  Cancelar
+                </Button>
+              </Stack>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+              Historial de actividad
+            </Typography>
+            <Stack spacing={4} style={{ position: "relative" }}>
+              {loadingActivities ? (
+                <Typography variant="body2" color="text.secondary">
+                  Cargando actividades...
+                </Typography>
+              ) : activities.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No hay actividades registradas.
+                </Typography>
+              ) : (
+                activities.map((activity) => (
+                  <ActivityItemCard key={activity.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      {getActivityIcon(activity.activityType.code)}
+                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        {`${activity.activityType.name} realizada por ${activity.createdBy.name}`}
+                      </Typography>
+                    </Stack>
+                    <Stack>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(activity.createdAt, "datetimeShort12h")}
+                      </Typography>
+                      <Typography variant="body1">{activity.comment}</Typography>
+                    </Stack>
+                  </ActivityItemCard>
+                ))
+              )}
+              <div
+                style={{
+                  width: "1px",
+                  backgroundColor: colors.border,
+                  position: "absolute",
+                  top: 8,
+                  left: "56px",
+                  bottom: 8,
+                }}
+              />
+            </Stack>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+              Casos activos
+            </Typography>
+            {client.activeCases.map((c) => (
+              <ActivityItemCard key={c.id}>
+                <Stack spacing={1} alignItems="flex-start">
+                  <StatusChip variant="info" size="small" label={c.statusLabel} />
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    {c.id}
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    <span style={{ color: colors.text.secondary }}>[1]</span> {c.description}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    {c.orderType}
+                  </Typography>
+                </Stack>
+              </ActivityItemCard>
             ))}
-          </Select>
-        </FormControl>
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          placeholder="Escribe aquí..."
-          value={activityNotes}
-          onChange={(e) => setActivityNotes(e.target.value)}
-          variant="outlined"
-          size="small"
-        />
-        <ActivityFormActions>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={activitySaving || !activityNotes.trim()}
-          >
-            Guardar
-          </Button>
-          <Button variant="outlined" onClick={handleCancel}>
-            Cancelar
-          </Button>
-        </ActivityFormActions>
-      </ActivityFormCard>
-
-      <SectionTitle>Historial de actividad</SectionTitle>
-      <ActivityList>
-        {client.activities.length === 0 ? (
-          <EmptyState>No hay actividad registrada</EmptyState>
-        ) : (
-          client.activities.map((activity: ClientActivity) => (
-            <ActivityItemCard key={activity.id}>
-              <ActivityItemIcon>{getActivityIcon(activity.type)}</ActivityItemIcon>
-              <ActivityItemContent>
-                <ActivityItemMeta>
-                  {activity.type === "message" && activity.toolName
-                    ? `Mensaje enviado automáticamente a través de ${activity.toolName}`
-                    : `${getActivityTypeLabel(activity.type)} realizada por ${activity.author}`}{" "}
-                  · {activity.date} {activity.time}
-                </ActivityItemMeta>
-                <ActivityItemDescription>{activity.description}</ActivityItemDescription>
-              </ActivityItemContent>
-            </ActivityItemCard>
-          ))
-        )}
-      </ActivityList>
-
-      <SectionTitle sx={{ mt: 3 }}>Casos activos</SectionTitle>
-      <ActiveCasesList>
-        {client.activeCases.length === 0 ? (
-          <EmptyState>No hay casos activos</EmptyState>
-        ) : (
-          client.activeCases.map((c) => (
-            <ActiveCaseCard key={c.id}>
-              <CaseStatusChip label={c.statusLabel} size="small" />
-              <CaseId>{c.id}</CaseId>
-              <CaseDescription>{c.description}</CaseDescription>
-              <CaseOrderType>{c.orderType}</CaseOrderType>
-            </ActiveCaseCard>
-          ))
-        )}
-      </ActiveCasesList>
+          </Card>
+        </Grid>
+      </Grid>
     </>
   );
 }

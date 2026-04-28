@@ -1,8 +1,68 @@
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Props as GoogleMapReactProps } from "google-map-react";
 import { Divider, Grid, Stack, Typography, FormControlLabel, Switch, Radio, RadioGroup } from "@mui/material";
 import { FormTextField } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
 import { colors } from "@/styles/theme";
+
+const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
+
+const DEFAULT_MAP_CENTER = {
+  lat: 19.432608,
+  lng: -99.133209,
+};
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+interface MapCoordinates {
+  lat: number;
+  lng: number;
+}
+
+interface MapMarkerProps {
+  lat: number;
+  lng: number;
+}
+
+interface GeocoderResult {
+  geometry: {
+    location: {
+      lat: () => number;
+      lng: () => number;
+    };
+  };
+}
+
+interface GoogleMapsApi {
+  Geocoder: new () => {
+    geocode: (
+      request: { address: string },
+      callback: (results: GeocoderResult[] | null, status: string) => void,
+    ) => void;
+  };
+  GeocoderStatus: {
+    OK: string;
+  };
+}
+
+function MapMarker({ lat, lng }: MapMarkerProps) {
+  return (
+    <div
+      data-lat={lat}
+      data-lng={lng}
+      style={{
+        width: "18px",
+        height: "18px",
+        borderRadius: "50%",
+        border: "2px solid #FFFFFF",
+        backgroundColor: colors.chip.variants.error.color,
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
+      }}
+    />
+  );
+}
 
 interface AddressSectionProps {
   detail: CreditApplicationDetail;
@@ -10,6 +70,45 @@ interface AddressSectionProps {
 
 export function AddressSection({ detail }: AddressSectionProps) {
   const { address } = detail;
+  const neighborhoodName = address.neighborhood?.name?.trim() || "No especificada";
+  const neighborhoodState = address.neighborhood?.state?.trim() || "No especificado";
+  const neighborhoodCity = address.neighborhood?.municipality?.trim() || "No especificada";
+  const [markerPosition, setMarkerPosition] = useState<MapCoordinates | null>(null);
+  const [googleMapsApi, setGoogleMapsApi] = useState<GoogleMapsApi | null>(null);
+  const [geocodeErrorMessage, setGeocodeErrorMessage] = useState<string>("");
+
+  const fullAddress = useMemo(() => {
+    return [address.streetAndNumber, neighborhoodCity, neighborhoodState, address.postalCode, "México"]
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .join(", ");
+  }, [address.postalCode, address.streetAndNumber, neighborhoodCity, neighborhoodState]);
+
+  const handleGoogleApiLoaded = useCallback(({ maps }: { maps: GoogleMapsApi }) => {
+    setGoogleMapsApi(maps);
+  }, []);
+
+  useEffect(() => {
+    if (!googleMapsApi || !fullAddress) {
+      return;
+    }
+
+    const geocoder = new googleMapsApi.Geocoder();
+
+    geocoder.geocode({ address: fullAddress }, (results, status) => {
+      if (status === googleMapsApi.GeocoderStatus.OK && results?.[0]) {
+        const location = results[0].geometry.location;
+        const coordinates = { lat: location.lat(), lng: location.lng() };
+        setMarkerPosition(coordinates);
+        setGeocodeErrorMessage("");
+        return;
+      }
+
+      setMarkerPosition(null);
+      setGeocodeErrorMessage("No se pudo localizar la dirección exacta.");
+    });
+  }, [fullAddress, googleMapsApi]);
+
   return (
     <Stack width="100%" spacing={3}>
       <Stack>
@@ -23,12 +122,14 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField label="Código Postal" value={address.postalCode} disabled fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }} sx={{ display: { xs: 'none', md: 'block' } }} />
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Estado" value={address.state} disabled fullWidth />
+          <FormTextField label="Colonia" value={neighborhoodName} disabled fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Ciudad" value={address.city} disabled fullWidth />
+          <FormTextField label="Estado" value={neighborhoodState} disabled fullWidth />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <FormTextField label="Ciudad" value={neighborhoodCity} disabled fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <FormTextField label="Calle y número" value={address.streetAndNumber} disabled fullWidth />
@@ -40,14 +141,70 @@ export function AddressSection({ detail }: AddressSectionProps) {
               backgroundColor: colors.chip.background,
               border: `1px solid ${colors.border}`,
               borderRadius: "16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              Mapa (placeholder)
-            </Typography>
+            {GOOGLE_MAPS_API_KEY ? (
+              <>
+                {markerPosition ? (
+                  <GoogleMapReact
+                    bootstrapURLKeys={{ key: GOOGLE_MAPS_API_KEY }}
+                    center={markerPosition}
+                    defaultCenter={DEFAULT_MAP_CENTER}
+                    defaultZoom={13}
+                    zoom={16}
+                    yesIWantToUseGoogleMapApiInternals
+                    onGoogleApiLoaded={handleGoogleApiLoaded}
+                    options={{
+                      fullscreenControl: false,
+                      mapTypeControl: false,
+                      streetViewControl: false,
+                    }}
+                  >
+                    <MapMarker lat={markerPosition.lat} lng={markerPosition.lng} />
+                  </GoogleMapReact>
+                ) : (
+                  <GoogleMapReact
+                    bootstrapURLKeys={{ key: GOOGLE_MAPS_API_KEY }}
+                    center={DEFAULT_MAP_CENTER}
+                    defaultCenter={DEFAULT_MAP_CENTER}
+                    defaultZoom={13}
+                    zoom={13}
+                    yesIWantToUseGoogleMapApiInternals
+                    onGoogleApiLoaded={handleGoogleApiLoaded}
+                    options={{
+                      fullscreenControl: false,
+                      mapTypeControl: false,
+                      streetViewControl: false,
+                    }}
+                  />
+                )}
+                {!fullAddress || geocodeErrorMessage ? (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: "absolute",
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    {!fullAddress ? "No hay dirección suficiente para ubicar el mapa." : geocodeErrorMessage}
+                  </Typography>
+                ) : null}
+              </>
+            ) : (
+              <Stack height="100%" alignItems="center" justifyContent="center" px={2}>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Configura `GOOGLE_MAPS_API_KEY` en el entorno para visualizar el mapa.
+                </Typography>
+              </Stack>
+            )}
           </div>
         </Grid>
         <Grid size={{ xs: 12 }}>

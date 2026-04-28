@@ -1,6 +1,7 @@
-import { Button, Grid, IconButton, Stack, Typography } from "@mui/material";
+import { Button, Grid, IconButton, MenuItem, Stack, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 import { FormTextField } from "@/components/Form";
+import type { FamilyRelationshipCatalogItem } from "@/services/catalog.service";
 import type { ReferencesTabErrors, ReferencesTabValues } from "@/types/credit-application-form.types";
 import { Card, ReferenceCard } from "./styles";
 
@@ -10,9 +11,11 @@ interface ReferencesTabProps {
   onFieldChange: (field: keyof Omit<ReferencesTabValues, "familyReferences">, value: string) => void;
   onReferenceFieldChange: (
     referenceId: string,
-    field: "name" | "relationship" | "address" | "phone",
+    field: "name" | "relationshipId" | "address" | "phone",
     value: string
   ) => void;
+  relationshipOptions: FamilyRelationshipCatalogItem[];
+  relationshipsLoading: boolean;
   onAddReference: () => void;
   onRemoveReference: (referenceId: string) => void;
   onSave: () => Promise<boolean>;
@@ -23,6 +26,8 @@ export function ReferencesTab({
   errors,
   onFieldChange,
   onReferenceFieldChange,
+  relationshipOptions,
+  relationshipsLoading,
   onAddReference,
   onRemoveReference,
   onSave,
@@ -94,6 +99,11 @@ export function ReferencesTab({
       </Grid>
 
       <Typography variant="h5">Referencias familiares</Typography>
+      {errors.familyReferences ? (
+        <Typography variant="body2" color="error.main">
+          {errors.familyReferences}
+        </Typography>
+      ) : null}
       <Stack spacing={2} width="100%">
         {values.familyReferences.map((reference, index) => (
           <ReferenceCard key={reference.id}>
@@ -115,17 +125,37 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.name}
                   onChange={(event) => onReferenceFieldChange(reference.id, "name", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.name)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.name}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <FormTextField
                   fullWidth
                   required
+                  select
                   label="Parentesco"
-                  placeholder="Ingresa"
-                  value={reference.relationship}
-                  onChange={(event) => onReferenceFieldChange(reference.id, "relationship", event.target.value)}
-                />
+                  value={reference.relationshipId}
+                  onChange={(event) =>
+                    onReferenceFieldChange(
+                      reference.id,
+                      "relationshipId",
+                      event.target.value
+                    )
+                  }
+                  disabled={relationshipsLoading}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.relationshipId)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.relationshipId}
+                >
+                  <MenuItem value="">
+                    {relationshipsLoading ? "Cargando..." : "Selecciona"}
+                  </MenuItem>
+                  {relationshipOptions.map((option) => (
+                    <MenuItem key={option.id} value={String(option.id)}>
+                      {option.name}
+                    </MenuItem>
+                  ))}
+                </FormTextField>
               </Grid>
               <Grid size={{ xs: 12, md: 8 }}>
                 <FormTextField
@@ -135,6 +165,8 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.address}
                   onChange={(event) => onReferenceFieldChange(reference.id, "address", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.address)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.address}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -145,6 +177,8 @@ export function ReferencesTab({
                   placeholder="Ingresa"
                   value={reference.phone}
                   onChange={(event) => onReferenceFieldChange(reference.id, "phone", event.target.value)}
+                  error={Boolean(errors.familyReferenceItems?.[reference.id]?.phone)}
+                  helperText={errors.familyReferenceItems?.[reference.id]?.phone}
                 />
               </Grid>
             </Grid>

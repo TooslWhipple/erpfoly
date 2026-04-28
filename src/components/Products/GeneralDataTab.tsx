@@ -1,6 +1,6 @@
-import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box } from "@mui/material";
+import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box, Button } from "@mui/material";
 import { Remove, Add } from "@mui/icons-material";
-import { FormTextField, FormSelect } from "@/components";
+import { FormTextField, FormSelect, Plus, Minus } from "@/components";
 import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 
@@ -20,6 +20,8 @@ interface GeneralDataTabProps {
     departments: Array<{ value: string; label: string }>;
     lines: Array<{ value: string; label: string }>;
     warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
+    onOpenNewDepartmentModal?: () => void;
+    onOpenNewLineModal?: () => void;
 }
 
 export function GeneralDataTab({
@@ -30,6 +32,8 @@ export function GeneralDataTab({
     departments,
     lines,
     warrantyOptions,
+    onOpenNewDepartmentModal,
+    onOpenNewLineModal,
 }: GeneralDataTabProps) {
     const warrantyChoices =
         warrantyOptions && warrantyOptions.length > 0 ? warrantyOptions : DEFAULT_WARRANTY_OPTIONS;
@@ -55,6 +59,18 @@ export function GeneralDataTab({
                         helperText={errors.departmentId}
                         required
                     />
+                    <Button
+                        type="button"
+                        variant="text"
+                        size="small"
+                        color="primary"
+                        onClick={() => onOpenNewDepartmentModal?.()}
+                    >
+                        <Plus size={16} />
+                        <span style={{ marginLeft: 8 }}>
+                            Nuevo departamento
+                        </span>
+                    </Button>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <FormSelect
@@ -67,13 +83,23 @@ export function GeneralDataTab({
                         }}
                         options={lines}
                         error={Boolean(errors.lineId)}
-                        helperText={
-                            errors.lineId ||
-                            (!formState.departmentId ? "Selecciona un departamento primero" : undefined)
-                        }
+                        helperText={errors.lineId}
                         disabled={!formState.departmentId}
                         required
                     />
+                    <Button
+                        type="button"
+                        variant="text"
+                        size="small"
+                        color="primary"
+                        disabled={!formState.departmentId}
+                        onClick={() => onOpenNewLineModal?.()}
+                    >
+                        <Plus size={16} />
+                        <span style={{ marginLeft: 8 }}>
+                            Nueva línea
+                        </span>
+                    </Button>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <FormTextField
@@ -131,7 +157,7 @@ export function GeneralDataTab({
                                     onErrorClear("piecesCount");
                                 }}
                             >
-                                <Remove fontSize="small" />
+                                <Minus size={16} />
                             </InventoryButton>
                             <InventoryInput
                                 type="number"
@@ -166,7 +192,7 @@ export function GeneralDataTab({
                                     onErrorClear("piecesCount");
                                 }}
                             >
-                                <Add fontSize="small" />
+                                <Plus size={16} />
                             </InventoryButton>
                         </Stack>
                     </Box>

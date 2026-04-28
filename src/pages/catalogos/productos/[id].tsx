@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
 import {
@@ -43,6 +43,8 @@ import {
     DEFAULT_PRODUCT_BASE_PRICES,
 } from "@/data/productos.mockData";
 import { GeneralDataTab } from "@/components/Products/GeneralDataTab";
+import { QuickDepartmentModal } from "@/components/Products/QuickDepartmentModal";
+import { QuickProductLineModal } from "@/components/Products/QuickProductLineModal";
 import { SuppliersTab } from "@/components/Products/SuppliersTab";
 import { PriceTab } from "@/components/Products/PriceTab";
 import { PackagesTab } from "@/components/Products/PackagesTab";
@@ -81,7 +83,31 @@ export default function ProductFormPage() {
         suppliersCatalog,
         branchCatalogItems,
         warrantyOptions,
+        refreshDepartmentOptions,
+        refreshLineOptions,
     } = useProductFormCatalogs(generalData.departmentId);
+
+    const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+    const [lineModalOpen, setLineModalOpen] = useState(false);
+
+    const existingDepartmentIds = useMemo(
+        () =>
+            departmentOptions
+                .map((o) => Number(o.value))
+                .filter((id) => Number.isFinite(id)),
+        [departmentOptions]
+    );
+
+    const selectedDepartmentNumericId = useMemo(() => {
+        const n = Number(generalData.departmentId);
+        return Number.isFinite(n) && n > 0 ? n : null;
+    }, [generalData.departmentId]);
+
+    useEffect(() => {
+        if (selectedDepartmentNumericId == null) {
+            setLineModalOpen(false);
+        }
+    }, [selectedDepartmentNumericId]);
 
     const pageLoading = catalogsLoading || productLoading;
 
@@ -510,6 +536,8 @@ export default function ProductFormPage() {
                                 departments={departmentOptions}
                                 lines={lineOptions}
                                 warrantyOptions={warrantyOptions}
+                                onOpenNewDepartmentModal={() => setDepartmentModalOpen(true)}
+                                onOpenNewLineModal={() => setLineModalOpen(true)}
                             />
                         }
 
@@ -573,6 +601,27 @@ export default function ProductFormPage() {
                     </Grid>
                 </Grid>
             </Stack>
+
+            <QuickDepartmentModal
+                open={departmentModalOpen}
+                onClose={() => setDepartmentModalOpen(false)}
+                existingDepartmentIds={existingDepartmentIds}
+                onCreated={async ({ id }) => {
+                    await refreshDepartmentOptions();
+                    handleGeneralDataChange("departmentId", String(id));
+                }}
+            />
+            {selectedDepartmentNumericId != null && (
+                <QuickProductLineModal
+                    open={lineModalOpen}
+                    onClose={() => setLineModalOpen(false)}
+                    departmentId={selectedDepartmentNumericId}
+                    onCreated={async ({ id }) => {
+                        await refreshLineOptions();
+                        handleGeneralDataChange("lineId", String(id));
+                    }}
+                />
+            )}
         </MainLayout>
     );
 }

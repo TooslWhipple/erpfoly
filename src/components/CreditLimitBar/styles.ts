@@ -6,7 +6,7 @@ export const CreditLimitBarRoot = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(1),
-  minWidth: 180,
+  minWidth: "272px",
 }));
 
 export const CreditLimitBarTitle = styled(Typography)(({ theme }) => ({
@@ -17,8 +17,8 @@ export const CreditLimitBarTitle = styled(Typography)(({ theme }) => ({
 }));
 
 export const CreditLimitProgress = styled(LinearProgress)(({ theme }) => ({
-  height: 10,
-  borderRadius: 5,
+  height: "16px",
+  borderRadius: "32px",
   width: "100%",
   backgroundColor: theme.palette.primary.light,
   "& .MuiLinearProgress-bar": {

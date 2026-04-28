@@ -1,36 +1,35 @@
 import {
-  Person as PersonIcon,
-  Favorite as FavoriteIcon,
-  Place as PlaceIcon,
-  Business as BusinessIcon,
-  People as PeopleIcon,
-  Description as DescriptionIcon,
-} from "@mui/icons-material";
-import {
   InfoCard,
   InfoCardIcon,
-  InfoCardLabel,
+  Card
 } from "@/styles/clientes/detalle.styles";
+import { useRouter } from "next/router";
 import { Grid, Stack, Typography } from "@mui/material";
+import { Briefcase, FolderOpen, Heart, Map, User, Users } from "lucide-react";
 
 const INFO_CATEGORIES = [
-  { id: "basic", label: "Información básica", icon: <PersonIcon /> },
-  { id: "family", label: "Familia", icon: <FavoriteIcon /> },
-  { id: "address", label: "Dirección", icon: <PlaceIcon /> },
-  { id: "employment", label: "Empleo", icon: <BusinessIcon /> },
-  { id: "references", label: "Referencias", icon: <PeopleIcon /> },
-  { id: "documentation", label: "Documentación", icon: <DescriptionIcon /> },
+  { id: "basic-information", label: "Información básica", icon: <User /> },
+  { id: "family", label: "Familia", icon: <Heart /> },
+  { id: "address", label: "Dirección", icon: <Map /> },
+  { id: "employment", label: "Empleo", icon: <Briefcase /> },
+  { id: "references", label: "Referencias", icon: <Users /> },
+  { id: "documentation", label: "Documentación", icon: <FolderOpen /> },
 ];
 
 export function InformationTab() {
+  const router = useRouter();
+
   const handleCategoryClick = (categoryId: string) => {
-    console.log("[ClientDetail] Info category clicked:", categoryId);
+    const { id } = router.query;
+    if (typeof id !== "string") return;
+
+    router.push(`/clientes/${id}/editar?tab=${categoryId}`);
   };
 
   return (
-    <Stack spacing={2}>
+    <Card>
       <Stack>
-        <Typography variant="h3">Información</Typography>
+        <Typography variant="h5">Información</Typography>
         <Typography variant="body2" color="text.secondary">Visualiza y gestiona la información del cliente.</Typography>
       </Stack>
       <Grid container spacing={2}>
@@ -45,13 +44,13 @@ export function InformationTab() {
                 onKeyDown={(e) => e.key === "Enter" && handleCategoryClick(cat.id)}
               >
                 <InfoCardIcon>{cat.icon}</InfoCardIcon>
-                <InfoCardLabel>{cat.label}</InfoCardLabel>
+                <Typography variant="body2" color="text.primary" fontWeight={500}>{cat.label}</Typography>
               </InfoCard>
             </Grid>
           ))
         }
       </Grid>
-    </Stack>
+    </Card>
   );
 }
 

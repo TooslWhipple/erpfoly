@@ -13,17 +13,10 @@ function formatCurrency(value: number): string {
 }
 
 export interface CreditLimitBarProps {
-  /** Total credit limit (credit line) */
   creditLimit: number;
-  /** Amount of credit already used */
   creditUsed: number;
-  /** Amount of credit available (optional, defaults to creditLimit - creditUsed) */
   creditAvailable?: number;
-  /** Title above the bar (default: "Límite de crédito") */
-  title?: string;
-  /** Label for available amount (default: "Disponible:") */
   availableLabel?: string;
-  /** Label for used amount (default: "Usado:") */
   usedLabel?: string;
 }
 
@@ -31,9 +24,8 @@ export function CreditLimitBar({
   creditLimit,
   creditUsed,
   creditAvailable = undefined,
-  title = "Límite de crédito",
-  availableLabel = "Disponible:",
-  usedLabel = "Crédito utilizado:",
+  availableLabel = "Crédito disponible",
+  usedLabel = "Crédito utilizado",
 }: CreditLimitBarProps) {
   const available =
     creditAvailable !== undefined ? creditAvailable : Math.max(0, creditLimit - creditUsed);
@@ -42,19 +34,17 @@ export function CreditLimitBar({
 
   return (
     <CreditLimitBarRoot>
-      <Stack>
-        <Typography variant="h6">{title}</Typography>
-        <Typography variant="body1">{formatCurrency(creditLimit)}</Typography>
+      <Stack direction="row" justifyContent="space-between">
+        <Stack>
+          <Typography variant="body2" fontWeight={600}>{formatCurrency(creditUsed)}</Typography>
+          <Typography variant="body2" color="text.secondary">{usedLabel}</Typography>
+        </Stack>
+        <Stack>
+          <Typography variant="body2" fontWeight={600}>{formatCurrency(available)}</Typography>
+          <Typography variant="body2" color="text.secondary">{availableLabel}</Typography>
+        </Stack>
       </Stack>
       <CreditLimitProgress variant="determinate" value={progressValue} />
-      <CreditLimitLabelsRow>
-        <Typography variant="body2">
-          {usedLabel} <strong>{formatCurrency(creditUsed)}</strong>
-        </Typography>
-        <Typography variant="body2">
-          {availableLabel} <strong>{formatCurrency(available)}</strong>
-        </Typography>
-      </CreditLimitLabelsRow>
     </CreditLimitBarRoot>
   );
 }

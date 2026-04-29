@@ -33,6 +33,7 @@ interface CreditApplicationBasicInformationResponse {
   curp: string;
   rfc: string;
   phoneNumber: string;
+  phoneVerifiedAt?: string | null;
   email: string;
   maritalStatus: CreditApplicationCatalogItem;
 }
@@ -215,6 +216,15 @@ export interface ApproveCreditApplicationResponse {
   status: "APPROVED";
   creditApplicationId: number;
   clientId: number;
+}
+
+export interface CreditApplicationOtpStateResponse {
+  verified: boolean;
+  canSend: boolean;
+  cooldownUntil: string | null;
+  expiresAt: string | null;
+  attemptsLeft: number;
+  message: string;
 }
 
 const BASE = "/credit-applications";
@@ -645,6 +655,34 @@ export async function requestCreditApplicationAdditionalInformation(
   codes: string[]
 ): Promise<ApiSuccessPayload> {
   const result = await post<ApiSuccessPayload>(`${BASE}/${applicationId}/additional-information`, { codes });
+  return unwrapOrThrow(result);
+}
+
+export async function sendCreditApplicationOtp(
+  applicationId: string,
+  whatsappNumber: string,
+): Promise<CreditApplicationOtpStateResponse> {
+  const result = await post<CreditApplicationOtpStateResponse>(
+    `${BASE}/${applicationId}/otp/send`,
+    {
+      whatsappNumber,
+    },
+  );
+  return unwrapOrThrow(result);
+}
+
+export async function verifyCreditApplicationOtp(
+  applicationId: string,
+  whatsappNumber: string,
+  otpCode: string,
+): Promise<CreditApplicationOtpStateResponse> {
+  const result = await post<CreditApplicationOtpStateResponse>(
+    `${BASE}/${applicationId}/otp/verify`,
+    {
+      whatsappNumber,
+      otpCode,
+    },
+  );
   return unwrapOrThrow(result);
 }
 

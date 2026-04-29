@@ -1,7 +1,5 @@
 import { styled } from "@mui/material/styles";
 import {
-  Box,
-  Card,
   Typography,
   Chip,
   Table,
@@ -12,204 +10,32 @@ import {
 } from "@mui/material";
 import { colors } from "@/styles/theme";
 
-export const ClientCard = styled(Card)(({ theme }) => ({
-  padding: 0,
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-  overflow: "hidden",
-}));
-
-export const ClientCardContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2.5, 3),
+export const Card = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing(2),
-}));
-
-export const ClientHeaderRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-  gap: theme.spacing(2),
-}));
-
-export const ClientId = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
-  color: theme.palette.text.secondary,
-}));
-
-export const ClientName = styled(Typography)(({ theme }) => ({
-  fontSize: 22,
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-  lineHeight: 1.3,
-}));
-
-export const RequiredPaymentRow = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
-  "& strong": {
-    color: theme.palette.text.primary,
-  },
-  "& .due-label": {
-    color: theme.palette.error.main,
-    fontWeight: 500,
-  },
-}));
-
-export const CreditSummaryColumn = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  gap: theme.spacing(0.5),
-  minWidth: 180,
-}));
-
-/** Tabs section attached to the bottom of the card (no gap) */
-export const TabsSection = styled(Box)(({ theme }) => ({
-  marginTop: 0,
-  paddingLeft: theme.spacing(3),
-  paddingRight: theme.spacing(3),
-  borderTop: `1px solid ${colors.border}`,
-  "& .MuiTabs-indicator": {
-    backgroundColor: colors.sidebar.textSelected,
-  },
-  "& .Mui-selected": {
-    color: `${colors.sidebar.textSelected} !important`,
-  },
-}));
-
-// ============================================================================
-// TAB CONTENT (below the card)
-// ============================================================================
-
-export const TabContentCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(2.5, 3),
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-}));
-
-export const TabContentInner = styled(Box)(({ theme }) => ({
-  minHeight: 200,
-}));
-
-// ============================================================================
-// ACTIVITY TAB
-// ============================================================================
-
-export const ActivityFormCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  border: `1px solid ${colors.border}`,
-  borderRadius: theme.shape.borderRadius,
+  gap: "24px",
+  padding: "32px 24px",
   backgroundColor: colors.background.sidebar,
-  marginBottom: theme.spacing(3),
+  border: `1px solid ${colors.border}`,
+  borderRadius: "16px",
 }));
 
-export const ActivityFormActions = styled(Box)(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing(1.5),
-  marginTop: theme.spacing(2),
-}));
-
-export const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  fontWeight: 600,
-  color: theme.palette.text.secondary,
-  marginBottom: theme.spacing(1.5),
-  textTransform: "uppercase",
-  letterSpacing: "0.02em",
-}));
-
-export const ActivityList = styled(Box)({
+export const ActivityList = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 12,
 });
 
-export const ActivityItemCard = styled(Box)(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
-  border: `1px solid ${colors.border}`,
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: colors.background.sidebar,
-  alignItems: "flex-start",
-}));
-
-export const ActivityItemIcon = styled(Box)(({ theme }) => ({
-  width: 40,
-  height: 40,
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: colors.chip.background,
-  color: theme.palette.primary.main,
-  flexShrink: 0,
-}));
-
-export const ActivityItemContent = styled(Box)({
-  flex: 1,
-  minWidth: 0,
-});
-
-export const ActivityItemMeta = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
-  color: theme.palette.text.secondary,
-  marginBottom: 4,
-}));
-
-export const ActivityItemDescription = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.primary,
-  lineHeight: 1.5,
-}));
-
-export const ActiveCasesList = styled(Box)(({ theme }) => ({
+export const ActivityItemCard = styled('div')({
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing(1.5),
-  marginTop: theme.spacing(2),
-}));
-
-export const ActiveCaseCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  border: `1px solid ${colors.border}`,
-  borderRadius: theme.shape.borderRadius,
+  gap: "16px",
+  padding: "16px",
   backgroundColor: colors.background.sidebar,
-}));
-
-export const CaseStatusChip = styled(Chip)(() => ({
-  backgroundColor: "#16a34a",
-  color: "#fff",
-  fontWeight: 600,
-  fontSize: 12,
-  height: 24,
-  marginBottom: 8,
-  "& .MuiChip-label": {
-    paddingLeft: 10,
-    paddingRight: 10,
-  },
-}));
-
-export const CaseId = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-  marginBottom: 4,
-}));
-
-export const CaseDescription = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
-  marginBottom: 2,
-}));
-
-export const CaseOrderType = styled(Typography)(({ theme }) => ({
-  fontSize: 13,
-  color: theme.palette.text.secondary,
-}));
+  border: `1px solid ${colors.border}`,
+  borderRadius: "8px",
+  zIndex: 1
+});
 
 export const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   border: `1px solid ${colors.border}`,
@@ -247,7 +73,7 @@ export const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-export const TypeCellContent = styled(Box)<{ variant: "payment" | "purchase" }>(
+export const TypeCellContent = styled('div')<{ variant: "payment" | "purchase" }>(
   ({ theme, variant }) => ({
     display: "inline-flex",
     alignItems: "center",
@@ -262,7 +88,7 @@ export const TypeCellContent = styled(Box)<{ variant: "payment" | "purchase" }>(
   })
 );
 
-export const InfoCard = styled(Box)(({ theme }) => ({
+export const InfoCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -279,12 +105,13 @@ export const InfoCard = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const InfoCardIcon = styled(Box)(({ theme }) => ({
+export const InfoCardIcon = styled('div')(({ theme }) => ({
   width: "40px",
   height: "40px",
+  padding: "12px",
   borderRadius: "50%",
-  backgroundColor: colors.chip.background,
-  color: theme.palette.text.secondary,
+  backgroundColor: "#DBEAFE",
+  color: theme.palette.primary.main,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -297,16 +124,7 @@ export const InfoCardLabel = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }));
 
-export const EmptyState = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  padding: theme.spacing(6),
-  color: theme.palette.text.secondary,
-  fontSize: 14,
-}));
-
-export const ErrorState = styled(Box)(({ theme }) => ({
+export const ErrorState = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",

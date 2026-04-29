@@ -15,16 +15,16 @@ const MOVEMENT_TYPE_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
 const COLUMNS: DataTableColumn<ClientMovement>[] = [
   {
     id: "type",
-    label: "TIPO",
+    label: "Tipo",
     type: "chip",
     chipLabelMap: MOVEMENT_TYPE_CHIP_LABELS,
     chipVariantMap: MOVEMENT_TYPE_CHIP_VARIANTS,
   },
-  { id: "description", label: "DESCRIPCIÓN" },
-  { id: "invoice", label: "FACTURA" },
-  { id: "reference", label: "REFERENCIA" },
-  { id: "date", label: "FECHA" },
-  { id: "amount", label: "MONTO", type: "currency", align: "right" },
+  { id: "description", label: "Descripción" },
+  { id: "invoice", label: "Factura" },
+  { id: "reference", label: "Referencia" },
+  { id: "date", label: "Fecha" },
+  { id: "amount", label: "Monto", type: "currency", align: "right" },
 ];
 
 export interface MovementsTableProps {

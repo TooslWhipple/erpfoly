@@ -1,6 +1,6 @@
 import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box, Button } from "@mui/material";
 import { Remove, Add } from "@mui/icons-material";
-import { FormTextField, FormSelect, Plus, Minus } from "@/components";
+import { FormTextField, FormSelect, Plus, Minus, RadioButton } from "@/components";
 import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 
@@ -142,14 +142,13 @@ export function GeneralDataTab({
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                    <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="body1" fontWeight={600} component="span">
                             Número de piezas:
                         </Typography>
                         <Stack direction="row" alignItems="center" spacing={1}>
                             <InventoryButton
                                 size="small"
-                                aria-label="Reducir piezas"
                                 onClick={() => {
                                     const current = Math.max(MIN_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
                                     const next = Math.max(MIN_PIECES, current - 1);
@@ -184,7 +183,6 @@ export function GeneralDataTab({
                             />
                             <InventoryButton
                                 size="small"
-                                aria-label="Aumentar piezas"
                                 onClick={() => {
                                     const current = Math.min(MAX_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
                                     const next = Math.min(MAX_PIECES, current + 1);
@@ -195,30 +193,28 @@ export function GeneralDataTab({
                                 <Plus size={16} />
                             </InventoryButton>
                         </Stack>
-                    </Box>
-                    {errors.piecesCount && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
-                            {errors.piecesCount}
-                        </Typography>
-                    )}
+                    </Stack>
                 </Grid>
             </Grid>
+            <Divider />
             <Stack spacing={3}>
                 <Stack spacing={0.5}>
                     <Typography variant="h6">Garantía</Typography>
                     <Typography variant="body2" color="text.secondary">Selecciona el tipo de garantía</Typography>
                 </Stack>
-                <RadioGroup row>
-                    {warrantyChoices.map((opt) => (
-                        <FormControlLabel
-                            key={opt.value}
-                            control={<Radio />}
-                            label={opt.label}
-                            checked={formState.warrantyType === opt.value}
-                            onChange={() => onFieldChange("warrantyType", opt.value)}
-                        />
-                    ))}
-                </RadioGroup>
+                <Stack direction="row" spacing={2}>
+                    {
+                        warrantyChoices.map((opt) => (
+                            <RadioButton
+                                key={opt.value}
+                                value={opt.value}
+                                label={opt.label}
+                                checked={formState.warrantyType === opt.value}
+                                onChange={() => onFieldChange("warrantyType", opt.value)}
+
+                            />
+                        ))}
+                </Stack>
                 {
                     formState.warrantyType === "months" &&
                     <FormTextField

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { Typography, Grid, Switch, Button, Stack, IconButton, Divider } from "@mui/material";
-import { Pencil } from "lucide-react";
+import { Typography, Grid, Button, Stack, Divider } from "@mui/material";
 import numeral from "numeral";
 import { FormTextField, FormSelect } from "@/components";
 import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
@@ -62,81 +61,92 @@ export function PriceTab({
                             <Typography variant="h6">Cálculo de precios</Typography>
                             <Typography variant="body2" color="text.secondary">Registra los costos y descuentos que tendrá este artículo para obtener sus precios.</Typography>
                         </Stack>
-                        <Typography variant="body1">Costos</Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="Costo de lista"
-                                    placeholder="0.00"
-                                    type="number"
-                                    value={formState.listCost}
-                                    onChange={(e) => onFieldChange("listCost", e.target.value)}
-                                />
+                        <FormCard>
+                            <Typography variant="subtitle2">Costos</Typography>
+                            {(formState.lastEditedDate || formState.lastEditedBy) && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Modificado por última vez
+                                    {formState.lastEditedDate ? `: ${formState.lastEditedDate}` : ""}
+                                    {formState.lastEditedBy
+                                        ? `${formState.lastEditedDate ? " · " : ": "}${formState.lastEditedBy}`
+                                        : ""}
+                                </Typography>
+                            )}
+                            <Grid container spacing={2}>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="Costo de lista"
+                                        placeholder="0.00"
+                                        type="number"
+                                        value={formState.listCost}
+                                        onChange={(e) => onFieldChange("listCost", e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormSelect
+                                        label="Moneda"
+                                        value={formState.currency}
+                                        onChange={(e) => onFieldChange("currency", String(e.target.value))}
+                                        options={currencies}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="Tipo de cambio"
+                                        placeholder="1.00"
+                                        type="number"
+                                        value={formState.exchangeRate}
+                                        onChange={(e) => onFieldChange("exchangeRate", e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="IVA (%)"
+                                        placeholder="16.00"
+                                        type="number"
+                                        value={formState.iva}
+                                        onChange={(e) => onFieldChange("iva", e.target.value)}
+                                    />
+                                </Grid>
                             </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormSelect
-                                    label="Moneda"
-                                    value={formState.currency}
-                                    onChange={(e) => onFieldChange("currency", String(e.target.value))}
-                                    options={currencies}
-                                />
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="Tipo de cambio"
-                                    placeholder="1.00"
-                                    type="number"
-                                    value={formState.exchangeRate}
-                                    onChange={(e) => onFieldChange("exchangeRate", e.target.value)}
-                                />
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="IVA (%)"
-                                    placeholder="16.00"
-                                    type="number"
-                                    value={formState.iva}
-                                    onChange={(e) => onFieldChange("iva", e.target.value)}
-                                />
-                            </Grid>
-                        </Grid>
 
-                        <LastCostCard>
-                            <Stack
-                                spacing={3}
-                                width="100%"
-                                direction="row"
-                                alignItems="center"
-                                flexWrap="nowrap"
-                                divider={<Divider orientation="vertical" flexItem />}>
-                                <Stack>
-                                    <Typography variant="body2" color="text.secondary">Costo promedio:</Typography>
-                                    <Typography variant="h6">{numeral(formState.averageCost).format("$0,0.00")}</Typography>
-                                </Stack>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={3} flexGrow={1}>
+                            <LastCostCard>
+                                <Stack
+                                    spacing={3}
+                                    width="100%"
+                                    direction="row"
+                                    alignItems="center"
+                                    flexWrap="nowrap"
+                                    divider={<Divider orientation="vertical" flexItem />}>
                                     <Stack>
-                                        <Typography variant="body2" color="text.secondary">Costo último:</Typography>
-                                        <Typography variant="h6">{numeral(formState.lastCost).format("$0,0.00")}</Typography>
+                                        <Typography variant="body2" color="text.secondary">Costo promedio:</Typography>
+                                        <Typography variant="h6">{numeral(formState.averageCost).format("$0,0.00")}</Typography>
                                     </Stack>
-                                    <Button
-                                        variant="text"
-                                        onClick={onCostHistoryOpen}>
-                                        Ver historial de costos
-                                    </Button>
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={3} flexGrow={1}>
+                                        <Stack>
+                                            <Typography variant="body2" color="text.secondary">Costo último:</Typography>
+                                            <Typography variant="h6">{numeral(formState.lastCost).format("$0,0.00")}</Typography>
+                                        </Stack>
+                                        <Button
+                                            variant="text"
+                                            onClick={onCostHistoryOpen}>
+                                            Ver historial de costos
+                                        </Button>
+                                    </Stack>
                                 </Stack>
-                            </Stack>
-                        </LastCostCard>
-                        <LuquidationCard checked={formState.liquidation}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <LiquidationSwitch
-                                    checked={formState.liquidation}
-                                    onChange={(e) => onFieldChange("liquidation", e.target.checked)}
-                                    color="primary"
-                                />
-                                <Typography variant="body1">Liquidación</Typography>
-                            </Stack>
-                            <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
-                        </LuquidationCard>
+                            </LastCostCard>
+                            <LuquidationCard checked={formState.liquidation}>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <LiquidationSwitch
+                                        checked={formState.liquidation}
+                                        onChange={(e) => onFieldChange("liquidation", e.target.checked)}
+                                        color="primary"
+                                    />
+                                    <Typography variant="body1">Liquidación</Typography>
+                                </Stack>
+                                <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
+                            </LuquidationCard>
+                        </FormCard>
                     </FormCard>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
@@ -154,9 +164,9 @@ export function PriceTab({
                         </Stack>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
                             <Typography variant="subtitle2">Precios base</Typography>
-                            <Button variant="text" onClick={() => setAddBasePriceOpen(true)}>
-                                Agregar
-                            </Button>
+                            <Typography variant="body2" color="text.secondary">
+                                Este precio se calcula tomando el costo de lista y el margen definido por departamento.
+                            </Typography>
                         </Stack>
                         <Stack spacing={2}>
                             {
@@ -170,26 +180,16 @@ export function PriceTab({
                                 basePrices.map((row) => {
                                     const linePrice = referenceCost * (1 + row.marginPercent / 100);
                                     return (
-                                        <Card key={row.id} backgroundColor="#FFFFFF">
+                                        <Card key={row.id} backgroundColor="#CBD5E1">
                                             <Stack spacing={1}>
-                                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
                                                     <Stack>
-                                                        <Typography variant="subtitle2">{row.name}</Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Margen {numeral(row.marginPercent).format("0,0.00")}%
+                                                        <Typography variant="subtitle2" color="text.secondary">Margen</Typography>
+                                                        <Typography variant="body1">
+                                                            {numeral(row.marginPercent).format("0,0.00")}%
                                                         </Typography>
                                                     </Stack>
-                                                    <Typography variant="h6">{numeral(linePrice).format("$0,0.00")}</Typography>
-                                                </Stack>
-                                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {row.lastEditedBy
-                                                            ? `Editado por ${row.lastEditedBy}`
-                                                            : "Sin historial de edición"}
-                                                    </Typography>
-                                                    <IconButton size="small" aria-label="Edit base price" disabled>
-                                                        <Pencil size={18} />
-                                                    </IconButton>
+                                                    <Typography variant="h5">{numeral(linePrice).format("$0,0.00")}</Typography>
                                                 </Stack>
                                             </Stack>
                                         </Card>

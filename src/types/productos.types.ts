@@ -28,7 +28,8 @@ export interface CreateProductBranchPayload {
 export type CreateProductRequest = {
     departmentId: number;
     lineId: number;
-    code: string;
+    /** Omitted on POST /products — backend assigns code. Included on PATCH when updating. */
+    code?: string;
     shortName: string;
     description: string;
     pieceCount: number;
@@ -42,6 +43,11 @@ export type CreateProductRequest = {
 
 export interface CreateProductResponse {
     id: number;
+}
+
+/** GET /products/preview-code?lineId= */
+export interface ProductPreviewCodeResponse {
+    code: string;
 }
 
 export interface ProductSupplier {
@@ -126,7 +132,6 @@ export interface GeneralDataFormState {
     piecesCount: string;
     warrantyType: WarrantyType;
     warrantyMonths: string;
-    /** Free text when warrantyType is policy (maps to ANNEX_POLICY + warrantyPolicy) */
     warrantyPolicy: string;
 }
 
@@ -139,6 +144,8 @@ export interface PriceFormState {
     costBasisForCalculation: CostBasisForCalculation;
     lastCost: string;
     averageCost: string;
+    lastEditedBy: string;
+    lastEditedDate: string;
 }
 
 export interface FormErrors {

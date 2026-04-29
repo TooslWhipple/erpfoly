@@ -24,6 +24,7 @@ import {
     buildCreateProductRequest,
     resolveGalleryImageUrlsForCreate,
     getProductById,
+    getProductPreviewCode,
     updateProduct,
     productDetailDtoToFormSnapshot,
     type ProductDetailBranchDto,
@@ -122,6 +123,8 @@ export default function ProductFormPage() {
         costBasisForCalculation: "last_cost",
         lastCost: "0.00",
         averageCost: "0.00",
+        lastEditedBy: "",
+        lastEditedDate: "",
     });
 
     const [basePrices, setBasePrices] = useState<ProductBasePrice[]>(() => [...DEFAULT_PRODUCT_BASE_PRICES]);
@@ -264,12 +267,16 @@ export default function ProductFormPage() {
                 showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
                 return;
             }
-            const payload = buildCreateProductRequest({
-                generalData,
-                suppliers,
-                branches,
-                images: resolvedImageUrls,
-            });
+            const payload = buildCreateProductRequest(
+                {
+                    generalData,
+                    priceData,
+                    suppliers,
+                    branches,
+                    images: resolvedImageUrls,
+                },
+                isNew ? "create" : "update"
+            );
 
             if (isNew) {
                 const result = await createProduct(payload);
@@ -308,9 +315,38 @@ export default function ProductFormPage() {
     };
 
     const handleGeneralDataChange = (field: keyof GeneralDataFormState, value: string | "months" | "policy") => {
+        if (field === "lineId") {
+            const lineIdStr = String(value);
+            setGeneralData((prev) => ({
+                ...prev,
+                lineId: lineIdStr,
+                ...(lineIdStr === "" ? { code: "" } : {}),
+            }));
+            const lineNumericId = Number(lineIdStr);
+            if (!Number.isFinite(lineNumericId) || lineNumericId <= 0) {
+                return;
+            }
+            void (async () => {
+                const result = await getProductPreviewCode(lineNumericId);
+                if (result.error) {
+                    console.error("[ProductForm] Preview code error:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                const preview = result.data;
+                if (!preview) {
+                    return;
+                }
+                setGeneralData((prev) =>
+                    prev.lineId !== lineIdStr ? prev : { ...prev, code: preview.code }
+                );
+            })();
+            return;
+        }
+
         setGeneralData((prev) => {
             if (field === "departmentId" && value !== prev.departmentId) {
-                return { ...prev, departmentId: value as string, lineId: "" };
+                return { ...prev, departmentId: value as string, lineId: "", code: "" };
             }
             return { ...prev, [field]: value };
         });

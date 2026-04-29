@@ -10,6 +10,7 @@ import type {
     ProductBranch,
     ProductGalleryImage,
     CostBasisForCalculation,
+    ProductPreviewCodeResponse,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
 
@@ -49,25 +50,32 @@ export async function resolveGalleryImageUrlsForCreate(
     return urls;
 }
 
-export function buildCreateProductRequest(input: {
-    generalData: GeneralDataFormState;
-    suppliers: ProductSupplier[];
-    branches: ProductBranch[];
-    images: string[];
-}): CreateProductRequest {
-    const { generalData, suppliers, branches, images } = input;
+export function buildCreateProductRequest(
+    input: {
+        generalData: GeneralDataFormState;
+        priceData: PriceFormState;
+        suppliers: ProductSupplier[];
+        branches: ProductBranch[];
+        images: string[];
+    },
+    mode: "create" | "update"
+): CreateProductRequest {
+    const { generalData, priceData, suppliers, branches, images } = input;
 
     const departmentId = Number(generalData.departmentId);
     const lineId = Number(generalData.lineId);
     const pieceCount = parseInt(generalData.piecesCount, 10);
 
-    const base = {
+    const baseFields = {
         departmentId,
         lineId,
-        code: generalData.code.trim() || "PENDING",
         shortName: generalData.shortName.trim(),
         description: generalData.description.trim(),
         pieceCount: Number.isFinite(pieceCount) ? pieceCount : 1,
+        listCost: Number(priceData.listCost),
+        currency: priceData.currency,
+        exchangeRate: Number(priceData.exchangeRate),
+        iva: Number(priceData.iva),
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
@@ -88,6 +96,14 @@ export function buildCreateProductRequest(input: {
         })),
     };
 
+    const base: Omit<
+        CreateProductRequest,
+        "warrantyType" | "warrantyMonths" | "warrantyPolicy"
+    > =
+        mode === "update"
+            ? { ...baseFields, code: generalData.code.trim() }
+            : baseFields;
+
     if (generalData.warrantyType === "policy") {
         return {
             ...base,
@@ -107,6 +123,14 @@ export async function createProduct(
     payload: CreateProductRequest
 ): Promise<ApiResult<CreateProductResponse>> {
     return post<CreateProductResponse>(PRODUCTS_BASE, payload);
+}
+
+export async function getProductPreviewCode(
+    lineId: number
+): Promise<ApiResult<ProductPreviewCodeResponse>> {
+    return get<ProductPreviewCodeResponse>(`${PRODUCTS_BASE}/preview-code`, {
+        params: { lineId },
+    });
 }
 
 export interface ProductDetailSupplierDto {
@@ -138,6 +162,8 @@ export interface ProductDetailPriceDto {
     lastCost: number;
     liquidation: boolean;
     costBasisForCalculation?: string | null;
+    lastEditedBy?: string | null;
+    lastEditedDate?: string | null;
     basePrices?: Array<{
         id?: string;
         name: string;
@@ -229,6 +255,8 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         costBasisForCalculation: normalizeCostBasis(price?.costBasisForCalculation ?? undefined),
         lastCost: (price?.lastCost ?? 0).toFixed(2),
         averageCost: (price?.averageCost ?? 0).toFixed(2),
+        lastEditedBy: (price?.lastEditedBy ?? "").trim(),
+        lastEditedDate: (price?.lastEditedDate ?? "").trim(),
     };
 
     const basePrices: ProductBasePrice[] =

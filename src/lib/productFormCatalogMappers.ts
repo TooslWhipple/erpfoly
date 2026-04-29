@@ -7,9 +7,10 @@ import type { ProductBranch, WarrantyType } from "@/types/productos.types";
 export function departmentCatalogToSelectOptions(
     items: DepartmentCatalogItem[]
 ): Array<{ value: string; label: string }> {
+
     return items.map((d) => ({
         value: String(d.id),
-        label: d.code?.trim() ? `${d.code} — ${d.name}` : d.name,
+        label: `${String(d.id).padStart(2, "0")} — ${d.name}`
     }));
 }
 
@@ -36,8 +37,8 @@ export function warrantyCatalogToFormOptions(
             w.value === "ANNEX_POLICY"
                 ? "policy"
                 : w.value === "MONTHS"
-                  ? "months"
-                  : null;
+                    ? "months"
+                    : null;
         if (formValue) {
             mapped.push({ value: formValue, label: w.label });
         }

@@ -32,6 +32,7 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
 import {
+    branchCatalogToPackageSelectableItems,
     branchCatalogToProductBranches,
     mergeBranchCatalogWithProductDetail,
 } from "@/lib/productFormCatalogMappers";
@@ -39,7 +40,6 @@ import {
     CURRENCIES,
     MOCK_COST_HISTORY,
     MOCK_ARTICLES,
-    MOCK_PACKAGE_BRANCHES,
     COST_BASIS_FOR_PRICE_OPTIONS,
     DEFAULT_PRODUCT_BASE_PRICES,
 } from "@/data/productos.mockData";
@@ -103,6 +103,11 @@ export default function ProductFormPage() {
         const n = Number(generalData.departmentId);
         return Number.isFinite(n) && n > 0 ? n : null;
     }, [generalData.departmentId]);
+
+    const packageBranchSelectableItems = useMemo(
+        () => branchCatalogToPackageSelectableItems(branchCatalogItems),
+        [branchCatalogItems]
+    );
 
     useEffect(() => {
         if (selectedDepartmentNumericId == null) {
@@ -274,6 +279,7 @@ export default function ProductFormPage() {
                     suppliers,
                     branches,
                     images: resolvedImageUrls,
+                    packages,
                 },
                 isNew ? "create" : "update"
             );
@@ -608,7 +614,7 @@ export default function ProductFormPage() {
                             <PackagesTab
                                 packages={packages}
                                 availableArticles={MOCK_ARTICLES}
-                                availableBranches={MOCK_PACKAGE_BRANCHES}
+                                availableBranches={packageBranchSelectableItems}
                                 onAddPackage={handleAddPackage}
                                 onRemovePackage={handleRemovePackage}
                             />

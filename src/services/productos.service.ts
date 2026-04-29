@@ -1,6 +1,7 @@
 import { get, patch, post, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
+    CreateProductPackageItemPayload,
     CreateProductRequest,
     CreateProductResponse,
     GeneralDataFormState,
@@ -9,12 +10,37 @@ import type {
     ProductSupplier,
     ProductBranch,
     ProductGalleryImage,
+    ProductPackage,
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
 
 const PRODUCTS_BASE = "/products";
+
+function mapProductPackagesToPackageItems(
+    packages: ProductPackage[]
+): CreateProductPackageItemPayload[] {
+    return packages.map((pkg) => {
+        if (pkg.type === "article") {
+            const productId = Number(pkg.articleId);
+            return {
+                type: "PRODUCT",
+                productId: Number.isFinite(productId) ? productId : null,
+                serviceName: null,
+                packagePrice: pkg.packagePrice,
+                branchIds: [...pkg.branches],
+            };
+        }
+        return {
+            type: "SERVICE",
+            productId: null,
+            serviceName: (pkg.serviceName ?? "").trim() || null,
+            packagePrice: pkg.packagePrice,
+            branchIds: [...pkg.branches],
+        };
+    });
+}
 
 function readFileAsDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -57,10 +83,11 @@ export function buildCreateProductRequest(
         suppliers: ProductSupplier[];
         branches: ProductBranch[];
         images: string[];
+        packages: ProductPackage[];
     },
     mode: "create" | "update"
 ): CreateProductRequest {
-    const { generalData, priceData, suppliers, branches, images } = input;
+    const { generalData, priceData, suppliers, branches, images, packages } = input;
 
     const departmentId = Number(generalData.departmentId);
     const lineId = Number(generalData.lineId);
@@ -96,13 +123,15 @@ export function buildCreateProductRequest(
         })),
     };
 
+    const packageItems = mapProductPackagesToPackageItems(packages);
+
     const base: Omit<
         CreateProductRequest,
         "warrantyType" | "warrantyMonths" | "warrantyPolicy"
     > =
         mode === "update"
-            ? { ...baseFields, code: generalData.code.trim() }
-            : baseFields;
+            ? { ...baseFields, code: generalData.code.trim(), packageItems }
+            : { ...baseFields, packageItems };
 
     if (generalData.warrantyType === "policy") {
         return {

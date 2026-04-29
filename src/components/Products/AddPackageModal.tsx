@@ -284,7 +284,7 @@ export function AddPackageModal({
                     <>
                         <Grid size={{ xs: 12 }}>
                             <FormTextField
-                                label="Nombre del paquete"
+                                label="Nombre del servicio"
                                 placeholder="Ej. Servicio de instalación gratis"
                                 value={serviceName}
                                 onChange={(e) => {

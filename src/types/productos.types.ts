@@ -25,10 +25,19 @@ export interface CreateProductBranchPayload {
     isAvailable: boolean;
 }
 
+export type ProductPackageItemApiType = "PRODUCT" | "SERVICE";
+
+export interface CreateProductPackageItemPayload {
+    type: ProductPackageItemApiType;
+    productId: number | null;
+    serviceName: string | null;
+    packagePrice: number;
+    branchIds: number[];
+}
+
 export type CreateProductRequest = {
     departmentId: number;
     lineId: number;
-    /** Omitted on POST /products — backend assigns code. Included on PATCH when updating. */
     code?: string;
     shortName: string;
     description: string;
@@ -36,6 +45,7 @@ export type CreateProductRequest = {
     suppliers: CreateProductSupplierPayload[];
     images: CreateProductImagePayload[];
     branches: CreateProductBranchPayload[];
+    packageItems?: CreateProductPackageItemPayload[];
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }

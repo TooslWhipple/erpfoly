@@ -154,6 +154,7 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
 };
 
 const DRAFT_STALE_AFTER_MS = 5 * 60 * 1000;
+const VERIFIED_SECURITY_CODE_VALUE = "Verificado";
 const inFlightCreditApplicationRequests = new Map<
   string,
   Promise<CreditApplicationDetailResponse>
@@ -184,6 +185,7 @@ function mapCreditApplicationToFormValues(
   creditApplication: CreditApplicationDetailResponse
 ): {
   basicInformation: BasicInformationFormValues;
+  phoneIsVerified: boolean;
   family: FamilyTabValues;
   address: AddressTabValues;
   employment: EmploymentTabValues;
@@ -215,7 +217,9 @@ function mapCreditApplicationToFormValues(
     rfc: creditApplication.basicInformation.rfc ?? "",
     email: creditApplication.basicInformation.email ?? "",
     whatsappNumber: creditApplication.basicInformation.phoneNumber ?? "",
-    securityCode: "",
+    securityCode: creditApplication.basicInformation.phoneVerifiedAt
+      ? VERIFIED_SECURITY_CODE_VALUE
+      : "",
   };
 
   const family: FamilyTabValues = {
@@ -380,6 +384,7 @@ function mapCreditApplicationToFormValues(
 
   return {
     basicInformation,
+    phoneIsVerified: Boolean(creditApplication.basicInformation.phoneVerifiedAt),
     family,
     address,
     employment,
@@ -482,13 +487,59 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     return [...BASE_TAB_LIST, GUARANTOR_TAB_ITEM];
   }, [shouldShowGuarantorTab]);
 
-  const basicInformationTab = useBasicInformationTab(EMPTY_BASIC_INFORMATION_VALUES);
   const familyTab = useFamilyTab(EMPTY_FAMILY_VALUES);
   const addressTab = useAddressTab(EMPTY_ADDRESS_VALUES);
   const employmentTab = useEmploymentTab(EMPTY_EMPLOYMENT_VALUES);
   const referencesTab = useReferencesTab(EMPTY_REFERENCES_VALUES);
   const documentationTab = useDocumentationTab(EMPTY_DOCUMENTATION_VALUES);
   const guarantorTab = useGuarantorTab(EMPTY_GUARANTOR_VALUES);
+  const prepareBasicInformationForOtpSend = useCallback(
+    async (
+      basicInformationValues: BasicInformationFormValues,
+    ): Promise<string | undefined> => {
+      if (isCreateMode || !applicationId) {
+        return undefined;
+      }
+
+      const currentPayload = {
+        id: applicationId,
+        basicInformation: basicInformationValues,
+        family: familyTab.values,
+        address: addressTab.values,
+        employment: employmentTab.values,
+        references: referencesTab.values,
+        documentation: documentationTab.values,
+        guarantor: guarantorTab.values,
+        biometrics: biometricsData,
+      };
+
+      await saveCreditApplicationSection(
+        applicationId,
+        "basicInformation",
+        currentPayload,
+      );
+
+      return applicationId;
+    },
+    [
+      addressTab.values,
+      applicationId,
+      biometricsData,
+      documentationTab.values,
+      employmentTab.values,
+      familyTab.values,
+      guarantorTab.values,
+      isCreateMode,
+      referencesTab.values,
+    ],
+  );
+  const basicInformationTab = useBasicInformationTab(
+    EMPTY_BASIC_INFORMATION_VALUES,
+    {
+      applicationId: isCreateMode ? undefined : applicationId,
+      prepareForOtpSend: prepareBasicInformationForOtpSend,
+    },
+  );
 
   const setBasicInformationValuesFromExternal = basicInformationTab.setValuesFromExternalSource;
   const setFamilyValuesFromExternal = familyTab.setValuesFromExternalSource;
@@ -548,9 +599,12 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
 
         const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
         const shouldApplyServerValues = !draft || draftIsStale;
+        const shouldForceVerifiedPhoneState = mappedValues.phoneIsVerified;
 
         if (shouldApplyServerValues) {
-          setBasicInformationValuesFromExternal(mappedValues.basicInformation);
+          setBasicInformationValuesFromExternal(mappedValues.basicInformation, {
+            isSecurityCodeVerified: mappedValues.phoneIsVerified,
+          });
           setFamilyValuesFromExternal(mappedValues.family);
           setAddressValuesFromExternal(mappedValues.address);
           setEmploymentValuesFromExternal(mappedValues.employment);
@@ -566,6 +620,12 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
           upsertReferences(draftKey, mappedValues.references);
           upsertDocumentation(draftKey, mappedValues.documentation);
           upsertGuarantor(draftKey, mappedValues.guarantor);
+        } else if (shouldForceVerifiedPhoneState) {
+          // Even with a fresh draft, the backend verified phone state is authoritative.
+          setBasicInformationValuesFromExternal(mappedValues.basicInformation, {
+            isSecurityCodeVerified: true,
+          });
+          upsertBasicInformation(draftKey, mappedValues.basicInformation);
         }
       } catch (loadError) {
         console.error("[CreditApplicationForm] Unable to load credit application", loadError);

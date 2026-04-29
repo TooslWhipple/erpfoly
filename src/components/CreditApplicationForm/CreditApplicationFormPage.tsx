@@ -244,6 +244,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={basicInformationTab.errors}
             validatingSecurityCode={basicInformationTab.validatingSecurityCode}
             isSecurityCodeValid={basicInformationTab.isSecurityCodeValid}
+            otpActionLabel={basicInformationTab.otpActionLabel}
+            isOtpActionDisabled={basicInformationTab.isOtpActionDisabled}
+            isSecurityCodeFieldDisabled={basicInformationTab.isSecurityCodeFieldDisabled}
             maritalStatusOptions={maritalStatuses}
             maritalStatusesLoading={maritalStatusesLoading}
             onFieldChange={handleBasicFieldChange}

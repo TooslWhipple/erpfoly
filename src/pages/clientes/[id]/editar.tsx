@@ -167,6 +167,9 @@ export default function ClientEditPage() {
           errors={basicInformationTab.errors}
           validatingSecurityCode={basicInformationTab.validatingSecurityCode}
           isSecurityCodeValid={basicInformationTab.isSecurityCodeValid}
+          otpActionLabel={basicInformationTab.otpActionLabel}
+          isOtpActionDisabled={basicInformationTab.isOtpActionDisabled}
+          isSecurityCodeFieldDisabled={basicInformationTab.isSecurityCodeFieldDisabled}
           maritalStatusOptions={maritalStatuses}
           maritalStatusesLoading={maritalStatusesLoading}
           onFieldChange={(field, value) => {

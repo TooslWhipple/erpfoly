@@ -54,10 +54,12 @@ export function useProductFormCatalogs(
     }, []);
 
     const refreshDepartmentOptions = useCallback(async () => {
-        const deptRes = await getDepartmentsCatalog();
-        setDepartmentOptions(
-            departmentCatalogToSelectOptions(deptRes.data ?? ([] as DepartmentCatalogItem[]))
-        );
+        try {
+            const depts = await getDepartmentsCatalog();
+            setDepartmentOptions(departmentCatalogToSelectOptions(depts));
+        } catch {
+            setDepartmentOptions([]);
+        }
     }, []);
 
     const refreshLineOptions = useCallback(async () => {
@@ -79,25 +81,32 @@ export function useProductFormCatalogs(
 
         async function loadBaseCatalogs() {
             setCatalogsLoading(true);
-            const [deptRes, supRes, branchRes, prodRes] = await Promise.all([
-                getDepartmentsCatalog(),
-                getSuppliersCatalog(),
-                getBranchesCatalog(),
-                getProductsCatalog(),
-            ]);
+            try {
+                const [depts, sups, branches, prodRes] = await Promise.all([
+                    getDepartmentsCatalog(),
+                    getSuppliersCatalog(),
+                    getBranchesCatalog(),
+                    getProductsCatalog(),
+                ]);
 
-            if (cancelled) return;
+                if (cancelled) return;
 
-            setDepartmentOptions(
-                departmentCatalogToSelectOptions(deptRes.data ?? ([] as DepartmentCatalogItem[]))
-            );
-            setSuppliersCatalog(supRes.data ?? []);
-            setBranchCatalogItems(branchRes.data ?? []);
-            const warrantyFromApi = prodRes.data?.warrantyTypes ?? [];
-            const currenciesFromApi = prodRes.data?.currencies ?? [];
-            setWarrantyOptions(warrantyCatalogToFormOptions(warrantyFromApi));
-
-            setCatalogsLoading(false);
+                setDepartmentOptions(departmentCatalogToSelectOptions(depts));
+                setSuppliersCatalog(sups);
+                setBranchCatalogItems(branches);
+                const warrantyFromApi = prodRes.data?.warrantyTypes ?? [];
+                setWarrantyOptions(warrantyCatalogToFormOptions(warrantyFromApi));
+            } catch {
+                if (!cancelled) {
+                    setDepartmentOptions([]);
+                    setSuppliersCatalog([]);
+                    setBranchCatalogItems([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setCatalogsLoading(false);
+                }
+            }
         }
 
         loadBaseCatalogs();

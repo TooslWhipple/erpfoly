@@ -1,4 +1,4 @@
-import { del, get, patch, post } from "@/lib/axios";
+import { del, get, patch, post, unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
@@ -88,8 +88,16 @@ export interface DepartmentCatalogItem {
   code: string | null;
 }
 
-export async function getDepartmentsCatalog(): Promise<
-  ApiResult<DepartmentCatalogItem[]>
-> {
-  return get<DepartmentCatalogItem[]>(`${BASE}/catalog`);
+export async function getDepartmentsCatalog(): Promise<DepartmentCatalogItem[]> {
+  return unwrapOrThrow(await get<DepartmentCatalogItem[]>(`${BASE}/catalog`));
+}
+
+export interface DepartmentLineItem {
+  id: number;
+  name: string;
+  code: string | null;
+}
+
+export async function getDepartmentLines(departmentId: number): Promise<DepartmentLineItem[]> {
+  return unwrapOrThrow(await get<DepartmentLineItem[]>(`${BASE}/${departmentId}/lines`));
 }

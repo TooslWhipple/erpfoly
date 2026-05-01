@@ -1,12 +1,8 @@
 import { useState, useMemo } from "react";
 import { styled } from "@mui/material/styles";
-import { Box, Chip, InputAdornment, TextField, Typography } from "@mui/material";
-import { Add as AddIcon, Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
+import { Chip, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import { colors } from "@/styles/theme";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { X as DeleteIcon, Plus, Search as SearchIcon } from "lucide-react";
 
 export interface SelectableItem {
     id: string | number;
@@ -14,37 +10,17 @@ export interface SelectableItem {
 }
 
 export interface MultiSelectChipsProps {
-    /** Label for the component */
     label?: string;
-    /** All available items */
     items: SelectableItem[];
-    /** Currently selected item IDs */
     selectedIds: (string | number)[];
-    /** Callback when selection changes */
     onChange: (selectedIds: (string | number)[]) => void;
-    /** Disable all interactions */
     disabled?: boolean;
-    /** Show error state */
     error?: boolean;
-    /** Helper text below component */
     helperText?: string;
-    /** Empty state text when no items are selected */
     emptyText?: string;
-    /** Show search input to filter available items */
     searchable?: boolean;
-    /** Placeholder for search input when searchable */
     searchPlaceholder?: string;
 }
-
-// ============================================================================
-// STYLED COMPONENTS
-// ============================================================================
-
-const Container = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-});
 
 const Label = styled(Typography)(({ theme }) => ({
     fontSize: "0.875rem",
@@ -53,45 +29,38 @@ const Label = styled(Typography)(({ theme }) => ({
     marginBottom: 4,
 }));
 
-const SelectedContainer = styled(Box)(({ theme }) => ({
+const SelectedContainer = styled('div')<{ disabled: boolean, error: boolean }>(({ disabled, error }) => ({
     display: "flex",
     flexWrap: "wrap",
-    gap: 8,
-    padding: theme.spacing(2),
+    gap: "8px",
+    padding: "16px",
     backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    minHeight: 56,
+    border: `1px solid ${(error) ? "error.main" : colors.border}`,
+    borderRadius: "8px",
+    minHeight: "56px",
+    opacity: disabled ? 0.6 : 1,
 }));
 
-const AvailableContainer = styled(Box)({
+const AvailableContainer = styled('div')({
     display: "flex",
     flexWrap: "wrap",
-    gap: 8,
+    gap: "8px",
 });
 
-const SearchField = styled(TextField)(({ theme }) => ({
+const SearchField = styled(TextField)({
     "& .MuiOutlinedInput-root": {
-        fontSize: "0.875rem",
-        backgroundColor: theme.palette.background.paper,
+        fontSize: "14px",
+        backgroundColor: colors.background.sidebar,
     },
-}));
+});
 
 const SelectedChip = styled(Chip)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 6,
-    fontSize: "0.875rem",
+    backgroundColor: '#E2E8F0',
+    borderRadius: '4px',
+    fontSize: "14px",
     fontWeight: 400,
     color: theme.palette.text.primary,
-    height: 32,
-    "& .MuiChip-deleteIcon": {
-        color: theme.palette.text.secondary,
-        fontSize: 16,
-        "&:hover": {
-            color: theme.palette.text.primary,
-        },
-    },
+    height: 36
 }));
 
 const AvailableChip = styled(Chip)(({ theme }) => ({
@@ -141,10 +110,6 @@ const EmptyText = styled(Typography)(({ theme }) => ({
     opacity: 0.7,
 }));
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function MultiSelectChips({
     label,
     items,
@@ -169,23 +134,22 @@ export function MultiSelectChips({
         );
     }, [items, selectedIds, searchable, searchValue]);
 
-    // Handle adding an item
     const handleAdd = (id: string | number) => {
         if (disabled) return;
         onChange([...selectedIds, id]);
     };
 
-    // Handle removing an item
     const handleRemove = (id: string | number) => {
         if (disabled) return;
         onChange(selectedIds.filter((selectedId) => selectedId !== id));
     };
 
     return (
-        <Container>
+        <Stack spacing={1}>
             {label && <Label>{label}</Label>}
 
-            {searchable && (
+            {
+                searchable &&
                 <SearchField
                     size="small"
                     fullWidth
@@ -202,53 +166,46 @@ export function MultiSelectChips({
                             ),
                         },
                     }}
-                    sx={{ mb: 0.5 }}
+                    style={{ marginBottom: "8px" }}
                 />
-            )}
+            }
 
-            {/* Selected items box */}
             <SelectedContainer
-                sx={{
-                    borderColor: error ? "error.main" : colors.border,
-                    opacity: disabled ? 0.6 : 1,
-                }}
-            >
-                {selectedItems.length === 0 ? (
-                    <EmptyText>{emptyText}</EmptyText>
-                ) : (
-                    selectedItems.map((item) => (
-                        <SelectedChip
-                            key={item.id}
-                            label={item.label}
-                            onDelete={disabled ? undefined : () => handleRemove(item.id)}
-                            deleteIcon={<CloseIcon />}
-                        />
-                    ))
-                )}
+                disabled={disabled}
+                error={error}>
+                {
+                    selectedItems.length === 0 ?
+                        <EmptyText>{emptyText}</EmptyText>
+                        :
+                        selectedItems.map((item) => (
+                            <SelectedChip
+                                key={item.id}
+                                label={item.label}
+                                onDelete={disabled ? undefined : () => handleRemove(item.id)}
+                                deleteIcon={<DeleteIcon size={16} />}
+                            />
+                        ))
+                }
             </SelectedContainer>
 
-            {/* Available items */}
-            {availableItems.length > 0 && (
+            {
+                availableItems.length > 0 &&
                 <AvailableContainer>
-                    {availableItems.map((item) => (
-                        <AvailableChip
-                            key={item.id}
-                            label={item.label}
-                            deleteIcon={<AddIcon />}
-                            onDelete={() => handleAdd(item.id)}
-                            disabled={disabled}
-                        />
-                    ))}
+                    {
+                        availableItems.map((item) => (
+                            <AvailableChip
+                                key={item.id}
+                                label={item.label}
+                                deleteIcon={<Plus size={16} />}
+                                onDelete={() => handleAdd(item.id)}
+                            />
+                        ))
+                    }
                 </AvailableContainer>
-            )}
+            }
 
-            {/* Helper text */}
-            {helperText &&
-                (error ? (
-                    <ErrorText>{helperText}</ErrorText>
-                ) : (
-                    <HelperText>{helperText}</HelperText>
-                ))}
-        </Container>
+            {helperText && (error) ? <ErrorText>{helperText}</ErrorText> : <HelperText>{helperText}</HelperText>
+            }
+        </Stack>
     );
 }

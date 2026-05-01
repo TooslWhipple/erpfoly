@@ -1,5 +1,4 @@
-import { FormControlLabel, Grid, RadioGroup, Typography, Radio, Stack, Divider, Box, Button } from "@mui/material";
-import { Remove, Add } from "@mui/icons-material";
+import { Grid, Typography, Stack, Divider, Button } from "@mui/material";
 import { FormTextField, FormSelect, Plus, Minus, RadioButton } from "@/components";
 import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";

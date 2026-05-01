@@ -24,6 +24,8 @@ export { Form, FormTextField, FormSelect } from "./Form";
 export type { FormProps, FormFieldConfig, FieldType, FieldValidation, SelectOption, FormTextFieldProps, FormSelectProps } from "./Form";
 export { RadioButton, RadioButtonGroup } from "./RadioButton";
 export type { RadioButtonProps } from "./RadioButton";
+export { Checkbox, CheckboxGroup } from "./Checkbox";
+export type { CheckboxProps } from "./Checkbox";
 export { ModalForm } from "./ModalForm";
 export type { ModalFormProps } from "./ModalForm";
 export { SideModal } from "./SideModal";

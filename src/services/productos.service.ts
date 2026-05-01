@@ -1,4 +1,4 @@
-import { get, patch, post, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
+import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
     CreateProductPackageItemPayload,
@@ -335,7 +335,7 @@ export interface ProductListItem {
     name: string;
     department: string;
     line: string;
-    supplier: string;
+    supplier: string | null;
 }
 export interface GetProductsQueryParams {
     page: number;
@@ -371,5 +371,13 @@ export async function getProductsCatalog(): Promise<
     ApiResult<ProductsCatalogData>
 > {
     return get<ProductsCatalogData>(`${PRODUCTS_BASE}/catalog`);
+}
+
+export async function getProductsByLineIds(lineIds: number[]): Promise<ProductListItem[]> {
+    return unwrapOrThrow(
+        await post<ProductListItem[]>(`${PRODUCTS_BASE}/by-lines`, {
+            line_ids: lineIds,
+        })
+    );
 }
 

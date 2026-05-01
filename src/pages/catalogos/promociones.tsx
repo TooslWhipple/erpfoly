@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import {
@@ -6,386 +6,226 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 import { MainLayout, Title, TableCrud, FilterMenu, TabFilters } from "@/components";
-import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import type { FilterOption } from "@/components/FilterMenu";
+import type { Column, RowAction } from "@/components/TableCrud";
+import type { PromotionListItem } from "@/types/promociones.types";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { formatDate } from "@/utils/date";
+import {
+  getPromotions,
+  deletePromotion,
+  getPromotionListFilters,
+} from "@/services/promociones.service";
 
+const SEARCH_DEBOUNCE_MS = 300;
+const FILTER_CATALOG_STALE_MS = 5 * 60 * 1000;
 
-export type PromotionType = "Crédito" | "Contado" | "Apartados";
-
-export interface Promotion {
-  id: number;
-  name: string;
-  margin: number;
-  type: PromotionType;
-  startDate: string;
-  endDate: string | null;
-  departments: string[] | "Todos";
-  groups: string[] | "Todos";
-  branches: string[] | "Todas";
+function extractNumericIds(selected: (string | number)[]): number[] {
+  return [...new Set(
+    selected
+      .filter((value) => value !== "all")
+      .map((value) => (typeof value === "number" ? value : parseInt(String(value), 10)))
+      .filter((value) => Number.isInteger(value) && value > 0),
+  )];
 }
-interface GetPromotionsParams {
-  page: number;
-  limit: number;
-  search?: string;
-  branchFilter?: (string | number)[];
-  departmentFilter?: (string | number)[];
-}
-interface GetPromotionsResponse {
-  data: Promotion[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-const DUMMY_PROMOTIONS: Promotion[] = [
-  {
-    id: 1,
-    name: "Crédito permanente",
-    margin: 5,
-    type: "Crédito",
-    startDate: "2025-09-01",
-    endDate: null,
-    departments: "Todos",
-    groups: "Todos",
-    branches: "Todas",
-  },
-  {
-    id: 2,
-    name: "Mes de línea blanca",
-    margin: 32,
-    type: "Crédito",
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-    departments: ["Línea blanca"],
-    groups: ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 5", "Grupo 6", "Grupo 7"],
-    branches: "Todas",
-  },
-  {
-    id: 3,
-    name: "Buen fin 2024",
-    margin: 25,
-    type: "Contado",
-    startDate: "2025-11-13",
-    endDate: "2025-11-17",
-    departments: "Todos",
-    groups: "Todos",
-    branches: "Todas",
-  },
-  {
-    id: 4,
-    name: "Black Friday 2024",
-    margin: 20,
-    type: "Crédito",
-    startDate: "2025-11-28",
-    endDate: "2025-11-28",
-    departments: "Todos",
-    groups: "Todos",
-    branches: "Todas",
-  },
-  {
-    id: 5,
-    name: "Día de las madres",
-    margin: 29,
-    type: "Contado",
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-    departments: ["Electrodomésticos", "Línea blanca", "Electrónica"],
-    groups: ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 5", "Grupo 6", "Grupo 7"],
-    branches: "Todas",
-  },
-  {
-    id: 6,
-    name: "Aniversario Foly",
-    margin: 29,
-    type: "Contado",
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-    departments: "Todos",
-    groups: ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 5", "Grupo 6", "Grupo 7"],
-    branches: "Todas",
-  },
-  {
-    id: 7,
-    name: "Día del padre",
-    margin: 29,
-    type: "Contado",
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-    departments: "Todos",
-    groups: ["Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 5", "Grupo 6", "Grupo 7"],
-    branches: "Todas",
-  },
-  {
-    id: 8,
-    name: "Temporada de calor",
-    margin: 29,
-    type: "Apartados",
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-    departments: ["Aire acondicionado"],
-    groups: ["Minisplits"],
-    branches: "Todas",
-  },
-];
-
-async function getPromotions(params: GetPromotionsParams): Promise<GetPromotionsResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  let filteredData = [...DUMMY_PROMOTIONS];
-
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter((p) =>
-      p.name.toLowerCase().includes(searchLower)
-    );
-  }
-
-  if (params.branchFilter && params.branchFilter.length > 0 && !params.branchFilter.includes("all")) {
-  }
-
-  if (params.departmentFilter && params.departmentFilter.length > 0 && !params.departmentFilter.includes("all")) {
-  }
-
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
-
-  return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
-  };
-}
-
-async function deletePromotion(id: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-}
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = date.toLocaleDateString("es-MX", { month: "short" });
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-const formatDepartments = (departments: string[] | "Todos"): string => {
-  if (departments === "Todos") return "Todos";
-  if (departments.length === 1) return departments[0];
-  return `${departments.length} dptos`;
-};
-
-const formatGroups = (groups: string[] | "Todos"): string => {
-  if (groups === "Todos") return "Todos";
-  if (groups.length === 1) return groups[0];
-  return `${groups.length} grupos`;
-};
-
-const formatBranches = (branches: string[] | "Todas"): string => {
-  if (branches === "Todas") return "Todas";
-  if (branches.length === 1) return branches[0];
-  return `${branches.length} sucursales`;
-};
-
-const BRANCH_OPTIONS: FilterOption[] = [
-  { id: "all", label: "Todas" },
-  { id: "matriz", label: "Matriz" },
-  { id: "campestre", label: "Campestre" },
-  { id: "estacion", label: "Estación" },
-  { id: "matamoros-pedro-cardenas", label: "Matamoros-Pedro Cárdenas" },
-  { id: "matamoros-plaza-patio", label: "Matamoros-Plaza Patio" },
-  { id: "matamoros-brisas", label: "Matamoros-Brisas" },
-  { id: "reynosa-av-hidalgo", label: "Reynosa-Av. Hidalgo" },
-];
-
-const DEPARTMENT_OPTIONS: FilterOption[] = [
-  { id: "all", label: "Todos" },
-  { id: "muebles", label: "Muebles" },
-  { id: "colchones", label: "Colchones" },
-  { id: "linea-infantil", label: "Línea Infantil" },
-  { id: "muebles-tubulares", label: "Muebles Tubulares" },
-  { id: "cocinetas", label: "Cocinetas" },
-  { id: "ventiladores-climas", label: "Ventiladores / Climas" },
-];
 
 export default function Promociones() {
   const router = useRouter();
 
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState("");
   const [selectedBranches, setSelectedBranches] = useState<(string | number)[]>(["all"]);
   const [selectedDepartments, setSelectedDepartments] = useState<(string | number)[]>(["all"]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
 
-  const fetchPromotions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getPromotions({
-        page,
-        limit: rowsPerPage,
-        search: searchValue || undefined,
-        branchFilter: selectedBranches.length > 0 ? selectedBranches : undefined,
-        departmentFilter: selectedDepartments.length > 0 ? selectedDepartments : undefined,
-      });
+  const listExtraParams = useMemo(() => {
+    const branchIds = extractNumericIds(selectedBranches);
+    const departmentIds = extractNumericIds(selectedDepartments);
+    return {
+      ...(branchIds.length > 0 ? { branchIds } : {}),
+      ...(departmentIds.length > 0 ? { departmentIds } : {}),
+    };
+  }, [selectedBranches, selectedDepartments]);
 
-      setPromotions(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error("[Promociones] Error fetching:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, searchValue, selectedBranches, selectedDepartments]);
+  const {
+    data: promotionRows,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage: handleRowsPerPageChange,
+    setSearch,
+    isLoading: loading,
+    refetch,
+  } = usePaginatedList<PromotionListItem>({
+    queryKey: ["promotions", "list"],
+    queryFn: getPromotions,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: listExtraParams,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS
+  );
 
   useEffect(() => {
-    fetchPromotions();
-  }, [fetchPromotions]);
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
   useEffect(() => {
     setPage(0);
-  }, [searchValue, selectedBranches, selectedDepartments]);
+  }, [listExtraParams, setPage]);
 
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-  };
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+    },
+    [setSearchInput]
+  );
 
-  const handleCreatePromotion = () => {
+  const { data: listFilters } = useQuery({
+    queryKey: ["promotions", "list-filters"],
+    queryFn: getPromotionListFilters,
+    staleTime: FILTER_CATALOG_STALE_MS,
+  });
+
+  const branchFilterOptions = listFilters?.branches ?? [];
+  const departmentFilterOptions = listFilters?.departments ?? [];
+
+  const handleCreatePromotion = useCallback(() => {
     router.push("/catalogos/promociones/nuevo");
-  };
+  }, [router]);
 
-  const handleViewDetails = (promotion: Promotion) => {
-    router.push(`/catalogos/promociones/${promotion.id}`);
-  };
+  const handleViewDetails = useCallback(
+    (promotion: PromotionListItem) => {
+      router.push(`/catalogos/promociones/${promotion.id}`);
+    },
+    [router]
+  );
 
-  const handleEditPromotion = (promotion: Promotion) => {
-    router.push(`/catalogos/promociones/${promotion.id}`);
-  };
+  const handleEditPromotion = useCallback(
+    (promotion: PromotionListItem) => {
+      router.push(`/catalogos/promociones/${promotion.id}`);
+    },
+    [router]
+  );
 
-  const handleDeletePromotion = async (promotion: Promotion) => {
-    if (window.confirm(`¿Estás seguro de eliminar la promoción "${promotion.name}"?`)) {
-      try {
-        await deletePromotion(promotion.id);
-        fetchPromotions();
-      } catch (err) {
-        console.error("[Promociones] Error deleting:", err);
-        alert("Error al eliminar la promoción");
+  const handleDeletePromotion = useCallback(
+    async (promotion: PromotionListItem) => {
+      if (
+        !window.confirm(`¿Estás seguro de eliminar la promoción "${promotion.name}"?`)
+      ) {
+        return;
       }
-    }
-  };
+      const result = await deletePromotion(promotion.id);
+      if (!result.error) {
+        void refetch();
+      }
+    },
+    [refetch]
+  );
 
-  const handleBranchFilterChange = (selectedIds: (string | number)[]) => {
+  const handleBranchFilterChange = useCallback((selectedIds: (string | number)[]) => {
     setSelectedBranches(selectedIds);
-  };
+  }, []);
 
-  const handleDepartmentFilterChange = (selectedIds: (string | number)[]) => {
+  const handleDepartmentFilterChange = useCallback((selectedIds: (string | number)[]) => {
     setSelectedDepartments(selectedIds);
-  };
+  }, []);
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPage(newPage);
+    },
+    [setPage]
+  );
 
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-  };
-
-  const columns: Column<Promotion>[] = [
-    {
-      id: "id",
-      label: "ID",
-      type: "id",
-      size: "sm",
-      maxSize: "xs",
-      idPadding: 2,
-    },
-    {
-      id: "name",
-      label: "Nombre",
-      size: "xl",
-    },
-    {
-      id: "margin",
-      label: "Margen",
-      type: "percentage",
-      size: "sm",
-      align: "left",
-    },
-    {
-      id: "type",
-      label: "Tipo",
-      size: "md",
-      type: "chip",
-      chipLabelMap: { Crédito: "Crédito", Contado: "Contado", Apartados: "Apartados" },
-      chipVariantMap: {
-        Crédito: "default",
-        Contado: "success",
-        Apartados: "warning",
-      } as Record<string, StatusChipVariant>,
-    },
-    {
-      id: "startDate",
-      label: "Inicio",
-      type: "date",
-      size: "md",
-      format: (value) => formatDate(String(value)),
-    },
-    {
-      id: "endDate",
-      label: "Fin",
-      size: "md",
-      format: (value, row) => {
-        if (!value || value === "null") return "Sin fecha fin";
-        return formatDate(String(value));
+  const columns = useMemo<Column<PromotionListItem>[]>(
+    () => [
+      {
+        id: "id",
+        label: "ID",
+        type: "id",
+        size: "sm",
+        maxSize: "xs",
+        idPadding: 2,
       },
-    },
-    {
-      id: "departments",
-      label: "Departamentos",
-      size: "lg",
-      format: (value) => formatDepartments(value as string[] | "Todos"),
-    },
-    {
-      id: "groups",
-      label: "Grupos",
-      size: "lg",
-      format: (value) => formatGroups(value as string[] | "Todos"),
-    },
-    {
-      id: "branches",
-      label: "Sucursales",
-      size: "lg",
-      format: (value) => formatBranches(value as string[] | "Todas"),
-    },
-  ];
+      {
+        id: "name",
+        label: "Nombre",
+        size: "xl",
+      },
+      {
+        id: "discount_rate",
+        label: "Margen",
+        type: "percentage",
+        size: "sm",
+        align: "left",
+      },
+      {
+        id: "purchase_type_label",
+        label: "Tipo",
+        size: "md",
+        type: "text",
+      },
+      {
+        id: "start_date",
+        label: "Inicio",
+        type: "text",
+        size: "md",
+        format: (value) => formatDate(String(value), "dateNumeric"),
+      },
+      {
+        id: "end_date",
+        label: "Fin",
+        type: "text",
+        size: "md",
+        format: (value) =>
+          formatDate(value as string | null | undefined, "dateNumeric", {
+            fallback: "Sin fecha fin",
+          }),
+      },
+      {
+        id: "department_summary",
+        label: "Departamentos",
+        size: "lg",
+      },
+      {
+        id: "branch_summary",
+        label: "Sucursales",
+        size: "lg",
+      },
+    ],
+    []
+  );
 
-  const actions: RowAction<Promotion>[] = [
-    {
-      id: "view",
-      label: "Ver detalles",
-      icon: <VisibilityIcon fontSize="small" />,
-      onClick: handleViewDetails,
-    },
-    {
-      id: "edit",
-      label: "Editar",
-      icon: <EditIcon fontSize="small" />,
-      onClick: handleEditPromotion,
-    },
-    {
-      id: "delete",
-      label: "Eliminar",
-      icon: <DeleteIcon fontSize="small" />,
-      onClick: handleDeletePromotion,
-      color: "error",
-    },
-  ];
+  const actions = useMemo<RowAction<PromotionListItem>[]>(
+    () => [
+      {
+        id: "view",
+        label: "Ver detalles",
+        icon: <VisibilityIcon fontSize="small" />,
+        onClick: handleViewDetails,
+      },
+      {
+        id: "edit",
+        label: "Editar",
+        icon: <EditIcon fontSize="small" />,
+        onClick: handleEditPromotion,
+      },
+      {
+        id: "delete",
+        label: "Eliminar",
+        icon: <DeleteIcon fontSize="small" />,
+        onClick: handleDeletePromotion,
+        color: "error",
+      },
+    ],
+    [handleViewDetails, handleEditPromotion, handleDeletePromotion]
+  );
 
   return (
     <MainLayout>
@@ -396,7 +236,7 @@ export default function Promociones() {
             <FilterMenu
               label="sucursales"
               title="Sucursales"
-              options={BRANCH_OPTIONS.filter((opt) => opt.id !== "all")}
+              options={branchFilterOptions}
               selectedIds={selectedBranches}
               onChange={handleBranchFilterChange}
               allOptionId="all"
@@ -405,7 +245,7 @@ export default function Promociones() {
             <FilterMenu
               label="departamentos"
               title="Departamentos"
-              options={DEPARTMENT_OPTIONS.filter((opt) => opt.id !== "all")}
+              options={departmentFilterOptions}
               selectedIds={selectedDepartments}
               onChange={handleDepartmentFilterChange}
               allOptionId="all"
@@ -414,16 +254,16 @@ export default function Promociones() {
           </Stack>
           <TabFilters
             tabs={[]}
-            activeTab={''}
-            onTabChange={() => { }}
+            activeTab=""
+            onTabChange={() => {}}
             showSearch
-            searchValue={searchValue}
+            searchValue={searchInput}
             onSearchChange={handleSearchChange}
-            searchPlaceholder="Buscar"
+            searchPlaceholder="Buscar por nombre"
             actions={[
               {
                 label: "Nuevo",
-                onClick: handleCreatePromotion
+                onClick: handleCreatePromotion,
               },
             ]}
           />
@@ -431,7 +271,7 @@ export default function Promociones() {
 
         <TableCrud
           columns={columns}
-          rows={promotions}
+          rows={promotionRows}
           actions={actions}
           loading={loading}
           rowKey="id"

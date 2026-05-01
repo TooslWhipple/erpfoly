@@ -1,4 +1,15 @@
-import { get, post, patch, unwrapOrThrow, type ApiResult } from "@/lib/axios";
+import {
+	get,
+	post,
+	patch,
+	del,
+	unwrapOrThrow,
+	type ApiResult,
+	type ApiSuccessPayload,
+	type PaginatedRowsResponse,
+} from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
+import type { PromotionListItem } from "@/types/promociones.types";
 
 const BASE = "/promotions";
 
@@ -174,4 +185,61 @@ export async function updatePromotion(
 	payload: SavePromotionPayload
 ): Promise<ApiResult<PromotionDetail>> {
 	return patch<PromotionDetail>(`${BASE}/${id}`, payload);
+}
+
+export interface GetPromotionsParams {
+	page: number;
+	limit: number;
+	search?: string;
+	branchIds?: number[];
+	departmentIds?: number[];
+	[key: string]: unknown;
+}
+
+function serializeListParams(
+	params: GetPromotionsParams
+): Record<string, string | number | boolean | undefined> {
+	const branchIds =
+		params.branchIds && params.branchIds.length > 0
+			? params.branchIds.join(",")
+			: undefined;
+	const departmentIds =
+		params.departmentIds && params.departmentIds.length > 0
+			? params.departmentIds.join(",")
+			: undefined;
+	return {
+		page: params.page,
+		limit: params.limit,
+		search: params.search,
+		branchIds,
+		departmentIds,
+	};
+}
+
+export async function getPromotions(
+	params: GetPromotionsParams
+): Promise<ApiResult<PaginatedRowsResponse<PromotionListItem>>> {
+	return get<PaginatedRowsResponse<PromotionListItem>>(
+		buildListUrl(BASE, serializeListParams(params))
+	);
+}
+
+export interface PromotionListFilterOption {
+	id: number;
+	label: string;
+}
+
+export interface PromotionListFilters {
+	branches: PromotionListFilterOption[];
+	departments: PromotionListFilterOption[];
+}
+
+export async function getPromotionListFilters(): Promise<PromotionListFilters> {
+	return unwrapOrThrow(await get<PromotionListFilters>(`${BASE}/list-filters`));
+}
+
+export async function deletePromotion(
+	id: number
+): Promise<ApiResult<ApiSuccessPayload>> {
+	return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }

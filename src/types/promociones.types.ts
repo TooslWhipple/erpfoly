@@ -1,3 +1,15 @@
+export interface PromotionListItem {
+  id: number;
+  name: string;
+  discount_rate: number;
+  start_date: string;
+  end_date: string | null;
+  purchase_type_code: string;
+  purchase_type_label: string;
+  department_summary: string;
+  branch_summary: string;
+}
+
 export interface PromotionSupplier {
   id: number;
   supplierId: number;

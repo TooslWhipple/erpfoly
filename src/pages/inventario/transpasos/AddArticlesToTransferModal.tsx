@@ -17,7 +17,7 @@ import { SideModal } from "@/components/SideModal";
 import { StatusChip } from "@/components/StatusChip";
 import type { TransferArticleOption } from "@/types/transpasos.types";
 import { getAvailableArticlesToAddToTransfer } from "@/data/transpasos.mockData";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import {
   SearchInput,
   TableContainer,
@@ -156,7 +156,7 @@ export function AddArticlesToTransferModal({
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Search size={20} color={colors.text.secondary} />
+              <Search size={20} color={theme.palette.text.secondary} />
             </InputAdornment>
           ),
         }}

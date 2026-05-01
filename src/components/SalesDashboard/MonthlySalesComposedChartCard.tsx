@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import numeral from "numeral";
 import { Card, ChartWrapper } from "@/styles/catalogos/goals.styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { MonthlySalesPoint } from "@/types/sucursales.types";
 import { SalesDashboardChartTooltip } from "./SalesDashboardChartTooltip";
 
@@ -38,12 +38,12 @@ export function MonthlySalesComposedChartCard({
         <ChartWrapper>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barCategoryGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.app.border} />
               <XAxis
                 dataKey="month"
                 tickLine={false}
-                axisLine={{ stroke: colors.border }}
-                tick={{ fontSize: 12, fill: colors.text.secondary }}
+                axisLine={{ stroke: theme.palette.app.border }}
+                tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
               />
               <YAxis
                 tick={{ fontSize: 12 }}

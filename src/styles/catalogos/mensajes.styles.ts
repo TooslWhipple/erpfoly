@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, TextField, Chip } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const MessageFormContainer = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -25,30 +25,30 @@ export const MessageFormTopRow = styled(Box)(({ theme }) => ({
 export const MessageNameInput = styled(TextField)(() => ({
   flex: 1,
   "& .MuiOutlinedInput-root": {
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     "& fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&:hover fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&.Mui-focused fieldset": {
-      borderColor: colors.sidebar.textSelected,
+      borderColor: theme.palette.app.sidebar.textSelected,
     },
   },
 }));
 
 export const ContentTextarea = styled(TextField)(({ theme }) => ({
   "& .MuiOutlinedInput-root": {
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     "& fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&:hover fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&.Mui-focused fieldset": {
-      borderColor: colors.sidebar.textSelected,
+      borderColor: theme.palette.app.sidebar.textSelected,
     },
   },
   "& .MuiInputBase-input": {

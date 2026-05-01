@@ -39,7 +39,7 @@ import {
   MapPlaceholder,
   TotalCard
 } from "@/styles/solicitudes-descuento/nuevo.styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 const MOCK_CLIENT: ClientSummary = {
   id: "1",
@@ -304,12 +304,12 @@ export default function NuevaSolicitudDescuentoPage() {
                   size="small"
                   sx={{
                     "& .MuiToggleButtonGroup-grouped": {
-                      border: `1px solid ${colors.border}`,
+                      border: `1px solid ${theme.palette.app.border}`,
                       "&.Mui-selected": {
-                        backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
-                        color: colors.sidebar?.textSelected ?? "#2663EB",
+                        backgroundColor: theme.palette.app.sidebar.itemSelected,
+                        color: theme.palette.app.sidebar.textSelected,
                         "&:hover": {
-                          backgroundColor: colors.sidebar?.itemSelected ?? "#F0F6FF",
+                          backgroundColor: theme.palette.app.sidebar.itemSelected,
                         },
                       },
                     },

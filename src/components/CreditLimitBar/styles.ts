@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, LinearProgress } from "@mui/material";
-import { colors } from "@/styles/theme";
 
 export const CreditLimitBarRoot = styled(Box)(({ theme }) => ({
   display: "flex",

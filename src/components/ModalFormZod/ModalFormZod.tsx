@@ -1,16 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Button, CircularProgress } from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import { SideModal } from "@/components/SideModal";
 import { useFormFromFields } from "@/forms";
 import type { FormFieldDefinition, SchemaOutputFromFields, SchemaInputFromFields } from "@/forms";
-import { styled } from "@mui/material/styles";
-
-const SubmitButton = styled(Button)(({ theme }) => ({
-    minWidth: 120,
-    borderRadius: theme.shape.borderRadius,
-}));
+import { SubmitButton } from "./ModalFormZod.styles";
 
 type FieldDef = FormFieldDefinition<string, import("zod").ZodTypeAny>;
 

@@ -1,8 +1,13 @@
 import { useRouter } from "next/router";
-import { styled } from "@mui/material/styles";
-import { Box, Typography, IconButton } from "@mui/material";
+import { Box } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-import { colors } from "@/styles/theme";
+import {
+    BackButton,
+    BreadcrumbCurrent,
+    BreadcrumbLink,
+    Container,
+    Separator,
+} from "./Breadcrumbs.styles";
 
 export interface BreadcrumbItem {
     label: string;
@@ -14,56 +19,6 @@ export interface BreadcrumbsProps {
     showBackButton?: boolean;
     onBack?: () => void;
 }
-
-const Container = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-});
-
-const BackButton = styled(IconButton)(({ theme }) => ({
-    width: 36,
-    height: 36,
-    marginRight: theme.spacing(1),
-    padding: 0,
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    color: colors.text.primary,
-    boxShadow: "none",
-    "&:hover": {
-        backgroundColor: colors.background.sidebar,
-        borderColor: colors.border,
-        boxShadow: "none",
-        opacity: 0.9,
-    },
-    "& .MuiSvgIcon-root": {
-        fontSize: 20,
-    },
-}));
-
-const BreadcrumbLink = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    cursor: "pointer",
-    transition: "color 0.15s ease",
-    "&:hover": {
-        color: theme.palette.text.primary,
-    },
-}));
-
-const BreadcrumbCurrent = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.primary,
-    fontWeight: 500,
-}));
-
-const Separator = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.disabled,
-    margin: "0 8px",
-    userSelect: "none",
-}));
 
 export function Breadcrumbs({
     items,

@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, Button, IconButton } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // MAIN CONTAINER
@@ -10,7 +10,7 @@ export const SummaryContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     padding: theme.spacing(2.5),
 }));
 
@@ -50,7 +50,7 @@ export const ItemsList = styled(Box)(({ theme }) => ({
 export const ItemCard = styled(Box)(({ theme }) => ({
     position: "relative",
     borderRadius: 8,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(1),
 }));
 
@@ -81,7 +81,7 @@ export const QuantityControls = styled(Box)(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 6,
     overflow: "hidden",
 }));
@@ -92,7 +92,7 @@ export const QuantityButton = styled(IconButton)(({ theme }) => ({
     minWidth: 32,
     height: 32,
     "&:hover": {
-        backgroundColor: colors.background.sidebar,
+        backgroundColor: theme.palette.background.paper,
     },
 }));
 
@@ -103,7 +103,7 @@ export const RemoveButton = styled(IconButton)(({ theme }) => ({
     padding: theme.spacing(0.5),
     color: theme.palette.text.secondary,
     "&:hover": {
-        backgroundColor: colors.background.sidebar,
+        backgroundColor: theme.palette.background.paper,
         color: theme.palette.error.main,
     },
 }));
@@ -113,7 +113,7 @@ export const RemoveButton = styled(IconButton)(({ theme }) => ({
 
 export const SummaryFooter = styled(Box)(({ theme }) => ({
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
 }));
 
 // ContinueButton uses Button with fullWidth prop and variant="continue" from theme

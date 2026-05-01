@@ -1,28 +1,28 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const RouteDetailPanel = styled("div")(({ theme }) => ({
   flex: 1,
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   overflow: "hidden",
 }));
 
 export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selected }) => ({
   display: "flex",
-  backgroundColor: colors.background.sidebar,
-  border: (selected) ? `2px solid ${theme.palette.primary.main}` : `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: (selected) ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
   gap: "12px",
   padding: "12px",
   cursor: "pointer",
   transition: "border-color 0.2s, background-color 0.2s",
   "&:hover": {
-    borderColor: selected ? theme.palette.primary.main : colors.text.secondary,
+    borderColor: selected ? theme.palette.primary.main : theme.palette.text.secondary,
   },
   ...(selected && {
     backgroundColor: `${theme.palette.primary.main}08`,
@@ -51,9 +51,9 @@ export const DetailHeader = styled("div")({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   padding: "16px 24px",
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
 });
 
@@ -73,8 +73,8 @@ export const PersonRow = styled("div")(({ theme }) => ({
   justifyContent: "space-between",
   padding: "12px",
   borderRadius: "12px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`
 }));
 
 export const IconContainer = styled("div")(({ theme }) => ({

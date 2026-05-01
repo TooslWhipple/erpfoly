@@ -1,5 +1,4 @@
 import { styled, darken } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
 
 export const DropZoneRoot = styled("div")<{ isDragActive: boolean; isError?: boolean }>(
   ({ theme, isDragActive, isError }) => ({
@@ -21,7 +20,7 @@ export const FileListContainer = styled("div")(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
-export const FileIconContainer = styled("div")(({ theme }) => ({
+export const FileIconContainer = styled("div")({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -33,7 +32,7 @@ export const FileIconContainer = styled("div")(({ theme }) => ({
   '& svg': {
     stroke: '#2563EB'
   }
-}));
+});
 
 export const FileItemRow = styled("div")(({ theme }) => ({
   display: "flex",
@@ -42,7 +41,7 @@ export const FileItemRow = styled("div")(({ theme }) => ({
   alignItems: "center",
   gap: "12px",
   padding: "12px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px"
 }));

@@ -1,14 +1,14 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const SuggestionCardContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     padding: theme.spacing(2),
     borderRadius: 8,
-    border: `1px solid ${colors.border}`,
-    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${theme.palette.app.border}`,
+    backgroundColor: theme.palette.background.paper,
     minWidth: 240,
     maxWidth: 280,
 }));
@@ -17,8 +17,8 @@ export const ProductImage = styled(Box)(({ theme }) => ({
     width: 48,
     height: 48,
     borderRadius: 6,
-    backgroundColor: colors.background.main,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.app.border}`,
     flexShrink: 0,
 }));
 

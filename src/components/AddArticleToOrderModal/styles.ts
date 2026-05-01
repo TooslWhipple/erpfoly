@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // MAIN CONTAINER
@@ -27,8 +27,8 @@ export const ProductImage = styled(Box)({
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: colors.background.main,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.app.border}`,
     flexShrink: 0,
 });
 

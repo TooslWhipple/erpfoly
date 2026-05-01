@@ -23,7 +23,6 @@ import { FormActions, ConfirmButton } from "@/components/Form/styles";
 import { FormTextField, FormSelect } from "@/components/Form";
 import type { SelectOption } from "@/components/Form";
 import { TabsWrapper, StyledTabs, StyledTab } from "@/components/TabFilters/styles";
-import { colors } from "@/styles/theme";
 
 // ============================================================================
 // TYPES
@@ -220,7 +219,7 @@ export function AddDamagedGoodsModal({
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <Search size={18} color={colors.text.secondary} />
+                                        <Search size={18} color={theme.palette.text.secondary} />
                                     </InputAdornment>
                                 ),
                             }}
@@ -303,7 +302,7 @@ export function AddDamagedGoodsModal({
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
+                                                <Search size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -315,7 +314,7 @@ export function AddDamagedGoodsModal({
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Calendar size={18} color={colors.text.secondary} />
+                                                <Calendar size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -364,7 +363,7 @@ export function AddDamagedGoodsModal({
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
+                                                <Search size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -377,7 +376,7 @@ export function AddDamagedGoodsModal({
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
+                                                <Search size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -397,7 +396,7 @@ export function AddDamagedGoodsModal({
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Calendar size={18} color={colors.text.secondary} />
+                                                <Calendar size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}

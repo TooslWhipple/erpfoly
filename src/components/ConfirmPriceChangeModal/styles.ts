@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
-import { colors } from "@/styles/theme";
 
 export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -49,8 +48,8 @@ export const ProductCard = styled(Box)(({ theme }) => ({
   gap: theme.spacing(2),
   padding: theme.spacing(2),
   borderRadius: 12,
-  border: `1px solid ${colors.border}`,
-  backgroundColor: colors.background.sidebar,
+  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: theme.palette.background.paper,
   marginBottom: theme.spacing(3),
 }));
 

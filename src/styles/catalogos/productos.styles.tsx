@@ -1,13 +1,13 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
 import { Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer, Switch } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
     padding: "24px",
     gap: "24px",
@@ -16,7 +16,7 @@ export const FormCard = styled('div')(({ theme }) => ({
 export const Card = styled('div')<{ backgroundColor?: string }>(({ backgroundColor }) => ({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: backgroundColor ?? colors.background.sidebar,
+    backgroundColor: backgroundColor ?? theme.palette.background.paper,
     borderRadius: "16px",
     padding: "16px",
     gap: "12px"
@@ -37,7 +37,7 @@ export const LuquidationCard = styled('div')<{ checked: boolean }>(({ checked })
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: checked ? "#FEE2E2" : colors.background.sidebar,
+    backgroundColor: checked ? "#FEE2E2" : theme.palette.background.paper,
     borderRadius: "8px",
     padding: "8px 12px",
     gap: "16px",
@@ -99,8 +99,8 @@ const RadioOptionIcon = styled('div')<{ selected?: boolean }>(({ theme, selected
     width: 20,
     height: 20,
     borderRadius: "50%",
-    border: `2px solid ${selected ? colors.sidebar.textSelected : theme.palette.text.primary}`,
-    backgroundColor: selected ? colors.sidebar.textSelected : "transparent",
+    border: `2px solid ${selected ? theme.palette.app.sidebar.textSelected : theme.palette.text.primary}`,
+    backgroundColor: selected ? theme.palette.app.sidebar.textSelected : "transparent",
     position: "relative",
     flexShrink: 0,
     ...(selected && {
@@ -110,7 +110,7 @@ const RadioOptionIcon = styled('div')<{ selected?: boolean }>(({ theme, selected
             width: 8,
             height: 8,
             borderRadius: "50%",
-            backgroundColor: colors.background.sidebar,
+            backgroundColor: theme.palette.background.paper,
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
@@ -123,9 +123,9 @@ const StyledRadioOptionButton = styled(Button)<{ selected?: boolean }>(({ theme,
     alignItems: "center",
     padding: "12px",
     borderRadius: "12px",
-    border: `1px solid ${(selected) ? colors.sidebar.itemSelected : "#E2E8F0"}`,
-    backgroundColor: (selected) ? colors.sidebar.itemSelected : "transparent",
-    color: (selected) ? colors.sidebar.textSelected : "#09090B",
+    border: `1px solid ${(selected) ? theme.palette.app.sidebar.itemSelected : "#E2E8F0"}`,
+    backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : "transparent",
+    color: (selected) ? theme.palette.app.sidebar.textSelected : "#09090B",
     fontSize: "14px",
     fontWeight: (selected) ? 500 : 400,
     textTransform: "none",
@@ -180,14 +180,14 @@ export const GalleryItem = styled('div')(({ theme }) => ({
     aspectRatio: "1",
     borderRadius: "8px",
     overflow: "hidden",
-    border: `1px solid ${colors.border}`,
-    backgroundColor: colors.background.sidebar,
+    border: `1px solid ${theme.palette.app.border}`,
+    backgroundColor: theme.palette.background.paper,
     cursor: "pointer",
     padding: "12px",
     "&:hover": {
-        borderColor: colors.sidebar.textSelected,
+        borderColor: theme.palette.app.sidebar.textSelected,
         "& > div": {
-            border: `1px dashed ${colors.sidebar.textSelected}`,
+            border: `1px dashed ${theme.palette.app.sidebar.textSelected}`,
         },
         "& > div[data-gallery-overlay]": {
             opacity: 1,
@@ -237,8 +237,8 @@ export const GalleryIconButton = styled('div')(({ theme }) => ({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -250,7 +250,7 @@ export const GalleryIconButton = styled('div')(({ theme }) => ({
     },
     "&:hover": {
         backgroundColor: theme.palette.action.hover,
-        borderColor: colors.sidebar.textSelected,
+        borderColor: theme.palette.app.sidebar.textSelected,
     },
 }));
 
@@ -269,8 +269,8 @@ export const BranchItem = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(2),
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     gap: theme.spacing(2),
     boxShadow: "none",
@@ -311,7 +311,7 @@ export const InventoryButton = styled(IconButton)(({ theme }) => ({
     width: 32,
     height: 32,
     padding: 0,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     "&:hover": {
         backgroundColor: theme.palette.action.hover,
     },
@@ -324,7 +324,7 @@ export const EmptyStateContainer = styled('div')({
     justifyContent: "center",
     padding: "24px",
     minHeight: "72px",
-    backgroundColor: colors.background.content,
+    backgroundColor: theme.palette.background.content,
     borderRadius: "16px",
     textAlign: "center",
 });
@@ -335,8 +335,8 @@ export const PackageRowCard = styled('div')({
     alignItems: "center",
     gap: "12px",
     padding: "16px",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "12px",
 });
 
@@ -361,8 +361,8 @@ export const PackageStatusBadge = styled('div')(({ theme }) => ({
     maxWidth: "100%",
     padding: theme.spacing(0.75, 2),
     borderRadius: 999,
-    backgroundColor: colors.chip.background,
-    border: `1px solid ${colors.chip.border}`,
+    backgroundColor: theme.palette.app.chip.background,
+    border: `1px solid ${theme.palette.app.chip.border}`,
 }));
 
 export const PackageDeleteButton = styled(IconButton)(({ theme }) => ({
@@ -370,7 +370,7 @@ export const PackageDeleteButton = styled(IconButton)(({ theme }) => ({
     padding: "0px",
     width: "24px",
     height: "24px",
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     color: theme.palette.text.secondary,
     transition: "all 0.2s ease",
     "&:hover": {
@@ -389,8 +389,8 @@ export const EmptyStateText = styled(Typography)(({ theme }) => ({
 export const CostHistoryTimeline = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
     padding: "24px",
     position: "relative",
@@ -403,7 +403,7 @@ export const TimelineLine = styled('div')(({ theme }) => ({
     top: 34,
     bottom: 48,
     width: 1,
-    backgroundColor: colors.border,
+    backgroundColor: theme.palette.app.border,
 }));
 
 export const TimelineItem = styled('div')(({ theme }) => ({
@@ -417,12 +417,12 @@ export const TimelineDot = styled('div')(({ theme }) => ({
     width: "11px",
     height: "11px",
     borderRadius: "50%",
-    backgroundColor: colors.border,
+    backgroundColor: theme.palette.app.border,
 }));
 
 export const SupplierTableContainer = styled(TableContainer)(({ theme }) => ({
     flex: 1,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     marginBottom: theme.spacing(2),
     overflow: "auto",
@@ -432,11 +432,11 @@ export const SupplierTableContainer = styled(TableContainer)(({ theme }) => ({
 }));
 
 export const SupplierTableHeader = styled(TableCell)(({ theme }) => ({
-    backgroundColor: colors.background.main,
+    backgroundColor: theme.palette.background.default,
     fontSize: "0.875rem",
     fontWeight: 600,
     color: theme.palette.text.primary,
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(1.5, 2),
 }));
 
@@ -453,7 +453,7 @@ export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
     fontSize: "0.875rem",
     color: theme.palette.text.primary,
     padding: theme.spacing(1.5, 2),
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
 }));
 
 /** Assigned suppliers list (product form) — column headers */
@@ -462,15 +462,15 @@ export const SupplierAssignedHeaderCell = styled(TableCell)(({ theme }) => ({
     fontWeight: 500,
     color: theme.palette.text.secondary,
     padding: theme.spacing(1.25, 2),
-    borderBottom: `1px solid ${colors.border}`,
-    backgroundColor: colors.background.sidebar,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
+    backgroundColor: theme.palette.background.paper,
 }));
 
 export const SupplierAssignedBodyCell = styled(TableCell)(({ theme }) => ({
     fontSize: "0.875rem",
     color: theme.palette.text.primary,
     padding: theme.spacing(1.5, 2),
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
     verticalAlign: "middle",
 }));
 
@@ -488,18 +488,18 @@ export const SupplierPrimaryBadge = styled('div')(({ theme }) => ({
     fontSize: "0.75rem",
     fontWeight: 600,
     lineHeight: 1.2,
-    backgroundColor: colors.chip.variants.infoAlt.background,
-    color: colors.chip.variants.infoAlt.color,
+    backgroundColor: theme.palette.app.chip.variants.infoAlt.background,
+    color: theme.palette.app.chip.variants.infoAlt.color,
 }));
 
 export const SupplierRemoveIconButton = styled(IconButton)(({ theme }) => ({
     width: 36,
     height: 36,
     padding: 0,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "50%",
     color: theme.palette.text.secondary,
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     "&:hover": {
         backgroundColor: theme.palette.action.hover,
         color: theme.palette.error.main,

@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { TextField, Button, Box } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // MAIN CONTAINER
@@ -20,12 +20,12 @@ export const SupplierModalContainer = styled(Box)(({ theme }) => ({
 export const SearchInput = styled(TextField)(({ theme }) => ({
     "& .MuiOutlinedInput-root": {
         borderRadius: 8,
-        backgroundColor: colors.background.sidebar,
+        backgroundColor: theme.palette.background.paper,
         "& fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&:hover fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&.Mui-focused fieldset": {
             borderColor: theme.palette.primary.main,
@@ -42,8 +42,8 @@ export const SuppliersList = styled(Box)(({ theme }) => ({
     flexDirection: "column",
     overflowY: "auto",
     maxHeight: 400,
-    backgroundColor: colors.background.main,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
 }));
 
@@ -52,7 +52,7 @@ export const SupplierRow = styled(Box)<{ index: number }>(({ theme, index }) => 
     justifyContent: "space-between",
     alignItems: "center",
     padding: theme.spacing(2),
-    borderTop: (index === 0) ? `none` : `1px solid ${colors.border}`,
+    borderTop: (index === 0) ? `none` : `1px solid ${theme.palette.app.border}`,
 }));
 
 export const SupplierId = styled(Box)(({ theme }) => ({

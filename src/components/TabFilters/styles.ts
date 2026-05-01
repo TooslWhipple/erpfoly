@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Tab, Tabs } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 
 export const TabsWrapper = styled('div')(({ theme }) => ({
@@ -8,7 +8,7 @@ export const TabsWrapper = styled('div')(({ theme }) => ({
   justifyContent: 'flex-start',
   alignItems: 'center',
   height: 36,
-  backgroundColor: colors.segmentControl.background,
+  backgroundColor: theme.palette.app.segmentControl.background,
   borderRadius: 10,
   padding: "0 4px",
   overflow: "auto",
@@ -58,14 +58,14 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
   fontSize: 14,
   lineHeight: 20,
   fontWeight: 400,
-  color: colors.segmentControl.textInactive,
+  color: theme.palette.app.segmentControl.textInactive,
   whiteSpace: "nowrap",
   minWidth: "auto",
   borderRadius: 8,
   transition: "background-color 0.2s ease, color 0.2s ease, font-weight 0.2s ease, box-shadow 0.2s ease",
   "&.Mui-selected": {
-    backgroundColor: colors.background.sidebar,
-    color: colors.text.primary,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
     fontWeight: 600,
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
   },

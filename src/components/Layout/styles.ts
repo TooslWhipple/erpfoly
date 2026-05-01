@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Box, IconButton } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
-import { CONTENT_PADDING, colors } from "@/styles/theme";
+import { CONTENT_PADDING, theme } from "@/styles/theme";
 
 export const LayoutContainer = styled(Box)({
   display: "flex",
@@ -22,7 +22,7 @@ export const ContentWrapper = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   padding: CONTENT_PADDING,
-  backgroundColor: colors.background.main,
+  backgroundColor: theme.palette.background.default,
   position: "relative",
   overflow: "auto",
   [theme.breakpoints.down("md")]: {
@@ -41,12 +41,12 @@ export const MobileMenuButton = styled(IconButton)(({ theme }) => ({
   top: 16,
   width: 40,
   height: 40,
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   zIndex: 10,
   "&:hover": {
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
   },
   [theme.breakpoints.down("sm")]: {
     left: 12,

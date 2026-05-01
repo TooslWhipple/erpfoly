@@ -2,7 +2,6 @@
 
 import { useMemo, useCallback } from "react";
 import { Box } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import type { z } from "zod";
 import { useFormWithZod } from "./useFormWithZod";
 import { buildSchema } from "../fields";
@@ -12,12 +11,7 @@ import type {
     SchemaInputFromFields,
 } from "../fields";
 import { FormField } from "../components/FormField";
-
-const FormBody = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-}));
+import { FormBody } from "./useFormFromFields.styles";
 
 type FieldDef = FormFieldDefinition<string, z.ZodTypeAny>;
 

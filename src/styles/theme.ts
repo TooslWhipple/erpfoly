@@ -3,7 +3,48 @@ import { createTheme } from "@mui/material/styles";
 export const SIDEBAR_WIDTH = 240;
 export const CONTENT_PADDING = 32;
 
-export const colors = {
+/** Tokens de aplicación (sidebar, chips, bordes). Expuesto en theme.palette.app */
+export interface AppPalette {
+  background: {
+    main: string;
+    sidebar: string;
+    content: string;
+  };
+  border: string;
+  text: {
+    primary: string;
+    secondary: string;
+  };
+  sidebar: {
+    itemSelected: string;
+    textSelected: string;
+  };
+  chip: {
+    background: string;
+    border: string;
+    text: string;
+    variants: {
+      default: { background: string; color: string };
+      success: { background: string; color: string };
+      pending: { background: string; color: string };
+      error: { background: string; color: string };
+      warning: { background: string; color: string };
+      info: { background: string; color: string };
+      infoAlt: { background: string; color: string };
+      disabled: { background: string; color: string };
+    };
+  };
+  segmentControl: {
+    background: string;
+    textInactive: string;
+  };
+  /** Grises neutros para controles (track switch, etc.) */
+  neutral: {
+    switchTrack: string;
+  };
+}
+
+export const appPalette: AppPalette = {
   background: {
     main: "#FAFAFA",
     sidebar: "#FFFFFF",
@@ -37,6 +78,9 @@ export const colors = {
     background: "#EBEBEB",
     textInactive: "#707070",
   },
+  neutral: {
+    switchTrack: "#E5E7EB",
+  },
 };
 
 export const theme = createTheme({
@@ -52,7 +96,7 @@ export const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#2663EB",
+      main: appPalette.sidebar.textSelected,
       light: "#5B8DEF",
       dark: "#1D4ED8",
     },
@@ -61,19 +105,41 @@ export const theme = createTheme({
       light: "#f472b6",
       dark: "#db2777",
     },
+    success: {
+      main: "#16a34a",
+      light: "#22c55e",
+      dark: "#15803d",
+    },
+    warning: {
+      main: "#ea580c",
+      light: "#fb923c",
+      dark: "#c2410c",
+    },
+    error: {
+      main: appPalette.chip.variants.error.color,
+      light: "#f87171",
+      dark: "#b91c1c",
+    },
+    info: {
+      main: appPalette.chip.variants.info.color,
+      light: "#60a5fa",
+      dark: "#1d4ed8",
+    },
     background: {
-      default: colors.background.main,
-      paper: colors.background.sidebar,
-      content: colors.background.content,
+      default: appPalette.background.main,
+      paper: appPalette.background.sidebar,
+      content: appPalette.background.content,
     },
     text: {
-      primary: "#232325",
-      secondary: "#71717A",
+      primary: appPalette.text.primary,
+      secondary: appPalette.text.secondary,
     },
-    divider: colors.border,
+    divider: appPalette.border,
+    app: appPalette,
   },
   typography: {
-    fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+    fontFamily:
+      'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
     h1: {
       fontSize: 32,
       fontWeight: 700,
@@ -128,7 +194,7 @@ export const theme = createTheme({
       fontSize: 12,
       fontWeight: 400,
       lineHeight: 1.5,
-      color: "#71717A",
+      color: appPalette.text.secondary,
     },
     overline: {
       fontSize: 12,
@@ -173,15 +239,15 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            backgroundColor: colors.background.sidebar,
+            backgroundColor: appPalette.background.sidebar,
             "& fieldset": {
-              borderColor: colors.border,
+              borderColor: appPalette.border,
             },
             "&:hover fieldset": {
-              borderColor: colors.border,
+              borderColor: appPalette.border,
             },
             "&.Mui-focused fieldset": {
-              borderColor: "#2663EB",
+              borderColor: appPalette.sidebar.textSelected,
             },
           },
         },
@@ -190,15 +256,15 @@ export const theme = createTheme({
     MuiSelect: {
       styleOverrides: {
         root: {
-          backgroundColor: colors.background.sidebar,
+          backgroundColor: appPalette.background.sidebar,
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: colors.border,
+            borderColor: appPalette.border,
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: colors.border,
+            borderColor: appPalette.border,
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#2663EB",
+            borderColor: appPalette.sidebar.textSelected,
           },
         },
       },
@@ -237,16 +303,16 @@ export const theme = createTheme({
         thumb: {
           width: 20,
           height: 20,
-          backgroundColor: "#FFFFFF",
+          backgroundColor: appPalette.background.sidebar,
           boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
           border: "1px solid rgba(0,0,0,0.08)",
           "&.Mui-checked": {
-            backgroundColor: "#FFFFFF",
+            backgroundColor: appPalette.background.sidebar,
           },
         },
         track: {
           borderRadius: 12,
-          backgroundColor: "#E5E7EB",
+          backgroundColor: appPalette.neutral.switchTrack,
           opacity: 1,
           "&:after, &:before": {
             display: "none",
@@ -260,5 +326,11 @@ export const theme = createTheme({
 declare module "@mui/material/styles" {
   interface TypeBackground {
     content: string;
+  }
+  interface Palette {
+    app: AppPalette;
+  }
+  interface PaletteOptions {
+    app?: AppPalette;
   }
 }

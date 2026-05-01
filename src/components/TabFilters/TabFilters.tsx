@@ -1,6 +1,6 @@
 import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { ReactNode } from "react";
 import {
   TabsWrapper,
@@ -118,7 +118,7 @@ export function TabFilters({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search size={18} color={colors.text.secondary} />
+                    <Search size={18} color={theme.palette.text.secondary} />
                   </InputAdornment>
                 )
               }}

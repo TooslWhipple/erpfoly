@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const PageContainer = styled("div")(({ theme }) => ({
     display: "flex",
@@ -13,19 +13,19 @@ export const OriginDestinationRow = styled("div")(({ theme }) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: "16px",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: "12px",
     padding: "16px",
-    border: `1px solid ${colors.border}`
+    border: `1px solid ${theme.palette.app.border}`
 }));
 
 export const ProductsSection = styled("div")(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: "12px",
     padding: "0px",
-    border: `1px solid ${colors.border}`
+    border: `1px solid ${theme.palette.app.border}`
 }));
 
 export const ProductHeaderSection = styled("div")(({ theme }) => ({

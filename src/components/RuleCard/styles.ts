@@ -1,17 +1,17 @@
 import { styled, Theme } from "@mui/material/styles";
 import { Box, Paper, Select, Chip, IconButton } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const RuleCardContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 8,
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   boxShadow: "none",
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
   marginBottom: theme.spacing(2),
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   "&:last-child": {
     marginBottom: 0,
   },
@@ -33,16 +33,16 @@ export const RuleLabel = styled("span")(({ theme }) => ({
 }));
 
 const baseSelectStyles = (theme: Theme) => ({
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   borderRadius: 6,
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.border,
+    borderColor: theme.palette.app.border,
   },
   "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.border,
+    borderColor: theme.palette.app.border,
   },
   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: colors.sidebar.textSelected,
+    borderColor: theme.palette.app.sidebar.textSelected,
   },
   "& .MuiSelect-select": {
     padding: "8px 12px",
@@ -142,7 +142,7 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: theme.spacing(6),
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   borderRadius: 8,
-  border: `1px dashed ${colors.border}`,
+  border: `1px dashed ${theme.palette.app.border}`,
 }));

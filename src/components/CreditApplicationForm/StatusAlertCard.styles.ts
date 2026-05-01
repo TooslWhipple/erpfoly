@@ -1,13 +1,13 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export type StatusAlertCardVariant = "default" | "info" | "error" | "success";
 
 const variantStyles: Record<StatusAlertCardVariant, { background: string; color: string }> = {
-  default: colors.chip.variants.default,
-  info: colors.chip.variants.info,
-  error: colors.chip.variants.error,
-  success: colors.chip.variants.success,
+  default: theme.palette.app.chip.variants.default,
+  info: theme.palette.app.chip.variants.info,
+  error: theme.palette.app.chip.variants.error,
+  success: theme.palette.app.chip.variants.success,
 };
 
 interface StatusAlertContainerProps {

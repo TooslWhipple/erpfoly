@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Button, TextField, Select, Chip, Typography, IconButton } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // SEARCH PAGE STYLES
@@ -47,7 +47,7 @@ export const SearchBarContainer = styled(Box)(({ theme }) => ({
     gap: theme.spacing(1),
     width: "100%",
     maxWidth: 800,
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 8,
     padding: theme.spacing(1),
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
@@ -55,12 +55,12 @@ export const SearchBarContainer = styled(Box)(({ theme }) => ({
 
 export const SearchTypeSelect = styled(Select)(({ theme }) => ({
     minWidth: 140,
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     "& .MuiOutlinedInput-notchedOutline": {
-        borderColor: colors.border,
+        borderColor: theme.palette.app.border,
     },
     "&:hover .MuiOutlinedInput-notchedOutline": {
-        borderColor: colors.border,
+        borderColor: theme.palette.app.border,
     },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
         borderColor: theme.palette.primary.main,
@@ -70,12 +70,12 @@ export const SearchTypeSelect = styled(Select)(({ theme }) => ({
 export const SearchInput = styled(TextField)(({ theme }) => ({
     flex: 1,
     "& .MuiOutlinedInput-root": {
-        backgroundColor: colors.background.sidebar,
+        backgroundColor: theme.palette.background.paper,
         "& fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&:hover fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&.Mui-focused fieldset": {
             borderColor: theme.palette.primary.main,
@@ -168,9 +168,9 @@ export const FinancialSummary = styled(Box)(({ theme }) => ({
     gap: theme.spacing(3),
     flexWrap: "wrap",
     padding: theme.spacing(2),
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 8,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
 }));
 
 export const FinancialItem = styled(Box)({
@@ -241,8 +241,8 @@ export const ArticlesList = styled(Box)({
 });
 
 export const ArticleCard = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(2.5),
 }));
@@ -327,8 +327,8 @@ export const SummaryPanel = styled(Box)(({ theme }) => ({
 }));
 
 export const SummaryCard = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(2.5),
 }));
@@ -364,7 +364,7 @@ export const SummaryTotalRow = styled(Box)(({ theme }) => ({
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
     marginTop: theme.spacing(1),
 }));
 

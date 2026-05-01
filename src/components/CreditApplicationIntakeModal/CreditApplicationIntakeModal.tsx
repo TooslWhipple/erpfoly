@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 
 interface CreditApplicationIntakeModalProps {
@@ -253,7 +253,7 @@ export function CreditApplicationIntakeModal({
                 height={400}
                 style={{
                   width: "100%",
-                  backgroundColor: colors.background.sidebar,
+                  backgroundColor: theme.palette.background.paper,
                   cursor: saving ? "not-allowed" : "crosshair",
                 }}
                 onMouseDown={saving ? undefined : handleStartDrawing}
@@ -405,7 +405,7 @@ function DeviceCameraCapture({
           borderRadius: "16px",
           width: "100%",
           minHeight: "400px",
-          backgroundColor: colors.background.main,
+          backgroundColor: theme.palette.background.default,
           overflow: "hidden",
         }}
       >

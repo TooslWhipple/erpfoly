@@ -22,7 +22,7 @@ import {
     StatusValue
 } from "@/styles/solicitudes/detalle.styles";
 import { ArrowRight } from "lucide-react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // MOCK DATA & API
@@ -310,7 +310,7 @@ export default function SolicitudSucursalDetallePage() {
                             ))}
                         </Select>
                     </FormControl>
-                    <ArrowRight size={12} color={colors.text.secondary} />
+                    <ArrowRight size={12} color={theme.palette.text.secondary} />
                     <FormControl size="small">
                         <InputLabel id="destination-label">Por recibir</InputLabel>
                         <Select

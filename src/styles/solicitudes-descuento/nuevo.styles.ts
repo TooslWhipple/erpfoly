@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const DiscountCard = styled('div')({
   display: "flex",
@@ -31,8 +31,8 @@ export const SectionCard = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
   padding: "24px"
 });
@@ -48,7 +48,7 @@ export const SectionGrayCard = styled('div')({
 
 export const ChangeLink = styled(Typography)({
   fontSize: 13,
-  color: colors.text.primary,
+  color: theme.palette.text.primary,
   cursor: "pointer",
   fontWeight: 500,
   "&:hover": {
@@ -66,8 +66,8 @@ export const ItemsList = styled('div')({
 export const ItemCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: 'column',
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   padding: theme.spacing(2),
   gap: theme.spacing(2),
@@ -82,8 +82,8 @@ export const ItemImage = styled('div')({
 });
 
 export const SummaryCard = styled('div')(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   padding: "20px",
   position: "sticky",
@@ -96,6 +96,6 @@ export const MapPlaceholder = styled('div')({
   justifyContent: "flex-start",
   color: "#71717A",
   height: "112px",
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   borderRadius: "6px",
 });

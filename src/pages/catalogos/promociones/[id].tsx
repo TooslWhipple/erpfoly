@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
-import { Box, CircularProgress, Stack } from "@mui/material";
+import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 import {
   MainLayout,
   Breadcrumbs,
@@ -255,8 +255,12 @@ export default function PromotionFormPage() {
       }
     }
 
-    if (formState.selectedProductIds.length === 0) {
-      newErrors.selectedProductIds = "Selecciona al menos un producto";
+    const hasProducts = formState.selectedProductIds.length > 0;
+    const hasBranches = formState.selectedBranchIds.length > 0;
+    const hasSuppliers = (formState.suppliers?.length ?? 0) > 0;
+    if (!hasProducts && !hasBranches && !hasSuppliers) {
+      newErrors.scopeSelection =
+        "Debes elegir al menos una opción: productos (tab Departamentos), sucursales o proveedores.";
     }
 
     return { ok: Object.keys(newErrors).length === 0, nextErrors: newErrors };
@@ -286,9 +290,22 @@ export default function PromotionFormPage() {
     const { ok, nextErrors } = runValidation();
     setErrors(nextErrors);
     if (!ok) {
-      setActiveTab(
-        nextErrors.selectedProductIds ? "departments" : "configuration"
+      const hasConfigurationError = Boolean(
+        nextErrors.name ||
+          nextErrors.percentage ||
+          nextErrors.advancePercentage ||
+          nextErrors.startDate ||
+          nextErrors.endDate ||
+          nextErrors.purchaseTypeId ||
+          nextErrors.creditTermIds ||
+          nextErrors.layawayTermIds ||
+          nextErrors.customerLevelDownPayments
       );
+      if (hasConfigurationError) {
+        setActiveTab("configuration");
+      } else if (nextErrors.scopeSelection) {
+        setActiveTab("departments");
+      }
       return;
     }
 
@@ -317,6 +334,18 @@ export default function PromotionFormPage() {
   const handleFieldChange = useCallback(
     (field: keyof PromotionFormState, value: unknown) => {
       setFormState((prev) => ({ ...prev, [field]: value }));
+      if (
+        field === "selectedProductIds" ||
+        field === "selectedBranchIds" ||
+        field === "suppliers"
+      ) {
+        setErrors((prev) => {
+          if (!prev.scopeSelection) return prev;
+          const next = { ...prev };
+          delete next.scopeSelection;
+          return next;
+        });
+      }
     },
     []
   );
@@ -382,6 +411,12 @@ export default function PromotionFormPage() {
         />
         <TabFilters tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
+        {errors.scopeSelection ? (
+          <Alert severity="error" onClose={() => handleErrorClear("scopeSelection")}>
+            {errors.scopeSelection}
+          </Alert>
+        ) : null}
+
         {activeTab === "configuration" && (
           <ConfigurationTab
             formState={formState}
@@ -412,11 +447,6 @@ export default function PromotionFormPage() {
                   : null
               }
             />
-            {errors.selectedProductIds ? (
-              <Box sx={{ color: "error.main", typography: "body2", px: 1 }}>
-                {errors.selectedProductIds}
-              </Box>
-            ) : null}
           </>
         )}
 

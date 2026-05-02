@@ -26,6 +26,7 @@ import { usePromotionDepartmentsCatalog } from "@/hooks/usePromotionDepartmentsC
 import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog";
 import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { validatePromotionEndDate } from "@/lib/promotionFormValidation";
 
 function emptyForm(): PromotionFormState {
   return {
@@ -224,10 +225,9 @@ export default function PromotionFormPage() {
       newErrors.startDate = "La fecha de inicio es requerida";
     }
 
-    if (formState.hasEndDate && formState.endDate) {
-      if (new Date(formState.endDate) < new Date(formState.startDate)) {
-        newErrors.endDate = "La fecha de fin debe ser posterior a la fecha de inicio";
-      }
+    const endDateError = validatePromotionEndDate(formState);
+    if (endDateError) {
+      newErrors.endDate = endDateError;
     }
 
     if (formState.purchaseTypeId == null) {
@@ -272,7 +272,10 @@ export default function PromotionFormPage() {
       name: formState.name.trim(),
       discount_rate: Number(formState.percentage),
       start_date: formState.startDate,
-      end_date: formState.hasEndDate ? formState.endDate : null,
+      end_date:
+        formState.hasEndDate && formState.endDate && String(formState.endDate).trim()
+          ? formState.endDate
+          : null,
       purchase_type_id: formState.purchaseTypeId,
       credit_term_ids: code === "CREDITO" ? formState.creditTermIds : [],
       layaway_term_ids: code === "APARTADO" ? formState.layawayTermIds : [],

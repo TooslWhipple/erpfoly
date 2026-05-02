@@ -14,7 +14,6 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
     onClose: () => void;
     title: string;
     description?: string;
-    /** Single source of truth: each field has schema + label + type + placeholder, etc. */
     fields: T;
     defaultValues: SchemaInputFromFields<T>;
     onSubmit: (value: SchemaOutputFromFields<T>) => void | Promise<void>;
@@ -53,7 +52,6 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
             form.reset(defaultValues);
         }
         prevOpenRef.current = open;
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when open becomes true
     }, [open]);
 
     return (

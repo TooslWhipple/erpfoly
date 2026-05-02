@@ -5,16 +5,16 @@ import {
   Switch,
   Stack,
   Typography,
-  CircularProgress,
   Divider,
 } from "@mui/material";
-import { Checkbox, CheckboxGroup, FormTextField, RadioButton, RadioButtonGroup } from "@/components";
+import { Checkbox, FormTextField, RadioButton } from "@/components";
 import { FormCard } from "@/styles/catalogos/productos.styles";
 import { SwitchContainer } from "@/styles/catalogos/promociones.styles";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
 import type { PromotionFormConfiguration } from "@/services/promociones.service";
 
 interface ConfigurationTabProps {
+  isModal?: boolean;
   formState: PromotionFormState;
   errors: FormErrors;
   configuration: PromotionFormConfiguration | undefined;
@@ -33,6 +33,7 @@ function selectedPurchaseType(
 }
 
 export function ConfigurationTab({
+  isModal = false,
   formState,
   errors,
   configuration,
@@ -74,6 +75,7 @@ export function ConfigurationTab({
     onFieldChange("hasEndDate", checked);
     if (!checked) {
       onFieldChange("endDate", null);
+      onErrorClear("endDate");
     }
   };
 
@@ -92,7 +94,7 @@ export function ConfigurationTab({
           </Typography>
         </Stack>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid size={(isModal) ? { xs: 12 } : { xs: 12, sm: 6 }}>
             <FormTextField
               label="Nombre"
               value={formState.name}
@@ -105,7 +107,7 @@ export function ConfigurationTab({
               placeholder="Ej. Buen fin"
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 3 }}>
+          <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: 3 }}>
             <FormTextField
               label="Porcentaje"
               value={formState.percentage}
@@ -121,7 +123,7 @@ export function ConfigurationTab({
               }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 3 }}>
+          <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: 6 }}>
             <FormTextField
               label="Anticipo"
               value={formState.advancePercentage}
@@ -151,7 +153,7 @@ export function ConfigurationTab({
           </Typography>
         </Stack>
         <Stack
-          direction={{ xs: "column", md: "row" }}
+          direction={(isModal) ? "column" : { xs: "column", md: "row" }}
           spacing={2}
           divider={<Divider orientation="vertical" flexItem />}>
 
@@ -160,7 +162,7 @@ export function ConfigurationTab({
             <Grid container spacing={1} flexWrap="wrap">
               {
                 configuration?.purchaseTypes.map((item) => (
-                  <Grid size={{ xs: 'grow' }}>
+                  <Grid size={{ xs: 'auto' }}>
                     <RadioButton
                       key={item.id}
                       value={String(item.id)}
@@ -183,21 +185,24 @@ export function ConfigurationTab({
             purchaseType?.code === "CREDITO" && purchaseType.options &&
             <Stack spacing={1}>
               <Typography variant="subtitle2">{purchaseType.optionLabel}</Typography>
-              <Stack direction="row" spacing={1}>
+              <Grid container spacing={1} flexWrap="wrap">
                 {
                   purchaseType.options.map((item) => (
-                    <Checkbox
-                      key={item.id}
-                      value={String(item.id)}
-                      label={`${item.label} meses`}
-                      checked={formState.creditTermIds.includes(item.id)}
-                      onChange={(e) =>
-                        toggleTermId("creditTermIds", item.id, e.target.checked)
-                      }
-                    />
+                    <Grid size={{ xs: 'auto' }}>
+
+                      <Checkbox
+                        key={item.id}
+                        value={String(item.id)}
+                        label={`${item.label} meses`}
+                        checked={formState.creditTermIds.includes(item.id)}
+                        onChange={(e) =>
+                          toggleTermId("creditTermIds", item.id, e.target.checked)
+                        }
+                      />
+                    </Grid>
                   ))
                 }
-              </Stack>
+              </Grid>
             </Stack>
           }
           {
@@ -206,7 +211,7 @@ export function ConfigurationTab({
                 <Typography variant="body1" fontWeight={500}>{purchaseType.optionLabel} </Typography>
                 <Grid container spacing={1} flexWrap="wrap">
                   {purchaseType.options.map((opt) => (
-                    <Grid size={{ xs: 'grow' }}>
+                    <Grid size={{ xs: 'auto' }}>
                       <Checkbox
                         key={opt.id}
                         value={String(opt.id)}
@@ -268,8 +273,8 @@ export function ConfigurationTab({
             Define el periodo de vigencia para la promoción.
           </Typography>
         </Stack>
-        <Grid container spacing={2} alignItems="flex-end">
-          <Grid size={{ xs: 12, sm: 3 }}>
+        <Grid container spacing={2}>
+          <Grid size={(isModal) ? { xs: 'grow' } : { xs: 12, sm: 3 }}>
             <FormTextField
               label="Fecha de inicio"
               type="date"
@@ -286,14 +291,14 @@ export function ConfigurationTab({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: "auto" }}>
-            <SwitchContainer>
+            <SwitchContainer style={{ marginTop: '16px' }}>
               <Switch
                 checked={formState.hasEndDate}
                 onChange={(e) => handleEndDateToggle(e.target.checked)}
               />
             </SwitchContainer>
           </Grid>
-          <Grid size={{ xs: 12, sm: 3 }}>
+          <Grid size={(isModal) ? { xs: 'grow' } : { xs: 12, sm: 3 }}>
             <FormTextField
               label="Fecha de fin"
               type="date"

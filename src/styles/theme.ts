@@ -42,6 +42,8 @@ export interface AppPalette {
   neutral: {
     switchTrack: string;
   };
+  /** Banner informativo (promoción liquidación en modal de producto) */
+  promotionLiquidationBanner: string;
 }
 
 export const appPalette: AppPalette = {
@@ -81,6 +83,7 @@ export const appPalette: AppPalette = {
   neutral: {
     switchTrack: "#E5E7EB",
   },
+  promotionLiquidationBanner: "#FEE2E2",
 };
 
 export const theme = createTheme({

@@ -1,11 +1,19 @@
 import { useMemo, useState } from "react";
-import { Typography, Grid, Button, Stack, Divider } from "@mui/material";
+import { Typography, Grid, Button, Stack, Divider, IconButton } from "@mui/material";
 import numeral from "numeral";
+import { Pencil, Trash2 } from "lucide-react";
 import { FormTextField, FormSelect } from "@/components";
+import { ProductPromotionModal } from "@/components/ProductPromotionModal";
 import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
-import type { PriceFormState, CostHistoryEntry, ProductBasePrice } from "@/types/productos.types";
+import type {
+    PriceFormState,
+    CostHistoryEntry,
+    ProductBasePrice,
+    ProductPromotionDraft,
+} from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
+import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
 
 function getReferenceCostForCalculation(formState: PriceFormState): number {
     const list = Number(formState.listCost) || 0;
@@ -33,6 +41,10 @@ interface PriceTabProps {
     costHistoryOpen: boolean;
     onCostHistoryOpen: () => void;
     onCostHistoryClose: () => void;
+    /** Persisted product id when editing; null on "nuevo producto". */
+    productNumericId: number | null;
+    promotionDrafts: ProductPromotionDraft[];
+    onPromotionDraftsChange: (next: ProductPromotionDraft[]) => void;
 }
 
 export function PriceTab({
@@ -46,9 +58,46 @@ export function PriceTab({
     costHistoryOpen,
     onCostHistoryOpen,
     onCostHistoryClose,
+    productNumericId,
+    promotionDrafts,
+    onPromotionDraftsChange,
 }: PriceTabProps) {
-    const listCostNumber = Number(formState.listCost) || 0;
     const [addBasePriceOpen, setAddBasePriceOpen] = useState(false);
+    const [promotionModalOpen, setPromotionModalOpen] = useState(false);
+    const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
+
+    const editingPromotionDraft =
+        editingPromotionId != null
+            ? promotionDrafts.find((d) => d.id === editingPromotionId) ?? null
+            : null;
+
+    const openCreatePromotionModal = () => {
+        setEditingPromotionId(null);
+        setPromotionModalOpen(true);
+    };
+
+    const openEditPromotionModal = (id: string) => {
+        setEditingPromotionId(id);
+        setPromotionModalOpen(true);
+    };
+
+    const handleClosePromotionModal = () => {
+        setPromotionModalOpen(false);
+        setEditingPromotionId(null);
+    };
+
+    const handleSavePromotionDraft = (draft: ProductPromotionDraft) => {
+        const exists = promotionDrafts.some((d) => d.id === draft.id);
+        if (exists) {
+            onPromotionDraftsChange(promotionDrafts.map((d) => (d.id === draft.id ? draft : d)));
+        } else {
+            onPromotionDraftsChange([...promotionDrafts, draft]);
+        }
+    };
+
+    const handleRemovePromotionDraft = (id: string) => {
+        onPromotionDraftsChange(promotionDrafts.filter((d) => d.id !== id));
+    };
 
     const referenceCost = useMemo(() => getReferenceCostForCalculation(formState), [formState]);
 
@@ -147,6 +196,33 @@ export function PriceTab({
                                 <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
                             </LuquidationCard>
                         </FormCard>
+                        <FormCard>
+                            <Typography variant="subtitle2">Promociones</Typography>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={openCreatePromotionModal}
+                                sx={{ alignSelf: "flex-start", mt: 1 }}
+                            >
+                                Agregar promoción
+                            </Button>
+                            <Stack spacing={1.5} sx={{ mt: 2 }}>
+                                {promotionDrafts.length === 0 ? (
+                                    <Typography variant="body2" color="text.secondary">
+                                        No hay promociones. Agrega una para vincularla al guardar el producto.
+                                    </Typography>
+                                ) : (
+                                    promotionDrafts.map((row) => (
+                                        <ProductPromotionDraftCard
+                                            key={row.id}
+                                            draft={row}
+                                            handleEdit={() => openEditPromotionModal(row.id)}
+                                            handleDelete={() => handleRemovePromotionDraft(row.id)}
+                                        />
+                                    ))
+                                )}
+                            </Stack>
+                        </FormCard>
                     </FormCard>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
@@ -211,6 +287,15 @@ export function PriceTab({
                 onClose={() => setAddBasePriceOpen(false)}
                 referenceCost={referenceCost}
                 onAdd={onAddBasePrice}
+            />
+
+            <ProductPromotionModal
+                open={promotionModalOpen}
+                onClose={handleClosePromotionModal}
+                productId={productNumericId}
+                editingDraft={editingPromotionDraft}
+                isLiquidation={formState.liquidation}
+                onSave={handleSavePromotionDraft}
             />
         </>
     );

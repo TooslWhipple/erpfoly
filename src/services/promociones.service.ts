@@ -86,6 +86,8 @@ export interface SavePromotionPayload {
 	purchase_type_id?: number | null;
 	credit_term_ids?: number[];
 	layaway_term_ids?: number[];
+	credit_term_option_labels?: string[];
+	layaway_term_option_labels?: string[];
 	customer_level_down_payments?: Array<{
 		customer_level_id: number;
 		percentage: number;
@@ -144,7 +146,6 @@ function normalizeCustomerLevelEntry(raw: unknown): PromotionFormCustomerLevelEn
 	return { id, label, level_number: Number.isFinite(level_number) ? level_number : 0 };
 }
 
-/** Normaliza respuesta de configuración (camelCase / snake_case / envelope residual). */
 export function normalizePromotionFormConfiguration(raw: unknown): PromotionFormConfiguration {
 	const o = recordUnknown(unwrapSuccessEnvelope(raw));
 	const purchaseTypesRaw = o.purchaseTypes ?? o.purchase_types;

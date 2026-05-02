@@ -7,6 +7,7 @@ import type {
     GeneralDataFormState,
     PriceFormState,
     ProductBasePrice,
+    ProductPromotionDraft,
     ProductSupplier,
     ProductBranch,
     ProductGalleryImage,
@@ -84,10 +85,11 @@ export function buildCreateProductRequest(
         branches: ProductBranch[];
         images: string[];
         packages: ProductPackage[];
+        promotions?: ProductPromotionDraft[];
     },
     mode: "create" | "update"
 ): CreateProductRequest {
-    const { generalData, priceData, suppliers, branches, images, packages } = input;
+    const { generalData, priceData, suppliers, branches, images, packages, promotions } = input;
 
     const departmentId = Number(generalData.departmentId);
     const lineId = Number(generalData.lineId);
@@ -125,13 +127,32 @@ export function buildCreateProductRequest(
 
     const packageItems = mapProductPackagesToPackageItems(packages);
 
+    const promotionPayloads =
+        promotions
+            ?.map((d) => {
+                const rest: typeof d.payload = { ...d.payload };
+                delete rest.credit_term_option_labels;
+                delete rest.layaway_term_option_labels;
+                return rest;
+            })
+            .filter((p) => p.name?.trim()) ?? undefined;
+
     const base: Omit<
         CreateProductRequest,
         "warrantyType" | "warrantyMonths" | "warrantyPolicy"
     > =
         mode === "update"
-            ? { ...baseFields, code: generalData.code.trim(), packageItems }
-            : { ...baseFields, packageItems };
+            ? {
+                  ...baseFields,
+                  code: generalData.code.trim(),
+                  packageItems,
+                  ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+              }
+            : {
+                  ...baseFields,
+                  packageItems,
+                  ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+              };
 
     if (generalData.warrantyType === "policy") {
         return {

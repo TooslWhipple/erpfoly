@@ -2,7 +2,17 @@
 // TYPES & INTERFACES
 // ============================================================================
 
+import type { SavePromotionPayload } from "@/services/promociones.service";
+
 export type WarrantyType = "months" | "policy";
+
+/** Client-side promotion row for the product form; sent with create/update product. */
+export interface ProductPromotionDraft {
+    id: string;
+    isLiquidation: boolean;
+    purchaseTypeCode: string;
+    payload: SavePromotionPayload;
+}
 
 /** Backend warranty values for POST /products */
 export type ProductWarrantyTypeApi = "MONTHS" | "ANNEX_POLICY";
@@ -46,6 +56,8 @@ export type CreateProductRequest = {
     images: CreateProductImagePayload[];
     branches: CreateProductBranchPayload[];
     packageItems?: CreateProductPackageItemPayload[];
+    /** Nested promotions to persist with the product (drafts from Price tab). */
+    promotions?: SavePromotionPayload[];
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }

@@ -18,6 +18,7 @@ import type {
     PackageFormData,
     ProductBasePrice,
     ProductGalleryImage,
+    ProductPromotionDraft,
 } from "@/types/productos.types";
 import {
     createProduct,
@@ -143,6 +144,8 @@ export default function ProductFormPage() {
     const [packages, setPackages] = useState<ProductPackage[]>([]);
 
     const [costHistoryOpen, setCostHistoryOpen] = useState(false);
+
+    const [productPromotionDrafts, setProductPromotionDrafts] = useState<ProductPromotionDraft[]>([]);
 
     const [errors, setErrors] = useState<FormErrors>({});
 
@@ -280,6 +283,7 @@ export default function ProductFormPage() {
                     branches,
                     images: resolvedImageUrls,
                     packages,
+                    promotions: productPromotionDrafts,
                 },
                 isNew ? "create" : "update"
             );
@@ -605,7 +609,14 @@ export default function ProductFormPage() {
                                 costHistory={MOCK_COST_HISTORY}
                                 costHistoryOpen={costHistoryOpen}
                                 onCostHistoryOpen={() => setCostHistoryOpen(true)}
-                                onCostHistoryClose={() => setCostHistoryOpen(false)}
+                                onCostHistoryClose={() => setCostHistoryClose(false)}
+                                productNumericId={
+                                    isNew || productId == null || !Number.isFinite(Number(productId))
+                                        ? null
+                                        : Number(productId)
+                                }
+                                promotionDrafts={productPromotionDrafts}
+                                onPromotionDraftsChange={setProductPromotionDrafts}
                             />
                         }
 

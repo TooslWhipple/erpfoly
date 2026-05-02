@@ -11,15 +11,18 @@ export const TabsWrapper = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.app.segmentControl.background,
   borderRadius: 10,
   padding: "0 4px",
-  overflow: "auto",
+  overflowX: "auto",
+  overflowY: "hidden",
   maxWidth: "100%",
+  WebkitOverflowScrolling: "touch",
   "&::-webkit-scrollbar": {
     display: "none",
   },
   scrollbarWidth: "none",
   [theme.breakpoints.down("md")]: {
-    width: '100%'
-  }
+    width: "100%",
+    minWidth: 0,
+  },
 }));
 
 export const StyledTabs = styled(Tabs)(({ theme }) => ({
@@ -34,18 +37,24 @@ export const StyledTabs = styled(Tabs)(({ theme }) => ({
     alignItems: "center",
   },
   "& .MuiTabs-scroller": {
-    overflow: "auto !important",
+    overflowX: "auto !important",
+    overflowY: "hidden",
+    WebkitOverflowScrolling: "touch",
     "&::-webkit-scrollbar": {
       display: "none",
     },
     scrollbarWidth: "none",
   },
   [theme.breakpoints.down("md")]: {
+    minWidth: 0,
+    width: "100%",
     "& .MuiTabs-flexContainer": {
-      width: "100%",
+      width: "max-content",
+      flexWrap: "nowrap",
     },
     "& .MuiTabs-scroller": {
-      overflow: "hidden !important",
+      overflowX: "auto !important",
+      overflowY: "hidden",
     },
   },
 }));
@@ -74,10 +83,8 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
     fontSize: 13,
   },
   [theme.breakpoints.down("md")]: {
-    flex: 1,
-    minWidth: 0,
+    flex: "0 0 auto",
+    minWidth: "auto",
     maxWidth: "none",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
   },
 }));

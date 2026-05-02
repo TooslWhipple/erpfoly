@@ -17,6 +17,7 @@ import {
   updatePromotion,
   type PromotionDetail,
   type PromotionFormConfiguration,
+  type SavePromotionPayload,
 } from "@/services/promociones.service";
 import { ConfigurationTab } from "@/components/Promotions/ConfigurationTab";
 import { DepartmentsTab } from "@/components/Promotions/DepartmentsTab";
@@ -266,26 +267,29 @@ export default function PromotionFormPage() {
     return { ok: Object.keys(newErrors).length === 0, nextErrors: newErrors };
   };
 
-  const buildPayload = () => {
+  const buildPayload = (): SavePromotionPayload => {
     const code = purchaseTypeMeta?.code;
     return {
       name: formState.name.trim(),
-      discount_rate: Number(formState.percentage),
-      start_date: formState.startDate,
-      end_date:
+      discountRate: Number(formState.percentage),
+      startDate: formState.startDate,
+      endDate:
         formState.hasEndDate && formState.endDate && String(formState.endDate).trim()
           ? formState.endDate
           : null,
-      purchase_type_id: formState.purchaseTypeId,
-      credit_term_ids: code === "CREDITO" ? formState.creditTermIds : [],
-      layaway_term_ids: code === "APARTADO" ? formState.layawayTermIds : [],
-      customer_level_down_payments:
+      purchaseTypeId: formState.purchaseTypeId,
+      creditTermIds: code === "CREDITO" ? formState.creditTermIds : [],
+      layawayTermIds: code === "APARTADO" ? formState.layawayTermIds : [],
+      customerLevelDownPayments:
         code === "CREDITO" || code === "APARTADO"
-          ? formState.customerLevelDownPayments
+          ? formState.customerLevelDownPayments.map((r) => ({
+              customerLevelId: r.customer_level_id,
+              percentage: r.percentage,
+            }))
           : [],
-      product_ids: formState.selectedProductIds,
-      branch_ids: formState.selectedBranchIds,
-      supplier_ids: formState.suppliers.map((s) => s.supplierId),
+      productIds: formState.selectedProductIds,
+      branchIds: formState.selectedBranchIds,
+      supplierIds: formState.suppliers.map((s) => s.supplierId),
     };
   };
 

@@ -1,6 +1,7 @@
 import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
+    CreateProductImagePayload,
     CreateProductPackageItemPayload,
     CreateProductRequest,
     CreateProductResponse,
@@ -43,38 +44,40 @@ function mapProductPackagesToPackageItems(
     });
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (typeof reader.result === "string") {
-                resolve(reader.result);
-            } else {
-                reject(new Error("Unexpected FileReader result"));
-            }
-        };
-        reader.onerror = () => {
-            reject(reader.error ?? new Error("Failed to read image file"));
-        };
-        reader.readAsDataURL(file);
-    });
+export function buildProductImagesPayloadFromGallery(
+    galleryImages: ProductGalleryImage[]
+): CreateProductImagePayload[] {
+    let sortOrder = 0;
+
+    const images: CreateProductImagePayload[] = [];
+    for (const item of galleryImages) {
+        if (item.file !== null) {
+            continue;
+        }
+        const url = (item.previewUrl || item.imageUrl || "").trim();
+        if (!/^https?:\/\//i.test(url)) {
+            continue;
+        }
+        images.push({ imageUrl: url, sortOrder });
+        sortOrder += 1;
+    }
+    return images;
 }
 
-export async function resolveGalleryImageUrlsForCreate(
-    items: ProductGalleryImage[]
-): Promise<string[]> {
-    const urls: string[] = [];
-    for (const item of items) {
-        if (item.file) {
-            urls.push(await readFileAsDataUrl(item.file));
-        } else if (
-            /^https?:\/\//i.test(item.previewUrl) ||
-            /^data:image\//i.test(item.previewUrl)
-        ) {
-            urls.push(item.previewUrl);
-        }
+export function collectNewGalleryFiles(galleryImages: ProductGalleryImage[]): File[] {
+    return galleryImages.map((g) => g.file).filter((f): f is File => f !== null);
+}
+
+export function buildProductMultipartFormData(
+    payload: CreateProductRequest,
+    galleryFiles: File[]
+): FormData {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(payload));
+    for (const file of galleryFiles) {
+        formData.append("gallery", file);
     }
-    return urls;
+    return formData;
 }
 
 export function buildCreateProductRequest(
@@ -83,13 +86,14 @@ export function buildCreateProductRequest(
         priceData: PriceFormState;
         suppliers: ProductSupplier[];
         branches: ProductBranch[];
-        images: string[];
+        galleryImages: ProductGalleryImage[];
         packages: ProductPackage[];
         promotions?: ProductPromotionDraft[];
     },
     mode: "create" | "update"
 ): CreateProductRequest {
-    const { generalData, priceData, suppliers, branches, images, packages, promotions } = input;
+    const { generalData, priceData, suppliers, branches, galleryImages, packages, promotions } =
+        input;
 
     const departmentId = Number(generalData.departmentId);
     const lineId = Number(generalData.lineId);
@@ -110,13 +114,7 @@ export function buildCreateProductRequest(
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
             isPrimary: s.isDefault,
         })),
-        images: images
-            .filter(
-                (url) =>
-                    /^https?:\/\//i.test(url) ||
-                    /^data:image\//i.test(url)
-            )
-            .map((imageUrl, index) => ({ imageUrl, sortOrder: index })),
+        images: buildProductImagesPayloadFromGallery(galleryImages),
         branches: branches.map((b) => ({
             branchId: b.branchId,
             minStock: b.minInventory,
@@ -131,8 +129,8 @@ export function buildCreateProductRequest(
         promotions
             ?.map((d) => {
                 const rest: typeof d.payload = { ...d.payload };
-                delete rest.credit_term_option_labels;
-                delete rest.layaway_term_option_labels;
+                delete rest.creditTermOptionLabels;
+                delete rest.layawayTermOptionLabels;
                 return rest;
             })
             .filter((p) => p.name?.trim()) ?? undefined;
@@ -169,9 +167,20 @@ export function buildCreateProductRequest(
     };
 }
 
+const MULTIPART_UPLOAD_TIMEOUT_MS = 120_000;
+
 export async function createProduct(
-    payload: CreateProductRequest
+    payload: CreateProductRequest,
+    options?: { galleryFiles?: File[] }
 ): Promise<ApiResult<CreateProductResponse>> {
+    const galleryFiles = options?.galleryFiles ?? [];
+    if (galleryFiles.length > 0) {
+        const formData = buildProductMultipartFormData(payload, galleryFiles);
+        return post<CreateProductResponse>(PRODUCTS_BASE, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            timeout: MULTIPART_UPLOAD_TIMEOUT_MS,
+        });
+    }
     return post<CreateProductResponse>(PRODUCTS_BASE, payload);
 }
 
@@ -188,11 +197,6 @@ export interface ProductDetailSupplierDto {
     supplierProductCode?: string | null;
     isPrimary: boolean;
     supplierName?: string | null;
-}
-
-export interface ProductDetailImageDto {
-    imageUrl: string;
-    sortOrder: number;
 }
 
 export interface ProductDetailBranchDto {
@@ -231,7 +235,7 @@ export type ProductDetailDto = {
     description: string;
     pieceCount: number;
     suppliers: ProductDetailSupplierDto[];
-    images: ProductDetailImageDto[];
+    images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
     price?: ProductDetailPriceDto | null;
 } & (
@@ -319,21 +323,12 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
               }))
             : [...DEFAULT_PRODUCT_BASE_PRICES];
 
-    const sortedImages = [...(detail.images ?? [])].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-    );
-    const galleryImages: ProductGalleryImage[] = sortedImages.map((img, index) => ({
-        id: `img-${detail.id}-${index}-${img.sortOrder ?? index}`,
-        previewUrl: img.imageUrl,
-        file: null,
-    }));
-
     return {
         generalData,
         suppliers,
         priceData,
         basePrices,
-        galleryImages,
+        galleryImages: detail.images,
     };
 }
 
@@ -345,8 +340,17 @@ export async function getProductById(
 
 export async function updateProduct(
     id: number,
-    payload: CreateProductRequest
+    payload: CreateProductRequest,
+    options?: { galleryFiles?: File[] }
 ): Promise<ApiResult<ProductDetailDto>> {
+    const galleryFiles = options?.galleryFiles ?? [];
+    if (galleryFiles.length > 0) {
+        const formData = buildProductMultipartFormData(payload, galleryFiles);
+        return patch<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            timeout: MULTIPART_UPLOAD_TIMEOUT_MS,
+        });
+    }
     return patch<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`, payload);
 }
 export interface ProductListItem {

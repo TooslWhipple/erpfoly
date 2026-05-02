@@ -28,6 +28,9 @@ export interface CreateProductImagePayload {
     sortOrder: number;
 }
 
+/** Client-side cap aligned with backend (~30 gallery uploads per save). */
+export const MAX_PRODUCT_GALLERY_FILES = 30;
+
 export interface CreateProductBranchPayload {
     branchId: number;
     minStock: number;
@@ -126,10 +129,12 @@ export interface Product {
     images: string[];
 }
 
-/** Gallery row: preview URL (blob or https) plus optional file for API payload */
 export interface ProductGalleryImage {
     id: string;
+    isPrimary: boolean;
+    imageUrl: string;
     previewUrl: string;
+    sortOrder: number;
     file: File | null;
 }
 

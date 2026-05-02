@@ -6,6 +6,7 @@ import {
     Breadcrumbs,
     Title,
     VerticalSidebarTabs,
+    TabFilters,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
@@ -20,10 +21,11 @@ import type {
     ProductGalleryImage,
     ProductPromotionDraft,
 } from "@/types/productos.types";
+import { MAX_PRODUCT_GALLERY_FILES } from "@/types/productos.types";
 import {
     createProduct,
     buildCreateProductRequest,
-    resolveGalleryImageUrlsForCreate,
+    collectNewGalleryFiles,
     getProductById,
     getProductPreviewCode,
     updateProduct,
@@ -55,14 +57,17 @@ import { BranchesTab } from "@/components/Products/BranchesTab";
 
 export default function ProductFormPage() {
     const router = useRouter();
-    const { id } = router.query;
     const showSuccess = useSnackbarStore((s) => s.showSuccess);
     const showError = useSnackbarStore((s) => s.showError);
 
-    const isNew = id === "nuevo";
-    const productId = isNew ? null : String(id);
+    /** Avoid running logic while `query.id` is still undefined (first paint / hard reload). */
+    const routeIdParam = typeof router.query.id === "string" ? router.query.id : undefined;
+    const isNew = routeIdParam === "nuevo";
+    /** Numeric id segment for edit mode; only defined once the router is ready. */
+    const editProductIdStr =
+        router.isReady && routeIdParam != null && !isNew ? routeIdParam : null;
 
-    const [productLoading, setProductLoading] = useState(!isNew);
+    const [productLoading, setProductLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("general");
 
@@ -116,7 +121,7 @@ export default function ProductFormPage() {
         }
     }, [selectedDepartmentNumericId]);
 
-    const pageLoading = catalogsLoading || productLoading;
+    const pageLoading = !router.isReady || catalogsLoading || productLoading;
 
     const [suppliers, setSuppliers] = useState<ProductSupplier[]>([]);
 
@@ -150,7 +155,11 @@ export default function ProductFormPage() {
     const [errors, setErrors] = useState<FormErrors>({});
 
     useEffect(() => {
-        if (isNew || !productId) {
+        if (!router.isReady) {
+            return;
+        }
+
+        if (isNew || editProductIdStr == null) {
             setProductLoading(false);
             setDetailBranchRows(null);
             return;
@@ -160,7 +169,7 @@ export default function ProductFormPage() {
             setProductLoading(true);
             setDetailBranchRows(null);
             try {
-                const idNum = Number(productId);
+                const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
                     showError("Identificador de producto inválido.");
                     return;
@@ -189,7 +198,7 @@ export default function ProductFormPage() {
         }
 
         loadProduct();
-    }, [isNew, productId]);
+    }, [router.isReady, isNew, editProductIdStr, showError]);
 
     useEffect(() => {
         if (!isNew) {
@@ -267,21 +276,14 @@ export default function ProductFormPage() {
 
         setSaving(true);
         try {
-            let resolvedImageUrls: string[];
-            try {
-                resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
-            } catch (readErr) {
-                console.error("[ProductForm] Error reading gallery files:", readErr);
-                showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
-                return;
-            }
+            const newGalleryFiles = collectNewGalleryFiles(galleryImages);
             const payload = buildCreateProductRequest(
                 {
                     generalData,
                     priceData,
                     suppliers,
                     branches,
-                    images: resolvedImageUrls,
+                    galleryImages,
                     packages,
                     promotions: productPromotionDrafts,
                 },
@@ -289,7 +291,9 @@ export default function ProductFormPage() {
             );
 
             if (isNew) {
-                const result = await createProduct(payload);
+                const result = await createProduct(payload, {
+                    galleryFiles: newGalleryFiles.length > 0 ? newGalleryFiles : undefined,
+                });
                 if (result.error) {
                     console.error("[ProductForm] Error creating product:", result.error.message);
                     showError(result.error.message);
@@ -297,12 +301,14 @@ export default function ProductFormPage() {
                 }
                 showSuccess("Producto creado correctamente.");
             } else {
-                const idNum = Number(productId);
+                const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
                     showError("Identificador de producto inválido.");
                     return;
                 }
-                const result = await updateProduct(idNum, payload);
+                const result = await updateProduct(idNum, payload, {
+                    galleryFiles: newGalleryFiles.length > 0 ? newGalleryFiles : undefined,
+                });
                 if (result.error) {
                     console.error("[ProductForm] Error updating product:", result.error.message);
                     showError(result.error.message);
@@ -464,18 +470,24 @@ export default function ProductFormPage() {
         setPackages((prev) => prev.filter((p) => p.id !== packageId));
     };
 
-    const handleAddImage = (files: FileList) => {
+    const handleAddImage = (files: FileList | readonly File[]) => {
+        const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
         setGalleryImages((prev) => {
             const additions: ProductGalleryImage[] = [];
-            Array.from(files).forEach((file) => {
-                if (prev.length + additions.length < 6) {
-                    additions.push({
-                        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-                        previewUrl: URL.createObjectURL(file),
-                        file,
-                    });
+            for (const file of list) {
+                if (prev.length + additions.length >= MAX_PRODUCT_GALLERY_FILES) {
+                    break;
                 }
-            });
+
+                additions.push({
+                    id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                    previewUrl: URL.createObjectURL(file),
+                    file,
+                    isPrimary: false,
+                    imageUrl: "",
+                    sortOrder: prev.length + additions.length,
+                });
+            }
             return [...prev, ...additions];
         });
     };
@@ -484,12 +496,16 @@ export default function ProductFormPage() {
         setGalleryImages((prev) => {
             const next = [...prev];
             const old = next[index];
-            if (old?.previewUrl.startsWith("blob:")) {
+            if (!old) {
+                return next;
+            }
+            if (old.previewUrl.startsWith("blob:")) {
                 URL.revokeObjectURL(old.previewUrl);
             }
             next[index] = {
-                id: old?.id ?? `img-${Date.now()}`,
+                ...old,
                 previewUrl: URL.createObjectURL(file),
+                imageUrl: "",
                 file,
             };
             return next;
@@ -540,7 +556,7 @@ export default function ProductFormPage() {
     return (
         <MainLayout>
             <Stack spacing={3}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={2}>
                     <Breadcrumbs items={breadcrumbItems} />
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
@@ -563,7 +579,7 @@ export default function ProductFormPage() {
                 <Divider />
 
                 <Grid container spacing={5} flexWrap="nowrap">
-                    <Grid size={{ xs: 'auto' }}>
+                    <Grid size={{ xs: 'auto' }} sx={{ display: { xs: 'none', sm: 'block' } }}>
                         <VerticalSidebarTabs
                             tabs={tabs}
                             value={activeTab}
@@ -571,7 +587,12 @@ export default function ProductFormPage() {
                         />
                     </Grid>
                     <Grid size={{ xs: 'grow' }}>
-
+                        <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                            <TabFilters
+                                tabs={tabs}
+                                activeTab={activeTab}
+                                onTabChange={setActiveTab} />
+                        </Box>
                         {
                             activeTab === "general" &&
                             <GeneralDataTab
@@ -609,11 +630,13 @@ export default function ProductFormPage() {
                                 costHistory={MOCK_COST_HISTORY}
                                 costHistoryOpen={costHistoryOpen}
                                 onCostHistoryOpen={() => setCostHistoryOpen(true)}
-                                onCostHistoryClose={() => setCostHistoryClose(false)}
+                                onCostHistoryClose={() => setCostHistoryOpen(false)}
                                 productNumericId={
-                                    isNew || productId == null || !Number.isFinite(Number(productId))
+                                    isNew ||
+                                        editProductIdStr == null ||
+                                        !Number.isFinite(Number(editProductIdStr))
                                         ? null
-                                        : Number(productId)
+                                        : Number(editProductIdStr)
                                 }
                                 promotionDrafts={productPromotionDrafts}
                                 onPromotionDraftsChange={setProductPromotionDrafts}
@@ -635,6 +658,7 @@ export default function ProductFormPage() {
                             activeTab === "gallery" &&
                             <GalleryTab
                                 images={galleryImages}
+                                maxImages={MAX_PRODUCT_GALLERY_FILES}
                                 onAddImage={handleAddImage}
                                 onReplaceImage={handleReplaceImage}
                                 onRemoveImage={handleRemoveImage}

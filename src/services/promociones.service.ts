@@ -78,23 +78,24 @@ export interface PromotionDetail {
 	supplier_ids: number[];
 }
 
+/** Body for POST/PATCH promotions and nested `promotions` on product create/update (camelCase API). */
 export interface SavePromotionPayload {
 	name: string;
-	discount_rate: number;
-	start_date: string;
-	end_date?: string | null;
-	purchase_type_id?: number | null;
-	credit_term_ids?: number[];
-	layaway_term_ids?: number[];
-	credit_term_option_labels?: string[];
-	layaway_term_option_labels?: string[];
-	customer_level_down_payments?: Array<{
-		customer_level_id: number;
+	discountRate: number;
+	startDate: string;
+	endDate?: string | null;
+	purchaseTypeId?: number | null;
+	creditTermIds?: number[];
+	layawayTermIds?: number[];
+	creditTermOptionLabels?: string[];
+	layawayTermOptionLabels?: string[];
+	customerLevelDownPayments?: Array<{
+		customerLevelId: number;
 		percentage: number;
 	}>;
-	product_ids?: number[];
-	branch_ids?: number[];
-	supplier_ids?: number[];
+	productIds?: number[];
+	branchIds?: number[];
+	supplierIds?: number[];
 }
 
 function recordUnknown(v: unknown): Record<string, unknown> {

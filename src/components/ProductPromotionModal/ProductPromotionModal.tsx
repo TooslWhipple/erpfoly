@@ -43,10 +43,10 @@ function emptyFormBase(): PromotionFormState {
 
 function mergeCustomerLevelsFromPayload(
   catalogLevels: PromotionFormConfiguration["customerLevels"],
-  saved: SavePromotionPayload["customer_level_down_payments"]
+  saved: SavePromotionPayload["customerLevelDownPayments"]
 ): PromotionFormState["customerLevelDownPayments"] {
   const list = saved ?? [];
-  const byId = new Map(list.map((x) => [x.customer_level_id, x.percentage]));
+  const byId = new Map(list.map((x) => [x.customerLevelId, x.percentage]));
   return catalogLevels.map((cl) => ({
     customer_level_id: cl.id,
     percentage: byId.get(cl.id) ?? 0,
@@ -60,28 +60,28 @@ function mapPayloadToFormState(
 ): PromotionFormState {
   const productIds =
     productId != null
-      ? Array.from(new Set([...(payload.product_ids ?? []), productId]))
-      : [...(payload.product_ids ?? [])];
+      ? Array.from(new Set([...(payload.productIds ?? []), productId]))
+      : [...(payload.productIds ?? [])];
 
   return {
     name: payload.name,
-    percentage: String(payload.discount_rate),
+    percentage: String(payload.discountRate),
     advancePercentage: "",
-    purchaseTypeId: payload.purchase_type_id ?? null,
-    creditTermIds: [...(payload.credit_term_ids ?? [])],
-    layawayTermIds: [...(payload.layaway_term_ids ?? [])],
+    purchaseTypeId: payload.purchaseTypeId ?? null,
+    creditTermIds: [...(payload.creditTermIds ?? [])],
+    layawayTermIds: [...(payload.layawayTermIds ?? [])],
     customerLevelDownPayments: mergeCustomerLevelsFromPayload(
       configuration.customerLevels,
-      payload.customer_level_down_payments
+      payload.customerLevelDownPayments
     ),
-    startDate: payload.start_date,
-    endDate: payload.end_date ?? null,
-    hasEndDate: payload.end_date != null,
+    startDate: payload.startDate,
+    endDate: payload.endDate ?? null,
+    hasEndDate: payload.endDate != null,
     selectedDepartmentIds: [],
     selectedLineIds: [],
     selectedProductIds: productIds,
-    selectedBranchIds: [...(payload.branch_ids ?? [])],
-    suppliers: (payload.supplier_ids ?? []).map((sid, i) => ({
+    selectedBranchIds: [...(payload.branchIds ?? [])],
+    suppliers: (payload.supplierIds ?? []).map((sid, i) => ({
       id: i + 1,
       supplierId: sid,
       supplierName: `Proveedor ${sid}`,
@@ -272,23 +272,26 @@ export function ProductPromotionModal({
 
     return {
       name: formState.name.trim(),
-      discount_rate: Number(formState.percentage),
-      start_date: formState.startDate,
-      end_date:
+      discountRate: Number(formState.percentage),
+      startDate: formState.startDate,
+      endDate:
         formState.hasEndDate && formState.endDate && String(formState.endDate).trim()
           ? formState.endDate
           : null,
-      purchase_type_id: formState.purchaseTypeId,
-      credit_term_ids: code === "CREDITO" ? formState.creditTermIds : [],
-      layaway_term_ids: code === "APARTADO" ? formState.layawayTermIds : [],
+      purchaseTypeId: formState.purchaseTypeId,
+      creditTermIds: code === "CREDITO" ? formState.creditTermIds : [],
+      layawayTermIds: code === "APARTADO" ? formState.layawayTermIds : [],
       ...termLabels,
-      customer_level_down_payments:
+      customerLevelDownPayments:
         code === "CREDITO" || code === "APARTADO"
-          ? formState.customerLevelDownPayments
+          ? formState.customerLevelDownPayments.map((r) => ({
+              customerLevelId: r.customer_level_id,
+              percentage: r.percentage,
+            }))
           : [],
-      product_ids: productIds,
-      branch_ids: formState.selectedBranchIds,
-      supplier_ids: formState.suppliers.map((s) => s.supplierId),
+      productIds,
+      branchIds: formState.selectedBranchIds,
+      supplierIds: formState.suppliers.map((s) => s.supplierId),
     };
   };
 

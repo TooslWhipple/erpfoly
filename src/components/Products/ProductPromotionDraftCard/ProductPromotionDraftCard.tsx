@@ -47,18 +47,18 @@ export function ProductPromotionDraftCard({
 
   const {
     name,
-    start_date: startDate,
-    end_date: endDate
+    startDate,
+    endDate,
   } = draft.payload;
 
   const rangeLabel = formatPromotionDraftValidityRange(startDate, endDate);
 
   const creditTermLabels =
-    draft.payload.credit_term_option_labels?.filter(Boolean) ??
-    (draft.payload.credit_term_ids?.map((id) => String(id)) ?? []);
+    draft.payload.creditTermOptionLabels?.filter(Boolean) ??
+    (draft.payload.creditTermIds?.map((id) => String(id)) ?? []);
   const layawayTermLabels =
-    draft.payload.layaway_term_option_labels?.filter(Boolean) ??
-    (draft.payload.layaway_term_ids?.map((id) => String(id)) ?? []);
+    draft.payload.layawayTermOptionLabels?.filter(Boolean) ??
+    (draft.payload.layawayTermIds?.map((id) => String(id)) ?? []);
 
   return (
     <DraftCardRoot>
@@ -69,7 +69,7 @@ export function ProductPromotionDraftCard({
             <Typography variant="body2" color="text.secondary">{rangeLabel}</Typography>
           </Stack>
           <Stack direction="row" alignItems="center">
-            <Typography variant="h4">{draft.payload.discount_rate}<span style={{ color: theme.palette.text.secondary }}>%</span></Typography>
+            <Typography variant="h4">{draft.payload.discountRate}<span style={{ color: theme.palette.text.secondary }}>%</span></Typography>
           </Stack>
         </Stack>
 

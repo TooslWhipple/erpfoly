@@ -11,7 +11,7 @@ export function buildSelectedTermOptionLabels(
   purchaseType: PromotionFormPurchaseTypeEntry | undefined,
   creditTermIds: number[],
   layawayTermIds: number[]
-): Pick<SavePromotionPayload, "credit_term_option_labels" | "layaway_term_option_labels"> {
+): Pick<SavePromotionPayload, "creditTermOptionLabels" | "layawayTermOptionLabels"> {
   const options = purchaseType?.options ?? [];
 
   if (purchaseTypeCode === "CREDITO" && creditTermIds.length > 0) {
@@ -22,7 +22,7 @@ export function buildSelectedTermOptionLabels(
       })
       .filter((x): x is string => x != null && x.length > 0);
     return {
-      credit_term_option_labels: labels.length > 0 ? labels : undefined,
+      creditTermOptionLabels: labels.length > 0 ? labels : undefined,
     };
   }
 
@@ -34,7 +34,7 @@ export function buildSelectedTermOptionLabels(
       })
       .filter((x): x is string => x != null && x.length > 0);
     return {
-      layaway_term_option_labels: labels.length > 0 ? labels : undefined,
+      layawayTermOptionLabels: labels.length > 0 ? labels : undefined,
     };
   }
 

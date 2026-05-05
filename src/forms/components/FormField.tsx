@@ -6,6 +6,8 @@ import {
     FormHelperText,
     Checkbox,
     Switch,
+    Stack,
+    Typography,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form/FormTextField";
 import { FormSelect } from "@/components/Form/FormSelect";
@@ -102,18 +104,45 @@ export function FormFieldRender<TName extends string>({
             );
         case "switch":
             return (
-                <FormControl error={showError}>
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={Boolean(value)}
-                                onChange={(e) => field.handleChange(e.target.checked)}
-                                disabled={disabled}
-                                color="primary"
-                            />
-                        }
-                        label={label}
-                    />
+                <FormControl
+                    error={showError}
+                    variant="standard"
+                    sx={{ width: "100%", overflow: "visible" }}
+                >
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        spacing={2}
+                        sx={{ width: "100%", minWidth: 0 }}
+                    >
+                        {label != null && label !== "" && (
+                            <Typography
+                                component="label"
+                                variant="body2"
+                                htmlFor={field.name}
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    pr: 1,
+                                    lineHeight: 1.4,
+                                    alignSelf: "center",
+                                }}
+                            >
+                                {label}
+                            </Typography>
+                        )}
+                        <Switch
+                            id={field.name}
+                            checked={Boolean(value)}
+                            onChange={(e) => field.handleChange(e.target.checked)}
+                            onBlur={field.handleBlur}
+                            disabled={disabled}
+                            color="primary"
+                            inputProps={{ "aria-label": typeof label === "string" ? label : undefined }}
+                            sx={{ flexShrink: 0, mr: 0.5 }}
+                        />
+                    </Stack>
                     {finalHelperText && (
                         <FormHelperText>{finalHelperText}</FormHelperText>
                     )}

@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, Alert, CircularProgress, Stack } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { Box, Alert, CircularProgress, Stack, Button } from "@mui/material";
+import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import {
   MainLayout,
   Breadcrumbs,
-  ModalForm,
+  ModalFormZod,
   TableCrud,
   Title,
+  TabFilters,
 } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { FormFieldConfig } from "@/components/Form";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getDepartmentById } from "@/services/departments.service";
 import {
   getProductLines,
@@ -23,6 +24,23 @@ import {
 } from "@/services/product-lines.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import {
+  defineFormFields,
+  schemas,
+  type SchemaInputFromFields,
+  type SchemaOutputFromFields,
+} from "@/forms";
+import { messages } from "@/forms/validation/messages";
+import { z } from "zod";
+import {
+  SettingsGrid,
+  SettingsCard,
+  SettingsTitle,
+  SettingsDescription,
+  SettingsValue,
+  PromotionsCard,
+  PromotionsHeader,
+} from "@/styles/catalogos/departamentos-detail.styles";
 
 // ============================================================================
 // TYPES - Row with mock articles count for table display
@@ -30,6 +48,167 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 interface GroupRow extends ProductLineItem {
   articles: number;
+}
+
+type DepartmentDetailTab = "lines" | "settings";
+
+type LineFormShape = {
+  code: string;
+  name: string;
+  hasLinePromotion: boolean;
+  promotionPercentage: string;
+  promotionStartDate: string;
+  promotionEndDate: string;
+};
+
+const lineFormFields = defineFormFields<LineFormShape>()([
+  {
+    name: "name",
+    schema: schemas
+      .requiredString(2, "El nombre de la línea es requerido")
+      .max(128, messages.string.max(128)),
+    label: "Nombre de la categoría",
+    type: "text",
+    placeholder: "Ej. Sillas",
+  },
+  {
+    name: "code",
+    schema: schemas
+      .requiredString(1, "La abreviación es requerida")
+      .max(32, messages.string.max(32))
+      .transform((s) => s.toUpperCase()),
+    label: "Abreviación",
+    type: "text",
+    placeholder: "Ej. SL",
+    filter: (v) => v.toUpperCase(),
+  },
+  {
+    name: "hasLinePromotion",
+    schema: z.boolean(),
+    label: "Agregar Promoción para ésta Línea",
+    type: "switch",
+  },
+  {
+    name: "promotionPercentage",
+    schema: z.string(),
+    label: "Promoción",
+    type: "number",
+    placeholder: "32",
+    when: (values) => Boolean(values.hasLinePromotion),
+  },
+  {
+    name: "promotionStartDate",
+    schema: z.string(),
+    label: "Fecha de inicio",
+    type: "date",
+    when: (values) => Boolean(values.hasLinePromotion),
+  },
+  {
+    name: "promotionEndDate",
+    schema: z.string(),
+    label: "Fecha fin",
+    type: "date",
+    when: (values) => Boolean(values.hasLinePromotion),
+  },
+] as const);
+
+type LineFormOutput = SchemaOutputFromFields<typeof lineFormFields>;
+
+interface PromotionMockRow {
+  id: number;
+  status: "active" | "inactive";
+  name: string;
+  promotion: string;
+  endDate: string;
+  products: number;
+}
+
+const promotionMockRows: PromotionMockRow[] = [
+  {
+    id: 1,
+    status: "active",
+    name: "Mes de la línea blanca",
+    promotion: "12%",
+    endDate: "Octubre",
+    products: 298,
+  },
+  {
+    id: 2,
+    status: "inactive",
+    name: "Día de las madres",
+    promotion: "30%",
+    endDate: "10, Mayo de 2025",
+    products: 122,
+  },
+];
+
+function lineModalSchemaSuperRefine(data: LineFormOutput, ctx: z.RefinementCtx): void {
+  if (!data.hasLinePromotion) return;
+
+  const percentageRaw = data.promotionPercentage?.trim() ?? "";
+  if (!percentageRaw || Number.isNaN(Number(percentageRaw))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "El porcentaje de promoción es requerido",
+      path: ["promotionPercentage"],
+    });
+  } else {
+    const value = Number(percentageRaw);
+    if (value < 0 || value > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El porcentaje debe estar entre 0 y 100",
+        path: ["promotionPercentage"],
+      });
+    }
+  }
+
+  const startDate = data.promotionStartDate?.trim() ?? "";
+  const endDate = data.promotionEndDate?.trim() ?? "";
+  if (!startDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de inicio es requerida",
+      path: ["promotionStartDate"],
+    });
+  }
+  if (!endDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha fin es requerida",
+      path: ["promotionEndDate"],
+    });
+  }
+  if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha fin debe ser posterior a la fecha de inicio",
+      path: ["promotionEndDate"],
+    });
+  }
+}
+
+function buildLineModalDefaultValues(
+  editingLine: ProductLineItem | null,
+): SchemaInputFromFields<typeof lineFormFields> {
+  if (editingLine) {
+    return {
+      name: editingLine.name,
+      code: (editingLine.code ?? "").toUpperCase(),
+      hasLinePromotion: false,
+      promotionPercentage: "",
+      promotionStartDate: "",
+      promotionEndDate: "",
+    };
+  }
+  return {
+    name: "",
+    code: "",
+    hasLinePromotion: false,
+    promotionPercentage: "",
+    promotionStartDate: "",
+    promotionEndDate: "",
+  };
 }
 
 // ============================================================================
@@ -56,13 +235,21 @@ export default function DepartmentDetailPage() {
   const showSnackbar = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
+  const [activeTab, setActiveTab] = useState<DepartmentDetailTab>("lines");
   const [department, setDepartment] = useState<Department | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput("", 300);
   const isDepartmentReady = departmentId != null && !Number.isNaN(departmentId);
 
   const {
     data: productLines,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    setPage,
+    setRowsPerPage,
+    setSearch,
     isLoading: loadingLines,
     refetch: refetchProductLines,
   } = usePaginatedList<ProductLineItem>({
@@ -71,7 +258,7 @@ export default function DepartmentDetailPage() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    enabled: isDepartmentReady,
+    enabled: isDepartmentReady && activeTab === "lines",
   });
 
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -79,7 +266,6 @@ export default function DepartmentDetailPage() {
   const [savingLine, setSavingLine] = useState(false);
   const [hasGroupPromotion, setHasGroupPromotion] = useState(false);
   const [groupAffectedCount, setGroupAffectedCount] = useState<number | null>(null);
-  const [groupFormValues, setGroupFormValues] = useState<Record<string, unknown>>({});
 
   const fetchDepartment = useCallback(async () => {
     if (!isDepartmentReady) {
@@ -103,8 +289,14 @@ export default function DepartmentDetailPage() {
   }, [fetchDepartment]);
 
   useEffect(() => {
+    if (activeTab === "lines") {
+      setSearch(debouncedSearch);
+    }
+  }, [activeTab, debouncedSearch, setSearch]);
+
+  useEffect(() => {
     if (hasGroupPromotion && groupModalOpen && department) {
-      getAffectedItemsCount(department.id).then(setGroupAffectedCount);
+      void getAffectedItemsCount(department.id).then(setGroupAffectedCount);
     } else {
       setGroupAffectedCount(null);
     }
@@ -119,14 +311,12 @@ export default function DepartmentDetailPage() {
     setEditingLine(null);
     setHasGroupPromotion(false);
     setGroupAffectedCount(null);
-    setGroupFormValues({});
     setGroupModalOpen(true);
   };
 
   const handleOpenEditGroup = (row: GroupRow) => {
     setEditingLine(row);
     setHasGroupPromotion(false);
-    setGroupFormValues({});
     setGroupModalOpen(true);
   };
 
@@ -135,19 +325,17 @@ export default function DepartmentDetailPage() {
     setEditingLine(null);
     setHasGroupPromotion(false);
     setGroupAffectedCount(null);
-    setGroupFormValues({});
   };
 
   const handleGroupFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    setGroupFormValues(values);
-    setHasGroupPromotion(Boolean(values.hasGroupPromotion));
+    setHasGroupPromotion(Boolean(values.hasLinePromotion));
   }, []);
 
-  const handleSaveGroup = async (data: Record<string, unknown>) => {
+  const handleSaveGroup = async (data: LineFormOutput) => {
     if (departmentId == null || Number.isNaN(departmentId)) return;
 
-    const name = (data.name as string)?.trim();
-    const code = (data.code as string)?.trim();
+    const name = data.name.trim();
+    const code = data.code.trim().toUpperCase();
 
     setSavingLine(true);
     if (editingLine) {
@@ -198,10 +386,31 @@ export default function DepartmentDetailPage() {
     }));
   }, [productLines]);
 
+  const settingsPromotionColumns: Column<PromotionMockRow>[] = [
+    {
+      id: "status",
+      label: "Estatus",
+      type: "chip",
+      size: "sm",
+      chipLabelMap: {
+        active: "Activo",
+        inactive: "Inactivo",
+      },
+      chipVariantMap: {
+        active: "success",
+        inactive: "default",
+      },
+    },
+    { id: "name", label: "Nombre", size: "xl" },
+    { id: "promotion", label: "Promoción", size: "sm" },
+    { id: "endDate", label: "Finalización", size: "md" },
+    { id: "products", label: "Productos", type: "number", size: "sm", align: "left" },
+  ];
+
   const lineColumns: Column<GroupRow>[] = [
     {
       id: "id",
-      label: "ID",
+      label: "Identificador",
       type: "id",
       size: "xs",
       idPadding: 2,
@@ -240,85 +449,15 @@ export default function DepartmentDetailPage() {
     },
   ];
 
-  const groupFormFields: FormFieldConfig[] = useMemo(() => {
-    const base: FormFieldConfig[] = [
-      {
-        name: "code",
-        label: "Abreviación",
-        type: "text",
-        placeholder: "Ej. LB",
-        validation: { required: true, minLength: 1, maxLength: 32 },
-        disabled: !!editingLine,
-        transformInput: (v) => v.toUpperCase(),
-      },
-      {
-        name: "name",
-        label: "Nombre de la categoría",
-        type: "text",
-        placeholder: "Ej. Línea blanca",
-        validation: {
-          required: true,
-          minLength: 2,
-          maxLength: 128,
-        },
-        autoFocus: true,
-        showErrorOnlyAfterSubmit: true,
-      },
-      {
-        name: "hasGroupPromotion",
-        label: "Agregar Promoción para esta Línea",
-        type: "switch",
-        defaultValue: false,
-      },
-    ];
-    if (hasGroupPromotion) {
-      base.push(
-        {
-          name: "promotionPercentage",
-          label: "Promoción",
-          type: "number",
-          placeholder: "32",
-          validation: { required: true, min: 0, max: 100 },
-          helperText: "Porcentaje de descuento (0-100)",
-        },
-        {
-          name: "promotionStartDate",
-          label: "Fecha de inicio",
-          type: "date",
-          validation: { required: true },
-        },
-        {
-          name: "promotionEndDate",
-          label: "Fecha fin",
-          type: "date",
-          validation: {
-            required: true,
-            custom: (value, allValues) => {
-              const start = allValues.promotionStartDate as string | undefined;
-              const end = value as string | undefined;
-              if (start && end && new Date(end) < new Date(start)) {
-                return "La fecha fin debe ser posterior a la fecha de inicio";
-              }
-              return undefined;
-            },
-          },
-        }
-      );
-    }
-    return base;
-  }, [hasGroupPromotion, editingLine]);
+  const groupModalInitialValues = useMemo(
+    () => buildLineModalDefaultValues(editingLine),
+    [editingLine],
+  );
 
-  const groupModalInitialValues = useMemo(() => {
-    if (Object.keys(groupFormValues).length > 0) return groupFormValues;
-    if (editingLine) {
-      return {
-        code: (editingLine.code ?? "").toUpperCase(),
-        name: editingLine.name,
-        hasGroupPromotion: false,
-      };
-    }
-    return { code: "", name: "", hasGroupPromotion: false };
-  }, [editingLine, groupFormValues]);
+  const tabs = [
+    { value: "lines", label: "Líneas" },
+    { value: "settings", label: "Ajustes" },
+  ];
 
   if (loading) {
     return (
@@ -352,39 +491,103 @@ export default function DepartmentDetailPage() {
     <MainLayout>
       <Stack spacing={2}>
         <Breadcrumbs items={breadcrumbItems} />
-        <Title
-          title={department.name}
-          actions={[
-            {
-              id: "new-group",
-              label: "Nuevo grupo",
-              icon: <AddIcon />,
-              onClick: handleOpenNewGroup,
-            },
-          ]}
+        <Title title={department.name} />
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={(value) => setActiveTab(value as DepartmentDetailTab)}
+          showSearch={activeTab === "lines"}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Buscar"
+          actions={
+            activeTab === "lines"
+              ? [
+                  {
+                    label: "Nueva línea",
+                    onClick: handleOpenNewGroup,
+                    variant: "contained",
+                    color: "primary",
+                  },
+                ]
+              : [
+                  {
+                    label: "Guardar cambios",
+                    onClick: () => showSnackbar("Cambios guardados correctamente."),
+                    variant: "contained",
+                    color: "primary",
+                  },
+                ]
+          }
         />
-        <TableCrud
-          columns={lineColumns}
-          rows={groupRows}
-          actions={lineActions}
-          rowKey="id"
-          loading={loadingLines}
-          emptyMessage="No hay líneas en este departamento"
-        />
+        {activeTab === "lines" ? (
+          <TableCrud
+            columns={lineColumns}
+            rows={groupRows}
+            actions={lineActions}
+            rowKey="id"
+            loading={loadingLines}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalRows={totalRows}
+            onPageChange={setPage}
+            onRowsPerPageChange={setRowsPerPage}
+            emptyMessage="No hay líneas en este departamento"
+          />
+        ) : (
+          <Stack spacing={2}>
+            <SettingsGrid>
+              <SettingsCard>
+                <SettingsTitle>Margen de utilidad</SettingsTitle>
+                <SettingsDescription>
+                  Se aplicará para todos los artículos dentro de este departamento. Éste
+                  precio será tomado como el precio de crédito de los artículos.
+                </SettingsDescription>
+                <SettingsValue>32%</SettingsValue>
+              </SettingsCard>
+
+              <SettingsCard>
+                <SettingsTitle>Promoción de contado</SettingsTitle>
+                <SettingsDescription>
+                  Configura el porcentaje que los artículos obtendrán para su precio de contado.
+                </SettingsDescription>
+                <SettingsValue>20%</SettingsValue>
+              </SettingsCard>
+            </SettingsGrid>
+
+            <PromotionsCard>
+              <PromotionsHeader>
+                <SettingsTitle sx={{ fontSize: "1.25rem" }}>Promociones</SettingsTitle>
+                <Button variant="outlined">Nueva promoción</Button>
+              </PromotionsHeader>
+              <TableCrud
+                columns={settingsPromotionColumns}
+                rows={promotionMockRows}
+                rowKey="id"
+                loading={false}
+                emptyMessage="No hay promociones registradas"
+              />
+            </PromotionsCard>
+          </Stack>
+        )}
       </Stack>
 
-      <ModalForm
+      <ModalFormZod
+        key={editingLine?.id ?? "new"}
         open={groupModalOpen}
         onClose={handleCloseGroupModal}
         title={editingLine ? "Editar línea" : "Nueva línea"}
-        fields={groupFormFields}
-        onConfirm={handleSaveGroup}
+        description={department ? `Línea: ${department.name}` : undefined}
+        fields={lineFormFields}
+        defaultValues={groupModalInitialValues}
+        onSubmit={handleSaveGroup}
         loading={savingLine}
-        initialValues={groupModalInitialValues}
         confirmLabel={editingLine ? "Guardar" : "Crear"}
-        cancelLabel="Cancelar"
         maxWidth="sm"
+        fullWidth
+        validateOn="change"
         onValuesChange={handleGroupFormValuesChange}
+        schemaSuperRefine={lineModalSchemaSuperRefine}
       >
         {hasGroupPromotion && groupAffectedCount !== null && (
           <Box sx={{ mt: 2 }}>
@@ -393,7 +596,7 @@ export default function DepartmentDetailPage() {
             </Alert>
           </Box>
         )}
-      </ModalForm>
+      </ModalFormZod>
     </MainLayout>
   );
 }

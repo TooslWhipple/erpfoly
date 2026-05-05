@@ -34,6 +34,7 @@ export function SideModal({
   headerActions,
   title,
   description,
+  headerContent,
   children,
   maxWidth = "md",
   fullWidth = true,
@@ -71,6 +72,7 @@ export function SideModal({
             {description}
           </Typography>
         )}
+        {headerContent != null ? headerContent : null}
       </Stack>
       {headerActions}
     </Stack>

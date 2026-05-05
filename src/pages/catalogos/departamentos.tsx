@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Alert, Stack } from "@mui/material";
 import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
+import { MainLayout, Title, TableCrud, ModalFormZod, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -15,6 +14,14 @@ import {
 } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import {
+  defineFormFields,
+  schemas,
+  type SchemaInputFromFields,
+  type SchemaOutputFromFields,
+} from "@/forms";
+import { messages } from "@/forms/validation/messages";
+import { z } from "zod";
 
 export type { Department } from "@/services/departments.service";
 export type { ProductGroup } from "@/services/departments.service";
@@ -25,6 +32,158 @@ async function getAffectedItemsCount(): Promise<number> {
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+type DepartmentFormShape = {
+  id: string;
+  name: string;
+  margin: string;
+  hasPromotion: boolean;
+  promotionPercentage: string;
+  promotionStartDate: string;
+  promotionEndDate: string;
+};
+
+const departmentFormFields = defineFormFields<DepartmentFormShape>()([
+  {
+    name: "id",
+    schema: z.string(),
+    label: "ID",
+    type: "text",
+    disabled: true,
+  },
+  {
+    name: "name",
+    schema: schemas
+      .requiredString(2, "El nombre es requerido")
+      .max(100, messages.string.max(100)),
+    label: "Nombre de la categoría",
+    type: "text",
+    placeholder: "Ej. Línea blanca",
+  },
+  {
+    name: "margin",
+    schema: z
+      .string()
+      .min(1, "El margen es requerido")
+      .refine(
+        (s) => s.trim() !== "" && !Number.isNaN(Number(s)) && /^-?\d*\.?\d*$/.test(s),
+        "Debe ser un número válido",
+      )
+      .transform((s) => Number(s))
+      .pipe(z.number().min(0, messages.number.min(0)).max(100, messages.number.max(100))),
+    label: "Margen",
+    type: "number",
+    placeholder: "32",
+    helperText: "Porcentaje de margen (0-100)",
+  },
+  {
+    name: "hasPromotion",
+    schema: z.boolean(),
+    label: "Agregar Promoción para éste departamento",
+    type: "switch",
+  },
+  {
+    name: "promotionPercentage",
+    schema: z.string(),
+    label: "Promoción",
+    type: "number",
+    placeholder: "32",
+    helperText: "Porcentaje de descuento (0-100)",
+    when: (v) => Boolean(v.hasPromotion),
+  },
+  {
+    name: "promotionStartDate",
+    schema: z.string(),
+    label: "Fecha de inicio",
+    type: "date",
+    when: (v) => Boolean(v.hasPromotion),
+  },
+  {
+    name: "promotionEndDate",
+    schema: z.string(),
+    label: "Fecha fin",
+    type: "date",
+    when: (v) => Boolean(v.hasPromotion),
+  },
+] as const);
+
+type DepartmentFormOutput = SchemaOutputFromFields<typeof departmentFormFields>;
+
+function buildDepartmentFormDefaultValues(
+  editing: Department | null,
+  nextId: string,
+): SchemaInputFromFields<typeof departmentFormFields> {
+  if (editing) {
+    return {
+      id: String(editing.id).padStart(2, "0"),
+      name: editing.name,
+      margin: String(editing.margin),
+      hasPromotion: Boolean(editing.promotion),
+      promotionPercentage:
+        editing.promotion?.percentage != null ? String(editing.promotion.percentage) : "",
+      promotionStartDate: editing.promotion?.startDate ?? "",
+      promotionEndDate: editing.promotion?.endDate ?? "",
+    };
+  }
+  return {
+    id: nextId,
+    name: "",
+    margin: "",
+    hasPromotion: false,
+    promotionPercentage: "",
+    promotionStartDate: "",
+    promotionEndDate: "",
+  };
+}
+
+function departmentModalSchemaSuperRefine(
+  data: DepartmentFormOutput,
+  ctx: z.RefinementCtx,
+): void {
+  if (!data.hasPromotion) return;
+
+  const pctRaw = data.promotionPercentage?.trim() ?? "";
+  if (pctRaw === "" || Number.isNaN(Number(pctRaw))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "El porcentaje de promoción es requerido",
+      path: ["promotionPercentage"],
+    });
+  } else {
+    const n = Number(pctRaw);
+    if (n < 0 || n > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El porcentaje debe estar entre 0 y 100",
+        path: ["promotionPercentage"],
+      });
+    }
+  }
+
+  const start = data.promotionStartDate?.trim() ?? "";
+  const end = data.promotionEndDate?.trim() ?? "";
+  if (!start) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de inicio es requerida",
+      path: ["promotionStartDate"],
+    });
+  }
+  if (!end) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha fin es requerida",
+      path: ["promotionEndDate"],
+    });
+  }
+  if (start && end && new Date(end) < new Date(start)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha fin debe ser posterior a la fecha de inicio",
+      path: ["promotionEndDate"],
+    });
+  }
+}
 
 export default function Departamentos() {
   const router = useRouter();
@@ -65,7 +224,6 @@ export default function Departamentos() {
   const [saving, setSaving] = useState(false);
   const [hasPromotion, setHasPromotion] = useState(false);
   const [affectedItemsCount, setAffectedItemsCount] = useState<number | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
   const getNextId = useCallback(() => {
     if (departments.length === 0) return "01";
@@ -73,108 +231,23 @@ export default function Departamentos() {
     return String(maxId + 1).padStart(2, "0");
   }, [departments]);
 
-  const departmentFormFields: FormFieldConfig[] = useMemo(() => {
-    const baseFields: FormFieldConfig[] = [
-      {
-        name: "id",
-        label: "ID",
-        type: "text",
-        disabled: true,
-        defaultValue: editingDepartment ? String(editingDepartment.id).padStart(2, "0") : getNextId(),
-      },
-      {
-        name: "name",
-        label: "Nombre de la categoría",
-        type: "text",
-        placeholder: "Ej. Línea blanca",
-        validation: {
-          required: true,
-          minLength: 2,
-          maxLength: 100,
-        },
-        autoFocus: true,
-      },
-      {
-        name: "margin",
-        label: "Margen",
-        type: "number",
-        placeholder: "32",
-        validation: {
-          required: true,
-          min: 0,
-          max: 100,
-        },
-        helperText: "Porcentaje de margen (0-100)",
-      },
-      {
-        name: "hasPromotion",
-        label: "Agregar promoción para éste departamento",
-        type: "switch",
-        defaultValue: false,
-      },
-    ];
-
-    if (hasPromotion) {
-      baseFields.push(
-        {
-          name: "promotionPercentage",
-          label: "Promoción",
-          type: "number",
-          placeholder: "32",
-          validation: {
-            required: true,
-            min: 0,
-            max: 100,
-          },
-          helperText: "Porcentaje de descuento (0-100)",
-        },
-        {
-          name: "promotionStartDate",
-          label: "Fecha de inicio",
-          type: "date",
-          validation: {
-            required: true,
-          },
-        },
-        {
-          name: "promotionEndDate",
-          label: "Fecha fin",
-          type: "date",
-          validation: {
-            required: true,
-            custom: (value, allValues) => {
-              const startDate = allValues.promotionStartDate as string | undefined;
-              const endDate = value as string | undefined;
-              if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-                return "La fecha fin debe ser posterior a la fecha de inicio";
-              }
-              return undefined;
-            },
-          },
-        }
-      );
-    }
-
-    return baseFields;
-  }, [hasPromotion, editingDepartment, getNextId]);
+  const departmentModalDefaultValues = useMemo(
+    () => buildDepartmentFormDefaultValues(editingDepartment, getNextId()),
+    [editingDepartment, getNextId],
+  );
 
   useEffect(() => {
     if (hasPromotion && modalOpen) {
-      getAffectedItemsCount().then(setAffectedItemsCount);
+      void getAffectedItemsCount().then(setAffectedItemsCount);
     } else {
       queueMicrotask(() => setAffectedItemsCount(null));
     }
   }, [hasPromotion, modalOpen, editingDepartment]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(event.target.value);
-  };
-
   const handleOpenCreateModal = () => {
     setEditingDepartment(null);
     setHasPromotion(false);
     setAffectedItemsCount(null);
-    setFormValues({});
     setModalOpen(true);
   };
 
@@ -183,15 +256,14 @@ export default function Departamentos() {
     setEditingDepartment(null);
     setHasPromotion(false);
     setAffectedItemsCount(null);
-    setFormValues({});
   };
 
-  const handleSaveDepartment = async (data: Record<string, unknown>) => {
+  const handleSaveDepartment = async (data: DepartmentFormOutput) => {
     setSaving(true);
     if (editingDepartment) {
       const result = await updateDepartment(editingDepartment.id, {
-        name: data.name as string,
-        margin: Number(data.margin),
+        name: data.name,
+        margin: data.margin,
       });
       if (result.error) {
         setSaving(false);
@@ -201,8 +273,8 @@ export default function Departamentos() {
       }
     } else {
       const result = await createDepartment({
-        name: data.name as string,
-        margin: Number(data.margin),
+        name: data.name,
+        margin: data.margin,
       });
       if (result.error) {
         setSaving(false);
@@ -216,14 +288,9 @@ export default function Departamentos() {
     refetch();
   };
 
-  const handleFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    setFormValues(values);
-
-    const promotionEnabled = Boolean(values.hasPromotion);
-    if (promotionEnabled !== hasPromotion) {
-      setHasPromotion(promotionEnabled);
-    }
-  }, [hasPromotion]);
+  const handleModalValuesChange = useCallback((values: Record<string, unknown>) => {
+    setHasPromotion(Boolean(values.hasPromotion));
+  }, []);
 
   const handleViewDetail = (department: Department) => {
     router.push(`/catalogos/departamentos/${department.id}`);
@@ -232,13 +299,12 @@ export default function Departamentos() {
   const handleEditDepartment = (department: Department) => {
     setEditingDepartment(department);
     setHasPromotion(Boolean(department.promotion));
-    setFormValues({});
     setModalOpen(true);
   };
 
   const handleDeleteDepartment = async (department: Department) => {
     const confirmed = window.confirm(
-      `¿Estás seguro de eliminar el departamento "${department.name}"?`
+      `¿Estás seguro de eliminar el departamento "${department.name}"?`,
     );
     if (!confirmed) return;
 
@@ -320,8 +386,8 @@ export default function Departamentos() {
 
         <TabFilters
           tabs={[]}
-          activeTab={''}
-          onTabChange={() => { }}
+          activeTab={""}
+          onTabChange={() => {}}
           showSearch
           searchValue={searchInput}
           onSearchChange={(value) => setSearchInput(value)}
@@ -332,7 +398,7 @@ export default function Departamentos() {
               onClick: handleOpenCreateModal,
               variant: "contained",
               color: "primary",
-            }
+            },
           ]}
         />
 
@@ -352,35 +418,21 @@ export default function Departamentos() {
         />
       </Stack>
 
-      <ModalForm
+      <ModalFormZod
+        key={editingDepartment?.id ?? "new"}
         open={modalOpen}
         onClose={handleCloseModal}
         title={editingDepartment ? "Editar departamento" : "Nuevo departamento"}
         fields={departmentFormFields}
-        onConfirm={handleSaveDepartment}
+        defaultValues={departmentModalDefaultValues}
+        onSubmit={handleSaveDepartment}
         loading={saving}
-        initialValues={
-          Object.keys(formValues).length > 0
-            ? formValues
-            : editingDepartment
-              ? {
-                id: String(editingDepartment.id).padStart(2, "0"),
-                name: editingDepartment.name,
-                margin: editingDepartment.margin,
-                hasPromotion: Boolean(editingDepartment.promotion),
-                promotionPercentage: editingDepartment.promotion?.percentage,
-                promotionStartDate: editingDepartment.promotion?.startDate,
-                promotionEndDate: editingDepartment.promotion?.endDate,
-              }
-              : {
-                id: getNextId(),
-                hasPromotion: false,
-              }
-        }
         confirmLabel={editingDepartment ? "Guardar" : "Crear"}
-        cancelLabel="Cancelar"
         maxWidth="sm"
-        onValuesChange={handleFormValuesChange}
+        fullWidth
+        validateOn="change"
+        onValuesChange={handleModalValuesChange}
+        schemaSuperRefine={departmentModalSchemaSuperRefine}
       >
         {hasPromotion && affectedItemsCount !== null && (
           <Box sx={{ mt: 2 }}>
@@ -389,7 +441,7 @@ export default function Departamentos() {
             </Alert>
           </Box>
         )}
-      </ModalForm>
+      </ModalFormZod>
     </MainLayout>
   );
 }

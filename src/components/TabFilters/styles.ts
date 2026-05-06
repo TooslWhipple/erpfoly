@@ -1,33 +1,36 @@
 import { styled } from "@mui/material/styles";
 import { Tab, Tabs } from "@mui/material";
-import { theme } from "@/styles/theme";
-
 
 export const TabsWrapper = styled('div')(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'flex-start',
-  alignItems: 'center',
+  display: "flex",
+  justifyContent: "flex-start",
+  alignItems: "center",
   height: 36,
+  // Fits tab labels when narrow; never wider than the parent (narrow cards/modals).
+  width: "min(100%, max-content)",
+  maxWidth: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
   backgroundColor: theme.palette.app.segmentControl.background,
   borderRadius: 10,
   padding: "0 4px",
   overflowX: "auto",
   overflowY: "hidden",
-  maxWidth: "100%",
   WebkitOverflowScrolling: "touch",
   "&::-webkit-scrollbar": {
     display: "none",
   },
   scrollbarWidth: "none",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    minWidth: 0,
-  },
 }));
 
-export const StyledTabs = styled(Tabs)(({ theme }) => ({
+export const StyledTabs = styled(Tabs)(() => ({
   minHeight: 28,
   height: 28,
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  overflow: "hidden",
+  boxSizing: "border-box",
   "& .MuiTabs-indicator": {
     display: "none",
   },
@@ -35,27 +38,19 @@ export const StyledTabs = styled(Tabs)(({ theme }) => ({
     gap: 0,
     height: 28,
     alignItems: "center",
+    width: "max-content",
+    flexWrap: "nowrap",
   },
   "& .MuiTabs-scroller": {
     overflowX: "auto !important",
     overflowY: "hidden",
+    maxWidth: "100%",
+    minWidth: 0,
     WebkitOverflowScrolling: "touch",
     "&::-webkit-scrollbar": {
       display: "none",
     },
     scrollbarWidth: "none",
-  },
-  [theme.breakpoints.down("md")]: {
-    minWidth: 0,
-    width: "100%",
-    "& .MuiTabs-flexContainer": {
-      width: "max-content",
-      flexWrap: "nowrap",
-    },
-    "& .MuiTabs-scroller": {
-      overflowX: "auto !important",
-      overflowY: "hidden",
-    },
   },
 }));
 

@@ -5,10 +5,19 @@ import { CircularProgress } from "@mui/material";
 import type { z } from "zod";
 import { SideModal } from "@/components/SideModal";
 import { useFormFromFields } from "@/forms";
-import type { FormFieldDefinition, SchemaOutputFromFields, SchemaInputFromFields } from "@/forms";
+import type {
+  FormFieldDefinition,
+  SchemaOutputFromFields,
+  SchemaInputFromFields,
+  UseFormFromFieldsResult,
+} from "@/forms";
 import { SubmitButton } from "./ModalFormZod.styles";
 
 type FieldDef = FormFieldDefinition<string, import("zod").ZodTypeAny>;
+
+export type ModalFormZodRenderFn<T extends readonly FieldDef[]> = (ctx: {
+  form: UseFormFromFieldsResult<T>["form"];
+}) => React.ReactNode;
 
 export interface ModalFormZodProps<T extends readonly FieldDef[]> {
   open: boolean;
@@ -23,7 +32,9 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   fullWidth?: boolean;
   validateOn?: "change" | "blur" | "submit";
-  children?: React.ReactNode;
+  /** When true, fields are not auto-rendered; use a function child to render `FormField` / `form.Field` manually. */
+  customFieldLayout?: boolean;
+  children?: React.ReactNode | ModalFormZodRenderFn<T>;
   headerContent?: React.ReactNode;
   /** Emitted when any field value changes while the modal is open (for dependent UI such as conditional sections). */
   onValuesChange?: (values: Record<string, unknown>) => void;
@@ -43,6 +54,7 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
   maxWidth = "md",
   fullWidth = true,
   validateOn = "blur",
+  customFieldLayout = false,
   children,
   headerContent,
   onValuesChange,
@@ -111,7 +123,9 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
       fullWidth={fullWidth}
       disableClose={loading}
     >
-      <FormContent disabled={loading}>{children}</FormContent>
+      <FormContent disabled={loading} skipFieldBody={customFieldLayout}>
+        {typeof children === "function" ? children({ form }) : children}
+      </FormContent>
     </SideModal>
   );
 }

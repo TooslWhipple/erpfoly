@@ -2,10 +2,13 @@ import { styled } from "@mui/material/styles";
 import { theme } from "@/styles/theme";
 
 export const CardContainer = styled('div')({
+  height: "100%",
   display: "flex",
   flexDirection: "column",
-  padding: "24px",
+  justifyContent: "space-between",
+  padding: "24px 16px",
   backgroundColor: theme.palette.background.paper,
   borderRadius: "16px",
-  border: `1px solid ${theme.palette.app.border}`
+  border: `1px solid ${theme.palette.app.border}`,
+  overflow: "hidden",
 });

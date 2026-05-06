@@ -141,16 +141,16 @@ export function buildCreateProductRequest(
     > =
         mode === "update"
             ? {
-                  ...baseFields,
-                  code: generalData.code.trim(),
-                  packageItems,
-                  ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
-              }
+                ...baseFields,
+                code: generalData.code.trim(),
+                packageItems,
+                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+            }
             : {
-                  ...baseFields,
-                  packageItems,
-                  ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
-              };
+                ...baseFields,
+                packageItems,
+                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+            };
 
     if (generalData.warrantyType === "policy") {
         return {
@@ -239,9 +239,9 @@ export type ProductDetailDto = {
     branches: ProductDetailBranchDto[];
     price?: ProductDetailPriceDto | null;
 } & (
-    | { warrantyType: "MONTHS"; warrantyMonths: number }
-    | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
-);
+        | { warrantyType: "MONTHS"; warrantyMonths: number }
+        | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
+    );
 
 export interface LoadedProductFormSnapshot {
     generalData: GeneralDataFormState;
@@ -280,10 +280,10 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         warrantyMonths: warrantyIsAnnex
             ? "0"
             : String(
-                  detail.warrantyType === "MONTHS" && Number.isFinite(detail.warrantyMonths)
-                      ? detail.warrantyMonths
-                      : 0
-              ),
+                detail.warrantyType === "MONTHS" && Number.isFinite(detail.warrantyMonths)
+                    ? detail.warrantyMonths
+                    : 0
+            ),
         warrantyPolicy:
             detail.warrantyType === "ANNEX_POLICY" ? (detail.warrantyPolicy ?? "") : "",
     };
@@ -316,11 +316,11 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
     const basePrices: ProductBasePrice[] =
         price?.basePrices && price.basePrices.length > 0
             ? price.basePrices.map((bp, i) => ({
-                  id: bp.id ?? `bp-${detail.id}-${i}`,
-                  name: bp.name,
-                  marginPercent: bp.marginPercent,
-                  lastEditedBy: bp.lastEditedBy ?? undefined,
-              }))
+                id: bp.id ?? `bp-${detail.id}-${i}`,
+                name: bp.name,
+                marginPercent: bp.marginPercent,
+                lastEditedBy: bp.lastEditedBy ?? undefined,
+            }))
             : [...DEFAULT_PRODUCT_BASE_PRICES];
 
     return {
@@ -376,6 +376,53 @@ export async function getProducts(
     return get<PaginatedRowsResponse<ProductListItem>>(
         buildListUrl(PRODUCTS_BASE, params)
     );
+}
+
+export const PRODUCT_SEARCH_DEFAULT_LIMIT = 100;
+
+/** Row shape returned by GET /products/search */
+export interface ProductSearchItem {
+    id: number;
+    code: string;
+    shortName: string;
+    description: string;
+    listCost: string;
+    score: number;
+}
+
+export interface ProductSearchParams {
+    q: string;
+    limit?: number;
+}
+
+function normalizeProductSearchResponse(data: unknown): ProductSearchItem[] {
+    if (Array.isArray(data)) {
+        return data as ProductSearchItem[];
+    }
+    if (data != null && typeof data === "object" && "rows" in data && Array.isArray((data as { rows: unknown }).rows) ) {
+        return (data as { rows: ProductSearchItem[] }).rows;
+    }
+    return [];
+}
+
+export async function searchProducts(params: ProductSearchParams): Promise<ApiResult<ProductSearchItem[]>> {
+    if (params.q.length < 2) {
+        return { data: [], error: null };
+    }
+
+    const limit = params.limit ?? PRODUCT_SEARCH_DEFAULT_LIMIT;
+    const result = await get<unknown>(`${PRODUCTS_BASE}/search`, {
+        params: { q: params.q, limit },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeProductSearchResponse(result.data),
+        error: null
+    };
 }
 export interface ProductWarrantyTypeCatalogOption {
     value: string;

@@ -31,6 +31,8 @@ export interface UseFormFromFieldsResult<T extends readonly FieldDef[]> {
         disabled?: boolean;
         /** When false, render as Box (caller wraps in own form). Default true for modal usage. */
         asForm?: boolean;
+        /** When true, only the built-in field list is omitted; children render fields manually (e.g. tabs). */
+        skipFieldBody?: boolean;
     }) => React.ReactElement;
 }
 
@@ -97,7 +99,13 @@ export function useFormFromFields<T extends readonly FieldDef[]>(
             children: contentChildren,
             disabled = false,
             asForm = true,
-        }: { children?: React.ReactNode; disabled?: boolean; asForm?: boolean }) {
+            skipFieldBody = false,
+        }: {
+            children?: React.ReactNode;
+            disabled?: boolean;
+            asForm?: boolean;
+            skipFieldBody?: boolean;
+        }) {
             const boxSx = {
                 display: "flex" as const,
                 flexDirection: "column" as const,
@@ -119,16 +127,18 @@ export function useFormFromFields<T extends readonly FieldDef[]>(
                     }
                     sx={boxSx}
                 >
-                    <FormBody>
-                        {fields.map((fieldConfig) => (
-                            <ConditionalFormField<T>
-                                key={String(fieldConfig.name)}
-                                form={form}
-                                fieldConfig={fieldConfig}
-                                formDisabled={disabled}
-                            />
-                        ))}
-                    </FormBody>
+                    {!skipFieldBody && (
+                        <FormBody>
+                            {fields.map((fieldConfig) => (
+                                <ConditionalFormField<T>
+                                    key={String(fieldConfig.name)}
+                                    form={form}
+                                    fieldConfig={fieldConfig}
+                                    formDisabled={disabled}
+                                />
+                            ))}
+                        </FormBody>
+                    )}
                     {contentChildren}
                 </Box>
             );

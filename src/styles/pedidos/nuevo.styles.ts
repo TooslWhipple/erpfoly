@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, TextField, Select, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // LAYOUT COMPONENTS
@@ -35,8 +35,8 @@ export const MobileCardContainer = styled(Box)(({ theme }) => ({
     top: "auto",
     height: "auto",
     maxHeight: "calc(100vh - 64px)",
-    backgroundColor: colors.background.sidebar,
-    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    borderTop: `1px solid ${theme.palette.app.border}`,
     boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.1)",
     zIndex: theme.zIndex.drawer + 1,
     overflow: "hidden",
@@ -81,11 +81,11 @@ export const SuggestionsList = styled(Box)(({ theme }) => ({
         height: 6,
     },
     "&::-webkit-scrollbar-track": {
-        backgroundColor: colors.background.main,
+        backgroundColor: theme.palette.background.default,
         borderRadius: 3,
     },
     "&::-webkit-scrollbar-thumb": {
-        backgroundColor: colors.border,
+        backgroundColor: theme.palette.app.border,
         borderRadius: 3,
         "&:hover": {
             backgroundColor: "#D4D4D8",

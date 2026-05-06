@@ -82,10 +82,10 @@ interface StatsCardGroupProps {
 
 export function StatsCardGroup({ cards }: StatsCardGroupProps) {
   return (
-    <Grid container spacing={2}>
+    <Grid container spacing={2} alignItems="stretch">
       {
         cards.map((card) => (
-          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 'grow' }}>
             <StatsCard
               label={card.label}
               value={card.value}

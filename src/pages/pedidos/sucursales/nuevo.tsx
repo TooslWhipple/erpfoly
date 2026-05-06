@@ -9,7 +9,7 @@ import type { Supplier, Article, OrderItem } from "@/types/pedidos.types";
 import type { ProductSuggestion } from "@/types/suggestions.types";
 import { getArticles, getSuggestionsForOrder, getCostHistory, getSuppliers } from "@/data/pedidos.mockData";
 import type { CostHistoryEntry } from "@/components/AddArticleToOrderModal";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import {
     PageContainer,
     PageHeader,
@@ -373,12 +373,12 @@ export default function NuevoPedidoSucursal() {
                                 IconComponent={ArrowDropDownIcon}
                                 sx={{
                                     maxWidth: 400,
-                                    backgroundColor: colors.background.sidebar,
+                                    backgroundColor: theme.palette.background.paper,
                                     "& .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: colors.border,
+                                        borderColor: theme.palette.app.border,
                                     },
                                     "&:hover .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: colors.border,
+                                        borderColor: theme.palette.app.border,
                                     },
                                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                                         borderColor: "#2663EB",
@@ -426,12 +426,12 @@ export default function NuevoPedidoSucursal() {
                                         maxWidth: 400,
                                         "& .MuiOutlinedInput-root": {
                                             borderRadius: 2,
-                                            backgroundColor: colors.background.sidebar,
+                                            backgroundColor: theme.palette.background.paper,
                                             "& fieldset": {
-                                                borderColor: colors.border,
+                                                borderColor: theme.palette.app.border,
                                             },
                                             "&:hover fieldset": {
-                                                borderColor: colors.border,
+                                                borderColor: theme.palette.app.border,
                                             },
                                             "&.Mui-focused fieldset": {
                                                 borderColor: "#2663EB",
@@ -480,7 +480,7 @@ export default function NuevoPedidoSucursal() {
                                 height: "100vh",
                                 top: 0,
                                 right: 0,
-                                borderLeft: `1px solid ${colors.border}`,
+                                borderLeft: `1px solid ${theme.palette.app.border}`,
                                 borderRadius: 0,
                                 boxShadow: "none",
                                 zIndex: (theme) => theme.zIndex.drawer + 1,

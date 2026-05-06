@@ -127,24 +127,3 @@ export const MOCK_ARTICLES: ArticleForPackage[] = [
     { id: "5", name: "Estufa Mabe 4 Quemadores EM4444BDB Negra", supplierId: 3, supplierName: "Mabe S.A de C.V", lastPrice: 5499.0 },
     { id: "6", name: "Horno Eléctrico Empotrable Samsung NE63K6711SS", supplierId: 2, supplierName: "Samsung Electronics", lastPrice: 8999.0 },
 ];
-
-// Mock branches for package selection (more branches than product branches)
-export const MOCK_PACKAGE_BRANCHES = [
-    { id: 1, label: "Matriz" },
-    { id: 2, label: "Campestre" },
-    { id: 3, label: "Carrera" },
-    { id: 4, label: "Estación" },
-    { id: 5, label: "Matamoros-Pedro Cárdenas" },
-    { id: 6, label: "Matamoros-Plaza Patio" },
-    { id: 7, label: "Matamoros-Brisas" },
-    { id: 8, label: "Reynosa-Av. Hidalgo" },
-    { id: 9, label: "Reynosa-Periferico" },
-    { id: 10, label: "Nuevo Laredo" },
-    { id: 11, label: "Concordia-Mty" },
-    { id: 12, label: "Guadalupe-NL" },
-    { id: 13, label: "Cumbres-Mty" },
-    { id: 14, label: "Valles Oriente" },
-    { id: 15, label: "Valles Galeana" },
-    { id: 16, label: "Mante" },
-    { id: 17, label: "Vallehermoso" },
-];

@@ -16,7 +16,7 @@ import { useHousingTypes } from "@/hooks/useHousingTypes";
 import { useFamilyRelationships } from "@/hooks/useFamilyRelationships";
 import { useMaritalStatuses } from "@/hooks/useMaritalStatuses";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { CreditApplicationTabId } from "@/types/credit-application-form.types";
 
@@ -108,7 +108,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             : tab.label,
         textColor:
           tabsWithErrorStateSet.has(tab.value as CreditApplicationTabId)
-            ? colors.chip.variants.error.color
+            ? theme.palette.app.chip.variants.error.color
             : undefined,
       })),
     [tabs, tabsWithErrorStateSet]
@@ -244,6 +244,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={basicInformationTab.errors}
             validatingSecurityCode={basicInformationTab.validatingSecurityCode}
             isSecurityCodeValid={basicInformationTab.isSecurityCodeValid}
+            otpActionLabel={basicInformationTab.otpActionLabel}
+            isOtpActionDisabled={basicInformationTab.isOtpActionDisabled}
+            isSecurityCodeFieldDisabled={basicInformationTab.isSecurityCodeFieldDisabled}
             maritalStatusOptions={maritalStatuses}
             maritalStatusesLoading={maritalStatusesLoading}
             onFieldChange={handleBasicFieldChange}

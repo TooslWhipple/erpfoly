@@ -1,15 +1,15 @@
 import { styled } from "@mui/material/styles";
 import { IconButton } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const QuantityControls = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   overflow: "hidden",
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   maxWidth: 140,
 }));
 
@@ -19,7 +19,7 @@ export const QuantityButton = styled(IconButton)(({ theme }) => ({
   minWidth: 36,
   height: 36,
   "&:hover": {
-    backgroundColor: colors.chip.background,
+    backgroundColor: theme.palette.app.chip.background,
   },
 }));
 

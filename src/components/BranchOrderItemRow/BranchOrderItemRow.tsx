@@ -9,7 +9,7 @@ import {
     QuantityButton,
     QuantityValue,
 } from "./styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export interface BranchOrderItemRowProps {
     item: BranchOrderLineItem;
@@ -56,7 +56,7 @@ export function BranchOrderItemRow({
                 <ProductIconPlaceholder>
                     <Package
                         size={16}
-                        color={colors.text.secondary} />
+                        color={theme.palette.text.secondary} />
                 </ProductIconPlaceholder>
                 <Typography variant="subtitle1" noWrap title={item.articleName}>{item.articleName}</Typography>
             </Stack>

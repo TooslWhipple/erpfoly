@@ -1,14 +1,14 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // MAIN CONTAINER
 // ============================================================================
 
 export const SuggestionsCardContainer = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(2.5),
     width: "100%",
@@ -66,7 +66,7 @@ export const SuggestionsList = styled(Box)({
 
 export const ProductItem = styled(Box)(({ theme }) => ({
     paddingBottom: theme.spacing(2),
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
     "&:last-child": {
         borderBottom: "none",
         paddingBottom: 0,

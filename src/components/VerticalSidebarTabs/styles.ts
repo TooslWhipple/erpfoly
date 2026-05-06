@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const TabsList = styled("div")(({ theme }) => ({
   display: "flex",
@@ -23,11 +23,11 @@ export const TabButton = styled("button")<{ selected: boolean }>(({ theme, selec
   fontSize: "14px",
   fontWeight: 500,
   lineHeight: "20px",
-  color: (selected) ? colors.sidebar.textSelected : colors.text.primary,
-  backgroundColor: (selected) ? colors.sidebar.itemSelected : "transparent",
+  color: (selected) ? theme.palette.app.sidebar.textSelected : theme.palette.text.primary,
+  backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : "transparent",
   transition: "background-color 0.2s ease, color 0.2s ease, font-weight 0.2s ease",
   textAlign: "left",
   "&:hover": {
-    backgroundColor: selected ? colors.sidebar.itemSelected : colors.chip.background,
+    backgroundColor: selected ? theme.palette.app.sidebar.itemSelected : theme.palette.app.chip.background,
   }
 }));

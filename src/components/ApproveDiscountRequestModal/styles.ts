@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const PriceComparisonPanel = styled('div')({
   display: "flex",
@@ -9,5 +9,5 @@ export const PriceComparisonPanel = styled('div')({
   gap: "12px",
   padding: "8px 12px",
   borderRadius: "12px",
-  backgroundColor: colors.background.content
+  backgroundColor: theme.palette.background.content
 });

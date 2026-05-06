@@ -1,6 +1,6 @@
 import { Stack, Typography } from "@mui/material";
 import numeral from "numeral";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export function SalesDashboardChartTooltip({
   active,
@@ -15,8 +15,8 @@ export function SalesDashboardChartTooltip({
   return (
     <Stack
       sx={{
-        backgroundColor: colors.background.sidebar,
-        border: `1px solid ${colors.border}`,
+        backgroundColor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.app.border}`,
         borderRadius: 1,
         p: 1.5,
         boxShadow: 1,

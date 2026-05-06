@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Paper, Typography, Button } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // LAYOUT COMPONENTS
@@ -15,8 +15,8 @@ export const TabsWrapper = styled(Box)(({ theme }) => ({
 // ============================================================================
 
 export const SettingsCard = styled(Paper)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(3),
     width: "100%",

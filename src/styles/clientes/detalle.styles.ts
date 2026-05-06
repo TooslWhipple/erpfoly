@@ -8,15 +8,15 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const Card = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
   padding: "32px 24px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
 }));
 
@@ -31,14 +31,14 @@ export const ActivityItemCard = styled('div')({
   flexDirection: "column",
   gap: "16px",
   padding: "16px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "8px",
   zIndex: 1
 });
 
 export const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: theme.shape.borderRadius,
   overflow: "hidden",
 }));
@@ -48,7 +48,7 @@ export const StyledTable = styled(Table)({
 });
 
 export const StyledTableHead = styled(TableHead)(({ theme }) => ({
-  backgroundColor: colors.chip.background,
+  backgroundColor: theme.palette.app.chip.background,
   "& th": {
     fontSize: 12,
     fontWeight: 600,
@@ -56,7 +56,7 @@ export const StyledTableHead = styled(TableHead)(({ theme }) => ({
     textTransform: "uppercase",
     letterSpacing: "0.04em",
     padding: theme.spacing(1.5, 2),
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
   },
 }));
 
@@ -69,7 +69,7 @@ export const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "& td": {
     padding: theme.spacing(2),
     fontSize: 14,
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
   },
 }));
 
@@ -94,9 +94,9 @@ export const InfoCard = styled('div')(({ theme }) => ({
   alignItems: "center",
   gap: "12px",
   padding: "12px 24px 12px 12px",
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "border-color 0.2s, background-color 0.2s",
   "&:hover": {

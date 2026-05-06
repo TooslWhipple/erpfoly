@@ -1,12 +1,12 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const Card = styled('div')(({ padding }: { padding?: string }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
   gap: "16px",
   padding: padding || "16px"

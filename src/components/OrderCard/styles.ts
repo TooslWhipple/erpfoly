@@ -1,18 +1,18 @@
 import { styled } from "@mui/material/styles";
 import { Chip, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export type OrderStatus = "pending" | "in_progress" | "received";
 
 export const CardContainer = styled('div')(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
   padding: "24px",
   cursor: "pointer",
   transition: "background-color 0.15s ease",
   "&:hover": {
-    backgroundColor: colors.background.main,
+    backgroundColor: theme.palette.background.default,
   },
 }));
 
@@ -61,7 +61,7 @@ export const InfoSection = styled('div')({
 export const SupplierName = styled(Typography)({
   fontSize: 15,
   fontWeight: 500,
-  color: colors.text.primary,
+  color: theme.palette.text.primary,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -69,7 +69,7 @@ export const SupplierName = styled(Typography)({
 
 export const DateText = styled(Typography)({
   fontSize: 13,
-  color: colors.text.secondary,
+  color: theme.palette.text.secondary,
 });
 
 export const ArrowContainer = styled('div')({
@@ -92,12 +92,12 @@ export const DestinationSection = styled('div')({
 export const DestinationName = styled(Typography)({
   fontSize: 15,
   fontWeight: 500,
-  color: colors.text.primary,
+  color: theme.palette.text.primary,
 });
 
 export const ItemCountText = styled(Typography)({
   fontSize: 14,
-  color: colors.text.secondary,
+  color: theme.palette.text.secondary,
   whiteSpace: "nowrap",
   flexShrink: 0,
 });
@@ -136,5 +136,5 @@ export const EmptyContainer = styled('div')(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: theme.spacing(6),
-  color: colors.text.secondary,
+  color: theme.palette.text.secondary,
 }));

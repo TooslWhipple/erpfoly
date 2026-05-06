@@ -8,3 +8,5 @@ export { CostHistoryModal } from "./CostHistoryModal";
 export { AddPackageModal } from "./AddPackageModal";
 export { AddSupplierModal } from "./AddSupplierModal";
 export { AddBasePriceModal } from "./AddBasePriceModal";
+export { QuickDepartmentModal } from "./QuickDepartmentModal";
+export { QuickProductLineModal } from "./QuickProductLineModal";

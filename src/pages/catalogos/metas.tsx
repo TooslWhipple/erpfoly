@@ -30,7 +30,7 @@ import {
 } from "@/styles/catalogos/goals.styles";
 import { getGoalsPageData } from "@/services/goals.service";
 import type { ChartMetricType, SalesHistoryPoint } from "@/types/goals.types";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CHART METRIC OPTIONS
@@ -51,8 +51,8 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   return (
     <Box
       sx={{
-        backgroundColor: colors.background.sidebar,
-        border: `1px solid ${colors.border}`,
+        backgroundColor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.app.border}`,
         borderRadius: 1,
         p: 1.5,
         boxShadow: 1,
@@ -260,11 +260,11 @@ export default function MetasPage() {
                 margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                 barCategoryGap={4}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.app.border} />
                 <XAxis
                   dataKey="label"
                   tickLine={false}
-                  axisLine={{ stroke: colors.border }}
+                  axisLine={{ stroke: theme.palette.app.border }}
                   tick={(props) => (
                     <XAxisTick
                       x={Number(props.x)}

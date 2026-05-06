@@ -13,6 +13,9 @@ interface BasicInformationTabProps {
   errors: BasicInformationFormErrors;
   validatingSecurityCode: boolean;
   isSecurityCodeValid: boolean | null;
+  otpActionLabel: string;
+  isOtpActionDisabled: boolean;
+  isSecurityCodeFieldDisabled: boolean;
   maritalStatusOptions: MaritalStatusCatalogItem[];
   maritalStatusesLoading: boolean;
   onFieldChange: (field: keyof BasicInformationFormValues, value: string) => void;
@@ -25,6 +28,9 @@ export function BasicInformationTab({
   errors,
   validatingSecurityCode,
   isSecurityCodeValid,
+  otpActionLabel,
+  isOtpActionDisabled,
+  isSecurityCodeFieldDisabled,
   maritalStatusOptions,
   maritalStatusesLoading,
   onFieldChange,
@@ -147,25 +153,28 @@ export function BasicInformationTab({
         <Grid size={{ xs: 12, md: 'grow' }}>
           <FormTextField
             fullWidth
-            required
+            required={isSecurityCodeValid !== true}
             label="Número de Whatsapp"
             placeholder="Ingresa"
             value={values.whatsappNumber}
             onChange={(event) => onFieldChange("whatsappNumber", event.target.value)}
             error={Boolean(errors.whatsappNumber)}
             helperText={errors.whatsappNumber}
+            disabled={isSecurityCodeValid === true}
           />
         </Grid>
         <Grid size={{ xs: 'grow' }}>
           <FormTextField
             fullWidth
-            required
+            required={isSecurityCodeValid !== true}
             label="Código de seguridad"
             placeholder="Ingresa"
             value={values.securityCode}
             onChange={(event) => onFieldChange("securityCode", event.target.value)}
             error={Boolean(errors.securityCode)}
             helperText={errors.securityCode}
+            disabled={isSecurityCodeFieldDisabled}
+            inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
           />
         </Grid>
         <Grid size={{ xs: 'auto' }} alignSelf="flex-end">
@@ -173,21 +182,21 @@ export function BasicInformationTab({
             variant="outlined"
             startIcon={<ShieldCheck size={16} />}
             onClick={onValidateSecurityCode}
-            disabled={validatingSecurityCode}
+            disabled={isOtpActionDisabled}
             sx={{ minWidth: 108, alignSelf: "stretch" }}>
-            Validar
+            {validatingSecurityCode ? "Procesando..." : otpActionLabel}
           </Button>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          {isSecurityCodeValid !== null && (
+          {isSecurityCodeValid === true && (
             <Typography
               variant="body2"
-              color={isSecurityCodeValid ? "success.main" : "error.main"}
+              color="success.main"
               sx={{ display: "flex", alignItems: "center", gap: 1 }}
             >
-              {isSecurityCodeValid ? <Check size={14} /> : null}
-              {isSecurityCodeValid ? "Código validado correctamente" : "Código inválido"}
+              <Check size={14} />
+              Código validado correctamente
             </Typography>
           )}
         </Grid>

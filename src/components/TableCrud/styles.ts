@@ -10,15 +10,14 @@ import {
   TableRow,
   TablePagination,
 } from "@mui/material";
-import { colors } from "@/styles/theme";
 
-export const TableWrapper = styled('div')({
+export const TableWrapper = styled("div")(({ theme }) => ({
   width: "100%",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
+  backgroundColor: theme.palette.app.background.sidebar,
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: theme.shape.borderRadius,
   overflow: "hidden",
-});
+}));
 
 export const StyledTableContainer = styled(TableContainer)({
   overflow: "auto",
@@ -28,44 +27,44 @@ export const StyledTableContainer = styled(TableContainer)({
   boxShadow: "none",
 });
 
-export const StyledTableHead = styled(TableHead)({
-  backgroundColor: colors.background.main,
-});
+export const StyledTableHead = styled(TableHead)(({ theme }) => ({
+  backgroundColor: theme.palette.app.background.main,
+}));
 
 export const StyledHeaderCell = styled(TableCell)(({ theme }) => ({
   fontWeight: 600,
   fontSize: 14,
-  color: "#232325",
-  borderBottom: `1px solid ${colors.border}`,
+  color: theme.palette.text.primary,
+  borderBottom: `1px solid ${theme.palette.app.border}`,
   padding: "12px 16px",
   whiteSpace: "nowrap",
-  backgroundColor: colors.background.main,
+  backgroundColor: theme.palette.app.background.main,
   [theme.breakpoints.down("sm")]: {
     padding: "10px 12px",
     fontSize: 13,
   },
 }));
 
-export const StyledTableRow = styled(TableRow)({
+export const StyledTableRow = styled(TableRow)(({ theme }) => ({
   transition: "background-color 0.15s ease",
   "&:hover": {
-    backgroundColor: colors.background.main,
+    backgroundColor: theme.palette.app.background.main,
     "& td": {
-      backgroundColor: colors.background.main,
+      backgroundColor: theme.palette.app.background.main,
     },
     "& .sticky-cell": {
-      backgroundColor: `${colors.background.main} !important`,
+      backgroundColor: `${theme.palette.app.background.main} !important`,
     },
   },
   "&:last-child td": {
     borderBottom: "none",
   },
-});
+}));
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   fontSize: 14,
-  color: "#232325",
-  borderBottom: `1px solid ${colors.border}`,
+  color: theme.palette.text.primary,
+  borderBottom: `1px solid ${theme.palette.app.border}`,
   padding: "12px 16px",
   [theme.breakpoints.down("sm")]: {
     padding: "10px 12px",
@@ -84,65 +83,71 @@ export const NumberCell = styled(StyledTableCell)({
   fontVariantNumeric: "tabular-nums",
 });
 
-export const ActionsHeaderCell = styled(StyledHeaderCell)({
+export const ActionsHeaderCell = styled(StyledHeaderCell)(({ theme }) => ({
   position: "sticky",
   right: 0,
   zIndex: 3,
-  backgroundColor: colors.background.main,
+  backgroundColor: theme.palette.app.background.main,
   boxShadow: "-4px 0 8px rgba(0, 0, 0, 0.04)",
   width: 56,
   minWidth: 56,
   maxWidth: 56,
   padding: "12px",
-});
+}));
 
-export const ActionsCell = styled(TableCell)({
+export const ActionsCell = styled(TableCell)(({ theme }) => ({
   position: "sticky",
   right: 0,
   zIndex: 1,
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.app.background.sidebar,
   boxShadow: "-4px 0 8px rgba(0, 0, 0, 0.04)",
   width: 56,
   minWidth: 56,
   maxWidth: 56,
   padding: "8px 12px",
-  borderBottom: `1px solid ${colors.border}`,
+  borderBottom: `1px solid ${theme.palette.app.border}`,
   transition: "background-color 0.15s ease",
-});
-
-export const StickyHeaderCell = styled(StyledHeaderCell)<{ position?: "left" | "right" }>(({ position = "right" }) => ({
-  position: "sticky",
-  [position]: 0,
-  zIndex: 3,
-  backgroundColor: `${colors.background.main} !important`,
-  boxShadow: position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
 }));
 
-export const StickyCell = styled(StyledTableCell)<{ position?: "left" | "right" }>(({ position = "right" }) => ({
-  position: "sticky",
-  [position]: 0,
-  zIndex: 1,
-  backgroundColor: colors.background.sidebar,
-  boxShadow: position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
-  transition: "background-color 0.15s ease",
-  "&.sticky-cell": {
-    backgroundColor: colors.background.sidebar,
-  },
-}));
+export const StickyHeaderCell = styled(StyledHeaderCell)<{ position?: "left" | "right" }>(
+  ({ theme, position = "right" }) => ({
+    position: "sticky",
+    [position]: 0,
+    zIndex: 3,
+    backgroundColor: `${theme.palette.app.background.main} !important`,
+    boxShadow:
+      position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
+  }),
+);
+
+export const StickyCell = styled(StyledTableCell)<{ position?: "left" | "right" }>(
+  ({ theme, position = "right" }) => ({
+    position: "sticky",
+    [position]: 0,
+    zIndex: 1,
+    backgroundColor: theme.palette.app.background.sidebar,
+    boxShadow:
+      position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
+    transition: "background-color 0.15s ease",
+    "&.sticky-cell": {
+      backgroundColor: theme.palette.app.background.sidebar,
+    },
+  }),
+);
 
 export const ActionsButton = styled(IconButton)({
   width: 32,
   height: 32,
 });
 
-export const StyledMenu = styled(Menu)({
+export const StyledMenu = styled(Menu)(({ theme }) => ({
   "& .MuiPaper-root": {
-    borderRadius: 8,
-    border: `1px solid ${colors.border}`,
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.app.border}`,
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
     minWidth: 160,
   },
-});
+}));
 
 export const StyledMenuItem = styled(MenuItem)({
   fontSize: 14,
@@ -155,7 +160,7 @@ export const StyledMenuItem = styled(MenuItem)({
 });
 
 export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
-  borderTop: `1px solid ${colors.border}`,
+  borderTop: `1px solid ${theme.palette.app.border}`,
   overflow: "hidden",
   display: "flex",
   justifyContent: "flex-end",
@@ -198,7 +203,7 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: theme.spacing(6),
-  color: "text.secondary",
+  color: theme.palette.text.secondary,
   [theme.breakpoints.down("sm")]: {
     padding: theme.spacing(4),
   },

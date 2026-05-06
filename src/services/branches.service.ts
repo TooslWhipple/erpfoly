@@ -1,4 +1,4 @@
-import { get, post, patch, del, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
+import { get, post, patch, del, unwrapOrThrow, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -85,17 +85,11 @@ export async function updateBranchesShippingPrice(
   return patch<unknown>(`${BASE}/shipping-price`, payload);
 }
 
-// ============================================================================
-// CATALOG (GET /branches/catalog — Branches.Read)
-// ============================================================================
-
 export interface BranchCatalogItem {
   id: number;
   name: string;
 }
 
-export async function getBranchesCatalog(): Promise<
-  ApiResult<BranchCatalogItem[]>
-> {
-  return get<BranchCatalogItem[]>(`${BASE}/catalog`);
+export async function getBranchesCatalog(): Promise<BranchCatalogItem[]> {
+  return unwrapOrThrow(await get<BranchCatalogItem[]>(`${BASE}/catalog`));
 }

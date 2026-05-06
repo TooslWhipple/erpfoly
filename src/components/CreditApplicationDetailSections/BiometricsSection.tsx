@@ -2,7 +2,7 @@ import { Divider, Stack, Typography } from "@mui/material";
 import { VerifiedRow, VerifiedCheck, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { Check } from "lucide-react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 interface BiometricsSectionProps {
   detail: CreditApplicationDetail;
@@ -61,7 +61,7 @@ export function BiometricsSection({ detail, onOpenImageViewer }: BiometricsSecti
                     width: 48,
                     height: 48,
                     borderRadius: 6,
-                    backgroundColor: colors.chip.background,
+                    backgroundColor: theme.palette.app.chip.background,
                     marginLeft: "auto",
                   }}
                 />

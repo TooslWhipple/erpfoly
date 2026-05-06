@@ -17,7 +17,7 @@ import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/pages/rutas/t
 import { AddArticlesToRouteModal } from "@/pages/rutas/AddArticlesToRouteModal";
 import { getRoutesByDate, getRouteDetailById } from "@/data/rutas.mockData";
 import type { RouteSummary, RouteDetail } from "@/types/rutas.types";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CONSTANTS
@@ -219,22 +219,22 @@ export default function RutaPage() {
 
                 <Stack direction="row" alignItems="center" spacing={2}>
                   <Stack direction="row" alignItems="center" gap={0.5}>
-                    <Box size={16} color={colors.text.secondary} />
+                    <Box size={16} color={theme.palette.text.secondary} />
                     <Typography variant="body2">{routeDetail.articleCount} artículos</Typography>
                   </Stack>
                   <Stack direction="row" alignItems="center" gap={0.5}>
-                    <Route size={16} color={colors.text.secondary} />
+                    <Route size={16} color={theme.palette.text.secondary} />
                     <Typography variant="body2">{routeDetail.pointCount} puntos</Typography>
                   </Stack>
                 </Stack>
 
                 <Stack direction="row" alignItems="center" spacing={2}>
                   <Stack direction="row" alignItems="center" gap={0.5}>
-                    <User size={16} color={colors.text.secondary} />
+                    <User size={16} color={theme.palette.text.secondary} />
                     <Typography variant="body2">{routeDetail.driverName}</Typography>
                   </Stack>
                   <Stack direction="row" alignItems="center" gap={0.5}>
-                    <Truck size={16} color={colors.text.secondary} />
+                    <Truck size={16} color={theme.palette.text.secondary} />
                     <Typography variant="body2">{routeDetail.vehicleInfo}</Typography>
                   </Stack>
                 </Stack>

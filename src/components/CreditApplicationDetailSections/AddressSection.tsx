@@ -5,7 +5,7 @@ import { Divider, Grid, Stack, Typography, FormControlLabel, Switch, Radio, Radi
 import { FormTextField } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
 
@@ -57,7 +57,7 @@ function MapMarker({ lat, lng }: MapMarkerProps) {
         height: "18px",
         borderRadius: "50%",
         border: "2px solid #FFFFFF",
-        backgroundColor: colors.chip.variants.error.color,
+        backgroundColor: theme.palette.app.chip.variants.error.color,
         boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
       }}
     />
@@ -138,8 +138,8 @@ export function AddressSection({ detail }: AddressSectionProps) {
           <div
             style={{
               height: "144px",
-              backgroundColor: colors.chip.background,
-              border: `1px solid ${colors.border}`,
+              backgroundColor: theme.palette.app.chip.background,
+              border: `1px solid ${theme.palette.app.border}`,
               borderRadius: "16px",
               position: "relative",
               overflow: "hidden",

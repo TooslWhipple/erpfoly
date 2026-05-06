@@ -13,7 +13,7 @@ import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { fetchSellerDetailMock } from "@/services/sellers.service";
 import type { SellerDetail, SellerSaleHistoryRow } from "@/types/sellers.types";
 import { ChartCard, MetricCard, SectionCard, SectionCardHeader } from "@/styles/catalogos/vendedores.styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 const CHART_PRIMARY = "#2663EB";
 
@@ -199,13 +199,13 @@ export default function VendedorDetailPage() {
                                 endAngle={-270}
                                 stroke="none">
                                 <Cell fill={CHART_PRIMARY} />
-                                <Cell fill={colors.chip.background} />
+                                <Cell fill={theme.palette.app.chip.background} />
                               </Pie>
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
                         <Stack spacing={0.5}>
-                          <ArrowUpNarrowWide strokeWidth={2} size={16} color={colors.text.secondary} />
+                          <ArrowUpNarrowWide strokeWidth={2} size={16} color={theme.palette.text.secondary} />
                           <Typography variant="h4">{detail.goalProgressPercent}%</Typography>
                           <Typography variant="body2" color="text.secondary">Meta alcanzada</Typography>
                         </Stack>
@@ -213,7 +213,7 @@ export default function VendedorDetailPage() {
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
                       <Stack spacing={0.5}>
-                        <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+                        <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
                         <Typography variant="h4">{numeral(detail.commissionAmount).format("$0,0.00")}</Typography>
                         <Typography variant="body2" color="text.secondary">Comisión ({detail.commissionRatePercent}%)</Typography>
                       </Stack>

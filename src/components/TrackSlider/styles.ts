@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const Root = styled("div", {
   shouldForwardProp: (prop) => prop !== "isDisabled",
@@ -29,7 +29,7 @@ export const TrackRail = styled("div")({
   transform: "translateY(-50%)",
   height: "8px",
   borderRadius: "4px",
-  backgroundColor: colors.border,
+  backgroundColor: theme.palette.app.border,
   overflow: "hidden",
 });
 

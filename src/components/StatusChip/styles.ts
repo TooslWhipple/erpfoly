@@ -1,20 +1,20 @@
 import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export type StatusChipVariant = "default" | "success" | "pending" | "error" | "warning" | "info" | "infoAlt" | "disabled";
 
 export type StatusChipSize = "default" | "small";
 
 const variantStyles: Record<StatusChipVariant, { background: string; color: string }> = {
-  default: colors.chip.variants.default,
-  success: colors.chip.variants.success,
-  pending: colors.chip.variants.pending,
-  error: colors.chip.variants.error,
-  warning: colors.chip.variants.warning,
-  info: colors.chip.variants.info,
-  infoAlt: colors.chip.variants.infoAlt,
-  disabled: colors.chip.variants.disabled
+  default: theme.palette.app.chip.variants.default,
+  success: theme.palette.app.chip.variants.success,
+  pending: theme.palette.app.chip.variants.pending,
+  error: theme.palette.app.chip.variants.error,
+  warning: theme.palette.app.chip.variants.warning,
+  info: theme.palette.app.chip.variants.info,
+  infoAlt: theme.palette.app.chip.variants.infoAlt,
+  disabled: theme.palette.app.chip.variants.disabled
 };
 
 const sizeStyles: Record<

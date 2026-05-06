@@ -3,7 +3,7 @@ import type { z } from "zod";
 import { zodFormValidator } from "../validation/zodValidator";
 
 export type UseFormWithZodOptions<
-    TSchema extends z.ZodObject<z.ZodRawShape>,
+    TSchema extends z.ZodTypeAny,
     TSubmitMeta = never,
 > = {
     schema: TSchema;
@@ -15,7 +15,7 @@ export type UseFormWithZodOptions<
 };
 
 export function useFormWithZod<
-    TSchema extends z.ZodObject<z.ZodRawShape>,
+    TSchema extends z.ZodTypeAny,
     TSubmitMeta = never,
 >(options: UseFormWithZodOptions<TSchema, TSubmitMeta>) {
     const {

@@ -12,7 +12,7 @@ import {
 import { AddSupplierModal } from "./AddSupplierModal";
 import type { ProductSupplier } from "@/types/productos.types";
 import type { SupplierCatalogItem } from "@/services/suppliers.service";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import { Minus, Plus } from "lucide-react";
 
 function formatSupplierTableId(supplierId: number): string {

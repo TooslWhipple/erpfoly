@@ -12,7 +12,7 @@ import {
 import numeral from "numeral";
 import { BadgeDollarSign } from "lucide-react";
 import { Card } from "@/styles/catalogos/goals.styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import { buildProgressData } from "./buildProgressData";
 
 export interface SalesMonthGoalCardProps {
@@ -29,14 +29,14 @@ export function SalesMonthGoalCard({ thisMonth, goal }: SalesMonthGoalCardProps)
       <Grid container width="100%" spacing={2} alignItems="center">
         <Grid size={{ xs: 12, md: 3 }}>
           <Stack spacing={0.5}>
-            <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+            <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
             <Typography variant="h4" fontWeight={600}>{numeral(thisMonth).format("$0,0.00")}</Typography>
             <Typography variant="body2" color="text.secondary">Este mes</Typography>
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
           <Stack spacing={0.5}>
-            <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+            <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
             <Typography variant="h4" fontWeight={600}>
               {numeral(goal).format("$0,0.00")}
             </Typography>
@@ -58,12 +58,12 @@ export function SalesMonthGoalCard({ thisMonth, goal }: SalesMonthGoalCardProps)
                     <stop offset="100%" stopColor="#C0DBFE" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.app.border} vertical={false} />
                 <XAxis
                   dataKey="day"
                   tickLine={false}
-                  axisLine={{ stroke: colors.border }}
-                  tick={{ fontSize: 10, fill: colors.text.secondary }}
+                  axisLine={{ stroke: theme.palette.app.border }}
+                  tick={{ fontSize: 10, fill: theme.palette.text.secondary }}
                   tickFormatter={(v) => `D${v}`}
                 />
                 <YAxis

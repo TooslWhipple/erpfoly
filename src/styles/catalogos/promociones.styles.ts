@@ -7,23 +7,22 @@ import {
     TableHead,
     TableRow,
 } from "@mui/material";
-import { colors } from "@/styles/theme";
 
 export const MonthButton = styled(Button)<{ selected?: boolean }>(({ theme, selected }) => ({
     minWidth: 64,
     minHeight: 44,
     padding: "12px 16px 12px 12px",
-    backgroundColor: (selected) ? colors.sidebar.itemSelected : colors.background.sidebar,
-    color: (selected) ? colors.sidebar.textSelected : theme.palette.text.secondary,
-    border: `1px solid ${(selected) ? colors.sidebar.itemSelected : colors.border}`,
+    backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.background.paper,
+    color: (selected) ? theme.palette.app.sidebar.textSelected : theme.palette.text.secondary,
+    border: `1px solid ${(selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.app.border}`,
     borderRadius: 12,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "flex-start",
     gap: "8px",
     "&:hover": {
-        backgroundColor: (selected) ? colors.sidebar.itemSelected : theme.palette.action.hover,
-        borderColor: (selected) ? colors.sidebar.itemSelected : colors.border,
+        backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.action.hover,
+        borderColor: (selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.app.border,
     },
 }));
 
@@ -31,15 +30,15 @@ export const MonthButtonIcon = styled(Box)<{ selected?: boolean }>(({ theme, sel
     width: 20,
     height: 20,
     borderRadius: 6,
-    border: `2px solid ${selected ? colors.sidebar.textSelected : colors.border}`,
-    backgroundColor: selected ? colors.sidebar.textSelected : "transparent",
+    border: `2px solid ${selected ? theme.palette.app.sidebar.textSelected : theme.palette.app.border}`,
+    backgroundColor: selected ? theme.palette.app.sidebar.textSelected : "transparent",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
     "& .MuiSvgIcon-root": {
         fontSize: 14,
-        color: colors.background.sidebar,
+        color: theme.palette.background.paper,
     },
 }));
 

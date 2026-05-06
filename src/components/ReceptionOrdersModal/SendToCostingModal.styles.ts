@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { DialogContent as MuiDialogContent, Typography, IconButton, Box, Button } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
     padding: theme.spacing(3),
@@ -68,7 +68,7 @@ export const ModalActions = styled(Box)(({ theme }) => ({
     justifyContent: "flex-end",
     gap: theme.spacing(2),
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
 }));
 
 export const CancelButton = styled(Button)(({ theme }) => ({

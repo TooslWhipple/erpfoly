@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, IconButton, Typography, Stack } from "@mui/material";
 import { X } from "lucide-react";
 import { Check } from "lucide-react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export interface ImageViewerModalProps {
   open: boolean;
@@ -42,8 +42,8 @@ export function ImageViewerModal({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "16px 20px",
-          borderBottom: `1px solid ${colors.border}`,
-          backgroundColor: colors.background.sidebar,
+          borderBottom: `1px solid ${theme.palette.app.border}`,
+          backgroundColor: theme.palette.background.paper,
         }}
       >
         <Stack spacing={0.5}>
@@ -57,7 +57,7 @@ export function ImageViewerModal({
                   width: 16,
                   height: 16,
                   borderRadius: "50%",
-                  backgroundColor: colors.chip.variants.success.color,
+                  backgroundColor: theme.palette.app.chip.variants.success.color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

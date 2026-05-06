@@ -20,6 +20,10 @@ export interface FormFieldDefinition<
     items?: AutocompleteItem[];
     rows?: number;
     helperText?: string;
+    /** When set, the field is not rendered unless the predicate returns true (uses live form values). */
+    when?: (values: Record<string, unknown>) => boolean;
+    /** Disable input while keeping the field visible (e.g. read-only ID). */
+    disabled?: boolean;
     /** Transform value on each keystroke (e.g. filters.onlyNumbers(10) for phone). Only applies to text-like inputs. */
     filter?: (value: string) => string;
     /** MUI TextField slotProps (e.g. { input: { startAdornment: <InputAdornment>$</InputAdornment> } }). */
@@ -48,13 +52,20 @@ type FieldDefWithSchema = FormFieldDefinition<string, z.ZodTypeAny>;
 
 export function buildSchema<T extends readonly FieldDefWithSchema[]>(
     fields: T,
-): z.ZodObject<z.ZodRawShape> {
+    superRefine?: (data: SchemaOutputFromFields<T>, ctx: z.RefinementCtx) => void,
+): z.ZodTypeAny {
     const shape: Record<string, z.ZodTypeAny> = {};
     for (let i = 0; i < fields.length; i++) {
         const field = fields[i];
         shape[field.name] = field.schema;
     }
-    return z.object(shape) as z.ZodObject<z.ZodRawShape>;
+    const obj = z.object(shape);
+    if (!superRefine) {
+        return obj;
+    }
+    return obj.superRefine((data, ctx) => {
+        superRefine(data as SchemaOutputFromFields<T>, ctx);
+    });
 }
 
 export type SchemaOutputFromFields<T extends readonly FieldDefWithSchema[]> = {

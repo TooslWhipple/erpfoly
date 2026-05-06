@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Typography, IconButton, TextField } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const TabsContainer = styled('div')(({ theme }) => ({
   marginBottom: theme.spacing(3),
@@ -9,8 +9,8 @@ export const TabsContainer = styled('div')(({ theme }) => ({
 export const FormCard = styled('div')({
   display: "flex",
   flexDirection: "column",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "8px",
   gap: "24px",
   padding: "24px"
@@ -46,7 +46,7 @@ export const NumberInputButton = styled(IconButton)<{ inputSize?: "small" | "med
   minWidth: inputSize === "small" ? 28 : 36,
   padding: 0,
   backgroundColor: "#FFFFFF",
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "50%",
   color: theme.palette.text.secondary,
   "&:hover": {
@@ -59,7 +59,7 @@ export const NumberInputButton = styled(IconButton)<{ inputSize?: "small" | "med
   "&:disabled": {
     opacity: 0.4,
     backgroundColor: "#FFFFFF",
-    borderColor: colors.border,
+    borderColor: theme.palette.app.border,
   },
   transition: "all 0.2s ease",
   "& .MuiSvgIcon-root": {

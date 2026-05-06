@@ -1,5 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
-import { checkIdentityConflicts, validateSecurityCode } from "@/services/creditApplications.service";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  checkIdentityConflicts,
+  sendCreditApplicationOtp,
+  verifyCreditApplicationOtp,
+} from "@/services/creditApplications.service";
+import { useOtpCooldown } from "@/hooks/common/useOtpCooldown";
 import type {
   BasicInformationFormErrors,
   BasicInformationFormValues,
@@ -14,12 +19,71 @@ import {
 } from "./fieldValidation";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VERIFIED_SECURITY_CODE_VALUE = "Verificado";
 
-export function useBasicInformationTab(initialValues: BasicInformationFormValues) {
+type BasicInformationTabOptions = {
+  applicationId?: string;
+  prepareForOtpSend?: (
+    values: BasicInformationFormValues,
+  ) => Promise<string | undefined>;
+};
+
+export function useBasicInformationTab(
+  initialValues: BasicInformationFormValues,
+  options?: BasicInformationTabOptions,
+) {
+  const prepareForOtpSend = options?.prepareForOtpSend;
   const [values, setValues] = useState<BasicInformationFormValues>(initialValues);
   const [errors, setErrors] = useState<BasicInformationFormErrors>({});
   const [validatingSecurityCode, setValidatingSecurityCode] = useState(false);
   const [isSecurityCodeValid, setIsSecurityCodeValid] = useState<boolean | null>(null);
+  const [resolvedApplicationId, setResolvedApplicationId] = useState<string | undefined>(
+    options?.applicationId,
+  );
+  const activeApplicationId = options?.applicationId ?? resolvedApplicationId;
+  const otpTimerId = useMemo(
+    () => `credit-application:${activeApplicationId ?? "draft"}:whatsapp-otp`,
+    [activeApplicationId],
+  );
+  const otpCooldown = useOtpCooldown(otpTimerId);
+  const hasValidWhatsappNumber = useMemo(
+    () => isValidMxPhone(values.whatsappNumber),
+    [values.whatsappNumber],
+  );
+  const isSecurityCodeFieldDisabled = !hasValidWhatsappNumber || isSecurityCodeValid === true;
+  const hasSecurityCodeInput = values.securityCode.trim().length > 0;
+  const otpActionLabel = useMemo(() => {
+    if (isSecurityCodeValid === true) {
+      return "Validado";
+    }
+    if (hasSecurityCodeInput) {
+      return "Validar";
+    }
+    if (otpCooldown.isCoolingDown) {
+      return `Reenviar (${otpCooldown.remainingSeconds}s)`;
+    }
+    if (!otpCooldown.hasStarted) {
+      return "Enviar";
+    }
+    return "Reenviar";
+  }, [
+    hasSecurityCodeInput,
+    isSecurityCodeValid,
+    otpCooldown.hasStarted,
+    otpCooldown.isCoolingDown,
+    otpCooldown.remainingSeconds,
+  ]);
+  const isOtpActionDisabled =
+    validatingSecurityCode ||
+    !hasValidWhatsappNumber ||
+    isSecurityCodeValid === true ||
+    (otpCooldown.isCoolingDown && !hasSecurityCodeInput);
+
+  useEffect(() => {
+    if (options?.applicationId) {
+      setResolvedApplicationId(options.applicationId);
+    }
+  }, [options?.applicationId]);
 
   const isDirty = useMemo(() => {
     return Object.values(values).some((value) => value.trim().length > 0);
@@ -33,6 +97,8 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
           ? cleanAlphaNumeric(value).slice(0, 13)
         : field === "whatsappNumber"
           ? normalizeMxPhone(value)
+        : field === "securityCode"
+          ? value.replace(/\D/g, "").slice(0, 6)
           : value;
     const nextValues = { ...values, [field]: nextValue };
 
@@ -41,14 +107,28 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
     if (field === "securityCode") {
       setIsSecurityCodeValid(null);
     }
+    if (field === "whatsappNumber") {
+      setIsSecurityCodeValid(null);
+      otpCooldown.reset();
+    }
     return nextValues;
-  }, [values]);
+  }, [otpCooldown, values]);
 
-  const setValuesFromExternalSource = useCallback((nextValues: BasicInformationFormValues) => {
-    setValues(nextValues);
-    setErrors({});
-    setIsSecurityCodeValid(null);
-  }, []);
+  const setValuesFromExternalSource = useCallback(
+    (
+      nextValues: BasicInformationFormValues,
+      options?: { isSecurityCodeVerified?: boolean },
+    ) => {
+      setValues(nextValues);
+      setErrors({});
+      const shouldMarkAsVerified =
+        options?.isSecurityCodeVerified ||
+        nextValues.securityCode.trim().toLowerCase() ===
+          VERIFIED_SECURITY_CODE_VALUE.toLowerCase();
+      setIsSecurityCodeValid(shouldMarkAsVerified ? true : null);
+    },
+    [],
+  );
 
   const validateValues = useCallback((): boolean => {
     const nextErrors: BasicInformationFormErrors = {};
@@ -78,36 +158,129 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
       nextErrors.whatsappNumber = "El número de Whatsapp debe tener 10 dígitos";
     }
 
-    if (!values.securityCode.trim()) {
+    if (!values.securityCode.trim() && !isSecurityCodeValid) {
       nextErrors.securityCode = "Código de seguridad es requerido";
-    } else if (values.securityCode.trim().length < 6) {
-      nextErrors.securityCode = "El código de seguridad debe tener al menos 6 caracteres";
+    } else if (values.securityCode.trim().length < 6 && !isSecurityCodeValid) {
+      nextErrors.securityCode = "El código de seguridad debe tener 6 dígitos";
+    }
+
+    if (!isSecurityCodeValid) {
+      nextErrors.securityCode =
+        nextErrors.securityCode ?? "Debes validar el código de seguridad";
     }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  }, [values]);
+  }, [isSecurityCodeValid, values]);
 
   const validateCurrentSecurityCode = useCallback(async (): Promise<boolean> => {
-    if (!values.securityCode.trim()) {
-      setErrors((prev) => ({ ...prev, securityCode: "Código de seguridad es requerido" }));
-      setIsSecurityCodeValid(false);
-      return false;
-    }
-
-    setValidatingSecurityCode(true);
-    try {
-      const isValid = await validateSecurityCode(values.securityCode);
-      setIsSecurityCodeValid(isValid);
+    if (!hasValidWhatsappNumber) {
       setErrors((prev) => ({
         ...prev,
-        securityCode: isValid ? undefined : "Código de seguridad inválido",
+        whatsappNumber: "El número de Whatsapp debe tener 10 dígitos",
       }));
-      return isValid;
+      return false;
+    }
+    if (isSecurityCodeValid) {
+      return true;
+    }
+
+    const shouldSendOtp =
+      !otpCooldown.hasStarted ||
+      (!otpCooldown.isCoolingDown && values.securityCode.trim().length === 0);
+    setValidatingSecurityCode(true);
+    try {
+      let targetApplicationId = activeApplicationId;
+      if (shouldSendOtp && prepareForOtpSend) {
+        const preparedApplicationId = await prepareForOtpSend(values);
+        if (preparedApplicationId) {
+          setResolvedApplicationId(preparedApplicationId);
+          targetApplicationId = preparedApplicationId;
+        }
+      }
+
+      if (!targetApplicationId) {
+        setErrors((prev) => ({
+          ...prev,
+          securityCode: "Guarda la solicitud para poder enviar el OTP",
+        }));
+        return false;
+      }
+
+      if (shouldSendOtp) {
+        const response = await sendCreditApplicationOtp(
+          targetApplicationId,
+          values.whatsappNumber,
+        );
+        otpCooldown.syncFromTimestamp(response.cooldownUntil);
+        setIsSecurityCodeValid(response.verified ? true : null);
+        setErrors((prev) => ({
+          ...prev,
+          securityCode: undefined,
+        }));
+        return true;
+      }
+
+      if (!values.securityCode.trim()) {
+        setErrors((prev) => ({
+          ...prev,
+          securityCode: "Código de seguridad es requerido",
+        }));
+        setIsSecurityCodeValid(false);
+        return false;
+      }
+
+      if (values.securityCode.trim().length < 6) {
+        setErrors((prev) => ({
+          ...prev,
+          securityCode: "El código de seguridad debe tener 6 dígitos",
+        }));
+        setIsSecurityCodeValid(false);
+        return false;
+      }
+
+      const response = await verifyCreditApplicationOtp(
+        targetApplicationId,
+        values.whatsappNumber,
+        values.securityCode,
+      );
+      otpCooldown.syncFromTimestamp(response.cooldownUntil);
+      setIsSecurityCodeValid(response.verified);
+      setErrors((prev) => ({
+        ...prev,
+        securityCode: response.verified
+          ? undefined
+          : (response.message || "Código de seguridad inválido"),
+      }));
+      return response.verified;
+    } catch (error) {
+      const fallbackMessage = shouldSendOtp
+        ? "No se pudo enviar el OTP por WhatsApp"
+        : "No se pudo validar el código OTP";
+      const errorMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+          ? ((error as { message: string }).message || fallbackMessage)
+          : fallbackMessage;
+      setErrors((prev) => ({
+        ...prev,
+        securityCode: errorMessage,
+      }));
+      setIsSecurityCodeValid(false);
+      return false;
     } finally {
       setValidatingSecurityCode(false);
     }
-  }, [values.securityCode]);
+  }, [
+    hasValidWhatsappNumber,
+    isSecurityCodeValid,
+    activeApplicationId,
+    prepareForOtpSend,
+    otpCooldown,
+    values,
+  ]);
 
   const getIdentityConflictError = useCallback(
     (
@@ -178,6 +351,9 @@ export function useBasicInformationTab(initialValues: BasicInformationFormValues
     isDirty,
     validatingSecurityCode,
     isSecurityCodeValid,
+    otpActionLabel,
+    isOtpActionDisabled,
+    isSecurityCodeFieldDisabled,
     setFieldValue,
     setValuesFromExternalSource,
     validateValues,

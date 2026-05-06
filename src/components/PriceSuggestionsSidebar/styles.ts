@@ -1,14 +1,14 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CONTAINER
 // ============================================================================
 
 export const SidebarContainer = styled(Box)(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   padding: theme.spacing(2.5),
   width: "100%",

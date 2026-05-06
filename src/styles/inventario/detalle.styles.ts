@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Chip } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const DetailContainer = styled('div')({
     padding: "24px"
@@ -10,9 +10,9 @@ export const CategoryChip = styled(Chip)({
     height: 24,
     fontSize: "12px",
     fontWeight: 500,
-    backgroundColor: colors.chip.background,
+    backgroundColor: theme.palette.app.chip.background,
     borderRadius: 6,
-    color: colors.chip.text,
+    color: theme.palette.app.chip.text,
     "& .MuiChip-icon": {
         marginLeft: 6,
         fontSize: 14,
@@ -35,8 +35,8 @@ export const SummaryCard = styled('div')({
     position: "relative",
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
     padding: "24px",
     height: "100%",
@@ -64,11 +64,11 @@ export const GalleryContainer = styled('div')({
         height: 6,
     },
     "&::-webkit-scrollbar-track": {
-        backgroundColor: colors.background.main,
+        backgroundColor: theme.palette.background.default,
         borderRadius: 3,
     },
     "&::-webkit-scrollbar-thumb": {
-        backgroundColor: colors.border,
+        backgroundColor: theme.palette.app.border,
         borderRadius: 3,
         "&:hover": {
             backgroundColor: "#D4D4D8",
@@ -80,8 +80,8 @@ export const GalleryImage = styled('div')(({ theme }) => ({
     width: 120,
     height: 120,
     borderRadius: theme.shape.borderRadius,
-    backgroundColor: colors.background.main,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.app.border}`,
     flexShrink: 0,
     overflow: "hidden",
     cursor: "pointer",
@@ -108,9 +108,9 @@ export const PackageItem = styled('div')(({ theme }) => ({
     alignItems: "center",
     gap: 16,
     padding: theme.spacing(2),
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
 }));
 
 export const PackageIcon = styled('div')(({ theme }) => ({
@@ -149,7 +149,7 @@ export const PricingItem = styled('div')({
     display: "flex",
     flexDirection: "column",
     padding: "16px",
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "12px",
     gap: "8px"
 });
@@ -159,9 +159,9 @@ export const CardContainer = styled('div')({
     flexDirection: "column",
     gap: "24px",
     padding: "24px",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: "16px",
-    border: `1px solid ${colors.border}`
+    border: `1px solid ${theme.palette.app.border}`
 });
 
 export const BranchCard = styled('div')(() => ({
@@ -169,8 +169,8 @@ export const BranchCard = styled('div')(() => ({
     alignItems: "center",
     gap: "16px",
     padding: "16px",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "8px"
 }));
 

@@ -2,7 +2,7 @@ import { Stack, Typography, Button, IconButton } from "@mui/material";
 import { CircleMinus, CirclePlus, Plus, User } from "lucide-react";
 import { DriverSection, IconContainer, PersonRow } from "@/styles/rutas.styles";
 import type { RouteDetail } from "@/types/rutas.types";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export interface DriverTabProps {
   routeDetail: RouteDetail;
@@ -33,7 +33,7 @@ export function DriverTab({
               <IconButton
                 size="small"
                 onClick={onRemoveDriver}>
-                <CircleMinus size={16} color={colors.text.secondary} />
+                <CircleMinus size={16} color={theme.palette.text.secondary} />
               </IconButton>
             </PersonRow>
             :
@@ -59,7 +59,7 @@ export function DriverTab({
                   size="small"
                   onClick={() => onRemoveAssistant?.(a.id)}
                 >
-                  <CircleMinus size={16} color={colors.text.secondary} />
+                  <CircleMinus size={16} color={theme.palette.text.secondary} />
                 </IconButton>
               </PersonRow>
             ))

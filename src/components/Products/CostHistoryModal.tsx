@@ -9,7 +9,7 @@ import {
 import type { CostHistoryEntry } from "@/types/productos.types";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Stack, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 interface CostHistoryModalProps {
     open: boolean;
@@ -38,8 +38,8 @@ export function CostHistoryModal({ open, onClose, history }: CostHistoryModalPro
                                             <Typography variant="body1">{numeral(entry.price).format("$0,0.00")}</Typography>
                                             {
                                                 entry.changeType === "increase"
-                                                    ? <ArrowUp size={12} strokeWidth={2} color={colors.text.secondary} />
-                                                    : <ArrowDown size={12} strokeWidth={2} color={colors.text.secondary} />
+                                                    ? <ArrowUp size={12} strokeWidth={2} color={theme.palette.text.secondary} />
+                                                    : <ArrowDown size={12} strokeWidth={2} color={theme.palette.text.secondary} />
                                             }
                                             <Typography variant="body2" color="text.secondary" fontWeight={500}> {numeral(entry.changePercentage).format("0.00")}%</Typography>
                                         </Stack>

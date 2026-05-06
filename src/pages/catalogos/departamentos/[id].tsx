@@ -20,6 +20,7 @@ import {
   createProductLine,
   updateProductLine,
   deleteProductLine,
+  type OriginPromotionPayload,
   type ProductLineItem,
 } from "@/services/product-lines.service";
 import type { Department } from "@/services/departments.service";
@@ -192,13 +193,17 @@ function buildLineModalDefaultValues(
   editingLine: ProductLineItem | null,
 ): SchemaInputFromFields<typeof lineFormFields> {
   if (editingLine) {
+    const hasPromotion = Boolean(editingLine.promotion);
     return {
       name: editingLine.name,
       code: (editingLine.code ?? "").toUpperCase(),
-      hasLinePromotion: false,
-      promotionPercentage: "",
-      promotionStartDate: "",
-      promotionEndDate: "",
+      hasLinePromotion: hasPromotion,
+      promotionPercentage:
+        editingLine.promotion?.percentage != null
+          ? String(editingLine.promotion.percentage)
+          : "",
+      promotionStartDate: editingLine.promotion?.startDate ?? "",
+      promotionEndDate: editingLine.promotion?.endDate ?? "",
     };
   }
   return {
@@ -211,15 +216,16 @@ function buildLineModalDefaultValues(
   };
 }
 
-// ============================================================================
-// HELPERS - Affected items count for promotion info (can be replaced by API later)
-// ============================================================================
+function buildLinePromotionPayload(data: LineFormOutput): OriginPromotionPayload | undefined {
+  if (!data.hasLinePromotion) {
+    return undefined;
+  }
 
-async function getAffectedItemsCount(departmentId?: number): Promise<number> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (departmentId === 1) return 43;
-  if (departmentId === 2) return 28;
-  return Math.floor(Math.random() * 50) + 10;
+  return {
+    discount_rate: Number(data.promotionPercentage),
+    start_date: data.promotionStartDate,
+    end_date: data.promotionEndDate || null,
+  };
 }
 
 // ============================================================================
@@ -265,7 +271,6 @@ export default function DepartmentDetailPage() {
   const [editingLine, setEditingLine] = useState<ProductLineItem | null>(null);
   const [savingLine, setSavingLine] = useState(false);
   const [hasGroupPromotion, setHasGroupPromotion] = useState(false);
-  const [groupAffectedCount, setGroupAffectedCount] = useState<number | null>(null);
 
   const fetchDepartment = useCallback(async () => {
     if (!isDepartmentReady) {
@@ -294,14 +299,6 @@ export default function DepartmentDetailPage() {
     }
   }, [activeTab, debouncedSearch, setSearch]);
 
-  useEffect(() => {
-    if (hasGroupPromotion && groupModalOpen && department) {
-      void getAffectedItemsCount(department.id).then(setGroupAffectedCount);
-    } else {
-      setGroupAffectedCount(null);
-    }
-  }, [hasGroupPromotion, groupModalOpen, department]);
-
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Departamentos", href: "/catalogos/departamentos" },
     { label: department ? department.name : "Detalle" },
@@ -310,13 +307,12 @@ export default function DepartmentDetailPage() {
   const handleOpenNewGroup = () => {
     setEditingLine(null);
     setHasGroupPromotion(false);
-    setGroupAffectedCount(null);
     setGroupModalOpen(true);
   };
 
   const handleOpenEditGroup = (row: GroupRow) => {
     setEditingLine(row);
-    setHasGroupPromotion(false);
+    setHasGroupPromotion(Boolean(row.promotion));
     setGroupModalOpen(true);
   };
 
@@ -324,7 +320,6 @@ export default function DepartmentDetailPage() {
     setGroupModalOpen(false);
     setEditingLine(null);
     setHasGroupPromotion(false);
-    setGroupAffectedCount(null);
   };
 
   const handleGroupFormValuesChange = useCallback((values: Record<string, unknown>) => {
@@ -336,10 +331,17 @@ export default function DepartmentDetailPage() {
 
     const name = data.name.trim();
     const code = data.code.trim().toUpperCase();
+    const promotion = buildLinePromotionPayload(data);
 
     setSavingLine(true);
     if (editingLine) {
-      const result = await updateProductLine(editingLine.id, { name, code });
+      const removePromotion = Boolean(editingLine.promotion) && !data.hasLinePromotion;
+      const result = await updateProductLine(editingLine.id, {
+        name,
+        code,
+        promotion,
+        removePromotion,
+      });
       setSavingLine(false);
       if (result.error) {
         console.error("[DepartmentDetail] Error saving line:", result.error.message);
@@ -348,7 +350,7 @@ export default function DepartmentDetailPage() {
       }
       showSnackbar("Línea actualizada correctamente.");
     } else {
-      const result = await createProductLine({ departmentId, name, code });
+      const result = await createProductLine({ departmentId, name, code, promotion });
       setSavingLine(false);
       if (result.error) {
         console.error("[DepartmentDetail] Error saving line:", result.error.message);
@@ -377,14 +379,16 @@ export default function DepartmentDetailPage() {
     await Promise.all([refetchProductLines(), fetchDepartment()]);
   };
 
-  const groupRows: GroupRow[] = useMemo(() => {
-    const hash = (s: string) =>
-      s.split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
-    return productLines.map((pl) => ({
-      ...pl,
-      articles: 10 + Math.abs(hash(String(pl.id) + pl.name)) % 35,
-    }));
-  }, [productLines]);
+  const groupRows: GroupRow[] = useMemo(
+    () =>
+      productLines.map((pl) => ({
+        ...pl,
+        articles: pl.articles ?? 0,
+      })),
+    [productLines],
+  );
+
+  const groupAffectedCount = hasGroupPromotion ? (editingLine?.articles ?? 0) : null;
 
   const settingsPromotionColumns: Column<PromotionMockRow>[] = [
     {
@@ -411,19 +415,14 @@ export default function DepartmentDetailPage() {
     {
       id: "id",
       label: "Identificador",
-      type: "id",
+      type: "text",
       size: "xs",
-      idPadding: 2,
+      format: (_value, row) => row.code ?? "-",
     },
     {
       id: "name",
       label: "Nombre",
       size: "md",
-    },
-    {
-      id: "code",
-      label: "Código",
-      size: "sm",
     },
     {
       id: "articles",

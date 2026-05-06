@@ -3,6 +3,7 @@ import { Alert, Box } from "@mui/material";
 import { ModalForm } from "@/components";
 import type { FormFieldConfig } from "@/components/Form";
 import { createDepartment } from "@/services/departments.service";
+import type { OriginPromotionPayload } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 async function getAffectedItemsCount(): Promise<number> {
@@ -159,10 +160,13 @@ export function QuickDepartmentModal({
     );
 
     const handleSaveDepartment = async (data: Record<string, unknown>) => {
+        const promotion = buildDepartmentPromotionPayload(data);
+
         setSaving(true);
         const result = await createDepartment({
             name: data.name as string,
             margin: Number(data.margin),
+            promotion,
         });
         setSaving(false);
         if (result.error) {
@@ -210,4 +214,18 @@ export function QuickDepartmentModal({
             )}
         </ModalForm>
     );
+}
+
+function buildDepartmentPromotionPayload(
+    data: Record<string, unknown>,
+): OriginPromotionPayload | undefined {
+    if (!data.hasPromotion) {
+        return undefined;
+    }
+
+    return {
+        discount_rate: Number(data.promotionPercentage),
+        start_date: String(data.promotionStartDate ?? ""),
+        end_date: data.promotionEndDate ? String(data.promotionEndDate) : null,
+    };
 }

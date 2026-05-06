@@ -35,12 +35,22 @@ export interface CreateDepartmentPayload {
   name: string;
   margin?: number;
   code?: string;
+  promotion?: OriginPromotionPayload;
 }
 
 export interface UpdateDepartmentPayload {
   name?: string;
   margin?: number;
   code?: string;
+  promotion?: OriginPromotionPayload;
+  removePromotion?: boolean;
+}
+
+export interface OriginPromotionPayload {
+  discount_rate: number;
+  start_date: string;
+  end_date?: string | null;
+  is_liquidation?: boolean;
 }
 
 // ============================================================================

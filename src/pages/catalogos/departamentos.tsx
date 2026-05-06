@@ -11,6 +11,7 @@ import {
   createDepartment,
   updateDepartment,
   deleteDepartment,
+  type OriginPromotionPayload,
 } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -185,6 +186,20 @@ function departmentModalSchemaSuperRefine(
   }
 }
 
+function buildOriginPromotionPayload(
+  data: DepartmentFormOutput,
+): OriginPromotionPayload | undefined {
+  if (!data.hasPromotion) {
+    return undefined;
+  }
+
+  return {
+    discount_rate: Number(data.promotionPercentage),
+    start_date: data.promotionStartDate,
+    end_date: data.promotionEndDate || null,
+  };
+}
+
 export default function Departamentos() {
   const router = useRouter();
 
@@ -259,11 +274,16 @@ export default function Departamentos() {
   };
 
   const handleSaveDepartment = async (data: DepartmentFormOutput) => {
+    const promotion = buildOriginPromotionPayload(data);
+
     setSaving(true);
     if (editingDepartment) {
+      const removePromotion = Boolean(editingDepartment.promotion) && !data.hasPromotion;
       const result = await updateDepartment(editingDepartment.id, {
         name: data.name,
         margin: data.margin,
+        promotion,
+        removePromotion,
       });
       if (result.error) {
         setSaving(false);
@@ -275,6 +295,7 @@ export default function Departamentos() {
       const result = await createDepartment({
         name: data.name,
         margin: data.margin,
+        promotion,
       });
       if (result.error) {
         setSaving(false);

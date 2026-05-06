@@ -3,6 +3,7 @@ import { Alert, Box } from "@mui/material";
 import { ModalForm } from "@/components";
 import type { FormFieldConfig } from "@/components/Form";
 import { createProductLine } from "@/services/product-lines.service";
+import type { OriginPromotionPayload } from "@/services/product-lines.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 async function getAffectedItemsCount(departmentId: number): Promise<number> {
@@ -137,9 +138,10 @@ export function QuickProductLineModal({
     const handleSaveGroup = async (data: Record<string, unknown>) => {
         const name = (data.name as string)?.trim();
         const code = (data.code as string)?.trim();
+        const promotion = buildLinePromotionPayload(data);
 
         setSavingLine(true);
-        const result = await createProductLine({ departmentId, name, code });
+        const result = await createProductLine({ departmentId, name, code, promotion });
         setSavingLine(false);
         if (result.error) {
             console.error("[QuickProductLineModal] Error creating line:", result.error.message);
@@ -178,4 +180,18 @@ export function QuickProductLineModal({
             )}
         </ModalForm>
     );
+}
+
+function buildLinePromotionPayload(
+    data: Record<string, unknown>,
+): OriginPromotionPayload | undefined {
+    if (!data.hasGroupPromotion) {
+        return undefined;
+    }
+
+    return {
+        discount_rate: Number(data.promotionPercentage),
+        start_date: String(data.promotionStartDate ?? ""),
+        end_date: data.promotionEndDate ? String(data.promotionEndDate) : null,
+    };
 }

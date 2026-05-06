@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, TextField } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // LAYOUT COMPONENTS
@@ -47,8 +47,8 @@ export const Section = styled(Box)(({ theme }) => ({
 export const BranchList = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
   padding: '24px',
 }));
@@ -58,7 +58,7 @@ export const BranchRow = styled(Box)(({ theme }) => ({
   alignItems: "center",
   justifyContent: "space-between",
   padding: theme.spacing(2, 0),
-  borderBottom: `1px solid ${colors.border}`,
+  borderBottom: `1px solid ${theme.palette.app.border}`,
   gap: theme.spacing(2),
   "&:last-of-type": {
     borderBottom: "none",
@@ -74,15 +74,15 @@ export const ShippingCostInput = styled(TextField)(({ theme }) => ({
   minWidth: 160,
   "& .MuiOutlinedInput-root": {
     height: 40,
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     "& fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&:hover fieldset": {
-      borderColor: colors.border,
+      borderColor: theme.palette.app.border,
     },
     "&.Mui-focused fieldset": {
-      borderColor: colors.sidebar.textSelected,
+      borderColor: theme.palette.app.sidebar.textSelected,
     },
   },
   "& input": {

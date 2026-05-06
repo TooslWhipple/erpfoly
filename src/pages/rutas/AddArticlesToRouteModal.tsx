@@ -17,7 +17,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { SideModal } from "@/components/SideModal";
 import type { ArticleToAdd } from "@/types/rutas.types";
 import { getAvailableArticlesToAdd } from "@/data/rutas.mockData";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import {
   SearchInput,
   TableContainer,
@@ -139,7 +139,7 @@ export function AddArticlesToRouteModal({
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon sx={{ color: colors.text.secondary, fontSize: 20 }} />
+              <SearchIcon sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
             </InputAdornment>
           ),
         }}

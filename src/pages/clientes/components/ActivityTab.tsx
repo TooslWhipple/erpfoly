@@ -15,7 +15,7 @@ import {
   ActivityItemCard,
 } from "@/styles/clientes/detalle.styles";
 import { FileText, Mail, Phone, User } from "lucide-react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import { StatusChip } from "@/components";
 import type {
   ClientCollectionActivity,
@@ -28,17 +28,17 @@ import { getApiErrorMessage } from "@/lib/axios";
 function getActivityIcon(code: string) {
   switch (code) {
     case "CALL":
-      return <Phone size={16} color={colors.text.secondary} />;
+      return <Phone size={16} color={theme.palette.text.secondary} />;
     case "MESSAGE":
-      return <Mail size={16} color={colors.text.secondary} />;
+      return <Mail size={16} color={theme.palette.text.secondary} />;
     case "EMAIL":
-      return <Mail size={16} color={colors.text.secondary} />;
+      return <Mail size={16} color={theme.palette.text.secondary} />;
     case "VISIT":
-      return <User size={16} color={colors.text.secondary} />;
+      return <User size={16} color={theme.palette.text.secondary} />;
     case "NOTE":
-      return <FileText size={16} color={colors.text.secondary} />;
+      return <FileText size={16} color={theme.palette.text.secondary} />;
     default:
-      return <Phone size={16} color={colors.text.secondary} />;
+      return <Phone size={16} color={theme.palette.text.secondary} />;
   }
 }
 
@@ -194,7 +194,7 @@ export function ActivityTab({
               <div
                 style={{
                   width: "1px",
-                  backgroundColor: colors.border,
+                  backgroundColor: theme.palette.app.border,
                   position: "absolute",
                   top: 8,
                   left: "56px",
@@ -217,7 +217,7 @@ export function ActivityTab({
                     {c.id}
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
-                    <span style={{ color: colors.text.secondary }}>[1]</span> {c.description}
+                    <span style={{ color: theme.palette.text.secondary }}>[1]</span> {c.description}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" fontWeight={500}>
                     {c.orderType}

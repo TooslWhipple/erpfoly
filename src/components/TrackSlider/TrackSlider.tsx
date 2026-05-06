@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import {
   Root,
   TrackShell,
@@ -63,7 +63,7 @@ export function TrackSlider({
   marks,
   onChange,
   disabled = false,
-  filledTrackColor = colors.sidebar.textSelected,
+  filledTrackColor = theme.palette.app.sidebar.textSelected,
   startLabel,
   endLabel,
   middleLabel,

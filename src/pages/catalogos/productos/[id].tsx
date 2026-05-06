@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
 import {
@@ -6,6 +6,7 @@ import {
     Breadcrumbs,
     Title,
     VerticalSidebarTabs,
+    TabFilters,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
@@ -18,12 +19,15 @@ import type {
     PackageFormData,
     ProductBasePrice,
     ProductGalleryImage,
+    ProductPromotionDraft,
 } from "@/types/productos.types";
+import { MAX_PRODUCT_GALLERY_FILES } from "@/types/productos.types";
 import {
     createProduct,
     buildCreateProductRequest,
-    resolveGalleryImageUrlsForCreate,
+    collectNewGalleryFiles,
     getProductById,
+    getProductPreviewCode,
     updateProduct,
     productDetailDtoToFormSnapshot,
     type ProductDetailBranchDto,
@@ -31,6 +35,7 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
 import {
+    branchCatalogToPackageSelectableItems,
     branchCatalogToProductBranches,
     mergeBranchCatalogWithProductDetail,
 } from "@/lib/productFormCatalogMappers";
@@ -38,11 +43,12 @@ import {
     CURRENCIES,
     MOCK_COST_HISTORY,
     MOCK_ARTICLES,
-    MOCK_PACKAGE_BRANCHES,
     COST_BASIS_FOR_PRICE_OPTIONS,
     DEFAULT_PRODUCT_BASE_PRICES,
 } from "@/data/productos.mockData";
 import { GeneralDataTab } from "@/components/Products/GeneralDataTab";
+import { QuickDepartmentModal } from "@/components/Products/QuickDepartmentModal";
+import { QuickProductLineModal } from "@/components/Products/QuickProductLineModal";
 import { SuppliersTab } from "@/components/Products/SuppliersTab";
 import { PriceTab } from "@/components/Products/PriceTab";
 import { PackagesTab } from "@/components/Products/PackagesTab";
@@ -51,14 +57,17 @@ import { BranchesTab } from "@/components/Products/BranchesTab";
 
 export default function ProductFormPage() {
     const router = useRouter();
-    const { id } = router.query;
     const showSuccess = useSnackbarStore((s) => s.showSuccess);
     const showError = useSnackbarStore((s) => s.showError);
 
-    const isNew = id === "nuevo";
-    const productId = isNew ? null : String(id);
+    /** Avoid running logic while `query.id` is still undefined (first paint / hard reload). */
+    const routeIdParam = typeof router.query.id === "string" ? router.query.id : undefined;
+    const isNew = routeIdParam === "nuevo";
+    /** Numeric id segment for edit mode; only defined once the router is ready. */
+    const editProductIdStr =
+        router.isReady && routeIdParam != null && !isNew ? routeIdParam : null;
 
-    const [productLoading, setProductLoading] = useState(!isNew);
+    const [productLoading, setProductLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("general");
 
@@ -81,9 +90,38 @@ export default function ProductFormPage() {
         suppliersCatalog,
         branchCatalogItems,
         warrantyOptions,
+        refreshDepartmentOptions,
+        refreshLineOptions,
     } = useProductFormCatalogs(generalData.departmentId);
 
-    const pageLoading = catalogsLoading || productLoading;
+    const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+    const [lineModalOpen, setLineModalOpen] = useState(false);
+
+    const existingDepartmentIds = useMemo(
+        () =>
+            departmentOptions
+                .map((o) => Number(o.value))
+                .filter((id) => Number.isFinite(id)),
+        [departmentOptions]
+    );
+
+    const selectedDepartmentNumericId = useMemo(() => {
+        const n = Number(generalData.departmentId);
+        return Number.isFinite(n) && n > 0 ? n : null;
+    }, [generalData.departmentId]);
+
+    const packageBranchSelectableItems = useMemo(
+        () => branchCatalogToPackageSelectableItems(branchCatalogItems),
+        [branchCatalogItems]
+    );
+
+    useEffect(() => {
+        if (selectedDepartmentNumericId == null) {
+            setLineModalOpen(false);
+        }
+    }, [selectedDepartmentNumericId]);
+
+    const pageLoading = !router.isReady || catalogsLoading || productLoading;
 
     const [suppliers, setSuppliers] = useState<ProductSupplier[]>([]);
 
@@ -96,6 +134,8 @@ export default function ProductFormPage() {
         costBasisForCalculation: "last_cost",
         lastCost: "0.00",
         averageCost: "0.00",
+        lastEditedBy: "",
+        lastEditedDate: "",
     });
 
     const [basePrices, setBasePrices] = useState<ProductBasePrice[]>(() => [...DEFAULT_PRODUCT_BASE_PRICES]);
@@ -110,10 +150,16 @@ export default function ProductFormPage() {
 
     const [costHistoryOpen, setCostHistoryOpen] = useState(false);
 
+    const [productPromotionDrafts, setProductPromotionDrafts] = useState<ProductPromotionDraft[]>([]);
+
     const [errors, setErrors] = useState<FormErrors>({});
 
     useEffect(() => {
-        if (isNew || !productId) {
+        if (!router.isReady) {
+            return;
+        }
+
+        if (isNew || editProductIdStr == null) {
             setProductLoading(false);
             setDetailBranchRows(null);
             return;
@@ -123,7 +169,7 @@ export default function ProductFormPage() {
             setProductLoading(true);
             setDetailBranchRows(null);
             try {
-                const idNum = Number(productId);
+                const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
                     showError("Identificador de producto inválido.");
                     return;
@@ -152,7 +198,7 @@ export default function ProductFormPage() {
         }
 
         loadProduct();
-    }, [isNew, productId]);
+    }, [router.isReady, isNew, editProductIdStr, showError]);
 
     useEffect(() => {
         if (!isNew) {
@@ -230,23 +276,24 @@ export default function ProductFormPage() {
 
         setSaving(true);
         try {
-            let resolvedImageUrls: string[];
-            try {
-                resolvedImageUrls = await resolveGalleryImageUrlsForCreate(galleryImages);
-            } catch (readErr) {
-                console.error("[ProductForm] Error reading gallery files:", readErr);
-                showError("No se pudieron procesar las imágenes. Intenta de nuevo.");
-                return;
-            }
-            const payload = buildCreateProductRequest({
-                generalData,
-                suppliers,
-                branches,
-                images: resolvedImageUrls,
-            });
+            const newGalleryFiles = collectNewGalleryFiles(galleryImages);
+            const payload = buildCreateProductRequest(
+                {
+                    generalData,
+                    priceData,
+                    suppliers,
+                    branches,
+                    galleryImages,
+                    packages,
+                    promotions: productPromotionDrafts,
+                },
+                isNew ? "create" : "update"
+            );
 
             if (isNew) {
-                const result = await createProduct(payload);
+                const result = await createProduct(payload, {
+                    galleryFiles: newGalleryFiles.length > 0 ? newGalleryFiles : undefined,
+                });
                 if (result.error) {
                     console.error("[ProductForm] Error creating product:", result.error.message);
                     showError(result.error.message);
@@ -254,12 +301,14 @@ export default function ProductFormPage() {
                 }
                 showSuccess("Producto creado correctamente.");
             } else {
-                const idNum = Number(productId);
+                const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
                     showError("Identificador de producto inválido.");
                     return;
                 }
-                const result = await updateProduct(idNum, payload);
+                const result = await updateProduct(idNum, payload, {
+                    galleryFiles: newGalleryFiles.length > 0 ? newGalleryFiles : undefined,
+                });
                 if (result.error) {
                     console.error("[ProductForm] Error updating product:", result.error.message);
                     showError(result.error.message);
@@ -282,9 +331,38 @@ export default function ProductFormPage() {
     };
 
     const handleGeneralDataChange = (field: keyof GeneralDataFormState, value: string | "months" | "policy") => {
+        if (field === "lineId") {
+            const lineIdStr = String(value);
+            setGeneralData((prev) => ({
+                ...prev,
+                lineId: lineIdStr,
+                ...(lineIdStr === "" ? { code: "" } : {}),
+            }));
+            const lineNumericId = Number(lineIdStr);
+            if (!Number.isFinite(lineNumericId) || lineNumericId <= 0) {
+                return;
+            }
+            void (async () => {
+                const result = await getProductPreviewCode(lineNumericId);
+                if (result.error) {
+                    console.error("[ProductForm] Preview code error:", result.error.message);
+                    showError(result.error.message);
+                    return;
+                }
+                const preview = result.data;
+                if (!preview) {
+                    return;
+                }
+                setGeneralData((prev) =>
+                    prev.lineId !== lineIdStr ? prev : { ...prev, code: preview.code }
+                );
+            })();
+            return;
+        }
+
         setGeneralData((prev) => {
             if (field === "departmentId" && value !== prev.departmentId) {
-                return { ...prev, departmentId: value as string, lineId: "" };
+                return { ...prev, departmentId: value as string, lineId: "", code: "" };
             }
             return { ...prev, [field]: value };
         });
@@ -392,18 +470,24 @@ export default function ProductFormPage() {
         setPackages((prev) => prev.filter((p) => p.id !== packageId));
     };
 
-    const handleAddImage = (files: FileList) => {
+    const handleAddImage = (files: FileList | readonly File[]) => {
+        const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
         setGalleryImages((prev) => {
             const additions: ProductGalleryImage[] = [];
-            Array.from(files).forEach((file) => {
-                if (prev.length + additions.length < 6) {
-                    additions.push({
-                        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-                        previewUrl: URL.createObjectURL(file),
-                        file,
-                    });
+            for (const file of list) {
+                if (prev.length + additions.length >= MAX_PRODUCT_GALLERY_FILES) {
+                    break;
                 }
-            });
+
+                additions.push({
+                    id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                    previewUrl: URL.createObjectURL(file),
+                    file,
+                    isPrimary: false,
+                    imageUrl: "",
+                    sortOrder: prev.length + additions.length,
+                });
+            }
             return [...prev, ...additions];
         });
     };
@@ -412,12 +496,16 @@ export default function ProductFormPage() {
         setGalleryImages((prev) => {
             const next = [...prev];
             const old = next[index];
-            if (old?.previewUrl.startsWith("blob:")) {
+            if (!old) {
+                return next;
+            }
+            if (old.previewUrl.startsWith("blob:")) {
                 URL.revokeObjectURL(old.previewUrl);
             }
             next[index] = {
-                id: old?.id ?? `img-${Date.now()}`,
+                ...old,
                 previewUrl: URL.createObjectURL(file),
+                imageUrl: "",
                 file,
             };
             return next;
@@ -468,7 +556,7 @@ export default function ProductFormPage() {
     return (
         <MainLayout>
             <Stack spacing={3}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={2}>
                     <Breadcrumbs items={breadcrumbItems} />
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
@@ -491,7 +579,7 @@ export default function ProductFormPage() {
                 <Divider />
 
                 <Grid container spacing={5} flexWrap="nowrap">
-                    <Grid size={{ xs: 'auto' }}>
+                    <Grid size={{ xs: 'auto' }} sx={{ display: { xs: 'none', sm: 'block' } }}>
                         <VerticalSidebarTabs
                             tabs={tabs}
                             value={activeTab}
@@ -499,7 +587,12 @@ export default function ProductFormPage() {
                         />
                     </Grid>
                     <Grid size={{ xs: 'grow' }}>
-
+                        <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                            <TabFilters
+                                tabs={tabs}
+                                activeTab={activeTab}
+                                onTabChange={setActiveTab} />
+                        </Box>
                         {
                             activeTab === "general" &&
                             <GeneralDataTab
@@ -510,6 +603,8 @@ export default function ProductFormPage() {
                                 departments={departmentOptions}
                                 lines={lineOptions}
                                 warrantyOptions={warrantyOptions}
+                                onOpenNewDepartmentModal={() => setDepartmentModalOpen(true)}
+                                onOpenNewLineModal={() => setLineModalOpen(true)}
                             />
                         }
 
@@ -536,6 +631,15 @@ export default function ProductFormPage() {
                                 costHistoryOpen={costHistoryOpen}
                                 onCostHistoryOpen={() => setCostHistoryOpen(true)}
                                 onCostHistoryClose={() => setCostHistoryOpen(false)}
+                                productNumericId={
+                                    isNew ||
+                                        editProductIdStr == null ||
+                                        !Number.isFinite(Number(editProductIdStr))
+                                        ? null
+                                        : Number(editProductIdStr)
+                                }
+                                promotionDrafts={productPromotionDrafts}
+                                onPromotionDraftsChange={setProductPromotionDrafts}
                             />
                         }
 
@@ -544,7 +648,7 @@ export default function ProductFormPage() {
                             <PackagesTab
                                 packages={packages}
                                 availableArticles={MOCK_ARTICLES}
-                                availableBranches={MOCK_PACKAGE_BRANCHES}
+                                availableBranches={packageBranchSelectableItems}
                                 onAddPackage={handleAddPackage}
                                 onRemovePackage={handleRemovePackage}
                             />
@@ -554,6 +658,7 @@ export default function ProductFormPage() {
                             activeTab === "gallery" &&
                             <GalleryTab
                                 images={galleryImages}
+                                maxImages={MAX_PRODUCT_GALLERY_FILES}
                                 onAddImage={handleAddImage}
                                 onReplaceImage={handleReplaceImage}
                                 onRemoveImage={handleRemoveImage}
@@ -573,6 +678,27 @@ export default function ProductFormPage() {
                     </Grid>
                 </Grid>
             </Stack>
+
+            <QuickDepartmentModal
+                open={departmentModalOpen}
+                onClose={() => setDepartmentModalOpen(false)}
+                existingDepartmentIds={existingDepartmentIds}
+                onCreated={async ({ id }) => {
+                    await refreshDepartmentOptions();
+                    handleGeneralDataChange("departmentId", String(id));
+                }}
+            />
+            {selectedDepartmentNumericId != null && (
+                <QuickProductLineModal
+                    open={lineModalOpen}
+                    onClose={() => setLineModalOpen(false)}
+                    departmentId={selectedDepartmentNumericId}
+                    onCreated={async ({ id }) => {
+                        await refreshLineOptions();
+                        handleGeneralDataChange("lineId", String(id));
+                    }}
+                />
+            )}
         </MainLayout>
     );
 }

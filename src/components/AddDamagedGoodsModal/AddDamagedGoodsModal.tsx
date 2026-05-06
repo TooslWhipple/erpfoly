@@ -1,113 +1,139 @@
-import { useState, useCallback } from "react";
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Dialog,
+    FormControl,
+    FormHelperText,
     Stack,
     Typography,
-    Radio,
-    RadioGroup,
-    FormControlLabel,
-    FormControl,
-    InputAdornment,
-    Switch,
+    Alert,
+    Box,
     CircularProgress,
-    useTheme,
 } from "@mui/material";
-import { Search, Calendar, Upload, X } from "lucide-react";
-import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    CloseButton,
-} from "@/components/ModalForm/styles";
-import { FormActions, ConfirmButton } from "@/components/Form/styles";
-import { FormTextField, FormSelect } from "@/components/Form";
+import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { ModalFormZod } from "@/components/ModalFormZod";
+import { TabFilters } from "@/components/TabFilters";
+import type { TabOption } from "@/components/TabFilters";
+import { RadioButton, RadioButtonGroup } from "@/components/RadioButton";
+import { DamagedGoodsProductSearchField } from "./DamagedGoodsProductSearchField";
+import { defineFormFields, messages, FormField, type SchemaOutputFromFields } from "@/forms";
 import type { SelectOption } from "@/components/Form";
-import { TabsWrapper, StyledTabs, StyledTab } from "@/components/TabFilters/styles";
-import { colors } from "@/styles/theme";
+import {
+    getDamagedProductsCatalog,
+    type DamagedProductCatalogItem,
+    type DamagedProductsCatalogData,
+} from "@/services/damaged-products.service";
+import { getApiErrorMessage } from "@/lib/axios";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type DamageOrigin = "provider" | "internal";
-export type ActionWithArticle =
-    | "internal_repair"
-    | "repair_with_supplier"
-    | "sell_auction"
-    | "return_to_supplier";
-
-export interface AddDamagedGoodsFormValues {
-    // Report tab
-    article: string;
-    provider: string;
-    damageOrigin: DamageOrigin;
+interface AddDamagedGoodsFormShape extends Record<string, unknown> {
+    productId: number;
+    damageOrigin: string;
     damageType: string;
     serialNumber: string;
     damageDetected: string;
     observations: string;
-    // Instructions tab - action
-    actionWithArticle: ActionWithArticle;
-    // Return to supplier
-    selectedProvider: string;
-    nextVisitDate: string;
-    acceptanceLetterFile: File | null;
-    // Sell at auction
-    cost: string;
-    lastPrice: string;
-    auctionPrice: string;
-    // Common
-    workAssignedTo: string;
-    responsible: string;
-    solution: string;
-    completionDate: string;
-    addCost: boolean;
-    costAmount: string;
+    damagedProductDisposition: string;
 }
 
-const DEFAULT_FORM_VALUES: AddDamagedGoodsFormValues = {
-    article: "",
-    provider: "",
-    damageOrigin: "provider",
+const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
+    {
+        name: "productId",
+        schema: z.number().int().positive({ message: messages.required }),
+        label: "Producto",
+    },
+    {
+        name: "damageOrigin",
+        schema: z.string().min(1, messages.required),
+        label: "Origen del daño",
+    },
+    {
+        name: "damageType",
+        schema: z.string().min(1, messages.required),
+        label: "Tipo de daño",
+        type: "select",
+        placeholder: "Seleccione",
+    },
+    {
+        name: "serialNumber",
+        schema: z.string(),
+        label: "Número de serie",
+        type: "text",
+        placeholder: "Ingrese",
+    },
+    {
+        name: "damageDetected",
+        schema: z.string().trim().min(1, messages.required),
+        label: "Daño detectado",
+        type: "textarea",
+        placeholder: "Ingrese",
+        rows: 2,
+    },
+    {
+        name: "observations",
+        schema: z.string(),
+        label: "Observaciones",
+        type: "textarea",
+        placeholder: "Ingrese",
+        rows: 2,
+    },
+    {
+        name: "damagedProductDisposition",
+        schema: z.string().min(1, messages.required),
+        label: "Disposición del producto",
+    },
+] as const);
+
+export type AddDamagedGoodsFormValues = SchemaOutputFromFields<typeof addDamagedGoodsFormFields>;
+
+const EMPTY_DEFAULTS: AddDamagedGoodsFormShape = {
+    productId: 0,
+    damageOrigin: "",
     damageType: "",
     serialNumber: "",
     damageDetected: "",
     observations: "",
-    actionWithArticle: "internal_repair",
-    selectedProvider: "",
-    nextVisitDate: "",
-    acceptanceLetterFile: null,
-    cost: "",
-    lastPrice: "",
-    auctionPrice: "",
-    workAssignedTo: "",
-    responsible: "",
-    solution: "",
-    completionDate: "",
-    addCost: true,
-    costAmount: "",
+    damagedProductDisposition: "",
 };
 
-const DAMAGE_TYPE_OPTIONS: SelectOption[] = [
-    { value: "incomplete", label: "Mercancía incompleta" },
-    { value: "factory_defect", label: "Defecto de fábrica" },
-    { value: "transport", label: "Daño en transporte" },
+function catalogItemIdString(item: DamagedProductCatalogItem): string {
+    return String(item.id);
+}
+
+function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): AddDamagedGoodsFormShape {
+    return {
+        productId: 0,
+        damageOrigin:
+            catalog.damageOrigins[0] != null
+                ? catalogItemIdString(catalog.damageOrigins[0])
+                : "",
+        damageType:
+            catalog.damageTypes[0] != null ? catalogItemIdString(catalog.damageTypes[0]) : "",
+        serialNumber: "",
+        damageDetected: "",
+        observations: "",
+        damagedProductDisposition:
+            catalog.dispositions[0] != null
+                ? catalogItemIdString(catalog.dispositions[0])
+                : "",
+    };
+}
+
+const MODAL_TABS: TabOption[] = [
+    { label: "Reporte", value: "report" },
+    { label: "Indicaciones y solución", value: "instructions" },
 ];
 
-const SOLUTION_OPTIONS: SelectOption[] = [
-    { value: "repaired", label: "Reparado" },
-    { value: "replaced", label: "Reemplazado" },
-    { value: "discarded", label: "Desechado" },
-];
+function formatFieldErrors(errors: unknown[]): string | undefined {
+    if (!errors?.length) {
+        return undefined;
+    }
+    return errors.map((item) => (typeof item === "string" ? item : String(item))).join(", ");
+}
 
-// Mock data for demo
-const MOCK_ARTICLE = "Frigobar Mabe 4pz Mod RF42623661234";
-const MOCK_PROVIDER = "Mabe S.A de C.V.";
-const MOCK_WORK_ASSIGNED = "Ebanista SLP Gerardo Ibarra";
-const MOCK_RESPONSIBLE = "Ignacio Fuentes";
-const MOCK_COST = "6924.50";
-const MOCK_LAST_PRICE = "10890.00";
-const MOCK_AUCTION_PRICE = "7790.00";
-const MOCK_NEXT_VISIT = "15 de Agosto, 2025";
+function catalogContainsId(list: DamagedProductCatalogItem[], selected: string): boolean {
+    return list.some((item) => catalogItemIdString(item) === selected);
+}
 
 export interface AddDamagedGoodsModalProps {
     open: boolean;
@@ -115,329 +141,302 @@ export interface AddDamagedGoodsModalProps {
     onSubmit?: (values: AddDamagedGoodsFormValues) => Promise<void>;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-export function AddDamagedGoodsModal({
-    open,
-    onClose,
-    onSubmit,
-}: AddDamagedGoodsModalProps) {
-    const theme = useTheme();
-    const [tabValue, setTabValue] = useState<"report" | "instructions">("report");
-    const [values, setValues] = useState<AddDamagedGoodsFormValues>(DEFAULT_FORM_VALUES);
-    const [loading, setLoading] = useState(false);
+export function AddDamagedGoodsModal({ open, onClose, onSubmit }: AddDamagedGoodsModalProps) {
+    const [activeTab, setActiveTab] = useState<string>("report");
+    const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
 
-    const handleClose = useCallback(() => {
-        if (!loading) {
-            setValues(DEFAULT_FORM_VALUES);
-            setTabValue("report");
-            setSubmitError(null);
-            onClose();
-        }
-    }, [loading, onClose]);
+    const catalogQuery = useQuery({
+        queryKey: ["damaged-products-catalog"],
+        queryFn: async () => {
+            const result = await getDamagedProductsCatalog();
+            if (result.error != null) {
+                throw new Error(result.error.message);
+            }
+            if (result.data == null) {
+                throw new Error("Catálogo vacío");
+            }
+            return result.data;
+        },
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const updateField = useCallback(<K extends keyof AddDamagedGoodsFormValues>(
-        field: K,
-        value: AddDamagedGoodsFormValues[K]
-    ) => {
-        setValues((prev) => ({ ...prev, [field]: value }));
-        setSubmitError(null);
+    const catalog = catalogQuery.data;
+    const catalogRef = useRef<DamagedProductsCatalogData | null>(null);
+    catalogRef.current = catalog ?? null;
+
+    const schemaSuperRefine = useCallback((data: AddDamagedGoodsFormValues, ctx: z.RefinementCtx) => {
+        const c = catalogRef.current;
+        if (c == null) {
+            return;
+        }
+        const assertIn = (
+            list: DamagedProductCatalogItem[],
+            value: string,
+            path: keyof AddDamagedGoodsFormValues,
+        ) => {
+            if (!catalogContainsId(list, value)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: messages.required,
+                    path: [path],
+                });
+            }
+        };
+        assertIn(c.damageOrigins, data.damageOrigin, "damageOrigin");
+        assertIn(c.damageTypes, data.damageType, "damageType");
+        assertIn(c.dispositions, data.damagedProductDisposition, "damagedProductDisposition");
     }, []);
 
-    const handleSubmit = useCallback(async () => {
-        setLoading(true);
-        setSubmitError(null);
-        try {
-            const submit = onSubmit ?? (async () => {
-                await new Promise((r) => setTimeout(r, 800));
-            });
-            await submit(values);
-            handleClose();
-        } catch (err) {
-            setSubmitError(err instanceof Error ? err.message : "Error al guardar");
-        } finally {
-            setLoading(false);
+    const defaultValues = useMemo(() => {
+        if (catalog == null) {
+            return EMPTY_DEFAULTS;
         }
-    }, [values, onSubmit, handleClose]);
+        return buildDefaultValuesFromCatalog(catalog);
+    }, [catalog]);
 
-    const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
-        setTabValue(newValue as "report" | "instructions");
-    };
+    const damageTypeOptions: SelectOption[] = useMemo(() => {
+        if (catalog == null) {
+            return [];
+        }
+        return catalog.damageTypes.map((item) => ({
+            value: catalogItemIdString(item),
+            label: item.label,
+        }));
+    }, [catalog]);
 
-    const showReturnToSupplier = values.actionWithArticle === "return_to_supplier";
-    const showSellAuction = values.actionWithArticle === "sell_auction";
+    useEffect(() => {
+        if (open) {
+            setActiveTab("report");
+            setSubmitError(null);
+        }
+    }, [open]);
+
+    const handleSubmit = useCallback(
+        async (values: AddDamagedGoodsFormValues) => {
+            setSubmitError(null);
+            setSubmitting(true);
+            try {
+                const runSubmit =
+                    onSubmit ??
+                    (async () => {
+                        await new Promise((r) => setTimeout(r, 800));
+                    });
+                await runSubmit(values);
+                onClose();
+            } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : "Error al guardar");
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [onSubmit, onClose],
+    );
+
+    const modalKey = open
+        ? catalog
+            ? "damaged-form-ready"
+            : "damaged-form-wait-catalog"
+        : "damaged-form-closed";
+
+    const catalogErrorMessage =
+        catalogQuery.isError ? getApiErrorMessage(catalogQuery.error) : null;
 
     return (
-        <Dialog
+        <ModalFormZod
+            key={modalKey}
             open={open}
-            onClose={(_, reason) => {
-                if (reason === "backdropClick" || reason === "escapeKeyDown") {
-                    handleClose();
-                }
-            }}
-            maxWidth="sm"
+            onClose={onClose}
+            title="Agregar mercancía dañada"
+            fields={addDamagedGoodsFormFields}
+            defaultValues={defaultValues}
+            onSubmit={handleSubmit}
+            confirmLabel="Agregar"
+            loading={submitting || catalogQuery.isPending}
+            maxWidth="md"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
+            validateOn="blur"
+            customFieldLayout
+            schemaSuperRefine={schemaSuperRefine}
         >
-            <DialogContent>
-                <ModalHeader>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
-                        <ModalTitle>Agregar mercancía dañada</ModalTitle>
-                    </div>
-                    <CloseButton onClick={handleClose} disabled={loading} size="small">
-                        <X size={20} />
-                    </CloseButton>
-                </ModalHeader>
+            {({ form }) => (
+                <Stack spacing={2} sx={{ pt: 1 }}>
+                    <TabFilters
+                        tabs={MODAL_TABS}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                    />
 
-                <TabsWrapper sx={{ mt: 2, mb: 2 }}>
-                    <StyledTabs value={tabValue} onChange={handleTabChange}>
-                        <StyledTab label="Reporte" value="report" />
-                        <StyledTab label="Indicaciones y solución" value="instructions" />
-                    </StyledTabs>
-                </TabsWrapper>
+                    {catalogQuery.isPending && (
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+                            <CircularProgress size={32} />
+                        </Box>
+                    )}
 
-                {submitError && (
-                    <Typography variant="body2" color="error" sx={{ mb: 2 }}>
-                        {submitError}
-                    </Typography>
-                )}
+                    {catalogErrorMessage != null && !catalogQuery.isPending && (
+                        <Alert severity="error" onClose={() => catalogQuery.refetch()}>
+                            {catalogErrorMessage}
+                        </Alert>
+                    )}
 
-                {tabValue === "report" && (
-                    <Stack component="form" spacing={2} sx={{ pt: 1 }}>
-                        <FormTextField
-                            label="Artículo"
-                            placeholder="Buscar"
-                            value={values.article || MOCK_ARTICLE}
-                            onChange={(e) => updateField("article", e.target.value)}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <Search size={18} color={colors.text.secondary} />
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <FormTextField
-                            label="Proveedor"
-                            value={MOCK_PROVIDER}
-                            disabled
-                            sx={{ "& .MuiInputBase-input": { color: "text.primary" } }}
-                        />
-                        <FormControl component="fieldset">
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Selecciona origen del daño
-                            </Typography>
-                            <RadioGroup
-                                row
-                                value={values.damageOrigin}
-                                onChange={(e) => updateField("damageOrigin", e.target.value as DamageOrigin)}
-                            >
-                                <FormControlLabel value="provider" control={<Radio />} label="Daño del proveedor" />
-                                <FormControlLabel value="internal" control={<Radio />} label="Daño interno" />
-                            </RadioGroup>
-                        </FormControl>
-                        <FormSelect
-                            label="Tipo de daño"
-                            placeholder="Seleccione"
-                            options={DAMAGE_TYPE_OPTIONS}
-                            value={values.damageType || "incomplete"}
-                            onChange={(e) => updateField("damageType", String(e.target.value))}
-                        />
-                        <FormTextField
-                            label="Número de serie"
-                            placeholder="Ingrese"
-                            value={values.serialNumber}
-                            onChange={(e) => updateField("serialNumber", e.target.value)}
-                        />
-                        <FormTextField
-                            label="Daño detectado"
-                            placeholder="Ingrese"
-                            multiline
-                            rows={3}
-                            value={values.damageDetected}
-                            onChange={(e) => updateField("damageDetected", e.target.value)}
-                        />
-                        <FormTextField
-                            label="Observaciones"
-                            placeholder="Ingrese"
-                            multiline
-                            rows={3}
-                            value={values.observations}
-                            onChange={(e) => updateField("observations", e.target.value)}
-                        />
-                    </Stack>
-                )}
+                    {submitError != null && (
+                        <Alert severity="error" onClose={() => setSubmitError(null)}>
+                            {submitError}
+                        </Alert>
+                    )}
 
-                {tabValue === "instructions" && (
-                    <Stack spacing={2} sx={{ pt: 1 }}>
-                        <FormControl component="fieldset">
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                ¿Qué se hará con el artículo?
-                            </Typography>
-                            <RadioGroup
-                                value={values.actionWithArticle}
-                                onChange={(e) => updateField("actionWithArticle", e.target.value as ActionWithArticle)}
-                                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
-                            >
-                                <FormControlLabel value="internal_repair" control={<Radio />} label="Reparación interna" />
-                                <FormControlLabel value="repair_with_supplier" control={<Radio />} label="Reparar con proveedor" />
-                                <FormControlLabel value="sell_auction" control={<Radio />} label="Vender en remate" />
-                                <FormControlLabel value="return_to_supplier" control={<Radio />} label="Regresar al proveedor" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        {showReturnToSupplier && (
-                            <Stack spacing={2}>
-                                <FormTextField
-                                    label="Seleccione el Proveedor"
-                                    value={values.selectedProvider || "MABE S.A de C.V."}
-                                    onChange={(e) => updateField("selectedProvider", e.target.value)}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <FormTextField
-                                    label="Próxima visita del proveedor"
-                                    value={MOCK_NEXT_VISIT}
-                                    disabled
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Calendar size={18} color={colors.text.secondary} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={1}
-                                    sx={{
-                                        border: "1px dashed",
-                                        borderColor: "divider",
-                                        borderRadius: 1,
-                                        p: 2,
-                                        cursor: "pointer",
-                                    }}
-                                    onClick={() => {}}
-                                >
-                                    <Upload size={20} color={theme.palette.primary.main} />
-                                    <Typography variant="body2" color="primary">
-                                        Cargar carta de aceptación
-                                    </Typography>
-                                </Stack>
-                            </Stack>
-                        )}
-
-                        {showSellAuction && (
-                            <Stack spacing={2}>
-                                <FormTextField label="Costo" value={`$${MOCK_COST}`} disabled />
-                                <FormTextField label="Último precio" value={`$${MOCK_LAST_PRICE}`} disabled />
-                                <FormTextField
-                                    label="Precio de remate"
-                                    placeholder="Ingrese"
-                                    value={values.auctionPrice || MOCK_AUCTION_PRICE}
-                                    onChange={(e) => updateField("auctionPrice", e.target.value)}
-                                />
-                            </Stack>
-                        )}
-
-                        {!showSellAuction && !showReturnToSupplier && (
-                            <>
-                                <FormTextField
-                                    label="Trabajo asignado a"
-                                    placeholder="Ingrese"
-                                    value={values.workAssignedTo || MOCK_WORK_ASSIGNED}
-                                    onChange={(e) => updateField("workAssignedTo", e.target.value)}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <FormTextField
-                                    label="Responsable"
-                                    placeholder="Ingrese"
-                                    value={values.responsible || MOCK_RESPONSIBLE}
-                                    onChange={(e) => updateField("responsible", e.target.value)}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Search size={18} color={colors.text.secondary} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <FormSelect
-                                    label="Solución"
-                                    placeholder="Seleccione"
-                                    options={SOLUTION_OPTIONS}
-                                    value={values.solution}
-                                    onChange={(e) => updateField("solution", String(e.target.value))}
-                                />
-                                <FormTextField
-                                    label="Fecha de finalización"
-                                    placeholder="Ingrese"
-                                    value={values.completionDate}
-                                    onChange={(e) => updateField("completionDate", e.target.value)}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <Calendar size={18} color={colors.text.secondary} />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Switch
-                                        checked={values.addCost}
-                                        onChange={(e) => updateField("addCost", e.target.checked)}
-                                        color="primary"
+                    {catalog != null && !catalogQuery.isPending && (
+                        <>
+                            {activeTab === "report" && (
+                                <Stack spacing={2}>
+                                    <DamagedGoodsProductSearchField
+                                        form={form}
+                                        fetchEnabled={open && activeTab === "report"}
+                                        disabled={submitting}
                                     />
-                                    <Typography variant="body2">¿Agregar costo?</Typography>
-                                </Stack>
-                                {values.addCost && (
-                                    <FormTextField
-                                        label="Costo"
+
+                                    <form.Field name="damageOrigin">
+                                        {(field) => {
+                                            const errorMessage = formatFieldErrors(
+                                                field.state.meta.errors,
+                                            );
+                                            const showError = !field.state.meta.isValid;
+                                            return (
+                                                <FormControl
+                                                    component="fieldset"
+                                                    variant="standard"
+                                                    error={showError}
+                                                >
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{ mb: 1 }}
+                                                    >
+                                                        Selecciona el origen del daño
+                                                    </Typography>
+                                                    <RadioButtonGroup sx={{ flexWrap: "wrap" }}>
+                                                        {catalog.damageOrigins.map((opt) => {
+                                                            const idStr = catalogItemIdString(opt);
+                                                            return (
+                                                                <RadioButton
+                                                                    key={idStr}
+                                                                    value={idStr}
+                                                                    label={opt.label}
+                                                                    checked={field.state.value === idStr}
+                                                                    onChange={(e) => {
+                                                                        field.handleChange(e.target.value);
+                                                                        field.handleBlur();
+                                                                    }}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </RadioButtonGroup>
+                                                    {showError && errorMessage != null && (
+                                                        <FormHelperText>{errorMessage}</FormHelperText>
+                                                    )}
+                                                </FormControl>
+                                            );
+                                        }}
+                                    </form.Field>
+
+                                    <FormField
+                                        form={form}
+                                        name="damageType"
+                                        label="Tipo de daño"
+                                        placeholder="Seleccione"
+                                        type="select"
+                                        options={damageTypeOptions}
+                                    />
+
+                                    <FormField
+                                        form={form}
+                                        name="serialNumber"
+                                        label="Número de serie"
                                         placeholder="Ingrese"
-                                        value={values.costAmount}
-                                        onChange={(e) => updateField("costAmount", e.target.value)}
+                                        type="text"
                                     />
-                                )}
-                            </>
-                        )}
-                    </Stack>
-                )}
 
-                <FormActions>
-                    <ConfirmButton
-                        type="button"
-                        variant="contained"
-                        onClick={handleSubmit}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <CircularProgress size={20} color="inherit" />
-                        ) : (
-                            "Agregar"
-                        )}
-                    </ConfirmButton>
-                </FormActions>
-            </DialogContent>
-        </Dialog>
+                                    <FormField
+                                        form={form}
+                                        name="damageDetected"
+                                        label="Daño detectado"
+                                        placeholder="Ingrese"
+                                        type="textarea"
+                                        rows={2}
+                                    />
+
+                                    <FormField
+                                        form={form}
+                                        name="observations"
+                                        label="Observaciones"
+                                        placeholder="Ingrese"
+                                        type="textarea"
+                                        rows={2}
+                                    />
+                                </Stack>
+                            )}
+
+                            {activeTab === "instructions" && (
+                                <Stack spacing={2}>
+                                    <form.Field name="damagedProductDisposition">
+                                        {(field) => {
+                                            const errorMessage = formatFieldErrors(
+                                                field.state.meta.errors,
+                                            );
+                                            const showError = !field.state.meta.isValid;
+                                            return (
+                                                <FormControl
+                                                    component="fieldset"
+                                                    variant="standard"
+                                                    error={showError}
+                                                >
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        sx={{ mb: 1 }}
+                                                    >
+                                                        ¿Qué se hará con el producto?
+                                                    </Typography>
+                                                    <RadioButtonGroup
+                                                        sx={{
+                                                            display: "grid",
+                                                            gridTemplateColumns: {
+                                                                xs: "1fr",
+                                                                sm: "1fr 1fr",
+                                                            },
+                                                            gap: 1,
+                                                        }}
+                                                    >
+                                                        {catalog.dispositions.map((opt) => {
+                                                            const idStr = catalogItemIdString(opt);
+                                                            return (
+                                                                <RadioButton
+                                                                    key={idStr}
+                                                                    value={idStr}
+                                                                    label={opt.label}
+                                                                    checked={field.state.value === idStr}
+                                                                    onChange={(e) => {
+                                                                        field.handleChange(e.target.value);
+                                                                        field.handleBlur();
+                                                                    }}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </RadioButtonGroup>
+                                                    {showError && errorMessage != null && (
+                                                        <FormHelperText>{errorMessage}</FormHelperText>
+                                                    )}
+                                                </FormControl>
+                                            );
+                                        }}
+                                    </form.Field>
+                                </Stack>
+                            )}
+                        </>
+                    )}
+                </Stack>
+            )}
+        </ModalFormZod>
     );
 }

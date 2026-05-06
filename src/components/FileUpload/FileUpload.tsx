@@ -6,7 +6,6 @@ import {
   FileItemRow,
   FileIconContainer
 } from "./styles";
-import { colors } from "@/styles/theme";
 
 export interface UploadedFileItem {
   id: string;
@@ -195,7 +194,7 @@ export function FileUpload({
                 {
                   currentFile.uploadedAt &&
                   <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <Clock9 size={14} color={colors.text.secondary} />
+                    <Clock9 size={14} color={theme.palette.text.secondary} />
                     <Typography variant="caption">{currentFile.uploadedAt}</Typography>
                   </Stack>
                 }
@@ -208,13 +207,13 @@ export function FileUpload({
                 e.stopPropagation();
                 removeFile(currentFile.id);
               }}>
-              <Trash2 size={16} color={colors.text.secondary} />
+              <Trash2 size={16} color={theme.palette.text.secondary} />
             </IconButton>
             <Button
               variant="outlined"
               color="primary"
               size="small"
-              startIcon={<Download size={16} color={colors.text.secondary} />}
+              startIcon={<Download size={16} color={theme.palette.text.secondary} />}
               onClick={(e) => {
                 e.stopPropagation();
                 downloadFile(currentFile);
@@ -226,7 +225,7 @@ export function FileUpload({
       )}
 
       {displayError && (
-        <Typography variant="caption" sx={{ color: colors.chip.variants.error.color }}>
+        <Typography variant="caption" sx={{ color: theme.palette.app.chip.variants.error.color }}>
           {displayError}
         </Typography>
       )}

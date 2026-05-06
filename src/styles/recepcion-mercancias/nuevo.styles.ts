@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, Button, LinearProgress, TableHead, TableRow, TableCell } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -88,8 +88,8 @@ export const ActionButton = styled(Button)(({ theme }) => ({
 
 export const ContentSection = styled(Box)(({ theme }) => ({
     marginTop: theme.spacing(2),
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(3),
 }));
@@ -109,22 +109,22 @@ export const SectionDescription = styled(Typography)(({ theme }) => ({
 export const TableContainer = styled(Box)({
     width: "100%",
     overflowX: "auto",
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
 });
 
 export const StyledTableHead = styled(TableHead)({
-    backgroundColor: colors.background.main,
+    backgroundColor: theme.palette.background.default,
 });
 
 export const StyledTableRow = styled(TableRow)({
     "&:hover": {
-        backgroundColor: colors.background.main,
+        backgroundColor: theme.palette.background.default,
     },
 });
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
     fontSize: "0.875rem",
     color: theme.palette.text.primary,
 }));

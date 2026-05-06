@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const PageContainer = styled('div')(({ theme }) => ({
     display: "flex",
@@ -17,9 +17,9 @@ export const PageHeader = styled('div')(({ theme }) => ({
 export const SummaryCard = styled('div')({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 12,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: "24px 16px",
     gap: "16px"
 });

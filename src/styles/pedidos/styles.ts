@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Button, Chip, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // TYPES
@@ -149,7 +149,7 @@ export const TotalRow = styled(Box)(({ theme }) => ({
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
     marginTop: theme.spacing(1),
 }));
 
@@ -175,8 +175,8 @@ export const ItemsList = styled(Box)({
 });
 
 export const ItemCard = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: 8,
     padding: theme.spacing(2.5),
     marginBottom: theme.spacing(2),

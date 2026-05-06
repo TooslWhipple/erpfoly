@@ -3,7 +3,7 @@ import { Box, Button, Grid, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import { FormTextField } from "@/components";
 import { SideModal } from "@/components/SideModal";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { ProductBasePrice } from "@/types/productos.types";
 
 export interface AddBasePriceModalProps {

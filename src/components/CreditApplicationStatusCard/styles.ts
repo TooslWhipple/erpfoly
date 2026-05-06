@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Stack } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export type CreditApplicationStatusCardVariant = "approved" | "rejected";
 
@@ -9,14 +9,14 @@ const CARD_VARIANT_STYLES: Record<
   { backgroundColor: string; borderColor: string; iconColor: string }
 > = {
   approved: {
-    backgroundColor: colors.chip.variants.success.background,
-    borderColor: colors.chip.variants.success.background,
-    iconColor: colors.chip.variants.success.color,
+    backgroundColor: theme.palette.app.chip.variants.success.background,
+    borderColor: theme.palette.app.chip.variants.success.background,
+    iconColor: theme.palette.app.chip.variants.success.color,
   },
   rejected: {
-    backgroundColor: colors.chip.variants.error.background,
-    borderColor: colors.chip.variants.error.background,
-    iconColor: colors.chip.variants.error.color,
+    backgroundColor: theme.palette.app.chip.variants.error.background,
+    borderColor: theme.palette.app.chip.variants.error.background,
+    iconColor: theme.palette.app.chip.variants.error.color,
   },
 };
 

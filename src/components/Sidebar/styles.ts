@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Avatar, Box, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
 import { ChevronDown, ChevronUp } from "@/components/Icons";
-import { SIDEBAR_WIDTH, colors } from "@/styles/theme";
+import { SIDEBAR_WIDTH, theme } from "@/styles/theme";
 interface StyledDrawerProps {
   isMobile?: boolean;
 }
@@ -14,8 +14,8 @@ export const StyledDrawer = styled(Drawer, {
   "& .MuiDrawer-paper": {
     width: SIDEBAR_WIDTH,
     boxSizing: "border-box",
-    backgroundColor: colors.background.sidebar,
-    borderRight: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    borderRight: `1px solid ${theme.palette.app.border}`,
   },
 }));
 
@@ -36,11 +36,11 @@ interface NavItemButtonProps {
 export const NavItemButton = styled(ListItemButton, {
   shouldForwardProp: (prop) => prop !== "active" && prop !== "hasSubItems",
 })<NavItemButtonProps>(({ active, hasSubItems }) => ({
-  backgroundColor: active && !hasSubItems ? colors.sidebar.itemSelected : "transparent",
-  color: active ? colors.sidebar.textSelected : "inherit",
+  backgroundColor: active && !hasSubItems ? theme.palette.app.sidebar.itemSelected : "transparent",
+  color: active ? theme.palette.app.sidebar.textSelected : "inherit",
   padding: "8px 12px",
   "&:hover": {
-    backgroundColor: active && !hasSubItems ? colors.sidebar.itemSelected : "rgba(0, 0, 0, 0.04)",
+    backgroundColor: active && !hasSubItems ? theme.palette.app.sidebar.itemSelected : "rgba(0, 0, 0, 0.04)",
   },
 }));
 
@@ -53,7 +53,7 @@ export const NavItemIcon = styled(ListItemIcon, {
 })<NavItemIconProps>(({ active }) => ({
   minWidth: 24,
   marginRight: 8,
-  color: active ? colors.sidebar.textSelected : "inherit",
+  color: active ? theme.palette.app.sidebar.textSelected : "inherit",
   "& svg": {
     width: 16,
     height: 16,
@@ -69,10 +69,10 @@ export const SubItemButton = styled(ListItemButton, {
   shouldForwardProp: (prop) => prop !== "active",
 })<SubItemButtonProps>(({ active }) => ({
   paddingLeft: 44,
-  backgroundColor: active ? colors.sidebar.itemSelected : "transparent",
-  color: active ? colors.sidebar.textSelected : "inherit",
+  backgroundColor: active ? theme.palette.app.sidebar.itemSelected : "transparent",
+  color: active ? theme.palette.app.sidebar.textSelected : "inherit",
   "&:hover": {
-    backgroundColor: active ? colors.sidebar.itemSelected : "rgba(0, 0, 0, 0.04)",
+    backgroundColor: active ? theme.palette.app.sidebar.itemSelected : "rgba(0, 0, 0, 0.04)",
   },
 }));
 
@@ -90,7 +90,7 @@ export const CollapseIcon = styled(ChevronUp)({
 
 export const UserProfileContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1.5),
-  borderTop: `1px solid ${colors.border}`,
+  borderTop: `1px solid ${theme.palette.app.border}`,
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1),

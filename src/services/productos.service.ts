@@ -1,85 +1,120 @@
-import { get, patch, post, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
+import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
+    CreateProductImagePayload,
+    CreateProductPackageItemPayload,
     CreateProductRequest,
     CreateProductResponse,
     GeneralDataFormState,
     PriceFormState,
     ProductBasePrice,
+    ProductPromotionDraft,
     ProductSupplier,
     ProductBranch,
     ProductGalleryImage,
+    ProductPackage,
     CostBasisForCalculation,
+    ProductPreviewCodeResponse,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
 
 const PRODUCTS_BASE = "/products";
 
-function readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (typeof reader.result === "string") {
-                resolve(reader.result);
-            } else {
-                reject(new Error("Unexpected FileReader result"));
-            }
+function mapProductPackagesToPackageItems(
+    packages: ProductPackage[]
+): CreateProductPackageItemPayload[] {
+    return packages.map((pkg) => {
+        if (pkg.type === "article") {
+            const productId = Number(pkg.articleId);
+            return {
+                type: "PRODUCT",
+                productId: Number.isFinite(productId) ? productId : null,
+                serviceName: null,
+                packagePrice: pkg.packagePrice,
+                branchIds: [...pkg.branches],
+            };
+        }
+        return {
+            type: "SERVICE",
+            productId: null,
+            serviceName: (pkg.serviceName ?? "").trim() || null,
+            packagePrice: pkg.packagePrice,
+            branchIds: [...pkg.branches],
         };
-        reader.onerror = () => {
-            reject(reader.error ?? new Error("Failed to read image file"));
-        };
-        reader.readAsDataURL(file);
     });
 }
 
-export async function resolveGalleryImageUrlsForCreate(
-    items: ProductGalleryImage[]
-): Promise<string[]> {
-    const urls: string[] = [];
-    for (const item of items) {
-        if (item.file) {
-            urls.push(await readFileAsDataUrl(item.file));
-        } else if (
-            /^https?:\/\//i.test(item.previewUrl) ||
-            /^data:image\//i.test(item.previewUrl)
-        ) {
-            urls.push(item.previewUrl);
+export function buildProductImagesPayloadFromGallery(
+    galleryImages: ProductGalleryImage[]
+): CreateProductImagePayload[] {
+    let sortOrder = 0;
+
+    const images: CreateProductImagePayload[] = [];
+    for (const item of galleryImages) {
+        if (item.file !== null) {
+            continue;
         }
+        const url = (item.previewUrl || item.imageUrl || "").trim();
+        if (!/^https?:\/\//i.test(url)) {
+            continue;
+        }
+        images.push({ imageUrl: url, sortOrder });
+        sortOrder += 1;
     }
-    return urls;
+    return images;
 }
 
-export function buildCreateProductRequest(input: {
-    generalData: GeneralDataFormState;
-    suppliers: ProductSupplier[];
-    branches: ProductBranch[];
-    images: string[];
-}): CreateProductRequest {
-    const { generalData, suppliers, branches, images } = input;
+export function collectNewGalleryFiles(galleryImages: ProductGalleryImage[]): File[] {
+    return galleryImages.map((g) => g.file).filter((f): f is File => f !== null);
+}
+
+export function buildProductMultipartFormData(
+    payload: CreateProductRequest,
+    galleryFiles: File[]
+): FormData {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(payload));
+    for (const file of galleryFiles) {
+        formData.append("gallery", file);
+    }
+    return formData;
+}
+
+export function buildCreateProductRequest(
+    input: {
+        generalData: GeneralDataFormState;
+        priceData: PriceFormState;
+        suppliers: ProductSupplier[];
+        branches: ProductBranch[];
+        galleryImages: ProductGalleryImage[];
+        packages: ProductPackage[];
+        promotions?: ProductPromotionDraft[];
+    },
+    mode: "create" | "update"
+): CreateProductRequest {
+    const { generalData, priceData, suppliers, branches, galleryImages, packages, promotions } =
+        input;
 
     const departmentId = Number(generalData.departmentId);
     const lineId = Number(generalData.lineId);
     const pieceCount = parseInt(generalData.piecesCount, 10);
 
-    const base = {
+    const baseFields = {
         departmentId,
         lineId,
-        code: generalData.code.trim() || "PENDING",
         shortName: generalData.shortName.trim(),
         description: generalData.description.trim(),
         pieceCount: Number.isFinite(pieceCount) ? pieceCount : 1,
+        listCost: Number(priceData.listCost),
+        currency: priceData.currency,
+        exchangeRate: Number(priceData.exchangeRate),
+        iva: Number(priceData.iva),
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
             isPrimary: s.isDefault,
         })),
-        images: images
-            .filter(
-                (url) =>
-                    /^https?:\/\//i.test(url) ||
-                    /^data:image\//i.test(url)
-            )
-            .map((imageUrl, index) => ({ imageUrl, sortOrder: index })),
+        images: buildProductImagesPayloadFromGallery(galleryImages),
         branches: branches.map((b) => ({
             branchId: b.branchId,
             minStock: b.minInventory,
@@ -87,6 +122,35 @@ export function buildCreateProductRequest(input: {
             isAvailable: b.enabled,
         })),
     };
+
+    const packageItems = mapProductPackagesToPackageItems(packages);
+
+    const promotionPayloads =
+        promotions
+            ?.map((d) => {
+                const rest: typeof d.payload = { ...d.payload };
+                delete rest.creditTermOptionLabels;
+                delete rest.layawayTermOptionLabels;
+                return rest;
+            })
+            .filter((p) => p.name?.trim()) ?? undefined;
+
+    const base: Omit<
+        CreateProductRequest,
+        "warrantyType" | "warrantyMonths" | "warrantyPolicy"
+    > =
+        mode === "update"
+            ? {
+                ...baseFields,
+                code: generalData.code.trim(),
+                packageItems,
+                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+            }
+            : {
+                ...baseFields,
+                packageItems,
+                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+            };
 
     if (generalData.warrantyType === "policy") {
         return {
@@ -103,10 +167,29 @@ export function buildCreateProductRequest(input: {
     };
 }
 
+const MULTIPART_UPLOAD_TIMEOUT_MS = 120_000;
+
 export async function createProduct(
-    payload: CreateProductRequest
+    payload: CreateProductRequest,
+    options?: { galleryFiles?: File[] }
 ): Promise<ApiResult<CreateProductResponse>> {
+    const galleryFiles = options?.galleryFiles ?? [];
+    if (galleryFiles.length > 0) {
+        const formData = buildProductMultipartFormData(payload, galleryFiles);
+        return post<CreateProductResponse>(PRODUCTS_BASE, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            timeout: MULTIPART_UPLOAD_TIMEOUT_MS,
+        });
+    }
     return post<CreateProductResponse>(PRODUCTS_BASE, payload);
+}
+
+export async function getProductPreviewCode(
+    lineId: number
+): Promise<ApiResult<ProductPreviewCodeResponse>> {
+    return get<ProductPreviewCodeResponse>(`${PRODUCTS_BASE}/preview-code`, {
+        params: { lineId },
+    });
 }
 
 export interface ProductDetailSupplierDto {
@@ -114,11 +197,6 @@ export interface ProductDetailSupplierDto {
     supplierProductCode?: string | null;
     isPrimary: boolean;
     supplierName?: string | null;
-}
-
-export interface ProductDetailImageDto {
-    imageUrl: string;
-    sortOrder: number;
 }
 
 export interface ProductDetailBranchDto {
@@ -138,6 +216,8 @@ export interface ProductDetailPriceDto {
     lastCost: number;
     liquidation: boolean;
     costBasisForCalculation?: string | null;
+    lastEditedBy?: string | null;
+    lastEditedDate?: string | null;
     basePrices?: Array<{
         id?: string;
         name: string;
@@ -155,13 +235,13 @@ export type ProductDetailDto = {
     description: string;
     pieceCount: number;
     suppliers: ProductDetailSupplierDto[];
-    images: ProductDetailImageDto[];
+    images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
     price?: ProductDetailPriceDto | null;
 } & (
-    | { warrantyType: "MONTHS"; warrantyMonths: number }
-    | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
-);
+        | { warrantyType: "MONTHS"; warrantyMonths: number }
+        | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
+    );
 
 export interface LoadedProductFormSnapshot {
     generalData: GeneralDataFormState;
@@ -200,10 +280,10 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         warrantyMonths: warrantyIsAnnex
             ? "0"
             : String(
-                  detail.warrantyType === "MONTHS" && Number.isFinite(detail.warrantyMonths)
-                      ? detail.warrantyMonths
-                      : 0
-              ),
+                detail.warrantyType === "MONTHS" && Number.isFinite(detail.warrantyMonths)
+                    ? detail.warrantyMonths
+                    : 0
+            ),
         warrantyPolicy:
             detail.warrantyType === "ANNEX_POLICY" ? (detail.warrantyPolicy ?? "") : "",
     };
@@ -229,33 +309,26 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         costBasisForCalculation: normalizeCostBasis(price?.costBasisForCalculation ?? undefined),
         lastCost: (price?.lastCost ?? 0).toFixed(2),
         averageCost: (price?.averageCost ?? 0).toFixed(2),
+        lastEditedBy: (price?.lastEditedBy ?? "").trim(),
+        lastEditedDate: (price?.lastEditedDate ?? "").trim(),
     };
 
     const basePrices: ProductBasePrice[] =
         price?.basePrices && price.basePrices.length > 0
             ? price.basePrices.map((bp, i) => ({
-                  id: bp.id ?? `bp-${detail.id}-${i}`,
-                  name: bp.name,
-                  marginPercent: bp.marginPercent,
-                  lastEditedBy: bp.lastEditedBy ?? undefined,
-              }))
+                id: bp.id ?? `bp-${detail.id}-${i}`,
+                name: bp.name,
+                marginPercent: bp.marginPercent,
+                lastEditedBy: bp.lastEditedBy ?? undefined,
+            }))
             : [...DEFAULT_PRODUCT_BASE_PRICES];
-
-    const sortedImages = [...(detail.images ?? [])].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-    );
-    const galleryImages: ProductGalleryImage[] = sortedImages.map((img, index) => ({
-        id: `img-${detail.id}-${index}-${img.sortOrder ?? index}`,
-        previewUrl: img.imageUrl,
-        file: null,
-    }));
 
     return {
         generalData,
         suppliers,
         priceData,
         basePrices,
-        galleryImages,
+        galleryImages: detail.images,
     };
 }
 
@@ -267,8 +340,17 @@ export async function getProductById(
 
 export async function updateProduct(
     id: number,
-    payload: CreateProductRequest
+    payload: CreateProductRequest,
+    options?: { galleryFiles?: File[] }
 ): Promise<ApiResult<ProductDetailDto>> {
+    const galleryFiles = options?.galleryFiles ?? [];
+    if (galleryFiles.length > 0) {
+        const formData = buildProductMultipartFormData(payload, galleryFiles);
+        return patch<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            timeout: MULTIPART_UPLOAD_TIMEOUT_MS,
+        });
+    }
     return patch<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`, payload);
 }
 export interface ProductListItem {
@@ -278,7 +360,7 @@ export interface ProductListItem {
     name: string;
     department: string;
     line: string;
-    supplier: string;
+    supplier: string | null;
 }
 export interface GetProductsQueryParams {
     page: number;
@@ -294,6 +376,53 @@ export async function getProducts(
     return get<PaginatedRowsResponse<ProductListItem>>(
         buildListUrl(PRODUCTS_BASE, params)
     );
+}
+
+export const PRODUCT_SEARCH_DEFAULT_LIMIT = 100;
+
+/** Row shape returned by GET /products/search */
+export interface ProductSearchItem {
+    id: number;
+    code: string;
+    shortName: string;
+    description: string;
+    listCost: string;
+    score: number;
+}
+
+export interface ProductSearchParams {
+    q: string;
+    limit?: number;
+}
+
+function normalizeProductSearchResponse(data: unknown): ProductSearchItem[] {
+    if (Array.isArray(data)) {
+        return data as ProductSearchItem[];
+    }
+    if (data != null && typeof data === "object" && "rows" in data && Array.isArray((data as { rows: unknown }).rows) ) {
+        return (data as { rows: ProductSearchItem[] }).rows;
+    }
+    return [];
+}
+
+export async function searchProducts(params: ProductSearchParams): Promise<ApiResult<ProductSearchItem[]>> {
+    if (params.q.length < 2) {
+        return { data: [], error: null };
+    }
+
+    const limit = params.limit ?? PRODUCT_SEARCH_DEFAULT_LIMIT;
+    const result = await get<unknown>(`${PRODUCTS_BASE}/search`, {
+        params: { q: params.q, limit },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeProductSearchResponse(result.data),
+        error: null
+    };
 }
 export interface ProductWarrantyTypeCatalogOption {
     value: string;
@@ -314,5 +443,13 @@ export async function getProductsCatalog(): Promise<
     ApiResult<ProductsCatalogData>
 > {
     return get<ProductsCatalogData>(`${PRODUCTS_BASE}/catalog`);
+}
+
+export async function getProductsByLineIds(lineIds: number[]): Promise<ProductListItem[]> {
+    return unwrapOrThrow(
+        await post<ProductListItem[]>(`${PRODUCTS_BASE}/by-lines`, {
+            line_ids: lineIds,
+        })
+    );
 }
 

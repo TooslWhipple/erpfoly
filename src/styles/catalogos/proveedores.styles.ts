@@ -1,13 +1,13 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, IconButton, RadioGroup, FormControlLabel } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const FormCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
     padding: "24px",
     gap: "24px",
@@ -49,7 +49,7 @@ export const DynamicListItem = styled('div')({
 export const DeleteButton = styled(IconButton)(({ theme }) => ({
     width: "24px",
     height: "24px",
-    border: '1px solid' + colors.border
+    border: '1px solid' + theme.palette.app.border
 }));
 
 export const DeleteButtonWrapper = styled('div')(({ theme }) => ({

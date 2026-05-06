@@ -148,9 +148,10 @@ ComponentName/
 
 #### Separación de Estilos
 - **SIEMPRE** separar styled components en archivos `*.styledComponents.ts` o `styles.ts`
-- **SIEMPRE** usar colores del tema centralizado (`colors` de `@/styles/theme`)
+- **SIEMPRE** usar colores del tema MUI: `theme.palette`, `theme.palette.app` (tokens de app en `src/styles/theme.ts`) y `theme.spacing` / `theme.shape`
 - **NUNCA** hardcodear colores o valores de estilo directamente en componentes
-- Importar colores: `import { colors } from "@/styles/theme"`
+- En `styled` de MUI: `(({ theme }) => ({ backgroundColor: theme.palette.background.paper, borderColor: theme.palette.app.border }))`
+- Fuera del callback (constantes de módulo): `import { theme } from "@/styles/theme"` y `theme.palette.app…`, o `useTheme()` en componentes
 
 #### Barrel Exports (index.ts)
 - Cada carpeta de componente debe tener un `index.ts` que exporte:
@@ -194,7 +195,7 @@ ComponentName/
 - SIEMPRE verifica imports, exports y tipos antes de hacer cambios
 - SIEMPRE usa `read_lints` después de modificar archivos
 - SIEMPRE separa styled components en archivos `*.styledComponents.ts`
-- SIEMPRE usa colores del tema centralizado (`colors` de `@/styles/theme`)
+- SIEMPRE usa colores vía tema MUI (`theme.palette` / `theme.palette.app`, definidos en `@/styles/theme`)
 - NUNCA hardcodees colores o valores de estilo
 - NUNCA elimines componentes/estilos sin verificar todas las referencias
 - SIEMPRE sigue la estructura de carpetas establecida

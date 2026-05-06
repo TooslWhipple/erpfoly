@@ -1,4 +1,4 @@
-import { get, post, patch } from "@/lib/axios";
+import { get, post, patch, unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
@@ -153,8 +153,6 @@ export interface SupplierCatalogItem {
   businessName: string | null;
 }
 
-export async function getSuppliersCatalog(): Promise<
-  ApiResult<SupplierCatalogItem[]>
-> {
-  return get<SupplierCatalogItem[]>(`${SUPPLIERS_BASE}/catalog`);
+export async function getSuppliersCatalog(): Promise<SupplierCatalogItem[]> {
+  return unwrapOrThrow(await get<SupplierCatalogItem[]>(`${SUPPLIERS_BASE}/catalog`));
 }

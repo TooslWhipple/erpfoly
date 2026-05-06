@@ -2,7 +2,17 @@
 // TYPES & INTERFACES
 // ============================================================================
 
+import type { SavePromotionPayload } from "@/services/promociones.service";
+
 export type WarrantyType = "months" | "policy";
+
+/** Client-side promotion row for the product form; sent with create/update product. */
+export interface ProductPromotionDraft {
+    id: string;
+    isLiquidation: boolean;
+    purchaseTypeCode: string;
+    payload: SavePromotionPayload;
+}
 
 /** Backend warranty values for POST /products */
 export type ProductWarrantyTypeApi = "MONTHS" | "ANNEX_POLICY";
@@ -18,6 +28,9 @@ export interface CreateProductImagePayload {
     sortOrder: number;
 }
 
+/** Client-side cap aligned with backend (~30 gallery uploads per save). */
+export const MAX_PRODUCT_GALLERY_FILES = 30;
+
 export interface CreateProductBranchPayload {
     branchId: number;
     minStock: number;
@@ -25,16 +38,29 @@ export interface CreateProductBranchPayload {
     isAvailable: boolean;
 }
 
+export type ProductPackageItemApiType = "PRODUCT" | "SERVICE";
+
+export interface CreateProductPackageItemPayload {
+    type: ProductPackageItemApiType;
+    productId: number | null;
+    serviceName: string | null;
+    packagePrice: number;
+    branchIds: number[];
+}
+
 export type CreateProductRequest = {
     departmentId: number;
     lineId: number;
-    code: string;
+    code?: string;
     shortName: string;
     description: string;
     pieceCount: number;
     suppliers: CreateProductSupplierPayload[];
     images: CreateProductImagePayload[];
     branches: CreateProductBranchPayload[];
+    packageItems?: CreateProductPackageItemPayload[];
+    /** Nested promotions to persist with the product (drafts from Price tab). */
+    promotions?: SavePromotionPayload[];
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
@@ -42,6 +68,11 @@ export type CreateProductRequest = {
 
 export interface CreateProductResponse {
     id: number;
+}
+
+/** GET /products/preview-code?lineId= */
+export interface ProductPreviewCodeResponse {
+    code: string;
 }
 
 export interface ProductSupplier {
@@ -98,10 +129,12 @@ export interface Product {
     images: string[];
 }
 
-/** Gallery row: preview URL (blob or https) plus optional file for API payload */
 export interface ProductGalleryImage {
     id: string;
+    isPrimary: boolean;
+    imageUrl: string;
     previewUrl: string;
+    sortOrder: number;
     file: File | null;
 }
 
@@ -126,7 +159,6 @@ export interface GeneralDataFormState {
     piecesCount: string;
     warrantyType: WarrantyType;
     warrantyMonths: string;
-    /** Free text when warrantyType is policy (maps to ANNEX_POLICY + warrantyPolicy) */
     warrantyPolicy: string;
 }
 
@@ -139,6 +171,8 @@ export interface PriceFormState {
     costBasisForCalculation: CostBasisForCalculation;
     lastCost: string;
     averageCost: string;
+    lastEditedBy: string;
+    lastEditedDate: string;
 }
 
 export interface FormErrors {

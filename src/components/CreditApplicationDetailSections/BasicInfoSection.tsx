@@ -2,7 +2,7 @@ import { Divider, Grid, Stack, Typography } from "@mui/material";
 import { FormTextField } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { Check } from "lucide-react";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 interface BasicInfoSectionProps {
   detail: CreditApplicationDetail;
@@ -60,7 +60,7 @@ export function BasicInfoSection({ detail }: BasicInfoSectionProps) {
                   padding: "16px",
                   borderRadius: "8px",
                   backgroundColor: '#0596690F',
-                  color: colors.chip.variants.success.color,
+                  color: theme.palette.app.chip.variants.success.color,
                   fontSize: 12,
                   fontWeight: 500,
                 }}

@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { DialogContent as MuiDialogContent, Typography, IconButton } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const DialogContent = styled(MuiDialogContent)({
   display: "flex",

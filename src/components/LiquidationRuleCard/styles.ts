@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Select, TextField, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CARD
@@ -13,8 +13,8 @@ export const RuleCardContainer = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
   padding: theme.spacing(2),
   borderRadius: 12,
-  border: `1px solid ${colors.border}`,
-  backgroundColor: colors.background.sidebar,
+  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: theme.palette.background.paper,
   marginBottom: theme.spacing(2),
 }));
 

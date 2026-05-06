@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, TextField, Typography, Chip, Button, LinearProgress, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export type CashRegisterStatus = "open" | "closed";
 
@@ -40,7 +40,7 @@ export const Card = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     borderRadius: "12px",
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: "24px",
     gap: "16px",
     width: "274px",
@@ -67,9 +67,9 @@ export const SearchBarContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     gap: theme.spacing(1.5),
     alignItems: "center",
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(1.5),
     marginBottom: theme.spacing(3),
 }));
@@ -80,7 +80,7 @@ export const PaymentTypeSelect = styled(Button)(({ theme }) => ({
     textTransform: "none",
     fontWeight: 500,
     fontSize: "0.875rem",
-    borderColor: colors.border,
+    borderColor: theme.palette.app.border,
     color: theme.palette.text.primary,
     "&:hover": {
         borderColor: theme.palette.text.disabled,
@@ -90,16 +90,16 @@ export const PaymentTypeSelect = styled(Button)(({ theme }) => ({
 export const SearchInput = styled(TextField)(({ theme }) => ({
     flex: 1,
     "& .MuiOutlinedInput-root": {
-        backgroundColor: colors.background.sidebar,
+        backgroundColor: theme.palette.background.paper,
         height: 36,
         "& fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&:hover fieldset": {
             borderColor: theme.palette.text.disabled,
         },
         "&.Mui-focused fieldset": {
-            borderColor: colors.sidebar.textSelected,
+            borderColor: theme.palette.app.sidebar.textSelected,
         },
     },
     "& .MuiOutlinedInput-input": {
@@ -115,9 +115,9 @@ export const SearchButton = styled(Button)(({ theme }) => ({
 }));
 
 export const BalanceCard = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(2.5),
     marginBottom: theme.spacing(3),
 }));
@@ -194,9 +194,9 @@ export const ActionButton = styled(Button)(({ theme }) => ({
 }));
 
 export const HistorySection = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
+    backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(2.5),
 }));
 
@@ -217,7 +217,7 @@ export const ViewAllLink = styled(Button)(({ theme }) => ({
     textTransform: "none",
     fontSize: "0.875rem",
     fontWeight: 500,
-    color: colors.sidebar.textSelected,
+    color: theme.palette.app.sidebar.textSelected,
     padding: 0,
     minWidth: "auto",
     "&:hover": {
@@ -236,7 +236,7 @@ export const HistoryTableHeader = styled(Box)(({ theme }) => ({
     gridTemplateColumns: "80px 1fr 1fr 1fr 1fr",
     gap: theme.spacing(2),
     paddingBottom: theme.spacing(1),
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
     marginBottom: theme.spacing(1.5),
 }));
 
@@ -375,7 +375,7 @@ export const CutModalActions = styled(Box)(({ theme }) => ({
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
 }));
 
 export const CutButton = styled(Button)(({ theme }) => ({
@@ -436,7 +436,7 @@ export const DenominationList = styled(Box)(({ theme }) => ({
 
 export const DenominationItem = styled(Box)(({ theme }) => ({
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(1.5),
     display: "flex",
     justifyContent: "space-between",
@@ -476,7 +476,7 @@ export const DenominationSubtotal = styled(Typography)(({ theme }) => ({
 export const WithdrawalTotalCard = styled(Box)(({ theme }) => ({
     backgroundColor: "#F4F4F5",
     borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${theme.palette.app.border}`,
     padding: theme.spacing(1.5),
     display: "flex",
     justifyContent: "space-between",
@@ -500,7 +500,7 @@ export const WithdrawalModalActions = styled(Box)(({ theme }) => ({
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
     paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${theme.palette.app.border}`,
 }));
 
 export const WithdrawalButton = styled(Button)(({ theme }) => ({
@@ -514,13 +514,13 @@ export const WithdrawalAmountInput = styled(TextField)(({ theme }) => ({
         backgroundColor: "#F4F4F5",
         borderRadius: theme.shape.borderRadius,
         "& fieldset": {
-            borderColor: colors.border,
+            borderColor: theme.palette.app.border,
         },
         "&:hover fieldset": {
             borderColor: theme.palette.text.disabled,
         },
         "&.Mui-focused fieldset": {
-            borderColor: colors.sidebar.textSelected,
+            borderColor: theme.palette.app.sidebar.textSelected,
         },
     },
 }));

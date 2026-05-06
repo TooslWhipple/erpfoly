@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { TrackSlider } from "@/components/TrackSlider";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import { PriceComparisonPanel } from "./styles";
 import { ChevronRight } from "lucide-react";
 
@@ -170,7 +170,7 @@ export function ApproveDiscountRequestModal({
                 {formatCurrency(saleTotal)}
               </Typography>
             </Stack>
-            <ChevronRight size={24} color={colors.text.secondary} />
+            <ChevronRight size={24} color={theme.palette.text.secondary} />
             <Stack spacing={0.5} flex={1}>
               <Typography variant="body2" color="text.secondary" align="right">
                 Con descuento

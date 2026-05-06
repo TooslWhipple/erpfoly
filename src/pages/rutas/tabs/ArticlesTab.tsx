@@ -3,7 +3,7 @@ import { GripVertical, MoreVertical } from "lucide-react";
 import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components/TableCrud";
 import type { RouteArticle } from "@/types/rutas.types";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 const ARTICLE_STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
@@ -21,7 +21,7 @@ const COLUMNS: DataTableColumn<RouteArticle>[] = [
   {
     id: "drag",
     label: "",
-    format: () => <GripVertical size={16} color={colors.text.secondary} />,
+    format: () => <GripVertical size={16} color={theme.palette.text.secondary} />,
   },
   { id: "invoiceNumber", label: "Factura" },
   {

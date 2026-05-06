@@ -11,7 +11,7 @@ Antes de modificar cualquier componente o archivo, verifica:
 - [ ] Los tipos TypeScript están correctamente definidos
 - [ ] Los styled components están exportados desde el archivo correcto
 - [ ] No hay referencias a componentes/estilos eliminados
-- [ ] Los colores y estilos usan el tema centralizado (`colors` de `@/styles/theme`)
+- [ ] Los colores y estilos usan el tema MUI (`theme.palette`, `theme.palette.app` desde `@/styles/theme`)
 
 ---
 
@@ -203,35 +203,34 @@ interface Props {
 
 ### 1. Uso del Tema
 
-**OBLIGATORIO**: Usar siempre colores del tema centralizado:
+**OBLIGATORIO**: Usar siempre el tema de MUI (`createTheme` en `src/styles/theme.ts`). Tokens de producto viven en **`palette.app`** (tipo `AppPalette`).
 
 ```typescript
-//  CORRECTO
-import { colors } from "@/styles/theme";
-backgroundColor: colors.background.sidebar;
-borderColor: colors.border;
-color: colors.chip.text;
+//  CORRECTO — styled (@mui/material/styles)
+import { styled } from "@mui/material/styles";
+export const Card = styled("div")(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+  color: theme.palette.text.primary,
+}));
+
+//  CORRECTO — constantes a nivel módulo (mismo tema singleton)
+import { theme } from "@/styles/theme";
+const border = theme.palette.app.border;
+
+//  CORRECTO — componente React
+import { useTheme } from "@mui/material/styles";
+const theme = useTheme();
+<Box sx={{ color: theme.palette.text.secondary }} />
 
 //  INCORRECTO
 backgroundColor: "#FFFFFF";
 borderColor: "#E4E4E7";
-color: "#475569";
 ```
 
 ### 2. Agregar Nuevos Colores
 
-**OBLIGATORIO**: Si necesitas un nuevo color, agregarlo a `src/styles/theme.ts`:
-
-```typescript
-//  CORRECTO
-export const colors = {
-  // ... colores existentes
-  newFeature: {
-    primary: "#HEX",
-    secondary: "#HEX",
-  },
-};
-```
+**OBLIGATORIO**: Definirlos en `src/styles/theme.ts`: actualizar **`appPalette`** (y la interfaz **`AppPalette`** si hace falta), pasar **`app`** en `createTheme({ palette: { …, app: appPalette } })`, y extender **`declare module "@mui/material/styles"`** (`Palette` / `PaletteOptions`) para que TypeScript reconozca `theme.palette.app`. Preferir nombres semánticos (p. ej. bajo `chip.variants`, `sidebar`) en lugar de alias de color sueltos.
 
 ---
 

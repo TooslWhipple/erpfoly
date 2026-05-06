@@ -1,13 +1,13 @@
 import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const SalesChartContainer = styled('div')({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "8px",
     padding: "16px"
 });
@@ -27,8 +27,8 @@ export const SalesIcon = styled('div')({
 });
 
 export const ActivityLogContainer = styled(Box)(({ theme }) => ({
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(3),
 }));
@@ -55,7 +55,7 @@ export const ActivityDot = styled(Box)<{ isLast?: boolean }>(({ isLast }) => ({
     width: 8,
     height: 8,
     borderRadius: "50%",
-    backgroundColor: colors.border,
+    backgroundColor: theme.palette.app.border,
     marginTop: 6,
     flexShrink: 0,
     position: "relative",
@@ -69,7 +69,7 @@ export const ActivityDot = styled(Box)<{ isLast?: boolean }>(({ isLast }) => ({
             transform: "translateX(-50%)",
             width: 1,
             height: "calc(100% + 16px)",
-            backgroundColor: colors.border,
+            backgroundColor: theme.palette.app.border,
         },
 }));
 
@@ -80,8 +80,8 @@ export const ActivityContent = styled(Box)({
 export const CardContainer = styled('div')({
     display: "flex",
     flexDirection: "column",
-    backgroundColor: colors.background.sidebar,
-    border: `1px solid ${colors.border}`,
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
     padding: "24px",
     gap: "24px"

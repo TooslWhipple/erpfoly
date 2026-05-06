@@ -7,7 +7,7 @@ Antes de modificar código, verifica:
 1. **Imports**: ¿Existen todos los componentes/estilos que importo?
 2. **Exports**: ¿Están exportados en `index.ts`?
 3. **Estilos**: ¿Están en archivo separado `*.styledComponents.ts`?
-4. **Colores**: ¿Uso `colors` del tema, no valores hardcodeados?
+4. **Colores**: ¿Uso `theme.palette` / `theme.palette.app` (MUI + `@/styles/theme`), no hex sueltos?
 5. **Tipos**: ¿Las interfaces están correctamente definidas?
 
 ---
@@ -49,9 +49,16 @@ export const HeaderContainer = styled(Box)({...});
 // Error
 backgroundColor: "#FFFFFF";
 
-// Solución
-import { colors } from "@/styles/theme";
-backgroundColor: colors.background.sidebar;
+// Solución (styled con MUI)
+import { styled } from "@mui/material/styles";
+styled("div")(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+}));
+
+// Solución (sx o componente con hook)
+import { useTheme } from "@mui/material/styles";
+const theme = useTheme();
+// sx={{ borderColor: theme.palette.app.border }}
 ```
 
 ---

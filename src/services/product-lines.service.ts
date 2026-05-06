@@ -10,6 +10,12 @@ export interface ProductLineItem {
   id: number;
   name: string;
   code: string | null;
+  articles?: number;
+  promotion?: {
+    percentage: number;
+    startDate: string;
+    endDate: string;
+  };
 }
 
 export interface GetProductLinesParams {
@@ -25,11 +31,21 @@ export interface CreateProductLinePayload {
   departmentId: number;
   name: string;
   code: string;
+  promotion?: OriginPromotionPayload;
 }
 
 export interface UpdateProductLinePayload {
   name?: string;
   code?: string;
+  promotion?: OriginPromotionPayload;
+  removePromotion?: boolean;
+}
+
+export interface OriginPromotionPayload {
+  discount_rate: number;
+  start_date: string;
+  end_date?: string | null;
+  is_liquidation?: boolean;
 }
 
 // ============================================================================

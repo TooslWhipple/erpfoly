@@ -1,12 +1,22 @@
-import { useMemo, useState } from "react";
-import { Typography, Grid, Switch, Button, Stack, IconButton, Divider } from "@mui/material";
-import { Pencil } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Typography, Grid, Button, Stack, Divider, Box, CircularProgress, useTheme } from "@mui/material";
 import numeral from "numeral";
+import { useQuery } from "@tanstack/react-query";
 import { FormTextField, FormSelect } from "@/components";
+import { ProductPromotionModal } from "@/components/ProductPromotionModal";
+import { TabFilters } from "@/components/TabFilters";
+import type { TabOption } from "@/components/TabFilters";
+import { getPromotionFormConfiguration } from "@/services/promociones.service";
 import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
-import type { PriceFormState, CostHistoryEntry, ProductBasePrice } from "@/types/productos.types";
+import type {
+    PriceFormState,
+    CostHistoryEntry,
+    ProductBasePrice,
+    ProductPromotionDraft,
+} from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
+import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
 
 function getReferenceCostForCalculation(formState: PriceFormState): number {
     const list = Number(formState.listCost) || 0;
@@ -23,6 +33,20 @@ function getReferenceCostForCalculation(formState: PriceFormState): number {
     }
 }
 
+/**
+ * Estimated shelf price for a promotion line: list cost with department margin, then promotion discount.
+ * discountRate is stored as a whole percent (e.g. 10 → 10% off → multiply by 0.9).
+ */
+function computeEstimatedPromotionalPrice(
+    listCost: number,
+    marginPercent: number,
+    discountRatePercent: number
+): number {
+    const withMargin = listCost * (1 + marginPercent / 100);
+    const clamped = Math.min(100, Math.max(0, discountRatePercent));
+    return withMargin * (1 - clamped / 100);
+}
+
 interface PriceTabProps {
     formState: PriceFormState;
     onFieldChange: (field: keyof PriceFormState, value: string | boolean) => void;
@@ -34,6 +58,10 @@ interface PriceTabProps {
     costHistoryOpen: boolean;
     onCostHistoryOpen: () => void;
     onCostHistoryClose: () => void;
+    /** Persisted product id when editing; null on "nuevo producto". */
+    productNumericId: number | null;
+    promotionDrafts: ProductPromotionDraft[];
+    onPromotionDraftsChange: (next: ProductPromotionDraft[]) => void;
 }
 
 export function PriceTab({
@@ -47,9 +75,83 @@ export function PriceTab({
     costHistoryOpen,
     onCostHistoryOpen,
     onCostHistoryClose,
+    productNumericId,
+    promotionDrafts,
+    onPromotionDraftsChange,
 }: PriceTabProps) {
-    const listCostNumber = Number(formState.listCost) || 0;
+    const theme = useTheme();
     const [addBasePriceOpen, setAddBasePriceOpen] = useState(false);
+    const [promotionModalOpen, setPromotionModalOpen] = useState(false);
+    const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
+    const [activePurchaseTypeTab, setActivePurchaseTypeTab] = useState("");
+
+    const promotionFormConfigurationQuery = useQuery({
+        queryKey: ["promotion-form-configuration", "price-tab"],
+        queryFn: () => getPromotionFormConfiguration(),
+        staleTime: 10 * 60 * 1000,
+        enabled: promotionDrafts.length > 0,
+    });
+
+    const purchaseTypes = promotionFormConfigurationQuery.data?.purchaseTypes ?? [];
+
+    useEffect(() => {
+        if (purchaseTypes.length === 0) return;
+        const validIds = new Set(purchaseTypes.map((p) => String(p.id)));
+        if (!validIds.has(activePurchaseTypeTab)) {
+            setActivePurchaseTypeTab(String(purchaseTypes[0].id));
+        }
+    }, [purchaseTypes, activePurchaseTypeTab]);
+
+    const purchaseTypeTabs: TabOption[] = useMemo(
+        () =>
+            purchaseTypes.map((pt) => ({
+                value: String(pt.id),
+                label: pt.label,
+                count: promotionDrafts.filter((d) => d.payload.purchaseTypeId === pt.id).length,
+            })),
+        [purchaseTypes, promotionDrafts]
+    );
+
+    const filteredPromotionDrafts = useMemo(() => {
+        const selectedId = Number(activePurchaseTypeTab);
+        if (!Number.isFinite(selectedId)) return [];
+        return promotionDrafts.filter((d) => d.payload.purchaseTypeId === selectedId);
+    }, [promotionDrafts, activePurchaseTypeTab]);
+
+    const listCostForOtherPrices = useMemo(() => Number(formState.listCost) || 0, [formState.listCost]);
+    const firstBaseMarginPercent = basePrices[0]?.marginPercent ?? 0;
+
+    const editingPromotionDraft = editingPromotionId != null
+        ? promotionDrafts.find((d) => d.id === editingPromotionId) ?? null
+        : null;
+
+    const openCreatePromotionModal = () => {
+        setEditingPromotionId(null);
+        setPromotionModalOpen(true);
+    };
+
+    const openEditPromotionModal = (id: string) => {
+        setEditingPromotionId(id);
+        setPromotionModalOpen(true);
+    };
+
+    const handleClosePromotionModal = () => {
+        setPromotionModalOpen(false);
+        setEditingPromotionId(null);
+    };
+
+    const handleSavePromotionDraft = (draft: ProductPromotionDraft) => {
+        const exists = promotionDrafts.some((d) => d.id === draft.id);
+        if (exists) {
+            onPromotionDraftsChange(promotionDrafts.map((d) => (d.id === draft.id ? draft : d)));
+        } else {
+            onPromotionDraftsChange([...promotionDrafts, draft]);
+        }
+    };
+
+    const handleRemovePromotionDraft = (id: string) => {
+        onPromotionDraftsChange(promotionDrafts.filter((d) => d.id !== id));
+    };
 
     const referenceCost = useMemo(() => getReferenceCostForCalculation(formState), [formState]);
 
@@ -62,142 +164,236 @@ export function PriceTab({
                             <Typography variant="h6">Cálculo de precios</Typography>
                             <Typography variant="body2" color="text.secondary">Registra los costos y descuentos que tendrá este artículo para obtener sus precios.</Typography>
                         </Stack>
-                        <Typography variant="body1">Costos</Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="Costo de lista"
-                                    placeholder="0.00"
-                                    type="number"
-                                    value={formState.listCost}
-                                    onChange={(e) => onFieldChange("listCost", e.target.value)}
-                                />
+                        <FormCard>
+                            <Typography variant="subtitle2">Costos</Typography>
+                            {(formState.lastEditedDate || formState.lastEditedBy) && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Modificado por última vez
+                                    {formState.lastEditedDate ? `: ${formState.lastEditedDate}` : ""}
+                                    {formState.lastEditedBy
+                                        ? `${formState.lastEditedDate ? " · " : ": "}${formState.lastEditedBy}`
+                                        : ""}
+                                </Typography>
+                            )}
+                            <Grid container spacing={2}>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="Costo de lista"
+                                        placeholder="0.00"
+                                        type="number"
+                                        value={formState.listCost}
+                                        onChange={(e) => onFieldChange("listCost", e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormSelect
+                                        label="Moneda"
+                                        value={formState.currency}
+                                        onChange={(e) => onFieldChange("currency", String(e.target.value))}
+                                        options={currencies}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="Tipo de cambio"
+                                        placeholder="1.00"
+                                        type="number"
+                                        value={formState.exchangeRate}
+                                        onChange={(e) => onFieldChange("exchangeRate", e.target.value)}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <FormTextField
+                                        label="IVA (%)"
+                                        placeholder="16.00"
+                                        type="number"
+                                        value={formState.iva}
+                                        onChange={(e) => onFieldChange("iva", e.target.value)}
+                                    />
+                                </Grid>
                             </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormSelect
-                                    label="Moneda"
-                                    value={formState.currency}
-                                    onChange={(e) => onFieldChange("currency", String(e.target.value))}
-                                    options={currencies}
-                                />
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="Tipo de cambio"
-                                    placeholder="1.00"
-                                    type="number"
-                                    value={formState.exchangeRate}
-                                    onChange={(e) => onFieldChange("exchangeRate", e.target.value)}
-                                />
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="IVA (%)"
-                                    placeholder="16.00"
-                                    type="number"
-                                    value={formState.iva}
-                                    onChange={(e) => onFieldChange("iva", e.target.value)}
-                                />
-                            </Grid>
-                        </Grid>
 
-                        <LastCostCard>
-                            <Stack
-                                spacing={3}
-                                width="100%"
-                                direction="row"
-                                alignItems="center"
-                                flexWrap="nowrap"
-                                divider={<Divider orientation="vertical" flexItem />}>
-                                <Stack>
-                                    <Typography variant="body2" color="text.secondary">Costo promedio:</Typography>
-                                    <Typography variant="h6">{numeral(formState.averageCost).format("$0,0.00")}</Typography>
-                                </Stack>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={3} flexGrow={1}>
+                            <LastCostCard>
+                                <Stack
+                                    spacing={3}
+                                    width="100%"
+                                    direction="row"
+                                    alignItems="center"
+                                    flexWrap="nowrap"
+                                    divider={<Divider orientation="vertical" flexItem />}>
                                     <Stack>
-                                        <Typography variant="body2" color="text.secondary">Costo último:</Typography>
-                                        <Typography variant="h6">{numeral(formState.lastCost).format("$0,0.00")}</Typography>
+                                        <Typography variant="body2" color="text.secondary">Costo promedio:</Typography>
+                                        <Typography variant="h6">{numeral(formState.averageCost).format("$0,0.00")}</Typography>
                                     </Stack>
-                                    <Button
-                                        variant="text"
-                                        onClick={onCostHistoryOpen}>
-                                        Ver historial de costos
-                                    </Button>
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={3} flexGrow={1}>
+                                        <Stack>
+                                            <Typography variant="body2" color="text.secondary">Costo último:</Typography>
+                                            <Typography variant="h6">{numeral(formState.lastCost).format("$0,0.00")}</Typography>
+                                        </Stack>
+                                        <Button
+                                            variant="text"
+                                            onClick={onCostHistoryOpen}>
+                                            Ver historial de costos
+                                        </Button>
+                                    </Stack>
                                 </Stack>
+                            </LastCostCard>
+                            <LuquidationCard checked={formState.liquidation}>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <LiquidationSwitch
+                                        checked={formState.liquidation}
+                                        onChange={(e) => onFieldChange("liquidation", e.target.checked)}
+                                        color="primary"
+                                    />
+                                    <Typography variant="body1">Liquidación</Typography>
+                                </Stack>
+                                <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
+                            </LuquidationCard>
+                        </FormCard>
+                        <FormCard>
+                            <Typography variant="subtitle2">Promociones</Typography>
+                            <Stack spacing={1.5}>
+                                {
+                                    promotionDrafts.length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            No hay promociones. Agrega una para vincularla al guardar el producto.
+                                        </Typography>
+                                    ) : (
+                                        promotionDrafts.map((row) => (
+                                            <ProductPromotionDraftCard
+                                                key={row.id}
+                                                draft={row}
+                                                handleEdit={() => openEditPromotionModal(row.id)}
+                                                handleDelete={() => handleRemovePromotionDraft(row.id)}
+                                            />
+                                        ))
+                                    )
+                                }
                             </Stack>
-                        </LastCostCard>
-                        <LuquidationCard checked={formState.liquidation}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <LiquidationSwitch
-                                    checked={formState.liquidation}
-                                    onChange={(e) => onFieldChange("liquidation", e.target.checked)}
-                                    color="primary"
-                                />
-                                <Typography variant="body1">Liquidación</Typography>
-                            </Stack>
-                            <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
-                        </LuquidationCard>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={openCreatePromotionModal}
+                                sx={{ alignSelf: "flex-start" }}>
+                                Agregar promoción
+                            </Button>
+                        </FormCard>
                     </FormCard>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
-                    <Card backgroundColor="#E2E8F0">
-                        <Stack spacing={1.5}>
-                            <Typography variant="body1">Costo a considerar para el cálculo</Typography>
-                            <FormSelect
-                                value={formState.costBasisForCalculation}
-                                onChange={(e) =>
-                                    onFieldChange("costBasisForCalculation", String(e.target.value))
+                    <Stack spacing={2}>
+                        <Card backgroundColor="#E2E8F0">
+                            <Stack spacing={1.5}>
+                                <Typography variant="body1">Costo a considerar para el cálculo</Typography>
+                                <FormSelect
+                                    value={formState.costBasisForCalculation}
+                                    onChange={(e) =>
+                                        onFieldChange("costBasisForCalculation", String(e.target.value))
+                                    }
+                                    options={costBasisOptions}
+                                    sx={{ backgroundColor: "transparent" }}
+                                />
+                            </Stack>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
+                                <Typography variant="subtitle2">Precios base</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Este precio se calcula tomando el costo de lista y el margen definido por departamento.
+                                </Typography>
+                            </Stack>
+                            <Stack spacing={2}>
+                                {
+                                    basePrices.length === 0 && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            No hay precios base. Usa Agregar para crear uno.
+                                        </Typography>
+                                    )
                                 }
-                                options={costBasisOptions}
-                                sx={{ backgroundColor: "transparent" }}
-                            />
-                        </Stack>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
-                            <Typography variant="subtitle2">Precios base</Typography>
-                            <Button variant="text" onClick={() => setAddBasePriceOpen(true)}>
-                                Agregar
-                            </Button>
-                        </Stack>
-                        <Stack spacing={2}>
-                            {
-                                basePrices.length === 0 && (
-                                    <Typography variant="body2" color="text.secondary">
-                                        No hay precios base. Usa Agregar para crear uno.
-                                    </Typography>
-                                )
-                            }
-                            {
-                                basePrices.map((row) => {
-                                    const linePrice = referenceCost * (1 + row.marginPercent / 100);
-                                    return (
-                                        <Card key={row.id} backgroundColor="#FFFFFF">
-                                            <Stack spacing={1}>
-                                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
-                                                    <Stack>
-                                                        <Typography variant="subtitle2">{row.name}</Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Margen {numeral(row.marginPercent).format("0,0.00")}%
-                                                        </Typography>
+                                {
+                                    basePrices.map((row) => {
+                                        const linePrice = referenceCost * (1 + row.marginPercent / 100);
+                                        return (
+                                            <Card key={row.id} backgroundColor="#CBD5E1">
+                                                <Stack spacing={1}>
+                                                    <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                                                        <Stack>
+                                                            <Typography variant="subtitle2" color="text.secondary">Margen</Typography>
+                                                            <Typography variant="body1">
+                                                                {numeral(row.marginPercent).format("0,0.00")}%
+                                                            </Typography>
+                                                        </Stack>
+                                                        <Typography variant="h5">{numeral(linePrice).format("$0,0.00")}</Typography>
                                                     </Stack>
-                                                    <Typography variant="h6">{numeral(linePrice).format("$0,0.00")}</Typography>
                                                 </Stack>
-                                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {row.lastEditedBy
-                                                            ? `Editado por ${row.lastEditedBy}`
-                                                            : "Sin historial de edición"}
-                                                    </Typography>
-                                                    <IconButton size="small" aria-label="Edit base price" disabled>
-                                                        <Pencil size={18} />
-                                                    </IconButton>
-                                                </Stack>
+                                            </Card>
+                                        );
+                                    })
+                                }
+                            </Stack>
+                        </Card>
+                        {
+                            promotionDrafts.length > 0 &&
+                            <FormCard>
+                                <Stack spacing={2}>
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="subtitle2">Otros precios</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Vista previa por tipo de compra: costo de lista, margen del primer precio base y descuento de la promoción.
+                                        </Typography>
+                                    </Stack>
+                                    {
+                                        !promotionFormConfigurationQuery.isPending &&
+                                        !promotionFormConfigurationQuery.isError &&
+                                        purchaseTypeTabs.length > 0 &&
+                                        <>
+                                            <TabFilters
+                                                tabs={purchaseTypeTabs}
+                                                activeTab={activePurchaseTypeTab}
+                                                onTabChange={setActivePurchaseTypeTab}
+                                            />
+                                            <Stack spacing={2}>
+                                                {
+                                                    filteredPromotionDrafts.length === 0 ?
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            No hay promociones para este tipo de compra.
+                                                        </Typography>
+                                                        :
+                                                        filteredPromotionDrafts.map((draft) => {
+                                                            const estimatedPrice = computeEstimatedPromotionalPrice(
+                                                                listCostForOtherPrices,
+                                                                firstBaseMarginPercent,
+                                                                draft.payload.discountRate
+                                                            );
+                                                            return (
+                                                                <Card
+                                                                    key={draft.id}
+                                                                    backgroundColor={theme.palette.grey[200]}>
+                                                                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1} flexWrap="wrap">
+                                                                        <Stack spacing={1}>
+                                                                            <Typography variant="body2" color="text.secondary">{draft.payload.name}</Typography>
+                                                                            <Typography variant="body1">{numeral(draft.payload.discountRate).format("0,0.00")}%</Typography>
+                                                                        </Stack>
+                                                                        <Typography variant="h5">{numeral(estimatedPrice).format("$0,0.00")}</Typography>
+                                                                    </Stack>
+                                                                </Card>
+                                                            );
+                                                        }
+                                                        )
+                                                }
                                             </Stack>
-                                        </Card>
-                                    );
-                                })
-                            }
-                        </Stack>
-                    </Card>
+                                        </>
+                                    }
+                                    {
+                                        !promotionFormConfigurationQuery.isPending &&
+                                        !promotionFormConfigurationQuery.isError &&
+                                        purchaseTypeTabs.length === 0 &&
+                                        <Typography variant="body2" color="text.secondary">
+                                            No hay tipos de compra en la configuración de promociones.
+                                        </Typography>
+                                    }
+                                </Stack>
+                            </FormCard>
+                        }
+                    </Stack>
                 </Grid>
             </Grid>
 
@@ -211,6 +407,15 @@ export function PriceTab({
                 onClose={() => setAddBasePriceOpen(false)}
                 referenceCost={referenceCost}
                 onAdd={onAddBasePrice}
+            />
+
+            <ProductPromotionModal
+                open={promotionModalOpen}
+                onClose={handleClosePromotionModal}
+                productId={productNumericId}
+                editingDraft={editingPromotionDraft}
+                isLiquidation={formState.liquidation}
+                onSave={handleSavePromotionDraft}
             />
         </>
     );

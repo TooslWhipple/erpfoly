@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Button, Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CARD
@@ -10,8 +10,8 @@ export const CardContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
   padding: "16px"
 }));
@@ -50,7 +50,7 @@ export const TimelineDot = styled(Box)<{ active?: boolean }>(({ theme, active })
   width: 8,
   height: 8,
   borderRadius: "50%",
-  backgroundColor: active ? theme.palette.primary.main : colors.border,
+  backgroundColor: active ? theme.palette.primary.main : theme.palette.app.border,
   flexShrink: 0,
   zIndex: 1,
 }));
@@ -59,7 +59,7 @@ export const TimelineLine = styled(Box)({
   width: 2,
   flex: 1,
   minHeight: 12,
-  backgroundColor: colors.border,
+  backgroundColor: theme.palette.app.border,
   marginTop: 6,
   marginBottom: 2,
 });
@@ -73,7 +73,7 @@ export const PriceRow = styled(Box, {
   flexWrap: "wrap",
   padding: "8px",
   borderRadius: "12px",
-  backgroundColor: highlighted ? colors.sidebar.itemSelected : "transparent",
+  backgroundColor: highlighted ? theme.palette.app.sidebar.itemSelected : "transparent",
   flex: 1,
   minWidth: 0,
   marginLeft: theme.spacing(1.5),

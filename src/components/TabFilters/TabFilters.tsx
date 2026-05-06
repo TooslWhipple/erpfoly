@@ -1,6 +1,6 @@
 import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import type { ReactNode } from "react";
 import {
   TabsWrapper,
@@ -75,8 +75,28 @@ export function TabFilters({
   const singleAction = hasActions && actions.length === 1;
 
   return (
-    <Grid container spacing={2} alignItems="center" justifyContent={{ xs: "flex-start", md: "space-between" }}>
-      <Grid size={{ xs: 12, md: 'auto' }}>
+    <Grid
+      container
+      spacing={2}
+      alignItems="center"
+      justifyContent={{ xs: "flex-start", md: "space-between" }}
+      wrap="wrap"
+      sx={{
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+      }}
+    >
+      <Grid
+        size={{ xs: 12, md: "auto" }}
+        sx={{
+          minWidth: 0,
+          maxWidth: "100%",
+          flexShrink: 1,
+          overflow: "hidden",
+        }}
+      >
         {
           tabs.length > 0 &&
           <TabsWrapper>
@@ -105,10 +125,20 @@ export function TabFilters({
         }
       </Grid>
 
-      <Grid container size={{ xs: 12, md: 'auto' }} alignContent={{ xs: 'flex-start', md: 'flex-end' }}>
+      <Grid
+        container
+        size={{ xs: 12, md: "auto" }}
+        alignContent={{ xs: "flex-start", md: "flex-end" }}
+        sx={{
+          minWidth: 0,
+          maxWidth: "100%",
+          flexShrink: 1,
+          justifyContent: { xs: "flex-start", md: "flex-end" },
+        }}
+      >
         {
           showSearch &&
-          <Grid size={{ xs: 6, md: 'auto' }}>
+          <Grid size={{ xs: 12, sm: 6, md: "auto" }} sx={{ minWidth: 0, maxWidth: "100%" }}>
             <FormTextField
               placeholder={searchPlaceholder}
               value={searchValue}
@@ -118,7 +148,7 @@ export function TabFilters({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search size={18} color={colors.text.secondary} />
+                    <Search size={18} color={theme.palette.text.secondary} />
                   </InputAdornment>
                 )
               }}
@@ -127,10 +157,9 @@ export function TabFilters({
         }
         {
           hasActions && actions.map((action, index) => (
-            <Grid size={{ xs: 6, md: 'auto' }}>
+            <Grid key={`${action.label}-${index}`} size={{ xs: 12, sm: 6, md: "auto" }} sx={{ minWidth: 0, maxWidth: "100%" }}>
               <Button
                 fullWidth
-                key={index}
                 variant={action.variant ?? "contained"}
                 color={action.color ?? "primary"}
                 onClick={action.onClick}

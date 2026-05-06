@@ -2,14 +2,15 @@ import type { BranchCatalogItem } from "@/services/branches.service";
 import type { DepartmentCatalogItem } from "@/services/departments.service";
 import type { ProductLineCatalogItem } from "@/services/product-lines.service";
 import type { ProductDetailBranchDto } from "@/services/productos.service";
-import type { ProductBranch, WarrantyType } from "@/types/productos.types";
+import type { ProductBranch, SelectableItem, WarrantyType } from "@/types/productos.types";
 
 export function departmentCatalogToSelectOptions(
     items: DepartmentCatalogItem[]
 ): Array<{ value: string; label: string }> {
+
     return items.map((d) => ({
         value: String(d.id),
-        label: d.code?.trim() ? `${d.code} — ${d.name}` : d.name,
+        label: `${String(d.id).padStart(2, "0")} — ${d.name}`
     }));
 }
 
@@ -36,8 +37,8 @@ export function warrantyCatalogToFormOptions(
             w.value === "ANNEX_POLICY"
                 ? "policy"
                 : w.value === "MONTHS"
-                  ? "months"
-                  : null;
+                    ? "months"
+                    : null;
         if (formValue) {
             mapped.push({ value: formValue, label: w.label });
         }
@@ -53,6 +54,14 @@ export function branchCatalogToProductBranches(items: BranchCatalogItem[]): Prod
         enabled: false,
         minInventory: 0,
         maxInventory: 20,
+    }));
+}
+
+/** Maps GET /branches/catalog rows for MultiSelectChips in package modal */
+export function branchCatalogToPackageSelectableItems(items: BranchCatalogItem[]): SelectableItem[] {
+    return items.map((b) => ({
+        id: b.id,
+        label: b.name,
     }));
 }
 

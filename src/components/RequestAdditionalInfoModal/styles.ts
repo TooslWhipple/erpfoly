@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
 import { Stack } from "@mui/material";
-import { colors } from "@/styles/theme";
 
 export const Card = styled(Stack, {
   shouldForwardProp: (prop) => prop !== "selected",
@@ -12,8 +11,8 @@ export const Card = styled(Stack, {
   gap: "24px",
   padding: "16px",
   borderRadius: "16px",
-  border: `1px solid ${(selected) ? colors.sidebar.itemSelected : theme.palette.divider}`,
-  backgroundColor: (selected) ? colors.sidebar.itemSelected : 'transparent',
+  border: `1px solid ${(selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.divider}`,
+  backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : 'transparent',
   transition: 'border-color 0.2s, background-color 0.2s',
 }));
 
@@ -27,7 +26,7 @@ export const IconCircle = styled('div', {
   alignItems: "center",
   justifyContent: "center",
   backgroundColor: (selected) ? theme.palette.primary.main : "#E2E8F0",
-  color: (selected) ? "#ffffff" : colors.text.secondary,
+  color: (selected) ? "#ffffff" : theme.palette.text.secondary,
   transition: 'background-color 0.2s'
 }));
 

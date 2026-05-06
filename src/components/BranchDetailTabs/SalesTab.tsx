@@ -18,7 +18,7 @@ import {
 import { ArrowDownFromLine, ListFilter, BadgeDollarSign, CircleArrowDown, CircleArrowUp } from "lucide-react";
 import numeral from "numeral";
 import { Card } from "@/styles/catalogos/goals.styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 import {
   getSalesDashboard,
   getMonthlySales,
@@ -162,7 +162,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
             <Grid width="100%" height="100%" container spacing={2} alignItems="center">
               <Grid size={{ xs: 12, md: 4 }}>
                 <Stack spacing={0.5}>
-                  <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+                  <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
                   <Typography variant="h4" fontWeight={600}>
                     {numeral(kpis?.performancePercent ?? 0).format("0,0%")}
                   </Typography>
@@ -173,7 +173,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Stack spacing={0.5}>
-                  <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+                  <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
                   <Typography variant="h4" fontWeight={600}>
                     {numeral(kpis?.closeRatePercent ?? 0).format("0,0%")}
                   </Typography>
@@ -184,7 +184,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Stack spacing={0.5}>
-                  <BadgeDollarSign strokeWidth={2} size={16} color={colors.text.secondary} />
+                  <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
                   <Typography variant="h4" fontWeight={600}>
                     {numeral(kpis?.avgTicket ?? 0).format("$0,0.00")}
                   </Typography>

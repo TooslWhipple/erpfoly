@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Box, Tab, Tabs } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 interface TabsContainerProps {
   fullWidth?: boolean;
@@ -14,7 +14,7 @@ export const TabsContainer = styled(Box, {
   justifyContent: "space-between",
   alignItems: "flex-end",
   flexDirection: "row",
-  borderBottom: withBorder ? `1px solid ${colors.border}` : "none",
+  borderBottom: withBorder ? `1px solid ${theme.palette.app.border}` : "none",
   gap: theme.spacing(2),
   width: fullWidth ? "100%" : "auto",
   [theme.breakpoints.down("md")]: {
@@ -36,7 +36,7 @@ export const TabsWrapper = styled(Box)({
 export const StyledTabs = styled(Tabs)(({ theme }) => ({
   minHeight: 40,
   "& .MuiTabs-indicator": {
-    backgroundColor: colors.sidebar.textSelected,
+    backgroundColor: theme.palette.app.sidebar.textSelected,
     bottom: 0,
   },
   "& .MuiTabs-flexContainer": {
@@ -63,7 +63,7 @@ export const StyledTab = styled(Tab)(({ theme }) => ({
   whiteSpace: "nowrap",
   minWidth: "auto",
   "&.Mui-selected": {
-    color: colors.sidebar.textSelected,
+    color: theme.palette.app.sidebar.textSelected,
   },
   [theme.breakpoints.down("sm")]: {
     padding: "8px 12px",

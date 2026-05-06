@@ -1,6 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Typography } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const DetailLayout = styled("div")(({ theme }) => ({
   display: "flex",
@@ -28,8 +28,8 @@ export const ContentColumn = styled("div")(({ theme }) => ({
 }));
 
 export const RiskCard = styled("div")(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
   padding: "12px",
   display: "flex",
@@ -48,21 +48,21 @@ export const RiskBar = styled("div")(({ theme }) => ({
 export const RiskScore = styled(Typography)(({ theme }) => ({
   fontSize: 18,
   fontWeight: 700,
-  color: colors.text.primary,
+  color: theme.palette.text.primary,
 }));
 
 export const RiskLabel = styled(Typography)(({ theme }) => ({
   fontSize: 12,
   fontWeight: 500,
-  color: colors.chip.variants.pending.color,
-  backgroundColor: colors.chip.variants.pending.background,
+  color: theme.palette.app.chip.variants.pending.color,
+  backgroundColor: theme.palette.app.chip.variants.pending.background,
   padding: "2px 8px",
   borderRadius: 6,
 }));
 
 export const SectionCard = styled("div")(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
   padding: "16px",
 }));
@@ -70,13 +70,13 @@ export const SectionCard = styled("div")(({ theme }) => ({
 export const SectionTitle = styled(Typography)(({ theme }) => ({
   fontSize: 16,
   fontWeight: 600,
-  color: colors.text.primary,
+  color: theme.palette.text.primary,
   marginBottom: theme.spacing(1),
 }));
 
 export const SectionDescription = styled(Typography)(({ theme }) => ({
   fontSize: 14,
-  color: colors.text.secondary,
+  color: theme.palette.text.secondary,
   marginBottom: theme.spacing(2),
 }));
 
@@ -113,9 +113,9 @@ export const ProductCard = styled("div")(({ theme }) => ({
   flexDirection: "column",
   gap: "4px",
   padding: "16px 12px",
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
-  backgroundColor: colors.background.sidebar,
+  backgroundColor: theme.palette.background.paper,
 }));
 
 export const ProductImage = styled("img")(({ theme }) => ({
@@ -131,14 +131,14 @@ export const SummaryRow = styled("div")<{ withBackground?: boolean }>(({ withBac
   justifyContent: "space-between",
   alignItems: "center",
   padding: "8px 12px",
-  backgroundColor: (withBackground) ? colors.chip.background : "transparent",
+  backgroundColor: (withBackground) ? theme.palette.app.chip.background : "transparent",
   borderRadius: "12px"
 }));
 
 /** Read-only credit application review page content shell */
 export const RevisionContentWrapper = styled("div")(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: theme.spacing(1),
   padding: theme.spacing(3),
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
@@ -147,5 +147,5 @@ export const RevisionContentWrapper = styled("div")(({ theme }) => ({
 export const RevisionErrorContainer = styled("div")(({ theme }) => ({
   padding: theme.spacing(6),
   textAlign: "center",
-  color: colors.text.secondary,
+  color: theme.palette.text.secondary,
 }));

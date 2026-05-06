@@ -1,13 +1,13 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, TextField, Link } from "@mui/material";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const SimplePageContainer = styled(Box)({
 	minHeight: "100vh",
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
-	backgroundColor: colors.background.main,
+	backgroundColor: theme.palette.background.default,
 	padding: 16,
 });
 
@@ -74,15 +74,15 @@ export const StyledTextField = styled(TextField)({
 			borderColor: "#A1A1AA",
 		},
 		"&.Mui-focused fieldset": {
-			borderColor: colors.sidebar.textSelected,
+			borderColor: theme.palette.app.sidebar.textSelected,
 			borderWidth: "1px",
 		},
 	},
 	"& .MuiInputLabel-root": {
-		color: colors.text.secondary,
+		color: theme.palette.text.secondary,
 	},
 	"& .MuiInputLabel-root.Mui-focused": {
-		color: colors.text.secondary,
+		color: theme.palette.text.secondary,
 	},
 });
 

@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { colors } from "@/styles/theme";
+import { theme } from "@/styles/theme";
 
 export const PageHeaderRow = styled("div")(({ theme }) => ({
   display: "flex",
@@ -10,8 +10,8 @@ export const PageHeaderRow = styled("div")(({ theme }) => ({
 }));
 
 export const SectionCard = styled("div")(({ theme }) => ({
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 16,
   padding: theme.spacing(3),
 }));
@@ -21,8 +21,8 @@ export const MetricCard = styled("div")(({ theme }) => ({
   flexDirection: "column",
   gap: theme.spacing(0.5),
   padding: theme.spacing(2.5),
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 16,
   minHeight: 104,
 }));
@@ -31,8 +31,8 @@ export const ChartCard = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
-  backgroundColor: colors.background.sidebar,
-  border: `1px solid ${colors.border}`,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
   gap: "16px",
   padding: "16px",

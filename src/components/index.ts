@@ -31,11 +31,17 @@ export type { ModalFormProps } from "./ModalForm";
 export { SideModal } from "./SideModal";
 export type { SideModalProps } from "./SideModal";
 export { ModalFormZod } from "./ModalFormZod";
-export type { ModalFormZodProps } from "./ModalFormZod";
+export type { ModalFormZodProps, ModalFormZodRenderFn } from "./ModalFormZod";
 export { ProductPromotionModal } from "./ProductPromotionModal";
 export type { ProductPromotionModalProps } from "./ProductPromotionModal";
 export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
-export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues, DamageOrigin, ActionWithArticle } from "./AddDamagedGoodsModal";
+export type {
+    AddDamagedGoodsModalProps,
+    AddDamagedGoodsFormValues,
+    DamageOrigin,
+    DamagedProductDisposition,
+    ActionWithArticle,
+} from "./AddDamagedGoodsModal";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { MultiSelectChips } from "./MultiSelectChips";

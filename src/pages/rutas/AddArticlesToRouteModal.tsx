@@ -16,7 +16,6 @@ import {
 import { Search as SearchIcon } from "@mui/icons-material";
 import { SideModal } from "@/components/SideModal";
 import type { ArticleToAdd } from "@/types/rutas.types";
-import { getAvailableArticlesToAdd } from "@/data/rutas.mockData";
 import { theme } from "@/styles/theme";
 import {
   SearchInput,
@@ -31,6 +30,7 @@ export interface AddArticlesToRouteModalProps {
   open: boolean;
   onClose: () => void;
   routeId: number;
+  fetchAvailableArticles: (routeId: number) => Promise<ArticleToAdd[]>;
   onConfirm: (articleIds: string[]) => void | Promise<void>;
 }
 
@@ -38,6 +38,7 @@ export function AddArticlesToRouteModal({
   open,
   onClose,
   routeId,
+  fetchAvailableArticles,
   onConfirm,
 }: AddArticlesToRouteModalProps) {
   const [articles, setArticles] = useState<ArticleToAdd[]>([]);
@@ -51,12 +52,12 @@ export function AddArticlesToRouteModal({
       setLoading(true);
       setSelectedIds(new Set());
       setSearchQuery("");
-      getAvailableArticlesToAdd(routeId)
+      fetchAvailableArticles(routeId)
         .then((data) => setArticles(data))
         .catch(() => setArticles([]))
         .finally(() => setLoading(false));
     }
-  }, [open, routeId]);
+  }, [open, routeId, fetchAvailableArticles]);
 
   const filteredArticles = useMemo(() => {
     if (!searchQuery.trim()) return articles;

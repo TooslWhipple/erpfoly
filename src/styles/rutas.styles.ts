@@ -40,6 +40,25 @@ export const MapPlaceholder = styled("div")(({ theme }) => ({
   },
 }));
 
+export const RouteMiniMapThumb = styled("img")({
+  width: "88px",
+  height: "100%",
+  minHeight: 72,
+  maxHeight: 120,
+  objectFit: "cover",
+  borderRadius: "12px",
+  flexShrink: 0,
+  display: "block",
+});
+
+export const DetailMiniMap = styled("img")({
+  width: 96,
+  height: 96,
+  objectFit: "cover",
+  borderRadius: 12,
+  border: `1px solid ${theme.palette.app.border}`,
+});
+
 export const MapPlaceholderLarge = styled("div")(({ theme }) => ({
   width: "100%",
   minHeight: 320,

@@ -112,4 +112,6 @@ export {
   GuarantorTab,
 } from "./CreditApplicationForm";
 export * from "./Icons";
+export { RouteCircuitMap } from "./RouteCircuitMap";
+export type { RouteCircuitMapProps } from "./RouteCircuitMap";
 

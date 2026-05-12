@@ -24,6 +24,7 @@ import {
   MainLayout,
   StatusChip,
   TabFilters,
+  AddArticlesToRouteModal,
 } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -34,8 +35,7 @@ import {
   RouteMiniMapThumb,
   DetailMiniMap,
 } from "@/styles/rutas.styles";
-import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/pages/rutas/tabs";
-import { AddArticlesToRouteModal } from "@/pages/rutas/AddArticlesToRouteModal";
+import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/components/RouteTabs";
 import type { RouteSummary } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
 import {
@@ -313,16 +313,25 @@ export default function RutaPage() {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
     setSelectedDate(d);
+    if (activeTab === TAB_ROUTE) {
+      setActiveTab(TAB_ARTICLES);
+    }
   };
 
   const handleNextDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + 1);
     setSelectedDate(d);
+    if (activeTab === TAB_ROUTE) {
+      setActiveTab(TAB_ARTICLES);
+    }
   };
 
   const handleToday = () => {
     setSelectedDate(new Date());
+    if (activeTab === TAB_ROUTE) {
+      setActiveTab(TAB_ARTICLES);
+    }
   };
 
   const handleConfirmAddArticles = async (articleIds: string[]) => {
@@ -427,7 +436,10 @@ export default function RutaPage() {
               <RouteCard
                 key={route.id}
                 selected={resolvedRouteId === route.id}
-                onClick={() => setSelectedRouteId(route.id)}
+                onClick={() => {
+                  setSelectedRouteId(route.id);
+                  setActiveTab(TAB_ARTICLES);
+                }}
               >
                 {route.miniMapUrl ? (
                   <RouteMiniMapThumb

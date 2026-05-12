@@ -45,8 +45,10 @@ export const RouteMiniMapThumb = styled("img")({
   height: "100%",
   minHeight: 72,
   maxHeight: 120,
-  objectFit: "cover",
+  objectFit: "contain",
+  backgroundColor: theme.palette.grey[100],
   borderRadius: "12px",
+  border: `1px solid ${theme.palette.app.border}`,
   flexShrink: 0,
   display: "block",
 });

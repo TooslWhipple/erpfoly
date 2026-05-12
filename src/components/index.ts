@@ -114,4 +114,6 @@ export {
 export * from "./Icons";
 export { RouteCircuitMap } from "./RouteCircuitMap";
 export type { RouteCircuitMapProps } from "./RouteCircuitMap";
+export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
+export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
 

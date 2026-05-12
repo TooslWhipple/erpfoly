@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Box, Button, Skeleton, Table, TableBody, TableRow, TableCell, Typography } from "@mui/material";
+import { Button, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   TableWrapper,
   StyledTableContainer,
@@ -123,6 +124,11 @@ export function TableCrud<T>({
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
+  const { hasPermission } = usePermissions();
+  const visibleActions = actions?.filter((action) => {
+    if (!action.permission) return true;
+    return hasPermission(action.permission);
+  });
 
   const getColumnWidth = (column: Column<T>): number => {
     if (column.size) {
@@ -287,8 +293,9 @@ export function TableCrud<T>({
       cellStyle.width = maxWidth;
     }
 
-    const cellProps: any = {
-      key: String(column.id),
+    const cellProps: React.ComponentProps<typeof StyledTableCell> & {
+      position?: Column<T>["stickyPosition"];
+    } = {
       align: column.align ?? "left",
       style: cellStyle,
       title: column.truncate ? String(value ?? "") : undefined,
@@ -300,14 +307,14 @@ export function TableCrud<T>({
     }
 
     return (
-      <CellComponent {...cellProps}>
+      <CellComponent key={String(column.id)} {...cellProps}>
         {formattedValue}
       </CellComponent>
     );
   };
 
   const total = totalRows ?? rows?.length ?? 0;
-  const hasActions = actions && actions.length > 0;
+  const hasActions = visibleActions && visibleActions.length > 0;
 
   const renderSkeletonRows = () => {
     const skeletonRows = Array.from({ length: rowsPerPage }, (_, index) => index);
@@ -317,7 +324,6 @@ export function TableCrud<T>({
         {columns.map((column) => {
           const width = getColumnWidth(column);
           const maxWidth = getColumnMaxWidth(column);
-          const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
           const cellStyle: React.CSSProperties = { minWidth: width };
           if (maxWidth !== undefined) {
             cellStyle.maxWidth = maxWidth;
@@ -354,7 +360,6 @@ export function TableCrud<T>({
         {columns.map((column) => {
           const width = getColumnWidth(column);
           const maxWidth = getColumnMaxWidth(column);
-          const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
           const headerStyle: React.CSSProperties = { minWidth: width };
           if (maxWidth !== undefined) {
             headerStyle.maxWidth = maxWidth;
@@ -450,7 +455,7 @@ export function TableCrud<T>({
           horizontal: "right",
         }}
       >
-        {actions?.map((action) => {
+        {visibleActions?.map((action) => {
           const isDisabled =
             typeof action.disabled === "function" && selectedRow
               ? action.disabled(selectedRow)

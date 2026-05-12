@@ -22,6 +22,8 @@ import type {
     ProductPromotionDraft,
 } from "@/types/productos.types";
 import { MAX_PRODUCT_GALLERY_FILES } from "@/types/productos.types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_PRODUCTS_CREATE, CATALOG_PRODUCTS_UPDATE } from "@/lib/permissions";
 import {
     createProduct,
     buildCreateProductRequest,
@@ -57,12 +59,14 @@ import { BranchesTab } from "@/components/Products/BranchesTab";
 
 export default function ProductFormPage() {
     const router = useRouter();
+    const { hasPermission } = usePermissions();
     const showSuccess = useSnackbarStore((s) => s.showSuccess);
     const showError = useSnackbarStore((s) => s.showError);
 
     /** Avoid running logic while `query.id` is still undefined (first paint / hard reload). */
     const routeIdParam = typeof router.query.id === "string" ? router.query.id : undefined;
     const isNew = routeIdParam === "nuevo";
+    const canSaveProduct = hasPermission(isNew ? CATALOG_PRODUCTS_CREATE : CATALOG_PRODUCTS_UPDATE);
     /** Numeric id segment for edit mode; only defined once the router is ready. */
     const editProductIdStr =
         router.isReady && routeIdParam != null && !isNew ? routeIdParam : null;
@@ -569,7 +573,7 @@ export default function ProductFormPage() {
                             variant="contained"
                             color="primary"
                             onClick={handleSave}
-                            disabled={saving}
+                            disabled={saving || !canSaveProduct}
                         >
                             {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
                         </Button>

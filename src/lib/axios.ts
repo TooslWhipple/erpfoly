@@ -30,6 +30,19 @@ function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
 	return typeof url === "string" && url.includes("/auth/refresh");
 }
 
+function isPublicAuthRequest(config: AxiosRequestConfig | undefined): boolean {
+	const url = config?.url ?? "";
+	if (typeof url !== "string") return false;
+
+	return [
+		"/auth/login",
+		"/auth/validate-otp",
+		"/auth/login/otp/resend",
+		"/auth/password/recovery",
+		"/auth/logout",
+	].some((path) => url.includes(path));
+}
+
 let isRefreshing = false;
 const failedQueue: Array<{ resolve: (token: string) => void; reject: (err: AxiosError) => void }> = [];
 
@@ -92,7 +105,14 @@ api.interceptors.response.use(
 			return Promise.reject(error);
 		}
 
-		if (isRefreshRequest(originalRequest) || (originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry) {
+		if (
+			isPublicAuthRequest(originalRequest) ||
+			isRefreshRequest(originalRequest) ||
+			(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry
+		) {
+			if (isPublicAuthRequest(originalRequest)) {
+				return Promise.reject(error);
+			}
 			useAuthStore.getState().logout();
 			if (typeof window !== "undefined") {
 				window.location.href = "/login";

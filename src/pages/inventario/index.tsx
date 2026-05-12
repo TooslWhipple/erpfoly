@@ -13,6 +13,7 @@ import type { Column, RowAction, StatusChipVariant } from "@/components/TableCru
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { INVENTORY_COLORS } from "@/styles/inventario/styles";
+import { INVENTORY_READ } from "@/lib/permissions";
 
 interface InventoryItem {
     id: number;
@@ -393,6 +394,7 @@ export default function Inventario() {
             label: "Ver detalle",
             icon: <VisibilityIcon fontSize="small" />,
             onClick: handleViewDetail,
+            permission: INVENTORY_READ,
         },
     ];
 

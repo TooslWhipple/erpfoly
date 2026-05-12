@@ -6,6 +6,7 @@ import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import { StatusChip } from "@/styles/recepcion-mercancias.styles";
 import type { MerchandiseReception, ReceptionStatus } from "@/types/recepcion-mercancias.types";
+import { MERCHANDISE_RECEPTION_CREATE, MERCHANDISE_RECEPTION_READ } from "@/lib/permissions";
 
 interface GetReceptionsParams {
     page: number;
@@ -339,6 +340,7 @@ export default function RecepcionMercancias() {
             label: "Ver detalle",
             icon: <EditIcon fontSize="small" />,
             onClick: handleViewReception,
+            permission: MERCHANDISE_RECEPTION_READ,
         },
     ];
 
@@ -360,6 +362,7 @@ export default function RecepcionMercancias() {
                         onClick: handleCreate,
                         variant: "contained",
                         color: "primary",
+                        permission: MERCHANDISE_RECEPTION_CREATE,
                     },
                 ]}
             />

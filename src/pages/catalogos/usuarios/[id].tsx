@@ -25,6 +25,8 @@ import {
     type RoleItem,
     type BranchItem,
 } from "@/services/users.service";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
 
 async function loadCatalogs() {
     const [rolesResult, branchesResult] = await Promise.all([
@@ -64,9 +66,11 @@ const initialUser: UserFormState = {
 
 export default function UserFormPage() {
     const router = useRouter();
+    const { hasPermission } = usePermissions();
     const { id } = router.query;
 
     const isNew = id === "nuevo";
+    const canSaveUser = hasPermission(isNew ? CATALOG_USERS_CREATE : CATALOG_USERS_UPDATE);
     const userId = isNew ? null : Number(id);
 
     const [loading, setLoading] = useState(true);
@@ -239,7 +243,7 @@ export default function UserFormPage() {
                     <Button
                         variant="contained"
                         onClick={handleConfirm}
-                        disabled={!canSendInvite || sendingInvite}>
+                        disabled={!canSendInvite || sendingInvite || !canSaveUser}>
                         {
                             (sendingInvite) ?
                                 <CircularProgress size={20} color="inherit" />

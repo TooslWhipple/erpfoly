@@ -28,6 +28,7 @@ import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog
 import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { validatePromotionEndDate } from "@/lib/promotionFormValidation";
+import { CATALOG_PROMOTIONS_CREATE, CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
 
 function emptyForm(): PromotionFormState {
   return {
@@ -413,6 +414,7 @@ export default function PromotionFormPage() {
               label: "Guardar",
               onClick: handleSave,
               disabled: saving,
+              permission: isNew ? CATALOG_PROMOTIONS_CREATE : CATALOG_PROMOTIONS_UPDATE,
             },
           ]}
         />

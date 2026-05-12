@@ -8,6 +8,7 @@ import type { Column, RowAction, StatusChipVariant } from "@/components/TableCru
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getProducts, type ProductListItem } from "@/services/productos.service";
+import { CATALOG_PRODUCTS_CREATE, CATALOG_PRODUCTS_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -154,6 +155,7 @@ export default function Productos() {
                 label: "Editar",
                 icon: <EditIcon fontSize="small" />,
                 onClick: handleEditProduct,
+                permission: CATALOG_PRODUCTS_UPDATE,
             },
         ],
         [handleEditProduct],
@@ -187,6 +189,7 @@ export default function Productos() {
                             variant: "contained",
                             color: "primary",
                             showIcon: true,
+                            permission: CATALOG_PRODUCTS_CREATE,
                         },
                     ]}
                 />

@@ -7,6 +7,8 @@ export interface User {
 	email: string;
 	avatar?: string;
 	role: string;
+	roleId?: number;
+	roleName?: string;
 	permissions: string[];
 }
 
@@ -40,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
 			},
 
 			setToken: (token: string) => {
-				set({ token });
+				set({ token, isAuthenticated: true });
 			},
 
 			logout: () => {
@@ -51,7 +53,7 @@ export const useAuthStore = create<AuthState>()(
 				});
 			},
 
-			setUser: (user: User) => set({ user }),
+			setUser: (user: User) => set({ user, isAuthenticated: true }),
 
 			setLoading: (isLoading: boolean) => set({ isLoading }),
 		}),

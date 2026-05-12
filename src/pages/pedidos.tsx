@@ -9,6 +9,7 @@ import type { Supplier } from "@/types/pedidos.types";
 import { getSuggestions } from "@/data/suggestions.mockData";
 import { PageContent, SidebarPanel } from "@/styles/pedidos.styles";
 import { Stack } from "@mui/material";
+import { ORDERS_CREATE } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "in_progress" | "received";
 
@@ -208,6 +209,7 @@ export default function Pedidos() {
             onClick: handleCreateOrder,
             variant: "contained",
             color: "primary",
+            permission: ORDERS_CREATE,
         },
     ];
 

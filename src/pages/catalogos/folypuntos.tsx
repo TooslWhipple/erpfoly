@@ -2,8 +2,12 @@ import { Box, CircularProgress, Stack } from "@mui/material";
 import { MainLayout, TabFilters, Title } from "@/components";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { useFolypuntosPage } from "@/hooks/usePoints";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_POINTS_UPDATE } from "@/lib/permissions";
 
 export default function Folypuntos() {
+  const { hasPermission } = usePermissions();
+  const canUpdatePoints = hasPermission(CATALOG_POINTS_UPDATE);
   const {
     purchaseTypes,
     formState,
@@ -52,7 +56,8 @@ export default function Folypuntos() {
               id: "save",
               label: "Guardar",
               onClick: handleSave,
-              disabled: saving,
+              disabled: saving || !canUpdatePoints,
+              permission: CATALOG_POINTS_UPDATE,
             },
           ]}
         />
@@ -67,7 +72,7 @@ export default function Folypuntos() {
           formState={formState}
           activePurchaseTypeId={effectiveActiveTab}
           onFieldChange={handleFieldChange}
-          disabled={saving}
+          disabled={saving || !canUpdatePoints}
         />
       </Stack>
     </MainLayout>

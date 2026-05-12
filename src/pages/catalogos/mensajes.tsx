@@ -18,6 +18,11 @@ import {
 } from "@/services/collection-messages.service";
 import type { CollectionMessage } from "@/services/collection-messages.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import {
+  CATALOG_MESSAGES_CREATE,
+  CATALOG_MESSAGES_DELETE,
+  CATALOG_MESSAGES_UPDATE,
+} from "@/lib/permissions";
 
 interface Message {
   id: number;
@@ -209,6 +214,7 @@ export default function Mensajes() {
       id: "edit",
       label: "Editar",
       onClick: handleOpenEditModal,
+      permission: CATALOG_MESSAGES_UPDATE,
     },
     {
       id: "delete",
@@ -216,6 +222,7 @@ export default function Mensajes() {
       onClick: handleDeleteMessage,
       color: "error",
       disabled: (row) => row.inUse,
+      permission: CATALOG_MESSAGES_DELETE,
     },
   ];
 
@@ -237,6 +244,7 @@ export default function Mensajes() {
               onClick: handleOpenCreateModal,
               variant: "contained",
               color: "primary",
+              permission: CATALOG_MESSAGES_CREATE,
             }
           ]}
         />

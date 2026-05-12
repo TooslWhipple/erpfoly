@@ -15,6 +15,7 @@ import {
     getDamagedProducts,
     type DamagedProductListItem,
 } from "@/services/damaged-products.service";
+import { DAMAGED_INVENTORY_CREATE, DAMAGED_INVENTORY_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -272,6 +273,7 @@ export default function MercanciaDanada() {
                 icon: <EditIcon fontSize="small" />,
                 onClick: handleEdit,
                 disabled: (row) => row.id == null,
+                permission: DAMAGED_INVENTORY_UPDATE,
             },
         ],
         [handleEdit],
@@ -305,6 +307,7 @@ export default function MercanciaDanada() {
                             onClick: handleCreate,
                             variant: "contained",
                             color: "primary",
+                            permission: DAMAGED_INVENTORY_CREATE,
                         },
                     ]}
                 />

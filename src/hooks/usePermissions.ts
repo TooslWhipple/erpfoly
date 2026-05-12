@@ -1,15 +1,14 @@
 import { useAuthStore } from "@/store/useAuthStore";
+import { shouldBypassAccessControl } from "@/lib/accessControl";
+import {
+  canAccessPath,
+  hasAccessRequirement,
+  isSuperAdmin,
+  type AccessRequirement,
+} from "@/lib/routeAccess";
 
 /**
- * Permisos disponibles en el sistema
- * Estructura: modulo.accion
- * Ejemplos:
- * - clientes.ver
- * - clientes.crear
- * - clientes.editar
- * - clientes.eliminar
- * - reportes.generar
- * - catalogos.productos.ver
+ * Available permission code using module.action format.
  */
 export type Permission = string;
 
@@ -23,9 +22,10 @@ export function usePermissions() {
   const { user } = useAuthStore();
 
   const hasPermission = (permission: Permission): boolean => {
+    if (shouldBypassAccessControl) return true;
     if (!user) return false;
 
-    if (user.role === "admin") return true;
+    if (isSuperAdmin(user)) return true;
 
     return user.permissions?.includes(permission) ?? false;
   };
@@ -39,13 +39,23 @@ export function usePermissions() {
   };
 
   const hasRole = (role: string): boolean => {
+    if (shouldBypassAccessControl) return true;
     if (!user) return false;
     return user.role === role;
   };
 
   const hasAnyRole = (roles: string[]): boolean => {
+    if (shouldBypassAccessControl) return true;
     if (!user) return false;
     return roles.includes(user.role);
+  };
+
+  const canAccess = (requirement?: AccessRequirement): boolean => {
+    return hasAccessRequirement(user, requirement);
+  };
+
+  const canAccessRoute = (pathname: string): boolean => {
+    return canAccessPath(pathname, user);
   };
 
   return {
@@ -54,6 +64,8 @@ export function usePermissions() {
     hasAnyPermission,
     hasRole,
     hasAnyRole,
+    canAccess,
+    canAccessRoute,
     isAuthenticated: !!user,
     user,
   };

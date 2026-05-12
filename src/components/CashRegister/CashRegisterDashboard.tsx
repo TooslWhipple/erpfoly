@@ -40,6 +40,8 @@ export function CashRegisterDashboard({
     cashRegister,
     searchQuery,
     onSearchQueryChange,
+    canCut = true,
+    canWithdraw = true,
     onCut,
     onWithdrawal,
     onViewAllHistory,
@@ -100,14 +102,20 @@ export function CashRegisterDashboard({
                 </Grid>
             </BalanceCard>
 
-            <ActionsContainer>
-                <ActionButton variant="outlined" onClick={onCut}>
-                    Realizar corte
-                </ActionButton>
-                <ActionButton variant="outlined" onClick={onWithdrawal}>
-                    Realizar retiro
-                </ActionButton>
-            </ActionsContainer>
+            {(canCut || canWithdraw) && (
+                <ActionsContainer>
+                    {canCut && (
+                        <ActionButton variant="outlined" onClick={onCut}>
+                            Realizar corte
+                        </ActionButton>
+                    )}
+                    {canWithdraw && (
+                        <ActionButton variant="outlined" onClick={onWithdrawal}>
+                            Realizar retiro
+                        </ActionButton>
+                    )}
+                </ActionsContainer>
+            )}
 
             <HistorySection>
                 <HistoryHeader>

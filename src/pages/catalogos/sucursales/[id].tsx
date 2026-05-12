@@ -7,6 +7,8 @@ import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { SalesTab, GoalsTab, PromotionsTab, SettingsTab } from "@/components/BranchDetailTabs";
 import { getBranch } from "@/services/branchDetail.service";
 import type { Branch } from "@/types/sucursales.types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_PROMOTIONS_CREATE } from "@/lib/permissions";
 
 const TAB_VENTAS = "ventas";
 const TAB_METAS = "metas";
@@ -22,6 +24,7 @@ const TABS = [
 
 export default function BranchDetailPage() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const { id } = router.query;
   const branchId = Number(id);
 
@@ -45,7 +48,7 @@ export default function BranchDetailPage() {
   ];
 
   const tabRightContent =
-    activeTab === TAB_PROMOCIONES ? (
+    activeTab === TAB_PROMOCIONES && hasPermission(CATALOG_PROMOTIONS_CREATE) ? (
       <Button
         variant="contained"
         size="small"

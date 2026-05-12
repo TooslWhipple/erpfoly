@@ -1,24 +1,27 @@
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import {
 	Alert,
-	Box,
 	Button,
 	CircularProgress,
 	InputAdornment,
+	Typography,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon, Pin as PinIcon } from "@mui/icons-material";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, type ResendOtpRequest } from "@/services/auth.service";
+import { canAccessPath, getFirstAllowedRoute, normalizePathname } from "@/lib/routeAccess";
 import {
-	SimplePageContainer,
-	LoginCard,
+	PageContainer,
+	LeftPanel,
+	RightPanel,
 	LogoContainer,
-	BrandName,
-	WelcomeText,
+	FormWrapper,
 	Form,
 	StyledTextField,
-	AlertContainer,
+	BackLink,
+	RecoveryRow,
 } from "@/styles/login/styles";
 
 const OTP_LENGTH = 6;
@@ -40,6 +43,11 @@ export default function ValidateOtpPage() {
 	const isValidOtp = OTP_REGEX.test(otpTrimmed);
 	const canSubmit = isValidOtp && !loading;
 
+	const handleBackToLogin = (event: React.MouseEvent<HTMLAnchorElement>) => {
+		event.preventDefault();
+		router.push("/login");
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!canSubmit) return;
@@ -56,7 +64,11 @@ export default function ValidateOtpPage() {
 		}
 
 		setAuth(result.data!.token, result.data!.user);
-		router.push("/solicitudes-credito");
+		const redirect = typeof router.query.redirect === "string" ? normalizePathname(router.query.redirect) : "";
+		const nextPath = redirect && canAccessPath(redirect, result.data!.user)
+			? redirect
+			: getFirstAllowedRoute(result.data!.user);
+		router.push(nextPath);
 		setLoading(false);
 	};
 
@@ -84,114 +96,87 @@ export default function ValidateOtpPage() {
 	};
 
 	return (
-		<SimplePageContainer>
-			<LoginCard>
+		<PageContainer>
+			<LeftPanel />
+			<RightPanel>
 				<LogoContainer>
-					<BrandName>Folysoft</BrandName>
-					<WelcomeText variant="body2">
-						Ingresa el código de verificación que recibiste por SMS
-					</WelcomeText>
+					<Image
+						src="/logo/foly-login.svg"
+						alt="foly"
+						width={44}
+						height={24}
+						priority
+					/>
 				</LogoContainer>
 
-				<Box
-					component="button"
-					type="button"
-					onClick={() => router.push("/login")}
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						gap: 0.5,
-						fontSize: 14,
-						cursor: "pointer",
-						border: "none",
-						background: "none",
-						padding: 0,
-						color: "text.secondary",
-						"&:hover": { color: "text.primary" },
-						mb: 2,
-					}}
-				>
-					<ArrowBackIcon fontSize="small" />
-					Volver al inicio de sesión
-				</Box>
+				<FormWrapper>
+					<Typography variant="h1">Verifica tu cuenta</Typography>
 
-				{error && (
-					<AlertContainer>
-						<Alert severity="error" onClose={() => setError(null)}>
-							{error}
-						</Alert>
-					</AlertContainer>
-				)}
+					<BackLink href="/login" onClick={handleBackToLogin}>
+						<ArrowBackIcon fontSize="small" />
+						Volver al inicio de sesión
+					</BackLink>
 
-				{resendSuccess && (
-					<AlertContainer>
-						<Alert severity="success" onClose={() => setResendSuccess(false)}>
-							Código reenviado. Revisa tu SMS.
-						</Alert>
-					</AlertContainer>
-				)}
+					<Form onSubmit={handleSubmit}>
+						<StyledTextField
+							label="Código de verificación *"
+							placeholder="Ingresa el código de 6 dígitos"
+							type="text"
+							inputMode="numeric"
+							value={otpTrimmed}
+							onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+							error={otp.length > 0 && !isValidOtp}
+							helperText={
+								otp.length > 0 && !isValidOtp
+									? `Ingresa ${OTP_LENGTH} dígitos`
+									: "Revisa el SMS que enviamos a tu teléfono"
+							}
+							fullWidth
+							autoComplete="one-time-code"
+							autoFocus
+							InputProps={{
+								startAdornment: (
+									<InputAdornment position="start">
+										<PinIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+									</InputAdornment>
+								),
+							}}
+						/>
 
-				{resendError && (
-					<AlertContainer>
-						<Alert severity="error" onClose={() => setResendError(null)}>
-							{resendError}
-						</Alert>
-					</AlertContainer>
-				)}
-
-				<Form onSubmit={handleSubmit}>
-					<StyledTextField
-						label="Código OTP"
-						placeholder="000000"
-						type="text"
-						inputMode="numeric"
-						value={otpTrimmed}
-						onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-						error={otp.length > 0 && !isValidOtp}
-						helperText={
-							otp.length > 0 && !isValidOtp
-								? `Ingresa ${OTP_LENGTH} dígitos`
-								: ""
-						}
-						fullWidth
-						autoComplete="one-time-code"
-						autoFocus
-						InputProps={{
-							startAdornment: (
-								<InputAdornment position="start">
-									<PinIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-								</InputAdornment>
-							),
-						}}
-					/>
-
-					<Button
-						variant="contained"
-						fullWidth
-						disabled={loading}
-						onClick={handleSubmit}
-					>
-						{loading ? (
-							<CircularProgress size={24} color="inherit" />
-						) : (
-							"Validar"
+						{error && <Alert severity="error">{error}</Alert>}
+						{resendError && <Alert severity="error">{resendError}</Alert>}
+						{resendSuccess && (
+							<Alert severity="success">Te enviamos un nuevo código.</Alert>
 						)}
-					</Button>
 
-					<Button
-						variant="text"
-						type="button"
-						onClick={handleResend}
-						disabled={resendLoading}
-					>
-						{resendLoading ? (
-							<CircularProgress size={18} color="inherit" />
-						) : (
-							"Reenviar código"
-						)}
-					</Button>
-				</Form>
-			</LoginCard>
-		</SimplePageContainer>
+						<Button
+							fullWidth
+							type="submit"
+							variant="contained"
+							color="primary"
+							disabled={!canSubmit}
+						>
+							{loading ? <CircularProgress size={24} color="inherit" /> : "Validar"}
+						</Button>
+					</Form>
+
+					<RecoveryRow>
+						<Typography variant="body2" color="text.secondary">¿No recibiste el código?</Typography>
+						<Button
+							variant="text"
+							type="button"
+							onClick={handleResend}
+							disabled={resendLoading}
+						>
+							{resendLoading ? (
+								<CircularProgress size={18} color="inherit" />
+							) : (
+								"Reenviar"
+							)}
+						</Button>
+					</RecoveryRow>
+				</FormWrapper>
+			</RightPanel>
+		</PageContainer>
 	);
 }

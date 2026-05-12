@@ -5,6 +5,7 @@ import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import { Stack } from "@mui/material";
+import { BRANCH_ORDERS_CREATE, BRANCH_ORDERS_READ } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "delivered";
 
@@ -317,6 +318,7 @@ export default function PedidosSucursales() {
             label: "Ver detalle",
             icon: <EditIcon fontSize="small" />,
             onClick: handleViewOrder,
+            permission: BRANCH_ORDERS_READ,
         },
     ];
 
@@ -340,6 +342,7 @@ export default function PedidosSucursales() {
                             variant: "contained",
                             color: "primary",
                             showIcon: true,
+                            permission: BRANCH_ORDERS_CREATE,
                         },
                     ]}
                 />

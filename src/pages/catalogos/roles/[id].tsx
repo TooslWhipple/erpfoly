@@ -18,12 +18,16 @@ import {
   areModulesEqual,
 } from "@/utils/role";
 import type { PermissionsTemplateResponse } from "@/types/roles.types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
 
 export default function RoleFormPage() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const { id } = router.query;
 
   const isNew = id === "nuevo";
+  const canSaveRole = hasPermission(isNew ? CATALOG_ROLES_CREATE : CATALOG_ROLES_UPDATE);
   const roleId = isNew ? null : Number(id);
 
   const [loading, setLoading] = useState(true);
@@ -214,7 +218,7 @@ export default function RoleFormPage() {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canSaveRole}
           >
             {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
           </Button>

@@ -1,15 +1,14 @@
 import { styled } from "@mui/material/styles";
 import { Box, Typography, TextField, Link } from "@mui/material";
-import { theme } from "@/styles/theme";
 
-export const SimplePageContainer = styled(Box)({
+export const SimplePageContainer = styled(Box)(({ theme }) => ({
 	minHeight: "100vh",
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
 	backgroundColor: theme.palette.background.default,
 	padding: 16,
-});
+}));
 
 export const PageContainer = styled(Box)({
 	minHeight: "100vh",
@@ -38,40 +37,40 @@ export const RightPanel = styled(Box)(({ theme }) => ({
 	minWidth: 0,
 	alignItems: "center",
 	justifyContent: "center",
-	backgroundColor: "#FFFFFF",
+	backgroundColor: theme.palette.background.paper,
 	padding: "48px 0px",
 }));
 
-export const FormWrapper = styled(Box)(({ theme }) => ({
+export const FormWrapper = styled(Box)({
 	display: "flex",
 	flexDirection: "column",
 	alignItems: "center",
 	width: "100%",
 	maxWidth: "560px",
 	gap: "32px"
-}));
+});
 
-export const LogoContainer = styled(Box)(({ theme }) => ({
+export const LogoContainer = styled(Box)({
 	display: "flex",
 	justifyContent: "center",
 	marginBottom: "64px"
-}));
+});
 
-export const Form = styled("form")(({ theme }) => ({
+export const Form = styled("form")({
 	display: "flex",
 	flexDirection: "column",
 	width: "100%",
 	gap: "24px",
-}));
+});
 
-export const StyledTextField = styled(TextField)({
+export const StyledTextField = styled(TextField)(({ theme }) => ({
 	"& .MuiOutlinedInput-root": {
-		backgroundColor: "#FFFFFF",
+		backgroundColor: theme.palette.background.paper,
 		"& fieldset": {
-			borderColor: "#D4D4D8",
+			borderColor: theme.palette.app.border,
 		},
 		"&:hover fieldset": {
-			borderColor: "#A1A1AA",
+			borderColor: theme.palette.text.secondary,
 		},
 		"&.Mui-focused fieldset": {
 			borderColor: theme.palette.app.sidebar.textSelected,
@@ -84,20 +83,15 @@ export const StyledTextField = styled(TextField)({
 	"& .MuiInputLabel-root.Mui-focused": {
 		color: theme.palette.text.secondary,
 	},
-});
-
-export const AlertContainer = styled(Box)(({ theme }) => ({
-	width: "100%",
-	marginBottom: theme.spacing(2),
 }));
 
-export const RecoveryRow = styled(Box)(({ theme }) => ({
+export const RecoveryRow = styled(Box)({
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
 	gap: "8px",
 	flexWrap: "wrap",
-}));
+});
 
 export const RecoveryLink = styled(Link)(({ theme }) => ({
 	fontSize: 14,
@@ -141,11 +135,15 @@ export const BackLink = styled(Link)(({ theme }) => ({
 	display: "flex",
 	alignItems: "center",
 	gap: 4,
+	alignSelf: "flex-start",
 	fontSize: 14,
 	cursor: "pointer",
 	textDecoration: "none",
 	color: theme.palette.text.secondary,
-	marginBottom: theme.spacing(2),
+	backgroundColor: "transparent",
+	border: "none",
+	padding: 0,
+	marginBottom: 0,
 	"&:hover": {
 		color: theme.palette.text.primary,
 	},

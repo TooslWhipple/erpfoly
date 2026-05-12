@@ -34,6 +34,13 @@ import {
 import { messages } from "@/forms/validation/messages";
 import { z } from "zod";
 import {
+  CATALOG_DEPARTMENTS_CREATE,
+  CATALOG_DEPARTMENTS_DELETE,
+  CATALOG_DEPARTMENTS_UPDATE,
+  CATALOG_PROMOTIONS_CREATE,
+} from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import {
   SettingsGrid,
   SettingsCard,
   SettingsTitle,
@@ -234,6 +241,7 @@ function buildLinePromotionPayload(data: LineFormOutput): OriginPromotionPayload
 
 export default function DepartmentDetailPage() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const { id } = router.query;
 
   const departmentId = id === "new" || id === "nuevo" ? null : Number(id);
@@ -438,6 +446,7 @@ export default function DepartmentDetailPage() {
       label: "Editar",
       icon: <EditIcon fontSize="small" />,
       onClick: handleOpenEditGroup,
+      permission: CATALOG_DEPARTMENTS_UPDATE,
     },
     {
       id: "delete",
@@ -445,6 +454,7 @@ export default function DepartmentDetailPage() {
       icon: <DeleteIcon fontSize="small" />,
       onClick: handleDeleteGroup,
       color: "error",
+      permission: CATALOG_DEPARTMENTS_DELETE,
     },
   ];
 
@@ -507,6 +517,7 @@ export default function DepartmentDetailPage() {
                     onClick: handleOpenNewGroup,
                     variant: "contained",
                     color: "primary",
+                    permission: CATALOG_DEPARTMENTS_CREATE,
                   },
                 ]
               : [
@@ -515,6 +526,7 @@ export default function DepartmentDetailPage() {
                     onClick: () => showSnackbar("Cambios guardados correctamente."),
                     variant: "contained",
                     color: "primary",
+                    permission: CATALOG_DEPARTMENTS_UPDATE,
                   },
                 ]
           }
@@ -557,7 +569,7 @@ export default function DepartmentDetailPage() {
             <PromotionsCard>
               <PromotionsHeader>
                 <SettingsTitle sx={{ fontSize: "1.25rem" }}>Promociones</SettingsTitle>
-                <Button variant="outlined">Nueva promoción</Button>
+                {hasPermission(CATALOG_PROMOTIONS_CREATE) && <Button variant="outlined">Nueva promoción</Button>}
               </PromotionsHeader>
               <TableCrud
                 columns={settingsPromotionColumns}

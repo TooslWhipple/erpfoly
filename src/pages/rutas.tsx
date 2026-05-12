@@ -18,6 +18,8 @@ import { AddArticlesToRouteModal } from "@/pages/rutas/AddArticlesToRouteModal";
 import { getRoutesByDate, getRouteDetailById } from "@/data/rutas.mockData";
 import type { RouteSummary, RouteDetail } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ROUTE_ARTICLES_UPDATE } from "@/lib/permissions";
 
 // ============================================================================
 // CONSTANTS
@@ -62,6 +64,8 @@ function isToday(date: Date): boolean {
 // ============================================================================
 
 export default function RutaPage() {
+  const { hasPermission } = usePermissions();
+  const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [routes, setRoutes] = useState<RouteSummary[]>([]);
   const [routesLoading, setRoutesLoading] = useState(true);
@@ -246,14 +250,16 @@ export default function RutaPage() {
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
                 />
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<PlusCircle size={16} />}
-                  onClick={() => setAddArticlesModalOpen(true)}
-                >
-                  Agregar
-                </Button>
+                {canUpdateRouteArticles && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<PlusCircle size={16} />}
+                    onClick={() => setAddArticlesModalOpen(true)}
+                  >
+                    Agregar
+                  </Button>
+                )}
               </Stack>
 
               {activeTab === TAB_ARTICLES && (

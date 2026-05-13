@@ -1,18 +1,9 @@
 import { styled } from "@mui/material/styles";
-import { Box, Button, Chip, Typography } from "@mui/material";
-import { theme } from "@/styles/theme";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { Chip } from "@mui/material";
 
 export type OrderStatus = "pending" | "in_progress" | "received";
 
-// ============================================================================
-// LAYOUT COMPONENTS
-// ============================================================================
-
-export const PageContainer = styled(Box)(({ theme }) => ({
+export const PageContainer = styled('div')(({ theme }) => ({
     display: "flex",
     gap: theme.spacing(3),
     [theme.breakpoints.down("lg")]: {
@@ -20,12 +11,12 @@ export const PageContainer = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const MainContent = styled(Box)({
+export const MainContent = styled('div')({
     flex: 1,
     minWidth: 0,
 });
 
-export const SidePanel = styled(Box)(({ theme }) => ({
+export const SidePanel = styled('div')(({ theme }) => ({
     width: 280,
     flexShrink: 0,
     [theme.breakpoints.down("lg")]: {
@@ -34,11 +25,7 @@ export const SidePanel = styled(Box)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// HEADER COMPONENTS
-// ============================================================================
-
-export const HeaderSection = styled(Box)(({ theme }) => ({
+export const HeaderSection = styled('div')(({ theme }) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -51,53 +38,11 @@ export const HeaderSection = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const TitleSection = styled(Box)({
+export const TitleSection = styled('div')({
     display: "flex",
     flexDirection: "column",
     gap: 4,
 });
-
-export const TitleRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "baseline",
-    gap: theme.spacing(1.5),
-    flexWrap: "wrap",
-}));
-
-export const PageTitle = styled(Typography)(({ theme }) => ({
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#232325",
-    [theme.breakpoints.down("sm")]: {
-        fontSize: 24,
-    },
-}));
-
-export const DateText = styled(Typography)({
-    fontSize: 14,
-    color: "#71717A",
-});
-
-export const ActionsSection = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1.5),
-    flexWrap: "wrap",
-    [theme.breakpoints.down("sm")]: {
-        width: "100%",
-        justifyContent: "flex-start",
-    },
-}));
-
-export const ActionButton = styled(Button)(({ theme }) => ({
-    height: 40,
-    textTransform: "none",
-    fontWeight: 500,
-    [theme.breakpoints.down("sm")]: {
-        flex: "1 1 auto",
-        minWidth: 0,
-    },
-}));
 
 export const StatusChip = styled(Chip)<{ statusType: OrderStatus }>(({ statusType }) => {
     const statusStyles: Record<OrderStatus, { bg: string; text: string }> = {
@@ -116,150 +61,27 @@ export const StatusChip = styled(Chip)<{ statusType: OrderStatus }>(({ statusTyp
     };
 });
 
-// ============================================================================
-// SUMMARY PANEL COMPONENTS
-// ============================================================================
-
-export const SummaryCard = styled(Box)(({ theme }) => ({
-    position: "sticky",
-    top: theme.spacing(2),
-}));
-
-export const SummaryRow = styled(Box)({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-});
-
-export const SummaryLabel = styled(Typography)({
-    fontSize: 14,
-    color: "#71717A",
-});
-
-export const SummaryValue = styled(Typography)({
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#232325",
-    textAlign: "right",
-});
-
-export const TotalRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${theme.palette.app.border}`,
-    marginTop: theme.spacing(1),
-}));
-
-export const TotalLabel = styled(Typography)({
-    fontSize: 16,
-    fontWeight: 600,
-    color: "#232325",
-});
-
-export const TotalValue = styled(Typography)({
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#232325",
-});
-
-// ============================================================================
-// ORDER ITEM CARD COMPONENTS
-// ============================================================================
-
-export const ItemsList = styled(Box)({
+export const SummaryCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-});
-
-export const ItemCard = styled(Box)(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
-    borderRadius: 8,
-    padding: theme.spacing(2.5),
-    marginBottom: theme.spacing(2),
+    borderRadius: "16px",
+    gap: "16px",
+    padding: "16px",
 }));
 
-export const ItemHeader = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+export const ItemCard = styled('div')(({ theme }) => ({
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "12px",
+    padding: "16px"
 }));
 
-export const ItemImage = styled(Box)({
-    width: 64,
-    height: 64,
+export const ItemImage = styled('img')({
+    width: "32px",
+    height: "32px",
     backgroundColor: "#e5e7eb",
-    borderRadius: 8,
+    borderRadius: "8px",
     flexShrink: 0,
-});
-
-export const ItemInfo = styled(Box)({
-    flex: 1,
-    minWidth: 0,
-});
-
-export const ItemCode = styled(Typography)({
-    fontSize: 13,
-    color: "#71717A",
-    marginBottom: 4,
-});
-
-export const ItemName = styled(Typography)({
-    fontSize: 15,
-    fontWeight: 500,
-    color: "#232325",
-});
-
-export const ItemPriceRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(4),
-    marginBottom: theme.spacing(1.5),
-    flexWrap: "wrap",
-}));
-
-export const PriceColumn = styled(Box)({
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-});
-
-export const PriceLabel = styled(Typography)({
-    fontSize: 13,
-    color: "#71717A",
-});
-
-export const PriceValue = styled(Typography)({
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#232325",
-});
-
-export const ComparisonRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(2),
-    flexWrap: "wrap",
-}));
-
-export const InternetPriceTag = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    color: "#71717A",
-    fontSize: 13,
-});
-
-export const ComparisonLink = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    fontSize: 13,
-    color: "#71717A",
-    cursor: "pointer",
-    "&:hover": {
-        color: "#232325",
-    },
 });

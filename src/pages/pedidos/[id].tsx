@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Typography, Skeleton } from "@mui/material";
+import { Typography, Skeleton, Stack, Button, Divider, Grid } from "@mui/material";
 import {
     Edit as EditIcon,
-    Download as DownloadIcon,
-    OpenInNew as OpenInNewIcon,
-    Public as PublicIcon,
+    Download as DownloadIcon
 } from "@mui/icons-material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs } from "@/components";
+import { MainLayout, Breadcrumbs, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
     PageContainer,
@@ -16,40 +14,11 @@ import {
     SidePanel,
     HeaderSection,
     TitleSection,
-    TitleRow,
-    PageTitle,
-    DateText,
-    ActionsSection,
-    ActionButton,
-    StatusChip,
     SummaryCard,
-    SummaryRow,
-    SummaryLabel,
-    SummaryValue,
-    TotalRow,
-    TotalLabel,
-    TotalValue,
-    ItemsList,
     ItemCard,
-    ItemHeader,
     ItemImage,
-    ItemInfo,
-    ItemCode,
-    ItemName,
-    ItemPriceRow,
-    PriceColumn,
-    PriceLabel,
-    PriceValue,
-    ComparisonRow,
-    InternetPriceTag,
-    ComparisonLink,
     OrderStatus,
 } from "@/styles/pedidos/styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 interface PriceComparison {
     store: string;
     price: number;
@@ -124,35 +93,14 @@ const DUMMY_ORDER: OrderDetail = {
     ],
 };
 
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
 async function getOrderDetail(id: string): Promise<OrderDetail> {
     await new Promise((resolve) => setTimeout(resolve, 500));
     return { ...DUMMY_ORDER, id: parseInt(id), folio: id };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function formatCurrency(value: number): string {
     return numeral(value).format("$0,0.00");
 }
-
-function getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-        pending: "Por recibir",
-        in_progress: "En curso",
-        received: "Recibido",
-    };
-    return labels[status];
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export default function PedidoDetalle() {
     const router = useRouter();
@@ -230,105 +178,84 @@ export default function PedidoDetalle() {
 
     return (
         <MainLayout>
-            <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
-
-            <HeaderSection>
-                <TitleSection>
-                    <TitleRow>
-                        <PageTitle>Pedido {order.folio}</PageTitle>
-                        <StatusChip
-                            label={getStatusLabel(order.status)}
-                            statusType={order.status}
-                            size="small"
-                        />
-                    </TitleRow>
-                    <DateText>Fecha de alta: {order.createdAt}</DateText>
-                </TitleSection>
-
-                <ActionsSection>
-                    <ActionButton
-                        variant="outlined"
-                        startIcon={<EditIcon />}
-                        onClick={handleEdit}
-                    >
-                        Editar
-                    </ActionButton>
-                    <ActionButton
-                        variant="outlined"
-                        startIcon={<DownloadIcon />}
-                        onClick={handleDownloadPdf}
-                    >
-                        Descargar PDF
-                    </ActionButton>
-                </ActionsSection>
-            </HeaderSection>
-
-            <PageContainer>
-                <MainContent>
-                    <ItemsList>
-                        {order.items.map((item) => (
-                            <ItemCard key={item.id}>
-                                <ItemHeader>
-                                    <ItemImage />
-                                    <ItemInfo>
-                                        <ItemCode>{item.code}</ItemCode>
-                                        <ItemName>{item.name}</ItemName>
-                                    </ItemInfo>
-                                </ItemHeader>
-
-                                <ItemPriceRow>
-                                    <PriceColumn>
-                                        <PriceLabel>Precio unitario</PriceLabel>
-                                        <PriceValue>{formatCurrency(item.unitPrice)}</PriceValue>
-                                    </PriceColumn>
-                                    <PriceColumn>
-                                        <PriceLabel>Cantidad</PriceLabel>
-                                        <PriceValue>{item.quantity}</PriceValue>
-                                    </PriceColumn>
-                                    <PriceColumn>
-                                        <PriceLabel>Total</PriceLabel>
-                                        <PriceValue>{formatCurrency(item.total)}</PriceValue>
-                                    </PriceColumn>
-                                </ItemPriceRow>
-
-                                {(item.averageInternetPrice || item.priceComparisons) && (
-                                    <ComparisonRow>
-                                        {item.averageInternetPrice && (
-                                            <InternetPriceTag>
-                                                <PublicIcon sx={{ fontSize: 16 }} />
-                                                Precio en internet prom: {formatCurrency(item.averageInternetPrice)}
-                                            </InternetPriceTag>
-                                        )}
-                                        {item.priceComparisons?.map((comp, idx) => (
-                                            <ComparisonLink key={idx} onClick={() => comp.url && window.open(comp.url, "_blank")}>
-                                                {comp.store}: {formatCurrency(comp.price)}
-                                                <OpenInNewIcon sx={{ fontSize: 14 }} />
-                                            </ComparisonLink>
-                                        ))}
-                                    </ComparisonRow>
-                                )}
-                            </ItemCard>
-                        ))}
-                    </ItemsList>
-                </MainContent>
-
-                <SidePanel>
-                    <SummaryCard>
-                        <SummaryRow>
-                            <SummaryLabel>Subtotal</SummaryLabel>
-                            <SummaryValue>{formatCurrency(order.subtotal)}</SummaryValue>
-                        </SummaryRow>
-                        <SummaryRow>
-                            <SummaryLabel>IVA</SummaryLabel>
-                            <SummaryValue>{formatCurrency(order.tax)}</SummaryValue>
-                        </SummaryRow>
-                        <TotalRow>
-                            <TotalLabel>Total:</TotalLabel>
-                            <TotalValue>{formatCurrency(order.total)}</TotalValue>
-                        </TotalRow>
-                    </SummaryCard>
-                </SidePanel>
-            </PageContainer>
+            <Stack spacing={3}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }}>
+                    <Breadcrumbs
+                        showBackButton
+                        items={breadcrumbs}
+                        onBack={() => router.push("/pedidos")} />
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={handleEdit}>
+                            Editar
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<DownloadIcon />}
+                            onClick={handleDownloadPdf}>
+                            Descargar PDF
+                        </Button>
+                        <StatusChip label={order.status} />
+                    </Stack>
+                </Stack>
+                <Divider />
+                <Grid container spacing={4} justifyContent="revert">
+                    <Grid size={{ xs: 12, md: 8, xl: 9 }}>
+                        <Stack spacing={2}>
+                            {
+                                order.items.map((item) => (
+                                    <ItemCard key={item.id}>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <ItemImage />
+                                            <Stack direction={{ xs: "column", md: "row" }} spacing={4} style={{ width: "100%" }}>
+                                                <Stack spacing={0.5} sx={{ width: { xs: "100%", md: "50%" } }}>
+                                                    <Typography variant="caption" color="text.secondary">{item.code}</Typography>
+                                                    <Typography
+                                                        variant="body1"
+                                                        fontWeight={600}
+                                                        style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{item.name}</Typography>
+                                                </Stack>
+                                                <Stack direction="row" spacing={2} width={{ xs: "100%", md: "50%" }} flex={1} justifyContent="space-between">
+                                                    <Stack spacing={0.5}>
+                                                        <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
+                                                        <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
+                                                    </Stack>
+                                                    <Stack spacing={0.5}>
+                                                        <Typography variant="body2" color="text.secondary">Cantidad</Typography>
+                                                        <Typography>{item.quantity}</Typography>
+                                                    </Stack>
+                                                    <Stack spacing={0.5}>
+                                                        <Typography variant="body2" color="text.secondary">Total</Typography>
+                                                        <Typography variant="body1" fontWeight={700}>{formatCurrency(item.total)}</Typography>
+                                                    </Stack>
+                                                </Stack>
+                                            </Stack>
+                                        </Stack>
+                                    </ItemCard>
+                                ))
+                            }
+                        </Stack>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+                        <SummaryCard>
+                            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                                <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                                <Typography variant="body1" fontWeight={600}>{formatCurrency(order.subtotal)}</Typography>
+                            </Stack>
+                            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                                <Typography variant="body2" color="text.secondary">IVA</Typography>
+                                <Typography variant="body1" fontWeight={600}>{formatCurrency(order.tax)}</Typography>
+                            </Stack>
+                            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                                <Typography variant="h5" fontWeight={700}>Total:</Typography>
+                                <Typography variant="h5" fontWeight={700}>{formatCurrency(order.total)}</Typography>
+                            </Stack>
+                        </SummaryCard>
+                    </Grid>
+                </Grid>
+            </Stack>
         </MainLayout>
     );
 }

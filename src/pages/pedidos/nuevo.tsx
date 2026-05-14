@@ -1,52 +1,65 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, InputAdornment, TextField, CircularProgress, Typography, Select, MenuItem, FormControl, Drawer, useMediaQuery, useTheme } from "@mui/material";
-import { Search as SearchIcon, ArrowDropDown as ArrowDropDownIcon } from "@mui/icons-material";
-import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, OrderSummarySidebar, AddArticleToOrderModal } from "@/components";
+import { Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid, Divider, Button } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
 import type { Supplier, Article, OrderItem } from "@/types/pedidos.types";
 import type { ProductSuggestion } from "@/types/suggestions.types";
-import { getArticles, getSuggestionsForOrder, getCostHistory } from "@/data/pedidos.mockData";
+import { getSuggestionsForOrder, getCostHistory } from "@/data/pedidos.mockData";
 import type { CostHistoryEntry } from "@/components/AddArticleToOrderModal";
-import { theme } from "@/styles/theme";
+import { unwrapOrThrow } from "@/lib/axios";
 import {
-    PageContainer,
-    PageHeader,
-    SuggestionsSection,
+    getProductsBySupplier,
+    type ProductBySupplierItem,
+} from "@/services/productos.service";
+import {
     SuggestionsList,
-    ArticlesSection,
-    ArticlesHeader,
-    MainContent,
     StockCell,
-    DrawerContent,
-    MobileCardContainer,
+    Card,
+    GrayCard
 } from "@/styles/pedidos/nuevo.styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { Search } from "lucide-react";
 
 interface ArticleRow extends Article {
     image?: string;
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+function mapProductBySupplierToArticleRow(
+    item: ProductBySupplierItem,
+): ArticleRow {
+    return {
+        id: String(item.id),
+        name: item.shortName,
+        folio: item.code,
+        salesYear: item.yearlySales,
+        salesLastMonth: item.previousMonthSales,
+        salesCurrentMonth: item.currentMonthSales,
+        inRepair: item.underRepair,
+        stock: item.inStock,
+        pendingSupply: item.pendingSupply,
+        image: item.previewImage ?? undefined,
+    };
+}
+
+function articleMatchesQuery(article: ArticleRow, normalizedQuery: string): boolean {
+    if (!normalizedQuery) return true;
+    return (
+        article.name.toLowerCase().includes(normalizedQuery) ||
+        article.folio.toLowerCase().includes(normalizedQuery)
+    );
+}
 
 export default function NuevoPedido() {
     const router = useRouter();
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const { supplierId, supplierName } = router.query;
 
     // State
     const [supplier, setSupplier] = useState<Supplier | null>(null);
-    const [articles, setArticles] = useState<ArticleRow[]>([]);
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [suggestionsLoading, setSuggestionsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [addArticleModalOpen, setAddArticleModalOpen] = useState(false);
@@ -54,43 +67,51 @@ export default function NuevoPedido() {
     const [costHistory, setCostHistory] = useState<CostHistoryEntry[]>([]);
     const [costHistoryLoading, setCostHistoryLoading] = useState(false);
 
-    // Initialize supplier from query params
     useEffect(() => {
         if (supplierId && supplierName && typeof supplierId === "string" && typeof supplierName === "string") {
             setSupplier({ id: supplierId, name: supplierName });
         }
     }, [supplierId, supplierName]);
 
-    // Fetch data when supplier is set
     useEffect(() => {
         if (supplier) {
-            fetchArticles();
             fetchSuggestions();
         }
     }, [supplier]);
 
-    // Filter articles based on search query
-    const filteredArticles = articles.filter((article) => {
-        if (!searchQuery.trim()) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            article.name.toLowerCase().includes(query) ||
-            article.folio.toLowerCase().includes(query)
-        );
+    const supplierIdNumber = useMemo(() => {
+        if (!supplier) return 0;
+        const parsed = Number(supplier.id);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    }, [supplier]);
+
+    const {
+        data: productRows,
+        isFetching: articlesFetching,
+    } = useQuery({
+        queryKey: ["products-by-supplier", supplierIdNumber],
+        queryFn: async () =>
+            unwrapOrThrow(await getProductsBySupplier(supplierIdNumber)),
+        enabled: supplierIdNumber > 0,
+        staleTime: 30_000,
     });
 
-    const fetchArticles = async () => {
-        if (!supplier) return;
-        setLoading(true);
-        try {
-            const data = await getArticles(supplier.id);
-            setArticles(data);
-        } catch (error) {
-            console.error("[NuevoPedido] Error fetching articles:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const articles = useMemo<ArticleRow[]>(
+        () => (productRows ?? []).map(mapProductBySupplierToArticleRow),
+        [productRows],
+    );
+
+    const filteredArticles = useMemo<ArticleRow[]>(() => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        if (!normalizedQuery) return articles;
+        return articles.filter((article) => articleMatchesQuery(article, normalizedQuery));
+    }, [articles, searchQuery]);
+
+    const isSearchActive = searchQuery.trim().length > 0;
+    const articlesLoading = supplierIdNumber > 0 && articlesFetching;
+    const emptyArticlesMessage = isSearchActive
+        ? "No se encontraron artículos para la búsqueda"
+        : "No hay artículos disponibles para este proveedor";
 
     const fetchSuggestions = async () => {
         if (!supplier) return;
@@ -129,17 +150,15 @@ export default function NuevoPedido() {
         const existingItemIndex = orderItems.findIndex((orderItem) => orderItem.articleId === item.articleId);
 
         if (existingItemIndex >= 0) {
-            // Update quantity and price if already exists
             const updatedItems = [...orderItems];
             updatedItems[existingItemIndex] = {
                 ...updatedItems[existingItemIndex],
                 quantity: updatedItems[existingItemIndex].quantity + item.quantity,
-                unitPrice: item.unitPrice, // Update to latest price
+                unitPrice: item.unitPrice,
                 totalPrice: item.unitPrice * (updatedItems[existingItemIndex].quantity + item.quantity),
             };
             setOrderItems(updatedItems);
         } else {
-            // Add new item
             setOrderItems([...orderItems, item]);
         }
     };
@@ -158,10 +177,6 @@ export default function NuevoPedido() {
         setOrderItems(updatedItems);
     };
 
-    const handleRemoveItem = (articleId: string) => {
-        setOrderItems(orderItems.filter((item) => item.articleId !== articleId));
-    };
-
     const handleCloseAddArticleModal = () => {
         setAddArticleModalOpen(false);
         setSelectedArticle(null);
@@ -169,7 +184,6 @@ export default function NuevoPedido() {
     };
 
     const handleAddFromSuggestion = (suggestion: ProductSuggestion) => {
-        // Find article by SKU
         const article = articles.find((a) => a.folio === suggestion.sku);
         if (article) {
             handleAddArticle(article);
@@ -177,18 +191,26 @@ export default function NuevoPedido() {
     };
 
     const handleContinue = () => {
-        // TODO: Navigate to next step or save order
         console.log("[NuevoPedido] Continue with order:", orderItems);
     };
 
-    // Breadcrumbs
+    const truncatedSupplierName = (name: string | undefined) => {
+        if (name === undefined) return "...";
+        if (name.length <= 40) return name;
+
+        return name
+            .slice(0, 40)
+            .split(' ')
+            .slice(0, -1)
+            .join(' ') + '...';
+    }
+
     const breadcrumbs: BreadcrumbItem[] = [
         { label: "Pedidos", href: "/pedidos" },
-        { label: supplier?.name || "...", href: supplier ? `/pedidos?supplier=${supplier.id}` : undefined },
+        { label: truncatedSupplierName(supplier?.name), href: supplier ? `/pedidos?supplier=${supplier.id}` : undefined },
         { label: "Nuevo pedido" },
     ];
 
-    // Table columns
     const columns: Column<ArticleRow>[] = [
         {
             id: "name",
@@ -197,16 +219,32 @@ export default function NuevoPedido() {
             truncate: true,
             format: (value, row) => (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Box
-                        sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1,
-                            backgroundColor: "#F3F4F6",
-                            border: "1px solid #E4E4E7",
-                            flexShrink: 0,
-                        }}
-                    />
+                    {row.image ? (
+                        <Box
+                            component="img"
+                            src={row.image}
+                            alt={String(value)}
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                objectFit: "cover",
+                                border: `1px solid ${theme.palette.app.border}`,
+                                flexShrink: 0,
+                            }}
+                        />
+                    ) : (
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                backgroundColor: theme.palette.background.lowGray,
+                                border: `1px solid ${theme.palette.app.border}`,
+                                flexShrink: 0,
+                            }}
+                        />
+                    )}
                     <Typography variant="body2" sx={{ flex: 1 }}>
                         {String(value)}
                     </Typography>
@@ -302,160 +340,86 @@ export default function NuevoPedido() {
 
     return (
         <MainLayout>
-            <Breadcrumbs items={breadcrumbs} />
-
-            <Box sx={{
-                display: "flex",
-                marginTop: 2,
-                marginRight: { xs: 0, sm: 0, md: "320px" },
-                paddingBottom: { xs: "200px", sm: "200px", md: 0 },
-            }}>
-                <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                    <PageHeader>
+            <Grid container spacing={4}>
+                <Grid size={{ xs: 12, md: 8, xl: 9 }}>
+                    <Stack direction="column" spacing={3}>
+                        <Breadcrumbs items={breadcrumbs} />
                         <Typography variant="h1">Nuevo pedido</Typography>
-                        <Select
-                            size="small"
-                            value={supplier.id}
-                            displayEmpty
-                            renderValue={(value) => {
-                                if (!value) return "Seleccionar proveedor";
-                                return supplier.name;
-                            }}
-                            IconComponent={ArrowDropDownIcon}
-                            disabled
-                            sx={{
-                                maxWidth: 400,
-                                backgroundColor: theme.palette.background.paper,
-                                "& .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: theme.palette.app.border,
-                                },
-                                "&:hover .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: theme.palette.app.border,
-                                },
-                                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: "#2663EB",
-                                },
-                                "&.Mui-disabled": {
-                                    backgroundColor: theme.palette.background.default,
-                                },
-                            }}
-                        >
-                            <MenuItem value={supplier.id}>{supplier.name}</MenuItem>
-                        </Select>
-                    </PageHeader>
-
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        <SuggestionsSection>
-                            <Typography variant="h4">Sugerencias</Typography>
-                            {suggestionsLoading ? (
-                                <Box sx={{ display: "flex", justifyContent: "center", padding: 4 }}>
-                                    <CircularProgress size={24} />
-                                </Box>
-                            ) : (
-                                <SuggestionsList>
-                                    {suggestions.map((suggestion) => (
+                        <SuggestionsList>
+                            {
+                                suggestions.length === 0 ?
+                                    [1, 2, 3, 4].map((i) => (
+                                        <Skeleton
+                                            key={i}
+                                            variant="rectangular"
+                                            style={{ borderRadius: "12px", flex: "1 1 272px", minWidth: "272px", maxWidth: "272px", height: "304px" }}
+                                        />
+                                    ))
+                                    :
+                                    suggestions.map((suggestion) => (
                                         <ProductSuggestionCard
                                             key={suggestion.id}
                                             product={suggestion}
                                             onAdd={handleAddFromSuggestion}
                                         />
-                                    ))}
-                                </SuggestionsList>
-                            )}
-                        </SuggestionsSection>
-
-                        <ArticlesSection>
-                            <ArticlesHeader>
-                                <Typography variant="h4">Todos los artículos</Typography>
+                                    ))
+                            }
+                        </SuggestionsList>
+                        <Card>
+                            <Stack spacing={1}>
+                                <Typography variant="h5">Todos los artículos</Typography>
                                 <TextField
+                                    fullWidth
+                                    size="small"
                                     placeholder="Buscar en artículos"
                                     value={searchQuery}
                                     onChange={handleSearchChange}
-                                    size="small"
-                                    sx={{
-                                        maxWidth: 400,
-                                        "& .MuiOutlinedInput-root": {
-                                            borderRadius: 2,
-                                            backgroundColor: theme.palette.background.paper,
-                                            "& fieldset": {
-                                                borderColor: theme.palette.app.border,
-                                            },
-                                            "&:hover fieldset": {
-                                                borderColor: theme.palette.app.border,
-                                            },
-                                            "&.Mui-focused fieldset": {
-                                                borderColor: "#2663EB",
-                                            },
-                                        },
-                                    }}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <SearchIcon sx={{ color: "#71717A", fontSize: 20 }} />
+                                                <Search size={18} color={theme.palette.text.secondary} />
                                             </InputAdornment>
                                         ),
                                     }}
                                 />
-                            </ArticlesHeader>
+                            </Stack>
+                        </Card>
 
-                            <TableCrud
-                                columns={columns}
-                                rows={filteredArticles}
-                                loading={loading}
-                                emptyMessage="No hay artículos disponibles"
-                                rowKey="id"
-                            />
-                        </ArticlesSection>
-                    </Box>
-                </Box>
-
-                {isMobile ? (
-                    <MobileCardContainer>
-                        <OrderSummarySidebar
-                            items={orderItems}
-                            onContinue={handleContinue}
-                            onQuantityChange={handleQuantityChange}
-                            onRemoveItem={handleRemoveItem}
+                        <TableCrud
+                            columns={columns}
+                            rows={filteredArticles}
+                            loading={articlesLoading}
+                            emptyMessage={emptyArticlesMessage}
+                            rowKey="id"
                         />
-                    </MobileCardContainer>
-                ) : (
-                    <Drawer
-                        anchor="right"
-                        open={true}
-                        variant="persistent"
-                        sx={{
-                            display: { xs: "none", md: "block" },
-                            "& .MuiDrawer-paper": {
-                                width: 320,
-                                height: "100vh",
-                                top: 0,
-                                right: 0,
-                                borderLeft: `1px solid ${theme.palette.app.border}`,
-                                borderRadius: 0,
-                                boxShadow: "none",
-                                zIndex: (theme) => theme.zIndex.drawer + 1,
-                            },
-                        }}
-                    >
-                        <DrawerContent>
-                            <OrderSummarySidebar
-                                items={orderItems}
-                                onContinue={handleContinue}
-                                onQuantityChange={handleQuantityChange}
-                                onRemoveItem={handleRemoveItem}
-                            />
-                        </DrawerContent>
-                    </Drawer>
-                )}
+                    </Stack>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+                    <GrayCard>
+                        <Stack style={{ padding: "0px 16px" }}>
+                            <Typography variant="body1">Articulos</Typography>
+                            <Typography variant="body2" color="text.secondary">Comienza a agregar artículos a tu pedido</Typography>
+                        </Stack>
+                        <Divider />
+                        <Stack style={{ padding: "0px 16px" }}>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                color="primary" >
+                                Continuar
+                            </Button>
+                        </Stack>
+                    </GrayCard>
+                </Grid>
+            </Grid>
 
-                <AddArticleToOrderModal
-                    open={addArticleModalOpen}
-                    onClose={handleCloseAddArticleModal}
-                    article={selectedArticle}
-                    onAddToOrder={handleAddToOrder}
-                    costHistory={costHistory}
-                />
-            </Box>
+            <AddArticleToOrderModal
+                open={addArticleModalOpen}
+                onClose={handleCloseAddArticleModal}
+                article={selectedArticle}
+                onAddToOrder={handleAddToOrder}
+                costHistory={costHistory}
+            />
         </MainLayout>
     );
 }

@@ -8,8 +8,12 @@ import {
     CircularProgress,
     Typography,
     useTheme,
+    Table,
+    TableHead,
+    TableRow,
+    TableCell,
+    TableBody,
 } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import type { Supplier } from "@/types/pedidos.types";
 import { unwrapOrThrow } from "@/lib/axios";
@@ -26,7 +30,9 @@ import {
     SupplierRow,
     SupplierId,
     SupplierName,
+    Card
 } from "./styles";
+import { Search } from "lucide-react";
 
 function mapSearchItemToSupplier(item: SupplierSearchItem): Supplier {
     const displayName =
@@ -119,18 +125,16 @@ export function SupplierSelectionModal({
     let listBody: ReactNode;
 
     if (showInitialLoading) {
-        listBody = (
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 4,
-                }}
-            >
-                <CircularProgress size={24} />
-            </Box>
-        );
+        listBody = <Box
+            sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 4,
+            }}
+        >
+            <CircularProgress size={24} />
+        </Box>
     } else if (isError) {
         listBody = (
             <Box
@@ -195,28 +199,56 @@ export function SupplierSelectionModal({
             disableClose={isFetching && searchRows === undefined}
             contentSx={{ flex: 1, minHeight: 0 }}
         >
-            <SupplierModalContainer sx={{ flex: 1, minHeight: 0 }}>
-                <SearchInput
-                    placeholder="Buscar"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    size="small"
-                    fullWidth
-                    disabled={showInitialLoading || isError}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon
-                                    sx={{ color: theme.palette.text.secondary, fontSize: 20 }}
-                                />
-                            </InputAdornment>
-                        ),
-                    }}
-                />
+            <SearchInput
+                placeholder="Buscar"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                size="small"
+                fullWidth
+                disabled={showInitialLoading || isError}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <Search size={18} color={theme.palette.text.secondary} />
+                        </InputAdornment>
+                    ),
+                }}
+            />
+            <Card>
                 {
-                    listBody
+                    showInitialLoading
+                        ? <CircularProgress size={24} />
+                        : filteredSuppliers.length === 0
+                            ?
+                            <Typography variant="body2" color="text.secondary">No se encontraron proveedores</Typography>
+                            :
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
+                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Proveedor</TableCell>
+                                        <TableCell style={{ padding: "12px 8px" }}></TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {
+                                        filteredSuppliers.map((supplier) => (
+                                            <TableRow key={supplier.id}>
+                                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
+                                                <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
+                                                <TableCell style={{ padding: "12px 8px" }}>
+                                                    <Button color="primary" onClick={() => handleSelect(supplier)}>Seleccionar</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    }
+                                </TableBody>
+                            </Table>
+
                 }
-            </SupplierModalContainer>
+
+
+            </Card>
         </SideModal>
     );
 }

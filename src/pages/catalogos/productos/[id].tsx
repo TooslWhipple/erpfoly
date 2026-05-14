@@ -166,12 +166,14 @@ export default function ProductFormPage() {
         if (isNew || editProductIdStr == null) {
             setProductLoading(false);
             setDetailBranchRows(null);
+            setProductPromotionDrafts([]);
             return;
         }
 
         async function loadProduct() {
             setProductLoading(true);
             setDetailBranchRows(null);
+            setProductPromotionDrafts([]);
             try {
                 const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
@@ -191,6 +193,7 @@ export default function ProductFormPage() {
                     setPriceData(snap.priceData);
                     setBasePrices(snap.basePrices);
                     setGalleryImages(snap.galleryImages);
+                    setProductPromotionDrafts(snap.promotionDrafts);
                     setDetailBranchRows(result.data.branches ?? []);
                 }
             } catch (err) {

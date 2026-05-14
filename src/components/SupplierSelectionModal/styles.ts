@@ -2,20 +2,12 @@ import { styled } from "@mui/material/styles";
 import { TextField, Button, Box } from "@mui/material";
 import { theme } from "@/styles/theme";
 
-// ============================================================================
-// MAIN CONTAINER
-// ============================================================================
-
 export const SupplierModalContainer = styled(Box)(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
 }));
-
-// ============================================================================
-// SEARCH INPUT
-// ============================================================================
 
 export const SearchInput = styled(TextField)(({ theme }) => ({
     "& .MuiOutlinedInput-root": {
@@ -33,9 +25,14 @@ export const SearchInput = styled(TextField)(({ theme }) => ({
     },
 }));
 
-// ============================================================================
-// SUPPLIERS LIST
-// ============================================================================
+export const Card = styled('div')(({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "16px",
+    padding: "24px"
+}));
 
 export const SuppliersList = styled(Box)(({ theme }) => ({
     display: "flex",

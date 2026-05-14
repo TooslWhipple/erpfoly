@@ -30,7 +30,7 @@ export async function fetchRoutesForDate(params: {
 }
 
 export async function fetchRouteDetail(routeId: number) {
-  return get<RouteDetailApi>(`/routes/${routeId}/detail`);
+  return get<RouteDetailApi>(`/routes/${routeId}`);
 }
 
 export async function fetchAvailableProducts(routeId: number, page = 1) {

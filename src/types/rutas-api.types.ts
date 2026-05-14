@@ -10,7 +10,7 @@ export interface RouteListRowApi {
   mini_map_url: string | null;
 }
 
-/** Map payload from GET /routes/:id/detail */
+/** Map payload from GET /routes/:id */
 export interface RouteMapPayloadApi {
   center: { lat: number; lng: number };
   zoom: number;
@@ -40,7 +40,7 @@ export interface CartaPorteFileApi {
   uploaded_at: string;
 }
 
-/** Raw detail from GET /routes/:id/detail */
+/** Raw detail from GET /routes/:id */
 export interface RouteDetailApi {
   id: number;
   code: string;

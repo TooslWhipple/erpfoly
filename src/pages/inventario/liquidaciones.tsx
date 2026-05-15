@@ -141,7 +141,7 @@ export default function LiquidacionesPage() {
         <Stack direction="column" spacing={3} flex={1}>
           <Title title="Estrategia de baja rotación" />
           {state === "loading" && (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Stack direction="column" spacing={3}>
               <Box
                 sx={{
                   display: "grid",
@@ -161,7 +161,7 @@ export default function LiquidacionesPage() {
                 ))}
               </Box>
               <Skeleton variant="text" width={200} height={32} animation="wave" />
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Stack direction="column" spacing={2}>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Skeleton
                     key={i}
@@ -171,8 +171,8 @@ export default function LiquidacionesPage() {
                     animation="wave"
                   />
                 ))}
-              </Box>
-            </Box>
+              </Stack>
+            </Stack>
           )}
           {state === "error" && (
             <p style={{ color: "var(--mui-palette-error-main)" }}>

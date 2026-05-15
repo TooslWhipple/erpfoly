@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-    Box,
+    Stack,
     InputAdornment,
     Button,
     CircularProgress,
@@ -125,26 +125,21 @@ export function SupplierSelectionModal({
     let listBody: ReactNode;
 
     if (showInitialLoading) {
-        listBody = <Box
-            sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: 4,
-            }}
+        listBody = <Stack
+            direction="row"
+            justifyContent="center"
+            alignItems="center"
+            sx={{ padding: 4 }}
         >
             <CircularProgress size={24} />
-        </Box>
+        </Stack>
     } else if (isError) {
         listBody = (
-            <Box
-                sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 2,
-                    padding: 4,
-                }}
+            <Stack
+                direction="column"
+                alignItems="center"
+                spacing={2}
+                sx={{ padding: 4 }}
             >
                 <Typography variant="body2" color="error">
                     {errorMessage}
@@ -152,22 +147,20 @@ export function SupplierSelectionModal({
                 <Button variant="outlined" size="small" onClick={() => void refetch()}>
                     Reintentar
                 </Button>
-            </Box>
+            </Stack>
         );
     } else if (filteredSuppliers.length === 0) {
         listBody = (
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 4,
-                }}
+            <Stack
+                direction="row"
+                justifyContent="center"
+                alignItems="center"
+                sx={{ padding: 4 }}
             >
                 <Typography variant="body2" color="text.secondary">
                     No se encontraron proveedores
                 </Typography>
-            </Box>
+            </Stack>
         );
     } else {
         listBody = (
@@ -175,10 +168,10 @@ export function SupplierSelectionModal({
                 {
                     filteredSuppliers.map((supplier, index) => (
                         <SupplierRow index={index} key={supplier.id}>
-                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                            <Stack direction="column" spacing={0.5}>
                                 <SupplierId>{supplier.id}</SupplierId>
                                 <SupplierName>{supplier.name}</SupplierName>
-                            </Box>
+                            </Stack>
                             <Button color="primary" onClick={() => handleSelect(supplier)}>
                                 Seleccionar
                             </Button>

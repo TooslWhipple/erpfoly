@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { shouldBypassAccessControl } from "@/lib/accessControl";
 
 export const api = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
@@ -113,6 +114,9 @@ api.interceptors.response.use(
 			if (isPublicAuthRequest(originalRequest)) {
 				return Promise.reject(error);
 			}
+			if (shouldBypassAccessControl) {
+				return Promise.reject(error);
+			}
 			useAuthStore.getState().logout();
 			if (typeof window !== "undefined") {
 				window.location.href = "/login";
@@ -144,6 +148,9 @@ api.interceptors.response.use(
 			const result = await authService.refresh();
 			if (result.error || !result.data?.accessToken) {
 				processQueue(error, null);
+				if (shouldBypassAccessControl) {
+					return Promise.reject(error);
+				}
 				useAuthStore.getState().logout();
 				if (typeof window !== "undefined") {
 					window.location.href = "/login";

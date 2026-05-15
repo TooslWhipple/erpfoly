@@ -20,6 +20,7 @@ export interface ProductSuggestion {
     currentStock: number;
     demandData: DemandData;
     trendData: DemandTrendPoint[];
+    score: number;
 }
 
 export interface SuggestionsResponse {

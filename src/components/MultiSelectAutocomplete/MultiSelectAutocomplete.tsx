@@ -1,7 +1,7 @@
 import {
     Autocomplete,
     TextField,
-    Box,
+    Stack,
     InputAdornment,
     type AutocompleteRenderInputParams,
 } from "@mui/material";
@@ -55,7 +55,7 @@ export function MultiSelectAutocomplete({
     };
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
+        <Stack direction="column">
             {label && <FieldLabel>{label}</FieldLabel>}
             <Autocomplete
                 multiple
@@ -119,6 +119,6 @@ export function MultiSelectAutocomplete({
                     ))
                 )}
             </ChipsContainer>
-        </Box>
+        </Stack>
     );
 }

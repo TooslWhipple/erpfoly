@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Dialog, Box, Typography } from "@mui/material";
+import { Stack, Box, Typography } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect, FormTextField } from "@/components/Form";
+import { SideModal } from "@/components/SideModal";
 import {
   DialogContent,
   ModalHeader,
@@ -91,29 +92,24 @@ export function CashWithdrawalModal({
   };
 
   return (
-    <Dialog
+    <SideModal
       open={open}
-      onClose={handleClose}
-      maxWidth="sm"
+      onClose={onClose}
+      title={cashRegisterName}
+      maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          maxHeight: "90vh",
-        },
-      }}
     >
       <DialogContent>
         <ModalHeader>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1 }}>
             <ModalTitle>{cashRegisterName}</ModalTitle>
-          </Box>
+          </Stack>
           <CloseButton onClick={onClose} size="small">
             <CloseIcon />
           </CloseButton>
         </ModalHeader>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 2 }}>
+        <Stack direction="column" spacing={3} sx={{ mt: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
             Retiro de efectivo
           </Typography>
@@ -152,7 +148,7 @@ export function CashWithdrawalModal({
           </Box>
 
           <WithdrawalFieldsRow>
-            <Box sx={{ flex: 1 }}>
+            <Stack sx={{ flex: 1 }}>
               <FormSelect
                 label="Banco"
                 value={selectedBank}
@@ -160,15 +156,15 @@ export function CashWithdrawalModal({
                 options={banks}
                 placeholder="Seleccione un banco"
               />
-            </Box>
-            <Box sx={{ flex: 1 }}>
+            </Stack>
+            <Stack sx={{ flex: 1 }}>
               <FormTextField
                 label="Numero de cheque"
                 placeholder="Ingrese"
                 value={checkNumber}
                 onChange={(e) => setCheckNumber(e.target.value)}
               />
-            </Box>
+            </Stack>
           </WithdrawalFieldsRow>
 
           <AvailableAfterWithdrawalCard>
@@ -179,7 +175,7 @@ export function CashWithdrawalModal({
               {numeral(availableAfterWithdrawal).format("$0,0.00")}
             </AvailableAfterWithdrawalValue>
           </AvailableAfterWithdrawalCard>
-        </Box>
+        </Stack>
 
         <WithdrawalModalActions>
           <WithdrawalButton variant="contained" onClick={handleConfirm} fullWidth>
@@ -187,6 +183,6 @@ export function CashWithdrawalModal({
           </WithdrawalButton>
         </WithdrawalModalActions>
       </DialogContent>
-    </Dialog>
+    </SideModal>
   );
 }

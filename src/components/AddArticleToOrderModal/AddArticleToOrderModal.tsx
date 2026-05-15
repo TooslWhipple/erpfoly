@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Typography, Button, TextField, InputAdornment } from "@mui/material";
+import { Stack, Typography, Button, TextField, InputAdornment, Box } from "@mui/material";
 import { ArrowUpward as ArrowUpIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
@@ -127,14 +127,14 @@ export function AddArticleToOrderModal({
             <AddArticleModalContainer>
                 <ProductInfo>
                     <ProductImage />
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    <Stack direction="column" spacing={0.5}>
                         <Typography variant="h5" sx={{ lineHeight: 1.4 }}>
                             {article.name}
                         </Typography>
                         <Typography variant="caption">
                             {article.folio}
                         </Typography>
-                    </Box>
+                    </Stack>
                 </ProductInfo>
 
                 <CostInputSection>
@@ -186,9 +186,9 @@ export function AddArticleToOrderModal({
                             <TimelineItem key={entry.id}>
                                 <TimelineDot />
                                 <TimelineContent>
-                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: 1 }}>
-                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ width: "100%" }}>
+                                        <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
+                                            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
                                                 <Typography variant="body2" color="text.secondary">
                                                     {formatDate(entry.date)}
                                                 </Typography>
@@ -197,8 +197,8 @@ export function AddArticleToOrderModal({
                                                         Pedido {entry.orderId}
                                                     </TimelineOrderLink>
                                                 )}
-                                            </Box>
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                            </Stack>
+                                            <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
                                                 <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
                                                     {formatCurrency(entry.price)}
                                                 </Typography>
@@ -206,9 +206,9 @@ export function AddArticleToOrderModal({
                                                     <ArrowUpIcon sx={{ fontSize: 14 }} />
                                                     {numeral(entry.changePercentage).format("0.00")}%
                                                 </TimelineChange>
-                                            </Box>
-                                        </Box>
-                                    </Box>
+                                            </Stack>
+                                        </Stack>
+                                    </Stack>
                                 </TimelineContent>
                             </TimelineItem>
                         ))}

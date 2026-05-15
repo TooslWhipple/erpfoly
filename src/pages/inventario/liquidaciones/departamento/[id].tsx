@@ -154,7 +154,7 @@ export default function DepartamentoLiquidacionesPage() {
         />
 
         {state === "loading" && (
-          <Box sx={{ mt: 3 }}>
+          <Stack sx={{ mt: 3 }}>
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton
@@ -166,7 +166,7 @@ export default function DepartamentoLiquidacionesPage() {
                 />
               ))}
             </Box>
-          </Box>
+          </Stack>
         )}
 
         {state === "error" && (

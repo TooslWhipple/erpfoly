@@ -3,7 +3,7 @@ import { Box, CircularProgress } from "@mui/material";
 import { useRouter } from "next/router";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
-import { shouldBypassAccessControl } from "@/lib/accessControl";
+import { shouldBypassAccessControl, DEV_MOCK_USER } from "@/lib/accessControl";
 import {
   canAccessPath,
   FORBIDDEN_ROUTE,
@@ -57,8 +57,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
     getServerHydrationSnapshot
   );
   const [validatedToken, setValidatedToken] = useState<string | null>(null);
+  const [bypassInitialized, setBypassInitialized] = useState(false);
 
   useEffect(() => {
+    if (shouldBypassAccessControl && !bypassInitialized) {
+      setUser(DEV_MOCK_USER);
+      setBypassInitialized(true);
+      return;
+    }
+
     if (shouldBypassAccessControl) return;
     if (!router.isReady || !hasHydrated) return;
 
@@ -120,7 +127,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return () => {
       cancelled = true;
     };
-  }, [clearAuth, hasHydrated, router, setUser, token, user, validatedToken]);
+  }, [clearAuth, hasHydrated, router, setUser, token, user, validatedToken, bypassInitialized]);
 
   if (shouldBypassAccessControl) {
     return <>{children}</>;

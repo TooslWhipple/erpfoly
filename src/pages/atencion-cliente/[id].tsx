@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Skeleton, IconButton, Typography } from "@mui/material";
+import { Box, Stack, Skeleton, IconButton, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { MainLayout, Breadcrumbs, Tabs } from "@/components";
@@ -229,12 +229,12 @@ export default function InvoiceDetailPage() {
                                     {invoice.activities.length === 0 ? (
                                         <EmptyState>No hay actividad reciente</EmptyState>
                                     ) : (
-                                        <Box>
+                                        <Stack>
                                             {/* TODO: Render activities when available */}
                                             {invoice.activities.map((activity) => (
                                                 <Box key={activity.id}>{activity.description}</Box>
                                             ))}
-                                        </Box>
+                                        </Stack>
                                     )}
                                 </>
                             )}
@@ -248,7 +248,7 @@ export default function InvoiceDetailPage() {
                                                     <ArticleCode>{article.code}</ArticleCode>
                                                     <ArticleDescription>{article.description}</ArticleDescription>
                                                 </ArticleInfo>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Stack direction="row" alignItems="center" spacing={1}>
                                                     <ArticleStatusChip
                                                         label={getArticleStatusLabel(article.status)}
                                                         statusType={article.status}
@@ -257,7 +257,7 @@ export default function InvoiceDetailPage() {
                                                     <IconButton size="small" sx={{ color: "#71717A" }}>
                                                         <MoreVertIcon fontSize="small" />
                                                     </IconButton>
-                                                </Box>
+                                                </Stack>
                                             </ArticleHeader>
 
                                             <ArticleDetails>

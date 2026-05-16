@@ -96,6 +96,10 @@ export interface SavePromotionPayload {
 	productIds?: number[];
 	branchIds?: number[];
 	supplierIds?: number[];
+	/** When updating an existing promotion from GET /products/:id */
+	promotionId?: number;
+	/** Mirrors backend UpdateProductPromotionItemDto when sending product save */
+	isLiquidation?: boolean;
 }
 
 function recordUnknown(v: unknown): Record<string, unknown> {

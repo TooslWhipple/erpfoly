@@ -48,7 +48,10 @@ function getErrorMessage(error: AxiosError): string {
 	if (data && typeof data === "object" && "message" in data) {
 		const msg = (data as { message?: unknown }).message;
 		if (typeof msg === "string" && msg.trim()) return msg;
-		if (Array.isArray(msg)) return msg.map(String).join(". ") || DEFAULT_ERROR_MESSAGE;
+		if (Array.isArray(msg)) {
+			const joined = joinMessageArray(msg);
+			return joined ?? DEFAULT_ERROR_MESSAGE;
+		}
 	}
 	if (data && typeof data === "object" && "errors" in data) {
 		const errors = (data as { errors?: Record<string, string[]> }).errors;
@@ -194,17 +197,40 @@ function isBackendErrorBody(
 	);
 }
 
+function messageFromValidationConstraintItem(item: unknown): string | null {
+	if (typeof item === "string" && item.trim()) return item;
+	if (item == null || typeof item !== "object") return null;
+	const ve = item as { constraints?: unknown; children?: unknown[] };
+	if (ve.constraints != null && typeof ve.constraints === "object") {
+		const vals = Object.values(ve.constraints as Record<string, unknown>).filter(
+			(v): v is string => typeof v === "string" && v.trim().length > 0
+		);
+		if (vals.length) return vals.join(". ");
+	}
+	if (Array.isArray(ve.children) && ve.children.length > 0) {
+		return joinMessageArray(ve.children);
+	}
+	return null;
+}
+
+function joinMessageArray(items: unknown[]): string | null {
+	const parts = items
+		.map((item) => messageFromValidationConstraintItem(item))
+		.filter((p): p is string => Boolean(p));
+	return parts.length ? parts.join(". ") : null;
+}
+
 function messageFromPayload(data: unknown): string | null {
 	if (data == null || typeof data !== "object") return null;
 	if ("error" in data && data.error != null && typeof data.error === "object" && "message" in data.error) {
 		const msg = (data.error as { message?: unknown }).message;
 		if (typeof msg === "string" && msg.trim()) return msg;
-		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+		if (Array.isArray(msg)) return joinMessageArray(msg);
 	}
 	if ("message" in data) {
 		const msg = (data as { message: unknown }).message;
 		if (typeof msg === "string" && msg.trim()) return msg;
-		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
+		if (Array.isArray(msg)) return joinMessageArray(msg);
 	}
 	return null;
 }
@@ -234,9 +260,18 @@ export async function request<T>(
 		const body = response.data;
 
 		if (isBackendErrorBody(body)) {
+			const rawMsg = body.error.message as unknown;
+			let message: string;
+			if (typeof rawMsg === "string" && rawMsg.trim()) {
+				message = rawMsg;
+			} else if (Array.isArray(rawMsg)) {
+				message = joinMessageArray(rawMsg) ?? DEFAULT_ERROR_MESSAGE;
+			} else {
+				message = DEFAULT_ERROR_MESSAGE;
+			}
 			return {
 				data: null,
-				error: { message: body.error.message },
+				error: { message },
 			};
 		}
 

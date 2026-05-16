@@ -16,6 +16,7 @@ import type {
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
 } from "@/types/productos.types";
+import type { SavePromotionPayload } from "@/services/promociones.service";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
 
 const PRODUCTS_BASE = "/products";
@@ -128,13 +129,17 @@ export function buildCreateProductRequest(
     const promotionPayloads =
         promotions
             ?.map((d) => {
-                const rest: typeof d.payload = { ...d.payload };
+                const rest: SavePromotionPayload = { ...d.payload };
                 delete rest.creditTermOptionLabels;
                 delete rest.layawayTermOptionLabels;
-                return rest;
+                return {
+                    ...rest,
+                    isLiquidation: d.isLiquidation,
+                };
             })
-            .filter((p) => p.name?.trim()) ?? undefined;
+            .filter((p) => p.name?.trim()) ?? [];
 
+    /** PATCH must always send `promotions` (even []) so backend full-sync can detach/remove. */
     const base: Omit<
         CreateProductRequest,
         "warrantyType" | "warrantyMonths" | "warrantyPolicy"
@@ -144,12 +149,12 @@ export function buildCreateProductRequest(
                 ...baseFields,
                 code: generalData.code.trim(),
                 packageItems,
-                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+                promotions: promotionPayloads,
             }
             : {
                 ...baseFields,
                 packageItems,
-                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+                ...(promotionPayloads.length > 0 ? { promotions: promotionPayloads } : {}),
             };
 
     if (generalData.warrantyType === "policy") {
@@ -226,6 +231,32 @@ export interface ProductDetailPriceDto {
     }> | null;
 }
 
+export interface ProductDetailPromotionPayloadDto {
+    name: string;
+    discountRate: number;
+    startDate: string;
+    endDate?: string | null;
+    purchaseTypeId?: number | null;
+    creditTermIds?: number[];
+    creditTermOptionLabels?: string[];
+    layawayTermIds?: number[];
+    layawayTermOptionLabels?: string[];
+    customerLevelDownPayments?: Array<{
+        customerLevelId: number;
+        percentage: number;
+    }>;
+    productIds?: number[];
+    branchIds?: number[];
+    supplierIds?: number[];
+}
+
+export interface ProductDetailPromotionDto {
+    promotionId: number;
+    isLiquidation: boolean;
+    purchaseTypeCode: string;
+    payload: ProductDetailPromotionPayloadDto;
+}
+
 export type ProductDetailDto = {
     id: number;
     departmentId: number;
@@ -238,6 +269,7 @@ export type ProductDetailDto = {
     images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
     price?: ProductDetailPriceDto | null;
+    promotions?: ProductDetailPromotionDto[];
 } & (
         | { warrantyType: "MONTHS"; warrantyMonths: number }
         | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
@@ -249,6 +281,7 @@ export interface LoadedProductFormSnapshot {
     priceData: PriceFormState;
     basePrices: ProductBasePrice[];
     galleryImages: ProductGalleryImage[];
+    productPromotionDrafts: ProductPromotionDraft[];
 }
 
 const COST_BASIS_VALUES: CostBasisForCalculation[] = [
@@ -262,6 +295,36 @@ function normalizeCostBasis(value: string | null | undefined): CostBasisForCalcu
         return value as CostBasisForCalculation;
     }
     return "last_cost";
+}
+
+function detailPromotionsToDrafts(
+    rows: ProductDetailPromotionDto[] | undefined,
+): ProductPromotionDraft[] {
+    if (!rows?.length) {
+        return [];
+    }
+    return rows.map((row, index) => ({
+        id: `promo-${row.promotionId}-${index}`,
+        isLiquidation: Boolean(row.isLiquidation),
+        purchaseTypeCode: row.purchaseTypeCode ?? "",
+        payload: {
+            promotionId: row.promotionId,
+            name: row.payload.name,
+            discountRate: row.payload.discountRate,
+            startDate: row.payload.startDate,
+            endDate: row.payload.endDate ?? null,
+            purchaseTypeId: row.payload.purchaseTypeId ?? null,
+            creditTermIds: row.payload.creditTermIds,
+            layawayTermIds: row.payload.layawayTermIds,
+            creditTermOptionLabels: row.payload.creditTermOptionLabels,
+            layawayTermOptionLabels: row.payload.layawayTermOptionLabels,
+            customerLevelDownPayments: row.payload.customerLevelDownPayments,
+            productIds: row.payload.productIds,
+            branchIds: row.payload.branchIds,
+            supplierIds: row.payload.supplierIds,
+            isLiquidation: row.isLiquidation,
+        },
+    }));
 }
 
 export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): LoadedProductFormSnapshot {
@@ -329,6 +392,7 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         priceData,
         basePrices,
         galleryImages: detail.images,
+        productPromotionDrafts: detailPromotionsToDrafts(detail.promotions),
     };
 }
 

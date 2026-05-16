@@ -187,6 +187,7 @@ export default function ProductFormPage() {
                     setPriceData(snap.priceData);
                     setBasePrices(snap.basePrices);
                     setGalleryImages(snap.galleryImages);
+                    setProductPromotionDrafts(snap.productPromotionDrafts);
                     setDetailBranchRows(result.data.branches ?? []);
                 }
             } catch (err) {

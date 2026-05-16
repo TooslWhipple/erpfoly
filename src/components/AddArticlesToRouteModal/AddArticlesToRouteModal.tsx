@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ChangeEvent } from "react";
 import {
   Stack,
   Button,
@@ -14,23 +14,22 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import { SideModal } from "@/components/SideModal";
-import type { ArticleToAdd } from "@/types/rutas.types";
-import { getAvailableArticlesToAdd } from "@/data/rutas.mockData";
+import { StatusChip, SideModal } from "@/components";
 import { theme } from "@/styles/theme";
+import type { ArticleToAdd } from "@/types/rutas.types";
 import {
   SearchInput,
   TableContainer,
   StyledTableRow,
   StyledTableCell,
   EmptyStateContainer,
-} from "./addArticlesModal.styles";
-import { StatusChip } from "@/components";
+} from "./styles";
 
 export interface AddArticlesToRouteModalProps {
   open: boolean;
   onClose: () => void;
   routeId: number;
+  fetchAvailableArticles: (routeId: number) => Promise<ArticleToAdd[]>;
   onConfirm: (articleIds: string[]) => void | Promise<void>;
 }
 
@@ -38,6 +37,7 @@ export function AddArticlesToRouteModal({
   open,
   onClose,
   routeId,
+  fetchAvailableArticles,
   onConfirm,
 }: AddArticlesToRouteModalProps) {
   const [articles, setArticles] = useState<ArticleToAdd[]>([]);
@@ -51,45 +51,47 @@ export function AddArticlesToRouteModal({
       setLoading(true);
       setSelectedIds(new Set());
       setSearchQuery("");
-      getAvailableArticlesToAdd(routeId)
+      fetchAvailableArticles(routeId)
         .then((data) => setArticles(data))
         .catch(() => setArticles([]))
         .finally(() => setLoading(false));
     }
-  }, [open, routeId]);
+  }, [open, routeId, fetchAvailableArticles]);
 
   const filteredArticles = useMemo(() => {
     if (!searchQuery.trim()) return articles;
-    const q = searchQuery.toLowerCase();
-    return articles.filter((a) => a.sku.toLowerCase().includes(q));
+    const query = searchQuery.toLowerCase();
+    return articles.filter((article) => article.sku.toLowerCase().includes(query));
   }, [articles, searchQuery]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   };
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(new Set(filteredArticles.map((a) => a.id)));
-    } else {
-      const next = new Set(selectedIds);
-      filteredArticles.forEach((a) => next.delete(a.id));
-      setSelectedIds(next);
+  const handleSelectAll = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setSelectedIds(new Set(filteredArticles.map((article) => article.id)));
+      return;
     }
+
+    const nextSelectedIds = new Set(selectedIds);
+    filteredArticles.forEach((article) => nextSelectedIds.delete(article.id));
+    setSelectedIds(nextSelectedIds);
   };
 
   const handleSelectOne = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
+    const nextSelectedIds = new Set(selectedIds);
+    if (nextSelectedIds.has(id)) nextSelectedIds.delete(id);
+    else nextSelectedIds.add(id);
+    setSelectedIds(nextSelectedIds);
   };
 
   const isAllSelected =
     filteredArticles.length > 0 &&
-    filteredArticles.every((a) => selectedIds.has(a.id));
+    filteredArticles.every((article) => selectedIds.has(article.id));
   const isIndeterminate =
-    filteredArticles.some((a) => selectedIds.has(a.id)) && !isAllSelected;
+    filteredArticles.some((article) => selectedIds.has(article.id)) &&
+    !isAllSelected;
 
   const handleConfirm = async () => {
     if (selectedIds.size === 0) return;
@@ -109,8 +111,8 @@ export function AddArticlesToRouteModal({
     <SideModal
       open={open}
       onClose={onClose}
-      title="Agregar artículos a esta ruta"
-      description="Selecciona los artículos que deseas agregar a esta ruta"
+      title="Agregar articulos a esta ruta"
+      description="Selecciona los articulos que deseas agregar a esta ruta"
       maxWidth="md"
       headerActions={
         <Button
@@ -154,8 +156,8 @@ export function AddArticlesToRouteModal({
           <EmptyStateContainer>
             <Typography variant="body2" color="text.secondary">
               {searchQuery
-                ? "No se encontraron artículos"
-                : "No hay artículos disponibles para agregar"}
+                ? "No se encontraron articulos"
+                : "No hay articulos disponibles para agregar"}
             </Typography>
           </EmptyStateContainer>
         ) : (
@@ -172,7 +174,7 @@ export function AddArticlesToRouteModal({
                 </StyledTableCell>
                 <StyledTableCell>SKU</StyledTableCell>
                 <StyledTableCell>Tipo</StyledTableCell>
-                <StyledTableCell>Artículo</StyledTableCell>
+                <StyledTableCell>Articulo</StyledTableCell>
                 <StyledTableCell>Zona</StyledTableCell>
               </TableRow>
             </TableHead>
@@ -180,11 +182,7 @@ export function AddArticlesToRouteModal({
               {filteredArticles.map((row) => {
                 const isSelected = selectedIds.has(row.id);
                 return (
-                  <StyledTableRow
-                    key={row.id}
-                    selected={isSelected}
-                    hover
-                  >
+                  <StyledTableRow key={row.id} selected={isSelected} hover>
                     <StyledTableCell padding="checkbox">
                       <Checkbox
                         checked={isSelected}
@@ -194,10 +192,11 @@ export function AddArticlesToRouteModal({
                     </StyledTableCell>
                     <StyledTableCell>{row.sku}</StyledTableCell>
                     <StyledTableCell>
-                      <StatusChip 
+                      <StatusChip
                         size="small"
                         label={row.type}
-                        variant={row.type === "Venta" ? "default" : "pending"} />
+                        variant={row.type === "Venta" ? "default" : "pending"}
+                      />
                     </StyledTableCell>
                     <StyledTableCell
                       sx={{
@@ -220,7 +219,3 @@ export function AddArticlesToRouteModal({
     </SideModal>
   );
 }
-
-const AddArticlesToRouteModalPage = () => null;
-
-export default AddArticlesToRouteModalPage;

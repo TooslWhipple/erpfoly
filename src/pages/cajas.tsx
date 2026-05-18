@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import { MainLayout, StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CASH_REGISTERS_UPDATE } from "@/lib/permissions";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
@@ -17,6 +19,9 @@ import {
 } from "@/styles/cajas.styles";
 
 export default function Cajas() {
+  const { hasPermission } = usePermissions();
+  const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
+
   const [cashRegister, setCashRegister] = useState<CashRegisterState>({
     id: "1",
     name: "Caja 1",
@@ -85,6 +90,9 @@ export default function Cajas() {
 
   const handleCashWithdrawalConfirm = (amount: number, bank: string, checkNumber: string) => {
     // TODO: Implement cash withdrawal functionality
+    void amount;
+    void bank;
+    void checkNumber;
   };
 
   const banks = [
@@ -129,6 +137,7 @@ export default function Cajas() {
             <OpenCashRegisterForm
               initialFund={cashRegister.initialFund}
               exchangeRate={cashRegister.exchangeRate}
+              canOpen={canUpdateCashRegister}
               onInitialFundChange={handleInitialFundChange}
               onExchangeRateChange={handleExchangeRateChange}
               onOpen={handleOpenCashRegister}
@@ -137,6 +146,8 @@ export default function Cajas() {
             <CashRegisterDashboard
               cashRegister={cashRegister}
               searchQuery={searchQuery}
+              canCut={canUpdateCashRegister}
+              canWithdraw={canUpdateCashRegister}
               onSearchQueryChange={setSearchQuery}
               onCut={handleCut}
               onWithdrawal={handleWithdrawal}

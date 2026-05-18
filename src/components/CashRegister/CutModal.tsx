@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Dialog, Box } from "@mui/material";
+import { Stack } from "@mui/material";
 import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
 import { NumberInput } from "@/components/Folypuntos";
+import { SideModal } from "@/components/SideModal";
 import {
     DialogContent,
     ModalHeader,
@@ -128,29 +129,24 @@ export function CutModal({
     ];
 
     return (
-        <Dialog
+        <SideModal
             open={open}
-            onClose={handleClose}
-            maxWidth="sm"
+            onClose={onClose}
+            title={cashRegisterName}
+            maxWidth="md"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
         >
             <DialogContent>
                 <ModalHeader>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1 }}>
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1 }}>
                         <ModalTitle>{cashRegisterName}</ModalTitle>
-                    </Box>
+                    </Stack>
                     <CloseButton onClick={onClose} size="small">
                         <CloseIcon />
                     </CloseButton>
                 </ModalHeader>
 
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 2 }}>
+                <Stack direction="column" spacing={3} sx={{ mt: 2 }}>
                     <FormSelect
                         label="Tipo de corte"
                         value={cutType}
@@ -181,7 +177,7 @@ export function CutModal({
 
                                     return (
                                         <DenominationItem key={denom.value}>
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                            <Stack direction="row" alignItems="center" spacing={1.5}>
                                                 <DenominationBadge
                                                     sx={{
                                                         backgroundColor: denom.color,
@@ -193,7 +189,7 @@ export function CutModal({
                                                 <DenominationTypeLabel>
                                                     {denom.type === "bill" ? "Billete" : "Moneda"}
                                                 </DenominationTypeLabel>
-                                            </Box>
+                                            </Stack>
 
                                             <DenominationControls>
                                                 <NumberInput
@@ -279,7 +275,7 @@ export function CutModal({
                             </ShortageCard>
                         </>
                     )}
-                </Box>
+                </Stack>
 
                 <CutModalActions>
                     <CutButton variant="contained" onClick={handleConfirm} fullWidth>
@@ -287,6 +283,6 @@ export function CutModal({
                     </CutButton>
                 </CutModalActions>
             </DialogContent>
-        </Dialog>
+        </SideModal>
     );
 }

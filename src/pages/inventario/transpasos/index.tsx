@@ -8,6 +8,7 @@ import type { Column } from "@/components/TableCrud";
 import type { TransferArticleRow, TransferArticleOption } from "@/types/transpasos.types";
 import { getArticlesForNewTransfer } from "@/data/transpasos.mockData";
 import { QuantityControls, QuantityButton, QuantityValue } from "@/styles/inventario/transpasos.styles";
+import { INVENTORY_TRANSFERS_CREATE } from "@/lib/permissions";
 
 export default function TranspasosPage() {
   const router = useRouter();
@@ -161,7 +162,8 @@ export default function TranspasosPage() {
               id: "create",
               label: "Crear transpaso",
               onClick: () => setAddModalOpen(true),
-              icon: <Plus size={18} />
+              icon: <Plus size={18} />,
+              permission: INVENTORY_TRANSFERS_CREATE,
             },
           ]}
         />

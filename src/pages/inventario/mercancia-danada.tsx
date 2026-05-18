@@ -13,8 +13,11 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
     getDamagedProducts,
+    getDamagedProductStats,
     type DamagedProductListItem,
+    type DamagedProductStats,
 } from "@/services/damaged-products.service";
+import { DAMAGED_INVENTORY_CREATE, DAMAGED_INVENTORY_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -40,31 +43,10 @@ const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
     CANCELLED: "error",
 };
 
-interface DamagedStats {
-    totalItems: number;
-    itemsCost: number;
-    itemsValue: number;
-    itemsChange: number;
-    costChange: number;
-    valueChange: number;
-}
-
-async function getDamagedStats(): Promise<DamagedStats> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-        totalItems: 812,
-        itemsCost: 1060539.59,
-        itemsValue: 3421309.4,
-        itemsChange: 12,
-        costChange: 79502.4,
-        valueChange: 79502.4,
-    };
-}
-
 export default function MercanciaDanada() {
     const router = useRouter();
 
-    const [stats, setStats] = useState<DamagedStats | null>(null);
+    const [stats, setStats] = useState<DamagedProductStats | null>(null);
     const [activeTab, setActiveTab] = useState("all");
     const [addModalOpen, setAddModalOpen] = useState(false);
 
@@ -122,8 +104,10 @@ export default function MercanciaDanada() {
     useEffect(() => {
         async function loadStats() {
             try {
-                const data = await getDamagedStats();
-                setStats(data);
+                const result = await getDamagedProductStats();
+                if (result.data != null) {
+                    setStats(result.data);
+                }
             } catch (err) {
                 console.error("[MercanciaDanada] Error loading stats:", err);
             }
@@ -272,6 +256,7 @@ export default function MercanciaDanada() {
                 icon: <EditIcon fontSize="small" />,
                 onClick: handleEdit,
                 disabled: (row) => row.id == null,
+                permission: DAMAGED_INVENTORY_UPDATE,
             },
         ],
         [handleEdit],
@@ -305,6 +290,7 @@ export default function MercanciaDanada() {
                             onClick: handleCreate,
                             variant: "contained",
                             color: "primary",
+                            permission: DAMAGED_INVENTORY_CREATE,
                         },
                     ]}
                 />
@@ -345,10 +331,7 @@ export default function MercanciaDanada() {
                 <AddDamagedGoodsModal
                     open={addModalOpen}
                     onClose={() => setAddModalOpen(false)}
-                    onSubmit={async () => {
-                        await new Promise((r) => setTimeout(r, 800));
-                        refetch();
-                    }}
+                    onSuccess={() => refetch()}
                 />
             </Stack>
         </MainLayout>

@@ -38,6 +38,9 @@ import {
 import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/components/RouteTabs";
 import type { RouteSummary } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ROUTE_ARTICLES_UPDATE } from "@/lib/permissions";
+
 import {
   addProductsToRoute,
   deleteCartaPorteDocument,
@@ -147,6 +150,9 @@ function formatDateLabel(date: Date): string {
 // ============================================================================
 
 export default function RutaPage() {
+  const { hasPermission } = usePermissions();
+  const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
+
   const queryClient = useQueryClient();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
@@ -159,10 +165,7 @@ export default function RutaPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
   const [addArticlesModalOpen, setAddArticlesModalOpen] = useState(false);
-  const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<
-    File | undefined
-  >(undefined);
-  /** Remount carta tab after successful upload so local staging state clears without refetch flicker. */
+  const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<File | undefined>(undefined);
   const [cartaPanelKey, setCartaPanelKey] = useState(0);
 
   const routesQuery = useQuery({
@@ -567,47 +570,68 @@ export default function RutaPage() {
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
                 />
+                {
+                  canUpdateRouteArticles && (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<PlusCircle size={16} />}
+                      onClick={() => setAddArticlesModalOpen(true)}
+                    >
+                      Agregar
+                    </Button>
+                  )
+                }
                 {renderTabActionButton()}
-              </Stack>
+              </Stack >
 
               {activeTab === TAB_ARTICLES && (
                 <ArticlesTab articles={routeDetail.articles} />
-              )}
+              )
+              }
 
-              {activeTab === TAB_ROUTE && (
-                <RouteTab map={routeDetail.map ?? null} />
-              )}
+              {
+                activeTab === TAB_ROUTE && (
+                  <RouteTab map={routeDetail.map ?? null} />
+                )
+              }
 
-              {activeTab === TAB_CARTA_PORTE && (
-                <RouteCartaUploadSection
-                  key={`${resolvedRouteId}-${cartaPanelKey}`}
-                  serverFiles={routeDetail.cartaPorteRemoteFiles}
-                  onPendingLocalFile={setPendingCartaLocalFile}
-                  onRemoveServerDocument={handleRemoveCartaServerDocument}
-                />
-              )}
+              {
+                activeTab === TAB_CARTA_PORTE && (
+                  <RouteCartaUploadSection
+                    key={`${resolvedRouteId}-${cartaPanelKey}`}
+                    serverFiles={routeDetail.cartaPorteRemoteFiles}
+                    onPendingLocalFile={setPendingCartaLocalFile}
+                    onRemoveServerDocument={handleRemoveCartaServerDocument}
+                  />
+                )
+              }
 
-              {activeTab === TAB_DRIVER && (
-                <DriverTab routeDetail={routeDetail} />
-              )}
+              {
+                activeTab === TAB_DRIVER && (
+                  <DriverTab routeDetail={routeDetail} />
+                )
+              }
 
-              {resolvedRouteId ? (
-                <AddArticlesToRouteModal
-                  open={addArticlesModalOpen}
-                  onClose={() => setAddArticlesModalOpen(false)}
-                  routeId={resolvedRouteId}
-                  fetchAvailableArticles={fetchArticlesForModal}
-                  onConfirm={handleConfirmAddArticles}
-                />
-              ) : null}
-            </Stack>
+              {
+                resolvedRouteId ? (
+                  <AddArticlesToRouteModal
+                    open={addArticlesModalOpen}
+                    onClose={() => setAddArticlesModalOpen(false)}
+                    routeId={resolvedRouteId}
+                    fetchAvailableArticles={fetchArticlesForModal}
+                    onConfirm={handleConfirmAddArticles}
+                  />
+                ) : null
+              }
+            </Stack >
           ) : (
             <Typography variant="body2" color="text.secondary">
               No se encontró la ruta
             </Typography>
           )}
-        </Stack>
-      </Stack>
-    </MainLayout>
+        </Stack >
+      </Stack >
+    </MainLayout >
   );
 }

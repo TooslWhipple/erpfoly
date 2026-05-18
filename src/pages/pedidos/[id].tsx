@@ -1,164 +1,91 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Typography, Skeleton } from "@mui/material";
+import { Typography, Skeleton, Stack, Button, Divider, Grid, Box, LinearProgress } from "@mui/material";
 import {
     Edit as EditIcon,
     Download as DownloadIcon,
-    OpenInNew as OpenInNewIcon,
-    Public as PublicIcon,
+    LocalShipping as DeliveryIcon,
+    CheckCircle as CheckCircleIcon,
+    Schedule as ScheduleIcon,
 } from "@mui/icons-material";
-import numeral from "numeral";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { getOrderFull } from "@/services/orders.service";
+import type { OrderFullDetail } from "@/types/orders.types";
 import {
     PageContainer,
     MainContent,
     SidePanel,
     HeaderSection,
     TitleSection,
-    TitleRow,
-    PageTitle,
-    DateText,
-    ActionsSection,
-    ActionButton,
-    StatusChip,
     SummaryCard,
-    SummaryRow,
-    SummaryLabel,
-    SummaryValue,
-    TotalRow,
-    TotalLabel,
-    TotalValue,
-    ItemsList,
     ItemCard,
-    ItemHeader,
-    ItemImage,
-    ItemInfo,
-    ItemCode,
-    ItemName,
-    ItemPriceRow,
-    PriceColumn,
-    PriceLabel,
-    PriceValue,
-    ComparisonRow,
-    InternetPriceTag,
-    ComparisonLink,
-    OrderStatus,
 } from "@/styles/pedidos/styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+type DisplayStatus = "pending" | "in_progress" | "received" | "cancelled";
 
-interface PriceComparison {
-    store: string;
-    price: number;
-    url?: string;
+function mapBackendStatus(status: string): DisplayStatus {
+    switch (status) {
+        case "pending":
+            return "pending";
+        case "partially_delivered":
+            return "in_progress";
+        case "delivered":
+            return "received";
+        case "cancelled":
+            return "cancelled";
+        default:
+            return "pending";
+    }
 }
 
-interface OrderItem {
-    id: number;
-    code: string;
-    name: string;
-    imageUrl?: string;
-    unitPrice: number;
-    quantity: number;
-    total: number;
-    averageInternetPrice?: number;
-    priceComparisons?: PriceComparison[];
-}
-
-interface OrderDetail {
-    id: number;
-    folio: string;
-    supplier: string;
-    createdAt: string;
-    status: OrderStatus;
-    subtotal: number;
-    tax: number;
-    total: number;
-    items: OrderItem[];
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const DUMMY_ORDER: OrderDetail = {
-    id: 239392,
-    folio: "239392",
-    supplier: "Mabe S.A. de C.V.",
-    createdAt: "15 de Julio, 2025",
-    status: "received",
-    subtotal: 291449.40,
-    tax: 35901.56,
-    total: 327400.96,
-    items: [
-        {
-            id: 1,
-            code: "04ET-123456",
-            name: "Secadora Whirlpool 18 kg Carga Superior Blanca Eléctrica",
-            unitPrice: 9349.00,
-            quantity: 12,
-            total: 112188.00,
-            averageInternetPrice: 20944.45,
-            priceComparisons: [
-                { store: "Liverpool", price: 21898.50, url: "#" },
-                { store: "Walmart", price: 19990.40, url: "#" },
-            ],
-        },
-        {
-            id: 2,
-            code: "04ET-123456",
-            name: "Secadora Whirlpool 26 kg Carga Superior Blanca",
-            unitPrice: 15122.50,
-            quantity: 8,
-            total: 120980.00,
-            averageInternetPrice: 26890.50,
-            priceComparisons: [
-                { store: "Liverpool", price: 26890.50, url: "#" },
-                { store: "Walmart", price: 26890.50, url: "#" },
-                { store: "Coppel", price: 26890.50, url: "#" },
-            ],
-        },
-    ],
-};
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getOrderDetail(id: string): Promise<OrderDetail> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return { ...DUMMY_ORDER, id: parseInt(id), folio: id };
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatCurrency(value: number): string {
-    return numeral(value).format("$0,0.00");
-}
-
-function getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
+function getStatusLabel(status: DisplayStatus): string {
+    const labels: Record<DisplayStatus, string> = {
         pending: "Por recibir",
         in_progress: "En curso",
         received: "Recibido",
+        cancelled: "Cancelado",
     };
     return labels[status];
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+function getStatusColor(status: DisplayStatus): string {
+    switch (status) {
+        case "received":
+            return "#16a34a";
+        case "in_progress":
+            return "#2563eb";
+        case "pending":
+            return "#ea580c";
+        case "cancelled":
+            return "#6b7280";
+        default:
+            return "#d1d5db";
+    }
+}
+
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+}
+
+function formatCurrency(value: number): string {
+    return new Intl.NumberFormat("es-MX", {
+        style: "currency",
+        currency: "MXN",
+        minimumFractionDigits: 2,
+    }).format(value);
+}
 
 export default function PedidoDetalle() {
     const router = useRouter();
     const { id } = router.query;
 
-    const [order, setOrder] = useState<OrderDetail | null>(null);
+    const [order, setOrder] = useState<OrderFullDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -170,8 +97,10 @@ export default function PedidoDetalle() {
     const loadOrder = async (orderId: string) => {
         setLoading(true);
         try {
-            const data = await getOrderDetail(orderId);
-            setOrder(data);
+            const result = await getOrderFull(Number(orderId));
+            if (result.data) {
+                setOrder(result.data);
+            }
         } catch (err) {
             console.error("[PedidoDetalle] Error loading order:", err);
         } finally {
@@ -187,10 +116,19 @@ export default function PedidoDetalle() {
         console.log("[PedidoDetalle] Download PDF");
     };
 
-    // Breadcrumbs
+    const displayStatus = order ? mapBackendStatus(order.status) : "pending";
+
+    const totalRequested = order
+        ? order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0)
+        : 0;
+    const totalDelivered = order
+        ? order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0)
+        : 0;
+    const progress = totalRequested > 0 ? Math.round((totalDelivered / totalRequested) * 100) : 0;
+
     const breadcrumbs: BreadcrumbItem[] = [
         { label: "Pedidos", href: "/pedidos" },
-        { label: order?.supplier || "...", href: "/pedidos" },
+        { label: order?.branch?.name || "...", href: "/pedidos" },
         { label: `Pedido ${order?.folio || "..."}` },
     ];
 
@@ -208,7 +146,7 @@ export default function PedidoDetalle() {
                     <MainContent>
                         {[1, 2].map((i) => (
                             <ItemCard key={i}>
-                                <Skeleton variant="rectangular" height={120} />
+                                <Skeleton variant="rectangular" height={80} />
                             </ItemCard>
                         ))}
                     </MainContent>
@@ -223,112 +161,268 @@ export default function PedidoDetalle() {
     if (!order) {
         return (
             <MainLayout>
-                <Typography>Pedido no encontrado</Typography>
+                <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
+                <Box sx={{ marginTop: 4, textAlign: "center" }}>
+                    <Typography variant="h5" color="text.secondary">
+                        Pedido no encontrado
+                    </Typography>
+                    <Button variant="contained" sx={{ marginTop: 2 }} onClick={() => router.push("/pedidos")}>
+                        Volver a pedidos
+                    </Button>
+                </Box>
             </MainLayout>
         );
     }
 
     return (
         <MainLayout>
-            <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
+            <Stack spacing={3}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }}>
+                    <Breadcrumbs
+                        showBackButton
+                        items={breadcrumbs}
+                        onBack={() => router.push("/pedidos")} />
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={handleEdit}>
+                            Editar
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<DownloadIcon />}
+                            onClick={handleDownloadPdf}>
+                            Descargar PDF
+                        </Button>
+                        <Box
+                            sx={{
+                                backgroundColor: getStatusColor(displayStatus) + "18",
+                                color: getStatusColor(displayStatus),
+                                fontWeight: 500,
+                                fontSize: 13,
+                                borderRadius: 1.5,
+                                padding: "4px 12px",
+                                height: 24,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            {getStatusLabel(displayStatus)}
+                        </Box>
+                    </Stack>
+                </Stack>
 
-            <HeaderSection>
-                <TitleSection>
-                    <TitleRow>
-                        <PageTitle>Pedido {order.folio}</PageTitle>
-                        <StatusChip
-                            label={getStatusLabel(order.status)}
-                            statusType={order.status}
-                            size="small"
+                <Divider />
+
+                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                    <Typography variant="h1">Pedido {order.folio}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {order.branch?.name} · {formatDate(order.order_date)}
+                    </Typography>
+                    {order.requested_by_user && (
+                        <Typography variant="body2" color="text.secondary">
+                            Solicitado por: {order.requested_by_user.first_name} {order.requested_by_user.last_name}
+                        </Typography>
+                    )}
+                </Stack>
+
+                {progress > 0 && progress < 100 && (
+                    <Stack spacing={1}>
+                        <Stack direction="row" justifyContent="space-between">
+                            <Typography variant="body2" color="text.secondary">
+                                Progreso de entrega
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                                {totalDelivered} de {totalRequested} artículos
+                            </Typography>
+                        </Stack>
+                        <LinearProgress
+                            variant="determinate"
+                            value={progress}
+                            sx={{
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: "background.lowGray",
+                                "& .MuiLinearProgress-bar": {
+                                    borderRadius: 4,
+                                    backgroundColor: getStatusColor(displayStatus),
+                                },
+                            }}
                         />
-                    </TitleRow>
-                    <DateText>Fecha de alta: {order.createdAt}</DateText>
-                </TitleSection>
+                    </Stack>
+                )}
 
-                <ActionsSection>
-                    <ActionButton
-                        variant="outlined"
-                        startIcon={<EditIcon />}
-                        onClick={handleEdit}
-                    >
-                        Editar
-                    </ActionButton>
-                    <ActionButton
-                        variant="outlined"
-                        startIcon={<DownloadIcon />}
-                        onClick={handleDownloadPdf}
-                    >
-                        Descargar PDF
-                    </ActionButton>
-                </ActionsSection>
-            </HeaderSection>
+                <Grid container spacing={4} justifyContent="revert">
+                    <Grid size={{ xs: 12, md: 8, xl: 9 }}>
+                        <Stack spacing={3}>
+                            <Typography variant="h5" fontWeight={600}>
+                                Artículos ({order.order_items.length})
+                            </Typography>
 
-            <PageContainer>
-                <MainContent>
-                    <ItemsList>
-                        {order.items.map((item) => (
-                            <ItemCard key={item.id}>
-                                <ItemHeader>
-                                    <ItemImage />
-                                    <ItemInfo>
-                                        <ItemCode>{item.code}</ItemCode>
-                                        <ItemName>{item.name}</ItemName>
-                                    </ItemInfo>
-                                </ItemHeader>
+                            {order.order_items.map((item) => {
+                                const itemDelivered = item.delivered_quantity;
+                                const itemRequested = item.requested_quantity;
+                                const itemProgress = itemRequested > 0 ? Math.round((itemDelivered / itemRequested) * 100) : 0;
+                                const isFullyDelivered = itemDelivered >= itemRequested;
+                                const productImage = item.product?.product_images?.[0]?.image_url;
 
-                                <ItemPriceRow>
-                                    <PriceColumn>
-                                        <PriceLabel>Precio unitario</PriceLabel>
-                                        <PriceValue>{formatCurrency(item.unitPrice)}</PriceValue>
-                                    </PriceColumn>
-                                    <PriceColumn>
-                                        <PriceLabel>Cantidad</PriceLabel>
-                                        <PriceValue>{item.quantity}</PriceValue>
-                                    </PriceColumn>
-                                    <PriceColumn>
-                                        <PriceLabel>Total</PriceLabel>
-                                        <PriceValue>{formatCurrency(item.total)}</PriceValue>
-                                    </PriceColumn>
-                                </ItemPriceRow>
+                                return (
+                                    <ItemCard key={item.id}>
+                                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                                            <Box
+                                                sx={{
+                                                    width: 48,
+                                                    height: 48,
+                                                    borderRadius: 2,
+                                                    overflow: "hidden",
+                                                    flexShrink: 0,
+                                                    backgroundColor: "background.lowGray",
+                                                    border: (theme) => `1px solid ${theme.palette.app.border}`,
+                                                }}
+                                            >
+                                                {productImage ? (
+                                                    <Box
+                                                        component="img"
+                                                        src={productImage}
+                                                        alt={item.product?.short_name ?? ""}
+                                                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                    />
+                                                ) : (
+                                                    <Box sx={{ width: "100%", height: "100%" }} />
+                                                )}
+                                            </Box>
 
-                                {(item.averageInternetPrice || item.priceComparisons) && (
-                                    <ComparisonRow>
-                                        {item.averageInternetPrice && (
-                                            <InternetPriceTag>
-                                                <PublicIcon sx={{ fontSize: 16 }} />
-                                                Precio en internet prom: {formatCurrency(item.averageInternetPrice)}
-                                            </InternetPriceTag>
+                                            <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                                                <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                                                    {item.product?.code ?? "—"}
+                                                </Typography>
+                                                <Typography
+                                                    variant="body1"
+                                                    fontWeight={600}
+                                                    sx={{
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {item.product?.short_name ?? "Producto sin nombre"}
+                                                </Typography>
+                                            </Stack>
+
+                                            <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
+                                                <Typography variant="body2" color="text.secondary">Solicitado</Typography>
+                                                <Typography variant="body1" fontWeight={600}>{itemRequested}</Typography>
+                                            </Stack>
+
+                                            <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
+                                                <Typography variant="body2" color="text.secondary">Entregado</Typography>
+                                                <Typography variant="body1" fontWeight={600} color={isFullyDelivered ? "success.main" : "text.primary"}>
+                                                    {itemDelivered}
+                                                </Typography>
+                                            </Stack>
+
+                                            <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "right" }}>
+                                                <Typography variant="body2" color="text.secondary">Estado</Typography>
+                                                {isFullyDelivered ? (
+                                                    <CheckCircleIcon sx={{ fontSize: 20, color: "success.main" }} />
+                                                ) : itemDelivered > 0 ? (
+                                                    <ScheduleIcon sx={{ fontSize: 20, color: "warning.main" }} />
+                                                ) : (
+                                                    <ScheduleIcon sx={{ fontSize: 20, color: "text.disabled" }} />
+                                                )}
+                                            </Stack>
+                                        </Stack>
+
+                                        {itemProgress > 0 && itemProgress < 100 && (
+                                            <Box sx={{ marginTop: 2 }}>
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={itemProgress}
+                                                    sx={{
+                                                        height: 4,
+                                                        borderRadius: 2,
+                                                        backgroundColor: "background.lowGray",
+                                                        "& .MuiLinearProgress-bar": {
+                                                            borderRadius: 2,
+                                                            backgroundColor: "primary.main",
+                                                        },
+                                                    }}
+                                                />
+                                            </Box>
                                         )}
-                                        {item.priceComparisons?.map((comp, idx) => (
-                                            <ComparisonLink key={idx} onClick={() => comp.url && window.open(comp.url, "_blank")}>
-                                                {comp.store}: {formatCurrency(comp.price)}
-                                                <OpenInNewIcon sx={{ fontSize: 14 }} />
-                                            </ComparisonLink>
-                                        ))}
-                                    </ComparisonRow>
-                                )}
-                            </ItemCard>
-                        ))}
-                    </ItemsList>
-                </MainContent>
+                                    </ItemCard>
+                                );
+                            })}
 
-                <SidePanel>
-                    <SummaryCard>
-                        <SummaryRow>
-                            <SummaryLabel>Subtotal</SummaryLabel>
-                            <SummaryValue>{formatCurrency(order.subtotal)}</SummaryValue>
-                        </SummaryRow>
-                        <SummaryRow>
-                            <SummaryLabel>IVA</SummaryLabel>
-                            <SummaryValue>{formatCurrency(order.tax)}</SummaryValue>
-                        </SummaryRow>
-                        <TotalRow>
-                            <TotalLabel>Total:</TotalLabel>
-                            <TotalValue>{formatCurrency(order.total)}</TotalValue>
-                        </TotalRow>
-                    </SummaryCard>
-                </SidePanel>
-            </PageContainer>
+                            {order.order_deliveries.length > 0 && (
+                                <>
+                                    <Divider sx={{ marginTop: 2 }} />
+                                    <Typography variant="h5" fontWeight={600}>
+                                        Entregas ({order.order_deliveries.length})
+                                    </Typography>
+
+                                    {order.order_deliveries.map((delivery) => (
+                                        <ItemCard key={delivery.id}>
+                                            <Stack direction="row" spacing={2} alignItems="center">
+                                                <DeliveryIcon sx={{ color: "primary.main" }} />
+                                                <Stack spacing={0.5} sx={{ flex: 1 }}>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {formatDate(delivery.delivery_date)}
+                                                    </Typography>
+                                                    {delivery.received_by_user && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Recibido por: {delivery.received_by_user.first_name} {delivery.received_by_user.last_name}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {delivery.order_delivery_items.length} artículo(s)
+                                                    </Typography>
+                                                </Stack>
+                                                <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "right" }}>
+                                                    <Typography variant="body2" color="text.secondary">Cantidad</Typography>
+                                                    <Typography variant="body1" fontWeight={600}>
+                                                        {delivery.order_delivery_items.reduce((sum, di) => sum + di.quantity, 0)}
+                                                    </Typography>
+                                                </Stack>
+                                            </Stack>
+                                        </ItemCard>
+                                    ))}
+                                </>
+                            )}
+                        </Stack>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+                        <SummaryCard>
+                            <Stack spacing={2}>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Total artículos</Typography>
+                                    <Typography variant="body1" fontWeight={600}>{totalRequested}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Entregados</Typography>
+                                    <Typography variant="body1" fontWeight={600} color="success.main">{totalDelivered}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Pendientes</Typography>
+                                    <Typography variant="body1" fontWeight={600} color="warning.main">{totalRequested - totalDelivered}</Typography>
+                                </Stack>
+                                <Divider />
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Entregas</Typography>
+                                    <Typography variant="body1" fontWeight={600}>{order.order_deliveries.length}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Progreso</Typography>
+                                    <Typography variant="body1" fontWeight={700}>{progress}%</Typography>
+                                </Stack>
+                            </Stack>
+                        </SummaryCard>
+                    </Grid>
+                </Grid>
+            </Stack>
         </MainLayout>
     );
 }

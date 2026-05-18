@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Typography, Button, LinearProgress, Table, TableBody, TableHead, TableRow, TableCell } from "@mui/material";
+import { Box, Stack, Typography, Button, LinearProgress, Table, TableBody, TableHead, TableRow, TableCell } from "@mui/material";
 import { MainLayout, Breadcrumbs } from "@/components";
 import { NumberInput } from "@/components/Folypuntos";
 import type { ReceptionArticle } from "@/types/recepcion-mercancias.types";
@@ -223,14 +223,14 @@ export default function NuevaRecepcion() {
                 </ProgressSection>
 
                 <ContentSection>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
                         <Box>
                             <SectionTitle>Artículos recibidos</SectionTitle>
                             <SectionDescription>
                                 Confirma la cantidad de artículos recibidos.
                             </SectionDescription>
                         </Box>
-                    </Box>
+                    </Stack>
 
                     {/* Table */}
                     <TableContainer>

@@ -5,6 +5,7 @@ import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import { CUSTOMER_DELINQUENCY_READ, CUSTOMER_DELINQUENCY_UPDATE } from "@/lib/permissions";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -453,18 +454,21 @@ export default function ClientesMorosidad() {
       id: "view",
       label: "Ver detalle",
       onClick: handleViewCustomer,
+      permission: CUSTOMER_DELINQUENCY_READ,
     },
     {
       id: "contact",
       label: "Contactar",
       onClick: handleContactCustomer,
       color: "primary",
+      permission: CUSTOMER_DELINQUENCY_UPDATE,
     },
     {
       id: "payment",
       label: "Registrar pago",
       onClick: handleRegisterPayment,
       color: "primary",
+      permission: CUSTOMER_DELINQUENCY_UPDATE,
     },
   ];
 

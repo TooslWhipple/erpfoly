@@ -24,6 +24,8 @@ import {
   UpdateBranchShippingPricePayload,
 } from "@/services/branches.service";
 import type { BranchShippingCost } from "@/types/shipping-costs.types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_SHIPPING_COSTS_UPDATE } from "@/lib/permissions";
 
 // ============================================================================
 // HELPERS
@@ -44,6 +46,8 @@ function formatCurrency(value: number): string {
 // ============================================================================
 
 export default function CostosEnvioPage() {
+  const { hasPermission } = usePermissions();
+  const canUpdateShippingCosts = hasPermission(CATALOG_SHIPPING_COSTS_UPDATE);
   const [branches, setBranches] = useState<BranchShippingCost[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -177,7 +181,7 @@ export default function CostosEnvioPage() {
             variant="contained"
             color="primary"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canUpdateShippingCosts}
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
           >
             Guardar cambios
@@ -201,6 +205,7 @@ export default function CostosEnvioPage() {
                   <ShippingCostInput
                     size="small"
                     value={formatCurrency(branch.shippingCost)}
+                    disabled={!canUpdateShippingCosts}
                     onChange={(e) => {
                       const value = parseCurrencyInput(e.target.value);
                       handleCostChange(branch.id, value);

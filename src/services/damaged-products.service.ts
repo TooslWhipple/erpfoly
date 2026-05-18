@@ -1,7 +1,8 @@
-import { get, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
+import { get, post, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 const DAMAGED_PRODUCTS_BASE = "/damaged-products";
+const PRODUCTS_BASE = "/products";
 
 export interface DamagedProductBranchDto {
     id: number;
@@ -29,6 +30,8 @@ export interface DamagedProductsCatalogData {
     damageActions: DamagedProductCatalogItem[];
     dispositions: DamagedProductCatalogItem[];
     repairSuppliers: DamagedProductCatalogItem[];
+    repairResponsibles?: DamagedProductCatalogItem[];
+    solutions?: DamagedProductCatalogItem[];
 }
 
 /**
@@ -106,4 +109,101 @@ export async function getDamagedProductsCatalog(): Promise<
     ApiResult<DamagedProductsCatalogData>
 > {
     return get<DamagedProductsCatalogData>(`${DAMAGED_PRODUCTS_BASE}/catalog`);
+}
+
+export const PRODUCT_SEARCH_DEFAULT_LIMIT = 100;
+
+export interface ProductSearchItem {
+    id: number;
+    code: string;
+    shortName: string;
+    description: string;
+    listCost: string;
+    score: number;
+}
+
+export interface ProductSearchParams {
+    q: string;
+    limit?: number;
+}
+
+function normalizeProductSearchResponse(data: unknown): ProductSearchItem[] {
+    if (Array.isArray(data)) {
+        return data as ProductSearchItem[];
+    }
+    if (data != null && typeof data === "object" && "rows" in data && Array.isArray((data as { rows: unknown }).rows)) {
+        return (data as { rows: ProductSearchItem[] }).rows;
+    }
+    return [];
+}
+
+export async function searchProducts(params: ProductSearchParams): Promise<ApiResult<ProductSearchItem[]>> {
+    if (params.q.length < 2) {
+        return { data: [], error: null };
+    }
+
+    const limit = params.limit ?? PRODUCT_SEARCH_DEFAULT_LIMIT;
+    const result = await get<unknown>(`${PRODUCTS_BASE}/search`, {
+        params: { q: params.q, limit },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeProductSearchResponse(result.data),
+        error: null
+    };
+}
+
+export interface CreateDamagedProductPayload {
+    productId: number;
+    branchId: number;
+    damageOriginId: number;
+    damageTypeId: number;
+    damageActionId: number;
+    dispositionCode: string;
+    damageDescription: string;
+    serialNumber?: string;
+    observations?: string;
+    invoiceNumber?: string;
+    status?: string;
+    detectedDate?: string;
+    quantity?: number;
+    repairCost?: number;
+    repairSupplierId?: number;
+    assignedToId?: number;
+    responsibleId?: number;
+    solutionId?: number;
+    endDate?: string;
+    includeCost?: boolean;
+    acceptanceLetterUrl?: string;
+    auctionPrice?: number;
+    listCost?: number;
+    lastCost?: number;
+}
+
+export async function createDamagedProduct(
+    payload: CreateDamagedProductPayload | FormData
+): Promise<ApiResult<{ id: number; folio: string }>> {
+    if (payload instanceof FormData) {
+        return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+    }
+    return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload);
+}
+
+export interface DamagedProductStats {
+    totalItems: number;
+    itemsCost: number;
+    itemsValue: number;
+    itemsChange: number;
+    costChange: number;
+    valueChange: number;
+}
+
+export async function getDamagedProductStats(): Promise<ApiResult<DamagedProductStats>> {
+    return get<DamagedProductStats>(`${DAMAGED_PRODUCTS_BASE}/stats`);
 }

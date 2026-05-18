@@ -19,7 +19,7 @@ import {
     PRODUCT_SEARCH_DEFAULT_LIMIT,
     searchProducts,
     type ProductSearchItem,
-} from "@/services/productos.service";
+} from "@/services/damaged-products.service";
 
 const SEARCH_DEBOUNCE_MS = 300;
 

@@ -13,6 +13,7 @@ export interface CashRegisterState {
 export interface OpenCashRegisterFormProps {
   initialFund: number;
   exchangeRate: number;
+  canOpen?: boolean;
   onInitialFundChange: (value: string) => void;
   onExchangeRateChange: (value: string) => void;
   onOpen: () => void;
@@ -22,6 +23,8 @@ export interface CashRegisterDashboardProps {
   cashRegister: CashRegisterState;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
+  canCut?: boolean;
+  canWithdraw?: boolean;
   onCut: () => void;
   onWithdrawal: () => void;
   onViewAllHistory: () => void;

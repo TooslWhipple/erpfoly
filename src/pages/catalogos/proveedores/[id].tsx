@@ -2,6 +2,7 @@ import { Box, CircularProgress, Stack } from "@mui/material";
 import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
+import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 
 export default function SupplierFormPage() {
     const {
@@ -62,6 +63,7 @@ export default function SupplierFormPage() {
                             label: "Guardar",
                             onClick: handleSave,
                             disabled: saving,
+                            permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
                         },
                     ]}
                 />

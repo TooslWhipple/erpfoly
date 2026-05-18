@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, type ChangeEvent } from "react";
 import {
-  Box,
+  Stack,
   Button,
   Checkbox,
   CircularProgress,
@@ -149,9 +149,9 @@ export function AddArticlesToRouteModal({
 
       <TableContainer>
         {loading ? (
-          <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+          <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
             <CircularProgress size={32} />
-          </Box>
+          </Stack>
         ) : filteredArticles.length === 0 ? (
           <EmptyStateContainer>
             <Typography variant="body2" color="text.secondary">

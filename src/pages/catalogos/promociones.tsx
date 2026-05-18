@@ -18,6 +18,11 @@ import {
   deletePromotion,
   getPromotionListFilters,
 } from "@/services/promociones.service";
+import {
+  CATALOG_PROMOTIONS_CREATE,
+  CATALOG_PROMOTIONS_DELETE,
+  CATALOG_PROMOTIONS_UPDATE,
+} from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const FILTER_CATALOG_STALE_MS = 5 * 60 * 1000;
@@ -209,12 +214,14 @@ export default function Promociones() {
         label: "Ver detalles",
         icon: <VisibilityIcon fontSize="small" />,
         onClick: handleViewDetails,
+        permission: CATALOG_PROMOTIONS_UPDATE,
       },
       {
         id: "edit",
         label: "Editar",
         icon: <EditIcon fontSize="small" />,
         onClick: handleEditPromotion,
+        permission: CATALOG_PROMOTIONS_UPDATE,
       },
       {
         id: "delete",
@@ -222,6 +229,7 @@ export default function Promociones() {
         icon: <DeleteIcon fontSize="small" />,
         onClick: handleDeletePromotion,
         color: "error",
+        permission: CATALOG_PROMOTIONS_DELETE,
       },
     ],
     [handleViewDetails, handleEditPromotion, handleDeletePromotion]
@@ -264,6 +272,7 @@ export default function Promociones() {
               {
                 label: "Nuevo",
                 onClick: handleCreatePromotion,
+                permission: CATALOG_PROMOTIONS_CREATE,
               },
             ]}
           />

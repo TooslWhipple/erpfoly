@@ -1,4 +1,4 @@
-import { Box, IconButton, Switch, FormControl, MenuItem, Typography } from "@mui/material";
+import { Stack, IconButton, Switch, FormControl, MenuItem, Typography } from "@mui/material";
 import { DragIndicator as DragIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import type { LiquidationRule, LiquidationRuleOperator, LiquidationRulePeriod } from "@/types/liquidaciones.types";
 import {
@@ -101,7 +101,7 @@ export function LiquidationRuleCard({
       <Typography component="span" sx={{ fontSize: 14, color: "text.secondary" }}>
         %
       </Typography>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Stack direction="row" alignItems="center" spacing={0.5}>
         <Typography component="span" sx={{ fontSize: 14, color: "text.secondary", whiteSpace: "nowrap" }}>
           Etiqueta roja
         </Typography>
@@ -111,7 +111,7 @@ export function LiquidationRuleCard({
           onChange={(_, checked) => onRedLabelChange(rule.id, checked)}
           color="primary"
         />
-      </Box>
+      </Stack>
       <RuleActions>
         {onDrag && (
           <IconButton size="small" onClick={() => onDrag(rule.id)} aria-label="Reordenar">

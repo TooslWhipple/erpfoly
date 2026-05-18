@@ -12,6 +12,12 @@ import {
   deleteBranch,
   type Branch,
 } from "@/services/branches.service";
+import {
+  CATALOG_BRANCHES_CREATE,
+  CATALOG_BRANCHES_DELETE,
+  CATALOG_BRANCHES_READ,
+  CATALOG_BRANCHES_UPDATE,
+} from "@/lib/permissions";
 
 const ESTATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
@@ -192,17 +198,20 @@ export default function Sucursales() {
       id: "discounts",
       label: "Ver descuentos",
       onClick: handleViewDiscounts,
+      permission: CATALOG_BRANCHES_READ,
     },
     {
       id: "edit",
       label: "Editar",
       onClick: handleOpenEditModal,
+      permission: CATALOG_BRANCHES_UPDATE,
     },
     {
       id: "delete",
       label: "Eliminar",
       onClick: handleDeleteBranch,
       color: "error",
+      permission: CATALOG_BRANCHES_DELETE,
     },
   ];
 
@@ -222,7 +231,8 @@ export default function Sucursales() {
             {
               label: "Nuevo",
               onClick: handleOpenCreateModal,
-              variant: "contained"
+              variant: "contained",
+              permission: CATALOG_BRANCHES_CREATE,
             }
           ]}
         />

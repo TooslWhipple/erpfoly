@@ -1,4 +1,4 @@
-import { Box, Typography, Skeleton } from "@mui/material";
+import { Box, Stack, Typography, Skeleton } from "@mui/material";
 import { Lightbulb } from "lucide-react";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import { PriceSuggestionCard } from "@/components/PriceSuggestionCard";
@@ -34,12 +34,12 @@ export function PriceSuggestionsSidebar({
     return (
       <SidebarContainer>
         <SidebarHeader>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <SidebarIcon>
               <Lightbulb size={20} color="#FCD34D" />
             </SidebarIcon>
             <SidebarTitle>Sugerencias</SidebarTitle>
-          </Box>
+          </Stack>
         </SidebarHeader>
         <Skeleton variant="text" width="90%" sx={{ mb: 2 }} animation="wave" />
         <SuggestionsList>
@@ -61,12 +61,12 @@ export function PriceSuggestionsSidebar({
     return (
       <SidebarContainer>
         <SidebarHeader>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <SidebarIcon>
               <Lightbulb size={20} color="#FCD34D" />
             </SidebarIcon>
             <SidebarTitle>Sugerencias</SidebarTitle>
-          </Box>
+          </Stack>
         </SidebarHeader>
         <Box sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>
           No hay sugerencias de precios disponibles
@@ -78,12 +78,12 @@ export function PriceSuggestionsSidebar({
   return (
     <SidebarContainer>
       <SidebarHeader>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
           <SidebarIcon>
             <Lightbulb size={20} color="#FCD34D" />
           </SidebarIcon>
           <SidebarTitle>Sugerencias [{suggestions.length}]</SidebarTitle>
-        </Box>
+        </Stack>
       </SidebarHeader>
       <SidebarSubtitle>
         Precios sugeridos para artículos identificados con lento movimiento.

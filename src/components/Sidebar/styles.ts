@@ -19,12 +19,12 @@ export const StyledDrawer = styled(Drawer, {
   },
 }));
 
-export const NavigationContainer = styled(Box)(({ theme }) => ({
+export const NavigationContainer = styled(Box)(() => ({
   display: "flex",
   flexDirection: "column",
   flex: 1,
-  padding: "16px 8px 0px",
-  gap: "24px",
+  padding: `${theme.spacing(2)} ${theme.spacing(1)} 0px`,
+  gap: theme.spacing(3),
   overflowY: "auto",
 }));
 
@@ -103,6 +103,8 @@ export const UserAvatar = styled(Avatar)({
 });
 
 export const UserInfoContainer = styled(Box)({
+  flex: 1,
+  minWidth: 0,
   overflow: "hidden",
 });
 

@@ -1,5 +1,6 @@
 export { Sidebar } from "./Sidebar";
 export { MainLayout } from "./Layout";
+export { AuthGuard } from "./AuthGuard";
 export { Title } from "./Title";
 export { Breadcrumbs } from "./Breadcrumbs";
 export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";

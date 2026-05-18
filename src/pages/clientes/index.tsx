@@ -10,14 +10,12 @@ import {
 import {
   MainLayout,
   Title,
-  TitleAction,
   TabFilters,
   TableCrud,
-  Column,
-  RowAction,
 } from "@/components";
+import type { Column, RowAction, TitleAction } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
-import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
+import { CUSTOMERS_CREATE, CUSTOMERS_DELETE, CUSTOMERS_READ, CUSTOMERS_UPDATE, REPORTS_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getClients, type Client, type ClientStatus } from "@/services/clients.service";
@@ -136,7 +134,7 @@ export default function Clientes() {
       icon: <ExportIcon />,
       variant: "outlined",
       onClick: () => console.log("Exportar clientes"),
-      permission: REPORTES_EXPORTAR,
+      permission: REPORTS_READ,
     },
     {
       id: "create",
@@ -144,7 +142,7 @@ export default function Clientes() {
       icon: <AddIcon />,
       variant: "contained",
       href: "/clientes/nuevo",
-      permission: CLIENTES_CREAR,
+      permission: CUSTOMERS_CREATE,
     },
   ];
 
@@ -154,12 +152,14 @@ export default function Clientes() {
       label: "Ver detalles",
       icon: <ViewIcon />,
       onClick: (row) => router.push(`/clientes/${row.id}`),
+      permission: CUSTOMERS_READ,
     },
     {
       id: "edit",
       label: "Editar",
       icon: <EditIcon />,
       onClick: (row) => console.log("Editar:", row),
+      permission: CUSTOMERS_UPDATE,
     },
     {
       id: "delete",
@@ -167,6 +167,7 @@ export default function Clientes() {
       icon: <DeleteIcon />,
       onClick: (row) => console.log("Eliminar:", row),
       color: "error",
+      permission: CUSTOMERS_DELETE,
     },
   ];
 

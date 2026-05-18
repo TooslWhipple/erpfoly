@@ -6,6 +6,7 @@ import type { Column } from "@/components/TableCrud";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { fetchSellersMock } from "@/services/sellers.service";
 import type { SellerListItem } from "@/types/sellers.types";
+import { CATALOG_SELLERS_CREATE } from "@/lib/permissions";
 
 export default function VendedoresPage() {
   const router = useRouter();
@@ -105,6 +106,7 @@ export default function VendedoresPage() {
             {
               label: "Nuevo",
               onClick: () => {},
+              permission: CATALOG_SELLERS_CREATE,
             },
           ]}
         />

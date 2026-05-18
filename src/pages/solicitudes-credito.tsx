@@ -13,6 +13,7 @@ import {
 } from "@/services/creditApplicationList.service";
 import { Stack } from "@mui/material";
 import { formatDateTimeShort, formatDate } from "@/utils/date";
+import { CREDIT_APPLICATIONS_READ, CREDIT_APPLICATIONS_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -167,11 +168,13 @@ export default function SolicitudesCredito() {
       id: "ver",
       label: "Ver detalle",
       onClick: handleVerDetalle,
+      permission: CREDIT_APPLICATIONS_UPDATE,
     },
     {
       id: "editar",
       label: "Editar",
       onClick: handleEditar,
+      permission: CREDIT_APPLICATIONS_READ,
     }
   ];
 

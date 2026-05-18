@@ -118,6 +118,56 @@ export async function getSuppliers(
   return get<GetSuppliersResponse>(buildListUrl(SUPPLIERS_BASE, params));
 }
 
+export const SUPPLIER_SEARCH_DEFAULT_LIMIT = 100;
+
+/** Row shape returned by GET /suppliers/search */
+export interface SupplierSearchItem {
+  id: number;
+  name: string;
+  businessName?: string | null;
+  score?: number;
+}
+
+export interface SupplierSearchParams {
+  q: string;
+  limit?: number;
+}
+
+function normalizeSupplierSearchResponse(data: unknown): SupplierSearchItem[] {
+  if (Array.isArray(data)) {
+    return data as SupplierSearchItem[];
+  }
+
+  if (
+    data != null &&
+    typeof data === "object" &&
+    "rows" in data &&
+    Array.isArray((data as { rows: unknown }).rows)
+  ) {
+    return (data as { rows: SupplierSearchItem[] }).rows;
+  }
+
+  return [];
+}
+
+export async function searchSuppliers(
+  params: SupplierSearchParams
+): Promise<ApiResult<SupplierSearchItem[]>> {
+  const limit = params.limit ?? SUPPLIER_SEARCH_DEFAULT_LIMIT;
+  const result = await get<unknown>(`${SUPPLIERS_BASE}/search`, {
+    params: { q: params.q.trim(), limit },
+  });
+
+  if (result.error != null) {
+    return { data: null, error: result.error };
+  }
+
+  return {
+    data: normalizeSupplierSearchResponse(result.data),
+    error: null,
+  };
+}
+
 export async function getSupplierById(
   id: number
 ): Promise<ApiResult<SupplierDetail>> {

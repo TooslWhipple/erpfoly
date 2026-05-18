@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import numeral from "numeral";
 import {
-  Box,
   Button,
   CircularProgress,
   IconButton,
@@ -49,25 +48,25 @@ const CHART_METRIC_OPTIONS: { value: ChartMetricType; label: string }[] = [
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length || !label) return null;
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         backgroundColor: theme.palette.background.paper,
         border: `1px solid ${theme.palette.app.border}`,
-        borderRadius: 1,
-        p: 1.5,
-        boxShadow: 1,
+        borderRadius: 4,
+        padding: theme.spacing(1.5),
+        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
         minWidth: 140,
       }}
     >
-      <Typography variant="caption" fontWeight={600} display="block" sx={{ mb: 0.5 }}>
+      <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: "block" }}>
         {label}
       </Typography>
       {payload.map((entry) => (
-        <Typography key={entry.name} variant="caption" display="block" sx={{ color: entry.color }}>
+        <Typography key={entry.name} variant="caption" sx={{ color: entry.color, display: "block" }}>
           {entry.name}: {numeral(entry.value).format("$0,0.00")}
         </Typography>
       ))}
-    </Box>
+    </div>
   );
 }
 
@@ -209,9 +208,9 @@ export default function MetasPage() {
   if (loading && !salesHistory.length) {
     return (
       <MainLayout>
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+        <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
           <CircularProgress />
-        </Box>
+        </Stack>
       </MainLayout>
     );
   }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { Box, InputAdornment, MenuItem, SelectChangeEvent } from "@mui/material";
+import { Stack, InputAdornment, MenuItem, SelectChangeEvent } from "@mui/material";
 import { Search as SearchIcon, Check as CheckIcon } from "@mui/icons-material";
 import { MainLayout } from "@/components";
 import type { SearchType } from "@/types/atencion-cliente.types";
@@ -79,22 +79,22 @@ export default function AtencionCliente() {
                         size="small"
                     >
                         <MenuItem value="facturas">
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
                                 {searchType === "facturas" && <CheckIcon sx={{ fontSize: 16 }} />}
                                 Facturas
-                            </Box>
+                            </Stack>
                         </MenuItem>
                         <MenuItem value="clientes">
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
                                 {searchType === "clientes" && <CheckIcon sx={{ fontSize: 16 }} />}
                                 Clientes
-                            </Box>
+                            </Stack>
                         </MenuItem>
                         <MenuItem value="pedidos">
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
                                 {searchType === "pedidos" && <CheckIcon sx={{ fontSize: 16 }} />}
                                 Pedidos
-                            </Box>
+                            </Stack>
                         </MenuItem>
                     </SearchTypeSelect>
 

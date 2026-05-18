@@ -23,6 +23,7 @@ import type { SelectOption } from "@/components/Form";
 import {
     getDamagedProductsCatalog,
     createDamagedProduct,
+    type CreateDamagedProductPayload,
     type DamagedProductCatalogItem,
     type DamagedProductsCatalogData,
 } from "@/services/damaged-products.service";
@@ -405,7 +406,7 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
                             throw new Error(result.error.message);
                         }
                     } else {
-                        const payload: Record<string, unknown> = {
+                        const payload: CreateDamagedProductPayload = {
                             productId: values.productId,
                             branchId: parseInt(values.branchId, 10),
                             damageOriginId: parseInt(values.damageOrigin, 10),
@@ -706,7 +707,15 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
                                                             </form.Field>
 
                                                             <form.Subscribe
-                                                                selector={(state) => state.values.includeCost}
+                                                                selector={(state) =>
+                                                                    Boolean(
+                                                                        (
+                                                                            state as {
+                                                                                values?: { includeCost?: boolean };
+                                                                            }
+                                                                        ).values?.includeCost,
+                                                                    )
+                                                                }
                                                             >
                                                                 {(showCost) =>
                                                                     showCost && (

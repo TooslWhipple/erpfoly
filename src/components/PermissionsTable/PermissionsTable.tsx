@@ -1,13 +1,15 @@
-import {
-    TableBody,
-} from "@mui/material";
+import { TableBody } from "@mui/material";
 import {
     CheckboxWrapper,
+    HeaderModuleCell,
+    HeaderPermissionCell,
+    HeaderRow,
     ModuleCell,
     PermissionCell,
     PermissionLabel,
     StyledCheckbox,
     StyledTable,
+    StyledTableHead,
     StyledTableRow,
     TableContainer,
 } from "./PermissionsTable.styles";
@@ -28,12 +30,24 @@ export interface ModulePermission {
 export interface PermissionsTableProps {
     modules: ModulePermission[];
     onChange: (moduleId: string, permission: keyof Permission, value: boolean) => void;
+    onGroupChange?: (permission: keyof Permission, value: boolean) => void;
+    groupState?: Partial<
+        Record<
+            keyof Permission,
+            {
+                checked: boolean;
+                indeterminate: boolean;
+            }
+        >
+    >;
     disabled?: boolean;
 }
 
 export function PermissionsTable({
     modules,
     onChange,
+    onGroupChange,
+    groupState,
     disabled = false,
 }: PermissionsTableProps) {
     const permissionColumns: { key: keyof Permission; label: string }[] = [
@@ -46,6 +60,37 @@ export function PermissionsTable({
     return (
         <TableContainer>
             <StyledTable>
+                <StyledTableHead>
+                    <HeaderRow>
+                        <HeaderModuleCell>Módulo</HeaderModuleCell>
+                        {permissionColumns.map((col) => {
+                            const state = groupState?.[col.key];
+                            return (
+                                <HeaderPermissionCell key={col.key}>
+                                    <CheckboxWrapper>
+                                        <StyledCheckbox
+                                            checked={Boolean(state?.checked)}
+                                            indeterminate={Boolean(state?.indeterminate)}
+                                            onChange={(e) =>
+                                                onGroupChange?.(
+                                                    col.key,
+                                                    e.target.checked,
+                                                )
+                                            }
+                                            disabled={
+                                                disabled ||
+                                                modules.length === 0 ||
+                                                !onGroupChange
+                                            }
+                                            size="small"
+                                        />
+                                        <PermissionLabel>{col.label}</PermissionLabel>
+                                    </CheckboxWrapper>
+                                </HeaderPermissionCell>
+                            );
+                        })}
+                    </HeaderRow>
+                </StyledTableHead>
                 <TableBody>
                     {modules.map((module) => (
                         <StyledTableRow key={module.id}>

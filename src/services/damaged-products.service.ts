@@ -162,7 +162,6 @@ export interface CreateDamagedProductPayload {
     branchId: number;
     damageOriginId: number;
     damageTypeId: number;
-    damageActionId: number;
     dispositionCode: string;
     damageDescription: string;
     serialNumber?: string;

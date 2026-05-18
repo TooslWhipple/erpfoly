@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
@@ -105,6 +113,40 @@ export default function RoleFormPage() {
       );
     },
     [],
+  );
+
+  const handleGroupPermissionChange = useCallback(
+    (permission: keyof Permission, value: boolean) => {
+      setTableModules((prev) =>
+        prev.map((module) => ({
+          ...module,
+          permissions: {
+            ...module.permissions,
+            [permission]: value,
+          },
+        })),
+      );
+    },
+    [],
+  );
+
+  const isGroupChecked = useCallback(
+    (permission: keyof Permission): boolean => {
+      if (tableModules.length === 0) return false;
+      return tableModules.every((module) => module.permissions[permission]);
+    },
+    [tableModules],
+  );
+
+  const isGroupIndeterminate = useCallback(
+    (permission: keyof Permission): boolean => {
+      if (tableModules.length === 0) return false;
+      const selectedCount = tableModules.filter(
+        (module) => module.permissions[permission],
+      ).length;
+      return selectedCount > 0 && selectedCount < tableModules.length;
+    },
+    [tableModules],
   );
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,6 +293,25 @@ export default function RoleFormPage() {
           <PermissionsTable
             modules={tableModules}
             onChange={handlePermissionChange}
+            onGroupChange={handleGroupPermissionChange}
+            groupState={{
+              view: {
+                checked: isGroupChecked("view"),
+                indeterminate: isGroupIndeterminate("view"),
+              },
+              create: {
+                checked: isGroupChecked("create"),
+                indeterminate: isGroupIndeterminate("create"),
+              },
+              edit: {
+                checked: isGroupChecked("edit"),
+                indeterminate: isGroupIndeterminate("edit"),
+              },
+              delete: {
+                checked: isGroupChecked("delete"),
+                indeterminate: isGroupIndeterminate("delete"),
+              },
+            }}
             disabled={saving}
           />
         </FormCard>

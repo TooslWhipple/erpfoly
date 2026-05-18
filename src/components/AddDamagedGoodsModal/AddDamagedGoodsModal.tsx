@@ -395,19 +395,6 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
                         if (values.serialNumber) formData.append("serialNumber", values.serialNumber);
                         if (values.observations) formData.append("observations", values.observations);
 
-                        if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR ||
-                            dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
-                            if (values.assignedToId) formData.append("assignedToId", String(parseInt(values.assignedToId, 10)));
-                            if (values.responsibleId) formData.append("responsibleId", String(parseInt(values.responsibleId, 10)));
-                            if (values.solutionId) formData.append("solutionId", String(parseInt(values.solutionId, 10)));
-                            if (values.endDate) formData.append("endDate", values.endDate);
-                            if (values.includeCost && values.repairCost) formData.append("repairCost", String(parseFloat(values.repairCost)));
-                        }
-
-                        if (dispositionCode === DISPOSITION_CODES.AUCTION_SALE && values.auctionPrice) {
-                            formData.append("auctionPrice", String(parseFloat(values.auctionPrice)));
-                        }
-
                         const file = acceptanceLetter[0];
                         if (file.file) {
                             formData.append("acceptanceLetter", file.file, file.name);

@@ -22,6 +22,7 @@ export interface CreateProductSupplierPayload {
 export interface CreateProductImagePayload {
     imageUrl: string;
     sortOrder: number;
+    isPrimary?: boolean;
 }
 
 export const MAX_PRODUCT_GALLERY_FILES = 30;

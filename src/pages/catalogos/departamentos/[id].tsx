@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, Alert, Button, CircularProgress, Stack } from "@mui/material";
+import { Box, Alert, CircularProgress, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import {
   MainLayout,
@@ -12,6 +12,7 @@ import {
 } from "@/components";
 import type { Column, RowAction, BreadcrumbItem } from "@/components";
 import {
+  DepartmentSettingsTab,
   buildLineModalDefaultValues,
   buildLinePromotionPayload,
   departmentLineFormFields,
@@ -31,7 +32,6 @@ import {
 } from "@/services/product-lines.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { z } from "zod";
 import {
   CATALOG_DEPARTMENTS_CREATE,
   CATALOG_DEPARTMENTS_DELETE,
@@ -40,40 +40,8 @@ import {
 } from "@/lib/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { formatPercentFieldValue, getProfitMarginFieldState } from "@/utils/percentInput";
-import {
-  SettingsGrid,
-  SettingsCard,
-  SettingsTitle,
-  SettingsDescription,
-  SettingsValue,
-  PromotionsCard,
-  PromotionsHeader,
-} from "@/styles/catalogos/departamentos-detail.styles";
-
-interface GroupRow extends ProductLineItem {
-  articles: number;
-}
 
 type DepartmentDetailTab = "lines" | "settings";
-
-interface PromotionRow {
-  id: string;
-  name: string;
-  discount: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-}
-
-const settingsPromotionColumns: Column<PromotionRow>[] = [
-  { id: "name", label: "Nombre", size: "md" },
-  { id: "discount", label: "Descuento", size: "sm" },
-  { id: "startDate", label: "Inicio", size: "sm" },
-  { id: "endDate", label: "Fin", size: "sm" },
-  { id: "status", label: "Estado", size: "sm" },
-];
-
-const promotionMockRows: PromotionRow[] = [];
 
 export default function DepartmentDetailPage() {
   const router = useRouter();
@@ -308,7 +276,8 @@ export default function DepartmentDetailPage() {
     [],
   );
 
-  const lineActions: RowAction<GroupRow>[] = [
+  const lineActions: RowAction<DepartmentLineTableRow>[] = useMemo(
+    () => [
     {
       id: "edit",
       label: "Editar",
@@ -324,7 +293,9 @@ export default function DepartmentDetailPage() {
       color: "error",
       permission: CATALOG_DEPARTMENTS_DELETE,
     },
-  ];
+    ],
+    [handleOpenEditGroup, handleDeleteGroup],
+  );
 
   const groupModalInitialValues = useMemo(
     () => buildLineModalDefaultValues(editingLine),
@@ -423,40 +394,14 @@ export default function DepartmentDetailPage() {
             emptyMessage="No hay líneas en este departamento"
           />
         ) : (
-          <Stack spacing={2}>
-            <SettingsGrid>
-              <SettingsCard>
-                <SettingsTitle>Margen de utilidad</SettingsTitle>
-                <SettingsDescription>
-                  Se aplicará para todos los artículos dentro de este departamento. Éste
-                  precio será tomado como el precio de crédito de los artículos.
-                </SettingsDescription>
-                <SettingsValue>32%</SettingsValue>
-              </SettingsCard>
-
-              <SettingsCard>
-                <SettingsTitle>Promoción de contado</SettingsTitle>
-                <SettingsDescription>
-                  Configura el porcentaje que los artículos obtendrán para su precio de contado.
-                </SettingsDescription>
-                <SettingsValue>20%</SettingsValue>
-              </SettingsCard>
-            </SettingsGrid>
-
-            <PromotionsCard>
-              <PromotionsHeader>
-                <SettingsTitle sx={{ fontSize: "1.25rem" }}>Promociones</SettingsTitle>
-                {hasPermission(CATALOG_PROMOTIONS_CREATE) && <Button variant="outlined">Nueva promoción</Button>}
-              </PromotionsHeader>
-              <TableCrud
-                columns={settingsPromotionColumns}
-                rows={promotionMockRows}
-                rowKey="id"
-                loading={false}
-                emptyMessage="No hay promociones registradas"
-              />
-            </PromotionsCard>
-          </Stack>
+          <DepartmentSettingsTab
+            marginDraft={marginDraft}
+            onMarginDraftChange={setMarginDraft}
+            marginFieldError={marginFieldState?.displayError ?? false}
+            marginHelperText={marginFieldState?.helperText ?? ""}
+            savingMargin={savingSettings}
+            canCreatePromotion={hasPermission(CATALOG_PROMOTIONS_CREATE)}
+          />
         )}
       </Stack>
 

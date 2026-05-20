@@ -19,6 +19,7 @@ export interface DepartmentSettingsTabProps {
   marginFieldError: boolean;
   marginHelperText: string;
   savingMargin: boolean;
+  canCreatePromotion?: boolean;
 }
 
 export function DepartmentSettingsTab({
@@ -27,6 +28,7 @@ export function DepartmentSettingsTab({
   marginFieldError,
   marginHelperText,
   savingMargin,
+  canCreatePromotion = false,
 }: DepartmentSettingsTabProps) {
   return (
     <Stack spacing={2}>
@@ -66,7 +68,7 @@ export function DepartmentSettingsTab({
       <PromotionsCard>
         <PromotionsHeader>
           <SettingsTitle sx={{ fontSize: "1.25rem" }}>Promociones</SettingsTitle>
-          <Button variant="outlined">Nueva promoción</Button>
+          {canCreatePromotion && <Button variant="outlined">Nueva promoción</Button>}
         </PromotionsHeader>
         <TableCrud
           columns={departmentSettingsPromotionColumns}

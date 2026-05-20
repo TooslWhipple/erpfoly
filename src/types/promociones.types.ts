@@ -1,5 +1,6 @@
 export interface PromotionListItem {
   id: number;
+  code: string;
   name: string;
   discount_rate: number;
   start_date: string;

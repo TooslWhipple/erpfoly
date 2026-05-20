@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBranchesCatalog, type BranchCatalogItem } from "@/services/branches.service";
-import { getDepartmentsCatalog, type DepartmentCatalogItem } from "@/services/departments.service";
+import { getDepartmentsCatalog } from "@/services/departments.service";
 import {
     getProductLinesCatalog,
     type ProductLineCatalogItem,
 } from "@/services/product-lines.service";
 import { getProductsCatalog } from "@/services/productos.service";
 import { getSuppliersCatalog, type SupplierCatalogItem } from "@/services/suppliers.service";
+import { unwrapOrThrow } from "@/lib/axios";
 import {
     departmentCatalogToSelectOptions,
     productLineCatalogToSelectOptions,
@@ -35,109 +37,105 @@ export interface UseProductFormCatalogsResult {
 export function useProductFormCatalogs(
     selectedDepartmentId: string
 ): UseProductFormCatalogsResult {
-    const [catalogsLoading, setCatalogsLoading] = useState(true);
-    const [departmentOptions, setDepartmentOptions] = useState<ProductFormCatalogSelectOption[]>(
-        []
-    );
-    const [lineOptions, setLineOptions] = useState<ProductFormCatalogSelectOption[]>([]);
-    const [suppliersCatalog, setSuppliersCatalog] = useState<SupplierCatalogItem[]>([]);
-    const [branchCatalogItems, setBranchCatalogItems] = useState<BranchCatalogItem[]>([]);
-    const [warrantyOptions, setWarrantyOptions] = useState<
-        Array<{ value: WarrantyType; label: string }>
-    >([
-        { value: "months", label: "Meses" },
-        { value: "policy", label: "Póliza anexa" },
-    ]);
+    const queryClient = useQueryClient();
+    const selectedDepartmentNumericId = Number(selectedDepartmentId);
+    const hasDepartmentSelection =
+        selectedDepartmentId.trim().length > 0 &&
+        Number.isFinite(selectedDepartmentNumericId);
 
-    const applyLineResult = useCallback((items: ProductLineCatalogItem[]) => {
-        setLineOptions(productLineCatalogToSelectOptions(items));
-    }, []);
+    const departmentsQuery = useQuery({
+        queryKey: ["catalog", "departments", "products-form"],
+        queryFn: getDepartmentsCatalog,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const suppliersQuery = useQuery({
+        queryKey: ["catalog", "suppliers", "products-form"],
+        queryFn: getSuppliersCatalog,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const branchesQuery = useQuery({
+        queryKey: ["catalog", "branches", "products-form"],
+        queryFn: getBranchesCatalog,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const productsCatalogQuery = useQuery({
+        queryKey: ["catalog", "products", "products-form"],
+        queryFn: async () => unwrapOrThrow(await getProductsCatalog()),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const linesQuery = useQuery({
+        queryKey: ["catalog", "product-lines", "products-form", selectedDepartmentNumericId],
+        queryFn: async (): Promise<ProductLineCatalogItem[]> => {
+            if (!hasDepartmentSelection) {
+                return [];
+            }
+            const result = await getProductLinesCatalog({
+                departmentId: selectedDepartmentNumericId,
+            });
+            return result.error ? [] : (result.data ?? []);
+        },
+        enabled: hasDepartmentSelection,
+        staleTime: 5 * 60 * 1000,
+    });
 
     const refreshDepartmentOptions = useCallback(async () => {
-        try {
-            const depts = await getDepartmentsCatalog();
-            setDepartmentOptions(departmentCatalogToSelectOptions(depts));
-        } catch {
-            setDepartmentOptions([]);
-        }
-    }, []);
+        await queryClient.invalidateQueries({
+            queryKey: ["catalog", "departments", "products-form"],
+        });
+    }, [queryClient]);
 
     const refreshLineOptions = useCallback(async () => {
-        const idNum = Number(selectedDepartmentId);
-        if (!selectedDepartmentId.trim() || !Number.isFinite(idNum)) {
-            applyLineResult([]);
+        if (!hasDepartmentSelection) {
             return;
         }
-        const result = await getProductLinesCatalog({ departmentId: idNum });
-        if (result.error) {
-            applyLineResult([]);
-            return;
-        }
-        applyLineResult(result.data ?? []);
-    }, [selectedDepartmentId, applyLineResult]);
+        await queryClient.invalidateQueries({
+            queryKey: ["catalog", "product-lines", "products-form", selectedDepartmentNumericId],
+        });
+    }, [hasDepartmentSelection, queryClient, selectedDepartmentNumericId]);
 
-    useEffect(() => {
-        let cancelled = false;
+    const departmentOptions = useMemo<ProductFormCatalogSelectOption[]>(
+        () =>
+            departmentsQuery.data
+                ? departmentCatalogToSelectOptions(departmentsQuery.data)
+                : [],
+        [departmentsQuery.data]
+    );
 
-        async function loadBaseCatalogs() {
-            setCatalogsLoading(true);
-            try {
-                const [depts, sups, branches, prodRes] = await Promise.all([
-                    getDepartmentsCatalog(),
-                    getSuppliersCatalog(),
-                    getBranchesCatalog(),
-                    getProductsCatalog(),
-                ]);
+    const lineOptions = useMemo<ProductFormCatalogSelectOption[]>(
+        () =>
+            linesQuery.data
+                ? productLineCatalogToSelectOptions(linesQuery.data)
+                : [],
+        [linesQuery.data]
+    );
 
-                if (cancelled) return;
+    const suppliersCatalog = suppliersQuery.data ?? [];
+    const branchCatalogItems = branchesQuery.data ?? [];
 
-                setDepartmentOptions(departmentCatalogToSelectOptions(depts));
-                setSuppliersCatalog(sups);
-                setBranchCatalogItems(branches);
-                const warrantyFromApi = prodRes.data?.warrantyTypes ?? [];
-                setWarrantyOptions(warrantyCatalogToFormOptions(warrantyFromApi));
-            } catch {
-                if (!cancelled) {
-                    setDepartmentOptions([]);
-                    setSuppliersCatalog([]);
-                    setBranchCatalogItems([]);
-                }
-            } finally {
-                if (!cancelled) {
-                    setCatalogsLoading(false);
-                }
-            }
-        }
+    const warrantyOptions = useMemo<Array<{ value: WarrantyType; label: string }>>(
+        () => {
+            const warrantyFromApi = productsCatalogQuery.data?.warrantyTypes ?? [];
+            const mapped = warrantyCatalogToFormOptions(warrantyFromApi);
+            return mapped.length > 0
+                ? mapped
+                : [
+                    { value: "months", label: "Meses" },
+                    { value: "policy", label: "Póliza anexa" },
+                ];
+        },
+        [productsCatalogQuery.data]
+    );
 
-        loadBaseCatalogs();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function syncLines() {
-            const idNum = Number(selectedDepartmentId);
-            if (!selectedDepartmentId.trim() || !Number.isFinite(idNum)) {
-                applyLineResult([]);
-                return;
-            }
-            const result = await getProductLinesCatalog({ departmentId: idNum });
-            if (cancelled) return;
-            if (result.error) {
-                applyLineResult([]);
-                return;
-            }
-            applyLineResult(result.data ?? []);
-        }
-
-        syncLines();
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedDepartmentId, applyLineResult]);
+    const catalogsLoading =
+        departmentsQuery.isLoading ||
+        suppliersQuery.isLoading ||
+        branchesQuery.isLoading ||
+        productsCatalogQuery.isLoading ||
+        (hasDepartmentSelection && linesQuery.isLoading);
 
     return {
         catalogsLoading,

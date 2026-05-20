@@ -1,5 +1,5 @@
 import OrderForm from "@/components/OrderForm";
 
 export default function NuevoPedido() {
-    return <OrderForm mode="create" />;
+    return <OrderForm mode="create" orderType="external" />;
 }

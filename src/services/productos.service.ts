@@ -525,6 +525,27 @@ export async function getProductsBySupplier(
         error: null,
     };
 }
+
+export async function getProductsByBranch(
+    branchId: number
+): Promise<ApiResult<ProductBySupplierItem[]>> {
+    if (!Number.isFinite(branchId) || branchId <= 0) {
+        return { data: [], error: null };
+    }
+
+    const result = await get<unknown>(`${PRODUCTS_BASE}/search-by-branch`, {
+        params: { branchId },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeProductsBySupplierResponse(result.data),
+        error: null,
+    };
+}
 export interface ProductWarrantyTypeCatalogOption {
     value: string;
     label: string;

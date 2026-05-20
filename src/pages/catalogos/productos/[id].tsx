@@ -57,6 +57,23 @@ import { PackagesTab } from "@/components/Products/PackagesTab";
 import { GalleryTab } from "@/components/Products/GalleryTab";
 import { BranchesTab } from "@/components/Products/BranchesTab";
 
+const inFlightProductDetailRequests = new Map<
+    number,
+    ReturnType<typeof getProductById>
+>();
+
+async function getProductByIdDeduped(id: number) {
+    const inFlight = inFlightProductDetailRequests.get(id);
+    if (inFlight) {
+        return inFlight;
+    }
+    const requestPromise = getProductById(id).finally(() => {
+        inFlightProductDetailRequests.delete(id);
+    });
+    inFlightProductDetailRequests.set(id, requestPromise);
+    return requestPromise;
+}
+
 export default function ProductFormPage() {
     const router = useRouter();
     const { hasPermission } = usePermissions();
@@ -180,7 +197,7 @@ export default function ProductFormPage() {
                     showError("Identificador de producto inválido.");
                     return;
                 }
-                const result = await getProductById(idNum);
+                const result = await getProductByIdDeduped(idNum);
                 if (result.error) {
                     console.error("[ProductForm] Error loading product:", result.error.message);
                     showError(result.error.message);

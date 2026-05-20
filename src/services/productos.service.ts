@@ -45,6 +45,23 @@ function mapProductPackagesToPackageItems(
     });
 }
 
+/** Storage path or legacy absolute URL to persist on create/update (not blob: or signed preview). */
+function resolvePersistableImageUrl(item: ProductGalleryImage): string | null {
+    const storagePath = (item.imageUrl || "").trim();
+    if (storagePath.length > 0 && !storagePath.startsWith("blob:")) {
+        return storagePath;
+    }
+    const preview = (item.previewUrl || "").trim();
+    if (
+        preview.length > 0 &&
+        /^https?:\/\//i.test(preview) &&
+        !preview.startsWith("blob:")
+    ) {
+        return preview;
+    }
+    return null;
+}
+
 export function buildProductImagesPayloadFromGallery(
     galleryImages: ProductGalleryImage[]
 ): CreateProductImagePayload[] {
@@ -52,14 +69,18 @@ export function buildProductImagesPayloadFromGallery(
 
     const images: CreateProductImagePayload[] = [];
     for (const item of galleryImages) {
-        if (item.file !== null) {
+        if (item.file != null) {
             continue;
         }
-        const url = (item.previewUrl || item.imageUrl || "").trim();
-        if (!/^https?:\/\//i.test(url)) {
+        const imageUrl = resolvePersistableImageUrl(item);
+        if (imageUrl == null) {
             continue;
         }
-        images.push({ imageUrl: url, sortOrder });
+        images.push({
+            imageUrl,
+            sortOrder,
+            ...(item.isPrimary ? { isPrimary: true } : {}),
+        });
         sortOrder += 1;
     }
     return images;
@@ -145,7 +166,7 @@ export function buildCreateProductRequest(
                 ...baseFields,
                 code: generalData.code.trim(),
                 packageItems,
-                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+                promotions: promotionPayloads ?? [],
             }
             : {
                 ...baseFields,
@@ -370,7 +391,14 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         suppliers,
         priceData,
         basePrices,
-        galleryImages: detail.images,
+        galleryImages: (detail.images ?? []).map((img, index) => ({
+            id: String(img.id ?? `img-${index}`),
+            isPrimary: Boolean(img.isPrimary),
+            imageUrl: img.imageUrl ?? "",
+            previewUrl: img.previewUrl ?? "",
+            sortOrder: img.sortOrder ?? index,
+            file: null,
+        })),
         promotionDrafts: mapDetailPromotionsToDrafts(detail, detail.promotions),
     };
 }

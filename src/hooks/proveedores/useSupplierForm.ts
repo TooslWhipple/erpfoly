@@ -1,5 +1,6 @@
 import { useReducer, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
+import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getSupplierById, createSupplier, updateSupplier } from "@/services/suppliers.service";
@@ -34,7 +35,8 @@ export function useSupplierForm() {
         if (Array.isArray(id)) return id[0];
         return id;
     }, [id]);
-    const isNew = routeId === "nuevo";
+    const isNew =
+        routeId === "nuevo" || router.pathname === "/catalogos/proveedores/nuevo";
     const supplierId = isNew || !routeId ? null : Number(routeId);
     const hasValidSupplierId = supplierId != null && Number.isFinite(supplierId) && supplierId > 0;
 
@@ -221,11 +223,24 @@ export function useSupplierForm() {
         (loadingCatalog && jobTitleOptions.length === 0);
     const saving = createSupplierMutation.isPending || updateSupplierMutation.isPending;
     const breadcrumbItems = useMemo(
-        () => [
-            { label: "Proveedores", href: "/catalogos/proveedores" },
-            { label: isNew ? "Nuevo" : "Editar" },
-        ],
-        [isNew],
+        () => {
+            const items: BreadcrumbItem[] = [
+                { label: "Proveedores", href: "/catalogos/proveedores" },
+            ];
+            if (isNew) {
+                items.push({ label: "Nuevo" });
+                return items;
+            }
+            if (hasValidSupplierId && supplierId != null) {
+                items.push({
+                    label: supplierQuery.data?.name ?? "Detalle",
+                    href: `/catalogos/proveedores/${supplierId}`,
+                });
+            }
+            items.push({ label: "Editar" });
+            return items;
+        },
+        [isNew, hasValidSupplierId, supplierId, supplierQuery.data?.name],
     );
 
     return {

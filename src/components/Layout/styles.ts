@@ -12,19 +12,22 @@ export const MainContent = styled(Box)({
   flexGrow: 1,
   display: "flex",
   flexDirection: "column",
-  minHeight: "100vh",
+  height: "100vh",
+  minHeight: 0,
   width: "100%",
   overflow: "hidden",
 }) as unknown as typeof Box;
 
 export const ContentWrapper = styled(Box)(({ theme }) => ({
   flex: 1,
+  minHeight: 0,
   display: "flex",
   flexDirection: "column",
   padding: CONTENT_PADDING,
   backgroundColor: theme.palette.background.default,
   position: "relative",
-  overflow: "auto",
+  overflowY: "auto",
+  overflowX: "hidden",
   [theme.breakpoints.down("md")]: {
     paddingTop: 72, // Espacio para el botón del menú
     padding: 16,

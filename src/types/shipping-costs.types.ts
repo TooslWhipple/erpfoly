@@ -1,24 +1,53 @@
-/**
- * Shipping costs (costos de envío) domain types.
- * Used for branch-level shipping cost configuration.
- */
+export interface GeoPoint {
+  lat: number;
+  lng: number;
+}
 
-export interface BranchShippingCost {
-  id: string;
+export interface GeoJsonPolygon {
+  type: "Polygon";
+  coordinates: number[][][];
+}
+
+export interface ShippingZone {
+  id?: number;
   name: string;
-  shippingCost: number;
+  color: string;
+  sortOrder: number;
+  polygon: GeoJsonPolygon;
 }
 
-export interface ShippingCostsState {
-  branches: BranchShippingCost[];
+export interface MunicipalityShippingCatalogItem {
+  municipalityId: number;
+  municipalityName: string;
+  stateName: string;
+  configId?: number;
 }
 
-export interface SaveShippingCostsPayload {
-  branches: { id: string; shippingCost: number }[];
+export interface MunicipalityShippingConfig {
+  municipalityId: number;
+  municipalityName: string;
+  stateName: string;
+  priceInZone: number;
+  priceOutOfZone: number;
+  mapCenter: GeoPoint | null;
+  mapDefaultZoom: number;
+  zones: ShippingZone[];
 }
 
-export interface SaveShippingCostsResponse {
-  success: boolean;
-  message?: string;
-  data?: BranchShippingCost[];
+export interface UpsertMunicipalityShippingConfigPayload {
+  priceInZone: number;
+  priceOutOfZone: number;
+  mapCenter?: GeoPoint;
+  mapDefaultZoom?: number;
+  zones: ShippingZone[];
 }
+
+export interface SaveMunicipalityShippingConfigResponse {
+  message: string;
+  municipalityId: number;
+}
+
+export type MapEditMode =
+  | { type: "idle" }
+  | { type: "creating" }
+  | { type: "editing"; zoneId: number | undefined };

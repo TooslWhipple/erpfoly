@@ -2,9 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
-  fetchSupplierChargesMock,
+  fetchSupplierCharges,
   getSupplierChargeCategories,
-  registerSupplierChargeMock,
+  registerSupplierCharge,
 } from "@/services/supplierCharges.service";
 import type {
   RegisterSupplierChargePayload,
@@ -51,14 +51,14 @@ export function useSupplierCharges(
     setLoading(true);
     setFetchError(null);
 
-    const result = await fetchSupplierChargesMock(supplierId);
+    const result = await fetchSupplierCharges(supplierId);
     if (isCancelled?.()) return;
 
     if (result.error) {
       setCharges([]);
       setFetchError(result.error.message);
     } else {
-      setCharges(result.data);
+      setCharges(result.data ?? []);
     }
 
     if (!isCancelled?.()) {
@@ -96,7 +96,7 @@ export function useSupplierCharges(
         selectedStatement?.label.replace(" (Siguiente)", "") ?? "—";
 
       setSaving(true);
-      const result = await registerSupplierChargeMock({
+      const result = await registerSupplierCharge({
         ...payload,
         supplierId,
         chargedInLabel,

@@ -23,7 +23,7 @@ import {
 const VAT_RATE = 0.16;
 
 export interface RegisterSupplierChargeFormValues {
-  accountStatementId: string;
+  accountStatementId: number;
   categoryId: string;
   description: string;
   amount: string;
@@ -47,7 +47,7 @@ interface RegisterSupplierChargeModalProps {
 }
 
 const DEFAULT_FORM_VALUES: RegisterSupplierChargeFormValues = {
-  accountStatementId: "",
+  accountStatementId: 0,
   categoryId: "",
   description: "",
   amount: "",
@@ -97,7 +97,7 @@ export function RegisterSupplierChargeModal({
     if (!open) return;
     setFormValues({
       ...DEFAULT_FORM_VALUES,
-      accountStatementId: accountStatementOptions[0]?.value?.toString() ?? "",
+      accountStatementId: accountStatementOptions[0]?.value ?? 0,
       categoryId: fixedCategoryId ?? "",
       amount: initialAmount,
     });
@@ -209,7 +209,7 @@ export function RegisterSupplierChargeModal({
           required
           value={formValues.accountStatementId}
           onChange={(event) => {
-            const value = String(event.target.value);
+            const value = Number(event.target.value);
             setFormValues((prev) => ({ ...prev, accountStatementId: value }));
           }}
           options={accountStatementOptions}

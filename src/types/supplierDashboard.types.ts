@@ -13,7 +13,7 @@ export interface SupplierDashboardSummary {
 }
 
 export interface SupplierAccountStatementRow {
-  id: string;
+  id: number;
   periodLabel: string;
   amount: number;
   payments: number;
@@ -22,13 +22,13 @@ export interface SupplierAccountStatementRow {
 }
 
 export interface SupplierDeliveryItem {
-  id: string;
+  id: number;
   productName: string;
   quantity: number;
 }
 
 export interface SupplierDeliveryGroup {
-  id: string;
+  id: number;
   dateLabel: string;
   itemCount: number;
   items: SupplierDeliveryItem[];
@@ -37,7 +37,7 @@ export interface SupplierDeliveryGroup {
 export type SupplierChargeStatus = "pending" | "paid";
 
 export interface SupplierChargeRow {
-  id: string;
+  id: number;
   description: string;
   category: string;
   chargedInLabel: string;
@@ -51,13 +51,13 @@ export interface SupplierChargeCategoryOption {
 }
 
 export interface SupplierAccountStatementOption {
-  value: string;
+  value: number;
   label: string;
 }
 
 export interface RegisterSupplierChargePayload {
   supplierId: number;
-  accountStatementId: string;
+  accountStatementId: number;
   chargedInLabel: string;
   categoryId: string;
   description: string;
@@ -68,7 +68,7 @@ export interface RegisterSupplierChargePayload {
 export type SupplierPaymentStatus = "pending" | "paid";
 
 export interface SupplierPaymentRow {
-  id: string;
+  id: number;
   description: string;
   chargedInLabel: string;
   amount: number;
@@ -80,7 +80,7 @@ export type SupplierDamagedGoodsStatus = "scheduled" | "pending";
 export type SupplierDamagedGoodsUrgency = "high" | "medium" | "low";
 
 export interface SupplierDamagedGoodsRow {
-  id: string;
+  id: number;
   sku: string;
   warehouse: string;
   entryDate: string;
@@ -92,7 +92,7 @@ export interface SupplierDamagedGoodsRow {
 }
 
 export interface RegisterDamagedGoodsExitPayload extends RegisterSupplierChargePayload {
-  damagedGoodsIds: string[];
+  damagedGoodsIds: number[];
 }
 
 export interface SupplierDashboard {

@@ -2,8 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getSupplierChargeCategories } from "@/services/supplierCharges.service";
-import { registerDamagedGoodsExitMock } from "@/services/supplierDamagedGoods.service";
-import { fetchSupplierDamagedGoodsMock } from "@/services/supplierDamagedGoods.service";
+import { registerDamagedGoodsExit, fetchSupplierDamagedGoods } from "@/services/supplierDamagedGoods.service";
 import type {
   RegisterSupplierChargePayload,
   SupplierAccountStatementRow,
@@ -26,7 +25,7 @@ export function useSupplierDamagedGoods(
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [exitModalOpen, setExitModalOpen] = useState(false);
 
   const categories = useMemo(() => getSupplierChargeCategories(), []);
@@ -50,14 +49,14 @@ export function useSupplierDamagedGoods(
     setLoading(true);
     setFetchError(null);
 
-    const result = await fetchSupplierDamagedGoodsMock(supplierId);
+    const result = await fetchSupplierDamagedGoods(supplierId);
     if (isCancelled?.()) return;
 
     if (result.error) {
       setItems([]);
       setFetchError(result.error.message);
     } else {
-      setItems(result.data);
+      setItems(result.data ?? []);
     }
 
     if (!isCancelled?.()) {
@@ -109,7 +108,7 @@ export function useSupplierDamagedGoods(
         selectedStatement?.label.replace(" (Siguiente)", "") ?? "—";
 
       setSaving(true);
-      const result = await registerDamagedGoodsExitMock({
+      const result = await registerDamagedGoodsExit({
         ...payload,
         supplierId,
         chargedInLabel,

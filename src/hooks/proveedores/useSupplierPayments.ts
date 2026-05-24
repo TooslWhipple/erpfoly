@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
-import { fetchSupplierPaymentsMock } from "@/services/supplierPayments.service";
+import { fetchSupplierPayments } from "@/services/supplierPayments.service";
 import type { SupplierPaymentRow } from "@/types/supplierDashboard.types";
 
 export function useSupplierPayments(supplierId: number | null) {
@@ -18,14 +18,14 @@ export function useSupplierPayments(supplierId: number | null) {
     setLoading(true);
     setFetchError(null);
 
-    const result = await fetchSupplierPaymentsMock(supplierId);
+    const result = await fetchSupplierPayments(supplierId);
     if (isCancelled?.()) return;
 
     if (result.error) {
       setPayments([]);
       setFetchError(result.error.message);
     } else {
-      setPayments(result.data);
+      setPayments(result.data ?? []);
     }
 
     if (!isCancelled?.()) {

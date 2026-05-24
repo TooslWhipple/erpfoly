@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
-import { fetchSupplierDashboardMock } from "@/services/supplierDashboard.service";
+import { fetchSupplierDashboard } from "@/services/supplierDashboard.service";
 import type {
   SupplierDashboard,
   SupplierDashboardTab,
@@ -28,10 +28,7 @@ export function useSupplierDashboard() {
   const router = useRouter();
   const rawId = router.query.id;
   const isReservedRoute = rawId === "nuevo" || rawId === "editar";
-  const supplierId =
-    typeof rawId === "string" && rawId.length > 0 && !isReservedRoute
-      ? Number.parseInt(rawId, 10)
-      : null;
+  const supplierId = typeof rawId === "string" && rawId.length > 0 && !isReservedRoute ? Number.parseInt(rawId, 10) : null;
   const validId = supplierId != null && !Number.isNaN(supplierId) ? supplierId : null;
 
   const [dashboard, setDashboard] = useState<SupplierDashboard | null>(null);
@@ -54,18 +51,20 @@ export function useSupplierDashboard() {
       setLoading(true);
       setError(null);
 
-      const result = await fetchSupplierDashboardMock(validId);
-      if (isCancelled()) return;
+      try {
+        const result = await fetchSupplierDashboard(validId);
+        if (isCancelled()) return;
 
       if (result.error) {
         setDashboard(null);
         setError(result.error.message);
       } else {
-        setDashboard(result.data);
+        setDashboard(result.data ?? null);
       }
-
-      if (!isCancelled()) {
-        setLoading(false);
+      } finally {
+        if (!isCancelled()) {
+          setLoading(false);
+        }
       }
     },
     [validId]

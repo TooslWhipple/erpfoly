@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import type { MunicipalityShippingCatalogItem } from "@/types/shipping-costs.types";
 import { useShippingMunicipalityCatalog } from "@/hooks/useShippingMunicipalityCatalog";
+import { matchesNormalizedSearch, normalizeSearchText } from "@/utils/search-text";
 
 type MunicipalityOption = {
   id: number;
@@ -65,8 +66,21 @@ export function ShippingMunicipalityAutocomplete({
         stateName: item.stateName,
       });
     }
-    return [...byId.values()].sort((a, b) => a.municipalityName.localeCompare(b.municipalityName));
-  }, [configuredMunicipalities, debouncedSearch.length, preloadMunicipalities, searchedMunicipalities]);
+    const merged = [...byId.values()];
+    const normalizedQuery = normalizeSearchText(debouncedSearch);
+    const filtered =
+      normalizedQuery.length >= 2
+        ? merged.filter((option) =>
+            matchesNormalizedSearch(
+              normalizedQuery,
+              option.municipalityName,
+              option.stateName
+            )
+          )
+        : merged;
+
+    return filtered.sort((a, b) => a.municipalityName.localeCompare(b.municipalityName, "es"));
+  }, [configuredMunicipalities, debouncedSearch, preloadMunicipalities, searchedMunicipalities]);
 
   const selectedOption = useMemo(() => {
     if (value == null) return null;
@@ -116,7 +130,17 @@ export function ShippingMunicipalityAutocomplete({
       inputValue={inputValue}
       loading={isFetching}
       loadingText="Cargando ciudades..."
-      filterOptions={(list) => list}
+      filterOptions={(list, state) => {
+        const normalizedQuery = normalizeSearchText(state.inputValue);
+        if (normalizedQuery.length < 2) return list;
+        return list.filter((option) =>
+          matchesNormalizedSearch(
+            normalizedQuery,
+            option.municipalityName,
+            option.stateName
+          )
+        );
+      }}
       noOptionsText="Sin resultados"
       clearOnBlur={false}
       getOptionLabel={(option) => option.label}

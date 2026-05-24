@@ -207,6 +207,7 @@ export default function CostosEnvioPage() {
   );
 
   const isMapZoneEditing = editMode.type === "creating" || editMode.type === "editing";
+  const isZoneMetadataLocked = editMode.type === "editing";
 
   useEffect(() => {
     if (!hasDraftZone || editMode.type === "creating") return;
@@ -618,7 +619,7 @@ export default function CostosEnvioPage() {
                     <ZoneName
                       size="small"
                       value={zone.name}
-                      disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
                       onChange={(event) =>
                         handleZoneChange(zone.id, { name: event.target.value })
                       }
@@ -628,7 +629,7 @@ export default function CostosEnvioPage() {
                       size="small"
                       type="color"
                       value={zone.color}
-                      disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
                       onChange={(event) =>
                         handleZoneChange(zone.id, { color: event.target.value })
                       }

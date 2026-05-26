@@ -2,8 +2,8 @@ import { IconButton } from "@mui/material";
 import { GripVertical, MoreVertical } from "lucide-react";
 import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components/TableCrud";
-import type { RouteArticle } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
+import type { RouteArticle } from "@/types/rutas.types";
 
 const ARTICLE_STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
@@ -59,7 +59,3 @@ export function ArticlesTab({ articles }: ArticlesTabProps) {
     />
   );
 }
-
-const RouteArticlesTabPage = () => null;
-
-export default RouteArticlesTabPage;

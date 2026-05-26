@@ -66,6 +66,7 @@ export async function updateRolePermissions(
 ): Promise<ApiResult<{ added: number; removed: number }>> {
   return patch<{ added: number; removed: number }>(
     `/role/${roleId}/permissions`,
-    payload
+    payload,
+    { timeout: 30000 }
   );
 }

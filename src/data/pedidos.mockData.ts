@@ -131,6 +131,7 @@ export const MOCK_SUGGESTIONS_FOR_ORDER: ProductSuggestion[] = [
             lastMonth: 32,
             currentMonth: 13,
         },
+        score: 0,
         trendData: [
             { month: "Feb", value: 8 },
             { month: "Mar", value: 12 },
@@ -149,6 +150,7 @@ export const MOCK_SUGGESTIONS_FOR_ORDER: ProductSuggestion[] = [
             lastMonth: 32,
             currentMonth: 13,
         },
+        score: 0,
         trendData: [
             { month: "Feb", value: 8 },
             { month: "Mar", value: 12 },
@@ -167,6 +169,7 @@ export const MOCK_SUGGESTIONS_FOR_ORDER: ProductSuggestion[] = [
             lastMonth: 190,
             currentMonth: 59,
         },
+        score: 0,
         trendData: [
             { month: "Feb", value: 45 },
             { month: "Mar", value: 52 },
@@ -185,6 +188,7 @@ export const MOCK_SUGGESTIONS_FOR_ORDER: ProductSuggestion[] = [
             lastMonth: 32,
             currentMonth: 13,
         },
+        score: 0,
         trendData: [
             { month: "Feb", value: 8 },
             { month: "Mar", value: 12 },

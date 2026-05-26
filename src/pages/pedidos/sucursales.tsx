@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { MainLayout, Title, TabFilters, TableCrud, SupplierSelectionModal } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
+import type { Supplier } from "@/types/pedidos.types";
 import { Stack } from "@mui/material";
+import { BRANCH_ORDERS_CREATE, BRANCH_ORDERS_READ } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "delivered";
 
@@ -204,6 +206,7 @@ export default function PedidosSucursales() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [supplierModalOpen, setSupplierModalOpen] = useState(false);
 
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
@@ -250,7 +253,21 @@ export default function PedidosSucursales() {
     };
 
     const handleCreate = () => {
-        router.push("/pedidos/sucursales/nuevo");
+        setSupplierModalOpen(true);
+    };
+
+    const handleSupplierSelect = (supplier: Supplier) => {
+        router.push({
+            pathname: "/pedidos/sucursales/nuevo",
+            query: {
+                supplierId: supplier.id,
+                supplierName: supplier.name,
+            },
+        });
+    };
+
+    const handleCloseSupplierModal = () => {
+        setSupplierModalOpen(false);
     };
 
     const handleViewOrder = (order: BranchOrder) => {
@@ -317,6 +334,7 @@ export default function PedidosSucursales() {
             label: "Ver detalle",
             icon: <EditIcon fontSize="small" />,
             onClick: handleViewOrder,
+            permission: BRANCH_ORDERS_READ,
         },
     ];
 
@@ -340,6 +358,7 @@ export default function PedidosSucursales() {
                             variant: "contained",
                             color: "primary",
                             showIcon: true,
+                            permission: BRANCH_ORDERS_CREATE,
                         },
                     ]}
                 />
@@ -359,6 +378,12 @@ export default function PedidosSucursales() {
                     emptyMessage="No hay pedidos de sucursales"
                 />
             </Stack>
+
+            <SupplierSelectionModal
+                open={supplierModalOpen}
+                onClose={handleCloseSupplierModal}
+                onSelect={handleSupplierSelect}
+            />
         </MainLayout>
     );
 }

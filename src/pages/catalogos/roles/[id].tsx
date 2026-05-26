@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
@@ -18,12 +26,16 @@ import {
   areModulesEqual,
 } from "@/utils/role";
 import type { PermissionsTemplateResponse } from "@/types/roles.types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
 
 export default function RoleFormPage() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const { id } = router.query;
 
   const isNew = id === "nuevo";
+  const canSaveRole = hasPermission(isNew ? CATALOG_ROLES_CREATE : CATALOG_ROLES_UPDATE);
   const roleId = isNew ? null : Number(id);
 
   const [loading, setLoading] = useState(true);
@@ -101,6 +113,40 @@ export default function RoleFormPage() {
       );
     },
     [],
+  );
+
+  const handleGroupPermissionChange = useCallback(
+    (permission: keyof Permission, value: boolean) => {
+      setTableModules((prev) =>
+        prev.map((module) => ({
+          ...module,
+          permissions: {
+            ...module.permissions,
+            [permission]: value,
+          },
+        })),
+      );
+    },
+    [],
+  );
+
+  const isGroupChecked = useCallback(
+    (permission: keyof Permission): boolean => {
+      if (tableModules.length === 0) return false;
+      return tableModules.every((module) => module.permissions[permission]);
+    },
+    [tableModules],
+  );
+
+  const isGroupIndeterminate = useCallback(
+    (permission: keyof Permission): boolean => {
+      if (tableModules.length === 0) return false;
+      const selectedCount = tableModules.filter(
+        (module) => module.permissions[permission],
+      ).length;
+      return selectedCount > 0 && selectedCount < tableModules.length;
+    },
+    [tableModules],
   );
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,7 +260,7 @@ export default function RoleFormPage() {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canSaveRole}
           >
             {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
           </Button>
@@ -247,6 +293,25 @@ export default function RoleFormPage() {
           <PermissionsTable
             modules={tableModules}
             onChange={handlePermissionChange}
+            onGroupChange={handleGroupPermissionChange}
+            groupState={{
+              view: {
+                checked: isGroupChecked("view"),
+                indeterminate: isGroupIndeterminate("view"),
+              },
+              create: {
+                checked: isGroupChecked("create"),
+                indeterminate: isGroupIndeterminate("create"),
+              },
+              edit: {
+                checked: isGroupChecked("edit"),
+                indeterminate: isGroupIndeterminate("edit"),
+              },
+              delete: {
+                checked: isGroupChecked("delete"),
+                indeterminate: isGroupIndeterminate("delete"),
+              },
+            }}
             disabled={saving}
           />
         </FormCard>

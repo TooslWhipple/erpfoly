@@ -5,6 +5,7 @@ import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
+import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
 
 type User = UserListItem;
 
@@ -135,6 +136,7 @@ export default function Usuarios() {
             label: "Editar",
             icon: <EditIcon fontSize="small" />,
             onClick: handleEditUser,
+            permission: CATALOG_USERS_UPDATE,
         },
     ];
 
@@ -153,7 +155,8 @@ export default function Usuarios() {
                     actions={[
                         {
                             label: "Nuevo",
-                            onClick: handleCreateUser
+                            onClick: handleCreateUser,
+                            permission: CATALOG_USERS_CREATE,
                         }
                     ]}
                 />

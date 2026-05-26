@@ -5,7 +5,9 @@ import { authService, LoginCredentials } from "@/services/auth.service";
 
 export function useAuth() {
 	const router = useRouter();
-	const { token, user, isAuthenticated, setAuth, logout: clearAuth, setLoading } = useAuthStore();
+
+	const { token, user, isAuthenticated, logout: clearAuth, setLoading } = useAuthStore();
+	
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
@@ -21,12 +23,16 @@ export function useAuth() {
 			setLoading(false);
 			return;
 		}
-		// Step 1 success: OTP sent → go to OTP screen (pass identifier for resend)
+
 		const query: Record<string, string> = {};
 		if (credentials.username?.trim()) query.username = credentials.username.trim();
 		if (credentials.cellphone?.trim()) query.cellphone = credentials.cellphone.trim();
+		if (typeof router.query.redirect === "string") query.redirect = router.query.redirect;
+		
 		const search = new URLSearchParams(query).toString();
+		
 		router.push(search ? `/login/validate-otp?${search}` : "/login/validate-otp");
+		
 		setIsLoading(false);
 		setLoading(false);
 	};
@@ -34,6 +40,7 @@ export function useAuth() {
 	const logout = async () => {
 		await authService.logout();
 		clearAuth();
+		
 		router.push("/login");
 	};
 

@@ -7,6 +7,9 @@ export interface RouteSummary {
   location: string;
   articleCount: number;
   pointCount: number;
+  /** Static Google Maps preview URL when configured server-side */
+  miniMapUrl?: string;
+  driverName?: string;
 }
 
 export interface RouteArticle {

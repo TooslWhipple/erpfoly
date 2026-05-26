@@ -19,6 +19,7 @@ export interface FormFromFieldsProps<T extends readonly FieldDef[]> {
     onSubmit: (value: SchemaOutputFromFields<T>) => void | Promise<void>;
     confirmLabel?: string;
     loading?: boolean;
+    disabled?: boolean;
     validateOn?: "change" | "blur" | "submit";
     /** MUI sx prop for the actions container (alignment, spacing, etc.). */
     actionsSx?: SxProps<Theme>;
@@ -35,6 +36,7 @@ export function FormFromFields<T extends readonly FieldDef[]>({
     onSubmit,
     confirmLabel = "Guardar",
     loading = false,
+    disabled = false,
     validateOn = "blur",
     actionsSx,
     children,
@@ -50,13 +52,14 @@ export function FormFromFields<T extends readonly FieldDef[]>({
                 form.handleSubmit();
             }}
         >
-            <FormContent disabled={loading} asForm={false}>
+            <FormContent disabled={loading || disabled} asForm={false}>
                 {children}
             </FormContent>
             <FormSubmitActions
                 form={form}
                 submitLabel={confirmLabel}
                 loading={loading}
+                disabled={disabled}
                 sx={actionsSx}
             />
         </form>

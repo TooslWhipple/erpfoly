@@ -2,7 +2,7 @@ import { useReducer, useState, useEffect, useMemo, useCallback, useRef } from "r
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { getSupplierById, createSupplier, updateSupplier } from "@/services/suppliers.service";
+import { getSupplierById, createSupplier, updateSupplier, inviteSupplier } from "@/services/suppliers.service";
 import { unwrapOrThrow, getApiErrorMessage } from "@/lib/axios";
 import { useContactJobTitles } from "./useContactJobTitles";
 import { validateGeneralForm } from "@/forms";
@@ -78,6 +78,10 @@ export function useSupplierForm() {
     const updateSupplierMutation = useMutation({
         mutationFn: ({ id: supplierIdValue, payload }: { id: number; payload: ReturnType<typeof formStateToPayload> }) =>
             updateSupplier(supplierIdValue, payload),
+    });
+
+    const inviteSupplierMutation = useMutation({
+        mutationFn: inviteSupplier,
     });
 
     useEffect(() => {
@@ -192,6 +196,24 @@ export function useSupplierForm() {
         createTempId,
     });
 
+    const handleInvite = useCallback(async () => {
+        if (!hasValidSupplierId || supplierId == null) {
+            showError("No se encontró un identificador de proveedor válido.");
+            return;
+        }
+        try {
+            const result = await inviteSupplierMutation.mutateAsync(supplierId as number);
+            if (result.error) {
+                showError(result.error.message);
+                return;
+            }
+            showSuccess(result.data?.message ?? "Invitación enviada correctamente.");
+        } catch (err) {
+            console.error("[SupplierForm] Error inviting:", err);
+            showError(getApiErrorMessage(err));
+        }
+    }, [supplierId, hasValidSupplierId, inviteSupplierMutation, showError, showSuccess]);
+
     const handleTabChange = useCallback((value: string) => {
         if (!isSupplierFormTab(value)) return;
         setActiveTab(value);
@@ -220,6 +242,8 @@ export function useSupplierForm() {
         (shouldLoadSupplier && supplierQuery.isLoading) ||
         (loadingCatalog && jobTitleOptions.length === 0);
     const saving = createSupplierMutation.isPending || updateSupplierMutation.isPending;
+    const inviting = inviteSupplierMutation.isPending;
+    const hasUser = supplierQuery.data?.hasUser ?? false;
     const breadcrumbItems = useMemo(
         () => [
             { label: "Proveedores", href: "/catalogos/proveedores" },
@@ -243,7 +267,10 @@ export function useSupplierForm() {
         activeTab,
         setActiveTab: handleTabChange,
         saving,
+        inviting,
+        hasUser,
         handleSave,
+        handleInvite,
         handleGeneralFieldChange,
         handleAddContact,
         handleRemoveContact,

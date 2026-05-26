@@ -1,6 +1,3 @@
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 import type { SavePromotionPayload } from "@/services/promociones.service";
 
@@ -14,7 +11,6 @@ export interface ProductPromotionDraft {
     payload: SavePromotionPayload;
 }
 
-/** Backend warranty values for POST /products */
 export type ProductWarrantyTypeApi = "MONTHS" | "ANNEX_POLICY";
 
 export interface CreateProductSupplierPayload {
@@ -26,9 +22,9 @@ export interface CreateProductSupplierPayload {
 export interface CreateProductImagePayload {
     imageUrl: string;
     sortOrder: number;
+    isPrimary?: boolean;
 }
 
-/** Client-side cap aligned with backend (~30 gallery uploads per save). */
 export const MAX_PRODUCT_GALLERY_FILES = 30;
 
 export interface CreateProductBranchPayload {
@@ -70,7 +66,6 @@ export interface CreateProductResponse {
     id: number;
 }
 
-/** GET /products/preview-code?lineId= */
 export interface ProductPreviewCodeResponse {
     code: string;
 }
@@ -80,7 +75,6 @@ export interface ProductSupplier {
     supplierId: number;
     supplierName: string;
     isDefault: boolean;
-    /** Supplier reference code sent to POST /products */
     supplierProductCode?: string;
 }
 
@@ -146,9 +140,7 @@ export interface CostHistoryEntry {
     changeType: "increase" | "decrease";
 }
 
-// ============================================================================
 // FORM STATE INTERFACES
-// ============================================================================
 
 export interface GeneralDataFormState {
     departmentId: string;
@@ -179,10 +171,6 @@ export interface FormErrors {
     [key: string]: string;
 }
 
-// ============================================================================
-// PACKAGE TYPES
-// ============================================================================
-
 export type PackageType = "article" | "service";
 
 export interface ProductPackage {
@@ -191,9 +179,7 @@ export interface ProductPackage {
     articleId?: string;
     articleName?: string;
     serviceName?: string;
-    /** Units included in the package (default 1 when adding from the modal). */
     quantity: number;
-    /** Effective line price for articles; services use 0 when complimentary. */
     packagePrice: number;
     branches: number[];
 }

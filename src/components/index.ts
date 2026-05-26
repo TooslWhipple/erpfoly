@@ -1,5 +1,6 @@
 export { Sidebar } from "./Sidebar";
 export { MainLayout } from "./Layout";
+export { AuthGuard } from "./AuthGuard";
 export { Title } from "./Title";
 export { Breadcrumbs } from "./Breadcrumbs";
 export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";
@@ -112,4 +113,8 @@ export {
   GuarantorTab,
 } from "./CreditApplicationForm";
 export * from "./Icons";
+export { RouteCircuitMap } from "./RouteCircuitMap";
+export type { RouteCircuitMapProps } from "./RouteCircuitMap";
+export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
+export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
 

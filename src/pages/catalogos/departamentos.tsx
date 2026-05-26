@@ -16,6 +16,12 @@ import {
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
+  CATALOG_DEPARTMENTS_CREATE,
+  CATALOG_DEPARTMENTS_DELETE,
+  CATALOG_DEPARTMENTS_READ,
+  CATALOG_DEPARTMENTS_UPDATE,
+} from "@/lib/permissions";
+import {
   defineFormFields,
   schemas,
   type SchemaInputFromFields,
@@ -384,12 +390,14 @@ export default function Departamentos() {
       label: "Ver detalle",
       icon: <VisibilityIcon fontSize="small" />,
       onClick: handleViewDetail,
+      permission: CATALOG_DEPARTMENTS_READ,
     },
     {
       id: "edit",
       label: "Editar",
       icon: <EditIcon fontSize="small" />,
       onClick: handleEditDepartment,
+      permission: CATALOG_DEPARTMENTS_UPDATE,
     },
     {
       id: "delete",
@@ -397,6 +405,7 @@ export default function Departamentos() {
       icon: <DeleteIcon fontSize="small" />,
       onClick: handleDeleteDepartment,
       color: "error",
+      permission: CATALOG_DEPARTMENTS_DELETE,
     },
   ];
 
@@ -419,6 +428,7 @@ export default function Departamentos() {
               onClick: handleOpenCreateModal,
               variant: "contained",
               color: "primary",
+              permission: CATALOG_DEPARTMENTS_CREATE,
             },
           ]}
         />

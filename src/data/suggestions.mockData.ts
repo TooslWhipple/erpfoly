@@ -15,6 +15,7 @@ export const MOCK_SUGGESTIONS: ProductSuggestion[] = [
             lastMonth: 32,
             currentMonth: 13,
         },
+        score: 0,
         trendData: [
             { month: "Ene", value: 8 },
             { month: "Feb", value: 12 },
@@ -35,6 +36,7 @@ export const MOCK_SUGGESTIONS: ProductSuggestion[] = [
             lastMonth: 28,
             currentMonth: 11,
         },
+        score: 0,
         trendData: [
             { month: "Ene", value: 7 },
             { month: "Feb", value: 10 },
@@ -55,6 +57,7 @@ export const MOCK_SUGGESTIONS: ProductSuggestion[] = [
             lastMonth: 35,
             currentMonth: 15,
         },
+        score: 0,
         trendData: [
             { month: "Ene", value: 10 },
             { month: "Feb", value: 14 },

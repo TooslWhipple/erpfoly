@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, Alert, CircularProgress, Stack, Button } from "@mui/material";
+import { Box, Alert, CircularProgress, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import {
   MainLayout,
@@ -10,230 +10,43 @@ import {
   Title,
   TabFilters,
 } from "@/components";
-import type { Column, RowAction } from "@/components/TableCrud";
-import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import type { Column, RowAction, BreadcrumbItem } from "@/components";
+import {
+  DepartmentSettingsTab,
+  buildLineModalDefaultValues,
+  buildLinePromotionPayload,
+  departmentLineFormFields,
+  lineModalSchemaSuperRefine,
+  type DepartmentLineTableRow,
+  type LineFormOutput,
+} from "@/components/DepartmentDetailTabs";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { getDepartmentById } from "@/services/departments.service";
+import { getDepartmentById, updateDepartment } from "@/services/departments.service";
 import {
   getProductLines,
   createProductLine,
   updateProductLine,
   deleteProductLine,
-  type OriginPromotionPayload,
   type ProductLineItem,
 } from "@/services/product-lines.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
-  defineFormFields,
-  schemas,
-  type SchemaInputFromFields,
-  type SchemaOutputFromFields,
-} from "@/forms";
-import { messages } from "@/forms/validation/messages";
-import { z } from "zod";
-import {
-  SettingsGrid,
-  SettingsCard,
-  SettingsTitle,
-  SettingsDescription,
-  SettingsValue,
-  PromotionsCard,
-  PromotionsHeader,
-} from "@/styles/catalogos/departamentos-detail.styles";
-
-// ============================================================================
-// TYPES - Row with mock articles count for table display
-// ============================================================================
-
-interface GroupRow extends ProductLineItem {
-  articles: number;
-}
+  CATALOG_DEPARTMENTS_CREATE,
+  CATALOG_DEPARTMENTS_DELETE,
+  CATALOG_DEPARTMENTS_UPDATE,
+  CATALOG_PROMOTIONS_CREATE,
+} from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import { formatPercentFieldValue, getProfitMarginFieldState } from "@/utils/percentInput";
 
 type DepartmentDetailTab = "lines" | "settings";
 
-type LineFormShape = {
-  code: string;
-  name: string;
-  hasLinePromotion: boolean;
-  promotionPercentage: string;
-  promotionStartDate: string;
-  promotionEndDate: string;
-};
-
-const lineFormFields = defineFormFields<LineFormShape>()([
-  {
-    name: "name",
-    schema: schemas
-      .requiredString(2, "El nombre de la línea es requerido")
-      .max(128, messages.string.max(128)),
-    label: "Nombre de la categoría",
-    type: "text",
-    placeholder: "Ej. Sillas",
-  },
-  {
-    name: "code",
-    schema: schemas
-      .requiredString(1, "La abreviación es requerida")
-      .max(32, messages.string.max(32))
-      .transform((s) => s.toUpperCase()),
-    label: "Abreviación",
-    type: "text",
-    placeholder: "Ej. SL",
-    filter: (v) => v.toUpperCase(),
-  },
-  {
-    name: "hasLinePromotion",
-    schema: z.boolean(),
-    label: "Agregar Promoción para ésta Línea",
-    type: "switch",
-  },
-  {
-    name: "promotionPercentage",
-    schema: z.string(),
-    label: "Promoción",
-    type: "number",
-    placeholder: "32",
-    when: (values) => Boolean(values.hasLinePromotion),
-  },
-  {
-    name: "promotionStartDate",
-    schema: z.string(),
-    label: "Fecha de inicio",
-    type: "date",
-    when: (values) => Boolean(values.hasLinePromotion),
-  },
-  {
-    name: "promotionEndDate",
-    schema: z.string(),
-    label: "Fecha fin",
-    type: "date",
-    when: (values) => Boolean(values.hasLinePromotion),
-  },
-] as const);
-
-type LineFormOutput = SchemaOutputFromFields<typeof lineFormFields>;
-
-interface PromotionMockRow {
-  id: number;
-  status: "active" | "inactive";
-  name: string;
-  promotion: string;
-  endDate: string;
-  products: number;
-}
-
-const promotionMockRows: PromotionMockRow[] = [
-  {
-    id: 1,
-    status: "active",
-    name: "Mes de la línea blanca",
-    promotion: "12%",
-    endDate: "Octubre",
-    products: 298,
-  },
-  {
-    id: 2,
-    status: "inactive",
-    name: "Día de las madres",
-    promotion: "30%",
-    endDate: "10, Mayo de 2025",
-    products: 122,
-  },
-];
-
-function lineModalSchemaSuperRefine(data: LineFormOutput, ctx: z.RefinementCtx): void {
-  if (!data.hasLinePromotion) return;
-
-  const percentageRaw = data.promotionPercentage?.trim() ?? "";
-  if (!percentageRaw || Number.isNaN(Number(percentageRaw))) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "El porcentaje de promoción es requerido",
-      path: ["promotionPercentage"],
-    });
-  } else {
-    const value = Number(percentageRaw);
-    if (value < 0 || value > 100) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "El porcentaje debe estar entre 0 y 100",
-        path: ["promotionPercentage"],
-      });
-    }
-  }
-
-  const startDate = data.promotionStartDate?.trim() ?? "";
-  const endDate = data.promotionEndDate?.trim() ?? "";
-  if (!startDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "La fecha de inicio es requerida",
-      path: ["promotionStartDate"],
-    });
-  }
-  if (!endDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "La fecha fin es requerida",
-      path: ["promotionEndDate"],
-    });
-  }
-  if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "La fecha fin debe ser posterior a la fecha de inicio",
-      path: ["promotionEndDate"],
-    });
-  }
-}
-
-function buildLineModalDefaultValues(
-  editingLine: ProductLineItem | null,
-): SchemaInputFromFields<typeof lineFormFields> {
-  if (editingLine) {
-    const hasPromotion = Boolean(editingLine.promotion);
-    return {
-      name: editingLine.name,
-      code: (editingLine.code ?? "").toUpperCase(),
-      hasLinePromotion: hasPromotion,
-      promotionPercentage:
-        editingLine.promotion?.percentage != null
-          ? String(editingLine.promotion.percentage)
-          : "",
-      promotionStartDate: editingLine.promotion?.startDate ?? "",
-      promotionEndDate: editingLine.promotion?.endDate ?? "",
-    };
-  }
-  return {
-    name: "",
-    code: "",
-    hasLinePromotion: false,
-    promotionPercentage: "",
-    promotionStartDate: "",
-    promotionEndDate: "",
-  };
-}
-
-function buildLinePromotionPayload(data: LineFormOutput): OriginPromotionPayload | undefined {
-  if (!data.hasLinePromotion) {
-    return undefined;
-  }
-
-  return {
-    discount_rate: Number(data.promotionPercentage),
-    start_date: data.promotionStartDate,
-    end_date: data.promotionEndDate || null,
-  };
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export default function DepartmentDetailPage() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+
   const { id } = router.query;
 
   const departmentId = id === "new" || id === "nuevo" ? null : Number(id);
@@ -244,6 +57,8 @@ export default function DepartmentDetailPage() {
   const [activeTab, setActiveTab] = useState<DepartmentDetailTab>("lines");
   const [department, setDepartment] = useState<Department | null>(null);
   const [loading, setLoading] = useState(true);
+  const [marginDraft, setMarginDraft] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput("", 300);
   const isDepartmentReady = departmentId != null && !Number.isNaN(departmentId);
@@ -281,12 +96,19 @@ export default function DepartmentDetailPage() {
     setLoading(true);
     const result = await getDepartmentById(departmentId);
     setLoading(false);
+
     if (result.error) {
       console.error("[DepartmentDetail] Error fetching department:", result.error.message);
       setDepartment(null);
+      setMarginDraft("");
       return;
     }
-    setDepartment(result.data ?? null);
+
+    const data = result.data ?? null;
+    setDepartment(data);
+    if (data) {
+      setMarginDraft(formatPercentFieldValue(data.margin));
+    }
   }, [departmentId, isDepartmentReady]);
 
   useEffect(() => {
@@ -299,87 +121,138 @@ export default function DepartmentDetailPage() {
     }
   }, [activeTab, debouncedSearch, setSearch]);
 
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Departamentos", href: "/catalogos/departamentos" },
-    { label: department ? department.name : "Detalle" },
-  ];
+  const marginFieldState = useMemo(
+    () => (department ? getProfitMarginFieldState(marginDraft, department.margin) : null),
+    [marginDraft, department],
+  );
 
-  const handleOpenNewGroup = () => {
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: "Departamentos", href: "/catalogos/departamentos" },
+      { label: department ? department.name : "Detalle" },
+    ],
+    [department],
+  );
+
+  const handleOpenNewGroup = useCallback(() => {
     setEditingLine(null);
     setHasGroupPromotion(false);
     setGroupModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenEditGroup = (row: GroupRow) => {
+  const handleOpenEditGroup = useCallback((row: DepartmentLineTableRow) => {
     setEditingLine(row);
     setHasGroupPromotion(Boolean(row.promotion));
     setGroupModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseGroupModal = () => {
+  const handleCloseGroupModal = useCallback(() => {
     setGroupModalOpen(false);
     setEditingLine(null);
     setHasGroupPromotion(false);
-  };
+  }, []);
 
   const handleGroupFormValuesChange = useCallback((values: Record<string, unknown>) => {
     setHasGroupPromotion(Boolean(values.hasLinePromotion));
   }, []);
 
-  const handleSaveGroup = async (data: LineFormOutput) => {
-    if (departmentId == null || Number.isNaN(departmentId)) return;
+  const handleSaveGroup = useCallback(
+    async (data: LineFormOutput) => {
+      if (departmentId == null || Number.isNaN(departmentId)) return;
 
-    const name = data.name.trim();
-    const code = data.code.trim().toUpperCase();
-    const promotion = buildLinePromotionPayload(data);
+      const name = data.name.trim();
+      const code = data.code.trim().toUpperCase();
+      const promotion = buildLinePromotionPayload(data);
 
-    setSavingLine(true);
-    if (editingLine) {
-      const removePromotion = Boolean(editingLine.promotion) && !data.hasLinePromotion;
-      const result = await updateProductLine(editingLine.id, {
-        name,
-        code,
-        promotion,
-        removePromotion,
-      });
-      setSavingLine(false);
+      setSavingLine(true);
+      if (editingLine) {
+        const linePromotionRemoval = Boolean(editingLine.promotion) && !data.hasLinePromotion;
+        const result = await updateProductLine(editingLine.id, {
+          name,
+          code,
+          promotion,
+          removePromotion: linePromotionRemoval,
+        });
+        setSavingLine(false);
+        if (result.error) {
+          console.error("[DepartmentDetail] Error saving line:", result.error.message);
+          showError(result.error.message);
+          return;
+        }
+        showSnackbar("Línea actualizada correctamente.");
+      } else {
+        const result = await createProductLine({ departmentId, name, code, promotion });
+        setSavingLine(false);
+        if (result.error) {
+          console.error("[DepartmentDetail] Error saving line:", result.error.message);
+          showError(result.error.message);
+          return;
+        }
+        showSnackbar("Línea creada correctamente.");
+      }
+      handleCloseGroupModal();
+      await Promise.all([refetchProductLines(), fetchDepartment()]);
+    },
+    [
+      departmentId,
+      editingLine,
+      fetchDepartment,
+      handleCloseGroupModal,
+      refetchProductLines,
+      showError,
+      showSnackbar,
+    ],
+  );
+
+  const handleDeleteGroup = useCallback(
+    async (row: DepartmentLineTableRow) => {
+      if (!window.confirm(`¿Eliminar la línea "${row.name}"?`)) return;
+
+      const result = await deleteProductLine(row.id);
       if (result.error) {
-        console.error("[DepartmentDetail] Error saving line:", result.error.message);
+        console.error("[DepartmentDetail] Error deleting line:", result.error.message);
         showError(result.error.message);
         return;
       }
-      showSnackbar("Línea actualizada correctamente.");
-    } else {
-      const result = await createProductLine({ departmentId, name, code, promotion });
-      setSavingLine(false);
-      if (result.error) {
-        console.error("[DepartmentDetail] Error saving line:", result.error.message);
-        showError(result.error.message);
-        return;
-      }
-      showSnackbar("Línea creada correctamente.");
+      showSnackbar("Línea eliminada correctamente.");
+      await Promise.all([refetchProductLines(), fetchDepartment()]);
+    },
+    [fetchDepartment, refetchProductLines, showError, showSnackbar],
+  );
+
+  const handleSaveSettings = useCallback(async () => {
+    if (
+      departmentId == null ||
+      department == null ||
+      marginFieldState == null ||
+      !marginFieldState.canSave ||
+      marginFieldState.parsed === null
+    ) {
+      return;
     }
-    handleCloseGroupModal();
-    await Promise.all([refetchProductLines(), fetchDepartment()]);
-  };
 
-  const handleDeleteGroup = async (row: GroupRow) => {
-    const confirmed = window.confirm(
-      `¿Eliminar la línea "${row.name}"?`
-    );
-    if (!confirmed) return;
+    setSavingSettings(true);
+    const result = await updateDepartment(departmentId, { margin: marginFieldState.parsed });
+    setSavingSettings(false);
 
-    const result = await deleteProductLine(row.id);
     if (result.error) {
-      console.error("[DepartmentDetail] Error deleting line:", result.error.message);
+      console.error("[DepartmentDetail] Error updating margin:", result.error.message);
       showError(result.error.message);
       return;
     }
-    showSnackbar("Línea eliminada correctamente.");
-    await Promise.all([refetchProductLines(), fetchDepartment()]);
-  };
 
-  const groupRows: GroupRow[] = useMemo(
+    const updated = result.data;
+    if (!updated) {
+      showError("No se recibió respuesta del servidor.");
+      return;
+    }
+
+    setDepartment(updated);
+    setMarginDraft(formatPercentFieldValue(updated.margin));
+    showSnackbar("Margen de utilidad guardado correctamente.");
+  }, [department, departmentId, marginFieldState, showError, showSnackbar]);
+
+  const groupRows: DepartmentLineTableRow[] = useMemo(
     () =>
       productLines.map((pl) => ({
         ...pl,
@@ -388,56 +261,29 @@ export default function DepartmentDetailPage() {
     [productLines],
   );
 
-  const groupAffectedCount = hasGroupPromotion ? (editingLine?.articles ?? 0) : null;
-
-  const settingsPromotionColumns: Column<PromotionMockRow>[] = [
-    {
-      id: "status",
-      label: "Estatus",
-      type: "chip",
-      size: "sm",
-      chipLabelMap: {
-        active: "Activo",
-        inactive: "Inactivo",
+  const lineColumns: Column<DepartmentLineTableRow>[] = useMemo(
+    () => [
+      {
+        id: "id",
+        label: "Identificador",
+        type: "text",
+        size: "xs",
+        format: (_value, row) => row.code ?? "-",
       },
-      chipVariantMap: {
-        active: "success",
-        inactive: "default",
-      },
-    },
-    { id: "name", label: "Nombre", size: "xl" },
-    { id: "promotion", label: "Promoción", size: "sm" },
-    { id: "endDate", label: "Finalización", size: "md" },
-    { id: "products", label: "Productos", type: "number", size: "sm", align: "left" },
-  ];
+      { id: "name", label: "Nombre", size: "md" },
+      { id: "articles", label: "Artículos", type: "number", size: "sm" },
+    ],
+    [],
+  );
 
-  const lineColumns: Column<GroupRow>[] = [
-    {
-      id: "id",
-      label: "Identificador",
-      type: "text",
-      size: "xs",
-      format: (_value, row) => row.code ?? "-",
-    },
-    {
-      id: "name",
-      label: "Nombre",
-      size: "md",
-    },
-    {
-      id: "articles",
-      label: "Artículos",
-      type: "number",
-      size: "sm",
-    },
-  ];
-
-  const lineActions: RowAction<GroupRow>[] = [
+  const lineActions: RowAction<DepartmentLineTableRow>[] = useMemo(
+    () => [
     {
       id: "edit",
       label: "Editar",
       icon: <EditIcon fontSize="small" />,
       onClick: handleOpenEditGroup,
+      permission: CATALOG_DEPARTMENTS_UPDATE,
     },
     {
       id: "delete",
@@ -445,18 +291,29 @@ export default function DepartmentDetailPage() {
       icon: <DeleteIcon fontSize="small" />,
       onClick: handleDeleteGroup,
       color: "error",
+      permission: CATALOG_DEPARTMENTS_DELETE,
     },
-  ];
+    ],
+    [handleOpenEditGroup, handleDeleteGroup],
+  );
 
   const groupModalInitialValues = useMemo(
     () => buildLineModalDefaultValues(editingLine),
     [editingLine],
   );
 
-  const tabs = [
-    { value: "lines", label: "Líneas" },
-    { value: "settings", label: "Ajustes" },
-  ];
+  const tabs = useMemo(
+    () => [
+      { value: "lines", label: "Líneas" },
+      { value: "settings", label: "Ajustes" },
+    ],
+    [],
+  );
+
+  const settingsSaveDisabled =
+    marginFieldState == null || !marginFieldState.canSave || savingSettings;
+
+  const groupAffectedCount = hasGroupPromotion ? (editingLine?.articles ?? 0) : null;
 
   if (loading) {
     return (
@@ -502,21 +359,24 @@ export default function DepartmentDetailPage() {
           actions={
             activeTab === "lines"
               ? [
-                  {
-                    label: "Nueva línea",
-                    onClick: handleOpenNewGroup,
-                    variant: "contained",
-                    color: "primary",
-                  },
-                ]
+                {
+                  label: "Nueva línea",
+                  onClick: handleOpenNewGroup,
+                  variant: "contained",
+                  color: "primary",
+                  permission: CATALOG_DEPARTMENTS_CREATE,
+                },
+              ]
               : [
-                  {
-                    label: "Guardar cambios",
-                    onClick: () => showSnackbar("Cambios guardados correctamente."),
-                    variant: "contained",
-                    color: "primary",
-                  },
-                ]
+                {
+                  label: "Guardar cambios",
+                  onClick: handleSaveSettings,
+                  variant: "contained",
+                  color: "primary",
+                  permission: CATALOG_DEPARTMENTS_UPDATE,
+                  disabled: settingsSaveDisabled,
+                },
+              ]
           }
         />
         {activeTab === "lines" ? (
@@ -534,40 +394,14 @@ export default function DepartmentDetailPage() {
             emptyMessage="No hay líneas en este departamento"
           />
         ) : (
-          <Stack spacing={2}>
-            <SettingsGrid>
-              <SettingsCard>
-                <SettingsTitle>Margen de utilidad</SettingsTitle>
-                <SettingsDescription>
-                  Se aplicará para todos los artículos dentro de este departamento. Éste
-                  precio será tomado como el precio de crédito de los artículos.
-                </SettingsDescription>
-                <SettingsValue>32%</SettingsValue>
-              </SettingsCard>
-
-              <SettingsCard>
-                <SettingsTitle>Promoción de contado</SettingsTitle>
-                <SettingsDescription>
-                  Configura el porcentaje que los artículos obtendrán para su precio de contado.
-                </SettingsDescription>
-                <SettingsValue>20%</SettingsValue>
-              </SettingsCard>
-            </SettingsGrid>
-
-            <PromotionsCard>
-              <PromotionsHeader>
-                <SettingsTitle sx={{ fontSize: "1.25rem" }}>Promociones</SettingsTitle>
-                <Button variant="outlined">Nueva promoción</Button>
-              </PromotionsHeader>
-              <TableCrud
-                columns={settingsPromotionColumns}
-                rows={promotionMockRows}
-                rowKey="id"
-                loading={false}
-                emptyMessage="No hay promociones registradas"
-              />
-            </PromotionsCard>
-          </Stack>
+          <DepartmentSettingsTab
+            marginDraft={marginDraft}
+            onMarginDraftChange={setMarginDraft}
+            marginFieldError={marginFieldState?.displayError ?? false}
+            marginHelperText={marginFieldState?.helperText ?? ""}
+            savingMargin={savingSettings}
+            canCreatePromotion={hasPermission(CATALOG_PROMOTIONS_CREATE)}
+          />
         )}
       </Stack>
 
@@ -576,8 +410,8 @@ export default function DepartmentDetailPage() {
         open={groupModalOpen}
         onClose={handleCloseGroupModal}
         title={editingLine ? "Editar línea" : "Nueva línea"}
-        description={department ? `Línea: ${department.name}` : undefined}
-        fields={lineFormFields}
+        description={`Línea: ${department.name}`}
+        fields={departmentLineFormFields}
         defaultValues={groupModalInitialValues}
         onSubmit={handleSaveGroup}
         loading={savingLine}

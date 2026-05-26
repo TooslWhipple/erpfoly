@@ -24,6 +24,12 @@ import type { RepairSupplier } from "@/services/repair-suppliers.service";
 import { getDepartments } from "@/services/departments.service";
 import type { Department } from "@/services/departments.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import {
+    CATALOG_REPAIR_SUPPLIERS_CREATE,
+    CATALOG_REPAIR_SUPPLIERS_DELETE,
+    CATALOG_REPAIR_SUPPLIERS_UPDATE,
+} from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { schemas, filters } from "@/forms";
 import {
     defineFormFields,
@@ -111,6 +117,8 @@ const settingsFields = defineFormFields<{ hourlyCost: string }>()([
 ]);
 
 export default function ProveedoresReparaciones() {
+    const { hasPermission } = usePermissions();
+    const canUpdateRepairSuppliers = hasPermission(CATALOG_REPAIR_SUPPLIERS_UPDATE);
     const showSnackbar = useSnackbarStore((s) => s.showSuccess);
     const showError = useSnackbarStore((s) => s.showError);
     const queryClient = useQueryClient();
@@ -327,6 +335,7 @@ export default function ProveedoresReparaciones() {
             label: "Editar",
             icon: <EditIcon fontSize="small" />,
             onClick: handleEditSupplier,
+            permission: CATALOG_REPAIR_SUPPLIERS_UPDATE,
         },
         {
             id: "delete",
@@ -334,6 +343,7 @@ export default function ProveedoresReparaciones() {
             icon: <DeleteIcon fontSize="small" />,
             onClick: handleDeleteSupplier,
             color: "error",
+            permission: CATALOG_REPAIR_SUPPLIERS_DELETE,
         },
     ];
 
@@ -360,6 +370,7 @@ export default function ProveedoresReparaciones() {
                                     variant: "contained",
                                     color: "primary",
                                     showIcon: true,
+                                    permission: CATALOG_REPAIR_SUPPLIERS_CREATE,
                                 },
                             ]
                             : []
@@ -402,6 +413,7 @@ export default function ProveedoresReparaciones() {
                                 onSubmit={handleSaveSettings}
                                 confirmLabel="Guardar cambios"
                                 loading={savingSettings}
+                                disabled={!canUpdateRepairSuppliers}
                                 actionsSx={{ justifyContent: "flex-start" }}
                             />
                         </FieldContainer>

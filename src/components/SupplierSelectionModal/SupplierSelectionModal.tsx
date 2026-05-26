@@ -1,23 +1,49 @@
-import { useState, useEffect, useMemo } from "react";
-import { Dialog, Box, InputAdornment, Button, CircularProgress, Typography } from "@mui/material";
-import { Search as SearchIcon, Close as CloseIcon } from "@mui/icons-material";
-import type { Supplier } from "@/types/pedidos.types";
-import { getSuppliers } from "@/data/pedidos.mockData";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    ModalDescription,
-    CloseButton,
-} from "@/components/ModalForm/styles";
+    Stack,
+    InputAdornment,
+    Button,
+    CircularProgress,
+    Typography,
+    useTheme,
+    Table,
+    TableHead,
+    TableRow,
+    TableCell,
+    TableBody,
+} from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import type { Supplier } from "@/types/pedidos.types";
+import { unwrapOrThrow } from "@/lib/axios";
+import { SideModal } from "@/components/SideModal";
+import {
+    SUPPLIER_SEARCH_DEFAULT_LIMIT,
+    searchSuppliers,
+    type SupplierSearchItem,
+} from "@/services/suppliers.service";
 import {
     SupplierModalContainer,
     SearchInput,
     SuppliersList,
     SupplierRow,
     SupplierId,
-    SupplierName
+    SupplierName,
+    Card
 } from "./styles";
+import { Search } from "lucide-react";
+
+function mapSearchItemToSupplier(item: SupplierSearchItem): Supplier {
+    const displayName =
+        item.businessName != null && item.businessName.trim().length > 0
+            ? `${item.name} — ${item.businessName.trim()}`
+            : item.name;
+    return {
+        id: String(item.id),
+        name: displayName,
+    };
+}
 
 export interface SupplierSelectionModalProps {
     open: boolean;
@@ -30,41 +56,51 @@ export function SupplierSelectionModal({
     onClose,
     onSelect,
 }: SupplierSelectionModalProps) {
-    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-    const [loading, setLoading] = useState(false);
+    const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
-        if (open) {
-            fetchSuppliers();
-        } else {
+        if (!open) {
             setSearchQuery("");
         }
     }, [open]);
 
-    const filteredSuppliers = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return suppliers;
-        }
-        const query = searchQuery.toLowerCase();
-        return suppliers.filter(
-            (supplier) =>
-                supplier.name.toLowerCase().includes(query) ||
-                supplier.id.includes(query)
-        );
-    }, [suppliers, searchQuery]);
+    const {
+        data: searchRows,
+        isFetching,
+        isPending,
+        isError,
+        error,
+        refetch,
+    } = useQuery({
+        queryKey: ["suppliers-search", "modal-open", SUPPLIER_SEARCH_DEFAULT_LIMIT],
+        queryFn: async () =>
+            unwrapOrThrow(
+                await searchSuppliers({
+                    q: "",
+                    limit: SUPPLIER_SEARCH_DEFAULT_LIMIT,
+                }),
+            ),
+        enabled: open,
+        staleTime: 30_000,
+    });
 
-    const fetchSuppliers = async () => {
-        setLoading(true);
-        try {
-            const data = await getSuppliers();
-            setSuppliers(data);
-        } catch (error) {
-            console.error("[SupplierSelectionModal] Error fetching suppliers:", error);
-        } finally {
-            setLoading(false);
+    const allSuppliers = useMemo(
+        () => (searchRows ?? []).map(mapSearchItemToSupplier),
+        [searchRows],
+    );
+
+    const filteredSuppliers = useMemo(() => {
+        const trimmed = searchQuery.trim();
+        if (!trimmed) {
+            return allSuppliers;
         }
-    };
+        const q = trimmed.toLowerCase();
+        return allSuppliers.filter(
+            (supplier) =>
+                supplier.name.toLowerCase().includes(q) || supplier.id.toLowerCase().includes(q),
+        );
+    }, [allSuppliers, searchQuery]);
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
@@ -76,97 +112,136 @@ export function SupplierSelectionModal({
     };
 
     const handleClose = () => {
-        if (!loading) {
+        if (!isFetching) {
             onClose();
         }
     };
 
+    const errorMessage =
+        isError && error instanceof Error ? error.message : "No se pudo cargar el listado.";
+
+    const showInitialLoading = open && (isPending || (isFetching && searchRows === undefined));
+
+    let listBody: ReactNode;
+
+    if (showInitialLoading) {
+        listBody = <Stack
+            direction="row"
+            justifyContent="center"
+            alignItems="center"
+            sx={{ padding: 4 }}
+        >
+            <CircularProgress size={24} />
+        </Stack>
+    } else if (isError) {
+        listBody = (
+            <Stack
+                direction="column"
+                alignItems="center"
+                spacing={2}
+                sx={{ padding: 4 }}
+            >
+                <Typography variant="body2" color="error">
+                    {errorMessage}
+                </Typography>
+                <Button variant="outlined" size="small" onClick={() => void refetch()}>
+                    Reintentar
+                </Button>
+            </Stack>
+        );
+    } else if (filteredSuppliers.length === 0) {
+        listBody = (
+            <Stack
+                direction="row"
+                justifyContent="center"
+                alignItems="center"
+                sx={{ padding: 4 }}
+            >
+                <Typography variant="body2" color="text.secondary">
+                    No se encontraron proveedores
+                </Typography>
+            </Stack>
+        );
+    } else {
+        listBody = (
+            <SuppliersList>
+                {
+                    filteredSuppliers.map((supplier, index) => (
+                        <SupplierRow index={index} key={supplier.id}>
+                            <Stack direction="column" spacing={0.5}>
+                                <SupplierId>{supplier.id}</SupplierId>
+                                <SupplierName>{supplier.name}</SupplierName>
+                            </Stack>
+                            <Button color="primary" onClick={() => handleSelect(supplier)}>
+                                Seleccionar
+                            </Button>
+                        </SupplierRow>
+                    ))
+                }
+            </SuppliersList>
+        );
+    }
+
     return (
-        <Dialog
+        <SideModal
             open={open}
             onClose={handleClose}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
+            title="Proveedores"
+            description="Selecciona un proveedor para continuar con el pedido"
+            maxWidth="md"
+            disableClose={isFetching && searchRows === undefined}
+            contentSx={{ flex: 1, minHeight: 0 }}
         >
-            <DialogContent>
-                <ModalHeader>
-                    <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                        <ModalTitle>Proveedores</ModalTitle>
-                        <ModalDescription>
-                            Selecciona un proveedor para continuar con el pedido
-                        </ModalDescription>
-                    </Box>
-                    <CloseButton onClick={handleClose} disabled={loading} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
+            <SearchInput
+                placeholder="Buscar"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                size="small"
+                fullWidth
+                disabled={showInitialLoading || isError}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <Search size={18} color={theme.palette.text.secondary} />
+                        </InputAdornment>
+                    ),
+                }}
+            />
+            <Card>
+                {
+                    showInitialLoading
+                        ? <CircularProgress size={24} />
+                        : filteredSuppliers.length === 0
+                            ?
+                            <Typography variant="body2" color="text.secondary">No se encontraron proveedores</Typography>
+                            :
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
+                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Proveedor</TableCell>
+                                        <TableCell style={{ padding: "12px 8px" }}></TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {
+                                        filteredSuppliers.map((supplier) => (
+                                            <TableRow key={supplier.id}>
+                                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
+                                                <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
+                                                <TableCell style={{ padding: "12px 8px" }}>
+                                                    <Button color="primary" onClick={() => handleSelect(supplier)}>Seleccionar</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    }
+                                </TableBody>
+                            </Table>
 
-                <SupplierModalContainer>
-                    <SearchInput
-                        placeholder="Buscar"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        size="small"
-                        fullWidth
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon sx={{ color: "#71717A", fontSize: 20 }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
+                }
 
-                    {loading ? (
-                        <Box
-                            sx={{
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                padding: 4,
-                            }}
-                        >
-                            <CircularProgress size={24} />
-                        </Box>
-                    ) : filteredSuppliers.length === 0 ? (
-                        <Box
-                            sx={{
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                padding: 4,
-                            }}
-                        >
-                            <Typography variant="body2" color="text.secondary">
-                                No se encontraron proveedores
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <SuppliersList>
-                            {filteredSuppliers.map((supplier, index) => (
-                                <SupplierRow index={index} key={supplier.id}>
-                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                        <SupplierId>{supplier.id}</SupplierId>
-                                        <SupplierName>{supplier.name}</SupplierName>
-                                    </Box>
-                                    <Button
-                                        color="primary"
-                                        onClick={() => handleSelect(supplier)}
-                                    >
-                                        Seleccionar
-                                    </Button>
-                                </SupplierRow>
-                            ))}
-                        </SuppliersList>
-                    )}
-                </SupplierModalContainer>
-            </DialogContent>
-        </Dialog>
+
+            </Card>
+        </SideModal>
     );
 }

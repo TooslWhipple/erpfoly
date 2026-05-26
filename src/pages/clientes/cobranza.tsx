@@ -4,6 +4,12 @@ import { Add as AddIcon } from "@mui/icons-material";
 import { MainLayout, Title, RulesList } from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
+import { usePermissions } from "@/hooks/usePermissions";
+import {
+  CUSTOMER_COLLECTION_CREATE,
+  CUSTOMER_COLLECTION_DELETE,
+  CUSTOMER_COLLECTION_UPDATE,
+} from "@/lib/permissions";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -150,6 +156,9 @@ async function deleteCollectionRule(id: string): Promise<{ success: boolean }> {
 // ============================================================================
 
 export default function CobranzaAutomatica() {
+  const { hasPermission } = usePermissions();
+  const canUpdateRule = hasPermission(CUSTOMER_COLLECTION_UPDATE);
+  const canDeleteRule = hasPermission(CUSTOMER_COLLECTION_DELETE);
   // State management
   const [rules, setRules] = useState<CollectionRuleData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,6 +274,7 @@ export default function CobranzaAutomatica() {
       onClick: handleCreateRule,
       variant: "contained",
       color: "primary",
+      permission: CUSTOMER_COLLECTION_CREATE,
     },
   ];
 
@@ -300,6 +310,8 @@ export default function CobranzaAutomatica() {
           onMessageChange={handleMessageChange}
           onToggleActive={handleToggleActive}
           onDelete={handleDeleteRule}
+          canUpdate={canUpdateRule}
+          canDelete={canDeleteRule}
           emptyMessage="No hay reglas de cobranza configuradas. Crea una nueva regla para comenzar."
         />
       )}

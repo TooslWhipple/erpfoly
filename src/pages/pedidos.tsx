@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { MainLayout, Title, Tabs, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
 import type { TitleAction } from "@/components/Title";
@@ -6,118 +6,52 @@ import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
 import type { ProductSuggestion } from "@/types/suggestions.types";
 import type { Supplier } from "@/types/pedidos.types";
-import { getSuggestions } from "@/data/suggestions.mockData";
+import type { OrderListItem } from "@/types/orders.types";
+import { getOrders, getSuggestions } from "@/services/orders.service";
 import { PageContent, SidebarPanel } from "@/styles/pedidos.styles";
 import { Stack } from "@mui/material";
+import { ORDERS_CREATE } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "in_progress" | "received";
 
-interface GetOrdersParams {
-    page: number;
-    limit: number;
-    status?: "all" | OrderStatus;
-}
+function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
+    const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
+    const totalDelivered = order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
+    const progress = totalRequested > 0 ? Math.round((totalDelivered / totalRequested) * 100) : 0;
 
-interface GetOrdersResponse {
-    data: OrderCardData[];
-    total: number;
-}
-
-const DUMMY_ORDERS: OrderCardData[] = [
-    {
-        id: 1,
-        supplier: "Mabe S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 19,
-        status: "received",
-        progress: 100,
-    },
-    {
-        id: 2,
-        supplier: "Mirage -Norage S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 19,
-        status: "in_progress",
-        progress: 75,
-    },
-    {
-        id: 3,
-        supplier: "Mabe S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 19,
-        status: "in_progress",
-        progress: 60,
-    },
-    {
-        id: 4,
-        supplier: "Mirage -Norage S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 15,
-        status: "pending",
-        progress: 30,
-    },
-    {
-        id: 5,
-        supplier: "Mirage -Norage S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 15,
-        status: "pending",
-        progress: 20,
-    },
-    {
-        id: 6,
-        supplier: "Mirage -Norage S.A. de C.V.",
-        supplierDate: "01 Junio, 2025",
-        destination: "Bodega",
-        deliveryDate: "08 Junio, 2025",
-        itemCount: 15,
-        status: "pending",
-        progress: 15,
-    },
-    {
-        id: 7,
-        supplier: "Electrodomésticos Premium",
-        supplierDate: "28 Mayo, 2025",
-        destination: "Bodega Central",
-        deliveryDate: "05 Junio, 2025",
-        itemCount: 22,
-        status: "received",
-        progress: 100,
-    },
-    {
-        id: 8,
-        supplier: "Muebles del Norte S.A.",
-        supplierDate: "25 Mayo, 2025",
-        destination: "Bodega Tampico",
-        deliveryDate: "02 Junio, 2025",
-        itemCount: 35,
-        status: "received",
-        progress: 100,
-    },
-];
-
-async function getOrders(params: GetOrdersParams): Promise<GetOrdersResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    let filteredData = [...DUMMY_ORDERS];
-
-    if (params.status && params.status !== "all") {
-        filteredData = filteredData.filter((order) => order.status === params.status);
+    let status: OrderStatus = "pending";
+    if (order.status === "delivered") {
+        status = "received";
+    } else if (order.status === "partially_delivered") {
+        status = "in_progress";
+    } else if (order.status === "cancelled") {
+        status = "pending";
     }
 
+    const orderDate = new Date(order.order_date);
+    const formattedDate = orderDate.toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+
+    const estimatedDelivery = new Date(orderDate);
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
+    const formattedDelivery = estimatedDelivery.toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+
     return {
-        data: filteredData,
-        total: filteredData.length,
+        id: order.id,
+        supplier: order.branch?.name ?? "Sin sucursal",
+        supplierDate: formattedDate,
+        destination: order.branch?.name ?? "Bodega",
+        deliveryDate: formattedDelivery,
+        itemCount: order.order_items.length,
+        status,
+        progress,
     };
 }
 
@@ -138,31 +72,40 @@ export default function Pedidos() {
         { value: "received", label: "Recibidos" },
     ];
 
-    const getStatusFilter = useCallback((): "all" | OrderStatus => {
-        return activeTab as "all" | OrderStatus;
+    const statusFilter = useMemo(() => {
+        if (activeTab === "all") return undefined;
+        if (activeTab === "pending") return "pending";
+        if (activeTab === "in_progress") return "partially_delivered";
+        if (activeTab === "received") return "delivered";
+        return undefined;
     }, [activeTab]);
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await getOrders({
-                page: 0,
+            const result = await getOrders({
+                page: 1,
                 limit: 50,
-                status: getStatusFilter(),
+                status: statusFilter,
             });
-            setOrders(response.data);
+            if (result.data) {
+                const mappedOrders = result.data.rows.map(mapBackendOrderToCardData);
+                setOrders(mappedOrders);
+            }
         } catch (err) {
-            console.error("[Pedidos] Error fetching:", err);
+            console.error("[Pedidos] Error fetching orders:", err);
         } finally {
             setLoading(false);
         }
-    }, [getStatusFilter]);
+    }, [statusFilter]);
 
     const fetchSuggestions = useCallback(async () => {
         setSuggestionsLoading(true);
         try {
-            const data = await getSuggestions();
-            setSuggestions(data);
+            const result = await getSuggestions(10);
+            if (result.data) {
+                setSuggestions(result.data);
+            }
         } catch (err) {
             console.error("[Pedidos] Error fetching suggestions:", err);
         } finally {
@@ -208,6 +151,7 @@ export default function Pedidos() {
             onClick: handleCreateOrder,
             variant: "contained",
             color: "primary",
+            permission: ORDERS_CREATE,
         },
     ];
 
@@ -235,7 +179,6 @@ export default function Pedidos() {
                     <SuggestionsCard products={suggestions} loading={suggestionsLoading} />
                 </SidebarPanel>
             </PageContent>
-
 
             <SupplierSelectionModal
                 open={supplierModalOpen}

@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { Box } from "@mui/material";
+import { Stack } from "@mui/material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import {
     BackButton,
@@ -54,7 +54,7 @@ export function Breadcrumbs({
                 const isClickable = !isLast && item.href;
 
                 return (
-                    <Box key={index} sx={{ display: "flex", alignItems: "center" }}>
+                    <Stack key={index} direction="row" alignItems="center">
                         {index > 0 && <Separator>›</Separator>}
 
                         {isClickable ? (
@@ -64,7 +64,7 @@ export function Breadcrumbs({
                         ) : (
                             <BreadcrumbCurrent>{item.label}</BreadcrumbCurrent>
                         )}
-                    </Box>
+                    </Stack>
                 );
             })}
         </Container>

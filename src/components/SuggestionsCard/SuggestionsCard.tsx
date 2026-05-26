@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { Lightbulb as LightbulbIcon } from "@mui/icons-material";
 import type { ProductSuggestion } from "@/types/suggestions.types";
 import {
@@ -58,14 +58,14 @@ export function SuggestionsCard({ products, loading = false }: SuggestionsCardPr
         return (
             <SuggestionsCardContainer>
                 <SuggestionsHeader>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
                         <SuggestionsIcon>
                             <LightbulbIcon sx={{ fontSize: 20, color: "#FCD34D" }} />
                         </SuggestionsIcon>
                         <SuggestionsTitle>Sugerencias</SuggestionsTitle>
-                    </Box>
+                    </Stack>
                 </SuggestionsHeader>
-                <Box sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>Cargando...</Box>
+                <Stack sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>Cargando...</Stack>
             </SuggestionsCardContainer>
         );
     }
@@ -74,16 +74,16 @@ export function SuggestionsCard({ products, loading = false }: SuggestionsCardPr
         return (
             <SuggestionsCardContainer>
                 <SuggestionsHeader>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
                         <SuggestionsIcon>
                             <LightbulbIcon sx={{ fontSize: 20, color: "#FCD34D" }} />
                         </SuggestionsIcon>
                         <SuggestionsTitle>Sugerencias</SuggestionsTitle>
-                    </Box>
+                    </Stack>
                 </SuggestionsHeader>
-                <Box sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>
+                <Stack sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>
                     No hay sugerencias disponibles
-                </Box>
+                </Stack>
             </SuggestionsCardContainer>
         );
     }
@@ -91,12 +91,12 @@ export function SuggestionsCard({ products, loading = false }: SuggestionsCardPr
     return (
         <SuggestionsCardContainer>
             <SuggestionsHeader>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
                     <SuggestionsIcon>
                         <LightbulbIcon sx={{ fontSize: 20, color: "#FCD34D" }} />
                     </SuggestionsIcon>
                     <SuggestionsTitle>Sugerencias</SuggestionsTitle>
-                </Box>
+                </Stack>
             </SuggestionsHeader>
             <SuggestionsSubtitle>
                 Productos próximos a agotarse y con alta demanda en los últimos meses.
@@ -109,13 +109,13 @@ export function SuggestionsCard({ products, loading = false }: SuggestionsCardPr
 
                     return (
                         <ProductItem key={product.id}>
-                            <Box sx={{ display: "flex", gap: 1.5, marginBottom: 1.5 }}>
+                            <Stack direction="row" spacing={1.5} sx={{ marginBottom: 1.5 }}>
                                 <ProductImage />
                                 <ProductInfo>
                                     <ProductName>{product.name}</ProductName>
                                     <ProductSku>{product.sku}</ProductSku>
                                 </ProductInfo>
-                            </Box>
+                            </Stack>
 
                             <StockInfo>
                                 <StockValue>{product.currentStock} unidades</StockValue>

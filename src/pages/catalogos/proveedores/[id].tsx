@@ -1,7 +1,9 @@
 import { Box, CircularProgress, Stack } from "@mui/material";
+import { MailOutline as MailOutlineIcon } from "@mui/icons-material";
 import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
+import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 
 export default function SupplierFormPage() {
     const {
@@ -19,7 +21,10 @@ export default function SupplierFormPage() {
         activeTab,
         setActiveTab,
         saving,
+        inviting,
+        hasUser,
         handleSave,
+        handleInvite,
         handleGeneralFieldChange,
         handleAddContact,
         handleRemoveContact,
@@ -57,11 +62,26 @@ export default function SupplierFormPage() {
                 <Title
                     title={isNew ? "Nuevo proveedor" : "Editar proveedor"}
                     actions={[
+                        ...(!isNew && !hasUser && generalFormValues.email
+                            ? [
+                                  {
+                                      id: "invite",
+                                      label: inviting ? "Enviando..." : "Enviar invitación",
+                                      onClick: handleInvite,
+                                      disabled: inviting,
+                                      icon: <MailOutlineIcon />,
+                                      variant: "outlined" as const,
+                                      color: "primary" as const,
+                                      permission: CATALOG_SUPPLIERS_UPDATE,
+                                  },
+                              ]
+                            : []),
                         {
                             id: "save",
                             label: "Guardar",
                             onClick: handleSave,
                             disabled: saving,
+                            permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
                         },
                     ]}
                 />

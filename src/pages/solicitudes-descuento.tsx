@@ -11,6 +11,7 @@ import type {
 } from "@/types/discount-requests.types";
 import { formatDateTimeShort } from "@/utils/date";
 import { Stack } from "@mui/material";
+import { DISCOUNT_REQUESTS_CREATE } from "@/lib/permissions";
 
 
 const TABS: TabOption[] = [
@@ -148,6 +149,7 @@ export default function SolicitudesDescuentoPage() {
               color: "primary",
               showIcon: false,
               onClick: () => router.push("/solicitudes-descuento/nuevo"),
+              permission: DISCOUNT_REQUESTS_CREATE,
             }
           ]}
         />

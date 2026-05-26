@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { shouldBypassAccessControl } from "@/lib/accessControl";
 
 export const api = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
@@ -28,6 +29,19 @@ type BackendBody<T> =
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
 	const url = config?.url ?? "";
 	return typeof url === "string" && url.includes("/auth/refresh");
+}
+
+function isPublicAuthRequest(config: AxiosRequestConfig | undefined): boolean {
+	const url = config?.url ?? "";
+	if (typeof url !== "string") return false;
+
+	return [
+		"/auth/login",
+		"/auth/validate-otp",
+		"/auth/login/otp/resend",
+		"/auth/password/recovery",
+		"/auth/logout",
+	].some((path) => url.includes(path));
 }
 
 let isRefreshing = false;
@@ -92,7 +106,17 @@ api.interceptors.response.use(
 			return Promise.reject(error);
 		}
 
-		if (isRefreshRequest(originalRequest) || (originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry) {
+		if (
+			isPublicAuthRequest(originalRequest) ||
+			isRefreshRequest(originalRequest) ||
+			(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry
+		) {
+			if (isPublicAuthRequest(originalRequest)) {
+				return Promise.reject(error);
+			}
+			if (shouldBypassAccessControl) {
+				return Promise.reject(error);
+			}
 			useAuthStore.getState().logout();
 			if (typeof window !== "undefined") {
 				window.location.href = "/login";
@@ -124,6 +148,9 @@ api.interceptors.response.use(
 			const result = await authService.refresh();
 			if (result.error || !result.data?.accessToken) {
 				processQueue(error, null);
+				if (shouldBypassAccessControl) {
+					return Promise.reject(error);
+				}
 				useAuthStore.getState().logout();
 				if (typeof window !== "undefined") {
 					window.location.href = "/login";

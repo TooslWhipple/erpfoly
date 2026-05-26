@@ -23,6 +23,7 @@ export interface FormSubmitActionsProps {
     submitLabel?: string;
     cancelLabel?: string;
     loading?: boolean;
+    disabled?: boolean;
     /** MUI sx prop for the actions container (alignment, spacing, etc.). */
     sx?: SxProps<Theme>;
 }
@@ -33,6 +34,7 @@ export function FormSubmitActions({
     submitLabel = "Guardar",
     cancelLabel = "Cancelar",
     loading = false,
+    disabled = false,
     sx,
 }: FormSubmitActionsProps) {
     const Subscribe = form.Subscribe as React.ComponentType<{
@@ -58,7 +60,7 @@ export function FormSubmitActions({
                                 type="button"
                                 variant="outlined"
                                 onClick={onCancel}
-                                disabled={submitting}
+                                disabled={submitting || disabled}
                             >
                                 {cancelLabel}
                             </CancelButton>
@@ -66,7 +68,7 @@ export function FormSubmitActions({
                         <ConfirmButton
                             type="submit"
                             variant="contained"
-                            disabled={!canSubmit || submitting}
+                            disabled={!canSubmit || submitting || disabled}
                         >
                             {submitting ? (
                                 <CircularProgress size={20} color="inherit" />

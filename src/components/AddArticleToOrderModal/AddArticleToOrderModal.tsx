@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
-import { Dialog, Box, Typography, Button, TextField, InputAdornment } from "@mui/material";
-import { Close as CloseIcon, ArrowUpward as ArrowUpIcon } from "@mui/icons-material";
+import { Stack, Typography, Button, TextField, InputAdornment, Box } from "@mui/material";
+import { ArrowUpward as ArrowUpIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
-import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    CloseButton,
-} from "@/components/ModalForm/styles";
+import { SideModal } from "@/components/SideModal";
 import {
     AddArticleModalContainer,
     ProductInfo,
@@ -122,120 +117,104 @@ export function AddArticleToOrderModal({
     }
 
     return (
-        <Dialog
+        <SideModal
             open={open}
             onClose={handleClose}
-            maxWidth="sm"
+            title="Agregar artículo al pedido"
+            maxWidth="md"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    maxHeight: "90vh",
-                },
-            }}
         >
-            <DialogContent>
-                <ModalHeader>
-                    <Box sx={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                        <ModalTitle>Agregar artículo al pedido</ModalTitle>
-                    </Box>
-                    <CloseButton onClick={handleClose} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
-
-                <AddArticleModalContainer>
-                    <ProductInfo>
-                        <ProductImage />
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                            <Typography variant="h5" sx={{ lineHeight: 1.4 }}>
-                                {article.name}
-                            </Typography>
-                            <Typography variant="caption">
-                                {article.folio}
-                            </Typography>
-                        </Box>
-                    </ProductInfo>
-
-                    <CostInputSection>
-                        <TextField
-                            fullWidth
-                            variant="outlined"
-                            size="medium"
-                            type="text"
-                            value={unitPrice === 0 ? "" : unitPrice.toString()}
-                            onChange={handlePriceChange}
-                            placeholder="0.00"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <Box component="span" sx={{ color: "text.secondary" }}>
-                                            $
-                                        </Box>
-                                    </InputAdornment>
-                                ),
-                            }}
-                            inputProps={{
-                                inputMode: "decimal",
-                            }}
-                        />
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleAddToOrder}
-                            disabled={unitPrice <= 0}
-                            sx={{
-                                textTransform: "none",
-                                fontWeight: 600,
-                                borderRadius: 1.5,
-                                padding: (theme) => theme.spacing(1.25, 2.5),
-                                whiteSpace: "nowrap",
-                            }}
-                        >
-                            Agregar
-                        </Button>
-                    </CostInputSection>
-
-                    <HistorySection>
-                        <Typography variant="h6">
-                            Historial de costos de este artículo
+            <AddArticleModalContainer>
+                <ProductInfo>
+                    <ProductImage />
+                    <Stack direction="column" spacing={0.5}>
+                        <Typography variant="h5" sx={{ lineHeight: 1.4 }}>
+                            {article.name}
                         </Typography>
-                        <HistoryTimeline>
-                            <TimelineLine />
-                            {costHistory.map((entry) => (
-                                <TimelineItem key={entry.id}>
-                                    <TimelineDot />
-                                    <TimelineContent>
-                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: 1 }}>
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}>
-                                                    <Typography variant="body2" sx={{ color: "#71717A" }}>
-                                                        {formatDate(entry.date)}
-                                                    </Typography>
-                                                    {entry.orderId && (
-                                                        <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
-                                                            Pedido {entry.orderId}
-                                                        </TimelineOrderLink>
-                                                    )}
-                                                </Box>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                                                    <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
-                                                        {formatCurrency(entry.price)}
-                                                    </Typography>
-                                                    <TimelineChange>
-                                                        <ArrowUpIcon sx={{ fontSize: 14 }} />
-                                                        {numeral(entry.changePercentage).format("0.00")}%
-                                                    </TimelineChange>
-                                                </Box>
-                                            </Box>
-                                        </Box>
-                                    </TimelineContent>
-                                </TimelineItem>
-                            ))}
-                        </HistoryTimeline>
-                    </HistorySection>
-                </AddArticleModalContainer>
-            </DialogContent>
-        </Dialog>
+                        <Typography variant="caption">
+                            {article.folio}
+                        </Typography>
+                    </Stack>
+                </ProductInfo>
+
+                <CostInputSection>
+                    <TextField
+                        fullWidth
+                        variant="outlined"
+                        size="medium"
+                        type="text"
+                        value={unitPrice === 0 ? "" : unitPrice.toString()}
+                        onChange={handlePriceChange}
+                        placeholder="0.00"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Box component="span" sx={{ color: "text.secondary" }}>
+                                        $
+                                    </Box>
+                                </InputAdornment>
+                            ),
+                        }}
+                        inputProps={{
+                            inputMode: "decimal",
+                        }}
+                    />
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleAddToOrder}
+                        disabled={unitPrice <= 0}
+                        sx={{
+                            textTransform: "none",
+                            fontWeight: 600,
+                            borderRadius: 1.5,
+                            padding: (theme) => theme.spacing(1.25, 2.5),
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Agregar
+                    </Button>
+                </CostInputSection>
+
+                <HistorySection>
+                    <Typography variant="h6">
+                        Historial de costos de este artículo
+                    </Typography>
+                    <HistoryTimeline>
+                        <TimelineLine />
+                        {costHistory.map((entry) => (
+                            <TimelineItem key={entry.id}>
+                                <TimelineDot />
+                                <TimelineContent>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ width: "100%" }}>
+                                        <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
+                                            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {formatDate(entry.date)}
+                                                </Typography>
+                                                {entry.orderId && (
+                                                    <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
+                                                        Pedido {entry.orderId}
+                                                    </TimelineOrderLink>
+                                                )}
+                                            </Stack>
+                                            <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
+                                                <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
+                                                    {formatCurrency(entry.price)}
+                                                </Typography>
+                                                <TimelineChange>
+                                                    <ArrowUpIcon sx={{ fontSize: 14 }} />
+                                                    {numeral(entry.changePercentage).format("0.00")}%
+                                                </TimelineChange>
+                                            </Stack>
+                                        </Stack>
+                                    </Stack>
+                                </TimelineContent>
+                            </TimelineItem>
+                        ))}
+                    </HistoryTimeline>
+                </HistorySection>
+            </AddArticleModalContainer>
+        </SideModal>
     );
 }

@@ -16,16 +16,14 @@ import {
 	LogoContainer,
 	Form,
 	StyledTextField,
-	AlertContainer,
 	RecoveryRow,
 	RecoveryLink,
 } from "@/styles/login/styles";
 
 export default function LoginPage() {
-	const { login, isLoading, error: loginError, clearError: clearLoginError } = useAuth();
+	const { login, isLoading } = useAuth();
 	const [showPassword, setShowPassword] = useState(false);
 
-	// Login form: one identifier (username or cellphone / employee number) + password
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
 
@@ -66,13 +64,6 @@ export default function LoginPage() {
 				</LogoContainer>
 				<FormWrapper>
 					<Typography variant="h1">Ingresa a tu cuenta</Typography>
-					{loginError && (
-						<AlertContainer>
-							<Alert severity="error" onClose={clearLoginError}>
-								{loginError}
-							</Alert>
-						</AlertContainer>
-					)}
 
 					<Form onSubmit={handleLogin}>
 						<StyledTextField
@@ -125,7 +116,12 @@ export default function LoginPage() {
 								),
 							}}
 						/>
-						<Button variant="contained" color="primary" fullWidth disabled={isLoading}>
+						<Button
+							fullWidth
+							type="submit"
+							variant="contained"
+							color="primary"
+							disabled={isLoading}>
 							{isLoading ? <CircularProgress size={24} color="inherit" /> : "Ingresar"}
 						</Button>
 					</Form>

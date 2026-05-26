@@ -1,6 +1,7 @@
-import { InputAdornment, SelectChangeEvent, Button, Grid } from "@mui/material";
+import { InputAdornment, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { theme } from "@/styles/theme";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { ReactNode } from "react";
 import {
   TabsWrapper,
@@ -29,6 +30,7 @@ export interface ActionButtonConfig {
   color?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
   showIcon?: boolean;
   disabled?: boolean;
+  permission?: string;
 }
 
 interface TabFiltersProps {
@@ -56,9 +58,9 @@ export function TabFilters({
   searchValue = "",
   onSearchChange,
   searchPlaceholder = "Buscar...",
-  selectFilter,
   actions,
 }: TabFiltersProps) {
+  const { hasPermission } = usePermissions();
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     onTabChange(newValue);
   };
@@ -67,12 +69,9 @@ export function TabFilters({
     onSearchChange?.(event.target.value);
   };
 
-  const handleSelectChange = (event: SelectChangeEvent<string>) => {
-    selectFilter?.onChange(event.target.value);
-  };
-
-  const hasActions = actions && actions.length > 0;
-  const singleAction = hasActions && actions.length === 1;
+  const visibleActions = actions?.filter((action) => !action.permission || hasPermission(action.permission));
+  const hasActions = visibleActions && visibleActions.length > 0;
+  const singleAction = hasActions && visibleActions.length === 1;
 
   return (
     <Grid
@@ -156,7 +155,7 @@ export function TabFilters({
           </Grid>
         }
         {
-          hasActions && actions.map((action, index) => (
+          hasActions && visibleActions.map((action, index) => (
             <Grid key={`${action.label}-${index}`} size={{ xs: 12, sm: 6, md: "auto" }} sx={{ minWidth: 0, maxWidth: "100%" }}>
               <Button
                 fullWidth

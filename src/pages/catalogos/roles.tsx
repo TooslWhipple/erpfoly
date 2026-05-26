@@ -9,6 +9,7 @@ import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getRolesList } from "@/services/roles.service";
 import { formatDateTime } from "@/utils/date";
 import type { RoleListItem } from "@/types/roles.types";
+import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -72,6 +73,7 @@ export default function Roles() {
       label: "Editar",
       icon: <EditIcon fontSize="small" />,
       onClick: handleEditRole,
+      permission: CATALOG_ROLES_UPDATE,
     },
   ];
 
@@ -93,6 +95,7 @@ export default function Roles() {
               onClick: handleCreateRole,
               variant: "contained",
               color: "primary",
+              permission: CATALOG_ROLES_CREATE,
             }
           ]}
         />

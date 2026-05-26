@@ -1,5 +1,6 @@
 import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
+import type { SavePromotionPayload } from "@/services/promociones.service";
 import type {
     CreateProductImagePayload,
     CreateProductPackageItemPayload,
@@ -44,6 +45,23 @@ function mapProductPackagesToPackageItems(
     });
 }
 
+/** Storage path or legacy absolute URL to persist on create/update (not blob: or signed preview). */
+function resolvePersistableImageUrl(item: ProductGalleryImage): string | null {
+    const storagePath = (item.imageUrl || "").trim();
+    if (storagePath.length > 0 && !storagePath.startsWith("blob:")) {
+        return storagePath;
+    }
+    const preview = (item.previewUrl || "").trim();
+    if (
+        preview.length > 0 &&
+        /^https?:\/\//i.test(preview) &&
+        !preview.startsWith("blob:")
+    ) {
+        return preview;
+    }
+    return null;
+}
+
 export function buildProductImagesPayloadFromGallery(
     galleryImages: ProductGalleryImage[]
 ): CreateProductImagePayload[] {
@@ -51,14 +69,18 @@ export function buildProductImagesPayloadFromGallery(
 
     const images: CreateProductImagePayload[] = [];
     for (const item of galleryImages) {
-        if (item.file !== null) {
+        if (item.file != null) {
             continue;
         }
-        const url = (item.previewUrl || item.imageUrl || "").trim();
-        if (!/^https?:\/\//i.test(url)) {
+        const imageUrl = resolvePersistableImageUrl(item);
+        if (imageUrl == null) {
             continue;
         }
-        images.push({ imageUrl: url, sortOrder });
+        images.push({
+            imageUrl,
+            sortOrder,
+            ...(item.isPrimary ? { isPrimary: true } : {}),
+        });
         sortOrder += 1;
     }
     return images;
@@ -144,7 +166,7 @@ export function buildCreateProductRequest(
                 ...baseFields,
                 code: generalData.code.trim(),
                 packageItems,
-                ...(promotionPayloads?.length ? { promotions: promotionPayloads } : {}),
+                promotions: promotionPayloads ?? [],
             }
             : {
                 ...baseFields,
@@ -226,6 +248,14 @@ export interface ProductDetailPriceDto {
     }> | null;
 }
 
+/** Promotion row returned by GET/PATCH /products/:id (aligned with nested PATCH `promotions`). */
+export interface ProductDetailPromotionDto {
+    promotionId: number;
+    isLiquidation: boolean;
+    purchaseTypeCode: string;
+    payload: SavePromotionPayload;
+}
+
 export type ProductDetailDto = {
     id: number;
     departmentId: number;
@@ -238,6 +268,7 @@ export type ProductDetailDto = {
     images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
     price?: ProductDetailPriceDto | null;
+    promotions?: ProductDetailPromotionDto[] | null;
 } & (
         | { warrantyType: "MONTHS"; warrantyMonths: number }
         | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
@@ -249,6 +280,7 @@ export interface LoadedProductFormSnapshot {
     priceData: PriceFormState;
     basePrices: ProductBasePrice[];
     galleryImages: ProductGalleryImage[];
+    promotionDrafts: ProductPromotionDraft[];
 }
 
 const COST_BASIS_VALUES: CostBasisForCalculation[] = [
@@ -262,6 +294,37 @@ function normalizeCostBasis(value: string | null | undefined): CostBasisForCalcu
         return value as CostBasisForCalculation;
     }
     return "last_cost";
+}
+
+function mapDetailPromotionsToDrafts(
+    detail: ProductDetailDto,
+    rows: ProductDetailPromotionDto[] | null | undefined
+): ProductPromotionDraft[] {
+    if (!rows?.length) {
+        return [];
+    }
+    const productId = detail.id;
+    const out: ProductPromotionDraft[] = [];
+    for (const row of rows) {
+        const promotionId = Number(row.promotionId);
+        if (!Number.isFinite(promotionId)) {
+            continue;
+        }
+        const basePayload = row.payload ?? ({} as SavePromotionPayload);
+        const productIds = Array.from(
+            new Set([...(basePayload.productIds ?? []), productId].filter((n) => Number.isFinite(n)))
+        );
+        out.push({
+            id: `promo-${promotionId}`,
+            isLiquidation: Boolean(row.isLiquidation),
+            purchaseTypeCode: String(row.purchaseTypeCode ?? "").trim(),
+            payload: {
+                ...basePayload,
+                productIds,
+            },
+        });
+    }
+    return out;
 }
 
 export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): LoadedProductFormSnapshot {
@@ -328,7 +391,15 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         suppliers,
         priceData,
         basePrices,
-        galleryImages: detail.images,
+        galleryImages: (detail.images ?? []).map((img, index) => ({
+            id: String(img.id ?? `img-${index}`),
+            isPrimary: Boolean(img.isPrimary),
+            imageUrl: img.imageUrl ?? "",
+            previewUrl: img.previewUrl ?? "",
+            sortOrder: img.sortOrder ?? index,
+            file: null,
+        })),
+        promotionDrafts: mapDetailPromotionsToDrafts(detail, detail.promotions),
     };
 }
 
@@ -422,6 +493,64 @@ export async function searchProducts(params: ProductSearchParams): Promise<ApiRe
     return {
         data: normalizeProductSearchResponse(result.data),
         error: null
+    };
+}
+
+/** Row shape returned by GET /products/search-by-supplier */
+export interface ProductBySupplierItem {
+    id: number;
+    code: string;
+    shortName: string;
+    previewImage: string | null;
+    yearlySales: number;
+    previousMonthSales: number;
+    currentMonthSales: number;
+    underRepair: number;
+    inStock: number;
+    pendingSupply: number;
+    score: number;
+}
+
+function normalizeProductsBySupplierResponse(
+    data: unknown
+): ProductBySupplierItem[] {
+    if (Array.isArray(data)) {
+        return data as ProductBySupplierItem[];
+    }
+    if (
+        data != null &&
+        typeof data === "object" &&
+        "rows" in data &&
+        Array.isArray((data as { rows: unknown }).rows)
+    ) {
+        return (data as { rows: ProductBySupplierItem[] }).rows;
+    }
+    return [];
+}
+
+/**
+ * Returns the full catalog of products for a given supplier.
+ * The endpoint is unfiltered on the server: any search/pagination
+ * is expected to happen on the client.
+ */
+export async function getProductsBySupplier(
+    supplierId: number
+): Promise<ApiResult<ProductBySupplierItem[]>> {
+    if (!Number.isFinite(supplierId) || supplierId <= 0) {
+        return { data: [], error: null };
+    }
+
+    const result = await get<unknown>(`${PRODUCTS_BASE}/search-by-supplier`, {
+        params: { supplierId },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeProductsBySupplierResponse(result.data),
+        error: null,
     };
 }
 export interface ProductWarrantyTypeCatalogOption {

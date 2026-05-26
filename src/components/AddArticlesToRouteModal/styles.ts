@@ -42,7 +42,7 @@ export const StyledTableRow = styled(TableRow)<{ selected?: boolean }>(
     ...(selected && {
       backgroundColor: theme.palette.action.selected,
     }),
-  })
+  }),
 );
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -59,7 +59,3 @@ export const EmptyStateContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(6),
   minHeight: 200,
 }));
-
-const AddArticlesModalStylesPage = () => null;
-
-export default AddArticlesModalStylesPage;

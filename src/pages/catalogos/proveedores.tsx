@@ -9,6 +9,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSuppliers } from "@/services/suppliers.service";
 import type { SupplierListItem } from "@/services/suppliers.service";
+import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -104,6 +105,7 @@ export default function Proveedores() {
                 label: "Editar",
                 icon: <EditIcon fontSize="small" />,
                 onClick: handleEditSupplier,
+                permission: CATALOG_SUPPLIERS_UPDATE,
             },
         ],
         [handleEditSupplier],
@@ -127,6 +129,7 @@ export default function Proveedores() {
                             onClick: handleCreateSupplier,
                             variant: "contained",
                             color: "primary",
+                            permission: CATALOG_SUPPLIERS_CREATE,
                         }
                     ]}
                 />

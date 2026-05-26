@@ -58,6 +58,8 @@ interface RuleCardProps {
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onReorder?: (ruleId: string) => void;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }
 
 // ============================================================================
@@ -76,6 +78,8 @@ export function RuleCard({
   onMessageChange,
   onToggleActive,
   onDelete,
+  canUpdate = true,
+  canDelete = true,
 }: RuleCardProps) {
   const handleTriggerChange = (event: SelectChangeEvent<unknown>) => {
     onTriggerChange(rule.id, event.target.value as string);
@@ -102,6 +106,7 @@ export function RuleCard({
           size="small"
           value={rule.trigger}
           onChange={handleTriggerChange}
+          disabled={!canUpdate}
         >
           {triggerOptions.map((option) => (
             <MenuItem key={option.value} value={option.value}>
@@ -116,6 +121,7 @@ export function RuleCard({
           size="small"
           value={rule.operator}
           onChange={handleOperatorChange}
+          disabled={!canUpdate}
         >
           {operatorOptions.map((option) => (
             <MenuItem key={option.value} value={option.value}>
@@ -130,6 +136,7 @@ export function RuleCard({
           size="small"
           value={rule.period}
           onChange={handlePeriodChange}
+          disabled={!canUpdate}
         >
           {periodOptions.map((option) => (
             <MenuItem key={option.value} value={option.value}>
@@ -144,6 +151,7 @@ export function RuleCard({
           size="small"
           value={rule.message}
           onChange={handleMessageChange}
+          disabled={!canUpdate}
         >
           {messageOptions.map((option) => (
             <MenuItem key={option.value} value={option.value}>
@@ -155,8 +163,8 @@ export function RuleCard({
         <StatusChip
           label={rule.isActive ? "Activo" : "Inactivo"}
           status={rule.isActive ? "active" : "inactive"}
-          onClick={() => onToggleActive(rule.id)}
-          clickable
+          onClick={canUpdate ? () => onToggleActive(rule.id) : undefined}
+          clickable={canUpdate}
         />
       </RuleContent>
 
@@ -164,9 +172,11 @@ export function RuleCard({
         <DragHandle>
           <DragIcon fontSize="small" />
         </DragHandle>
-        <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
-          <DeleteIcon fontSize="small" />
-        </ActionIconButton>
+        {canDelete && (
+          <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
+            <DeleteIcon fontSize="small" />
+          </ActionIconButton>
+        )}
       </ActionsContainer>
     </RuleCardContainer>
   );
@@ -189,6 +199,8 @@ interface RulesListProps {
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   emptyMessage?: string;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }
 
 export function RulesList({
@@ -204,6 +216,8 @@ export function RulesList({
   onToggleActive,
   onDelete,
   emptyMessage = "No hay reglas configuradas",
+  canUpdate = true,
+  canDelete = true,
 }: RulesListProps) {
   if (rules.length === 0) {
     return (
@@ -231,6 +245,8 @@ export function RulesList({
           onMessageChange={onMessageChange}
           onToggleActive={onToggleActive}
           onDelete={onDelete}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
         />
       ))}
     </RulesListContainer>

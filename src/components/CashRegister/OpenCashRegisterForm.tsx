@@ -10,6 +10,7 @@ import type { OpenCashRegisterFormProps } from "./types";
 export function OpenCashRegisterForm({
   initialFund,
   exchangeRate,
+  canOpen = true,
   onInitialFundChange,
   onExchangeRateChange,
   onOpen,
@@ -71,6 +72,7 @@ export function OpenCashRegisterForm({
       <Button
         variant="contained"
         onClick={onOpen}
+        disabled={!canOpen}
         fullWidth>
         Abrir caja
       </Button>

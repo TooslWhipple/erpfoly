@@ -54,6 +54,7 @@ export interface SupplierDetail extends SupplierListItem {
   creditData: SupplierCreditDataItem;
   bankAccounts: SupplierBankAccountItem[];
   promotions: SupplierPromotionItem[];
+  hasUser: boolean;
 }
 
 export interface ContactJobTitleOption {
@@ -185,6 +186,12 @@ export async function updateSupplier(
   payload: UpdateSupplierPayload
 ): Promise<ApiResult<ApiSuccessPayload>> {
   return patch<ApiSuccessPayload>(`${SUPPLIERS_BASE}/${id}`, payload);
+}
+
+export async function inviteSupplier(
+  id: number
+): Promise<ApiResult<{ message: string }>> {
+  return post<{ message: string }>(`${SUPPLIERS_BASE}/${id}/invite`, {});
 }
 
 export async function getContactJobTitles(): Promise<

@@ -1,4 +1,5 @@
 import { Box, CircularProgress, Stack } from "@mui/material";
+import { MailOutline as MailOutlineIcon } from "@mui/icons-material";
 import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
@@ -20,7 +21,10 @@ export default function SupplierFormPage() {
         activeTab,
         setActiveTab,
         saving,
+        inviting,
+        hasUser,
         handleSave,
+        handleInvite,
         handleGeneralFieldChange,
         handleAddContact,
         handleRemoveContact,
@@ -58,6 +62,18 @@ export default function SupplierFormPage() {
                 <Title
                     title={isNew ? "Nuevo proveedor" : "Editar proveedor"}
                     actions={[
+                        !isNew && !hasUser && generalFormValues.email
+                            ? {
+                                  id: "invite",
+                                  label: inviting ? "Enviando..." : "Enviar invitación",
+                                  onClick: handleInvite,
+                                  disabled: inviting,
+                                  icon: <MailOutlineIcon />,
+                                  variant: "outlined",
+                                  color: "primary",
+                                  permission: CATALOG_SUPPLIERS_UPDATE,
+                              }
+                            : null,
                         {
                             id: "save",
                             label: "Guardar",
@@ -65,7 +81,7 @@ export default function SupplierFormPage() {
                             disabled: saving,
                             permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
                         },
-                    ]}
+                    ].filter(Boolean)}
                 />
 
                 <TabFilters

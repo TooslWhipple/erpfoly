@@ -38,10 +38,12 @@ export function useAuth() {
 	};
 
 	const logout = async () => {
-		await authService.logout();
-		clearAuth();
-		
-		router.push("/login");
+		try {
+			await authService.logout();
+		} finally {
+			clearAuth();
+			await router.push("/login");
+		}
 	};
 
 	return {

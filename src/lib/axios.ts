@@ -44,6 +44,11 @@ function isPublicAuthRequest(config: AxiosRequestConfig | undefined): boolean {
 	].some((path) => url.includes(path));
 }
 
+function isLogoutRequest(config: AxiosRequestConfig | undefined): boolean {
+	const url = config?.url ?? "";
+	return typeof url === "string" && url.includes("/auth/logout");
+}
+
 let isRefreshing = false;
 const failedQueue: Array<{ resolve: (token: string) => void; reject: (err: AxiosError) => void }> = [];
 
@@ -97,7 +102,9 @@ api.interceptors.response.use(
 		const originalRequest = error.config;
 
 		if (error.response?.status !== 401) {
-			useSnackbarStore.getState().showError(getErrorMessage(error));
+			if (!isLogoutRequest(originalRequest)) {
+				useSnackbarStore.getState().showError(getErrorMessage(error));
+			}
 			return Promise.reject(error);
 		}
 

@@ -307,9 +307,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const handleLogout = async () => {
-    await authService.logout();
-    clearAuth();
-    await router.push("/login");
+    try {
+      await authService.logout();
+    } finally {
+      clearAuth();
+      await router.push("/login");
+    }
   };
 
   const drawerContent = (

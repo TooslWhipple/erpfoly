@@ -117,4 +117,6 @@ export { RouteCircuitMap } from "./RouteCircuitMap";
 export type { RouteCircuitMapProps } from "./RouteCircuitMap";
 export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
 export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
+export { ShippingZonesMap } from "./ShippingZonesMap";
+export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 

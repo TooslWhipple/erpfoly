@@ -115,11 +115,14 @@ interface BackendUser {
 	id: string | number;
 	firstName?: string;
 	lastName?: string;
+	first_name?: string;
+	last_name?: string;
 	name?: string;
 	email?: string;
 	username?: string;
 	role?: BackendRole;
 	roleId?: number;
+	role_id?: number;
 	roleName?: string;
 	permissions?: BackendPermission[];
 	avatar?: string;
@@ -204,10 +207,15 @@ function resolveBackendRole(u: BackendUser): Pick<User, "role" | "roleId" | "rol
 }
 
 function mapBackendUserToFrontend(u: BackendUser): User {
-	const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+	const firstName = u.firstName ?? u.first_name;
+	const lastName = u.lastName ?? u.last_name;
+	const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
 	const email = u.email ?? u.username ?? "";
 	const name = u.name != null && u.name !== "" ? u.name : fullName || email;
-	const role = resolveBackendRole(u);
+	const role = resolveBackendRole({
+		...u,
+		roleId: u.roleId ?? u.role_id,
+	});
 	return {
 		id: String(u.id),
 		name,
@@ -221,6 +229,7 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 interface BackendLoginResponse {
 	accessToken: string;
 	refreshToken?: string;
+	permissions?: BackendPermission[];
 	user: BackendUser;
 }
 
@@ -276,7 +285,10 @@ export const authService = {
 		return {
 			data: {
 				token: res.accessToken,
-				user: mapBackendUserToFrontend(res.user),
+				user: mapBackendUserToFrontend({
+					...res.user,
+					permissions: res.permissions ?? res.user.permissions,
+				}),
 			},
 			error: null,
 		};

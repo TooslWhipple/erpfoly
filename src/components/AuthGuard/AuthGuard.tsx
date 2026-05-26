@@ -86,6 +86,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
         return;
       }
 
+      if (currentPath === FORBIDDEN_ROUTE) {
+        const firstAllowed = getFirstAllowedRoute(user);
+        if (firstAllowed !== FORBIDDEN_ROUTE) {
+          void router.replace(firstAllowed);
+        }
+        return;
+      }
+
       if (!canAccessPath(currentPath, user) && currentPath !== FORBIDDEN_ROUTE) {
         void router.replace(FORBIDDEN_ROUTE);
       }
@@ -114,6 +122,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
       if (publicRoute || currentPath === "/") {
         void router.replace(getFirstAllowedRoute(nextUser));
+        return;
+      }
+
+      if (currentPath === FORBIDDEN_ROUTE) {
+        const firstAllowed = getFirstAllowedRoute(nextUser);
+        if (firstAllowed !== FORBIDDEN_ROUTE) {
+          void router.replace(firstAllowed);
+        }
         return;
       }
 

@@ -62,18 +62,20 @@ export default function SupplierFormPage() {
                 <Title
                     title={isNew ? "Nuevo proveedor" : "Editar proveedor"}
                     actions={[
-                        !isNew && !hasUser && generalFormValues.email
-                            ? {
-                                  id: "invite",
-                                  label: inviting ? "Enviando..." : "Enviar invitación",
-                                  onClick: handleInvite,
-                                  disabled: inviting,
-                                  icon: <MailOutlineIcon />,
-                                  variant: "outlined",
-                                  color: "primary",
-                                  permission: CATALOG_SUPPLIERS_UPDATE,
-                              }
-                            : null,
+                        ...(!isNew && !hasUser && generalFormValues.email
+                            ? [
+                                  {
+                                      id: "invite",
+                                      label: inviting ? "Enviando..." : "Enviar invitación",
+                                      onClick: handleInvite,
+                                      disabled: inviting,
+                                      icon: <MailOutlineIcon />,
+                                      variant: "outlined" as const,
+                                      color: "primary" as const,
+                                      permission: CATALOG_SUPPLIERS_UPDATE,
+                                  },
+                              ]
+                            : []),
                         {
                             id: "save",
                             label: "Guardar",
@@ -81,7 +83,7 @@ export default function SupplierFormPage() {
                             disabled: saving,
                             permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
                         },
-                    ].filter(Boolean)}
+                    ]}
                 />
 
                 <TabFilters

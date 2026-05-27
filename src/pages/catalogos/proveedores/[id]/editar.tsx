@@ -3,6 +3,7 @@ import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
 import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
+import { Mail, PencilIcon } from "lucide-react";
 
 export default function SupplierEditPage() {
     const {
@@ -20,6 +21,7 @@ export default function SupplierEditPage() {
         activeTab,
         setActiveTab,
         saving,
+        inviting,
         handleSave,
         handleGeneralFieldChange,
         handleAddContact,
@@ -32,6 +34,9 @@ export default function SupplierEditPage() {
         handleAddPromotion,
         handleRemovePromotion,
         handlePromotionChange,
+        handleEdit,
+        handleInvite,
+        hasUser
     } = useSupplierForm();
 
     if (showLoader) {
@@ -58,6 +63,28 @@ export default function SupplierEditPage() {
                             disabled: saving,
                             permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
                         },
+                        {
+                            id: "edit",
+                            label: "Editar",
+                            icon: <PencilIcon size={16} />,
+                            onClick: handleEdit,
+                            variant: "outlined",
+                            permission: CATALOG_SUPPLIERS_UPDATE,
+                        },
+                        ...(!isNew && !hasUser && generalFormValues.email
+                            ? [
+                                {
+                                    id: "invite",
+                                    label: inviting ? "Enviando..." : "Enviar invitación",
+                                    onClick: handleInvite,
+                                    disabled: inviting,
+                                    icon: <Mail size={16} />,
+                                    variant: "outlined" as const,
+                                    color: "primary" as const,
+                                    permission: CATALOG_SUPPLIERS_UPDATE,
+                                },
+                            ]
+                            : [])
                     ]}
                 />
 

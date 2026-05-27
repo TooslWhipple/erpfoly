@@ -36,14 +36,6 @@ export interface UpdateBranchPayload {
   status?: "ACTIVE" | "INACTIVE";
 }
 
-export interface UpdateBranchShippingPricePayload {
-  branches: BranchShippingPriceItem[];
-}
-export interface BranchShippingPriceItem {
-  id: number;
-  shippingPrice: number;
-}
-
 // ============================================================================
 // API
 // ============================================================================
@@ -77,12 +69,6 @@ export async function deleteBranch(
   id: number
 ): Promise<ApiResult<ApiSuccessPayload>> {
   return del<ApiSuccessPayload>(`${BASE}/${id}`);
-}
-
-export async function updateBranchesShippingPrice(
-  payload: UpdateBranchShippingPricePayload
-): Promise<ApiResult<unknown>> {
-  return patch<unknown>(`${BASE}/shipping-price`, payload);
 }
 
 export interface BranchCatalogItem {

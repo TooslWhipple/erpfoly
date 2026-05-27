@@ -17,6 +17,7 @@ import {
 } from "@/components/SelectedItemsPanel/styles";
 import { createOrderWithItems } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 interface ConfirmOrderItem {
     productId: number;
@@ -51,6 +52,7 @@ export default function ConfirmarArticulosPage() {
     const [orderData, setOrderData] = useState<ConfirmOrderData | null>(null);
     const [items, setItems] = useState<ConfirmOrderItem[]>([]);
     const [status, setStatus] = useState<"loading" | "idle" | "submitting" | "empty" | "error">("loading");
+    const { showError } = useSnackbarStore();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -130,7 +132,7 @@ export default function ConfirmarArticulosPage() {
             if (orderData.orderType === "external") {
                 const mainWarehouse = await getMainWarehouse();
                 if (!mainWarehouse) {
-                    console.error("[ConfirmarPedido] No se encontró la matriz");
+                    showError("No se encontró la sucursal matriz. Contacta a soporte.");
                     setStatus("error");
                     return;
                 }
@@ -154,7 +156,8 @@ export default function ConfirmarArticulosPage() {
             const result = await createOrderWithItems(payload);
 
             if (result.error || !result.data) {
-                console.error("[ConfirmarPedido] Error:", result.error);
+                const msg = result.error?.message || "Error al solicitar el pedido. Intenta de nuevo.";
+                showError(msg);
                 setStatus("error");
                 return;
             }
@@ -165,7 +168,8 @@ export default function ConfirmarArticulosPage() {
                 : `/pedidos/nuevo/resumen/${result.data.id}`;
             router.push(returnUrl);
         } catch (err) {
-            console.error("[ConfirmarPedido] Exception:", err);
+            const msg = err instanceof Error && err.message ? err.message : "Error al solicitar el pedido. Intenta de nuevo.";
+            showError(msg);
             setStatus("error");
         } finally {
             setStatus((prev) => (prev === "submitting" ? "idle" : prev));
@@ -347,11 +351,6 @@ export default function ConfirmarArticulosPage() {
                                     "Solicitar pedido"
                                 )}
                             </Button>
-                            {status === "error" && (
-                                <Typography variant="body2" color="error.main" textAlign="center">
-                                    Error al solicitar el pedido. Intenta de nuevo.
-                                </Typography>
-                            )}
                         </SummaryCard>
                     </Grid>
                 </Grid>

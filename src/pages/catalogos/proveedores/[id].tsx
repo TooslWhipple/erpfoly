@@ -1,141 +1,200 @@
-import { Box, CircularProgress, Stack } from "@mui/material";
-import { MailOutline as MailOutlineIcon } from "@mui/icons-material";
-import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
-import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
-import { useSupplierForm } from "@/hooks/proveedores";
-import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
+import { useMemo } from "react";
+import { Alert, Grid, Skeleton, Stack } from "@mui/material";
+import { Pencil } from "lucide-react";
+import {
+  MainLayout,
+  Breadcrumbs,
+  Title,
+  TabFilters,
+  DataTable,
+} from "@/components";
+import type { DataTableColumn, StatusChipVariant } from "@/components/TableCrud";
+import {
+  SupplierDashboardMetrics,
+  SupplierDashboardMetricsSkeleton,
+  SupplierDeliveriesPanel,
+  SupplierDeliveriesPanelSkeleton,
+  SupplierChargesTab,
+  SupplierPaymentsTab,
+  SupplierDamagedGoodsTab,
+} from "@/components/SupplierDashboard";
+import { useSupplierDashboard } from "@/hooks/proveedores/useSupplierDashboard";
+import { CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
+import type { SupplierAccountStatementRow } from "@/types/supplierDashboard.types";
+import { DashboardLabel } from "@/styles/catalogos/proveedores-detail.styles";
 
-export default function SupplierFormPage() {
-    const {
-        isNew,
-        showLoader,
-        breadcrumbItems,
-        tabs,
-        generalFormValues,
-        errors,
-        contacts,
-        creditData,
-        bankAccounts,
-        promotions,
-        jobTitleOptions,
-        activeTab,
-        setActiveTab,
-        saving,
-        inviting,
-        hasUser,
-        handleSave,
-        handleInvite,
-        handleGeneralFieldChange,
-        handleAddContact,
-        handleRemoveContact,
-        handleContactChange,
-        handleCreditDataChange,
-        handleAddBankAccount,
-        handleRemoveBankAccount,
-        handleBankAccountChange,
-        handleAddPromotion,
-        handleRemovePromotion,
-        handlePromotionChange,
-    } = useSupplierForm();
+const ACCOUNT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  overdue: "Retrasado",
+  paid: "Pagado",
+};
 
-    if (showLoader) {
-        return (
-            <MainLayout>
-                <Box
-                    sx={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        minHeight: 400,
-                    }}
-                >
-                    <CircularProgress />
-                </Box>
-            </MainLayout>
-        );
-    }
+const ACCOUNT_STATUS_VARIANTS: Record<string, StatusChipVariant> = {
+  pending: "default",
+  overdue: "error",
+  paid: "success",
+};
 
+const accountStatementColumns: DataTableColumn<SupplierAccountStatementRow>[] = [
+  { id: "periodLabel", label: "Estado de cuenta" },
+  { id: "amount", label: "Monto", type: "currency" },
+  { id: "payments", label: "Pagos", type: "currency" },
+  { id: "balance", label: "Saldo", type: "currency" },
+  {
+    id: "status",
+    label: "Estatus",
+    type: "chip",
+    chipLabelMap: ACCOUNT_STATUS_LABELS,
+    chipVariantMap: ACCOUNT_STATUS_VARIANTS,
+  },
+];
+
+const ACCOUNT_STATEMENT_SKELETON_ROWS = 3;
+
+function SupplierDashboardHeaderSkeleton() {
+  return (
+    <Stack spacing={0.5}>
+      <Skeleton variant="text" width={100} height={16} animation="wave" />
+      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+        <Skeleton variant="text" width="40%" height={40} animation="wave" />
+        <Skeleton variant="rounded" width={100} height={36} animation="wave" />
+      </Stack>
+    </Stack>
+  );
+}
+
+export default function SupplierDashboardPage() {
+  const {
+    routerReady,
+    validId,
+    dashboard,
+    loading,
+    error,
+    activeTab,
+    tabs,
+    breadcrumbItems,
+    handleTabChange,
+    handleEdit,
+  } = useSupplierDashboard();
+
+  const tableRows = useMemo(() => {
+    if (!dashboard || activeTab !== "account_statements") return [];
+    return dashboard.accountStatements;
+  }, [dashboard, activeTab]);
+
+  const showContentSkeleton = !routerReady || loading;
+
+  if (routerReady && validId === null) {
     return (
-        <MainLayout>
-            <Stack spacing={2}>
-                <Breadcrumbs items={breadcrumbItems} />
-                <Title
-                    title={isNew ? "Nuevo proveedor" : "Editar proveedor"}
+      <MainLayout>
+        <Stack spacing={2}>
+          <Breadcrumbs items={breadcrumbItems} />
+          <Alert severity="warning">Identificador de proveedor no válido.</Alert>
+        </Stack>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <Stack spacing={3}>
+        <Breadcrumbs items={breadcrumbItems} />
+
+        <Stack spacing={3}>
+          {
+            showContentSkeleton ?
+              <SupplierDashboardHeaderSkeleton />
+              :
+              dashboard != null && (
+                <Stack spacing={0.5}>
+                  <DashboardLabel>Dashboard</DashboardLabel>
+                  <Title
+                    title={dashboard.supplierName}
                     actions={[
-                        ...(!isNew && !hasUser && generalFormValues.email
-                            ? [
-                                  {
-                                      id: "invite",
-                                      label: inviting ? "Enviando..." : "Enviar invitación",
-                                      onClick: handleInvite,
-                                      disabled: inviting,
-                                      icon: <MailOutlineIcon />,
-                                      variant: "outlined" as const,
-                                      color: "primary" as const,
-                                      permission: CATALOG_SUPPLIERS_UPDATE,
-                                  },
-                              ]
-                            : []),
-                        {
-                            id: "save",
-                            label: "Guardar",
-                            onClick: handleSave,
-                            disabled: saving,
-                            permission: isNew ? CATALOG_SUPPLIERS_CREATE : CATALOG_SUPPLIERS_UPDATE,
-                        },
+                      {
+                        id: "edit",
+                        label: "Editar",
+                        icon: <Pencil size={16} />,
+                        onClick: handleEdit,
+                        variant: "outlined",
+                        permission: CATALOG_SUPPLIERS_UPDATE,
+                      },
                     ]}
-                />
+                  />
+                </Stack>
+              )
+          }
+
+          <Grid container spacing={2} alignItems="flex-start">
+            <Grid size={{ xs: 12, lg: 8 }} sx={{ minWidth: 0 }}>
+              <Stack spacing={2} sx={{ width: "100%" }}>
+                {
+                  showContentSkeleton ?
+                    <SupplierDashboardMetricsSkeleton />
+                    :
+                    dashboard != null &&
+                    <SupplierDashboardMetrics summary={dashboard.summary} />
+                }
 
                 <TabFilters
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  onTabChange={handleTabChange}
                 />
 
-                {
-                    activeTab === "general" && (
-                        <GeneralTab
-                            values={generalFormValues}
-                            errors={errors}
-                            onFieldChange={handleGeneralFieldChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "contacts" && (
-                        <ContactsTab
-                            contacts={contacts}
-                            jobTitleOptions={jobTitleOptions}
-                            onAddContact={handleAddContact}
-                            onRemoveContact={handleRemoveContact}
-                            onContactChange={handleContactChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "credit" && (
-                        <CreditTab
-                            creditData={creditData}
-                            bankAccounts={bankAccounts}
-                            jobTitleOptions={jobTitleOptions}
-                            onCreditDataChange={handleCreditDataChange}
-                            onAddBankAccount={handleAddBankAccount}
-                            onRemoveBankAccount={handleRemoveBankAccount}
-                            onBankAccountChange={handleBankAccountChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "promotions" && (
-                        <PromotionsTab
-                            promotions={promotions}
-                            onAddPromotion={handleAddPromotion}
-                            onRemovePromotion={handleRemovePromotion}
-                            onPromotionChange={handlePromotionChange}
-                        />
-                    )
-                }
-            </Stack>
-        </MainLayout>
-    );
+                {activeTab === "account_statements" && (
+                  <DataTable
+                    columns={accountStatementColumns}
+                    rows={tableRows}
+                    rowKey="id"
+                    loading={showContentSkeleton}
+                    loadingRowCount={ACCOUNT_STATEMENT_SKELETON_ROWS}
+                    emptyMessage="No hay estados de cuenta registrados"
+                  />
+                )}
+
+                {activeTab === "charges" && validId != null && (
+                  <SupplierChargesTab
+                    supplierId={validId}
+                    supplierName={dashboard?.supplierName ?? ""}
+                    accountStatements={dashboard?.accountStatements ?? []}
+                    contentLoading={showContentSkeleton}
+                  />
+                )}
+
+                {activeTab === "payments" && validId != null && (
+                  <SupplierPaymentsTab
+                    supplierId={validId}
+                    contentLoading={showContentSkeleton}
+                  />
+                )}
+
+                {activeTab === "damaged_goods" && validId != null && (
+                  <SupplierDamagedGoodsTab
+                    supplierId={validId}
+                    supplierName={dashboard?.supplierName ?? ""}
+                    accountStatements={dashboard?.accountStatements ?? []}
+                    contentLoading={showContentSkeleton}
+                  />
+                )}
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12, lg: 4 }}>
+              {
+                showContentSkeleton ?
+                  <SupplierDeliveriesPanelSkeleton />
+                  :
+                  dashboard != null &&
+                  <SupplierDeliveriesPanel
+                    upcomingDeliveries={dashboard.upcomingDeliveries}
+                    recentDeliveries={dashboard.recentDeliveries}
+                  />
+              }
+            </Grid>
+          </Grid>
+        </Stack>
+      </Stack>
+    </MainLayout>
+  );
 }

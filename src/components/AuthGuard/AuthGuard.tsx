@@ -66,7 +66,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    if (shouldBypassAccessControl) return;
+    if (shouldBypassAccessControl) {
+      if (router.isReady) {
+        const currentPath = normalizePathname(router.asPath);
+        if (currentPath === "/") {
+          void router.replace(getFirstAllowedRoute(DEV_MOCK_USER));
+        }
+      }
+      return;
+    }
     if (!router.isReady || !hasHydrated) return;
 
     const currentPath = normalizePathname(router.asPath);

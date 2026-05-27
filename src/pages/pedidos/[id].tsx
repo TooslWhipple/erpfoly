@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Typography, Skeleton, Stack, Button, Divider, Grid, Box, LinearProgress } from "@mui/material";
+import { Typography, Skeleton, Stack, Button, Divider, Grid, Box, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from "@mui/material";
 import {
-    Edit as EditIcon,
     Download as DownloadIcon,
     LocalShipping as DeliveryIcon,
     CheckCircle as CheckCircleIcon,
     Schedule as ScheduleIcon,
+    Send as SendIcon,
 } from "@mui/icons-material";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import { getOrderFull } from "@/services/orders.service";
+import { getOrderFull, updateOrderStatus } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import {
     PageContainer,
@@ -73,20 +73,14 @@ function formatDate(dateStr: string): string {
     });
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("es-MX", {
-        style: "currency",
-        currency: "MXN",
-        minimumFractionDigits: 2,
-    }).format(value);
-}
-
 export default function PedidoDetalle() {
     const router = useRouter();
     const { id } = router.query;
 
     const [order, setOrder] = useState<OrderFullDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [sendModalOpen, setSendModalOpen] = useState(false);
+    const [sending, setSending] = useState(false);
 
     useEffect(() => {
         if (id && typeof id === "string") {
@@ -108,15 +102,26 @@ export default function PedidoDetalle() {
         }
     };
 
-    const handleEdit = () => {
-        router.push(`/pedidos/${id}/editar`);
-    };
-
     const handleDownloadPdf = () => {
         console.log("[PedidoDetalle] Download PDF");
     };
 
+    const handleSendToWarehouse = async () => {
+        if (!order || !id) return;
+        setSending(true);
+        try {
+            await updateOrderStatus(Number(id), "partially_delivered");
+            setSendModalOpen(false);
+            await loadOrder(String(id));
+        } catch (err) {
+            console.error("[PedidoDetalle] Error sending to warehouse:", err);
+        } finally {
+            setSending(false);
+        }
+    };
+
     const displayStatus = order ? mapBackendStatus(order.status) : "pending";
+    const showSendButton = order?.order_type === "external" && displayStatus === "pending";
 
     const totalRequested = order
         ? order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0)
@@ -182,13 +187,7 @@ export default function PedidoDetalle() {
                         showBackButton
                         items={breadcrumbs}
                         onBack={() => router.push("/pedidos")} />
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            onClick={handleEdit}>
-                            Editar
-                        </Button>
+                    <Stack direction="row" spacing={2} alignItems="center">
                         <Button
                             variant="outlined"
                             startIcon={<DownloadIcon />}
@@ -252,6 +251,19 @@ export default function PedidoDetalle() {
                             }}
                         />
                     </Stack>
+                )}
+
+                {showSendButton && (
+                    <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<SendIcon />}
+                            onClick={() => setSendModalOpen(true)}
+                        >
+                            Enviar a Almacén
+                        </Button>
+                    </Box>
                 )}
 
                 <Grid container spacing={4} justifyContent="revert">
@@ -423,6 +435,23 @@ export default function PedidoDetalle() {
                     </Grid>
                 </Grid>
             </Stack>
+
+            <Dialog open={sendModalOpen} onClose={() => !sending && setSendModalOpen(false)}>
+                <DialogTitle>Enviar pedido a Almacén</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Al realizar esta acción los artículos ahora serán gestionados por el área de Recepción de Mercancía.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSendModalOpen(false)} disabled={sending}>
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleSendToWarehouse} variant="contained" color="primary" disabled={sending}>
+                        {sending ? "Enviando..." : "Enviar"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </MainLayout>
     );
 }

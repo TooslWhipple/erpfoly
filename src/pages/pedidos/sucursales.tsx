@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud, SupplierSelectionModal } from "@/components";
+import { MainLayout, Title, TabFilters, TableCrud, SupplierSelectionModal, BranchSelectionModal } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import type { Supplier } from "@/types/pedidos.types";
+import type { OrderListItem } from "@/types/orders.types";
+import { getOrders } from "@/services/orders.service";
 import { Stack } from "@mui/material";
 import { BRANCH_ORDERS_CREATE, BRANCH_ORDERS_READ } from "@/lib/permissions";
 
-type OrderStatus = "pending" | "delivered";
+type OrderStatus = "pending" | "partially_delivered" | "delivered" | "cancelled";
 
 interface BranchOrder {
     id: number;
@@ -17,7 +19,7 @@ interface BranchOrder {
     branch: string;
     requestedBy: string;
     requestedItems: number;
-    deliveredItems: number | null;
+    deliveredItems: number;
     status: OrderStatus;
 }
 
@@ -34,166 +36,70 @@ interface GetBranchOrdersResponse {
     page: number;
     limit: number;
 }
+
 const ESTATUS_CHIP_LABELS: Record<OrderStatus, string> = {
     pending: "Pendiente",
-    delivered: "Entregado",
+    partially_delivered: "En curso",
+    delivered: "Recibido",
+    cancelled: "Cancelado",
 };
 const ESTATUS_CHIP_VARIANTS: Record<OrderStatus, StatusChipVariant> = {
     pending: "pending",
+    partially_delivered: "warning",
     delivered: "success",
+    cancelled: "error",
 };
 
-const DUMMY_BRANCH_ORDERS: BranchOrder[] = [
-    {
-        id: 1,
-        folio: "FOL-10231",
-        date: "05, Noviembre de 2025",
-        branch: "Foly Muebles Tampico Centro",
-        requestedBy: "Ana López",
-        requestedItems: 12,
-        deliveredItems: null,
-        status: "pending",
-    },
-    {
-        id: 2,
-        folio: "FOL-10232",
-        date: "05, Noviembre de 2025",
-        branch: "Foly Muebles Altamira",
-        requestedBy: "Ricardo Montes",
-        requestedItems: 6,
-        deliveredItems: null,
-        status: "pending",
-    },
-    {
-        id: 3,
-        folio: "FOL-10212",
-        date: "03, Noviembre de 2025",
-        branch: "Foly Muebles Ejército Mexicano",
-        requestedBy: "María Fernanda Juárez",
-        requestedItems: 9,
-        deliveredItems: 4,
-        status: "delivered",
-    },
-    {
-        id: 4,
-        folio: "FOL-10198",
-        date: "02, Noviembre de 2025",
-        branch: "Foly Muebles Pánuco",
-        requestedBy: "Luis Hernández",
-        requestedItems: 3,
-        deliveredItems: 3,
-        status: "delivered",
-    },
-    {
-        id: 5,
-        folio: "FOL-10195",
-        date: "01, Noviembre de 2025",
-        branch: "Foly Muebles Coatzacoalcos",
-        requestedBy: "Pamela Salinas",
-        requestedItems: 7,
-        deliveredItems: 7,
-        status: "delivered",
-    },
-    {
-        id: 6,
-        folio: "FOL-10176",
-        date: "29, Octubre de 2025",
-        branch: "Foly Muebles San Luis Potosí Carranza",
-        requestedBy: "Jorge Carrillo",
-        requestedItems: 5,
-        deliveredItems: 2,
-        status: "delivered",
-    },
-    {
-        id: 7,
-        folio: "FOL-10160",
-        date: "28, Octubre de 2025",
-        branch: "Foly Muebles Poza Rica",
-        requestedBy: "Claudia Pérez",
-        requestedItems: 14,
-        deliveredItems: 14,
-        status: "delivered",
-    },
-    {
-        id: 8,
-        folio: "FOL-10145",
-        date: "25, Octubre de 2025",
-        branch: "Foly Muebles Veracruz Puerto",
-        requestedBy: "Fernando Sánchez",
-        requestedItems: 8,
-        deliveredItems: 8,
-        status: "delivered",
-    },
-    {
-        id: 9,
-        folio: "FOL-10130",
-        date: "22, Octubre de 2025",
-        branch: "Foly Muebles Xalapa",
-        requestedBy: "Diana Torres",
-        requestedItems: 10,
-        deliveredItems: 10,
-        status: "delivered",
-    },
-    {
-        id: 10,
-        folio: "FOL-10115",
-        date: "20, Octubre de 2025",
-        branch: "Foly Muebles Córdoba",
-        requestedBy: "Miguel Ángel Ruiz",
-        requestedItems: 6,
-        deliveredItems: 6,
-        status: "delivered",
-    },
-];
+function mapBackendOrderToBranchOrder(order: OrderListItem): BranchOrder {
+    const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
+    const totalDelivered = order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
+
+    const orderDate = new Date(order.order_date);
+    const formattedDate = orderDate.toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+
+    return {
+        id: order.id,
+        folio: order.folio,
+        date: formattedDate,
+        branch: order.branch?.name ?? "Sin sucursal",
+        requestedBy: order.requested_by_user
+            ? `${order.requested_by_user.first_name} ${order.requested_by_user.last_name}`
+            : "—",
+        requestedItems: totalRequested,
+        deliveredItems: totalDelivered,
+        status: order.status as OrderStatus,
+    };
+}
 
 async function getBranchOrders(
     params: GetBranchOrdersParams
 ): Promise<GetBranchOrdersResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const statusFilter = params.status && params.status !== "all"
+        ? params.status
+        : undefined;
 
-    let filteredData = [...DUMMY_BRANCH_ORDERS];
-
-    if (params.status && params.status !== "all") {
-        filteredData = filteredData.filter((order) => order.status === params.status);
-    }
-
-    if (params.search) {
-        const searchLower = params.search.toLowerCase();
-        filteredData = filteredData.filter(
-            (order) =>
-                order.folio.toLowerCase().includes(searchLower) ||
-                order.branch.toLowerCase().includes(searchLower) ||
-                order.requestedBy.toLowerCase().includes(searchLower)
-        );
-    }
-
-    const total = filteredData.length;
-    const start = params.page * params.limit;
-    const end = start + params.limit;
-    const paginatedData = filteredData.slice(start, end);
-
-    return {
-        data: paginatedData,
-        total,
-        page: params.page,
+    const result = await getOrders({
+        page: params.page + 1,
         limit: params.limit,
-    };
-}
+        search: params.search,
+        order_type: "internal",
+        status: statusFilter,
+    });
 
-function getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-        pending: "Pendiente",
-        delivered: "Entregado",
-    };
-    return labels[status];
-}
+    if (result.data) {
+        return {
+            data: result.data.rows.map(mapBackendOrderToBranchOrder),
+            total: result.data.total,
+            page: params.page,
+            limit: params.limit,
+        };
+    }
 
-function getStatusColor(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
-        pending: "#ea580c",
-        delivered: "#16a34a",
-    };
-    return colors[status];
+    return { data: [], total: 0, page: params.page, limit: params.limit };
 }
 
 export default function PedidosSucursales() {
@@ -207,11 +113,13 @@ export default function PedidosSucursales() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
     const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+    const [branchModalOpen, setBranchModalOpen] = useState(false);
 
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Pendientes", value: "pending" },
-        { label: "Surtidos", value: "delivered" },
+        { label: "En curso", value: "partially_delivered" },
+        { label: "Recibidos", value: "delivered" },
     ];
 
     const getStatusFilter = useCallback((): "all" | OrderStatus => {
@@ -253,21 +161,22 @@ export default function PedidosSucursales() {
     };
 
     const handleCreate = () => {
-        setSupplierModalOpen(true);
+        setBranchModalOpen(true);
     };
 
-    const handleSupplierSelect = (supplier: Supplier) => {
+    const handleBranchSelect = (branch: { id: number; name: string }) => {
         router.push({
             pathname: "/pedidos/sucursales/nuevo",
             query: {
-                supplierId: supplier.id,
-                supplierName: supplier.name,
+                orderType: "internal",
+                branchId: String(branch.id),
+                branchName: branch.name,
             },
         });
     };
 
-    const handleCloseSupplierModal = () => {
-        setSupplierModalOpen(false);
+    const handleCloseBranchModal = () => {
+        setBranchModalOpen(false);
     };
 
     const handleViewOrder = (order: BranchOrder) => {
@@ -316,7 +225,6 @@ export default function PedidosSucursales() {
             label: "Artículos entregados",
             type: "number",
             size: "md",
-            format: (value) => (value === null ? "-" : String(value)),
         },
         {
             id: "status",
@@ -341,7 +249,7 @@ export default function PedidosSucursales() {
     return (
         <MainLayout>
             <Stack direction="column" spacing={3}>
-                <Title title="Pedidos" />
+                <Title title="Pedidos por sucursal" />
 
                 <TabFilters
                     tabs={tabs}
@@ -379,10 +287,10 @@ export default function PedidosSucursales() {
                 />
             </Stack>
 
-            <SupplierSelectionModal
-                open={supplierModalOpen}
-                onClose={handleCloseSupplierModal}
-                onSelect={handleSupplierSelect}
+            <BranchSelectionModal
+                open={branchModalOpen}
+                onClose={handleCloseBranchModal}
+                onSelect={handleBranchSelect}
             />
         </MainLayout>
     );

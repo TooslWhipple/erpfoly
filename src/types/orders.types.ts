@@ -44,6 +44,7 @@ export interface UpdateOrderItemInput {
 }
 
 export interface CreateOrderPayload {
+  order_type: "external" | "internal";
   branch_id: number;
   folio: string;
   order_date: string;
@@ -55,6 +56,7 @@ export interface CreateOrderPayload {
 }
 
 export interface UpdateOrderPayload {
+  order_type?: "external" | "internal";
   branch_id?: number;
   folio?: string;
   order_date?: string;
@@ -91,6 +93,7 @@ export interface QueryOrdersParams {
   page?: number;
   limit?: number;
   search?: string;
+  order_type?: "external" | "internal";
   status?: string;
   branch_id?: number;
   client_id?: number;
@@ -117,6 +120,7 @@ export interface QueryOrderDeliveriesParams {
 
 export interface OrderListItem {
   id: number;
+  order_type: "external" | "internal";
   folio: string;
   status: string;
   order_date: string;
@@ -134,6 +138,7 @@ export interface OrderListItem {
 
 export interface OrderFullDetail {
   id: number;
+  order_type: "external" | "internal";
   folio: string;
   status: string;
   order_date: string;
@@ -145,6 +150,7 @@ export interface OrderFullDetail {
   order_items: Array<{
     id: number;
     requested_quantity: number;
+    unit_price: number;
     delivered_quantity: number;
     notes: string | null;
     product: {

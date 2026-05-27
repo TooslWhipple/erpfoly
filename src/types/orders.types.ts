@@ -32,6 +32,7 @@ export interface OrderItemInput {
   product_id: number;
   requested_quantity: number;
   unit_price: number;
+  scheduled_delivery_date?: string;
 }
 
 export interface UpdateOrderItemInput {
@@ -40,6 +41,7 @@ export interface UpdateOrderItemInput {
   requested_quantity: number;
   unit_price: number;
   delivered_quantity?: number;
+  scheduled_delivery_date?: string;
   notes?: string;
 }
 
@@ -132,6 +134,7 @@ export interface OrderListItem {
     id: number;
     requested_quantity: number;
     delivered_quantity: number;
+    scheduled_delivery_date: string | null;
     product: { id: number; code: string; short_name: string } | null;
   }>;
 }
@@ -152,6 +155,7 @@ export interface OrderFullDetail {
     requested_quantity: number;
     unit_price: number;
     delivered_quantity: number;
+    scheduled_delivery_date: string | null;
     notes: string | null;
     product: {
       id: number;

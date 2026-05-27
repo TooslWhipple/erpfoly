@@ -197,6 +197,18 @@ const getInitials = (name?: string | null): string => {
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "US";
 };
 
+const isPathActive = (path: string, pathname: string, siblingPaths: string[] = []): boolean => {
+  const pathMatches = pathname === path || pathname.startsWith(`${path}/`);
+  if (!pathMatches) return false;
+
+  const hasMoreSpecificMatch = siblingPaths.some((otherPath) => {
+    if (otherPath === path || otherPath.length <= path.length) return false;
+    return pathname === otherPath || pathname.startsWith(`${otherPath}/`);
+  });
+
+  return !hasMoreSpecificMatch;
+};
+
 const filterNavItemsByAccess = (items: NavItem[], user: ReturnType<typeof useAuthStore.getState>["user"]): NavItem[] =>
   items
     .map((item) => {
@@ -242,31 +254,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const isParentActive = (item: NavItem) => {
     if (item.subItems) {
-      return item.subItems.some((sub) => router.pathname === sub.path);
+      const subPaths = item.subItems.map((sub) => sub.path);
+      return item.subItems.some((sub) => isPathActive(sub.path, router.pathname, subPaths));
     }
 
-    // Check if current path matches this item
-    const pathMatches = router.pathname === item.path || router.pathname.startsWith(item.path + "/");
-
-    if (!pathMatches) {
-      return false;
-    }
-
-    // If path matches, check if there's a more specific item that also matches
-    // This prevents shorter paths from being active when a longer path is active
-    const hasMoreSpecificMatch = visibleNavItems.some((otherItem) => {
-      if (otherItem === item) return false;
-      if (otherItem.subItems) return false;
-
-      const otherPathMatches = router.pathname === otherItem.path || router.pathname.startsWith(otherItem.path + "/");
-      if (!otherPathMatches) return false;
-
-      // Check if the other item's path is longer (more specific)
-      return otherItem.path.length > item.path.length;
-    });
-
-    // Only active if no more specific match exists
-    return !hasMoreSpecificMatch;
+    const siblingPaths = visibleNavItems.filter((other) => !other.subItems).map((other) => other.path);
+    return isPathActive(item.path, router.pathname, siblingPaths);
   };
 
   const handleNavigation = (path: string) => {
@@ -338,6 +331,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const isOpen = openMenus[item.label] || false;
             const active = isParentActive(item);
+            const subPaths = hasSubItems ? item.subItems!.map((sub) => sub.path) : [];
 
             return (
               <Box key={item.label}>
@@ -367,9 +361,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
                     <List component="div" disablePadding>
                       {item.subItems!.map((subItem) => {
-                        const subActive =
-                          router.pathname === subItem.path ||
-                          router.pathname.startsWith(`${subItem.path}/`);
+                        const subActive = isPathActive(subItem.path, router.pathname, subPaths);
                         return (
                           <SubItemButton
                             key={subItem.path}

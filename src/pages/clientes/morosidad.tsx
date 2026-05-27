@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import { Link, Stack } from "@mui/material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import { StatsCardGroup } from "@/components/StatsCard";
@@ -256,6 +257,8 @@ const DELINQUENCY_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
 // ============================================================================
 
 export default function ClientesMorosidad() {
+  const router = useRouter();
+
   // State management
   const [activeTab, setActiveTab] = useState("all");
   const [searchValue, setSearchValue] = useState("");
@@ -330,8 +333,7 @@ export default function ClientesMorosidad() {
   };
 
   const handleViewCustomer = (customer: DelinquentCustomer) => {
-    console.log("[Morosidad] View customer:", customer.id);
-    // Navigate to customer detail page
+    router.push(`/clientes/${customer.id}`);
   };
 
   const handleContactCustomer = (customer: DelinquentCustomer) => {
@@ -399,7 +401,10 @@ export default function ClientesMorosidad() {
       format: (value, row) => (
         <Link
           component="button"
-          onClick={() => handleViewCustomer(row)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewCustomer(row);
+          }}
           sx={{
             color: "text.primary",
             textDecoration: "underline",
@@ -475,6 +480,7 @@ export default function ClientesMorosidad() {
           totalRows={totalRows}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
+          onRowClick={(row) => router.push(`/clientes/${row.id}`)}
           emptyMessage="No hay clientes con morosidad"
         />
       </Stack>

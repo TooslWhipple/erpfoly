@@ -1,0 +1,1 @@
+export { ShippingZonesMap } from "./ShippingZonesMap";

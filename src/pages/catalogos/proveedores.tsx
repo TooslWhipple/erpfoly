@@ -57,8 +57,12 @@ export default function Proveedores() {
         router.push("/catalogos/proveedores/nuevo");
     }, [router]);
 
-    const handleEditSupplier = useCallback((supplier: SupplierListItem) => {
+    const handleViewSupplier = useCallback((supplier: SupplierListItem) => {
         router.push(`/catalogos/proveedores/${supplier.id}`);
+    }, [router]);
+
+    const handleEditSupplier = useCallback((supplier: SupplierListItem) => {
+        router.push(`/catalogos/proveedores/${supplier.id}/editar`);
     }, [router]);
 
     const columns = useMemo<Column<SupplierListItem>[]>(
@@ -145,7 +149,7 @@ export default function Proveedores() {
                     totalRows={totalRows}
                     onPageChange={handlePageChange}
                     onRowsPerPageChange={handleRowsPerPageChange}
-                    onRowClick={handleEditSupplier}
+                    onRowClick={handleViewSupplier}
                     emptyMessage="No hay proveedores registrados"
                 />
             </Stack>

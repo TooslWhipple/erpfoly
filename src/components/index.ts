@@ -53,6 +53,8 @@ export { SuggestionsCard } from "./SuggestionsCard";
 export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";
 export type { SupplierSelectionModalProps } from "./SupplierSelectionModal";
+export { BranchSelectionModal } from "./BranchSelectionModal/BranchSelectionModal";
+export type { BranchSelectionModalProps } from "./BranchSelectionModal/BranchSelectionModal";
 export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";
@@ -117,4 +119,6 @@ export { RouteCircuitMap } from "./RouteCircuitMap";
 export type { RouteCircuitMapProps } from "./RouteCircuitMap";
 export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
 export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
+export { ShippingZonesMap } from "./ShippingZonesMap";
+export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 

@@ -4,7 +4,7 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
 
 export const api = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+	baseURL: "/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -295,14 +295,17 @@ export const del = <T>(url: string, config?: AxiosRequestConfig) =>
 	request<T>("DELETE", url, undefined, config);
 
 export function unwrapOrThrow<T>(result: ApiResult<T>): T {
+	console.log("result: ", result);
 	if (result.error) {
 		const e = new Error(result.error.message) as Error & { apiError?: ApiError };
 		e.apiError = result.error;
 		throw e;
 	}
+
 	if (result.data === null) {
 		throw new Error("Unexpected null data");
 	}
+
 	return result.data;
 }
 

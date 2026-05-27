@@ -213,10 +213,10 @@ export default function ClientDetailPage() {
             creditUsed={
               clientHeaderQuery.data
                 ? Math.max(
-                    clientHeaderQuery.data.creditLine.authorized -
-                      (clientHeaderQuery.data.creditLine.available ?? 0),
-                    0,
-                  )
+                  clientHeaderQuery.data.creditLine.authorized -
+                  (clientHeaderQuery.data.creditLine.available ?? 0),
+                  0,
+                )
                 : client.creditUsed
             }
             creditAvailable={
@@ -233,7 +233,7 @@ export default function ClientDetailPage() {
             onTabChange={(value: string) => setActiveTab(value)}
           />
 
-          <Button variant="contained" color="primary">
+          <Button variant="contained" color="primary" style={{ minWidth: "144px" }}>
             Agregar abono
           </Button>
         </Stack>

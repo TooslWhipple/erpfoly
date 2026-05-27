@@ -36,14 +36,6 @@ export interface UpdateBranchPayload {
   status?: "ACTIVE" | "INACTIVE";
 }
 
-export interface UpdateBranchShippingPricePayload {
-  branches: BranchShippingPriceItem[];
-}
-export interface BranchShippingPriceItem {
-  id: number;
-  shippingPrice: number;
-}
-
 // ============================================================================
 // API
 // ============================================================================
@@ -79,17 +71,17 @@ export async function deleteBranch(
   return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }
 
-export async function updateBranchesShippingPrice(
-  payload: UpdateBranchShippingPricePayload
-): Promise<ApiResult<unknown>> {
-  return patch<unknown>(`${BASE}/shipping-price`, payload);
-}
-
 export interface BranchCatalogItem {
   id: number;
   name: string;
+  is_main_warehouse: boolean;
 }
 
 export async function getBranchesCatalog(): Promise<BranchCatalogItem[]> {
   return unwrapOrThrow(await get<BranchCatalogItem[]>(`${BASE}/catalog`));
+}
+
+export async function getMainWarehouse(): Promise<BranchCatalogItem | null> {
+  const result = await getBranchesCatalog();
+  return result.find((b) => b.is_main_warehouse) ?? null;
 }

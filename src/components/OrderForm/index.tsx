@@ -2,16 +2,18 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
+import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal, BranchSelectionModal } from "@/components";
 import SelectedItemsPanel from "@/components/SelectedItemsPanel";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
 import type { Article, OrderItem } from "@/types/pedidos.types";
 import type { ProductSuggestion, SelectedOrderItem, OrderFullDetail } from "@/types/orders.types";
 import type { CostHistoryEntry } from "@/components";
+import type { BranchCatalogItem } from "@/services/branches.service";
 import { unwrapOrThrow } from "@/lib/axios";
 import {
     getProductsBySupplier,
+    getProductsByBranch,
     type ProductBySupplierItem,
 } from "@/services/productos.service";
 import {
@@ -20,7 +22,9 @@ import {
     getOrderFull,
     createOrderWithItems,
     updateOrderWithItems,
+    getSuggestions,
 } from "@/services/orders.service";
+import { getMainWarehouse } from "@/services/branches.service";
 import {
     SuggestionsList,
     StockCell,
@@ -61,15 +65,31 @@ function articleMatchesQuery(article: ArticleRow, normalizedQuery: string): bool
 interface OrderFormProps {
     mode: "create" | "edit";
     orderId?: number;
+    orderType?: "external" | "internal";
     supplierId?: string;
     supplierName?: string;
+    branchId?: string;
+    branchName?: string;
 }
 
-export default function OrderForm({ mode, orderId, supplierId: propSupplierId, supplierName: propSupplierName }: OrderFormProps) {
+export default function OrderForm({
+    mode,
+    orderId,
+    orderType: propOrderType,
+    supplierId: propSupplierId,
+    supplierName: propSupplierName,
+    branchId: propBranchId,
+    branchName: propBranchName,
+}: OrderFormProps) {
     const router = useRouter();
     const theme = useTheme();
 
+    const orderType = propOrderType ?? (router.query.orderType as "external" | "internal" | undefined) ?? "external";
+
     const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(null);
+    const [branch, setBranch] = useState<{ id: string; name: string } | null>(null);
+    const [mainWarehouse, setMainWarehouse] = useState<BranchCatalogItem | null>(null);
+    const [branchModalOpen, setBranchModalOpen] = useState(false);
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -83,12 +103,21 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
 
     const resolvedSupplierId = propSupplierId ?? (router.query.supplierId as string | undefined);
     const resolvedSupplierName = propSupplierName ?? (router.query.supplierName as string | undefined);
+    const resolvedBranchId = propBranchId ?? (router.query.branchId as string | undefined);
+    const resolvedBranchName = propBranchName ?? (router.query.branchName as string | undefined);
 
     useEffect(() => {
-        if (mode === "create" && resolvedSupplierId && resolvedSupplierName) {
-            setSupplier({ id: resolvedSupplierId, name: resolvedSupplierName });
+        if (mode === "create") {
+            if (orderType === "external" && resolvedSupplierId && resolvedSupplierName) {
+                setSupplier({ id: resolvedSupplierId, name: resolvedSupplierName });
+            } else if (orderType === "internal" && resolvedBranchId && resolvedBranchName) {
+                setBranch({ id: resolvedBranchId, name: resolvedBranchName });
+                getMainWarehouse().then((mw) => {
+                    if (mw) setMainWarehouse(mw);
+                });
+            }
         }
-    }, [mode, resolvedSupplierId, resolvedSupplierName]);
+    }, [mode, orderType, resolvedSupplierId, resolvedSupplierName, resolvedBranchId, resolvedBranchName]);
 
     useEffect(() => {
         if (mode === "edit" && orderId) {
@@ -107,10 +136,17 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
                     (item) => item.product?.product_suppliers?.[0]?.supplier_id
                 )?.product?.product_suppliers?.[0]?.supplier_id;
 
-                setSupplier({
-                    id: String(supplierId ?? ""),
-                    name: result.data.branch?.name ?? "",
-                });
+                if (result.data.order_type === "internal") {
+                    setBranch({
+                        id: String(result.data.branch?.id ?? ""),
+                        name: result.data.branch?.name ?? "",
+                    });
+                } else {
+                    setSupplier({
+                        id: String(supplierId ?? ""),
+                        name: result.data.branch?.name ?? "",
+                    });
+                }
 
                 const items: SelectedOrderItem[] = result.data.order_items.map((item) => ({
                     productId: item.product?.id ?? 0,
@@ -130,21 +166,36 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
         }
     };
 
-    const supplierIdNumber = useMemo(() => {
-        if (!supplier) return 0;
-        const parsed = Number(supplier.id);
-        return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-    }, [supplier]);
+    const sourceEntityId = useMemo(() => {
+        if (orderType === "external") {
+            if (!supplier) return 0;
+            const parsed = Number(supplier.id);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+        }
+        if (orderType === "internal") {
+            if (!mainWarehouse) return 0;
+            const parsed = Number(mainWarehouse.id);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+        }
+        return 0;
+    }, [orderType, supplier, mainWarehouse]);
 
     useEffect(() => {
-        if (!supplierIdNumber) return;
+        if (!sourceEntityId) return;
 
         const fetchSuggestions = async () => {
             setSuggestionsLoading(true);
             try {
-                const result = await getSuggestionsBySupplier(supplierIdNumber, 10);
-                if (result.data) {
-                    setSuggestions(result.data);
+                if (orderType === "external") {
+                    const result = await getSuggestionsBySupplier(sourceEntityId, 10);
+                    if (result.data) {
+                        setSuggestions(result.data);
+                    }
+                } else {
+                    const result = await getSuggestions(10);
+                    if (result.data) {
+                        setSuggestions(result.data);
+                    }
                 }
             } catch (error) {
                 console.error("[OrderForm] Error fetching suggestions:", error);
@@ -154,16 +205,20 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
         };
 
         fetchSuggestions();
-    }, [supplierIdNumber]);
+    }, [sourceEntityId, orderType]);
 
     const {
         data: productRows,
         isFetching: articlesFetching,
     } = useQuery({
-        queryKey: ["products-by-supplier", supplierIdNumber],
-        queryFn: async () =>
-            unwrapOrThrow(await getProductsBySupplier(supplierIdNumber)),
-        enabled: supplierIdNumber > 0,
+        queryKey: [orderType === "external" ? "products-by-supplier" : "products-by-branch", sourceEntityId],
+        queryFn: async () => {
+            if (orderType === "external") {
+                return unwrapOrThrow(await getProductsBySupplier(sourceEntityId));
+            }
+            return unwrapOrThrow(await getProductsByBranch(sourceEntityId));
+        },
+        enabled: sourceEntityId > 0,
         staleTime: 30_000,
     });
 
@@ -179,7 +234,7 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
     }, [articles, searchQuery]);
 
     const isSearchActive = searchQuery.trim().length > 0;
-    const articlesLoading = supplierIdNumber > 0 && articlesFetching;
+    const articlesLoading = sourceEntityId > 0 && articlesFetching;
     const emptyArticlesMessage = isSearchActive
         ? "No se encontraron artículos para la búsqueda"
         : "No hay artículos disponibles para este proveedor";
@@ -283,22 +338,43 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
         if (selectedItems.length === 0) return;
 
         if (mode === "create") {
-            const orderData = {
-                supplierId: supplier?.id,
-                supplierName: supplier?.name,
-                items: selectedItems.map((item) => ({
-                    productId: item.productId,
-                    productCode: item.productCode,
-                    productName: item.productName,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    totalPrice: item.totalPrice,
-                })),
-                total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
-            };
+            if (orderType === "external") {
+                const orderData = {
+                    orderType: "external" as const,
+                    supplierId: supplier?.id,
+                    supplierName: supplier?.name,
+                    items: selectedItems.map((item) => ({
+                        productId: item.productId,
+                        productCode: item.productCode,
+                        productName: item.productName,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        totalPrice: item.totalPrice,
+                    })),
+                    total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
+                };
 
-            sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
-            router.push("/pedidos/sucursales/nuevo/confirmar");
+                sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
+                router.push("/pedidos/sucursales/nuevo/confirmar");
+            } else {
+                const orderData = {
+                    orderType: "internal" as const,
+                    branchId: branch?.id,
+                    branchName: branch?.name,
+                    items: selectedItems.map((item) => ({
+                        productId: item.productId,
+                        productCode: item.productCode,
+                        productName: item.productName,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        totalPrice: item.totalPrice,
+                    })),
+                    total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
+                };
+
+                sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
+                router.push("/pedidos/sucursales/nuevo/confirmar");
+            }
         } else if (mode === "edit" && orderId) {
             const payload = {
                 items: selectedItems.map((item) => ({
@@ -311,7 +387,10 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
             try {
                 const result = await updateOrderWithItems(orderId, payload);
                 if (result.data) {
-                    router.push(`/pedidos/${orderId}`);
+                    const returnUrl = originalOrder?.order_type === "internal"
+                        ? `/pedidos/sucursales/${orderId}`
+                        : `/pedidos/${orderId}`;
+                    router.push(returnUrl);
                 }
             } catch (error) {
                 console.error("[OrderForm] Error updating order:", error);
@@ -319,7 +398,7 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
         }
     };
 
-    const truncatedSupplierName = (name: string | undefined) => {
+    const truncatedName = (name: string | undefined) => {
         if (name === undefined) return "...";
         if (name.length <= 40) return name;
 
@@ -330,19 +409,23 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
             .join(' ') + '...';
     }
 
+    const displayName = orderType === "external" ? supplier?.name : branch?.name;
+
     const breadcrumbs: BreadcrumbItem[] = mode === "create"
         ? [
-            { label: "Pedidos", href: "/pedidos" },
-            { label: truncatedSupplierName(supplier?.name), href: supplier ? `/pedidos?supplier=${supplier.id}` : undefined },
-            { label: "Nuevo pedido" },
+            { label: "Pedidos", href: orderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
+            { label: truncatedName(displayName), href: displayName ? (orderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
+            { label: orderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido" },
         ]
         : [
-            { label: "Pedidos", href: "/pedidos" },
-            { label: originalOrder?.folio ? `Pedido ${originalOrder.folio}` : "...", href: originalOrder ? `/pedidos/${originalOrder.id}` : undefined },
+            { label: "Pedidos", href: originalOrder?.order_type === "internal" ? "/pedidos/sucursales" : "/pedidos" },
+            { label: originalOrder?.folio ? `Pedido ${originalOrder.folio}` : "...", href: originalOrder ? (originalOrder.order_type === "internal" ? `/pedidos/sucursales/${originalOrder.id}` : `/pedidos/${originalOrder.id}`) : undefined },
             { label: "Editar pedido" },
         ];
 
-    const pageTitle = mode === "create" ? "Nuevo pedido" : `Editar pedido ${originalOrder?.folio ?? ""}`;
+    const pageTitle = mode === "create"
+        ? (orderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido")
+        : `Editar pedido ${originalOrder?.folio ?? ""}`;
 
     const columns: Column<ArticleRow>[] = [
         {
@@ -457,39 +540,37 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
     if (orderLoading) {
         return (
             <MainLayout>
-                <Stack
-                    direction="row"
-                    justifyContent="center"
-                    alignItems="center"
-                    sx={{ minHeight: 400 }}
-                >
+                <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
             </MainLayout>
         );
     }
 
-    if (mode === "edit" && (!supplier || !originalOrder)) {
+    if (mode === "edit" && (!originalOrder)) {
         return (
             <MainLayout>
                 <Box sx={{ marginTop: 4, textAlign: "center" }}>
-                    <Typography variant="h5" color="text.secondary">
-                        Pedido no encontrado
-                    </Typography>
+                    <Typography variant="h5" color="text.secondary">Pedido no encontrado</Typography>
                 </Box>
             </MainLayout>
         );
     }
 
-    if (mode === "create" && !supplier) {
+    if (mode === "create" && orderType === "external" && !supplier) {
         return (
             <MainLayout>
-                <Stack
-                    direction="row"
-                    justifyContent="center"
-                    alignItems="center"
-                    sx={{ minHeight: 400 }}
-                >
+                <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
+                    <CircularProgress />
+                </Stack>
+            </MainLayout>
+        );
+    }
+
+    if (mode === "create" && orderType === "internal" && (!branch || !mainWarehouse)) {
+        return (
+            <MainLayout>
+                <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
             </MainLayout>
@@ -566,6 +647,14 @@ export default function OrderForm({ mode, orderId, supplierId: propSupplierId, s
                 article={selectedArticle}
                 onAddToOrder={handleAddToOrder}
                 costHistory={costHistory}
+            />
+
+            <BranchSelectionModal
+                open={branchModalOpen}
+                onClose={() => setBranchModalOpen(false)}
+                onSelect={(b: BranchCatalogItem) => {
+                    setBranch({ id: String(b.id), name: b.name });
+                }}
             />
         </MainLayout>
     );

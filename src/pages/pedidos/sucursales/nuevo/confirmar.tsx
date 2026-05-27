@@ -16,6 +16,8 @@ import {
     StepperInput,
 } from "@/components/SelectedItemsPanel/styles";
 import { createOrderWithItems } from "@/services/orders.service";
+import { getMainWarehouse } from "@/services/branches.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 interface ConfirmOrderItem {
     productId: number;
@@ -28,8 +30,11 @@ interface ConfirmOrderItem {
 }
 
 interface ConfirmOrderData {
+    orderType: "external" | "internal";
     supplierId?: string;
     supplierName?: string;
+    branchId?: string;
+    branchName?: string;
     items: ConfirmOrderItem[];
     total: number;
 }
@@ -47,6 +52,7 @@ export default function ConfirmarArticulosPage() {
     const [orderData, setOrderData] = useState<ConfirmOrderData | null>(null);
     const [items, setItems] = useState<ConfirmOrderItem[]>([]);
     const [status, setStatus] = useState<"loading" | "idle" | "submitting" | "empty" | "error">("loading");
+    const { showError } = useSnackbarStore();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -121,8 +127,23 @@ export default function ConfirmarArticulosPage() {
         if (!items.length || !orderData) return;
         setStatus("submitting");
         try {
+            let branchId = 1;
+
+            if (orderData.orderType === "external") {
+                const mainWarehouse = await getMainWarehouse();
+                if (!mainWarehouse) {
+                    showError("No se encontró la sucursal matriz. Contacta a soporte.");
+                    setStatus("error");
+                    return;
+                }
+                branchId = mainWarehouse.id;
+            } else if (orderData.orderType === "internal" && orderData.branchId) {
+                branchId = Number(orderData.branchId);
+            }
+
             const payload = {
-                branch_id: 1,
+                order_type: orderData.orderType,
+                branch_id: branchId,
                 folio: `PED-${Date.now()}`,
                 order_date: new Date().toISOString().split("T")[0],
                 items: items.map((item) => ({
@@ -134,30 +155,41 @@ export default function ConfirmarArticulosPage() {
 
             const result = await createOrderWithItems(payload);
 
-            if (result.error) {
-                console.error("[ConfirmarPedido] Error:", result.error);
+            if (result.error || !result.data) {
+                const msg = result.error?.message || "Error al solicitar el pedido. Intenta de nuevo.";
+                showError(msg);
                 setStatus("error");
                 return;
             }
 
             sessionStorage.removeItem("newOrderData");
-            router.push("/pedidos/sucursales");
+            const returnUrl = orderData.orderType === "internal"
+                ? "/pedidos/sucursales"
+                : `/pedidos/nuevo/resumen/${result.data.id}`;
+            router.push(returnUrl);
         } catch (err) {
-            console.error("[ConfirmarPedido] Exception:", err);
+            const msg = err instanceof Error && err.message ? err.message : "Error al solicitar el pedido. Intenta de nuevo.";
+            showError(msg);
             setStatus("error");
         } finally {
             setStatus((prev) => (prev === "submitting" ? "idle" : prev));
         }
     };
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { label: "Pedidos", href: "/pedidos" },
-        {
-            label: supplierName ? `Sucursal ${supplierName}` : "Sucursales",
-            href: orderData?.supplierId ? `/pedidos/sucursales?supplier=${orderData.supplierId}` : "/pedidos/sucursales",
-        },
-        { label: "Nuevo pedido" },
-    ];
+    const breadcrumbs: BreadcrumbItem[] = orderData
+        ? [
+            { label: "Pedidos", href: orderData.orderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
+            {
+                label: orderData.orderType === "internal"
+                    ? (orderData.branchName ? `Sucursal ${orderData.branchName}` : "Sucursales")
+                    : (orderData.supplierName ? `Proveedor ${orderData.supplierName}` : "Proveedores"),
+                href: orderData.orderType === "internal"
+                    ? (orderData.branchId ? `/pedidos/sucursales?branch=${orderData.branchId}` : "/pedidos/sucursales")
+                    : (orderData.supplierId ? `/pedidos?supplier=${orderData.supplierId}` : "/pedidos"),
+            },
+            { label: "Nuevo pedido" },
+        ]
+        : [{ label: "Pedidos", href: "/pedidos" }, { label: "Nuevo pedido" }];
 
     if (status === "loading") {
         return (
@@ -319,11 +351,6 @@ export default function ConfirmarArticulosPage() {
                                     "Solicitar pedido"
                                 )}
                             </Button>
-                            {status === "error" && (
-                                <Typography variant="body2" color="error.main" textAlign="center">
-                                    Error al solicitar el pedido. Intenta de nuevo.
-                                </Typography>
-                            )}
                         </SummaryCard>
                     </Grid>
                 </Grid>

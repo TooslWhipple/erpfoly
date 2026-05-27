@@ -1,5 +1,4 @@
-import { Table, TableBody } from "@mui/material";
-import { Typography } from "@mui/material";
+import { Skeleton, Table, TableBody, Typography } from "@mui/material";
 import numeral from "numeral";
 import {
   TableWrapper,
@@ -30,6 +29,7 @@ export type DataTableColumnType =
 export interface DataTableColumn<T> {
   id: keyof T | string;
   label: string;
+  headerContent?: React.ReactNode;
   align?: "left" | "center" | "right";
   type?: DataTableColumnType;
   format?: (value: unknown, row: T) => React.ReactNode;
@@ -47,6 +47,8 @@ export interface DataTableProps<T> {
   rows: T[];
   rowKey: keyof T;
   emptyMessage?: string;
+  loading?: boolean;
+  loadingRowCount?: number;
 }
 
 function getValue<T>(row: T, columnId: keyof T | string): unknown {
@@ -124,11 +126,33 @@ function formatCellValue<T>(
   }
 }
 
+function renderSkeletonRows<T>(
+  columns: DataTableColumn<T>[],
+  rowCount: number
+) {
+  return Array.from({ length: rowCount }, (_, rowIndex) => (
+    <StyledTableRow key={`skeleton-${rowIndex}`}>
+      {columns.map((column) => (
+        <StyledTableCell key={`skeleton-${rowIndex}-${String(column.id)}`} align={column.align ?? "left"}>
+          <Skeleton
+            variant="text"
+            width={column.type === "id" ? 30 : "80%"}
+            height={24}
+            animation="wave"
+          />
+        </StyledTableCell>
+      ))}
+    </StyledTableRow>
+  ));
+}
+
 export function DataTable<T>({
   columns,
   rows,
   rowKey,
   emptyMessage = "No hay datos disponibles",
+  loading = false,
+  loadingRowCount = 5,
 }: DataTableProps<T>) {
   return (
     <TableWrapper>
@@ -141,13 +165,15 @@ export function DataTable<T>({
                   key={String(col.id)}
                   align={col.align ?? "left"}
                 >
-                  {col.label}
+                  {col.headerContent ?? col.label}
                 </StyledHeaderCell>
               ))}
             </StyledTableRow>
           </StyledTableHead>
           <TableBody>
-            {rows.length === 0 ? (
+            {loading ? (
+              renderSkeletonRows(columns, loadingRowCount)
+            ) : rows.length === 0 ? (
               <StyledTableRow>
                 <StyledTableCell colSpan={columns.length}>
                   <EmptyStateContainer>

@@ -127,25 +127,6 @@ export default function Clientes() {
     count: t.value === activeTab ? totalRows : undefined,
   }));
 
-  const actions: TitleAction[] = [
-    {
-      id: "export",
-      label: "Exportar",
-      icon: <ExportIcon />,
-      variant: "outlined",
-      onClick: () => console.log("Exportar clientes"),
-      permission: REPORTS_READ,
-    },
-    {
-      id: "create",
-      label: "Nuevo cliente",
-      icon: <AddIcon />,
-      variant: "contained",
-      href: "/clientes/nuevo",
-      permission: CUSTOMERS_CREATE,
-    },
-  ];
-
   const rowActions: RowAction<Client>[] = [
     {
       id: "view",
@@ -174,7 +155,7 @@ export default function Clientes() {
   return (
     <MainLayout>
       <Stack direction="column" spacing={3}>
-        <Title title="Clientes" actions={actions} />
+        <Title title="Clientes" />
         <TabFilters
           tabs={tabs}
           activeTab={activeTab}

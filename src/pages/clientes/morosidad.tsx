@@ -4,8 +4,7 @@ import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import { CUSTOMER_DELINQUENCY_READ, CUSTOMER_DELINQUENCY_UPDATE } from "@/lib/permissions";
+import type { Column, StatusChipVariant } from "@/components/TableCrud";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -242,6 +241,7 @@ const DELINQUENCY_CHIP_LABELS: Record<string, string> = {
   "2_days": "2 días",
   "5_days": "5 días",
 };
+
 const DELINQUENCY_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   "1_day": "default",
   "1_week": "error",
@@ -448,30 +448,6 @@ export default function ClientesMorosidad() {
     },
   ];
 
-  // Row actions configuration
-  const actions: RowAction<DelinquentCustomer>[] = [
-    {
-      id: "view",
-      label: "Ver detalle",
-      onClick: handleViewCustomer,
-      permission: CUSTOMER_DELINQUENCY_READ,
-    },
-    {
-      id: "contact",
-      label: "Contactar",
-      onClick: handleContactCustomer,
-      color: "primary",
-      permission: CUSTOMER_DELINQUENCY_UPDATE,
-    },
-    {
-      id: "payment",
-      label: "Registrar pago",
-      onClick: handleRegisterPayment,
-      color: "primary",
-      permission: CUSTOMER_DELINQUENCY_UPDATE,
-    },
-  ];
-
   return (
     <MainLayout>
       <Stack spacing={3}>
@@ -492,7 +468,6 @@ export default function ClientesMorosidad() {
         <TableCrud
           columns={columns}
           rows={customers}
-          actions={actions}
           loading={loading}
           rowKey="id"
           page={page}

@@ -29,15 +29,17 @@ const COLUMNS: DataTableColumn<ClientMovement>[] = [
 
 export interface MovementsTableProps {
   movements: ClientMovement[];
+  onRowClick?: (movement: ClientMovement) => void;
 }
 
-export function MovementsTable({ movements }: MovementsTableProps) {
+export function MovementsTable({ movements, onRowClick }: MovementsTableProps) {
   return (
     <DataTable<ClientMovement>
       columns={COLUMNS}
       rows={movements}
       rowKey="id"
       emptyMessage="No hay registros"
+      onRowClick={onRowClick}
     />
   );
 }

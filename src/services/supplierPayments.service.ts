@@ -9,7 +9,7 @@ export async function fetchSupplierPayments(
   supplierId: number
 ): Promise<SupplierPaymentsResult> {
   try {
-    const response = await unwrapOrThrow(get(`/suppliers/${supplierId}/dashboard/payments`));
+    const response = unwrapOrThrow(await get(`/suppliers/${supplierId}/dashboard/payments`));
     return { data: response as SupplierPaymentRow[], error: null };
   } catch (err: any) {
     return {

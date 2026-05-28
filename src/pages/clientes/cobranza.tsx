@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CircularProgress, Box } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, RulesList } from "@/components";
+import { MainLayout, Title, RulesList, AutomatedCollectionActivityModal } from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -41,6 +41,7 @@ export default function CobranzaAutomatica() {
   const [rules, setRules] = useState<CollectionRuleData[]>([]);
   const [catalogs, setCatalogs] = useState<AutomatedCollectionCatalogs | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activityRuleId, setActivityRuleId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -120,7 +121,7 @@ export default function CobranzaAutomatica() {
         time_period_id: firstPeriod.id,
         message_id: firstMessage.id,
         message_type_id: firstMessageType.id,
-        status: true,
+        status: false,
       });
       if (result.data) {
         setRules((prev) => [...prev, ruleToCollectionRule(result.data!)]);
@@ -211,6 +212,27 @@ export default function CobranzaAutomatica() {
     }
   };
 
+  const handleViewActivity = (ruleId: string) => {
+    setActivityRuleId(ruleId);
+  };
+
+  const handleCloseActivityModal = () => {
+    setActivityRuleId(null);
+  };
+
+  const selectedActivityRule = useMemo(
+    () => rules.find((rule) => rule.id === activityRuleId) ?? null,
+    [rules, activityRuleId]
+  );
+
+  const selectedMessageName = useMemo(() => {
+    if (!selectedActivityRule) return "";
+    return (
+      messageOptions.find((option) => option.value === selectedActivityRule.message)
+        ?.label ?? "Mensaje de recordatorio"
+    );
+  }, [selectedActivityRule, messageOptions]);
+
   const titleActions: TitleAction[] = [
     {
       id: "create",
@@ -255,11 +277,19 @@ export default function CobranzaAutomatica() {
           onMessageChange={handleMessageChange}
           onToggleActive={handleToggleActive}
           onDelete={handleDeleteRule}
+          onViewActivity={handleViewActivity}
           canUpdate={canUpdateRule}
           canDelete={canDeleteRule}
           emptyMessage="No hay reglas de cobranza configuradas. Crea una nueva regla para comenzar."
         />
       )}
+
+      <AutomatedCollectionActivityModal
+        open={activityRuleId !== null}
+        onClose={handleCloseActivityModal}
+        messageName={selectedMessageName}
+        isActive={selectedActivityRule?.isActive ?? true}
+      />
     </MainLayout>
   );
 }

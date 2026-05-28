@@ -2,6 +2,7 @@ import { MenuItem, SelectChangeEvent, Typography } from "@mui/material";
 import {
   DragIndicator as DragIcon,
   Delete as DeleteIcon,
+  ViewList as ViewListIcon,
 } from "@mui/icons-material";
 import {
   RuleCardContainer,
@@ -57,6 +58,7 @@ interface RuleCardProps {
   onMessageChange: (ruleId: string, value: string) => void;
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
+  onViewActivity?: (ruleId: string) => void;
   onReorder?: (ruleId: string) => void;
   canUpdate?: boolean;
   canDelete?: boolean;
@@ -78,6 +80,7 @@ export function RuleCard({
   onMessageChange,
   onToggleActive,
   onDelete,
+  onViewActivity,
   canUpdate = true,
   canDelete = true,
 }: RuleCardProps) {
@@ -172,6 +175,11 @@ export function RuleCard({
         <DragHandle>
           <DragIcon fontSize="small" />
         </DragHandle>
+        {onViewActivity && (
+          <ActionIconButton onClick={() => onViewActivity(rule.id)} size="small">
+            <ViewListIcon fontSize="small" />
+          </ActionIconButton>
+        )}
         {canDelete && (
           <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
             <DeleteIcon fontSize="small" />
@@ -198,6 +206,7 @@ interface RulesListProps {
   onMessageChange: (ruleId: string, value: string) => void;
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
+  onViewActivity?: (ruleId: string) => void;
   emptyMessage?: string;
   canUpdate?: boolean;
   canDelete?: boolean;
@@ -215,6 +224,7 @@ export function RulesList({
   onMessageChange,
   onToggleActive,
   onDelete,
+  onViewActivity,
   emptyMessage = "No hay reglas configuradas",
   canUpdate = true,
   canDelete = true,
@@ -245,6 +255,7 @@ export function RulesList({
           onMessageChange={onMessageChange}
           onToggleActive={onToggleActive}
           onDelete={onDelete}
+          onViewActivity={onViewActivity}
           canUpdate={canUpdate}
           canDelete={canDelete}
         />

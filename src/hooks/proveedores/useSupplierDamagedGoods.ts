@@ -71,7 +71,7 @@ export function useSupplierDamagedGoods(
     [loadItems]
   );
 
-  const toggleSelection = useCallback((id: string) => {
+  const toggleSelection = useCallback((id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );

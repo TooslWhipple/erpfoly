@@ -71,8 +71,7 @@ export default function SupplierEditPage() {
                             variant: "outlined",
                             permission: CATALOG_SUPPLIERS_UPDATE,
                         },
-                        ...(!isNew && !hasUser && generalFormValues.email
-                            ? [
+                       
                                 {
                                     id: "invite",
                                     label: inviting ? "Enviando..." : "Enviar invitación",
@@ -83,8 +82,6 @@ export default function SupplierEditPage() {
                                     color: "primary" as const,
                                     permission: CATALOG_SUPPLIERS_UPDATE,
                                 },
-                            ]
-                            : [])
                     ]}
                 />
 

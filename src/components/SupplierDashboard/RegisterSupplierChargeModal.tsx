@@ -97,7 +97,7 @@ export function RegisterSupplierChargeModal({
     if (!open) return;
     setFormValues({
       ...DEFAULT_FORM_VALUES,
-      accountStatementId: accountStatementOptions[0]?.value ?? 0,
+      accountStatementId: Number(accountStatementOptions[0]?.value ?? 0),
       categoryId: fixedCategoryId ?? "",
       amount: initialAmount,
     });

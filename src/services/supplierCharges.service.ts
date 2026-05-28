@@ -29,7 +29,7 @@ export async function fetchSupplierCharges(
   supplierId: number
 ): Promise<SupplierChargesResult> {
   try {
-    const response = await unwrapOrThrow(get(`/suppliers/${supplierId}/dashboard/charges`));
+    const response = unwrapOrThrow(await get(`/suppliers/${supplierId}/dashboard/charges`));
     return { data: response as SupplierChargeRow[], error: null };
   } catch (err: any) {
     return {
@@ -45,8 +45,7 @@ export async function registerSupplierCharge(
   payload: RegisterSupplierChargePayload
 ): Promise<RegisterSupplierChargeResult> {
   try {
-    const response = await unwrapOrThrow(
-      post(`/suppliers/${payload.supplierId}/dashboard/charges`, {
+    const response = unwrapOrThrow(await post(`/suppliers/${payload.supplierId}/dashboard/charges`, {
         accountStatementId: payload.accountStatementId,
         categoryId: payload.categoryId,
         description: payload.description,

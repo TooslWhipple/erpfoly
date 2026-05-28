@@ -62,3 +62,24 @@ export interface DepartmentDetail {
   articles: PriceSuggestionItem[];
   rules: LiquidationRule[];
 }
+
+// ============================================================================
+// RULE ACTIVITY (automation price change log)
+// ============================================================================
+
+export interface LiquidationRuleActivityEntry {
+  id: string;
+  date: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  imageUrl?: string;
+  previousPrice: number;
+  newPrice: number;
+}
+
+export interface LiquidationRuleActivityResponse {
+  ruleId: string;
+  totalModified: number;
+  entries: LiquidationRuleActivityEntry[];
+}

@@ -45,8 +45,11 @@ function buildMockSalesHistory(metric: ChartMetricType): SalesHistoryPoint[] {
   return points;
 }
 
-const MOCK_BRANCHES: Omit<BranchMonthlyGoal, "newCredits" | "collectionGoal" | "monthlyGoal">[] = [
-  { id: "1", branchName: "Ciampette" },
+const MOCK_BRANCHES: Omit<
+  BranchMonthlyGoal,
+  "numCredits" | "newCredits" | "collectionGoal" | "monthlyGoal"
+>[] = [
+  { id: "1", branchName: "Campestre" },
   { id: "2", branchName: "Carrera" },
   { id: "3", branchName: "Concordia-Mty" },
   { id: "4", branchName: "Cumbres-Mty" },
@@ -56,7 +59,7 @@ const MOCK_BRANCHES: Omit<BranchMonthlyGoal, "newCredits" | "collectionGoal" | "
   { id: "8", branchName: "Matamoros-Plaza Patio" },
   { id: "9", branchName: "Matamoros-Brisas" },
   { id: "10", branchName: "Marfre" },
-  { id: "11", branchName: "Campestre" },
+  { id: "11", branchName: "Marfre Centro" },
   { id: "12", branchName: "Reynosa-Av. Hidalgo" },
   { id: "13", branchName: "Reynosa-Periferico" },
   { id: "14", branchName: "Nuevo Laredo" },
@@ -69,6 +72,7 @@ function buildMockBranchGoals(month: number, year: number): BranchMonthlyGoal[] 
   const perBranch = Math.round((totalMonthly / count) * 100) / 100;
   return MOCK_BRANCHES.map((b) => ({
     ...b,
+    numCredits: 12,
     newCredits: 300000,
     collectionGoal: 600000,
     monthlyGoal: perBranch,

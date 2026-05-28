@@ -49,6 +49,7 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   loading?: boolean;
   loadingRowCount?: number;
+  onRowClick?: (row: T) => void;
 }
 
 function getValue<T>(row: T, columnId: keyof T | string): unknown {
@@ -153,6 +154,7 @@ export function DataTable<T>({
   emptyMessage = "No hay datos disponibles",
   loading = false,
   loadingRowCount = 5,
+  onRowClick,
 }: DataTableProps<T>) {
   return (
     <TableWrapper>
@@ -185,7 +187,12 @@ export function DataTable<T>({
               </StyledTableRow>
             ) : (
               rows.map((row) => (
-                <StyledTableRow key={String(row[rowKey])} hover>
+                <StyledTableRow
+                  key={String(row[rowKey])}
+                  hover
+                  onClick={() => onRowClick?.(row)}
+                  sx={onRowClick ? { cursor: "pointer" } : undefined}
+                >
                   {columns.map((col) => {
                     const value = getValue(row, col.id);
                     const content = formatCellValue(value, col, row);

@@ -11,7 +11,7 @@ import {
   ProductCard,
   ProductThumbnail,
   ValidationBanner,
-} from "./deliverPurchaseModal.styles";
+} from "@/styles/clientes/deliverPurchaseModal.styles";
 
 export interface DeliverPurchaseModalProps {
   open: boolean;

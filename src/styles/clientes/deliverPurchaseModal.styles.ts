@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Stack } from "@mui/material";
 
-export const ProductCard = styled('div')(({ theme }) => ({
+export const ProductCard = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
@@ -27,7 +27,7 @@ export const ProductThumbnail = styled("div")(({ theme }) => ({
   },
 }));
 
-export const ValidationBanner = styled('div')(({ theme }) => ({
+export const ValidationBanner = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",

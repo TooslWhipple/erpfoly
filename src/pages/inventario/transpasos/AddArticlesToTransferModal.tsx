@@ -24,7 +24,7 @@ import {
   StyledTableRow,
   StyledTableCell,
   EmptyStateContainer,
-} from "./AddArticlesToTransferModal.styles";
+} from "@/styles/inventario/addArticlesToTransferModal.styles";
 
 export interface AddArticlesToTransferModalProps {
   open: boolean;

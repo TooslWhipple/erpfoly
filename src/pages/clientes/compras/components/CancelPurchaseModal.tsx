@@ -10,7 +10,7 @@ import {
   FooterActions,
   ReasonCard,
   ReasonCheckIcon,
-} from "./cancelPurchaseModal.styles";
+} from "@/styles/clientes/cancelPurchaseModal.styles";
 
 export interface CancelPurchaseModalProps {
   open: boolean;

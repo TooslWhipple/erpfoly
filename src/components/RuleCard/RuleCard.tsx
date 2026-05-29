@@ -1,10 +1,5 @@
 import { MenuItem, SelectChangeEvent, Typography } from "@mui/material";
 import {
-  DragIndicator as DragIcon,
-  Delete as DeleteIcon,
-  ViewList as ViewListIcon,
-} from "@mui/icons-material";
-import {
   RuleCardContainer,
   RuleContent,
   RuleLabel,
@@ -15,10 +10,10 @@ import {
   StatusChip,
   ActionsContainer,
   ActionIconButton,
-  DragHandle,
   RulesListContainer,
   EmptyStateContainer,
 } from "./styles";
+import { ListCollapseIcon, Trash2Icon } from "lucide-react";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -59,7 +54,6 @@ interface RuleCardProps {
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onViewActivity?: (ruleId: string) => void;
-  onReorder?: (ruleId: string) => void;
   canUpdate?: boolean;
   canDelete?: boolean;
 }
@@ -172,17 +166,14 @@ export function RuleCard({
       </RuleContent>
 
       <ActionsContainer>
-        <DragHandle>
-          <DragIcon fontSize="small" />
-        </DragHandle>
         {onViewActivity && (
           <ActionIconButton onClick={() => onViewActivity(rule.id)} size="small">
-            <ViewListIcon fontSize="small" />
+            <ListCollapseIcon fontSize="small" />
           </ActionIconButton>
         )}
         {canDelete && (
           <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
-            <DeleteIcon fontSize="small" />
+            <Trash2Icon fontSize="small" />
           </ActionIconButton>
         )}
       </ActionsContainer>

@@ -47,18 +47,24 @@ export const QuantityControls = styled("div")(({ theme }) => ({
 }));
 
 export const QuantityButton = styled(IconButton)(({ theme }) => ({
-    borderRadius: 0,
-    padding: theme.spacing(1),
-    minWidth: 40,
-    height: 40,
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50px",
+    minWidth: "24px",
+    height: "24px",
+    border: `1px solid ${theme.palette.app.border}`,
     "&:hover": {
         backgroundColor: theme.palette.app.chip.background,
     },
 }));
 
 export const QuantityValue = styled("div")({
-    minWidth: 48,
+    minWidth: "24px",
+    height: "20px",
+    lineHeight: "20px",
     textAlign: "center",
-    fontSize: "0.875rem",
-    fontWeight: 500,
+    fontSize: "14px",
+    fontWeight: "700",
 });

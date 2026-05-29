@@ -4,88 +4,79 @@ import {
     Button,
     CircularProgress,
     Divider,
-    FormControl,
-    InputLabel,
-    MenuItem,
-    Select,
     Stack,
     Typography,
 } from "@mui/material";
 import { MainLayout, Breadcrumbs, BranchOrderItemRow } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { BranchOrderDetail, BranchOrderStatus } from "@/types/solicitudes.types";
+import type {
+    BranchRequestFullDetail,
+    BranchOrderDetail,
+    BranchOrderLineItem,
+    BranchOrderStatus,
+    ScheduleBranchRequestPayload,
+    UpdateBranchRequestPayload,
+} from "@/types/solicitudes.types";
 import {
-    OriginDestinationRow,
+    getBranchRequestFull,
+    updateBranchRequest,
+    scheduleBranchRequest,
+} from "@/services/requests.service";
+import {
     PageContainer,
-    ProductHeaderSection,
+    OriginDestinationCard,
     ProductsSection,
+    ProductHeaderSection,
     StatusValue
 } from "@/styles/solicitudes/detalle.styles";
-import { ArrowRight } from "lucide-react";
 import { theme } from "@/styles/theme";
+import { ArrowRight } from "lucide-react";
 
-// ============================================================================
-// MOCK DATA & API
-// ============================================================================
+function mapBackendToBranchOrderDetail(detail: BranchRequestFullDetail): BranchOrderDetail {
+    const totalRequested = detail.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
+    const totalDelivered = detail.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
 
-const MOCK_ORIGINS = [
-    { id: "warehouse", label: "Bodega" },
-    { id: "matamoros", label: "Matamoros" },
-];
+    const items: BranchOrderLineItem[] = detail.order_items.map((item) => ({
+        articleId: String(item.id),
+        articleName: item.product?.short_name ?? "Sin nombre",
+        deliveryDate: item.scheduled_delivery_date
+            ? new Date(item.scheduled_delivery_date).toISOString().split("T")[0]
+            : detail.order_date.split("T")[0],
+        scheduledDeliveryDate: item.scheduled_delivery_date
+            ? new Date(item.scheduled_delivery_date).toISOString().split("T")[0]
+            : null,
+        quantity: item.requested_quantity,
+        orderItemId: item.id,
+        productId: item.product?.id ?? 0,
+        requestedQuantity: item.requested_quantity,
+        deliveredQuantity: item.delivered_quantity,
+    }));
 
-const MOCK_DESTINATIONS = [
-    { id: "matamoros-pedro", label: "Matamoros-Pedro Cárdenas" },
-    { id: "tampico-centro", label: "Foly Muebles Tampico Centro" },
-];
-
-function buildMockOrder(id: number): BranchOrderDetail {
     return {
-        id,
-        folio: `FOL-${String(id).padStart(5, "0")}`,
-        createdAt: "2025-10-02",
-        status: "pending",
-        originId: "warehouse",
-        originLabel: "Bodega",
-        destinationId: "matamoros-pedro",
-        destinationLabel: "Matamoros-Pedro Cárdenas",
-        items: [
-            {
-                articleId: "art-1",
-                articleName: "Secadora Mabe 20kg SMG26N5MNBABO Blanca",
-                deliveryDate: "2025-10-15",
-                quantity: 5,
-            },
-            {
-                articleId: "art-2",
-                articleName: "Lavadora Samsung 18kg WA18T6260BY Blanca",
-                deliveryDate: "2025-10-18",
-                quantity: 7,
-            },
-            {
-                articleId: "art-3",
-                articleName: "Estufa Mabe 4 quemadores EM4442DBAB0 Blanca",
-                deliveryDate: "2025-10-20",
-                quantity: 3,
-            },
-        ],
+        id: detail.id,
+        folio: detail.folio,
+        createdAt: detail.created_at,
+        status: totalDelivered > 0 && totalDelivered >= totalRequested ? "delivered" : "pending",
+        originId: String(detail.branch?.id ?? ""),
+        originLabel: detail.branch?.name ?? "Sin sucursal",
+        destinationId: String(detail.requested_by_user?.id ?? ""),
+        destinationLabel: detail.requested_by_user
+            ? `${detail.requested_by_user.first_name} ${detail.requested_by_user.last_name}`
+            : "—",
+        items,
     };
 }
 
 async function getBranchOrderDetail(orderId: string): Promise<BranchOrderDetail | null> {
-    await new Promise((resolve) => setTimeout(resolve, 600));
     const id = parseInt(orderId, 10);
     if (Number.isNaN(id) || id < 1) return null;
-    return buildMockOrder(id);
-}
 
-async function updateBranchOrder(_orderId: string, _payload: Partial<BranchOrderDetail>): Promise<boolean> {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    return true;
+    const result = await getBranchRequestFull(id);
+    if (result.data) {
+        return mapBackendToBranchOrderDetail(result.data);
+    }
+    return null;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function formatCreatedDate(isoDate: string): string {
     const d = new Date(isoDate);
@@ -112,10 +103,6 @@ function getStatusChipColor(status: BranchOrderStatus): string {
     return status === "pending" ? "#EA580C" : "#7E22CE";
 }
 
-// ============================================================================
-// PAGE
-// ============================================================================
-
 type PageStatus = "loading" | "success" | "empty" | "error" | "submitting";
 
 export default function SolicitudSucursalDetallePage() {
@@ -124,8 +111,7 @@ export default function SolicitudSucursalDetallePage() {
 
     const [status, setStatus] = useState<PageStatus>("loading");
     const [order, setOrder] = useState<BranchOrderDetail | null>(null);
-    const [originId, setOriginId] = useState<string>("");
-    const [destinationId, setDestinationId] = useState<string>("");
+    const [originalOrder, setOriginalOrder] = useState<BranchOrderDetail | null>(null);
 
     const fetchOrder = useCallback(async () => {
         if (!id) return;
@@ -134,11 +120,11 @@ export default function SolicitudSucursalDetallePage() {
             const data = await getBranchOrderDetail(id);
             if (data) {
                 setOrder(data);
-                setOriginId(data.originId);
-                setDestinationId(data.destinationId);
+                setOriginalOrder(JSON.parse(JSON.stringify(data)));
                 setStatus("success");
             } else {
                 setOrder(null);
+                setOriginalOrder(null);
                 setStatus("empty");
             }
         } catch {
@@ -155,28 +141,58 @@ export default function SolicitudSucursalDetallePage() {
     };
 
     const handleDiscard = () => {
-        if (id) fetchOrder();
+        if (originalOrder) {
+            setOrder(JSON.parse(JSON.stringify(originalOrder)));
+        }
     };
 
+    const hasChanges = useCallback(() => {
+        if (!order || !originalOrder) return false;
+        if (order.items.length !== originalOrder.items.length) return true;
+        return order.items.some((item, index) => {
+            const orig = originalOrder.items[index];
+            return (
+                item.quantity !== orig.requestedQuantity ||
+                item.deliveryDate !== (orig.scheduledDeliveryDate ?? orig.deliveryDate)
+            );
+        });
+    }, [order, originalOrder]);
+
     const handleUpdate = async () => {
-        if (!id || !order) return;
+        if (!id || !order || !originalOrder) return;
         setStatus("submitting");
         try {
-            const success = await updateBranchOrder(id, {
-                originId,
-                destinationId,
-                items: order.items,
-            });
-            if (success) {
-                const updated = await getBranchOrderDetail(id);
-                if (updated) {
-                    setOrder(updated);
-                    setOriginId(updated.originId);
-                    setDestinationId(updated.destinationId);
-                }
-            } else {
-                setStatus("error");
+            const quantityChanges = order.items.filter(
+                (item, index) => item.quantity !== originalOrder.items[index].requestedQuantity
+            );
+            const scheduleChanges = order.items.filter(
+                (item, index) => item.deliveryDate !== originalOrder.items[index].deliveryDate
+            );
+
+            if (quantityChanges.length > 0) {
+                const payload: UpdateBranchRequestPayload = {
+                    items: order.items.map((item, index) => ({
+                        id: originalOrder.items[index].orderItemId,
+                        product_id: item.productId,
+                        requested_quantity: item.quantity,
+                        unit_price: 0,
+                        scheduled_delivery_date: item.deliveryDate || undefined,
+                    })),
+                };
+                await updateBranchRequest(parseInt(id, 10), payload);
             }
+
+            if (scheduleChanges.length > 0 && quantityChanges.length === 0) {
+                const payload: ScheduleBranchRequestPayload = {
+                    items: scheduleChanges.map((item) => ({
+                        order_item_id: item.orderItemId,
+                        scheduled_delivery_date: item.deliveryDate,
+                    })),
+                };
+                await scheduleBranchRequest(parseInt(id, 10), payload);
+            }
+
+            await fetchOrder();
         } catch {
             setStatus("error");
         } finally {
@@ -210,7 +226,7 @@ export default function SolicitudSucursalDetallePage() {
 
     const breadcrumbs: BreadcrumbItem[] = [
         { label: "Pedidos", href: "/solicitudes/sucursales" },
-        { label: id ?? "" },
+        { label: order?.folio ?? id ?? "" },
     ];
 
     if (status === "loading" && !order) {
@@ -263,16 +279,21 @@ export default function SolicitudSucursalDetallePage() {
             <Stack direction="row" justifyContent="space-between">
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                 <Stack direction="row" spacing={2}>
-                    <Button variant="outlined" onClick={handleDiscard} disabled={status === "submitting"}>
+                    <Button
+                        variant="outlined"
+                        onClick={handleDiscard}
+                        disabled={status === "submitting" || !hasChanges()}
+                    >
                         Descartar cambios
                     </Button>
                     <Button
                         variant="contained"
                         onClick={handleUpdate}
-                        disabled={status === "submitting"}>
-                        {
-                            (status === "submitting") ? <CircularProgress size={24} color="inherit" /> : "Actualizar pedido"
-                        }
+                        disabled={status === "submitting" || !hasChanges()}
+                    >
+                        {status === "submitting"
+                            ? <CircularProgress size={24} color="inherit" />
+                            : "Actualizar pedido"}
                     </Button>
                 </Stack>
             </Stack>
@@ -281,52 +302,33 @@ export default function SolicitudSucursalDetallePage() {
                 <Stack spacing={3}>
                     <Stack spacing={0.5}>
                         <Typography variant="caption" color="text.secondary">Factura</Typography>
-                        <Typography variant="h4">Pedido {order.id}</Typography>
+                        <Typography variant="h4">Pedido {order.folio}</Typography>
                         <Typography variant="body2" color="text.secondary">Creado el {formatCreatedDate(order.createdAt)}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Typography variant="body1">Pedido:</Typography>
                         <StatusValue
                             color={getStatusChipColor(order.status)}
-                            backgroundColor={getStatusChipBackgroundColor(order.status)}>
+                            backgroundColor={getStatusChipBackgroundColor(order.status)}
+                        >
                             <Typography variant="body1">{getStatusLabel(order.status)}</Typography>
                         </StatusValue>
                     </Stack>
                 </Stack>
 
-                <OriginDestinationRow>
-                    <FormControl size="small">
-                        <InputLabel id="origin-label">Origen</InputLabel>
-                        <Select
-                            labelId="origin-label"
-                            value={originId}
-                            label="Origen"
-                            onChange={(e) => setOriginId(e.target.value)}
-                        >
-                            {MOCK_ORIGINS.map((o) => (
-                                <MenuItem key={o.id} value={o.id}>
-                                    {o.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <ArrowRight size={12} color={theme.palette.text.secondary} />
-                    <FormControl size="small">
-                        <InputLabel id="destination-label">Por recibir</InputLabel>
-                        <Select
-                            labelId="destination-label"
-                            value={destinationId}
-                            label="Por recibir"
-                            onChange={(e) => setDestinationId(e.target.value)}
-                        >
-                            {MOCK_DESTINATIONS.map((d) => (
-                                <MenuItem key={d.id} value={d.id}>
-                                    {d.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </OriginDestinationRow>
+                <Divider />
+
+                <OriginDestinationCard>
+                    <Stack>
+                        <Typography variant="subtitle1">{order.originLabel}</Typography>
+                        <Typography variant="body2" color="text.secondary">Origen</Typography>
+                    </Stack>
+                    <ArrowRight size={16} color={theme.palette.text.secondary} />
+                    <Stack>
+                        <Typography variant="subtitle1">{order.destinationLabel}</Typography>
+                        <Typography variant="body2" color="text.secondary">Por recibir</Typography>
+                    </Stack>
+                </OriginDestinationCard>
 
                 <ProductsSection>
                     <ProductHeaderSection>
@@ -336,16 +338,14 @@ export default function SolicitudSucursalDetallePage() {
                     </ProductHeaderSection>
                     <Divider />
                     <Stack>
-                        {
-                            order.items.map((item) => (
-                                <BranchOrderItemRow
-                                    key={item.articleId}
-                                    item={item}
-                                    onDeliveryDateChange={handleDeliveryDateChange}
-                                    onQuantityChange={handleQuantityChange}
-                                />
-                            ))
-                        }
+                        {order.items.map((item) => (
+                            <BranchOrderItemRow
+                                key={item.articleId}
+                                item={item}
+                                onDeliveryDateChange={handleDeliveryDateChange}
+                                onQuantityChange={handleQuantityChange}
+                            />
+                        ))}
                     </Stack>
                 </ProductsSection>
             </PageContainer>

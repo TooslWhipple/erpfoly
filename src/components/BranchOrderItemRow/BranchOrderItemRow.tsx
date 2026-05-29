@@ -66,24 +66,22 @@ export function BranchOrderItemRow({
                 value={formatDateForInput(item.deliveryDate)}
                 onChange={handleDateChange}
             />
-            <QuantityControls>
+            <Stack direction="row" spacing={1} alignItems="center" flex={2}>
                 <QuantityButton
                     size="small"
                     onClick={handleDecrement}
                     disabled={item.quantity <= 1}
-                    aria-label="Decrease quantity"
                 >
-                    <Minus size={18} />
+                    <Minus size={16} style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }} />
                 </QuantityButton>
                 <QuantityValue>{item.quantity}</QuantityValue>
                 <QuantityButton
                     size="small"
                     onClick={handleIncrement}
-                    aria-label="Increase quantity"
                 >
-                    <Plus size={18} />
+                    <Plus size={16} style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }} />
                 </QuantityButton>
-            </QuantityControls>
+            </Stack>
         </Card>
     );
 }

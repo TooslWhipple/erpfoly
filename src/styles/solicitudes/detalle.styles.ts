@@ -1,5 +1,4 @@
 import { styled } from "@mui/material/styles";
-import { theme } from "@/styles/theme";
 
 export const PageContainer = styled("div")(({ theme }) => ({
     display: "flex",
@@ -8,13 +7,13 @@ export const PageContainer = styled("div")(({ theme }) => ({
     gap: "24px"
 }));
 
-export const OriginDestinationRow = styled("div")(({ theme }) => ({
+export const OriginDestinationCard = styled("div")(({ theme }) => ({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    gap: "16px",
+    gap: "48px",
     backgroundColor: theme.palette.background.paper,
-    borderRadius: "12px",
+    borderRadius: "16px",
     padding: "16px",
     border: `1px solid ${theme.palette.app.border}`
 }));

@@ -9,6 +9,8 @@ import type {
   LowRotationStrategyResponse,
   DepartmentDetail,
   LiquidationRule,
+  LiquidationRuleActivityEntry,
+  LiquidationRuleActivityResponse,
 } from "@/types/liquidaciones.types";
 
 export const MOCK_SUMMARY: LowRotationSummaryStats = {
@@ -189,4 +191,54 @@ export async function applyPriceSuggestion(
 ): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 400));
   // Simulated success; in production would call API
+}
+
+// ============================================================================
+// RULE ACTIVITY MOCK
+// ============================================================================
+
+const ACTIVITY_DATES = [
+  "2025-10-03T10:00:00.000Z",
+  "2025-10-02T14:30:00.000Z",
+  "2025-10-01T09:15:00.000Z",
+];
+
+function buildRuleActivityEntries(ruleId: string): LiquidationRuleActivityEntry[] {
+  const baseArticles = MOCK_PRICE_SUGGESTIONS;
+  const entries: LiquidationRuleActivityEntry[] = [];
+
+  for (let i = 0; i < 25; i++) {
+    const article = baseArticles[i % baseArticles.length];
+    const previousPrice = 8690;
+    const newPrice = 7900;
+    entries.push({
+      id: `${ruleId}-activity-${i + 1}`,
+      date: ACTIVITY_DATES[i % ACTIVITY_DATES.length],
+      productId: article.id,
+      productName: article.productName,
+      sku: article.sku,
+      previousPrice,
+      newPrice,
+    });
+  }
+
+  return entries;
+}
+
+export async function getLiquidationRuleActivity(
+  ruleId: string
+): Promise<LiquidationRuleActivityResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  if (ruleId === "error-demo") {
+    throw new Error("No se pudo cargar la actividad");
+  }
+
+  const entries = buildRuleActivityEntries(ruleId);
+
+  return {
+    ruleId,
+    totalModified: entries.length,
+    entries,
+  };
 }

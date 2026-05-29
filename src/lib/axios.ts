@@ -1,10 +1,11 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { apiBaseUrl } from "@/config/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
 
 export const api = axios.create({
-	baseURL: "/api",
+	baseURL: apiBaseUrl,
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -13,9 +14,21 @@ export const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
-		const token = useAuthStore.getState().token;
-		if (token) {
-			config.headers.Authorization = `Bearer ${token}`;
+		const url = config.url ?? "";
+		const isPublicAuth =
+			typeof url === "string" &&
+			[
+				"/auth/login",
+				"/auth/validate-otp",
+				"/auth/login/otp/resend",
+				"/auth/password/recovery",
+			].some((path) => url.includes(path));
+
+		if (!isPublicAuth) {
+			const token = useAuthStore.getState().token;
+			if (token) {
+				config.headers.Authorization = `Bearer ${token}`;
+			}
 		}
 		return config;
 	},

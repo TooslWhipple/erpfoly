@@ -28,6 +28,7 @@ export interface MonthlyGoalsSummary {
 export interface BranchMonthlyGoal {
   id: string;
   branchName: string;
+  numCredits: number;
   newCredits: number;
   collectionGoal: number;
   monthlyGoal: number;

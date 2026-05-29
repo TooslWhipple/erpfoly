@@ -1,9 +1,5 @@
 import { MenuItem, SelectChangeEvent, Typography } from "@mui/material";
 import {
-  DragIndicator as DragIcon,
-  Delete as DeleteIcon,
-} from "@mui/icons-material";
-import {
   RuleCardContainer,
   RuleContent,
   RuleLabel,
@@ -14,10 +10,10 @@ import {
   StatusChip,
   ActionsContainer,
   ActionIconButton,
-  DragHandle,
   RulesListContainer,
   EmptyStateContainer,
 } from "./styles";
+import { ListCollapseIcon, Trash2Icon } from "lucide-react";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -57,7 +53,7 @@ interface RuleCardProps {
   onMessageChange: (ruleId: string, value: string) => void;
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
-  onReorder?: (ruleId: string) => void;
+  onViewActivity?: (ruleId: string) => void;
   canUpdate?: boolean;
   canDelete?: boolean;
 }
@@ -78,6 +74,7 @@ export function RuleCard({
   onMessageChange,
   onToggleActive,
   onDelete,
+  onViewActivity,
   canUpdate = true,
   canDelete = true,
 }: RuleCardProps) {
@@ -169,12 +166,14 @@ export function RuleCard({
       </RuleContent>
 
       <ActionsContainer>
-        <DragHandle>
-          <DragIcon fontSize="small" />
-        </DragHandle>
+        {onViewActivity && (
+          <ActionIconButton onClick={() => onViewActivity(rule.id)} size="small">
+            <ListCollapseIcon fontSize="small" />
+          </ActionIconButton>
+        )}
         {canDelete && (
           <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
-            <DeleteIcon fontSize="small" />
+            <Trash2Icon fontSize="small" />
           </ActionIconButton>
         )}
       </ActionsContainer>
@@ -198,6 +197,7 @@ interface RulesListProps {
   onMessageChange: (ruleId: string, value: string) => void;
   onToggleActive: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
+  onViewActivity?: (ruleId: string) => void;
   emptyMessage?: string;
   canUpdate?: boolean;
   canDelete?: boolean;
@@ -215,6 +215,7 @@ export function RulesList({
   onMessageChange,
   onToggleActive,
   onDelete,
+  onViewActivity,
   emptyMessage = "No hay reglas configuradas",
   canUpdate = true,
   canDelete = true,
@@ -245,6 +246,7 @@ export function RulesList({
           onMessageChange={onMessageChange}
           onToggleActive={onToggleActive}
           onDelete={onDelete}
+          onViewActivity={onViewActivity}
           canUpdate={canUpdate}
           canDelete={canDelete}
         />

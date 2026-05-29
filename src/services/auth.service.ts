@@ -222,7 +222,18 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 interface BackendLoginResponse {
 	accessToken: string;
 	refreshToken?: string;
+	permissions?: BackendPermission[];
 	user: BackendUser;
+}
+
+function mapAuthResponseToLoginData(res: BackendLoginResponse): LoginResponse {
+	return {
+		token: res.accessToken,
+		user: mapBackendUserToFrontend({
+			...res.user,
+			permissions: res.permissions ?? res.user.permissions,
+		}),
+	};
 }
 
 export interface ValidateOtpRequest {
@@ -274,14 +285,7 @@ export const authService = {
 			AUTH_CREDENTIALS
 		);
 		if (result.error) return { data: null, error: result.error };
-		const res = result.data!;
-		return {
-			data: {
-				token: res.accessToken,
-				user: mapBackendUserToFrontend(res.user),
-			},
-			error: null,
-		};
+		return { data: mapAuthResponseToLoginData(result.data!), error: null };
 	},
 
 	/**

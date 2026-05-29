@@ -69,9 +69,19 @@ const ShippingZonesMap = dynamic(
   { ssr: false }
 );
 
-function parseCurrencyInput(value: string): number {
+function sanitizePriceInput(value: string): string {
   const cleaned = value.replace(/[^0-9.]/g, "");
-  const parsed = Number.parseFloat(cleaned);
+  const dotIndex = cleaned.indexOf(".");
+  if (dotIndex === -1) return cleaned.slice(0, 12);
+
+  const intPart = cleaned.slice(0, dotIndex).slice(0, 12);
+  const decPart = cleaned.slice(dotIndex + 1).replace(/\./g, "").slice(0, 2);
+  if (decPart.length === 0 && cleaned.endsWith(".")) return `${intPart}.`;
+  return decPart.length > 0 ? `${intPart}.${decPart}` : intPart;
+}
+
+function parseCurrencyInput(value: string): number {
+  const parsed = Number.parseFloat(sanitizePriceInput(value));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -262,18 +272,11 @@ export default function CostosEnvioPage() {
         queryKey: ["shipping-costs", "municipalities"],
       });
     },
-    onError: (error: Error) => {
-      setSnackbar({
-        open: true,
-        severity: "error",
-        message: error.message || "No se pudo guardar la configuración.",
-      });
-    },
   });
 
   const handlePriceChange = useCallback(
     (field: "priceInZone" | "priceOutOfZone", value: string) => {
-      const sanitized = value.replace(/[^0-9.]/g, "");
+      const sanitized = sanitizePriceInput(value);
       if (field === "priceInZone") {
         setPriceInZoneInput(sanitized);
       } else {

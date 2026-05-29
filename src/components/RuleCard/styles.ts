@@ -120,16 +120,6 @@ export const ActionIconButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-export const DragHandle = styled(Box)(({ theme }) => ({
-  cursor: "grab",
-  display: "flex",
-  alignItems: "center",
-  color: theme.palette.text.secondary,
-  "&:active": {
-    cursor: "grabbing",
-  },
-}));
-
 export const RulesListContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",

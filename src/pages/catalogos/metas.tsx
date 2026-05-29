@@ -29,9 +29,10 @@ import {
   Card,
   ChartWrapper,
 } from "@/styles/catalogos/goals.styles";
-import { getGoalsPageData } from "@/services/goals.service";
+import { getGoalsPageData, saveBranchGoals } from "@/services/goals.service";
 import type { ChartMetricType, SalesHistoryPoint } from "@/types/goals.types";
 import { theme } from "@/styles/theme";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 // ============================================================================
 // CHART METRIC OPTIONS
@@ -108,6 +109,8 @@ function XAxisTick({
 
 export default function MetasPage() {
   const router = useRouter();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetricType>("sales");
@@ -120,6 +123,8 @@ export default function MetasPage() {
   const [monthLabel, setMonthLabel] = useState("");
   const [totalGoal, setTotalGoal] = useState(0);
   const [branchGoals, setBranchGoals] = useState<BranchMonthlyGoal[]>([]);
+  const [originalGoals, setOriginalGoals] = useState<BranchMonthlyGoal[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -133,6 +138,7 @@ export default function MetasPage() {
       setSalesHistory(data.salesHistory);
       setMonthLabel(data.monthlySummary.monthLabel);
       setBranchGoals(data.branchGoals);
+      setOriginalGoals(data.branchGoals.map((g) => ({ ...g })));
       setTotalGoal(
         data.branchGoals.reduce((sum, branch) => sum + branch.monthlyGoal, 0)
       );
@@ -198,6 +204,20 @@ export default function MetasPage() {
     },
     [router]
   );
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await saveBranchGoals(currentMonth.month, currentMonth.year, branchGoals);
+      setOriginalGoals(branchGoals.map((g) => ({ ...g })));
+      showSuccess("Metas guardadas correctamente");
+    } catch (err) {
+      console.error("[Metas] Error saving goals:", err);
+      showError("No se pudieron guardar las metas");
+    } finally {
+      setSaving(false);
+    }
+  }, [branchGoals, currentMonth.month, currentMonth.year, showSuccess, showError]);
 
   const breadcrumbs = [
     { label: "Catálogos", href: "/catalogos/productos" },
@@ -336,7 +356,10 @@ export default function MetasPage() {
           <Typography variant="h6">Meta mensual por sucursal</Typography>
           <BranchMonthlyGoalsTable
             rows={branchGoals}
+            originalRows={originalGoals}
             onRowChange={handleBranchGoalChange}
+            onSave={handleSave}
+            saving={saving}
             onBranchNavigate={handleBranchNavigate}
             emptyMessage="No hay metas configuradas para este mes."
           />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Table, TableBody, Typography } from "@mui/material";
-import { ExternalLink } from "lucide-react";
+import { Button, Table, TableBody, Typography } from "@mui/material";
+import { ExternalLink, Save } from "lucide-react";
 import numeral from "numeral";
 import type { BranchMonthlyGoal } from "@/types/goals.types";
 import {
@@ -15,6 +15,7 @@ import {
   BranchNameLink,
   EditableCell,
   GoalCellInput,
+  SaveButtonWrapper,
 } from "./BranchMonthlyGoalsTable.styles";
 
 export type BranchMonthlyGoalField =
@@ -25,7 +26,10 @@ export type BranchMonthlyGoalField =
 
 export interface BranchMonthlyGoalsTableProps {
   rows: BranchMonthlyGoal[];
+  originalRows: BranchMonthlyGoal[];
   onRowChange: (rowId: string, field: BranchMonthlyGoalField, value: number) => void;
+  onSave: () => void;
+  saving?: boolean;
   onBranchNavigate?: (row: BranchMonthlyGoal) => void;
   emptyMessage?: string;
 }
@@ -118,12 +122,32 @@ function CurrencyGoalInput({ value, format, ariaLabel, onCommit }: CurrencyGoalI
   );
 }
 
+function rowsAreEqual(a: BranchMonthlyGoal[], b: BranchMonthlyGoal[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (
+      a[i].numCredits !== b[i].numCredits ||
+      a[i].newCredits !== b[i].newCredits ||
+      a[i].collectionGoal !== b[i].collectionGoal ||
+      a[i].monthlyGoal !== b[i].monthlyGoal
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function BranchMonthlyGoalsTable({
   rows,
+  originalRows,
   onRowChange,
+  onSave,
+  saving = false,
   onBranchNavigate,
   emptyMessage = "No hay metas configuradas para este mes.",
 }: BranchMonthlyGoalsTableProps) {
+  const hasChanges = !rowsAreEqual(rows, originalRows);
+
   const handleBranchClick = useCallback(
     (row: BranchMonthlyGoal) => {
       onBranchNavigate?.(row);
@@ -133,6 +157,17 @@ export function BranchMonthlyGoalsTable({
 
   return (
     <GoalsTableWrapper>
+      <SaveButtonWrapper>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<Save size={16} />}
+          onClick={onSave}
+          disabled={!hasChanges || saving}
+        >
+          {saving ? "Guardando..." : "Guardar"}
+        </Button>
+      </SaveButtonWrapper>
       <GoalsTableContainer>
         <Table size="small" style={{ width: "100%", minWidth: 720 }}>
           <GoalsTableHead>

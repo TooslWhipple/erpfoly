@@ -128,3 +128,9 @@ export const GoalsEmptyCell = styled(TableCell)(({ theme }) => ({
   borderBottom: "none",
   backgroundColor: theme.palette.common.white,
 }));
+
+export const SaveButtonWrapper = styled("div")({
+  display: "flex",
+  justifyContent: "flex-end",
+  marginBottom: 12,
+});

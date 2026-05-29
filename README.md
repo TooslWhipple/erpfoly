@@ -4,11 +4,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 El frontend consume la API del proyecto `folysoft-backend`. Para que todo funcione:
 
-1. **Variables de entorno**: Copia `.env.example` a `.env.local` y ajusta `NEXT_PUBLIC_API_URL`:
-   - Si el backend corre en el puerto **3000**: `NEXT_PUBLIC_API_URL=http://localhost:3000/api`
-   - Para evitar conflicto de puertos, ejecuta el frontend en **3001**: `pnpm dev -- -p 3001` (o `npm run dev -- -p 3001`).
+1. **Variables de entorno**: Copia `.env.example` a `.env.local`. Por defecto el frontend corre en **3000** y el backend en **3001**:
+   - `NEXT_PUBLIC_API_URL=http://localhost:3001/api`
 
-2. **CORS**: En el backend, `CORS_ALLOWED_ORIGINS` debe incluir la URL del frontend (ej. `http://localhost:3001` cuando el frontend corre en 3001).
+2. **CORS**: En el backend, `CORS_ALLOWED_ORIGINS` debe incluir la URL del frontend (`http://localhost:3000`).
 
 3. **Orden**: Arranca primero el backend (`cd folysoft-backend && pnpm start:dev`) y luego el frontend.
 

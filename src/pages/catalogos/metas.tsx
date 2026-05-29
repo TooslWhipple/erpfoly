@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import {
   ComposedChart,
   Bar,
@@ -21,15 +22,17 @@ import {
   Typography,
 } from "@mui/material";
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Check as CheckIcon } from "@mui/icons-material";
-import { MainLayout, DataTable, Title } from "@/components";
-import type { DataTableColumn } from "@/components";
+import { MainLayout, Title, BranchMonthlyGoalsTable } from "@/components";
+import type { BranchMonthlyGoalField } from "@/components";
+import type { BranchMonthlyGoal } from "@/types/goals.types";
 import {
   Card,
   ChartWrapper,
 } from "@/styles/catalogos/goals.styles";
-import { getGoalsPageData } from "@/services/goals.service";
+import { getGoalsPageData, saveBranchGoals } from "@/services/goals.service";
 import type { ChartMetricType, SalesHistoryPoint } from "@/types/goals.types";
 import { theme } from "@/styles/theme";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 // ============================================================================
 // CHART METRIC OPTIONS
@@ -105,6 +108,9 @@ function XAxisTick({
 }
 
 export default function MetasPage() {
+  const router = useRouter();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetricType>("sales");
@@ -116,7 +122,9 @@ export default function MetasPage() {
   const [salesHistory, setSalesHistory] = useState<SalesHistoryPoint[]>([]);
   const [monthLabel, setMonthLabel] = useState("");
   const [totalGoal, setTotalGoal] = useState(0);
-  const [branchGoals, setBranchGoals] = useState<Array<{ id: string; branchName: string; newCredits: number; collectionGoal: number; monthlyGoal: number }>>([]);
+  const [branchGoals, setBranchGoals] = useState<BranchMonthlyGoal[]>([]);
+  const [originalGoals, setOriginalGoals] = useState<BranchMonthlyGoal[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -129,8 +137,11 @@ export default function MetasPage() {
       );
       setSalesHistory(data.salesHistory);
       setMonthLabel(data.monthlySummary.monthLabel);
-      setTotalGoal(data.monthlySummary.totalGoal);
       setBranchGoals(data.branchGoals);
+      setOriginalGoals(data.branchGoals.map((g) => ({ ...g })));
+      setTotalGoal(
+        data.branchGoals.reduce((sum, branch) => sum + branch.monthlyGoal, 0)
+      );
     } catch (err) {
       console.error("[Metas] Error fetching data:", err);
       setError("Error al cargar las metas");
@@ -172,33 +183,41 @@ export default function MetasPage() {
 
   const currentMetricLabel = CHART_METRIC_OPTIONS.find((o) => o.value === chartMetric)?.label ?? "Ventas";
 
-  const branchGoalsColumns: DataTableColumn<{
-    id: string;
-    branchName: string;
-    newCredits: number;
-    collectionGoal: number;
-    monthlyGoal: number;
-  }>[] = [
-      { id: "branchName", label: "SUCURSAL" },
-      {
-        id: "newCredits",
-        label: "NUEVOS CRÉDITOS",
-        align: "right",
-        format: (v) => numeral(v).format("$0,0"),
-      },
-      {
-        id: "collectionGoal",
-        label: "META COBRACIONES",
-        align: "right",
-        format: (v) => numeral(v).format("$0,0"),
-      },
-      {
-        id: "monthlyGoal",
-        label: "META MENSUAL",
-        align: "right",
-        type: "currency",
-      },
-    ];
+  const handleBranchGoalChange = useCallback(
+    (rowId: string, field: BranchMonthlyGoalField, value: number) => {
+      setBranchGoals((prev) => {
+        const next = prev.map((row) =>
+          row.id === rowId ? { ...row, [field]: value } : row
+        );
+        if (field === "monthlyGoal") {
+          setTotalGoal(next.reduce((sum, row) => sum + row.monthlyGoal, 0));
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleBranchNavigate = useCallback(
+    (row: BranchMonthlyGoal) => {
+      void router.push(`/catalogos/sucursales/${row.id}`);
+    },
+    [router]
+  );
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await saveBranchGoals(currentMonth.month, currentMonth.year, branchGoals);
+      setOriginalGoals(branchGoals.map((g) => ({ ...g })));
+      showSuccess("Metas guardadas correctamente");
+    } catch (err) {
+      console.error("[Metas] Error saving goals:", err);
+      showError("No se pudieron guardar las metas");
+    } finally {
+      setSaving(false);
+    }
+  }, [branchGoals, currentMonth.month, currentMonth.year, showSuccess, showError]);
 
   const breadcrumbs = [
     { label: "Catálogos", href: "/catalogos/productos" },
@@ -308,27 +327,40 @@ export default function MetasPage() {
         </Card>
 
         <Card>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <IconButton onClick={handlePrevMonth} size="small" aria-label="Mes anterior">
-              <ChevronLeftIcon />
-            </IconButton>
-            <Typography variant="h6">{monthLabel}</Typography>
-            <IconButton onClick={handleNextMonth} size="small" aria-label="Mes siguiente">
-              <ChevronRightIcon />
-            </IconButton>
+          <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
+            <Stack spacing={0.5} flex={6}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="h4">{monthLabel}</Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <IconButton
+                    onClick={handlePrevMonth}
+                    size="small">
+                    <ChevronLeftIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleNextMonth}
+                    size="small">
+                    <ChevronRightIcon />
+                  </IconButton>
+                </Stack>
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
+              </Typography>
+            </Stack>
+            <Typography variant="h4" align="right" flex={1}>{numeral(totalGoal).format("$0,0.00")}</Typography>
           </Stack>
-          <Typography variant="body1">{numeral(totalGoal).format("$0,0.00")}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
-          </Typography>
         </Card>
 
         <Card>
           <Typography variant="h6">Meta mensual por sucursal</Typography>
-          <DataTable
-            columns={branchGoalsColumns}
+          <BranchMonthlyGoalsTable
             rows={branchGoals}
-            rowKey="id"
+            originalRows={originalGoals}
+            onRowChange={handleBranchGoalChange}
+            onSave={handleSave}
+            saving={saving}
+            onBranchNavigate={handleBranchNavigate}
             emptyMessage="No hay metas configuradas para este mes."
           />
         </Card>

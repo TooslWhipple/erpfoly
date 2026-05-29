@@ -72,7 +72,7 @@ export function PurchaseDetailActions({
         size="small"
       />
 
-      {isDeliveryPending ? (
+      {isDeliveryPending && false ? (
         <>
           <Button variant="contained" color="primary" onClick={handleOpenDeliverModal}>
             Entregar

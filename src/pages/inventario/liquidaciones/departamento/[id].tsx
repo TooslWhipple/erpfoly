@@ -7,9 +7,11 @@ import {
   Tabs,
   PriceSuggestionCard,
   LiquidationRuleCard,
+  LiquidationRuleActivityModal,
   ConfirmPriceChangeModal,
   TabFilters,
 } from "@/components";
+import { useLiquidationRuleActivity } from "@/hooks/useLiquidationRuleActivity";
 import type { TabItem } from "@/components/Tabs";
 import type {
   DepartmentDetail,
@@ -37,6 +39,14 @@ export default function DepartamentoLiquidacionesPage() {
   const [activeTab, setActiveTab] = useState("articulos");
   const [confirmModalItem, setConfirmModalItem] = useState<PriceSuggestionItem | null>(null);
   const [applyLoading, setApplyLoading] = useState(false);
+  const [activityRuleId, setActivityRuleId] = useState<string | null>(null);
+
+  const {
+    data: ruleActivity,
+    isLoading: activityLoading,
+    isError: activityError,
+    refetch: refetchActivity,
+  } = useLiquidationRuleActivity(activityRuleId, activityRuleId !== null);
 
   const departmentId = typeof id === "string" ? id : "";
 
@@ -212,6 +222,7 @@ export default function DepartamentoLiquidacionesPage() {
                       onPromotionChange={handleRulePromotionChange}
                       onRedLabelChange={handleRuleRedLabelChange}
                       onDelete={handleRuleDelete}
+                      onViewActivity={setActivityRuleId}
                       onDrag={() => { }}
                     />
                   ))
@@ -224,6 +235,16 @@ export default function DepartamentoLiquidacionesPage() {
 
 
 
+
+      <LiquidationRuleActivityModal
+        open={activityRuleId !== null}
+        onClose={() => setActivityRuleId(null)}
+        totalModified={ruleActivity?.totalModified ?? 0}
+        entries={ruleActivity?.entries ?? []}
+        loading={activityLoading}
+        error={activityError}
+        onRetry={() => void refetchActivity()}
+      />
 
       <ConfirmPriceChangeModal
         open={!!confirmModalItem}

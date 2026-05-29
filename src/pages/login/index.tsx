@@ -8,6 +8,7 @@ import {
 	Lock as LockIcon,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
+import { parseLoginIdentifier } from "@/utils/login-identifier";
 import {
 	PageContainer,
 	LeftPanel,
@@ -21,14 +22,13 @@ import {
 } from "@/styles/login/styles";
 
 export default function LoginPage() {
-	const { login, isLoading } = useAuth();
+	const { login, isLoading, error, clearError } = useAuth();
 	const [showPassword, setShowPassword] = useState(false);
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
 
 	const trimmedId = identifier.trim();
-	const isCellphone = /^\d+$/.test(trimmedId) && trimmedId.length >= 10;
 	const isValidPassword = (value: string) => value.length >= 8;
 
 	const identifierError = "";
@@ -42,10 +42,11 @@ export default function LoginPage() {
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!canSubmitLogin) return;
+		const parsed = parseLoginIdentifier(trimmedId);
 		await login(
-			isCellphone
-				? { cellphone: trimmedId, password }
-				: { username: trimmedId, password }
+			parsed.cellphone
+				? { cellphone: parsed.cellphone, password }
+				: { username: parsed.username ?? trimmedId, password }
 		);
 	};
 
@@ -65,13 +66,22 @@ export default function LoginPage() {
 				<FormWrapper>
 					<Typography variant="h1">Ingresa a tu cuenta</Typography>
 
+					{error && (
+						<Alert severity="error" onClose={clearError} sx={{ mb: 2 }}>
+							{error}
+						</Alert>
+					)}
+
 					<Form onSubmit={handleLogin}>
 						<StyledTextField
 							label="Número de empleado *"
 							placeholder="Ingresa tu número de empleado"
 							type="text"
 							value={identifier}
-							onChange={(e) => setIdentifier(e.target.value)}
+							onChange={(e) => {
+								clearError();
+								setIdentifier(e.target.value);
+							}}
 							error={!!identifierError}
 							helperText={identifierError}
 							fullWidth

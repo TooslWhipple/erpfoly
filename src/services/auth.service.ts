@@ -1,5 +1,6 @@
 import { get, post, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
 import type { User } from "@/store/useAuthStore";
+import { parseLoginIdentifier } from "@/utils/login-identifier";
 
 export type { User };
 
@@ -252,10 +253,11 @@ export const authService = {
 	 * Response 200: { message: "OTP enviado a tu celular" }. Uses credentials for cookies.
 	 */
 	async login(credentials: LoginCredentials): Promise<ApiResult<LoginOtpSentResponse>> {
-		const body =
+		const identifier =
 			credentials.cellphone != null && credentials.cellphone !== ""
-				? { cellphone: credentials.cellphone.trim(), password: credentials.password }
-				: { username: (credentials.username ?? "").trim(), password: credentials.password };
+				? { cellphone: credentials.cellphone.trim() }
+				: parseLoginIdentifier(credentials.username ?? "");
+		const body = { ...identifier, password: credentials.password };
 		const result = await post<LoginOtpSentResponse>("/auth/login", body, AUTH_CREDENTIALS);
 		if (result.error) return { data: null, error: result.error };
 		return { data: result.data!, error: null };

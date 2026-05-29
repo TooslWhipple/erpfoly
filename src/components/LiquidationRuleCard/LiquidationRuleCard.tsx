@@ -1,5 +1,6 @@
 import { Stack, IconButton, Switch, FormControl, MenuItem, Typography } from "@mui/material";
 import { DragIndicator as DragIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { History } from "lucide-react";
 import type { LiquidationRule, LiquidationRuleOperator, LiquidationRulePeriod } from "@/types/liquidaciones.types";
 import {
   RuleCardContainer,
@@ -24,6 +25,7 @@ export interface LiquidationRuleCardProps {
   onPromotionChange: (ruleId: string, value: number) => void;
   onRedLabelChange: (ruleId: string, enabled: boolean) => void;
   onDelete: (ruleId: string) => void;
+  onViewActivity?: (ruleId: string) => void;
   onDrag?: (ruleId: string) => void;
 }
 
@@ -50,6 +52,7 @@ export function LiquidationRuleCard({
   onPromotionChange,
   onRedLabelChange,
   onDelete,
+  onViewActivity,
   onDrag,
 }: LiquidationRuleCardProps) {
   return (
@@ -116,6 +119,15 @@ export function LiquidationRuleCard({
         {onDrag && (
           <IconButton size="small" onClick={() => onDrag(rule.id)} aria-label="Reordenar">
             <DragIcon fontSize="small" />
+          </IconButton>
+        )}
+        {onViewActivity && (
+          <IconButton
+            size="small"
+            onClick={() => onViewActivity(rule.id)}
+            aria-label="Ver actividad"
+          >
+            <History size={18} />
           </IconButton>
         )}
         <IconButton size="small" onClick={() => onDelete(rule.id)} aria-label="Eliminar" color="error">

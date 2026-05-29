@@ -1,48 +1,77 @@
-import { Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { DataTable } from "@/components/TableCrud";
 import { StatusChip } from "@/components/StatusChip";
 import type { DataTableColumn } from "@/components/TableCrud";
+import { useAutomatedCollectionMessageHistory } from "@/hooks/useAutomatedCollectionMessageHistory";
+import type { AutomatedCollectionMessageLogItem } from "@/services/automated-collection.service";
 import {
-  MOCK_AUTOMATED_COLLECTION_ACTIVITY,
-  MOCK_MESSAGES_SENT_LAST_MONTH,
-  type AutomatedCollectionActivityRow,
-} from "./mockData";
+  formatAutomatedCollectionActivityDate,
+  getMessageDeliveryStatusLabel,
+  getMessageDeliveryStatusVariant,
+} from "@/utils/automatedCollection";
 import {
   ActivityModalHeader,
   ActivityModalTitleRow,
   ActivitySectionTitle,
   ActivityTableWrapper,
-  ActivityStatusBadge,
+  ActivityStateMessage,
 } from "./styles";
 
 export interface AutomatedCollectionActivityModalProps {
   open: boolean;
   onClose: () => void;
+  ruleId: number | null;
   messageName: string;
   isActive: boolean;
 }
 
-const ACTIVITY_COLUMNS: DataTableColumn<AutomatedCollectionActivityRow>[] = [
-  { id: "date", label: "Fecha", type: "text" },
+const ACTIVITY_COLUMNS: DataTableColumn<AutomatedCollectionMessageLogItem>[] = [
+  {
+    id: "sentAt",
+    label: "Fecha",
+    type: "text",
+    format: (value) =>
+      formatAutomatedCollectionActivityDate(String(value ?? "")),
+  },
   { id: "phone", label: "Teléfono", type: "text" },
   { id: "clientName", label: "Cliente", type: "text" },
   {
     id: "status",
-    label: "Status",
+    label: "Estatus",
     type: "text",
-    format: () => <ActivityStatusBadge>Exitoso</ActivityStatusBadge>,
+    format: (value) => {
+      const status = value as AutomatedCollectionMessageLogItem["status"];
+      return (
+        <StatusChip
+          label={getMessageDeliveryStatusLabel(status)}
+          variant={getMessageDeliveryStatusVariant(status)}
+          size="small"
+        />
+      );
+    },
   },
 ];
 
 export function AutomatedCollectionActivityModal({
   open,
   onClose,
+  ruleId,
   messageName,
   isActive,
 }: AutomatedCollectionActivityModalProps) {
-  const formattedCount = MOCK_MESSAGES_SENT_LAST_MONTH.toLocaleString("es-MX");
+  const {
+    data: history,
+    isLoading,
+    isError,
+    refetch,
+  } = useAutomatedCollectionMessageHistory(ruleId, open);
+
+  const messagesSentLastMonth = history?.messagesSentLastMonth ?? 0;
+  const formattedCount = messagesSentLastMonth.toLocaleString("es-MX");
+  const rows = history?.items ?? [];
+  const showEmpty = !isLoading && !isError && rows.length === 0;
 
   return (
     <SideModal
@@ -78,14 +107,45 @@ export function AutomatedCollectionActivityModal({
       <ActivitySectionTitle>
         Historial de actividad de ésta automatización
       </ActivitySectionTitle>
-      <ActivityTableWrapper>
-        <DataTable
-          columns={ACTIVITY_COLUMNS}
-          rows={MOCK_AUTOMATED_COLLECTION_ACTIVITY}
-          rowKey="id"
-          emptyMessage="Sin actividad registrada"
-        />
-      </ActivityTableWrapper>
+
+      {isLoading && (
+        <ActivityStateMessage>
+          <CircularProgress size={32} />
+          <Typography variant="body2" color="text.secondary">
+            Cargando actividad...
+          </Typography>
+        </ActivityStateMessage>
+      )}
+
+      {isError && !isLoading && (
+        <ActivityStateMessage>
+          <Typography variant="body2" color="error">
+            No se pudo cargar la actividad. Intenta de nuevo.
+          </Typography>
+          <Button variant="outlined" size="small" onClick={() => void refetch()}>
+            Reintentar
+          </Button>
+        </ActivityStateMessage>
+      )}
+
+      {showEmpty && (
+        <ActivityStateMessage>
+          <Typography variant="body2" color="text.secondary">
+            Sin actividad registrada
+          </Typography>
+        </ActivityStateMessage>
+      )}
+
+      {!isLoading && !isError && rows.length > 0 && (
+        <ActivityTableWrapper>
+          <DataTable
+            columns={ACTIVITY_COLUMNS}
+            rows={rows}
+            rowKey="id"
+            emptyMessage="Sin actividad registrada"
+          />
+        </ActivityTableWrapper>
+      )}
     </SideModal>
   );
 }

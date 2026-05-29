@@ -31,10 +31,15 @@ interface GoogleMapsLike {
   LatLngBounds: new () => {
     extend: (point: GeoPoint) => void;
   };
-  Circle: new (options: Record<string, unknown>) => {
+  SymbolPath: {
+    CIRCLE: number;
+  };
+  Marker: new (options: Record<string, unknown>) => {
     setMap: (map: unknown) => void;
   };
 }
+
+const PLACEMENT_POINT_SYMBOL_SCALE = 12;
 
 interface ShippingZonesMapProps {
   initialCenter: GeoPoint;
@@ -231,18 +236,21 @@ export function ShippingZonesMap({
 
       if (isCreatingDraft && path.length > 0 && path.length < INITIAL_CREATE_POINTS) {
         path.forEach((point) => {
-          const circle = new maps.Circle({
-            center: point,
-            radius: 12,
+          const marker = new maps.Marker({
+            position: point,
             map,
-            fillColor: zone.color,
-            fillOpacity: 0.95,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
+            icon: {
+              path: maps.SymbolPath.CIRCLE,
+              fillColor: zone.color,
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2.5,
+              scale: PLACEMENT_POINT_SYMBOL_SCALE,
+            },
             clickable: false,
             zIndex: 3,
           });
-          markersRef.current.push(circle);
+          markersRef.current.push(marker);
         });
       }
     });

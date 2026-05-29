@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CircularProgress, Box } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import { MainLayout, Title, RulesList, AutomatedCollectionActivityModal } from "@/components";
+import {
+  MainLayout,
+  Title,
+  RulesList,
+  AutomatedCollectionActivityModal,
+  ConfirmDeleteModal,
+} from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -42,6 +48,10 @@ export default function CobranzaAutomatica() {
   const [catalogs, setCatalogs] = useState<AutomatedCollectionCatalogs | null>(null);
   const [loading, setLoading] = useState(true);
   const [activityRuleId, setActivityRuleId] = useState<string | null>(null);
+  const [rulePendingDelete, setRulePendingDelete] = useState<CollectionRuleData | null>(
+    null
+  );
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -196,19 +206,41 @@ export default function CobranzaAutomatica() {
     }
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
-    const ruleToDelete = rules.find((r) => r.id === ruleId);
-    if (!ruleToDelete) return;
+  const handleRequestDeleteRule = (ruleId: string) => {
+    const rule = rules.find((r) => r.id === ruleId);
+    if (rule) {
+      setRulePendingDelete(rule);
+    }
+  };
 
+  const handleCloseDeleteModal = () => {
+    if (!deleteLoading) {
+      setRulePendingDelete(null);
+    }
+  };
+
+  const handleConfirmDeleteRule = async () => {
+    if (!rulePendingDelete) return;
+
+    const ruleToDelete = rulePendingDelete;
+    const ruleId = ruleToDelete.id;
+    setDeleteLoading(true);
     setRules((prev) => prev.filter((r) => r.id !== ruleId));
 
     try {
       const result = await deleteAutomatedCollectionRule(Number(ruleId));
       if (result.error) {
         setRules((prev) => [...prev, ruleToDelete]);
+        return;
+      }
+      setRulePendingDelete(null);
+      if (activityRuleId === ruleId) {
+        setActivityRuleId(null);
       }
     } catch {
       setRules((prev) => [...prev, ruleToDelete]);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -225,13 +257,22 @@ export default function CobranzaAutomatica() {
     [rules, activityRuleId]
   );
 
+  const getRuleMessageName = useCallback(
+    (rule: CollectionRuleData) =>
+      messageOptions.find((option) => option.value === rule.message)?.label ??
+      "Regla de cobranza",
+    [messageOptions]
+  );
+
   const selectedMessageName = useMemo(() => {
     if (!selectedActivityRule) return "";
-    return (
-      messageOptions.find((option) => option.value === selectedActivityRule.message)
-        ?.label ?? "Mensaje de recordatorio"
-    );
-  }, [selectedActivityRule, messageOptions]);
+    return getRuleMessageName(selectedActivityRule);
+  }, [selectedActivityRule, getRuleMessageName]);
+
+  const pendingDeleteItemName = useMemo(() => {
+    if (!rulePendingDelete) return "";
+    return getRuleMessageName(rulePendingDelete);
+  }, [rulePendingDelete, getRuleMessageName]);
 
   const titleActions: TitleAction[] = [
     {
@@ -276,7 +317,7 @@ export default function CobranzaAutomatica() {
           onPeriodChange={handlePeriodChange}
           onMessageChange={handleMessageChange}
           onToggleActive={handleToggleActive}
-          onDelete={handleDeleteRule}
+          onDelete={handleRequestDeleteRule}
           onViewActivity={handleViewActivity}
           canUpdate={canUpdateRule}
           canDelete={canDeleteRule}
@@ -287,8 +328,17 @@ export default function CobranzaAutomatica() {
       <AutomatedCollectionActivityModal
         open={activityRuleId !== null}
         onClose={handleCloseActivityModal}
+        ruleId={activityRuleId ? Number(activityRuleId) : null}
         messageName={selectedMessageName}
         isActive={selectedActivityRule?.isActive ?? true}
+      />
+
+      <ConfirmDeleteModal
+        open={rulePendingDelete !== null}
+        onClose={handleCloseDeleteModal}
+        itemName={pendingDeleteItemName}
+        onConfirm={handleConfirmDeleteRule}
+        loading={deleteLoading}
       />
     </MainLayout>
   );

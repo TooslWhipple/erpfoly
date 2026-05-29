@@ -28,14 +28,12 @@ export const ActivityTableWrapper = styled(Box)(({ theme }) => ({
   overflow: "hidden",
 }));
 
-export const ActivityStatusBadge = styled(Box)(({ theme }) => ({
-  display: "inline-flex",
+export const ActivityStateMessage = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  padding: "4px 10px",
-  borderRadius: 6,
-  fontSize: 13,
-  fontWeight: 500,
-  backgroundColor: theme.palette.app.chip.variants.success.background,
-  color: theme.palette.app.chip.variants.success.color,
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(4, 2),
+  minHeight: 160,
 }));

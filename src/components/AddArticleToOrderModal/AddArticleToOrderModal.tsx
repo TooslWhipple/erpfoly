@@ -6,22 +6,15 @@ import type { Article, OrderItem } from "@/types/pedidos.types";
 import { SideModal } from "@/components/SideModal";
 import {
     AddArticleModalContainer,
-    ProductInfo,
     ProductImage,
-    CostInputSection,
     HistorySection,
-    HistoryTimeline,
     TimelineLine,
     TimelineItem,
     TimelineDot,
     TimelineContent,
-    TimelineChange,
     TimelineOrderLink,
+    UnitPriceSection,
 } from "./styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 export interface CostHistoryEntry {
     id: string;
@@ -39,10 +32,6 @@ export interface AddArticleToOrderModalProps {
     costHistory?: CostHistoryEntry[];
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function formatCurrency(amount: number): string {
     return numeral(amount).format("$0,0.00");
 }
@@ -56,10 +45,6 @@ function formatDate(dateString: string): string {
     });
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function AddArticleToOrderModal({
     open,
     onClose,
@@ -69,7 +54,6 @@ export function AddArticleToOrderModal({
 }: AddArticleToOrderModalProps) {
     const [unitPrice, setUnitPrice] = useState<number>(0);
 
-    // Set default price from last history entry or article
     useEffect(() => {
         if (article && open) {
             if (costHistory.length > 0) {
@@ -87,7 +71,6 @@ export function AddArticleToOrderModal({
 
     const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = event.target.value;
-        // Allow empty string, numbers, and decimal
         if (inputValue === "" || /^\d*\.?\d*$/.test(inputValue)) {
             const numValue = parseFloat(inputValue) || 0;
             setUnitPrice(numValue);
@@ -118,71 +101,67 @@ export function AddArticleToOrderModal({
 
     return (
         <SideModal
+            fullWidth
+            maxWidth="md"
             open={open}
             onClose={handleClose}
-            title="Agregar artículo al pedido"
-            maxWidth="md"
-            fullWidth
+            headerContent={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <ProductImage alt={article.name} />
+                    <Stack direction="column" spacing={0.5}>
+                        <Typography variant="h5">{article.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">{article.folio}</Typography>
+                    </Stack>
+                </Stack>
+            }
         >
             <AddArticleModalContainer>
-                <ProductInfo>
-                    <ProductImage />
-                    <Stack direction="column" spacing={0.5}>
-                        <Typography variant="h5" sx={{ lineHeight: 1.4 }}>
-                            {article.name}
-                        </Typography>
-                        <Typography variant="caption">
-                            {article.folio}
-                        </Typography>
-                    </Stack>
-                </ProductInfo>
-
-                <CostInputSection>
-                    <TextField
-                        fullWidth
-                        variant="outlined"
-                        size="medium"
-                        type="text"
-                        value={unitPrice === 0 ? "" : unitPrice.toString()}
-                        onChange={handlePriceChange}
-                        placeholder="0.00"
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Box component="span" sx={{ color: "text.secondary" }}>
-                                        $
-                                    </Box>
-                                </InputAdornment>
-                            ),
-                        }}
-                        inputProps={{
-                            inputMode: "decimal",
-                        }}
-                    />
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleAddToOrder}
-                        disabled={unitPrice <= 0}
-                        sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            borderRadius: 1.5,
-                            padding: (theme) => theme.spacing(1.25, 2.5),
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        Agregar
-                    </Button>
-                </CostInputSection>
+                <Typography variant="h6">Historial de costos de este artículo.</Typography>
 
                 <HistorySection>
-                    <Typography variant="h6">
-                        Historial de costos de este artículo
-                    </Typography>
-                    <HistoryTimeline>
-                        <TimelineLine />
-                        {costHistory.map((entry) => (
+                    <UnitPriceSection>
+                        <TimelineDot style={{ top: "12px" }} />
+
+                        <TextField
+                            variant="outlined"
+                            size="small"
+                            type="text"
+                            value={unitPrice === 0 ? "" : unitPrice.toString()}
+                            onChange={handlePriceChange}
+                            placeholder="0.00"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Box component="span" sx={{ color: "text.secondary" }}>
+                                            $
+                                        </Box>
+                                    </InputAdornment>
+                                ),
+                            }}
+                            inputProps={{
+                                inputMode: "decimal",
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleAddToOrder}
+                            disabled={unitPrice <= 0}
+                            sx={{
+                                textTransform: "none",
+                                fontWeight: 600,
+                                borderRadius: 1.5,
+                                padding: (theme) => theme.spacing(1.25, 2.5),
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            Agregar
+                        </Button>
+                    </UnitPriceSection>
+
+                    <TimelineLine />
+                    {
+                        costHistory.map((entry) => (
                             <TimelineItem key={entry.id}>
                                 <TimelineDot />
                                 <TimelineContent>
@@ -192,27 +171,27 @@ export function AddArticleToOrderModal({
                                                 <Typography variant="body2" color="text.secondary">
                                                     {formatDate(entry.date)}
                                                 </Typography>
-                                                {entry.orderId && (
-                                                    <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
-                                                        Pedido {entry.orderId}
-                                                    </TimelineOrderLink>
-                                                )}
+                                                {
+                                                    entry.orderId && (
+                                                        <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
+                                                            Pedido {entry.orderId}
+                                                        </TimelineOrderLink>
+                                                    )
+                                                }
                                             </Stack>
                                             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
-                                                <Typography variant="h5" sx={{ lineHeight: 1.2 }}>
-                                                    {formatCurrency(entry.price)}
-                                                </Typography>
-                                                <TimelineChange>
+                                                <Typography variant="subtitle1">{formatCurrency(entry.price)}</Typography>
+                                                <Typography variant="body2" color="text.secondary">
                                                     <ArrowUpIcon sx={{ fontSize: 14 }} />
                                                     {numeral(entry.changePercentage).format("0.00")}%
-                                                </TimelineChange>
+                                                </Typography>
                                             </Stack>
                                         </Stack>
                                     </Stack>
                                 </TimelineContent>
                             </TimelineItem>
-                        ))}
-                    </HistoryTimeline>
+                        ))
+                    }
                 </HistorySection>
             </AddArticleModalContainer>
         </SideModal>

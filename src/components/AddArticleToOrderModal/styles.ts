@@ -1,127 +1,81 @@
 import { styled } from "@mui/material/styles";
-import { Box } from "@mui/material";
 import { theme } from "@/styles/theme";
 
-// ============================================================================
-// MAIN CONTAINER
-// ============================================================================
-
-export const AddArticleModalContainer = styled(Box)(({ theme }) => ({
+export const AddArticleModalContainer = styled('div')({
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(3),
-    marginTop: theme.spacing(2),
-}));
-
-// ============================================================================
-// PRODUCT INFO
-// ============================================================================
-
-export const ProductInfo = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(1.5),
-    alignItems: "flex-start",
-}));
-
-export const ProductImage = styled(Box)({
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: theme.palette.background.default,
+    marginTop: "16px",
+    gap: "16px",
+    backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "16px",
+    padding: "24px",
+});
+
+export const ProductImage = styled('img')({
+    width: "64px",
+    height: "64px",
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "12px",
+    backgroundColor: theme.palette.background.default,
     flexShrink: 0,
 });
 
-// ProductName uses Typography variant="h5"
-// ProductSku uses Typography variant="caption"
-
-// ============================================================================
-// COST INPUT SECTION
-// ============================================================================
-
-export const CostInputSection = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(1.5),
-    alignItems: "center",
-}));
-
-// AddCostButton uses Button with inline styles
-
-// ============================================================================
-// HISTORY SECTION
-// ============================================================================
-
-export const HistorySection = styled(Box)(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-}));
-
-// HistoryTitle uses Typography variant="h6"
-
-export const HistoryTimeline = styled(Box)(({ theme }) => ({
+export const HistorySection = styled('div')({
     position: "relative",
-    paddingLeft: theme.spacing(3),
     display: "flex",
     flexDirection: "column",
-    gap: 0,
-}));
-
-export const TimelineLine = styled(Box)({
-    position: "absolute",
-    left: 11,
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: "#E4E4E7",
+    gap: "24px",
+    paddingLeft: "8px"
 });
 
-export const TimelineItem = styled(Box)(({ theme }) => ({
+export const UnitPriceSection = styled('div')({
     position: "relative",
     display: "flex",
-    gap: theme.spacing(2),
-    alignItems: "flex-start",
-    paddingBottom: theme.spacing(2.5),
-    "&:last-child": {
-        paddingBottom: 0,
-    },
-}));
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    paddingLeft: "18px"
+});
 
-export const TimelineDot = styled(Box)({
-    width: 12,
-    height: 12,
+export const TimelineLine = styled('div')({
+    position: "absolute",
+    left: "13px",
+    top: "12px",
+    bottom: "34px",
+    width: "1px",
+    backgroundColor: theme.palette.app.border,
+});
+
+export const TimelineItem = styled('div')({
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-start",
+    padding: "11px 18px",
+});
+
+export const TimelineDot = styled('div')({
+    position: "absolute",
+    top: "28px",
+    left: "0px",
+    width: "11px",
+    height: "11px",
     borderRadius: "50%",
-    backgroundColor: "#F3F4F6",
-    border: `1px solid #E4E4E7`,
+    backgroundColor: theme.palette.app.border,
     flexShrink: 0,
     zIndex: 1,
-    marginTop: 4,
 });
 
-export const TimelineContent = styled(Box)(({ theme }) => ({
+export const TimelineContent = styled('div')({
     flex: 1,
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(0.5),
     width: "100%",
-}));
-
-// TimelineDate uses Typography variant="body2" with color #71717A
-// TimelinePrice uses Typography variant="h5"
-
-export const TimelineChange = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#16A34A",
-    "& svg": {
-        fontSize: 14,
-    },
 });
 
-export const TimelineOrderLink = styled("a")(({ theme }) => ({
+export const TimelineOrderLink = styled("a")({
     fontSize: 14,
     color: "#71717A",
     textDecoration: "underline",
@@ -130,10 +84,4 @@ export const TimelineOrderLink = styled("a")(({ theme }) => ({
     "&:hover": {
         color: theme.palette.primary.main,
     },
-}));
-
-// ============================================================================
-// QUANTITY SECTION
-// ============================================================================
-
-
+}); 

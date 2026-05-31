@@ -74,7 +74,9 @@ export function SideModal({
         )}
         {headerContent != null ? headerContent : null}
       </Stack>
-      {headerActions}
+      {
+        headerActions
+      }
     </Stack>
   );
 

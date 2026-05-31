@@ -1,5 +1,6 @@
 import { Minus, Plus } from 'lucide-react';
-import { StepperContainer, StepperButton, StepperInput } from './styles';
+import { StepperButton, StepperInput } from './styles';
+import { Stack } from '@mui/material';
 
 interface QuantityStepperProps {
   value: number;
@@ -39,9 +40,8 @@ export default function QuantityStepper({
   };
 
   return (
-    <StepperContainer>
+    <Stack direction="row" alignItems="center" spacing={1}>
       <StepperButton
-        size="small"
         onClick={handleDecrement}
         disabled={value <= min}
       >
@@ -61,6 +61,6 @@ export default function QuantityStepper({
       >
         <Plus size={14} />
       </StepperButton>
-    </StepperContainer>
+    </Stack>
   );
 }

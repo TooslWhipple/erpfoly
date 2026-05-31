@@ -20,7 +20,7 @@ export const Content = styled("div")({
 export const ImageWrapper = styled("div")(({ theme }) => ({
     width: 48,
     height: 48,
-    borderRadius: theme.shape.borderRadius * 2,
+    borderRadius: Number(theme.shape.borderRadius) * 2,
     overflow: "hidden",
     flexShrink: 0,
     backgroundColor: theme.palette.background.lowGray,

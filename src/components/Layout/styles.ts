@@ -38,24 +38,6 @@ export const ContentWrapper = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const TopBar = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  padding: "12px 24px",
-  backgroundColor: theme.palette.background.default,
-  borderBottom: `1px solid ${theme.palette.app.border}`,
-  minHeight: 56,
-  [theme.breakpoints.down("md")]: {
-    padding: "12px 16px",
-    paddingTop: 72,
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "12px 12px",
-    paddingTop: 64,
-  },
-}));
-
 export const MobileMenuButton = styled(IconButton)(({ theme }) => ({
   position: "absolute",
   left: 16,

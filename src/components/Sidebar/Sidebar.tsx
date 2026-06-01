@@ -309,12 +309,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const drawerContent = (
     <>
       <NavigationContainer>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-          <Stack>
-            <Typography variant="subtitle2">Folysoft</Typography>
-            <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+            <Stack>
+              <Typography variant="subtitle2">Folysoft</Typography>
+              <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+            </Stack>
           </Stack>
+          <NotificationInbox />
         </Stack>
 
         {canCreateCreditApplication && (
@@ -398,7 +401,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             {user?.email ?? "Sin correo registrado"}
           </UserEmail>
         </UserInfoContainer>
-        <NotificationInbox />
         <Button
           variant="text"
           size="small"

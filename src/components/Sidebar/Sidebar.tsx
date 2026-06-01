@@ -66,6 +66,7 @@ import { hasAccessRequirement, type AccessRequirement } from "@/lib/routeAccess"
 import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
@@ -397,6 +398,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             {user?.email ?? "Sin correo registrado"}
           </UserEmail>
         </UserInfoContainer>
+        <NotificationInbox />
         <Button
           variant="text"
           size="small"

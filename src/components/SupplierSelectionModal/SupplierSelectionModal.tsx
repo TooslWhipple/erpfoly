@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    Stack,
     InputAdornment,
     Button,
     CircularProgress,
@@ -24,12 +23,7 @@ import {
     type SupplierSearchItem,
 } from "@/services/suppliers.service";
 import {
-    SupplierModalContainer,
     SearchInput,
-    SuppliersList,
-    SupplierRow,
-    SupplierId,
-    SupplierName,
     Card
 } from "./styles";
 import { Search } from "lucide-react";
@@ -37,7 +31,7 @@ import { Search } from "lucide-react";
 function mapSearchItemToSupplier(item: SupplierSearchItem): Supplier {
     const displayName =
         item.businessName != null && item.businessName.trim().length > 0
-            ? `${item.name} — ${item.businessName.trim()}`
+            ? `${item.name} - ${item.businessName.trim()}`
             : item.name;
     return {
         id: String(item.id),
@@ -70,8 +64,6 @@ export function SupplierSelectionModal({
         isFetching,
         isPending,
         isError,
-        error,
-        refetch,
     } = useQuery({
         queryKey: ["suppliers-search", "modal-open", SUPPLIER_SEARCH_DEFAULT_LIMIT],
         queryFn: async () =>
@@ -117,70 +109,7 @@ export function SupplierSelectionModal({
         }
     };
 
-    const errorMessage =
-        isError && error instanceof Error ? error.message : "No se pudo cargar el listado.";
-
     const showInitialLoading = open && (isPending || (isFetching && searchRows === undefined));
-
-    let listBody: ReactNode;
-
-    if (showInitialLoading) {
-        listBody = <Stack
-            direction="row"
-            justifyContent="center"
-            alignItems="center"
-            sx={{ padding: 4 }}
-        >
-            <CircularProgress size={24} />
-        </Stack>
-    } else if (isError) {
-        listBody = (
-            <Stack
-                direction="column"
-                alignItems="center"
-                spacing={2}
-                sx={{ padding: 4 }}
-            >
-                <Typography variant="body2" color="error">
-                    {errorMessage}
-                </Typography>
-                <Button variant="outlined" size="small" onClick={() => void refetch()}>
-                    Reintentar
-                </Button>
-            </Stack>
-        );
-    } else if (filteredSuppliers.length === 0) {
-        listBody = (
-            <Stack
-                direction="row"
-                justifyContent="center"
-                alignItems="center"
-                sx={{ padding: 4 }}
-            >
-                <Typography variant="body2" color="text.secondary">
-                    No se encontraron proveedores
-                </Typography>
-            </Stack>
-        );
-    } else {
-        listBody = (
-            <SuppliersList>
-                {
-                    filteredSuppliers.map((supplier, index) => (
-                        <SupplierRow index={index} key={supplier.id}>
-                            <Stack direction="column" spacing={0.5}>
-                                <SupplierId>{supplier.id}</SupplierId>
-                                <SupplierName>{supplier.name}</SupplierName>
-                            </Stack>
-                            <Button color="primary" onClick={() => handleSelect(supplier)}>
-                                Seleccionar
-                            </Button>
-                        </SupplierRow>
-                    ))
-                }
-            </SuppliersList>
-        );
-    }
 
     return (
         <SideModal
@@ -208,39 +137,36 @@ export function SupplierSelectionModal({
                 }}
             />
             <Card>
-                {
-                    showInitialLoading
-                        ? <CircularProgress size={24} />
-                        : filteredSuppliers.length === 0
-                            ?
-                            <Typography variant="body2" color="text.secondary">No se encontraron proveedores</Typography>
-                            :
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
-                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Proveedor</TableCell>
-                                        <TableCell style={{ padding: "12px 8px" }}></TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {
-                                        filteredSuppliers.map((supplier) => (
-                                            <TableRow key={supplier.id}>
-                                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
-                                                <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
-                                                <TableCell style={{ padding: "12px 8px" }}>
-                                                    <Button color="primary" onClick={() => handleSelect(supplier)}>Seleccionar</Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    }
-                                </TableBody>
-                            </Table>
-
-                }
-
-
+                {showInitialLoading ? (
+                    <CircularProgress size={24} />
+                ) : filteredSuppliers.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                        No se encontraron proveedores
+                    </Typography>
+                ) : (
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
+                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Proveedor</TableCell>
+                                <TableCell style={{ padding: "12px 8px" }}></TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {filteredSuppliers.map((supplier) => (
+                                <TableRow key={supplier.id}>
+                                    <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
+                                    <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
+                                    <TableCell style={{ padding: "12px 8px" }}>
+                                        <Button color="primary" onClick={() => handleSelect(supplier)}>
+                                            Seleccionar
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
             </Card>
         </SideModal>
     );

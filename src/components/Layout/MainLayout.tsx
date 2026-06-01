@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMediaQuery, useTheme } from "@mui/material";
 import { Sidebar } from "@/components/Sidebar";
+import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import {
   LayoutContainer,
   MainContent,
   ContentWrapper,
+  TopBar,
   MobileMenuButton,
   MobileMenuIcon,
 } from "./styles";
@@ -30,12 +32,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     <LayoutContainer>
       <Sidebar open={mobileOpen} onClose={handleCloseMobile} />
       <MainContent component="main">
-        <ContentWrapper>
+        <TopBar>
           {isMobile && (
             <MobileMenuButton onClick={handleToggleMobile}>
               <MobileMenuIcon />
             </MobileMenuButton>
           )}
+          <NotificationInbox />
+        </TopBar>
+        <ContentWrapper>
           {children}
         </ContentWrapper>
       </MainContent>

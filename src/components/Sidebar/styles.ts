@@ -16,6 +16,7 @@ export const StyledDrawer = styled(Drawer, {
     boxSizing: "border-box",
     backgroundColor: theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.app.border}`,
+    overflow: "visible",
   },
 }));
 

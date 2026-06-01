@@ -66,6 +66,7 @@ import { hasAccessRequirement, type AccessRequirement } from "@/lib/routeAccess"
 import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
@@ -308,12 +309,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const drawerContent = (
     <>
       <NavigationContainer>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-          <Stack>
-            <Typography variant="subtitle2">Folysoft</Typography>
-            <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+            <Stack>
+              <Typography variant="subtitle2">Folysoft</Typography>
+              <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+            </Stack>
           </Stack>
+          <NotificationInbox />
         </Stack>
 
         {canCreateCreditApplication && (

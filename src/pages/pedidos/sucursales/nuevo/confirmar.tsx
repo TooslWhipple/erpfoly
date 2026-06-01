@@ -128,6 +128,9 @@ export default function ConfirmarArticulosPage() {
                 branch_id: branchId,
                 folio: `PED-${Date.now()}`,
                 order_date: new Date().toISOString().split("T")[0],
+                supplier_id: orderData.orderType === "external" && orderData.supplierId
+                    ? Number(orderData.supplierId)
+                    : undefined,
                 items: items.map((item) => ({
                     product_id: item.productId,
                     requested_quantity: item.quantity,

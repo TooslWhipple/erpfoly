@@ -57,6 +57,11 @@ export type CreateProductRequest = {
     packageItems?: CreateProductPackageItemPayload[];
     /** Nested promotions to persist with the product (drafts from Price tab). */
     promotions?: SavePromotionPayload[];
+    listCost?: number;
+    currency?: string;
+    exchangeRate?: number;
+    iva?: number;
+    isLiquidation?: boolean;
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
@@ -138,6 +143,9 @@ export interface CostHistoryEntry {
     price: number;
     changePercentage: number;
     changeType: "increase" | "decrease";
+    orderId?: string;
+    branchName?: string;
+    notes?: string;
 }
 
 // FORM STATE INTERFACES

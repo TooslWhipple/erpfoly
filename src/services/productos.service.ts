@@ -16,6 +16,7 @@ import type {
     ProductPackage,
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
+    CostHistoryEntry,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
 
@@ -131,6 +132,7 @@ export function buildCreateProductRequest(
         currency: priceData.currency,
         exchangeRate: Number(priceData.exchangeRate),
         iva: Number(priceData.iva),
+        isLiquidation: priceData.liquidation,
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
@@ -407,6 +409,47 @@ export async function getProductById(
     id: number
 ): Promise<ApiResult<ProductDetailDto>> {
     return get<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`);
+}
+
+interface ProductCostHistoryApiEntry {
+    id: string;
+    date: string;
+    price: number;
+    changePercentage: number;
+    orderId?: string;
+    branchName?: string;
+    notes?: string;
+}
+
+function mapProductCostHistoryEntry(
+    row: ProductCostHistoryApiEntry
+): CostHistoryEntry {
+    const changePercentage = Number(row.changePercentage) || 0;
+    return {
+        id: String(row.id),
+        date: row.date,
+        price: Number(row.price) || 0,
+        changePercentage: Math.abs(changePercentage),
+        changeType: changePercentage >= 0 ? "increase" : "decrease",
+        orderId: row.orderId,
+        branchName: row.branchName,
+        notes: row.notes,
+    };
+}
+
+export async function getProductCostHistory(
+    productId: number
+): Promise<ApiResult<CostHistoryEntry[]>> {
+    const result = await get<ProductCostHistoryApiEntry[]>(
+        `${PRODUCTS_BASE}/${productId}/cost-history`
+    );
+    if (result.error) {
+        return { data: null, error: result.error };
+    }
+    return {
+        data: (result.data ?? []).map(mapProductCostHistoryEntry),
+        error: null,
+    };
 }
 
 export async function updateProduct(

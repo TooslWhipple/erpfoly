@@ -6,7 +6,7 @@ import {
   Title,
   RulesList,
   AutomatedCollectionActivityModal,
-  ConfirmDeleteModal,
+  ConfirmModal,
 } from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
@@ -333,7 +333,7 @@ export default function CobranzaAutomatica() {
         isActive={selectedActivityRule?.isActive ?? true}
       />
 
-      <ConfirmDeleteModal
+      <ConfirmModal
         open={rulePendingDelete !== null}
         onClose={handleCloseDeleteModal}
         itemName={pendingDeleteItemName}

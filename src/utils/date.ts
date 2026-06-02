@@ -22,6 +22,8 @@ export type DateFormatPreset =
   | "dateNumeric"
   /** Solo fecha extendida. Ej.: `8 de abril de 2026` */
   | "dateLong"
+  /** Día y mes con hora 12h. Ej.: `2 de junio 12:35 pm` */
+  | "dateMonthTime12h"
   /** Solo hora 24h. Ej.: `14:30` */
   | "time"
   /** Solo hora 12h con am/pm. Ej.: `2:30 pm` */
@@ -49,6 +51,7 @@ export const dateFormatPresets: Record<DateFormatPreset, string> = {
   localizedWithWeekday12h: "dddd, D [de] MMMM [de] YYYY h:mm a",
   dateNumeric: "L",
   dateLong: "LL",
+  dateMonthTime12h: "D [de] MMMM h:mm a",
   time: "LT",
   time12h: "h:mm a",
   datetimeNumeric: "L LT",
@@ -66,9 +69,18 @@ export const dateFormatPresets: Record<DateFormatPreset, string> = {
  */
 export type DateFormatArg = DateFormatPreset | (string & {});
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 function toDayjs(value: DateInput): Dayjs | null {
   if (value == null || value === "") {
     return null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (DATE_ONLY_PATTERN.test(trimmed)) {
+      const dateOnly = dayjs(trimmed, "YYYY-MM-DD", true);
+      return dateOnly.isValid() ? dateOnly : null;
+    }
   }
   const d = dayjs(value as string | number | Date);
   return d.isValid() ? d : null;

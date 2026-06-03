@@ -1,4 +1,4 @@
-import { Grid, Button, MenuItem, Typography } from "@mui/material";
+import { CircularProgress, Grid, Button, MenuItem, Typography } from "@mui/material";
 import { Check, ShieldCheck } from "lucide-react";
 import { FormTextField } from "@/components/Form";
 import type { MaritalStatusCatalogItem } from "@/services/catalog.service";
@@ -21,6 +21,7 @@ interface BasicInformationTabProps {
   onFieldChange: (field: keyof BasicInformationFormValues, value: string) => void;
   onValidateSecurityCode: () => Promise<boolean>;
   onContinue: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function BasicInformationTab({
@@ -36,6 +37,7 @@ export function BasicInformationTab({
   onFieldChange,
   onValidateSecurityCode,
   onContinue,
+  saving,
 }: BasicInformationTabProps) {
   return (
     <Card>
@@ -51,6 +53,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("firstName", event.target.value)}
             error={Boolean(errors.firstName)}
             helperText={errors.firstName}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -63,6 +66,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("lastName", event.target.value)}
             error={Boolean(errors.lastName)}
             helperText={errors.lastName}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -74,6 +78,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("secondLastName", event.target.value)}
             error={Boolean(errors.secondLastName)}
             helperText={errors.secondLastName}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -88,6 +93,7 @@ export function BasicInformationTab({
             error={Boolean(errors.birthDate)}
             helperText={errors.birthDate}
             InputLabelProps={{ shrink: true }}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -99,7 +105,7 @@ export function BasicInformationTab({
             error={Boolean(errors.maritalStatus)}
             helperText={errors.maritalStatus}
             fullWidth
-            disabled={maritalStatusesLoading}
+            disabled={maritalStatusesLoading || saving}
           >
             <MenuItem value="">
               {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
@@ -121,6 +127,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("curp", event.target.value)}
             error={Boolean(errors.curp)}
             helperText={errors.curp}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -133,6 +140,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("rfc", event.target.value)}
             error={Boolean(errors.rfc)}
             helperText={errors.rfc}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -148,6 +156,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("email", event.target.value)}
             error={Boolean(errors.email)}
             helperText={errors.email}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 'grow' }}>
@@ -160,7 +169,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("whatsappNumber", event.target.value)}
             error={Boolean(errors.whatsappNumber)}
             helperText={errors.whatsappNumber}
-            disabled={isSecurityCodeValid === true}
+            disabled={isSecurityCodeValid === true || saving}
           />
         </Grid>
         <Grid size={{ xs: 'grow' }}>
@@ -173,7 +182,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("securityCode", event.target.value)}
             error={Boolean(errors.securityCode)}
             helperText={errors.securityCode}
-            disabled={isSecurityCodeFieldDisabled}
+            disabled={isSecurityCodeFieldDisabled || saving}
             inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
           />
         </Grid>
@@ -182,7 +191,7 @@ export function BasicInformationTab({
             variant="outlined"
             startIcon={<ShieldCheck size={16} />}
             onClick={onValidateSecurityCode}
-            disabled={isOtpActionDisabled}
+            disabled={isOtpActionDisabled || saving}
             sx={{ minWidth: 108, alignSelf: "stretch" }}>
             {validatingSecurityCode ? "Procesando..." : otpActionLabel}
           </Button>
@@ -204,8 +213,9 @@ export function BasicInformationTab({
         <Grid size={{ xs: 12 }}>
           <Button
             variant="contained"
-            onClick={onContinue}>
-            Continuar
+            onClick={onContinue}
+            disabled={saving}>
+            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
           </Button>
         </Grid>
       </Grid>

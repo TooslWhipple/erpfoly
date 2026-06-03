@@ -54,6 +54,7 @@ export interface CreateOrderPayload {
   client_id?: number;
   requested_by?: number;
   status?: string;
+  supplier_id?: number;
   items: OrderItemInput[];
 }
 
@@ -128,6 +129,7 @@ export interface OrderListItem {
   order_date: string;
   notes: string | null;
   branch: { id: number; name: string } | null;
+  supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string } | null;
   requested_by_user: { id: number; first_name: string; last_name: string } | null;
   order_items: Array<{
@@ -148,6 +150,7 @@ export interface OrderFullDetail {
   notes: string | null;
   created_at: string;
   branch: { id: number; name: string } | null;
+  supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string; phone_number: string | null } | null;
   requested_by_user: { id: number; first_name: string; last_name: string; username: string } | null;
   order_items: Array<{

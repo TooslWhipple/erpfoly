@@ -1,4 +1,4 @@
-import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, Stack, Switch, Typography } from "@mui/material";
 import { TrackSlider } from "@/components";
 import { FormTextField } from "@/components/Form";
 import type { FamilyTabErrors, FamilyTabValues } from "@/types/credit-application-form.types";
@@ -9,11 +9,12 @@ interface FamilyTabProps {
   errors: FamilyTabErrors;
   onFieldChange: (field: keyof FamilyTabValues, value: FamilyTabValues[keyof FamilyTabValues]) => void;
   onContinue: () => Promise<boolean>;
+  saving: boolean;
 }
 
 const DEPENDENTS_MARKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export function FamilyTab({ values, errors, onFieldChange, onContinue }: FamilyTabProps) {
+export function FamilyTab({ values, errors, onFieldChange, onContinue, saving }: FamilyTabProps) {
   return (
     <Card>
       <Grid container spacing={3}>
@@ -22,6 +23,7 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue }: FamilyT
             <Switch
               checked={values.hasSpouse}
               onChange={(event) => onFieldChange("hasSpouse", event.target.checked)}
+              disabled={saving}
             />
             <Typography variant="h6">¿Cuenta con cónyuge?</Typography>
           </Stack>
@@ -37,7 +39,7 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue }: FamilyT
             onChange={(event) => onFieldChange("spouseName", event.target.value)}
             error={Boolean(errors.spouseName)}
             helperText={errors.spouseName}
-            disabled={!values.hasSpouse}
+            disabled={!values.hasSpouse || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -50,7 +52,7 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue }: FamilyT
             onChange={(event) => onFieldChange("spousePhone", event.target.value)}
             error={Boolean(errors.spousePhone)}
             helperText={errors.spousePhone}
-            disabled={!values.hasSpouse}
+            disabled={!values.hasSpouse || saving}
           />
         </Grid>
 
@@ -64,13 +66,17 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue }: FamilyT
               marks={DEPENDENTS_MARKS}
               onChange={(_, value) => onFieldChange("dependentsCount", value)}
               getMarkLabel={(markValue) => (markValue === 10 ? "+10" : String(markValue))}
+              disabled={saving}
             />
           </Stack>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Button variant="contained" onClick={onContinue}>
-            Continuar
+          <Button
+            variant="contained"
+            onClick={onContinue}
+            disabled={saving}>
+            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
           </Button>
         </Grid>
       </Grid>

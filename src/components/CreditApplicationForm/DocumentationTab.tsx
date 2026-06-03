@@ -1,4 +1,4 @@
-import { Button } from "@mui/material";
+import { Button, CircularProgress } from "@mui/material";
 import { FileUpload } from "@/components/FileUpload";
 import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -22,6 +22,7 @@ interface DocumentationTabProps {
   onIneFrontChange: (files: CreditApplicationDocumentFile[]) => void;
   onIneBackChange: (files: CreditApplicationDocumentFile[]) => void;
   onSave: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function DocumentationTab({
@@ -35,6 +36,7 @@ export function DocumentationTab({
   onIneFrontChange,
   onIneBackChange,
   onSave,
+  saving,
 }: DocumentationTabProps) {
   const requiredErrorMessage = "Documento obligatorio.";
   const incomeProofRequiredAndMissing = requireIncomeProof && values.incomeProofFiles.length === 0;
@@ -68,6 +70,8 @@ export function DocumentationTab({
           value={mapStoredToUploadItems(values.incomeProofFiles)}
           onChange={(files) => onIncomeProofChange(mapUploadToStoredItems(files))}
           placeholder="Comprobante de ingresos"
+          fileLabel="Comprobante de ingresos"
+          disabled={saving}
           accept={["image/*", "image/jpeg", "image/png", "image/webp", "application/pdf"]}
           error={incomeProofRequiredAndMissing ? requiredErrorMessage : undefined}
         />
@@ -77,6 +81,8 @@ export function DocumentationTab({
           value={mapStoredToUploadItems(values.employmentProofLetterFiles)}
           onChange={(files) => onEmploymentProofLetterChange(mapUploadToStoredItems(files))}
           placeholder="Carta de comprobante laboral"
+          fileLabel="Carta de comprobante laboral"
+          disabled={saving}
           accept={["image/*", "image/jpeg", "image/png", "image/webp", "application/pdf"]}
           error={employmentProofLetterRequiredAndMissing ? requiredErrorMessage : undefined}
         />
@@ -85,6 +91,8 @@ export function DocumentationTab({
         value={mapStoredToUploadItems(values.ineFrontFiles)}
         onChange={(files) => onIneFrontChange(mapUploadToStoredItems(files))}
         placeholder="INE frontal"
+        fileLabel="INE frontal"
+        disabled={saving}
         accept={["image/*", "image/jpeg", "image/png", "image/webp"]}
         error={ineFrontRequiredAndMissing ? requiredErrorMessage : undefined}
       />
@@ -92,6 +100,8 @@ export function DocumentationTab({
         value={mapStoredToUploadItems(values.ineBackFiles)}
         onChange={(files) => onIneBackChange(mapUploadToStoredItems(files))}
         placeholder="INE posterior"
+        fileLabel="INE posterior"
+        disabled={saving}
         accept={["image/*", "image/jpeg", "image/png", "image/webp"]}
         error={ineBackRequiredAndMissing ? requiredErrorMessage : undefined}
       />
@@ -99,8 +109,9 @@ export function DocumentationTab({
       <Button
         variant="contained"
         sx={{ alignSelf: "flex-start" }}
-        onClick={onSave}>
-        Guardar
+        onClick={onSave}
+        disabled={saving}>
+        {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
       </Button>
     </Card>
   );

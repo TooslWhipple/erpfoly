@@ -1,26 +1,13 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Grid, Stack, Typography } from "@mui/material";
 import { ArrowForward as ArrowForwardIcon } from "@mui/icons-material";
 import {
-    CardContainer,
+    Card,
     ProgressBarContainer,
     ProgressBarFill,
-    ContentRow,
-    InfoSection,
-    SupplierName,
-    DateText,
-    ArrowContainer,
-    DestinationSection,
-    DestinationName,
-    ItemCountText,
-    StatusChip,
-    ListContainer,
     EmptyContainer,
 } from "./styles";
 import type { OrderStatus } from "./styles";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { StatusChip, StatusChipVariant } from "../StatusChip";
 
 export type { OrderStatus } from "./styles";
 
@@ -32,7 +19,6 @@ export interface OrderCardData {
     deliveryDate: string;
     itemCount: number;
     status: OrderStatus;
-    /** Progress percentage 0-100 */
     progress: number;
 }
 
@@ -41,10 +27,6 @@ interface OrderCardProps {
     onClick?: (order: OrderCardData) => void;
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
         pending: "Por recibir",
@@ -52,6 +34,16 @@ function getStatusLabel(status: OrderStatus): string {
         received: "Recibido",
     };
     return labels[status];
+}
+
+function getStatusVariant(status: OrderStatus): StatusChipVariant {
+    const variants: Record<OrderStatus, string> = {
+        pending: "pending",
+        in_progress: "info",
+        received: "success",
+    };
+
+    return variants[status] as StatusChipVariant;
 }
 
 function getProgressColor(status: OrderStatus): string {
@@ -67,11 +59,9 @@ function getProgressColor(status: OrderStatus): string {
     }
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function OrderCard({ order, onClick }: OrderCardProps) {
+    const statusVariant: StatusChipVariant = getStatusVariant(order.status);
     const progressColor = getProgressColor(order.status);
 
     const handleClick = () => {
@@ -79,41 +69,40 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
     };
 
     return (
-        <CardContainer onClick={handleClick}>
-            <ProgressBarContainer>
-                <ProgressBarFill fillColor={progressColor} progress={order.progress} />
-            </ProgressBarContainer>
-
-            <ContentRow>
-                <InfoSection>
-                    <SupplierName>{order.supplier}</SupplierName>
-                    <DateText>{order.supplierDate}</DateText>
-                </InfoSection>
-
-                <ArrowContainer>
-                    <ArrowForwardIcon sx={{ fontSize: 20 }} />
-                </ArrowContainer>
-
-                <DestinationSection>
-                    <DestinationName>{order.destination}</DestinationName>
-                    <DateText>Entrega: {order.deliveryDate}</DateText>
-                </DestinationSection>
-
-                <ItemCountText>{order.itemCount} artículos</ItemCountText>
-
-                <StatusChip
-                    label={getStatusLabel(order.status)}
-                    size="small"
-                    statusType={order.status}
-                />
-            </ContentRow>
-        </CardContainer>
+        <Card onClick={handleClick}>
+            <Grid container spacing={2}>
+                <Grid size={12}>
+                    <ProgressBarContainer>
+                        <ProgressBarFill fillColor={progressColor} progress={order.progress} />
+                    </ProgressBarContainer>
+                </Grid>
+                <Grid size={12}>
+                    <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between" spacing={{ xs: 2, md: 0 }}>
+                        <Stack direction="row" alignItems="center" width="100%" spacing={2} flex={5}>
+                            <Stack spacing={0.5} width="100%" flex={3}>
+                                <Typography variant="body1" fontWeight={500}>{order.supplier}</Typography>
+                                <Typography variant="body2" color="text.secondary">{order.supplierDate}</Typography>
+                            </Stack>
+                            <ArrowForwardIcon sx={{ fontSize: 20 }} />
+                            <Stack spacing={0.5} width="100%" flex={3}>
+                                <Typography variant="body1" fontWeight={500}>{order.destination}</Typography>
+                                <Typography variant="body2" color="text.secondary">Entrega: {order.deliveryDate}</Typography>
+                            </Stack>
+                        </Stack>
+                        <Stack direction="row" alignItems="center" justifyContent={{ xs: "flex-start", md: "flex-end" }} spacing={2} flex={2}>
+                            <Typography variant="body2">{order.itemCount} artículos</Typography>
+                            <StatusChip
+                                label={getStatusLabel(order.status)}
+                                size="small"
+                                variant={statusVariant}
+                            />
+                        </Stack>
+                    </Stack>
+                </Grid>
+            </Grid>
+        </Card>
     );
 }
-
-// ============================================================================
-// ORDER LIST COMPONENT
-// ============================================================================
 
 interface OrderListProps {
     orders: OrderCardData[];
@@ -130,18 +119,18 @@ export function OrderList({
 }: OrderListProps) {
     if (loading) {
         return (
-            <ListContainer>
+            <Stack direction="column" spacing={2}>
                 {[1, 2, 3].map((i) => (
-                    <CardContainer key={i} sx={{ opacity: 0.5 }}>
+                    <Card key={i} sx={{ opacity: 0.5 }}>
                         <ProgressBarContainer>
                             <ProgressBarFill fillColor="#d1d5db" progress={60} />
                         </ProgressBarContainer>
-                        <ContentRow>
+                        <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between" spacing={{ xs: 2, md: 0 }}>
                             <Box sx={{ height: 40, width: "100%" }} />
-                        </ContentRow>
-                    </CardContainer>
+                        </Stack>
+                    </Card>
                 ))}
-            </ListContainer>
+            </Stack>
         );
     }
 
@@ -154,10 +143,12 @@ export function OrderList({
     }
 
     return (
-        <ListContainer>
-            {orders.map((order) => (
-                <OrderCard key={order.id} order={order} onClick={onOrderClick} />
-            ))}
-        </ListContainer>
+        <Stack direction="column" spacing={2}>
+            {
+                orders.map((order) => (
+                    <OrderCard key={order.id} order={order} onClick={onOrderClick} />
+                ))
+            }
+        </Stack>
     );
 }

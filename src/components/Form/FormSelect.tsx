@@ -27,19 +27,20 @@ export const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
     ({ label, options, required, error, helperText, placeholder, ...props }, ref) => {
         return (
             <FieldWrapper ref={ref}>
-                {label && (
-                    <FieldLabel>
-                        {label}
-                        {required && (
-                            <Typography
-                                component="span"
-                                sx={{ color: "error.main", ml: 0.5 }}
-                            >
-                                *
-                            </Typography>
-                        )}
-                    </FieldLabel>
-                )}
+                {
+                    label && (
+                        <FieldLabel>
+                            {label}
+                            {required && (
+                                <Typography
+                                    component="span"
+                                    sx={{ color: "error.main", ml: 0.5 }}
+                                >
+                                    *
+                                </Typography>
+                            )}
+                        </FieldLabel>
+                    )}
                 <StyledSelect
                     variant="outlined"
                     fullWidth

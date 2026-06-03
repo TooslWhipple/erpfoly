@@ -11,9 +11,10 @@ export interface CashRegisterState {
 }
 
 export interface OpenCashRegisterFormProps {
-  initialFund: number;
-  exchangeRate: number;
+  initialFund: string;
+  exchangeRate: string;
   canOpen?: boolean;
+  isLoading?: boolean;
   onInitialFundChange: (value: string) => void;
   onExchangeRateChange: (value: string) => void;
   onOpen: () => void;

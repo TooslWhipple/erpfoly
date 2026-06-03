@@ -6,36 +6,18 @@ import {
     StepperUnitLabel,
 } from "@/styles/catalogos/folypuntos.styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 export interface NumberInputProps {
-    /** Current value */
     value: number;
-    /** Callback when value changes */
     onChange: (value: number) => void;
-    /** Minimum allowed value */
     min?: number;
-    /** Maximum allowed value */
     max?: number;
-    /** Step size for increment/decrement */
     step?: number;
-    /** Disable the input */
     disabled?: boolean;
-    /** Placeholder text */
     placeholder?: string;
-    /** Width of the input */
     width?: number;
-    /** Size of the input */
     size?: "small" | "medium";
-    /** Unit label rendered inside the same container */
     unit?: string;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function NumberInput({
     value,
@@ -66,13 +48,11 @@ export function NumberInput({
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = e.target.value;
         
-        // Allow empty string for clearing
         if (inputValue === "") {
             onChange(min);
             return;
         }
 
-        // Only allow positive integers
         if (/^\d+$/.test(inputValue)) {
             const numValue = parseInt(inputValue, 10);
             if (numValue >= min && numValue <= max) {
@@ -86,7 +66,6 @@ export function NumberInput({
     };
 
     const handleBlur = () => {
-        // Ensure value is within bounds on blur
         if (value < min) {
             onChange(min);
         } else if (value > max) {

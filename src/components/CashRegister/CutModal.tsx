@@ -1,15 +1,11 @@
 import { useState, useMemo } from "react";
-import { Stack } from "@mui/material";
-import { Close as CloseIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import { Button, Divider, Stack, Typography } from "@mui/material";
+import { KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
 import { NumberInput } from "@/components/Folypuntos";
 import { SideModal } from "@/components/SideModal";
 import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    CloseButton,
     CutSection,
     CutSectionHeader,
     CutSectionTitle,
@@ -23,28 +19,14 @@ import {
     ShortageCard,
     ShortageLabel,
     ShortageValue,
-    CutModalActions,
-    CutButton,
-    WithdrawalSection,
     CurrentCashCard,
     CurrentCashLabel,
     CurrentCashValue,
-    WithdrawalInstruction,
-    DenominationList,
     DenominationItem,
     DenominationBadge,
-    DenominationTypeLabel,
-    DenominationControls,
-    DenominationSubtotal,
     WithdrawalTotalCard,
-    WithdrawalTotalLabel,
-    WithdrawalTotalValue,
 } from "@/styles/cajas.styles";
-import type { Denomination } from "./WithdrawalModal";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { StatusChip } from "../StatusChip";
 
 export type CutType = "partial" | "final";
 
@@ -63,10 +45,6 @@ export interface CutModalProps {
     shortage: number;
     denominations: Denomination[];
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function CutModal({
     open,
@@ -130,23 +108,18 @@ export function CutModal({
 
     return (
         <SideModal
+            fullWidth
+            maxWidth="md"
             open={open}
             onClose={onClose}
-            title={cashRegisterName}
-            maxWidth="md"
-            fullWidth
-        >
-            <DialogContent>
-                <ModalHeader>
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1 }}>
-                        <ModalTitle>{cashRegisterName}</ModalTitle>
+            contentSx={{ backgroundColor: "white", padding: 0 }}
+            headerContent={
+                <Stack spacing={2}>
+                    <Stack direction="row" width="100%" alignItems="center" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">{cashRegisterName}</Typography>
+                        <StatusChip label="Abierta" variant="success" size="small" />
                     </Stack>
-                    <CloseButton onClick={onClose} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
 
-                <Stack direction="column" spacing={3} sx={{ mt: 2 }}>
                     <FormSelect
                         label="Tipo de corte"
                         value={cutType}
@@ -157,66 +130,73 @@ export function CutModal({
                         options={cutTypeOptions}
                     />
 
-                    {cutType === "partial" ? (
-                        <WithdrawalSection>
-                            <CurrentCashCard>
-                                <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
-                                <CurrentCashValue>
-                                    {numeral(currentCash).format("$0,0.00")}
-                                </CurrentCashValue>
-                            </CurrentCashCard>
+                    {
+                        cutType === "partial" &&
+                        <CurrentCashCard>
+                            <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
+                            <CurrentCashValue>
+                                {numeral(currentCash).format("$0,0.00")}
+                            </CurrentCashValue>
+                        </CurrentCashCard>
+                    }
+                </Stack>
+            }>
 
-                            <WithdrawalInstruction>
-                                Ingresa el monto a retirar:
-                            </WithdrawalInstruction>
+            <Divider />
 
-                            <DenominationList>
-                                {denominations.map((denom) => {
-                                    const quantity = withdrawalQuantities[denom.value] || 0;
-                                    const subtotal = withdrawalSubtotals[denom.value] || 0;
+            <Stack direction="column" spacing={3} style={{ padding: "8px 24px 24px" }}>
+                {
+                    cutType === "partial" ?
+                        <Stack spacing={2}>
+                            <Typography variant="subtitle1">Ingresa el monto a retirar:</Typography>
 
-                                    return (
-                                        <DenominationItem key={denom.value}>
-                                            <Stack direction="row" alignItems="center" spacing={1.5}>
-                                                <DenominationBadge
-                                                    sx={{
-                                                        backgroundColor: denom.color,
-                                                        color: "white",
-                                                    }}
-                                                >
-                                                    ${denom.value}
-                                                </DenominationBadge>
-                                                <DenominationTypeLabel>
-                                                    {denom.type === "bill" ? "Billete" : "Moneda"}
-                                                </DenominationTypeLabel>
-                                            </Stack>
+                            <Stack spacing={1}>
+                                {
+                                    denominations.map((denom) => {
+                                        const quantity = withdrawalQuantities[denom.value] || 0;
+                                        const subtotal = withdrawalSubtotals[denom.value] || 0;
 
-                                            <DenominationControls>
-                                                <NumberInput
-                                                    value={quantity}
-                                                    onChange={(val) => handleQuantityChange(val, denom.value)}
-                                                    min={0}
-                                                    max={9999}
-                                                    step={1}
-                                                    width={60}
-                                                />
-                                                <DenominationSubtotal>
-                                                    {numeral(subtotal).format("$0,0.00")}
-                                                </DenominationSubtotal>
-                                            </DenominationControls>
-                                        </DenominationItem>
-                                    );
-                                })}
-                            </DenominationList>
+                                        return (
+                                            <DenominationItem key={denom.value}>
+                                                <Stack direction="row" alignItems="center" spacing={1}>
+                                                    <DenominationBadge
+                                                        sx={{
+                                                            backgroundColor: denom.color,
+                                                            color: "white",
+                                                        }}>
+                                                        ${denom.value}
+                                                    </DenominationBadge>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {
+                                                            (denom.type === "bill") ? "Billete" : "Moneda"
+                                                        }
+                                                    </Typography>
+                                                </Stack>
+
+                                                <Stack direction="row" alignItems="center" spacing={6}>
+                                                    <NumberInput
+                                                        size="small"
+                                                        value={quantity}
+                                                        onChange={(val) => handleQuantityChange(val, denom.value)}
+                                                        min={0}
+                                                        max={9999}
+                                                        step={1}
+                                                        width={60}
+                                                    />
+                                                    <Typography variant="subtitle1">{numeral(subtotal).format("$0,0.00")}</Typography>
+                                                </Stack>
+                                            </DenominationItem>
+                                        );
+                                    })
+                                }
+                            </Stack>
 
                             <WithdrawalTotalCard>
-                                <WithdrawalTotalLabel>Total:</WithdrawalTotalLabel>
-                                <WithdrawalTotalValue>
-                                    {numeral(withdrawalTotal).format("$0,0.00")}
-                                </WithdrawalTotalValue>
+                                <Typography variant="body2" color="text.secondary">Total:</Typography>
+                                <Typography variant="subtitle1" color="text.primary" fontWeight={600}>{numeral(withdrawalTotal).format("$0,0.00")}</Typography>
                             </WithdrawalTotalCard>
-                        </WithdrawalSection>
-                        ) : (
+                        </Stack>
+                        :
                         <>
                             <CutSection>
                                 <CutSectionHeader>
@@ -274,15 +254,20 @@ export function CutModal({
                                 </ShortageValue>
                             </ShortageCard>
                         </>
-                    )}
-                </Stack>
-
-                <CutModalActions>
-                    <CutButton variant="contained" onClick={handleConfirm} fullWidth>
-                        {cutType === "final" ? "Realizar corte final" : "Realizar corte parcial"}
-                    </CutButton>
-                </CutModalActions>
-            </DialogContent>
-        </SideModal>
+                }
+                <Divider />
+                <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleConfirm}>
+                    {
+                        (cutType === "final")
+                            ? "Realizar corte final"
+                            : "Realizar corte parcial"
+                    }
+                </Button>
+            </Stack>
+        </SideModal >
     );
 }

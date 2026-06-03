@@ -8,10 +8,10 @@ export const FieldWrapper = styled(Box)({
 });
 
 export const FieldLabel = styled(Typography)(({ theme }) => ({
-  fontSize: "0.875rem",
-  fontWeight: 400,
-  color: theme.palette.text.secondary,
-  marginBottom: theme.spacing(1),
+  fontSize: "14px",
+  fontWeight: 500,
+  color: theme.palette.text.primary,
+  marginBottom: "4px",
 }));
 
 export const StyledSelect = styled(Select)(({ theme }) => ({

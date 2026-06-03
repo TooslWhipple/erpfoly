@@ -11,7 +11,7 @@ export const FieldLabel = styled(Typography)(({ theme }) => ({
   fontSize: "14px",
   fontWeight: 500,
   color: theme.palette.text.primary,
-  marginBottom: theme.spacing(0.5),
+  marginBottom: "4px",
 }));
 
 export const StyledTextField = styled(TextField)(({ theme }) => ({

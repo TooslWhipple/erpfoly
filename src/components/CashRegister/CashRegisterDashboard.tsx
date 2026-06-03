@@ -1,5 +1,5 @@
-import { Grid, InputAdornment } from "@mui/material";
-import { Search as SearchIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import { Button, InputAdornment, Stack, Typography } from "@mui/material";
+import { KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
     DashboardContainer,
@@ -7,18 +7,8 @@ import {
     PaymentTypeSelect,
     SearchInput,
     SearchButton,
-    BalanceCard,
-    ProgressBarContainer,
-    ProgressBarLabels,
     ProgressBarLabel,
     StyledProgressBar,
-    BalanceLabel,
-    BalanceValue,
-    ActionsContainer,
-    ActionButton,
-    HistorySection,
-    HistoryHeader,
-    HistoryTitle,
     ViewAllLink,
     HistoryTable,
     HistoryTableHeader,
@@ -26,15 +16,9 @@ import {
     EmptyHistoryMessage,
 } from "@/styles/cajas.styles";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
 import type { CashRegisterDashboardProps } from "./types";
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
+import { Search } from "lucide-react";
+import { theme } from "@/styles/theme";
 
 export function CashRegisterDashboard({
     cashRegister,
@@ -46,7 +30,6 @@ export function CashRegisterDashboard({
     onWithdrawal,
     onViewAllHistory,
 }: CashRegisterDashboardProps) {
-    const remainingLimit = cashRegister.limit - cashRegister.currentCash;
     const progressPercentage = (cashRegister.currentCash / cashRegister.limit) * 100;
 
     return (
@@ -63,78 +46,70 @@ export function CashRegisterDashboard({
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon sx={{ fontSize: 20, color: "text.secondary" }} />
+                                <Search size={16} color={theme.palette.text.secondary} />
                             </InputAdornment>
                         ),
                     }}
                 />
 
-                <SearchButton variant="contained" onClick={() => { }}>
+                <SearchButton
+                    variant="contained"
+                    onClick={() => { }}>
                     Buscar
                 </SearchButton>
             </SearchBarContainer>
 
-            <BalanceCard>
-                <ProgressBarContainer>
-                    <ProgressBarLabels>
-                        <ProgressBarLabel>$0</ProgressBarLabel>
-                        <ProgressBarLabel>
-                            {numeral(cashRegister.limit).format("$0,0.00")}
-                        </ProgressBarLabel>
-                    </ProgressBarLabels>
-                    <StyledProgressBar variant="determinate" value={progressPercentage} />
-                </ProgressBarContainer>
+            <Stack spacing={0.4}>
+                <StyledProgressBar variant="determinate" value={progressPercentage} />
+                <Stack direction="row" justifyContent="space-between">
+                    <ProgressBarLabel>{numeral(cashRegister.currentCash).format("$0,0.00")}</ProgressBarLabel>
+                    <ProgressBarLabel>{numeral(cashRegister.limit).format("$0,0.00")}</ProgressBarLabel>
+                </Stack>
+            </Stack>
 
-                <Grid container spacing={2} justifyContent='space-between'>
-                    <Grid>
-                        <BalanceLabel>Efectivo actual</BalanceLabel>
-                        <BalanceValue>
-                            {numeral(cashRegister.currentCash).format("$0,0.00")}
-                        </BalanceValue>
-                    </Grid>
+            {
+                (canCut || canWithdraw) && (
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" alignItems="center">
+                        {
+                            canCut && (
+                                <Button
+                                    variant="option"
+                                    onClick={onCut}
+                                    style={{ width: "144px" }}>
+                                    Realizar corte
+                                </Button>
+                            )
+                        }
+                        {
+                            canWithdraw && (
+                                <Button
+                                    variant="option"
+                                    onClick={onWithdrawal}
+                                    style={{ width: "144px" }}>
+                                    Realizar retiro
+                                </Button>
+                            )
+                        }
+                    </Stack>
+                )
+            }
 
-                    <Grid>
-                        <BalanceLabel>Límite restante</BalanceLabel>
-                        <BalanceValue sx={{ textAlign: 'right' }}>
-                            {numeral(remainingLimit).format("$0,0.00")}
-                        </BalanceValue>
-                    </Grid>
-                </Grid>
-            </BalanceCard>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Historial de actividad de la caja</Typography>
+                <ViewAllLink onClick={onViewAllHistory}>Ver todo</ViewAllLink>
+            </Stack>
 
-            {(canCut || canWithdraw) && (
-                <ActionsContainer>
-                    {canCut && (
-                        <ActionButton variant="outlined" onClick={onCut}>
-                            Realizar corte
-                        </ActionButton>
-                    )}
-                    {canWithdraw && (
-                        <ActionButton variant="outlined" onClick={onWithdrawal}>
-                            Realizar retiro
-                        </ActionButton>
-                    )}
-                </ActionsContainer>
-            )}
+            <HistoryTable>
+                <HistoryTableHeader>
+                    <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
+                </HistoryTableHeader>
 
-            <HistorySection>
-                <HistoryHeader>
-                    <HistoryTitle>Historial de actividad de la caja</HistoryTitle>
-                    <ViewAllLink onClick={onViewAllHistory}>Ver todo</ViewAllLink>
-                </HistoryHeader>
-
-                <HistoryTable>
-                    <HistoryTableHeader>
-                        <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
-                    </HistoryTableHeader>
-
-                    <EmptyHistoryMessage>Sin actividad aún</EmptyHistoryMessage>
-                </HistoryTable>
-            </HistorySection>
+                <EmptyHistoryMessage>Sin actividad aún</EmptyHistoryMessage>
+            </HistoryTable>
         </DashboardContainer>
     );
 }

@@ -1,4 +1,4 @@
-import { Button, InputAdornment, Typography } from "@mui/material";
+import { Button, InputAdornment, Typography, CircularProgress } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import {
   Card,
@@ -11,6 +11,7 @@ export function OpenCashRegisterForm({
   initialFund,
   exchangeRate,
   canOpen = true,
+  isLoading = false,
   onInitialFundChange,
   onExchangeRateChange,
   onOpen,
@@ -32,16 +33,16 @@ export function OpenCashRegisterForm({
       <FormFieldsContainer>
         <FormTextField
           label="Fondo inicial"
-          placeholder="0.00"
-          value={initialFund.toFixed(2)}
+          placeholder="0"
+          value={initialFund}
           onChange={(e) => {
             const inputValue = e.target.value;
-            if (inputValue === "" || /^\d*\.?\d*$/.test(inputValue)) {
+            if (inputValue === "" || /^\d*$/.test(inputValue)) {
               onInitialFundChange(inputValue);
             }
           }}
           type="text"
-          inputMode="decimal"
+          inputMode="numeric"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">$</InputAdornment>
@@ -52,7 +53,7 @@ export function OpenCashRegisterForm({
         <FormTextField
           label="Paridad cambiaria"
           placeholder="0.00"
-          value={exchangeRate.toFixed(2)}
+          value={exchangeRate}
           onChange={(e) => {
             const inputValue = e.target.value;
             if (inputValue === "" || /^\d*\.?\d*$/.test(inputValue)) {
@@ -72,9 +73,9 @@ export function OpenCashRegisterForm({
       <Button
         variant="contained"
         onClick={onOpen}
-        disabled={!canOpen}
+        disabled={!canOpen || isLoading}
         fullWidth>
-        Abrir caja
+        {isLoading ? <CircularProgress size={24} color="inherit" /> : "Abrir caja"}
       </Button>
     </Card>
   );

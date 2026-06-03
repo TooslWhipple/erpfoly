@@ -18,10 +18,6 @@ import {
 } from "./styles";
 import type { OrderStatus } from "./styles";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export type { OrderStatus } from "./styles";
 
 export interface OrderCardData {
@@ -40,10 +36,6 @@ interface OrderCardProps {
     order: OrderCardData;
     onClick?: (order: OrderCardData) => void;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
@@ -66,10 +58,6 @@ function getProgressColor(status: OrderStatus): string {
             return "#d1d5db";
     }
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function OrderCard({ order, onClick }: OrderCardProps) {
     const progressColor = getProgressColor(order.status);
@@ -110,11 +98,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
         </CardContainer>
     );
 }
-
-// ============================================================================
-// ORDER LIST COMPONENT
-// ============================================================================
-
+        
 interface OrderListProps {
     orders: OrderCardData[];
     onOrderClick?: (order: OrderCardData) => void;

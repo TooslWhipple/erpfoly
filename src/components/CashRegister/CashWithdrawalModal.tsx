@@ -1,30 +1,16 @@
 import { useState, useMemo } from "react";
-import { Stack, Box, Typography } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { Stack, Typography, Divider, Button } from "@mui/material";
 import numeral from "numeral";
 import { FormSelect, FormTextField } from "@/components/Form";
 import { SideModal } from "@/components/SideModal";
 import {
-  DialogContent,
-  ModalHeader,
-  ModalTitle,
-  CloseButton,
   CurrentCashCard,
   CurrentCashLabel,
   CurrentCashValue,
   WithdrawalAmountInput,
-  WithdrawalAmountLabel,
-  WithdrawalFieldsRow,
-  AvailableAfterWithdrawalCard,
-  AvailableAfterWithdrawalLabel,
-  AvailableAfterWithdrawalValue,
-  WithdrawalModalActions,
-  WithdrawalButton,
+  WithdrawalTotalCard,
 } from "@/styles/cajas.styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { StatusChip } from "../StatusChip";
 
 export interface CashWithdrawalModalProps {
   open: boolean;
@@ -34,10 +20,6 @@ export interface CashWithdrawalModalProps {
   currentCash: number;
   banks: Array<{ value: string; label: string }>;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function CashWithdrawalModal({
   open,
@@ -93,96 +75,70 @@ export function CashWithdrawalModal({
 
   return (
     <SideModal
+      fullWidth
+      maxWidth="md"
       open={open}
       onClose={onClose}
-      title={cashRegisterName}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogContent>
-        <ModalHeader>
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1 }}>
-            <ModalTitle>{cashRegisterName}</ModalTitle>
+      contentSx={{ backgroundColor: "white", padding: 0 }}
+      headerContent={
+        <Stack spacing={2}>
+          <Stack direction="row" width="100%" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2" color="text.secondary">{cashRegisterName}</Typography>
+            <StatusChip label="Abierta" variant="success" size="small" />
           </Stack>
-          <CloseButton onClick={onClose} size="small">
-            <CloseIcon />
-          </CloseButton>
-        </ModalHeader>
-
-        <Stack direction="column" spacing={3} sx={{ mt: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
-            Retiro de efectivo
-          </Typography>
-
+          <Typography variant="h4">Retiro de efectivo</Typography>
           <CurrentCashCard>
             <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
             <CurrentCashValue>
               {numeral(currentCash).format("$0,0.00")}
             </CurrentCashValue>
           </CurrentCashCard>
+        </Stack>
+      }>
+      <Divider />
+      <Stack direction="column" spacing={3} style={{ padding: "8px 24px 24px" }}>
 
-          <Box>
-            <WithdrawalAmountLabel>
-              Ingresa el monto a retirar:
-            </WithdrawalAmountLabel>
-            <WithdrawalAmountInput
-              value={withdrawalAmount}
-              onChange={handleAmountChange}
-              onBlur={handleAmountBlur}
-              placeholder="0.00"
-              InputProps={{
-                startAdornment: (
-                  <Typography sx={{ mr: 1, color: "text.primary", fontWeight: 600 }}>
-                    $
-                  </Typography>
-                ),
-              }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  fontSize: "1.5rem",
-                  fontWeight: 600,
-                  height: 56,
-                },
-              }}
-            />
-          </Box>
-
-          <WithdrawalFieldsRow>
-            <Stack sx={{ flex: 1 }}>
-              <FormSelect
-                label="Banco"
-                value={selectedBank}
-                onChange={handleBankChange}
-                options={banks}
-                placeholder="Seleccione un banco"
-              />
-            </Stack>
-            <Stack sx={{ flex: 1 }}>
-              <FormTextField
-                label="Numero de cheque"
-                placeholder="Ingrese"
-                value={checkNumber}
-                onChange={(e) => setCheckNumber(e.target.value)}
-              />
-            </Stack>
-          </WithdrawalFieldsRow>
-
-          <AvailableAfterWithdrawalCard>
-            <AvailableAfterWithdrawalLabel>
-              Monto disponible despues del retiro:
-            </AvailableAfterWithdrawalLabel>
-            <AvailableAfterWithdrawalValue>
-              {numeral(availableAfterWithdrawal).format("$0,0.00")}
-            </AvailableAfterWithdrawalValue>
-          </AvailableAfterWithdrawalCard>
+        <Stack spacing={2} alignItems="center">
+          <Typography variant="subtitle1">Ingresa el monto a retirar:</Typography>
+          <WithdrawalAmountInput
+            value={withdrawalAmount}
+            onChange={handleAmountChange}
+            onBlur={handleAmountBlur}
+            placeholder="0.00"
+          />
         </Stack>
 
-        <WithdrawalModalActions>
-          <WithdrawalButton variant="contained" onClick={handleConfirm} fullWidth>
-            Realizar retiro
-          </WithdrawalButton>
-        </WithdrawalModalActions>
-      </DialogContent>
-    </SideModal>
+        <Stack direction="row" spacing={2}>
+          <FormSelect
+            label="Banco"
+            value={selectedBank}
+            onChange={handleBankChange}
+            options={banks}
+            placeholder="Seleccione un banco"
+          />
+          <FormTextField
+            label="Numero de cheque"
+            placeholder="Ingrese"
+            value={checkNumber}
+            onChange={(e) => setCheckNumber(e.target.value)}
+          />
+        </Stack>
+
+        <WithdrawalTotalCard>
+          <Typography variant="body2" color="text.secondary">Monto disponible despues del retiro:</Typography>
+          <Typography variant="subtitle1">{numeral(availableAfterWithdrawal).format("$0,0.00")}</Typography>
+        </WithdrawalTotalCard>
+
+        <Divider />
+
+        <Button
+          fullWidth
+          variant="contained"
+          size="large"
+          onClick={handleConfirm}>
+          Realizar retiro
+        </Button>
+      </Stack>
+    </ SideModal>
   );
 }

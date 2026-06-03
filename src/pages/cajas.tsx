@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Stack, Typography } from "@mui/material";
 import { MainLayout, StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuthStore } from "@/store/useAuthStore";
 import { CASH_REGISTERS_UPDATE } from "@/lib/permissions";
+import { getApiErrorMessage } from "@/lib/axios";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
@@ -17,47 +19,90 @@ import {
   type CashRegisterStatus,
   CashRegisterIconContainer,
 } from "@/styles/cajas.styles";
+import {
+  getUserAssignedCashRegister,
+  openCashRegister as openCashRegisterApi,
+} from "@/services/cash-register.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export default function Cajas() {
   const { hasPermission } = usePermissions();
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
+  const user = useAuthStore((state) => state.user);
+  const showError = useSnackbarStore((state) => state.showError);
 
-  const [cashRegister, setCashRegister] = useState<CashRegisterState>({
-    id: "1",
-    name: "Caja 1",
-    status: "closed",
-    initialFund: 1500.0,
-    exchangeRate: 17.6,
-    currentCash: 1500.0,
-    limit: 20000.0,
-  });
+  const [cashRegister, setCashRegister] = useState<CashRegisterState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOpening, setIsOpening] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
 
-  const handleOpenCashRegister = () => {
-    setCashRegister((prev) => ({
-      ...prev,
-      status: "open",
-    }));
+  const [initialFund, setInitialFund] = useState("0");
+  const [exchangeRate, setExchangeRate] = useState("17.6");
+
+  const loadAssignedCashRegister = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setIsLoading(true);
+      const assigned = await getUserAssignedCashRegister();
+      if (!assigned) {
+        showError("No tienes una caja asignada. Contacta a un administrador.");
+        return;
+      }
+      setCashRegister({
+        id: String(assigned.id),
+        name: assigned.name,
+        status: assigned.status === "OPEN" ? "open" : "closed",
+        initialFund: 0,
+        exchangeRate: 17.6,
+        currentCash: 0,
+        limit: 20000.0,
+      });
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, showError]);
+
+  useEffect(() => {
+    loadAssignedCashRegister();
+  }, [loadAssignedCashRegister]);
+
+  const handleOpenCashRegister = async () => {
+    if (!cashRegister) return;
+    try {
+      setIsOpening(true);
+      await openCashRegisterApi({
+        opening_balance: parseFloat(initialFund) || 0,
+        exchange_rate: parseFloat(exchangeRate) || 0,
+      });
+      setCashRegister((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "open",
+              initialFund: parseFloat(initialFund) || 0,
+              exchangeRate: parseFloat(exchangeRate) || 0,
+              currentCash: parseFloat(initialFund) || 0,
+            }
+          : prev
+      );
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setIsOpening(false);
+    }
   };
 
   const handleInitialFundChange = (value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setCashRegister((prev) => ({
-      ...prev,
-      initialFund: numValue,
-      currentCash: numValue,
-    }));
+    setInitialFund(value);
   };
 
   const handleExchangeRateChange = (value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setCashRegister((prev) => ({
-      ...prev,
-      exchangeRate: numValue,
-    }));
+    setExchangeRate(value);
   };
 
   const getStatusLabel = (status: CashRegisterStatus) => {
@@ -69,7 +114,6 @@ export default function Cajas() {
   };
 
   const handleCutConfirm = (cutType: CutType, withdrawalData?: Record<number, number>) => {
-    // TODO: Implement cut functionality with cutType
     if (cutType === "partial" && withdrawalData) {
       // Handle partial cut with withdrawal data
     }
@@ -89,7 +133,6 @@ export default function Cajas() {
   };
 
   const handleCashWithdrawalConfirm = (amount: number, bank: string, checkNumber: string) => {
-    // TODO: Implement cash withdrawal functionality
     void amount;
     void bank;
     void checkNumber;
@@ -115,6 +158,28 @@ export default function Cajas() {
     // TODO: Implement view all history functionality
   };
 
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
+          <Typography variant="body1">Cargando...</Typography>
+        </Stack>
+      </MainLayout>
+    );
+  }
+
+  if (!cashRegister) {
+    return (
+      <MainLayout>
+        <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
+          <Typography variant="h6" color="text.secondary">
+            No tienes una caja asignada
+          </Typography>
+        </Stack>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Stack spacing={3} justifyContent="center" alignItems="center" style={{ marginTop: "112px" }}>
@@ -135,9 +200,10 @@ export default function Cajas() {
         {
           cashRegister.status === "closed" ?
             <OpenCashRegisterForm
-              initialFund={cashRegister.initialFund}
-              exchangeRate={cashRegister.exchangeRate}
+              initialFund={initialFund}
+              exchangeRate={exchangeRate}
               canOpen={canUpdateCashRegister}
+              isLoading={isOpening}
               onInitialFundChange={handleInitialFundChange}
               onExchangeRateChange={handleExchangeRateChange}
               onOpen={handleOpenCashRegister}

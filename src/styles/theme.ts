@@ -240,6 +240,25 @@ export const theme = createTheme({
           },
         },
       },
+      variants: [
+        {
+          props: { variant: "option" },
+          style: ({ theme }) => ({
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            border: `1px solid ${theme.palette.app.border}`,
+            "&:hover": {
+              backgroundColor: theme.palette.background.paper,
+              borderColor: theme.palette.text.secondary,
+            },
+            "&.Mui-disabled": {
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.action.disabled,
+              borderColor: theme.palette.action.disabledBackground,
+            },
+          }),
+        },
+      ],
     },
     MuiTextField: {
       styleOverrides: {
@@ -339,5 +358,11 @@ declare module "@mui/material/styles" {
   }
   interface PaletteOptions {
     app?: AppPalette;
+  }
+}
+
+declare module "@mui/material/Button" {
+  interface ButtonPropsVariantOverrides {
+    option: true;
   }
 }

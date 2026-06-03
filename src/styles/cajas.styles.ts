@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Box, TextField, Typography, Chip, Button, LinearProgress, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
-import { theme } from "@/styles/theme";
+import { TextField, Typography, Chip, Button, LinearProgress, IconButton, DialogContent as MuiDialogContent } from "@mui/material";
 
 export type CashRegisterStatus = "open" | "closed";
 
@@ -49,29 +48,29 @@ export const Card = styled('div')(({ theme }) => ({
     margin: "0 auto",
 }));
 
-export const FormFieldsContainer = styled(Box)(({ theme }) => ({
+export const FormFieldsContainer = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(2.5),
 }));
 
-export const DashboardContainer = styled(Box)(({ theme }) => ({
-    width: 672,
-    maxWidth: "100%",
-    margin: "0 auto",
+export const DashboardContainer = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
+    gap: "32px",
+    width: "672px",
+    maxWidth: "100%",
+    margin: "0 auto",
 }));
 
-export const SearchBarContainer = styled(Box)(({ theme }) => ({
+export const SearchBarContainer = styled('div')(({ theme }) => ({
     display: "flex",
-    gap: theme.spacing(1.5),
+    gap: "16px",
     alignItems: "center",
     backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: "12px",
     border: `1px solid ${theme.palette.app.border}`,
-    padding: theme.spacing(1.5),
-    marginBottom: theme.spacing(3),
+    padding: "8px"
 }));
 
 export const PaymentTypeSelect = styled(Button)(({ theme }) => ({
@@ -92,45 +91,23 @@ export const SearchInput = styled(TextField)(({ theme }) => ({
     "& .MuiOutlinedInput-root": {
         backgroundColor: theme.palette.background.paper,
         height: 36,
+        borderColor: 'none',
         "& fieldset": {
-            borderColor: theme.palette.app.border,
+            border: 'none'
         },
         "&:hover fieldset": {
-            borderColor: theme.palette.text.disabled,
+            border: 'none'
         },
         "&.Mui-focused fieldset": {
-            borderColor: theme.palette.app.sidebar.textSelected,
+            border: 'none'
         },
-    },
-    "& .MuiOutlinedInput-input": {
-        padding: "8px 12px",
-        fontSize: "0.875rem",
-    },
+    }
 }));
 
 export const SearchButton = styled(Button)(({ theme }) => ({
     height: 36,
     minWidth: 100,
     fontWeight: 600,
-}));
-
-export const BalanceCard = styled(Box)(({ theme }) => ({
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${theme.palette.app.border}`,
-    padding: theme.spacing(2.5),
-    marginBottom: theme.spacing(3),
-}));
-
-export const ProgressBarContainer = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(2.5),
-}));
-
-export const ProgressBarLabels = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing(0.75),
 }));
 
 export const ProgressBarLabel = styled(Typography)(({ theme }) => ({
@@ -140,16 +117,16 @@ export const ProgressBarLabel = styled(Typography)(({ theme }) => ({
 }));
 
 export const StyledProgressBar = styled(LinearProgress)(({ theme }) => ({
-    height: 8,
-    borderRadius: 4,
+    height: "8px",
+    borderRadius: "32px",
     backgroundColor: "#E4E4E7",
     "& .MuiLinearProgress-bar": {
-        borderRadius: 4,
-        background: "linear-gradient(90deg, #22C55E 0%, #F59E0B 100%)",
+        borderRadius: "32px",
+        background: "linear-gradient(90deg, #16A34A 0%, #EAC50C 50%, #EF4444 100%)",
     },
 }));
 
-export const BalanceInfoContainer = styled(Box)(({ theme }) => ({
+export const BalanceInfoContainer = styled('div')(({ theme }) => ({
     display: "flex",
     justifyContent: "space-between",
     gap: theme.spacing(4),
@@ -159,79 +136,28 @@ export const BalanceInfoContainer = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const BalanceInfoItem = styled(Box)(({ theme }) => ({
+export const BalanceInfoItem = styled('div')(({ theme }) => ({
     flex: 1,
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(0.5),
 }));
 
-export const BalanceLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    fontWeight: 400,
-}));
-
-export const BalanceValue = styled(Typography)(({ theme }) => ({
-    fontSize: "1.5rem",
-    fontWeight: 700,
-    color: theme.palette.text.primary,
-}));
-
-export const ActionsContainer = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(3),
-    [theme.breakpoints.down("sm")]: {
-        flexDirection: "column",
-    },
-}));
-
-export const ActionButton = styled(Button)(({ theme }) => ({
-    flex: 1,
-    height: 40,
-    fontWeight: 600,
-}));
-
-export const HistorySection = styled(Box)(({ theme }) => ({
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${theme.palette.app.border}`,
-    padding: theme.spacing(2.5),
-}));
-
-export const HistoryHeader = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing(4),
-}));
-
-export const HistoryTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1rem",
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-}));
-
 export const ViewAllLink = styled(Button)(({ theme }) => ({
     textTransform: "none",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    color: theme.palette.app.sidebar.textSelected,
-    padding: 0,
-    minWidth: "auto",
+    color: theme.palette.text.primary,
     "&:hover": {
         backgroundColor: "transparent",
         textDecoration: "underline",
     },
 }));
 
-export const HistoryTable = styled(Box)(({ theme }) => ({
+export const HistoryTable = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
 }));
 
-export const HistoryTableHeader = styled(Box)(({ theme }) => ({
+export const HistoryTableHeader = styled('div')(({ theme }) => ({
     display: "grid",
     gridTemplateColumns: "80px 1fr 1fr 1fr 1fr",
     gap: theme.spacing(2),
@@ -253,44 +179,13 @@ export const EmptyHistoryMessage = styled(Typography)(({ theme }) => ({
     padding: theme.spacing(3),
 }));
 
-export const DialogContent = styled(MuiDialogContent)(({ theme }) => ({
-    padding: theme.spacing(3),
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-}));
-
-export const ModalHeader = styled(Box)(({ theme }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(1),
-}));
-
-export const ModalTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1.25rem",
-    fontWeight: 600,
-    color: theme.palette.text.primary,
-    lineHeight: 1.3,
-}));
-
-export const CloseButton = styled(IconButton)(({ theme }) => ({
-    marginTop: -4,
-    marginRight: -8,
-    color: theme.palette.text.secondary,
-    "&:hover": {
-        backgroundColor: theme.palette.action.hover,
-    },
-}));
-
-export const CutSection = styled(Box)(({ theme }) => ({
+export const CutSection = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(1.5),
 }));
 
-export const CutSectionHeader = styled(Box)(({ theme }) => ({
+export const CutSectionHeader = styled('div')(({ theme }) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -302,7 +197,7 @@ export const CutSectionTitle = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.primary,
 }));
 
-export const TotalIncomeCard = styled(Box)(({ theme }) => ({
+export const TotalIncomeCard = styled('div')(({ theme }) => ({
     backgroundColor: "#F4F4F5",
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(1.5),
@@ -323,13 +218,13 @@ export const TotalIncomeValue = styled(Typography)(({ theme }) => ({
     fontWeight: 600,
 }));
 
-export const BreakdownList = styled(Box)(({ theme }) => ({
+export const BreakdownList = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(1),
 }));
 
-export const BreakdownItem = styled(Box)(({ theme }) => ({
+export const BreakdownItem = styled('div')(({ theme }) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -349,7 +244,7 @@ export const BreakdownValue = styled(Typography)(({ theme }) => ({
     textAlign: "right",
 }));
 
-export const ShortageCard = styled(Box)(({ theme }) => ({
+export const ShortageCard = styled('div')(({ theme }) => ({
     backgroundColor: "#F4F4F5",
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(1.5),
@@ -370,7 +265,7 @@ export const ShortageValue = styled(Typography)(({ theme }) => ({
     fontWeight: 600,
 }));
 
-export const CutModalActions = styled(Box)(({ theme }) => ({
+export const CutModalActions = styled('div')(({ theme }) => ({
     display: "flex",
     gap: theme.spacing(2),
     marginTop: theme.spacing(2),
@@ -383,13 +278,13 @@ export const CutButton = styled(Button)(({ theme }) => ({
     fontWeight: 600,
 }));
 
-export const WithdrawalSection = styled(Box)(({ theme }) => ({
+export const WithdrawalSection = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(2),
 }));
 
-export const WithdrawalSectionHeader = styled(Box)(({ theme }) => ({
+export const WithdrawalSectionHeader = styled('div')(({ theme }) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -401,13 +296,14 @@ export const WithdrawalSectionTitle = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.primary,
 }));
 
-export const CurrentCashCard = styled(Box)(({ theme }) => ({
-    backgroundColor: "#F4F4F5",
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(1.5),
+export const CurrentCashCard = styled('div')(({ theme }) => ({
     display: "flex",
-    justifyContent: "space-between",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "8px",
+    padding: "8px 16px"
 }));
 
 export const CurrentCashLabel = styled(Typography)(({ theme }) => ({
@@ -428,29 +324,26 @@ export const WithdrawalInstruction = styled(Typography)(({ theme }) => ({
     fontWeight: 400,
 }));
 
-export const DenominationList = styled(Box)(({ theme }) => ({
+export const DenominationList = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(1.5),
 }));
 
-export const DenominationItem = styled(Box)(({ theme }) => ({
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${theme.palette.app.border}`,
-    padding: theme.spacing(1.5),
+export const DenominationItem = styled('div')(({ theme }) => ({
     display: "flex",
-    justifyContent: "space-between",
+    flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing(2),
+    justifyContent: "space-between",
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "16px",
+    padding: "12px 16px"
 }));
 
-export const DenominationBadge = styled(Box)(({ theme }) => ({
-    borderRadius: "12px",
-    padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
-    fontSize: "0.813rem",
-    fontWeight: 600,
-    minWidth: 40,
-    textAlign: "center",
+export const DenominationBadge = styled('div')(({ theme }) => ({
+    borderRadius: "2px",
+    padding: "4px",
+    textAlign: "center"
 }));
 
 export const DenominationTypeLabel = styled(Typography)(({ theme }) => ({
@@ -459,28 +352,14 @@ export const DenominationTypeLabel = styled(Typography)(({ theme }) => ({
     fontWeight: 400,
 }));
 
-export const DenominationControls = styled(Box)(({ theme }) => ({
+export const WithdrawalTotalCard = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(2),
-}));
-
-export const DenominationSubtotal = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.primary,
-    fontWeight: 500,
-    minWidth: 60,
-    textAlign: "right",
-}));
-
-export const WithdrawalTotalCard = styled(Box)(({ theme }) => ({
-    backgroundColor: "#F4F4F5",
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${theme.palette.app.border}`,
-    padding: theme.spacing(1.5),
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+    justifyContent: "flex-end",
+    backgroundColor: theme.palette.background.lowGray,
+    borderRadius: "8px",
+    gap: "8px",
+    padding: "16px",
 }));
 
 export const WithdrawalTotalLabel = styled(Typography)(({ theme }) => ({
@@ -495,69 +374,25 @@ export const WithdrawalTotalValue = styled(Typography)(({ theme }) => ({
     fontWeight: 600,
 }));
 
-export const WithdrawalModalActions = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(2),
-    marginTop: theme.spacing(2),
-    paddingTop: theme.spacing(2),
-    borderTop: `1px solid ${theme.palette.app.border}`,
-}));
-
-export const WithdrawalButton = styled(Button)(({ theme }) => ({
-    height: 40,
-    fontWeight: 600,
-}));
-
-export const WithdrawalAmountInput = styled(TextField)(({ theme }) => ({
-    width: "100%",
+export const WithdrawalAmountInput = styled(TextField)({
     "& .MuiOutlinedInput-root": {
-        backgroundColor: "#F4F4F5",
-        borderRadius: theme.shape.borderRadius,
-        "& fieldset": {
-            borderColor: theme.palette.app.border,
-        },
-        "&:hover fieldset": {
-            borderColor: theme.palette.text.disabled,
-        },
-        "&.Mui-focused fieldset": {
-            borderColor: theme.palette.app.sidebar.textSelected,
-        },
+      justifyContent: "center",
+  
+      "& fieldset": {
+        border: "none",
+      },
     },
-}));
-
-export const WithdrawalAmountLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    fontWeight: 400,
-    marginBottom: theme.spacing(1),
-    textAlign: "center",
-}));
-
-export const WithdrawalFieldsRow = styled(Box)(({ theme }) => ({
-    display: "flex",
-    gap: theme.spacing(2),
-    [theme.breakpoints.down("sm")]: {
-        flexDirection: "column",
+  
+    "& .MuiInputAdornment-root": {
+      marginRight: 0,
     },
-}));
-
-export const AvailableAfterWithdrawalCard = styled(Box)(({ theme }) => ({
-    backgroundColor: "#F4F4F5",
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(1.5),
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-}));
-
-export const AvailableAfterWithdrawalLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.primary,
-    fontWeight: 500,
-}));
-
-export const AvailableAfterWithdrawalValue = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.primary,
-    fontWeight: 600,
-}));
+  
+    "& .MuiInputBase-input": {
+      fontSize: "48px",
+      fontWeight: 400,
+      textAlign: "center",
+      width: "auto",
+      minWidth: "1ch",
+      padding: 0,
+    },
+  });

@@ -59,7 +59,6 @@ function getProgressColor(status: OrderStatus): string {
     }
 }
 
-
 export function OrderCard({ order, onClick }: OrderCardProps) {
     const statusVariant: StatusChipVariant = getStatusVariant(order.status);
     const progressColor = getProgressColor(order.status);
@@ -103,7 +102,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
         </Card>
     );
 }
-
+        
 interface OrderListProps {
     orders: OrderCardData[];
     onOrderClick?: (order: OrderCardData) => void;

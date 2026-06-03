@@ -1,4 +1,4 @@
-import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import type { HousingTypeCatalogItem } from "@/services/address.service";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
@@ -17,6 +17,7 @@ interface AddressTabProps {
   mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
   onFieldChange: (field: keyof AddressTabValues, value: AddressTabValues[keyof AddressTabValues]) => void;
   onSave: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function AddressTab({
@@ -29,6 +30,7 @@ export function AddressTab({
   mergeFieldValues,
   onFieldChange,
   onSave,
+  saving,
 }: AddressTabProps) {
   const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
 
@@ -86,6 +88,7 @@ export function AddressTab({
             onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
+            disabled={saving}
           />
         </Grid>
 
@@ -99,6 +102,7 @@ export function AddressTab({
             onChange={(event) => onFieldChange("betweenStreets", event.target.value)}
             error={Boolean(errors.betweenStreets)}
             helperText={errors.betweenStreets}
+            disabled={saving}
           />
         </Grid>
 
@@ -110,7 +114,7 @@ export function AddressTab({
             placeholder="Ingresa"
             value={values.receiverPhone}
             onChange={(event) => onFieldChange("receiverPhone", event.target.value)}
-            disabled={values.useClientPhone}
+            disabled={values.useClientPhone || saving}
             error={Boolean(errors.receiverPhone)}
             helperText={errors.receiverPhone}
           />
@@ -125,6 +129,7 @@ export function AddressTab({
             onChange={(event) => onFieldChange("receiverName", event.target.value)}
             error={Boolean(errors.receiverName)}
             helperText={errors.receiverName}
+            disabled={saving}
           />
         </Grid>
 
@@ -132,7 +137,7 @@ export function AddressTab({
           <Stack direction="row" alignItems="center" spacing={1}>
             <Switch
               checked={values.useClientPhone}
-              disabled={!canUseClientPhone}
+              disabled={!canUseClientPhone || saving}
               onChange={(event) => {
                 const checked = event.target.checked;
                 if (checked) {
@@ -167,7 +172,7 @@ export function AddressTab({
                       value={String(item.id)}
                       label={item.name}
                       checked={values.housingType === String(item.id)}
-                      disabled={housingTypesLoading}
+                      disabled={housingTypesLoading || saving}
                       onChange={(event) => onFieldChange("housingType", event.target.value)}
                     />
                   ))
@@ -191,6 +196,7 @@ export function AddressTab({
             onChange={(event) => onFieldChange("residenceTime", event.target.value)}
             error={Boolean(errors.residenceTime)}
             helperText={errors.residenceTime}
+            disabled={saving}
           />
         </Grid>
 
@@ -201,6 +207,7 @@ export function AddressTab({
             placeholder="Ingresa"
             value={values.previousAddress}
             onChange={(event) => onFieldChange("previousAddress", event.target.value)}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
@@ -210,12 +217,16 @@ export function AddressTab({
             placeholder="Ingresa"
             value={values.previousResidenceTime}
             onChange={(event) => onFieldChange("previousResidenceTime", event.target.value)}
+            disabled={saving}
           />
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Button variant="contained" onClick={onSave}>
-            Guardar
+          <Button
+            variant="contained"
+            onClick={onSave}
+            disabled={saving}>
+            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
           </Button>
         </Grid>
       </Grid>

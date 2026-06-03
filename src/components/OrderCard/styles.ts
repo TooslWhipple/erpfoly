@@ -4,11 +4,11 @@ import { theme } from "@/styles/theme";
 
 export type OrderStatus = "pending" | "in_progress" | "received";
 
-export const CardContainer = styled('div')(({ theme }) => ({
+export const Card = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: "16px",
-  padding: "24px",
+  borderRadius: "12px",
+  padding: "16px 24px",
   cursor: "pointer",
   transition: "background-color 0.15s ease",
   "&:hover": {
@@ -18,10 +18,9 @@ export const CardContainer = styled('div')(({ theme }) => ({
 
 export const ProgressBarContainer = styled('div')({
   position: "relative",
-  height: 6,
-  borderRadius: 3,
+  height: "8px",
+  borderRadius: "12px",
   overflow: "hidden",
-  marginBottom: 12,
   backgroundColor: "#e5e7eb",
 });
 
@@ -42,65 +41,6 @@ export const ProgressBarFill = styled('div', {
   borderRadius: 3,
   transition: "width 0.3s ease",
 }));
-
-export const ContentRow = styled('div')({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 16,
-});
-
-export const InfoSection = styled('div')({
-  display: "flex",
-  flexDirection: "column",
-  gap: 2,
-  minWidth: 0,
-  flex: 1,
-});
-
-export const SupplierName = styled(Typography)({
-  fontSize: 15,
-  fontWeight: 500,
-  color: theme.palette.text.primary,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-});
-
-export const DateText = styled(Typography)({
-  fontSize: 13,
-  color: theme.palette.text.secondary,
-});
-
-export const ArrowContainer = styled('div')({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#9CA3AF",
-  flexShrink: 0,
-  padding: "0 8px",
-});
-
-export const DestinationSection = styled('div')({
-  display: "flex",
-  flexDirection: "column",
-  gap: 2,
-  minWidth: 0,
-  flex: 1,
-});
-
-export const DestinationName = styled(Typography)({
-  fontSize: 15,
-  fontWeight: 500,
-  color: theme.palette.text.primary,
-});
-
-export const ItemCountText = styled(Typography)({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
-  whiteSpace: "nowrap",
-  flexShrink: 0,
-});
 
 interface StatusChipProps {
   statusType: OrderStatus;
@@ -124,12 +64,6 @@ export const StatusChip = styled(Chip, {
     height: 28,
   };
 });
-
-export const ListContainer = styled('div')(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(2),
-}));
 
 export const EmptyContainer = styled('div')(({ theme }) => ({
   display: "flex",

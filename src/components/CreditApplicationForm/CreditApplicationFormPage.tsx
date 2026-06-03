@@ -252,6 +252,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onFieldChange={handleBasicFieldChange}
             onValidateSecurityCode={basicInformationTab.validateCurrentSecurityCode}
             onContinue={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -281,6 +282,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               }
             }}
             onContinue={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -306,6 +308,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               persistAddress(nextValues);
             }}
             onSave={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -324,6 +327,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               persistEmployment(nextValues);
             }}
             onSave={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -350,6 +354,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               persistReferences(nextValues);
             }}
             onSave={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -377,6 +382,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               persistDocumentation(nextValues);
             }}
             onSave={handleContinueToNextTab}
+            saving={saving}
           />
         }
         {
@@ -396,6 +402,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               persistGuarantor(nextValues);
             }}
             onSave={handleGuarantorSave}
+            saving={saving}
           />
         }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Stack, Typography, Divider, Button } from "@mui/material";
+import { Stack, Typography, Divider, Button, CircularProgress } from "@mui/material";
 import numeral from "numeral";
 import { FormSelect, FormTextField } from "@/components/Form";
 import { SideModal } from "@/components/SideModal";
@@ -19,6 +19,7 @@ export interface CashWithdrawalModalProps {
   cashRegisterName: string;
   currentCash: number;
   banks: Array<{ value: string; label: string }>;
+  isLoading?: boolean;
 }
 
 export function CashWithdrawalModal({
@@ -28,6 +29,7 @@ export function CashWithdrawalModal({
   cashRegisterName,
   currentCash,
   banks,
+  isLoading = false,
 }: CashWithdrawalModalProps) {
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>("0.00");
   const [selectedBank, setSelectedBank] = useState<string>("");
@@ -55,6 +57,16 @@ export function CashWithdrawalModal({
     const amount = parseFloat(withdrawalAmount) || 0;
     return Math.max(0, currentCash - amount);
   }, [withdrawalAmount, currentCash]);
+
+  const exceedsAvailable = useMemo(() => {
+    const amount = parseFloat(withdrawalAmount) || 0;
+    return amount > currentCash;
+  }, [withdrawalAmount, currentCash]);
+
+  const isFormValid = useMemo(() => {
+    const amount = parseFloat(withdrawalAmount) || 0;
+    return amount > 0 && !exceedsAvailable && selectedBank;
+  }, [withdrawalAmount, exceedsAvailable, selectedBank]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -129,14 +141,21 @@ export function CashWithdrawalModal({
           <Typography variant="subtitle1">{numeral(availableAfterWithdrawal).format("$0,0.00")}</Typography>
         </WithdrawalTotalCard>
 
+        {exceedsAvailable && (
+          <Typography variant="body2" color="error.main" textAlign="center">
+            El monto excede el efectivo disponible
+          </Typography>
+        )}
+
         <Divider />
 
         <Button
           fullWidth
           variant="contained"
           size="large"
-          onClick={handleConfirm}>
-          Realizar retiro
+          onClick={handleConfirm}
+          disabled={isLoading || !isFormValid}>
+          {isLoading ? <CircularProgress size={24} color="inherit" /> : "Realizar retiro"}
         </Button>
       </Stack>
     </ SideModal>

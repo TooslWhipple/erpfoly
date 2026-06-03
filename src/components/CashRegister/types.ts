@@ -10,6 +10,16 @@ export interface CashRegisterState {
   limit: number;
 }
 
+export interface CashMovement {
+  id: number;
+  amount: number;
+  movement_type: string;
+  reference_folio: string | null;
+  created_at: string;
+  created_by_name: string;
+  client_name: string | null;
+}
+
 export interface OpenCashRegisterFormProps {
   initialFund: string;
   exchangeRate: string;
@@ -29,4 +39,6 @@ export interface CashRegisterDashboardProps {
   onCut: () => void;
   onWithdrawal: () => void;
   onViewAllHistory: () => void;
+  movements?: CashMovement[];
+  movementTypeMap?: Record<string, string>;
 }

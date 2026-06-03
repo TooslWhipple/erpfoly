@@ -6,6 +6,7 @@ export type {
   CashRegisterState,
   OpenCashRegisterFormProps,
   CashRegisterDashboardProps,
+  CashMovement,
 } from "./types";
-export type { CutType } from "./CutModal";
+export type { CutType, Denomination } from "./CutModal";
 export type { CashWithdrawalModalProps } from "./CashWithdrawalModal";

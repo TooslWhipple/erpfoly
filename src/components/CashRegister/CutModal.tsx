@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Button, Divider, Stack, Typography } from "@mui/material";
+import { Button, Divider, Stack, Typography, CircularProgress } from "@mui/material";
 import { KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
@@ -30,6 +30,13 @@ import { StatusChip } from "../StatusChip";
 
 export type CutType = "partial" | "final";
 
+export interface Denomination {
+    value: number;
+    label: string;
+    type: "bill" | "coin";
+    color: string;
+}
+
 export interface CutModalProps {
     open: boolean;
     onClose: () => void;
@@ -41,9 +48,11 @@ export interface CutModalProps {
     creditCard: number;
     cashDeposits: number;
     withdrawals: number;
+    withdrawalAmount: number;
     totalIncome: number;
     shortage: number;
     denominations: Denomination[];
+    isLoading?: boolean;
 }
 
 export function CutModal({
@@ -57,9 +66,11 @@ export function CutModal({
     creditCard,
     cashDeposits,
     withdrawals,
+    withdrawalAmount,
     totalIncome,
     shortage,
     denominations,
+    isLoading = false,
 }: CutModalProps) {
     const [cutType, setCutType] = useState<CutType>("final");
     const [withdrawalQuantities, setWithdrawalQuantities] = useState<Record<number, number>>({});
@@ -79,6 +90,7 @@ export function CutModal({
     };
 
     const handleConfirm = () => {
+        if (!isCutValid) return;
         if (cutType === "partial") {
             onConfirm(cutType, withdrawalQuantities);
         } else {
@@ -100,6 +112,17 @@ export function CutModal({
     const withdrawalTotal = useMemo(() => {
         return Object.values(withdrawalSubtotals).reduce((sum, val) => sum + val, 0);
     }, [withdrawalSubtotals]);
+
+    const partialCutExceeds = useMemo(() => {
+        return cutType === "partial" && withdrawalTotal > currentCash;
+    }, [cutType, withdrawalTotal, currentCash]);
+
+    const isCutValid = useMemo(() => {
+        if (cutType === "partial") {
+            return withdrawalTotal > 0 && !partialCutExceeds;
+        }
+        return true;
+    }, [cutType, withdrawalTotal, partialCutExceeds]);
 
     const cutTypeOptions = [
         { value: "partial", label: "Corte parcial" },
@@ -241,7 +264,7 @@ export function CutModal({
                                     <BreakdownItem>
                                         <BreakdownLabel>Retiros de caja ({withdrawals})</BreakdownLabel>
                                         <BreakdownValue sx={{ color: "error.main" }}>
-                                            -{numeral(Math.abs(withdrawals)).format("$0,0.00")}
+                                            -{numeral(withdrawalAmount).format("$0,0.00")}
                                         </BreakdownValue>
                                     </BreakdownItem>
                                 </BreakdownList>
@@ -255,17 +278,25 @@ export function CutModal({
                             </ShortageCard>
                         </>
                 }
+                {partialCutExceeds && (
+                    <Typography variant="body2" color="error.main" textAlign="center">
+                        El monto excede el efectivo disponible
+                    </Typography>
+                )}
                 <Divider />
                 <Button
                     fullWidth
                     variant="contained"
                     size="large"
-                    onClick={handleConfirm}>
-                    {
-                        (cutType === "final")
+                    onClick={handleConfirm}
+                    disabled={isLoading || !isCutValid}>
+                    {isLoading ? (
+                        <CircularProgress size={24} color="inherit" />
+                    ) : (
+                        cutType === "final"
                             ? "Realizar corte final"
                             : "Realizar corte parcial"
-                    }
+                    )}
                 </Button>
             </Stack>
         </SideModal >

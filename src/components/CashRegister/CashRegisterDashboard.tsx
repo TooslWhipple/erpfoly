@@ -29,6 +29,8 @@ export function CashRegisterDashboard({
     onCut,
     onWithdrawal,
     onViewAllHistory,
+    movements = [],
+    movementTypeMap = {},
 }: CashRegisterDashboardProps) {
     const progressPercentage = (cashRegister.currentCash / cashRegister.limit) * 100;
 
@@ -99,17 +101,45 @@ export function CashRegisterDashboard({
                 <ViewAllLink onClick={onViewAllHistory}>Ver todo</ViewAllLink>
             </Stack>
 
-            <HistoryTable>
-                <HistoryTableHeader>
-                    <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
-                    <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
-                    <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
-                    <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
-                    <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
-                </HistoryTableHeader>
+                <HistoryTable>
+                    <HistoryTableHeader>
+                        <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
+                        <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
+                        <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
+                        <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
+                        <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
+                    </HistoryTableHeader>
 
-                <EmptyHistoryMessage>Sin actividad aún</EmptyHistoryMessage>
-            </HistoryTable>
+                    {movements.length === 0 ? (
+                        <EmptyHistoryMessage>Sin actividad aún</EmptyHistoryMessage>
+                    ) : (
+                        movements.map((movement) => (
+                            <tr key={movement.id}>
+                                <td style={{ padding: "8px" }}>
+                                    {new Date(movement.created_at).toLocaleTimeString("es-MX", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </td>
+                                <td style={{ padding: "8px" }}>
+                                    {movementTypeMap[movement.movement_type] ?? movement.movement_type}
+                                </td>
+                                <td style={{ padding: "8px" }}>
+                                    {movement.reference_folio ?? "Efectivo"}
+                                </td>
+                                <td style={{ padding: "8px" }}>
+                                    {movement.created_by_name}
+                                </td>
+                                <td style={{ padding: "8px", textAlign: "right" }}>
+                                    ${movement.amount.toLocaleString("es-MX", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </HistoryTable>
         </DashboardContainer>
     );
 }

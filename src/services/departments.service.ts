@@ -16,11 +16,6 @@ export interface Department {
   name: string;
   margin: number;
   groups: ProductGroup[];
-  promotion?: {
-    percentage: number;
-    startDate: string;
-    endDate: string;
-  };
 }
 
 export interface GetDepartmentsParams {
@@ -35,22 +30,12 @@ export interface CreateDepartmentPayload {
   name: string;
   margin?: number;
   code?: string;
-  promotion?: OriginPromotionPayload;
 }
 
 export interface UpdateDepartmentPayload {
   name?: string;
   margin?: number;
   code?: string;
-  promotion?: OriginPromotionPayload;
-  removePromotion?: boolean;
-}
-
-export interface OriginPromotionPayload {
-  discount_rate: number;
-  start_date: string;
-  end_date?: string | null;
-  is_liquidation?: boolean;
 }
 
 // ============================================================================

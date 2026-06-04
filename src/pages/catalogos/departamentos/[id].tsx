@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, Alert, CircularProgress, Stack } from "@mui/material";
+import { Box, CircularProgress, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import {
   MainLayout,
@@ -14,9 +14,7 @@ import type { Column, RowAction, BreadcrumbItem } from "@/components";
 import {
   DepartmentSettingsTab,
   buildLineModalDefaultValues,
-  buildLinePromotionPayload,
   departmentLineFormFields,
-  lineModalSchemaSuperRefine,
   type DepartmentLineTableRow,
   type LineFormOutput,
 } from "@/components/DepartmentDetailTabs";
@@ -85,7 +83,6 @@ export default function DepartmentDetailPage() {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<ProductLineItem | null>(null);
   const [savingLine, setSavingLine] = useState(false);
-  const [hasGroupPromotion, setHasGroupPromotion] = useState(false);
 
   const fetchDepartment = useCallback(async () => {
     if (!isDepartmentReady) {
@@ -136,24 +133,17 @@ export default function DepartmentDetailPage() {
 
   const handleOpenNewGroup = useCallback(() => {
     setEditingLine(null);
-    setHasGroupPromotion(false);
     setGroupModalOpen(true);
   }, []);
 
   const handleOpenEditGroup = useCallback((row: DepartmentLineTableRow) => {
     setEditingLine(row);
-    setHasGroupPromotion(Boolean(row.promotion));
     setGroupModalOpen(true);
   }, []);
 
   const handleCloseGroupModal = useCallback(() => {
     setGroupModalOpen(false);
     setEditingLine(null);
-    setHasGroupPromotion(false);
-  }, []);
-
-  const handleGroupFormValuesChange = useCallback((values: Record<string, unknown>) => {
-    setHasGroupPromotion(Boolean(values.hasLinePromotion));
   }, []);
 
   const handleSaveGroup = useCallback(
@@ -162,17 +152,10 @@ export default function DepartmentDetailPage() {
 
       const name = data.name.trim();
       const code = data.code.trim().toUpperCase();
-      const promotion = buildLinePromotionPayload(data);
 
       setSavingLine(true);
       if (editingLine) {
-        const linePromotionRemoval = Boolean(editingLine.promotion) && !data.hasLinePromotion;
-        const result = await updateProductLine(editingLine.id, {
-          name,
-          code,
-          promotion,
-          removePromotion: linePromotionRemoval,
-        });
+        const result = await updateProductLine(editingLine.id, { name, code });
         setSavingLine(false);
         if (result.error) {
           console.error("[DepartmentDetail] Error saving line:", result.error.message);
@@ -181,7 +164,7 @@ export default function DepartmentDetailPage() {
         }
         showSnackbar("Línea actualizada correctamente.");
       } else {
-        const result = await createProductLine({ departmentId, name, code, promotion });
+        const result = await createProductLine({ departmentId, name, code });
         setSavingLine(false);
         if (result.error) {
           console.error("[DepartmentDetail] Error saving line:", result.error.message);
@@ -278,21 +261,21 @@ export default function DepartmentDetailPage() {
 
   const lineActions: RowAction<DepartmentLineTableRow>[] = useMemo(
     () => [
-    {
-      id: "edit",
-      label: "Editar",
-      icon: <EditIcon fontSize="small" />,
-      onClick: handleOpenEditGroup,
-      permission: CATALOG_DEPARTMENTS_UPDATE,
-    },
-    {
-      id: "delete",
-      label: "Eliminar",
-      icon: <DeleteIcon fontSize="small" />,
-      onClick: handleDeleteGroup,
-      color: "error",
-      permission: CATALOG_DEPARTMENTS_DELETE,
-    },
+      {
+        id: "edit",
+        label: "Editar",
+        icon: <EditIcon fontSize="small" />,
+        onClick: handleOpenEditGroup,
+        permission: CATALOG_DEPARTMENTS_UPDATE,
+      },
+      {
+        id: "delete",
+        label: "Eliminar",
+        icon: <DeleteIcon fontSize="small" />,
+        onClick: handleDeleteGroup,
+        color: "error",
+        permission: CATALOG_DEPARTMENTS_DELETE,
+      },
     ],
     [handleOpenEditGroup, handleDeleteGroup],
   );
@@ -312,8 +295,6 @@ export default function DepartmentDetailPage() {
 
   const settingsSaveDisabled =
     marginFieldState == null || !marginFieldState.canSave || savingSettings;
-
-  const groupAffectedCount = hasGroupPromotion ? (editingLine?.articles ?? 0) : null;
 
   if (loading) {
     return (
@@ -359,24 +340,24 @@ export default function DepartmentDetailPage() {
           actions={
             activeTab === "lines"
               ? [
-                {
-                  label: "Nueva línea",
-                  onClick: handleOpenNewGroup,
-                  variant: "contained",
-                  color: "primary",
-                  permission: CATALOG_DEPARTMENTS_CREATE,
-                },
-              ]
+                  {
+                    label: "Nueva línea",
+                    onClick: handleOpenNewGroup,
+                    variant: "contained",
+                    color: "primary",
+                    permission: CATALOG_DEPARTMENTS_CREATE,
+                  },
+                ]
               : [
-                {
-                  label: "Guardar cambios",
-                  onClick: handleSaveSettings,
-                  variant: "contained",
-                  color: "primary",
-                  permission: CATALOG_DEPARTMENTS_UPDATE,
-                  disabled: settingsSaveDisabled,
-                },
-              ]
+                  {
+                    label: "Guardar cambios",
+                    onClick: handleSaveSettings,
+                    variant: "contained",
+                    color: "primary",
+                    permission: CATALOG_DEPARTMENTS_UPDATE,
+                    disabled: settingsSaveDisabled,
+                  },
+                ]
           }
         />
         {activeTab === "lines" ? (
@@ -419,17 +400,7 @@ export default function DepartmentDetailPage() {
         maxWidth="sm"
         fullWidth
         validateOn="change"
-        onValuesChange={handleGroupFormValuesChange}
-        schemaSuperRefine={lineModalSchemaSuperRefine}
-      >
-        {hasGroupPromotion && groupAffectedCount !== null && (
-          <Box sx={{ mt: 2 }}>
-            <Alert severity="info" sx={{ borderRadius: 1 }}>
-              {groupAffectedCount} artículos serán afectados con esta promoción.
-            </Alert>
-          </Box>
-        )}
-      </ModalFormZod>
+      />
     </MainLayout>
   );
 }

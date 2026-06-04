@@ -6,14 +6,11 @@ import {
     SearchBarContainer,
     PaymentTypeSelect,
     SearchInput,
-    SearchButton,
-    ProgressBarLabel,
     StyledProgressBar,
     ViewAllLink,
     HistoryTable,
     HistoryTableHeader,
     HistoryTableHeaderCell,
-    EmptyHistoryMessage,
 } from "@/styles/cajas.styles";
 
 import type { CashRegisterDashboardProps } from "./types";
@@ -54,18 +51,18 @@ export function CashRegisterDashboard({
                     }}
                 />
 
-                <SearchButton
+                <Button
                     variant="contained"
                     onClick={() => { }}>
                     Buscar
-                </SearchButton>
+                </Button>
             </SearchBarContainer>
 
             <Stack spacing={0.4}>
                 <StyledProgressBar variant="determinate" value={progressPercentage} />
                 <Stack direction="row" justifyContent="space-between">
-                    <ProgressBarLabel>{numeral(cashRegister.currentCash).format("$0,0.00")}</ProgressBarLabel>
-                    <ProgressBarLabel>{numeral(cashRegister.limit).format("$0,0.00")}</ProgressBarLabel>
+                    <Typography variant="body2" color="text.secondary">{numeral(cashRegister.currentCash).format("$0,0.00")}</Typography>
+                    <Typography variant="body2" color="text.secondary">{numeral(cashRegister.limit).format("$0,0.00")}</Typography>
                 </Stack>
             </Stack>
 
@@ -101,25 +98,28 @@ export function CashRegisterDashboard({
                 <ViewAllLink onClick={onViewAllHistory}>Ver todo</ViewAllLink>
             </Stack>
 
-                <HistoryTable>
-                    <HistoryTableHeader>
-                        <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
-                        <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
-                    </HistoryTableHeader>
+            <HistoryTable>
+                <HistoryTableHeader>
+                    <HistoryTableHeaderCell>Hora</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Tipo</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Forma</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Usuario</HistoryTableHeaderCell>
+                    <HistoryTableHeaderCell>Monto</HistoryTableHeaderCell>
+                </HistoryTableHeader>
 
-                    {movements.length === 0 ? (
-                        <EmptyHistoryMessage>Sin actividad aún</EmptyHistoryMessage>
-                    ) : (
+                {
+                    movements.length === 0 ?
+                        <Typography variant="body2" color="text.secondary">Sin actividad aún</Typography>
+                        :
                         movements.map((movement) => (
                             <tr key={movement.id}>
                                 <td style={{ padding: "8px" }}>
-                                    {new Date(movement.created_at).toLocaleTimeString("es-MX", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
+                                    {
+                                        new Date(movement.created_at).toLocaleTimeString("es-MX", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        })
+                                    }
                                 </td>
                                 <td style={{ padding: "8px" }}>
                                     {movementTypeMap[movement.movement_type] ?? movement.movement_type}
@@ -138,8 +138,8 @@ export function CashRegisterDashboard({
                                 </td>
                             </tr>
                         ))
-                    )}
-                </HistoryTable>
+                }
+            </HistoryTable>
         </DashboardContainer>
     );
 }

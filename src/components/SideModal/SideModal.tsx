@@ -1,6 +1,6 @@
 "use client";
 
-import { Dialog, useMediaQuery, useTheme, Stack, Typography, Divider } from "@mui/material";
+import { Dialog, useMediaQuery, useTheme, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { DialogContent, CloseButton } from "../ModalForm/styles";
@@ -62,7 +62,7 @@ export function SideModal({
       direction="row"
       spacing={2}
       justifyContent="space-between"
-      alignItems="center"
+      alignItems="flex-start"
       sx={{ width: "100%" }}
     >
       <Stack spacing={0.5} width="100%">

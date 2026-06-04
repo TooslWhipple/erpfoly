@@ -39,9 +39,10 @@ export function BasicInformationTab({
   onContinue,
   saving,
 }: BasicInformationTabProps) {
+  const isSendMode = otpActionLabel !== "Validar";
+
   return (
     <Card>
-      <Typography variant="h5">Información básica</Typography>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <FormTextField
@@ -159,7 +160,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 'grow' }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             required={isSecurityCodeValid !== true}

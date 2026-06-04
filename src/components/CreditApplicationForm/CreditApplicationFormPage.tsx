@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Button, Divider, Stack } from "@mui/material";
+import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
 import { CircleAlert } from "lucide-react";
-import { Breadcrumbs, MainLayout, TabFilters } from "@/components";
+import { X } from "@/components/Icons";
+import { MainLayout, TabFilters } from "@/components";
 import { AddressTab } from "./AddressTab";
 import { BasicInformationTab } from "./BasicInformationTab";
 import { DocumentationTab } from "./DocumentationTab";
@@ -17,7 +18,6 @@ import { useFamilyRelationships } from "@/hooks/useFamilyRelationships";
 import { useMaritalStatuses } from "@/hooks/useMaritalStatuses";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { theme } from "@/styles/theme";
-import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { CreditApplicationTabId } from "@/types/credit-application-form.types";
 
 interface CreditApplicationFormPageProps {
@@ -71,10 +71,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     useFamilyRelationships();
   const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
 
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: "Solicitudes de crédito", href: "/solicitudes-credito" },
-    { label: isCreateMode ? "Nueva solicitud" : "Editar solicitud" },
-  ], [isCreateMode]);
+  const pageTitle = isCreateMode ? "Nueva solicitud de crédito" : "Editar solicitud de crédito";
 
   const additionalInformationAlertMessage = useMemo(() => {
     if (missingAdditionalInformationLabels.length === 0) {
@@ -201,24 +198,30 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   return (
     <MainLayout>
       <Stack spacing={3}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ xs: "flex-start", md: "center" }}
-          justifyContent="space-between"
-          spacing={2}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
-          <Breadcrumbs items={breadcrumbItems} showBackButton onBack={handleGoBack} />
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <IconButton size="small" onClick={handleGoBack}>
+              <X size={18} />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              {pageTitle}
+            </Typography>
+          </Stack>
           <Button
             variant="contained"
             color="inherit"
             disabled={saving || loading || loadingApplicationDetail}
             onClick={handleContinueBasicTab}
           >
-            Enviar a C&C
+            Enviar solicitud
           </Button>
-        </Stack>
-
-        <Divider />
+        </Box>
 
         {
           missingAdditionalInformationLabels.length > 0 &&

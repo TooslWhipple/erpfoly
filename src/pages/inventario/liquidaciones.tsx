@@ -224,6 +224,7 @@ export default function LiquidacionesPage() {
         }}
         productName={confirmModalItem?.productName ?? ""}
         sku={confirmModalItem?.sku ?? ""}
+        imageUrl={confirmModalItem?.imageUrl}
         previousPrice={previousPriceFromItem}
         newPrice={confirmModalItem?.suggestedPrice ?? 0}
         changePercent={confirmModalItem?.changePercent ?? 0}

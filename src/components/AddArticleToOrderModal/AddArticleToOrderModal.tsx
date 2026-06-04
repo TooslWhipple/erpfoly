@@ -7,6 +7,7 @@ import { SideModal } from "@/components/SideModal";
 import {
     AddArticleModalContainer,
     ProductImage,
+    ImagePlaceholder,
     HistorySection,
     TimelineLine,
     TimelineItem,
@@ -107,7 +108,11 @@ export function AddArticleToOrderModal({
             onClose={handleClose}
             headerContent={
                 <Stack direction="row" alignItems="center" spacing={1}>
-                    <ProductImage alt={article.name} />
+                    {article.image ? (
+                        <ProductImage src={article.image} alt={article.name} />
+                    ) : (
+                        <ImagePlaceholder />
+                    )}
                     <Stack direction="column" spacing={0.5}>
                         <Typography variant="h5">{article.name}</Typography>
                         <Typography variant="body2" color="text.secondary">{article.folio}</Typography>

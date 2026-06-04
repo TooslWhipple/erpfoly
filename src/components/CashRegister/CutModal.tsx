@@ -1,27 +1,13 @@
 import { useState, useMemo } from "react";
 import { Button, Divider, Stack, Typography, CircularProgress } from "@mui/material";
-import { KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { FormSelect } from "@/components/Form";
 import { NumberInput } from "@/components/Folypuntos";
 import { SideModal } from "@/components/SideModal";
 import {
-    CutSection,
-    CutSectionHeader,
-    CutSectionTitle,
-    TotalIncomeCard,
-    TotalIncomeLabel,
-    TotalIncomeValue,
-    BreakdownList,
     BreakdownItem,
-    BreakdownLabel,
-    BreakdownValue,
     ShortageCard,
-    ShortageLabel,
-    ShortageValue,
     CurrentCashCard,
-    CurrentCashLabel,
-    CurrentCashValue,
     DenominationItem,
     DenominationBadge,
     WithdrawalTotalCard,
@@ -156,11 +142,18 @@ export function CutModal({
                     {
                         cutType === "partial" &&
                         <CurrentCashCard>
-                            <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
-                            <CurrentCashValue>
-                                {numeral(currentCash).format("$0,0.00")}
-                            </CurrentCashValue>
+                            <Typography variant="body1">Efectivo actual</Typography>
+                            <Typography variant="subtitle1">{numeral(currentCash).format("$0,0.00")}</Typography>
                         </CurrentCashCard>
+                    }
+
+                    {
+                        cutType === "final" &&
+                        <CurrentCashCard>
+                            <Typography variant="body1">Corte final</Typography>
+                            <Typography variant="subtitle1">{numeral(totalIncome).format("$0,0.00")}</Typography>
+                        </CurrentCashCard>
+
                     }
                 </Stack>
             }>
@@ -221,69 +214,48 @@ export function CutModal({
                         </Stack>
                         :
                         <>
-                            <CutSection>
-                                <CutSectionHeader>
-                                    <CutSectionTitle>Corte final</CutSectionTitle>
-                                    <KeyboardArrowDownIcon sx={{ fontSize: 20, color: "text.secondary" }} />
-                                </CutSectionHeader>
-                                <TotalIncomeCard>
-                                    <TotalIncomeLabel>Total de ingresos</TotalIncomeLabel>
-                                    <TotalIncomeValue>
-                                        {numeral(totalIncome).format("$0,0.00")}
-                                    </TotalIncomeValue>
-                                </TotalIncomeCard>
-                            </CutSection>
 
-                            <CutSection>
-                                <CutSectionTitle sx={{ mb: 2 }}>Desgloce de caja</CutSectionTitle>
-                                <BreakdownList>
+                            <Stack>
+                                <Typography variant="subtitle1">Desgloce de caja</Typography>
+                                <Stack>
                                     <BreakdownItem>
-                                        <BreakdownLabel>Fondo inicial</BreakdownLabel>
-                                        <BreakdownValue>
-                                            {numeral(initialFund).format("$0,0.00")}
-                                        </BreakdownValue>
+                                        <Typography variant="body1">Fondo inicial</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(initialFund).format("$0,0.00")}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
-                                        <BreakdownLabel>Efectivo</BreakdownLabel>
-                                        <BreakdownValue>
-                                            {numeral(cash).format("$0,0.00")}
-                                        </BreakdownValue>
+                                        <Typography variant="body1">Efectivo</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(cash).format("$0,0.00")}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
-                                        <BreakdownLabel>Tarjeta de crédito</BreakdownLabel>
-                                        <BreakdownValue>
-                                            {numeral(creditCard).format("$0,0.00")}
-                                        </BreakdownValue>
+                                        <Typography variant="body1">Tarjeta de crédito</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(creditCard).format("$0,0.00")}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
-                                        <BreakdownLabel>Depósitos en efectivo</BreakdownLabel>
-                                        <BreakdownValue>
-                                            {numeral(cashDeposits).format("$0,0.00")}
-                                        </BreakdownValue>
+                                        <Typography variant="body1">Depósitos en efectivo</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(cashDeposits).format("$0,0.00")}</Typography>
                                     </BreakdownItem>
-                                    <BreakdownItem>
-                                        <BreakdownLabel>Retiros de caja ({withdrawals})</BreakdownLabel>
-                                        <BreakdownValue sx={{ color: "error.main" }}>
-                                            -{numeral(withdrawalAmount).format("$0,0.00")}
-                                        </BreakdownValue>
+                                    <BreakdownItem sx={{ borderBottom: 'none' }}>
+                                        <Typography variant="body1">Retiros de caja ({withdrawals})</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>-{numeral(withdrawalAmount).format("$0,0.00")}</Typography>
                                     </BreakdownItem>
-                                </BreakdownList>
-                            </CutSection>
-
-                            <ShortageCard>
-                                <ShortageLabel>Faltante</ShortageLabel>
-                                <ShortageValue>
-                                    {numeral(shortage).format("$0,0.00")}
-                                </ShortageValue>
-                            </ShortageCard>
+                                </Stack>
+                            </Stack>
                         </>
                 }
-                {partialCutExceeds && (
-                    <Typography variant="body2" color="error.main" textAlign="center">
-                        El monto excede el efectivo disponible
-                    </Typography>
-                )}
+                {
+                    partialCutExceeds &&
+                    <Typography variant="body2" color="error.main" textAlign="center">El monto excede el efectivo disponible</Typography>
+                }
                 <Divider />
+
+                {
+                    cutType === "final" &&
+                    <ShortageCard>
+                        <Typography variant="body2" color="text.secondary">Faltante</Typography>
+                        <Typography variant="subtitle1" fontWeight={600}>{numeral(shortage).format("$0,0.00")}</Typography>
+                    </ShortageCard>
+                }
+
                 <Button
                     fullWidth
                     variant="contained"

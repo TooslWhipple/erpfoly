@@ -5,8 +5,6 @@ import { FormSelect, FormTextField } from "@/components/Form";
 import { SideModal } from "@/components/SideModal";
 import {
   CurrentCashCard,
-  CurrentCashLabel,
-  CurrentCashValue,
   WithdrawalAmountInput,
   WithdrawalTotalCard,
 } from "@/styles/cajas.styles";
@@ -100,10 +98,8 @@ export function CashWithdrawalModal({
           </Stack>
           <Typography variant="h4">Retiro de efectivo</Typography>
           <CurrentCashCard>
-            <CurrentCashLabel>Efectivo actual</CurrentCashLabel>
-            <CurrentCashValue>
-              {numeral(currentCash).format("$0,0.00")}
-            </CurrentCashValue>
+            <Typography variant="body1">Efectivo actual</Typography>
+            <Typography variant="subtitle1">{numeral(currentCash).format("$0,0.00")}</Typography>
           </CurrentCashCard>
         </Stack>
       }>

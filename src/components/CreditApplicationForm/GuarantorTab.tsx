@@ -1,4 +1,4 @@
-import { Button, Grid, MenuItem, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, MenuItem, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -20,6 +20,7 @@ interface GuarantorTabProps {
   mergeFieldValues: (patch: Partial<GuarantorTabValues>) => GuarantorTabValues;
   onFieldChange: (field: keyof GuarantorTabValues, value: GuarantorTabValues[keyof GuarantorTabValues]) => void;
   onSave: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function GuarantorTab({
@@ -30,6 +31,7 @@ export function GuarantorTab({
   mergeFieldValues,
   onFieldChange,
   onSave,
+  saving,
 }: GuarantorTabProps) {
   const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const mapStoredToUploadItems = (files: CreditApplicationDocumentFile[]): UploadedFileItem[] =>
@@ -63,6 +65,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("fullName", event.target.value)}
             error={Boolean(errors.fullName)}
             helperText={errors.fullName}
+            disabled={saving}
           />
         </Grid>
 
@@ -117,6 +120,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
+            disabled={saving}
           />
         </Grid>
 
@@ -130,6 +134,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("betweenStreets", event.target.value)}
             error={Boolean(errors.betweenStreets)}
             helperText={errors.betweenStreets}
+            disabled={saving}
           />
         </Grid>
 
@@ -145,6 +150,7 @@ export function GuarantorTab({
             error={Boolean(errors.birthDate)}
             helperText={errors.birthDate}
             InputLabelProps={{ shrink: true }}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -157,7 +163,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("maritalStatus", event.target.value)}
             error={Boolean(errors.maritalStatus)}
             helperText={errors.maritalStatus}
-            disabled={maritalStatusesLoading}
+            disabled={maritalStatusesLoading || saving}
           >
             <MenuItem value="">
               {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
@@ -180,6 +186,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("curp", event.target.value)}
             error={Boolean(errors.curp)}
             helperText={errors.curp}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -192,6 +199,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("rfc", event.target.value)}
             error={Boolean(errors.rfc)}
             helperText={errors.rfc}
+            disabled={saving}
           />
         </Grid>
 
@@ -205,6 +213,7 @@ export function GuarantorTab({
             onChange={(event) => onFieldChange("phone", event.target.value)}
             error={Boolean(errors.phone)}
             helperText={errors.phone}
+            disabled={saving}
           />
         </Grid>
 
@@ -213,6 +222,8 @@ export function GuarantorTab({
             value={mapStoredToUploadItems(values.identificationFrontFiles)}
             onChange={(files) => onFieldChange("identificationFrontFiles", mapUploadToStoredItems(files))}
             placeholder="INE frontal del aval"
+            fileLabel="INE frontal del aval"
+            disabled={saving}
             accept={["image/*", "image/jpeg", "image/png", "image/webp"]}
             error={errors.identificationFrontFiles}
           />
@@ -222,6 +233,8 @@ export function GuarantorTab({
             value={mapStoredToUploadItems(values.identificationBackFiles)}
             onChange={(files) => onFieldChange("identificationBackFiles", mapUploadToStoredItems(files))}
             placeholder="INE posterior del aval"
+            fileLabel="INE posterior del aval"
+            disabled={saving}
             accept={["image/*", "image/jpeg", "image/png", "image/webp"]}
             error={errors.identificationBackFiles}
           />
@@ -232,6 +245,7 @@ export function GuarantorTab({
             <Switch
               checked={values.hasSpouse}
               onChange={(event) => onFieldChange("hasSpouse", event.target.checked)}
+              disabled={saving}
             />
             <Typography variant="body1">¿Cuenta con cónyuge?</Typography>
           </Stack>
@@ -240,8 +254,9 @@ export function GuarantorTab({
       <Button
         variant="contained"
         style={{ alignSelf: "flex-start" }}
-        onClick={onSave}>
-        Guardar
+        onClick={onSave}
+        disabled={saving}>
+        {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
       </Button>
     </Card>
   );

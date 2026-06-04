@@ -177,6 +177,7 @@ export default function ClientEditPage() {
             persistBasicInformation(nextValues);
           }}
           onValidateSecurityCode={basicInformationTab.validateCurrentSecurityCode}
+          saving={false}
           onContinue={handleSaveActiveTab}
         />
       );
@@ -191,6 +192,7 @@ export default function ClientEditPage() {
             const nextValues = familyTab.setFieldValue(field, value);
             persistFamily(nextValues);
           }}
+          saving={false}
           onContinue={handleSaveActiveTab}
         />
       );
@@ -219,6 +221,7 @@ export default function ClientEditPage() {
             persistAddress(nextValues);
           }}
           onSave={handleSaveActiveTab}
+          saving={false}
         />
       );
     }
@@ -239,6 +242,7 @@ export default function ClientEditPage() {
             persistEmployment(nextValues);
           }}
           onSave={handleSaveActiveTab}
+          saving={false}
         />
       );
     }
@@ -267,6 +271,7 @@ export default function ClientEditPage() {
             persistReferences(nextValues);
           }}
           onSave={handleSaveActiveTab}
+          saving={false}
         />
       );
     }
@@ -296,6 +301,7 @@ export default function ClientEditPage() {
             persistDocumentation(nextValues);
           }}
           onSave={handleSaveActiveTab}
+          saving={false}
         />
       );
     }

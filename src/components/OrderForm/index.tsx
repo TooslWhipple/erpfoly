@@ -132,10 +132,6 @@ export default function OrderForm({
             if (result.data) {
                 setOriginalOrder(result.data);
 
-                const supplierId = result.data.order_items.find(
-                    (item) => item.product?.product_suppliers?.[0]?.supplier_id
-                )?.product?.product_suppliers?.[0]?.supplier_id;
-
                 if (result.data.order_type === "internal") {
                     setBranch({
                         id: String(result.data.branch?.id ?? ""),
@@ -143,8 +139,8 @@ export default function OrderForm({
                     });
                 } else {
                     setSupplier({
-                        id: String(supplierId ?? ""),
-                        name: result.data.branch?.name ?? "",
+                        id: String(result.data.supplier?.id ?? ""),
+                        name: result.data.supplier?.name ?? "",
                     });
                 }
 

@@ -1,4 +1,4 @@
-import { Button, Grid, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, Stack, Switch, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
@@ -12,6 +12,7 @@ interface EmploymentTabProps {
   mergeFieldValues: (patch: Partial<EmploymentTabValues>) => EmploymentTabValues;
   onFieldChange: (field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => void;
   onSave: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function EmploymentTab({
@@ -21,6 +22,7 @@ export function EmploymentTab({
   mergeFieldValues,
   onFieldChange,
   onSave,
+  saving,
 }: EmploymentTabProps) {
   const mainNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const spouseNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.spousePostalCode);
@@ -38,6 +40,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("company", event.target.value)}
             error={Boolean(errors.company)}
             helperText={errors.company}
+            disabled={saving}
           />
         </Grid>
         <PostalCodeSettlementFields
@@ -89,6 +92,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -101,6 +105,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("seniorityYears", event.target.value)}
             error={Boolean(errors.seniorityYears)}
             helperText={errors.seniorityYears}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -113,6 +118,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("position", event.target.value)}
             error={Boolean(errors.position)}
             helperText={errors.position}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -125,6 +131,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("department", event.target.value)}
             error={Boolean(errors.department)}
             helperText={errors.department}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -137,6 +144,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("monthlyIncome", event.target.value)}
             error={Boolean(errors.monthlyIncome)}
             helperText={errors.monthlyIncome}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -149,6 +157,7 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("companyPhone", event.target.value)}
             error={Boolean(errors.companyPhone)}
             helperText={errors.companyPhone}
+            disabled={saving}
           />
         </Grid>
 
@@ -157,6 +166,7 @@ export function EmploymentTab({
             <Switch
               checked={values.hasOtherIncome}
               onChange={(event) => onFieldChange("hasOtherIncome", event.target.checked)}
+              disabled={saving}
             />
             <Typography variant="body1">¿Cuenta con otros ingresos?</Typography>
           </Stack>
@@ -168,7 +178,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.otherIncomeAmount}
             onChange={(event) => onFieldChange("otherIncomeAmount", event.target.value)}
-            disabled={!values.hasOtherIncome}
+            disabled={!values.hasOtherIncome || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -178,7 +188,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.otherIncomeSource}
             onChange={(event) => onFieldChange("otherIncomeSource", event.target.value)}
-            disabled={!values.hasOtherIncome}
+            disabled={!values.hasOtherIncome || saving}
           />
         </Grid>
       </Grid>
@@ -192,7 +202,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseCompany}
             onChange={(event) => onFieldChange("spouseCompany", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <PostalCodeSettlementFields
@@ -202,7 +212,7 @@ export function EmploymentTab({
           neighborhoodError={errors.spouseNeighborhoodFullCode}
           neighborhoods={spouseNeighborhoodsQuery.data ?? []}
           neighborhoodsLoading={spouseNeighborhoodsQuery.isFetching}
-          disabled={!spouseSectionEnabled}
+          disabled={!spouseSectionEnabled || saving}
           fieldKeys={{
             postalCode: "spousePostalCode",
             neighborhoodFullCode: "spouseNeighborhoodFullCode",
@@ -242,7 +252,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseStreetAndNumber}
             onChange={(event) => onFieldChange("spouseStreetAndNumber", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -252,7 +262,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseSeniorityYears}
             onChange={(event) => onFieldChange("spouseSeniorityYears", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -262,7 +272,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spousePosition}
             onChange={(event) => onFieldChange("spousePosition", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -272,7 +282,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseDepartment}
             onChange={(event) => onFieldChange("spouseDepartment", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -282,7 +292,7 @@ export function EmploymentTab({
             placeholder="Ingresa"
             value={values.spouseMonthlyIncome}
             onChange={(event) => onFieldChange("spouseMonthlyIncome", event.target.value)}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -294,15 +304,16 @@ export function EmploymentTab({
             onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value)}
             error={Boolean(errors.spouseCompanyPhone)}
             helperText={errors.spouseCompanyPhone}
-            disabled={!spouseSectionEnabled}
+            disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
       </Grid>
       <Button
         variant="contained"
         style={{ alignSelf: "flex-start" }}
-        onClick={onSave}>
-        Guardar
+        onClick={onSave}
+        disabled={saving}>
+        {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
       </Button>
     </Card>
   );

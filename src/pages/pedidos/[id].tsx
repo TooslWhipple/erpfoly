@@ -133,7 +133,7 @@ export default function PedidoDetalle() {
 
     const breadcrumbs: BreadcrumbItem[] = [
         { label: "Pedidos", href: "/pedidos" },
-        { label: order?.branch?.name || "...", href: "/pedidos" },
+        { label: order?.supplier?.name || order?.branch?.name || "...", href: "/pedidos" },
         { label: `Pedido ${order?.folio || "..."}` },
     ];
 
@@ -218,7 +218,7 @@ export default function PedidoDetalle() {
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     <Typography variant="h1">Pedido {order.folio}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        {order.branch?.name} · {formatDate(order.order_date)}
+                        {order.supplier?.name ?? order.branch?.name} · {formatDate(order.order_date)}
                     </Typography>
                     {order.requested_by_user && (
                         <Typography variant="body2" color="text.secondary">

@@ -23,18 +23,3 @@ export const SummaryCard = styled('div')({
     padding: "24px 16px",
     gap: "16px"
 });
-
-export const ItemCard = styled('div')(({ theme }) => ({
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.app.border}`,
-    borderRadius: "12px",
-    padding: "16px",
-}));
-
-export const ItemImage = styled('div')({
-    width: "48px",
-    height: "48px",
-    backgroundColor: theme.palette.background.lowGray,
-    borderRadius: "8px",
-    flexShrink: 0,
-});

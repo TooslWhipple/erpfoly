@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
 import {
@@ -7,6 +7,7 @@ import {
     Title,
     VerticalSidebarTabs,
     TabFilters,
+    ConfirmModal,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
@@ -36,6 +37,7 @@ import {
 } from "@/services/productos.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import {
     branchCatalogToPackageSelectableItems,
     branchCatalogToProductBranches,
@@ -43,7 +45,6 @@ import {
 } from "@/lib/productFormCatalogMappers";
 import {
     CURRENCIES,
-    MOCK_COST_HISTORY,
     MOCK_ARTICLES,
     COST_BASIS_FOR_PRICE_OPTIONS,
     DEFAULT_PRODUCT_BASE_PRICES,
@@ -72,6 +73,45 @@ async function getProductByIdDeduped(id: number) {
     });
     inFlightProductDetailRequests.set(id, requestPromise);
     return requestPromise;
+}
+
+function serializeProductFormDirtyState(input: {
+    isNew: boolean;
+    generalData: GeneralDataFormState;
+    priceData: PriceFormState;
+    suppliers: ProductSupplier[];
+    branches: ProductBranch[];
+    galleryImages: ProductGalleryImage[];
+    packages: ProductPackage[];
+    productPromotionDrafts: ProductPromotionDraft[];
+    basePrices: ProductBasePrice[];
+}): string {
+    const payload = buildCreateProductRequest(
+        {
+            generalData: input.generalData,
+            priceData: input.priceData,
+            suppliers: input.suppliers,
+            branches: input.branches,
+            galleryImages: input.galleryImages,
+            packages: input.packages,
+            promotions: input.productPromotionDrafts,
+        },
+        input.isNew ? "create" : "update"
+    );
+    return JSON.stringify({
+        payload,
+        priceFields: {
+            liquidation: input.priceData.liquidation,
+            costBasisForCalculation: input.priceData.costBasisForCalculation,
+            lastCost: input.priceData.lastCost,
+            averageCost: input.priceData.averageCost,
+        },
+        basePrices: input.basePrices.map((bp) => ({
+            name: bp.name,
+            marginPercent: bp.marginPercent,
+        })),
+        newGalleryFileCount: input.galleryImages.filter((g) => g.file != null).length,
+    });
 }
 
 export default function ProductFormPage() {
@@ -175,6 +215,88 @@ export default function ProductFormPage() {
 
     const [errors, setErrors] = useState<FormErrors>({});
 
+    const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+    const [confirmLeaveResolver, setConfirmLeaveResolver] = useState<
+        ((value: boolean) => void) | null
+    >(null);
+
+    const isFormReady =
+        !pageLoading &&
+        (isNew
+            ? branchCatalogItems.length > 0 && branches.length > 0
+            : detailBranchRows !== null && branches.length > 0);
+
+    const formReadyKey = [
+        routeIdParam ?? "",
+        isFormReady ? "ready" : "loading",
+        branches.length,
+        detailBranchRows?.length ?? 0,
+        branchCatalogItems.length,
+    ].join(":");
+
+    const currentFormSnapshot = useMemo(
+        () =>
+            serializeProductFormDirtyState({
+                isNew,
+                generalData,
+                priceData,
+                suppliers,
+                branches,
+                galleryImages,
+                packages,
+                productPromotionDrafts,
+                basePrices,
+            }),
+        [
+            isNew,
+            generalData,
+            priceData,
+            suppliers,
+            branches,
+            galleryImages,
+            packages,
+            productPromotionDrafts,
+            basePrices,
+        ]
+    );
+
+    const baselineSnapshot = useMemo(() => {
+        if (!isFormReady) {
+            return null;
+        }
+        return currentFormSnapshot;
+        // Capture baseline only when the form becomes ready or the route changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formReadyKey]);
+
+    const isDirty = useMemo(() => {
+        if (baselineSnapshot === null) {
+            return false;
+        }
+        return baselineSnapshot !== currentFormSnapshot;
+    }, [baselineSnapshot, currentFormSnapshot]);
+
+    const resolveConfirmLeave = useCallback((allow: boolean) => {
+        setConfirmLeaveOpen(false);
+        confirmLeaveResolver?.(allow);
+        setConfirmLeaveResolver(null);
+    }, [confirmLeaveResolver]);
+
+    const requestLeaveConfirmation = useCallback(() => {
+        if (!isDirty) {
+            return Promise.resolve(true);
+        }
+        return new Promise<boolean>((resolve) => {
+            setConfirmLeaveResolver(() => resolve);
+            setConfirmLeaveOpen(true);
+        });
+    }, [isDirty]);
+
+    const { navigateWithoutGuard } = useUnsavedChangesGuard({
+        isDirty,
+        confirmLeave: requestLeaveConfirmation,
+    });
+
     useEffect(() => {
         if (!router.isReady) {
             return;
@@ -248,7 +370,7 @@ export default function ProductFormPage() {
         setBranches(mergeBranchCatalogWithProductDetail(branchCatalogItems, detailBranchRows));
     }, [isNew, detailBranchRows, branchCatalogItems]);
 
-    const validateForm = (): boolean => {
+    const collectFormValidationErrors = (): FormErrors => {
         const newErrors: FormErrors = {};
 
         if (!generalData.departmentId) {
@@ -288,15 +410,41 @@ export default function ProductFormPage() {
             newErrors.piecesCount = "El número de piezas no puede ser mayor a 9999";
         }
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        if (isNew) {
+            const listCost = Number(priceData.listCost);
+            if (!priceData.listCost.trim() || !Number.isFinite(listCost) || listCost <= 0) {
+                newErrors.listCost = "El costo de lista debe ser mayor a 0";
+            }
+        }
+
+        return newErrors;
+    };
+
+    const firstTabWithValidationErrors = (validationErrors: FormErrors): string => {
+        const generalFields = new Set([
+            "departmentId",
+            "lineId",
+            "description",
+            "shortName",
+            "warrantyMonths",
+            "warrantyPolicy",
+            "piecesCount",
+        ]);
+        if (Object.keys(validationErrors).some((key) => generalFields.has(key))) {
+            return "general";
+        }
+        return "price";
     };
 
     const handleSave = async () => {
-        if (!validateForm()) {
-            setActiveTab("general");
+        const validationErrors = collectFormValidationErrors();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            setActiveTab(firstTabWithValidationErrors(validationErrors));
             return;
         }
+
+        setErrors({});
 
         setSaving(true);
         try {
@@ -340,7 +488,7 @@ export default function ProductFormPage() {
                 }
                 showSuccess("Producto actualizado correctamente.");
             }
-            router.push("/catalogos/productos");
+            navigateWithoutGuard("/catalogos/productos");
         } catch (err) {
             console.error("[ProductForm] Error saving:", err);
         } finally {
@@ -348,9 +496,10 @@ export default function ProductFormPage() {
         }
     };
 
-    const handleDiscard = () => {
-        if (window.confirm("¿Estás seguro de descartar los cambios?")) {
-            router.push("/catalogos/productos");
+    const handleDiscard = async () => {
+        const allow = await requestLeaveConfirmation();
+        if (allow) {
+            navigateWithoutGuard("/catalogos/productos");
         }
     };
 
@@ -401,6 +550,9 @@ export default function ProductFormPage() {
     };
 
     const handlePriceChange = (field: keyof PriceFormState, value: string | boolean) => {
+        if (field === "listCost" && errors.listCost) {
+            handleErrorClear("listCost");
+        }
         setPriceData((prev) => ({ ...prev, [field]: value }));
     };
 
@@ -646,12 +798,12 @@ export default function ProductFormPage() {
                             activeTab === "price" &&
                             <PriceTab
                                 formState={priceData}
+                                errors={errors}
                                 onFieldChange={handlePriceChange}
                                 currencies={CURRENCIES}
                                 costBasisOptions={COST_BASIS_FOR_PRICE_OPTIONS}
                                 basePrices={basePrices}
                                 onAddBasePrice={handleAddBasePrice}
-                                costHistory={MOCK_COST_HISTORY}
                                 costHistoryOpen={costHistoryOpen}
                                 onCostHistoryOpen={() => setCostHistoryOpen(true)}
                                 onCostHistoryClose={() => setCostHistoryOpen(false)}
@@ -723,6 +875,17 @@ export default function ProductFormPage() {
                     }}
                 />
             )}
+
+            <ConfirmModal
+                open={confirmLeaveOpen}
+                onClose={() => resolveConfirmLeave(false)}
+                onConfirm={() => resolveConfirmLeave(true)}
+                title="Cambios sin guardar"
+                description="Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?"
+                cancelLabel="Quedarme"
+                confirmLabel="Salir sin guardar"
+                confirmColor="error"
+            />
         </MainLayout>
     );
 }

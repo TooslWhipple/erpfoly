@@ -62,10 +62,10 @@ export function SideModal({
       direction="row"
       spacing={2}
       justifyContent="space-between"
-      alignItems="center"
+      alignItems="flex-start"
       sx={{ width: "100%" }}
     >
-      <Stack spacing={0.5}>
+      <Stack spacing={0.5} width="100%">
         {title != null && <Typography variant="h6">{title}</Typography>}
         {description != null && (
           <Typography variant="body2" color="text.secondary">
@@ -74,7 +74,9 @@ export function SideModal({
         )}
         {headerContent != null ? headerContent : null}
       </Stack>
-      {headerActions}
+      {
+        headerActions
+      }
     </Stack>
   );
 

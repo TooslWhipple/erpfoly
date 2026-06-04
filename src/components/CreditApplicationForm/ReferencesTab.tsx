@@ -1,4 +1,4 @@
-import { Button, Grid, IconButton, MenuItem, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, IconButton, MenuItem, Stack, Typography } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 import { FormTextField } from "@/components/Form";
 import type { FamilyRelationshipCatalogItem } from "@/services/catalog.service";
@@ -19,6 +19,7 @@ interface ReferencesTabProps {
   onAddReference: () => void;
   onRemoveReference: (referenceId: string) => void;
   onSave: () => Promise<boolean>;
+  saving: boolean;
 }
 
 export function ReferencesTab({
@@ -31,6 +32,7 @@ export function ReferencesTab({
   onAddReference,
   onRemoveReference,
   onSave,
+  saving,
 }: ReferencesTabProps) {
   return (
     <Card>
@@ -46,6 +48,7 @@ export function ReferencesTab({
             onChange={(event) => onFieldChange("company", event.target.value)}
             error={Boolean(errors.company)}
             helperText={errors.company}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -58,6 +61,7 @@ export function ReferencesTab({
             onChange={(event) => onFieldChange("phone", event.target.value)}
             error={Boolean(errors.phone)}
             helperText={errors.phone}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -70,6 +74,7 @@ export function ReferencesTab({
             onChange={(event) => onFieldChange("clientPosition", event.target.value)}
             error={Boolean(errors.clientPosition)}
             helperText={errors.clientPosition}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -82,6 +87,7 @@ export function ReferencesTab({
             onChange={(event) => onFieldChange("seniorityYears", event.target.value)}
             error={Boolean(errors.seniorityYears)}
             helperText={errors.seniorityYears}
+            disabled={saving}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -94,6 +100,7 @@ export function ReferencesTab({
             onChange={(event) => onFieldChange("respondentNameAndPosition", event.target.value)}
             error={Boolean(errors.respondentNameAndPosition)}
             helperText={errors.respondentNameAndPosition}
+            disabled={saving}
           />
         </Grid>
       </Grid>
@@ -110,7 +117,7 @@ export function ReferencesTab({
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h6">Referencia {index + 1}</Typography>
               {values.familyReferences.length > 1 && (
-                <IconButton onClick={() => onRemoveReference(reference.id)} size="small">
+                <IconButton onClick={() => onRemoveReference(reference.id)} size="small" disabled={saving}>
                   <Trash2 size={18} />
                 </IconButton>
               )}
@@ -127,6 +134,7 @@ export function ReferencesTab({
                   onChange={(event) => onReferenceFieldChange(reference.id, "name", event.target.value)}
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.name)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.name}
+                  disabled={saving}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -143,7 +151,7 @@ export function ReferencesTab({
                       event.target.value
                     )
                   }
-                  disabled={relationshipsLoading}
+                  disabled={relationshipsLoading || saving}
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.relationshipId)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.relationshipId}
                 >
@@ -167,6 +175,7 @@ export function ReferencesTab({
                   onChange={(event) => onReferenceFieldChange(reference.id, "address", event.target.value)}
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.address)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.address}
+                  disabled={saving}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -179,6 +188,7 @@ export function ReferencesTab({
                   onChange={(event) => onReferenceFieldChange(reference.id, "phone", event.target.value)}
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.phone)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.phone}
+                  disabled={saving}
                 />
               </Grid>
             </Grid>
@@ -190,15 +200,17 @@ export function ReferencesTab({
         variant="outlined"
         style={{ alignSelf: "flex-start" }}
         startIcon={<Plus size={16} />}
-        onClick={onAddReference}>
+        onClick={onAddReference}
+        disabled={saving}>
         Agregar otra
       </Button>
 
       <Button
         variant="contained"
         style={{ alignSelf: "flex-start" }}
-        onClick={onSave}>
-        Guardar
+        onClick={onSave}
+        disabled={saving}>
+        {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
       </Button>
     </Card>
   );

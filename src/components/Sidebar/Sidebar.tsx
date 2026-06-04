@@ -13,7 +13,8 @@ import {
   Route,
   Plus,
   Van,
-  HeartHandshake
+  HeartHandshake,
+  ShoppingCart,
 } from "@/components/Icons";
 import {
   StyledDrawer,
@@ -31,6 +32,8 @@ import {
 import { BanknoteArrowDown } from "lucide-react";
 import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
 import {
+  QUOTATIONS_READ,
+  SALES_READ,
   BRANCH_ORDERS_READ,
   BRANCH_REQUESTS_READ,
   CASH_REGISTERS_READ,
@@ -66,6 +69,7 @@ import { hasAccessRequirement, type AccessRequirement } from "@/lib/routeAccess"
 import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
@@ -92,6 +96,18 @@ const navItems: NavItem[] = [
     path: "/solicitudes-credito",
     icon: <CreditCard size={ICON_SIZE} />,
     requirement: { permission: CREDIT_APPLICATIONS_READ },
+  },
+  {
+    label: "Ventas",
+    path: "/ventas",
+    icon: <ShoppingCart size={ICON_SIZE} />,
+    requirement: { permission: SALES_READ },
+  },
+  {
+    label: "Cotizaciones guardadas",
+    path: "/cotizaciones-guardadas",
+    icon: <ClipboardList size={ICON_SIZE} />,
+    requirement: { permission: QUOTATIONS_READ },
   },
   { label: "Cajas", path: "/cajas", icon: <Monitor size={ICON_SIZE} />, requirement: { permission: CASH_REGISTERS_READ } },
   {
@@ -308,12 +324,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const drawerContent = (
     <>
       <NavigationContainer>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-          <Stack>
-            <Typography variant="subtitle2">Folysoft</Typography>
-            <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+            <Stack>
+              <Typography variant="subtitle2">Folysoft</Typography>
+              <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+            </Stack>
           </Stack>
+          <NotificationInbox />
         </Stack>
 
         {canCreateCreditApplication && (

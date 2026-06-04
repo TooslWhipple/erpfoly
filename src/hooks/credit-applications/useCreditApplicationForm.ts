@@ -953,6 +953,9 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     }
     if (!isValid) return false;
 
+    setSaving(true);
+    setSaveSuccess(false);
+
     const currentPayload = {
       id: isCreateMode ? undefined : applicationId,
       basicInformation: basicInformationTab.values,
@@ -999,6 +1002,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         console.error("[CreditApplicationForm] Unable to save active section", saveError);
         setError("No se pudo guardar la sección.");
         return false;
+      } finally {
+        setSaving(false);
       }
     }
 
@@ -1010,6 +1015,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     persistDocumentation(currentPayload.documentation);
     persistGuarantor(currentPayload.guarantor);
     setSaveSuccess(true);
+    setSaving(false);
     return true;
   }, [
     activeTab,

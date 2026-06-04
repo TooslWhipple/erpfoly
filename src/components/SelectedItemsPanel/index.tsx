@@ -1,13 +1,13 @@
-import { Box, Typography, Button } from '@mui/material';
+import { Typography, Button } from '@mui/material';
 import { ShoppingCart } from 'lucide-react';
 import type { SelectedOrderItem as SelectedOrderItemType } from '@/types/orders.types';
 import {
   PanelContainer,
   PanelHeader,
   ItemsList,
-  PanelFooter,
-  TotalRow,
   EmptyState,
+  ContinueButtonArea,
+  ContinueButtonContent,
 } from './styles';
 import SelectedOrderItem from './SelectedOrderItem';
 
@@ -40,58 +40,58 @@ export default function SelectedItemsPanel({
   return (
     <PanelContainer>
       <PanelHeader>
-        <Typography variant="body1" fontWeight={600}>
-          Artículos
-        </Typography>
+        <Typography variant="body1" fontWeight={600}>Artículos</Typography>
         <Typography variant="body2" color="text.secondary">
-          {items.length === 0
-            ? 'Comienza a agregar artículos a tu pedido'
-            : `${items.length} artículo${items.length !== 1 ? 's' : ''} · ${totalItems} unidad${totalItems !== 1 ? 'es' : ''}`}
+          {
+            items.length === 0
+              ? 'Comienza a agregar artículos a tu pedido'
+              : `${items.length} artículo${items.length !== 1 ? 's' : ''} · ${totalItems} unidad${totalItems !== 1 ? 'es' : ''}`
+          }
         </Typography>
       </PanelHeader>
 
-      {items.length === 0 ? (
-        <EmptyState>
-          <ShoppingCart size={32} strokeWidth={1.5} />
-          <Typography variant="body2" align="center">
-            No hay artículos seleccionados
-          </Typography>
-        </EmptyState>
-      ) : (
-        <ItemsList>
-          {items.map((item) => (
-            <SelectedOrderItem
-              key={item.productId}
-              item={item}
-              onQuantityChange={onQuantityChange}
-              onRemove={onRemove}
-            />
-          ))}
-        </ItemsList>
-      )}
+      {
+        items.length === 0 ?
+          < EmptyState >
+            <ShoppingCart size={32} strokeWidth={1.5} />
+            <Typography variant="body2" align="center">
+              No hay artículos seleccionados
+            </Typography>
+          </EmptyState>
+          :
+          <ItemsList>
+            {
+              items.map((item) => (
+                <SelectedOrderItem
+                  key={item.productId}
+                  item={item}
+                  onQuantityChange={onQuantityChange}
+                  onRemove={onRemove}
+                />
+              ))
+            }
+          </ItemsList>
+      }
 
-      {items.length > 0 && (
-        <PanelFooter>
-          <TotalRow>
-            <Typography variant="subtitle2" fontWeight={600}>
-              Total
-            </Typography>
-            <Typography variant="h6" fontWeight={700} color="primary.main">
-              {formatCurrency(totalPrice)}
-            </Typography>
-          </TotalRow>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={onContinue}
-            disabled={items.length === 0}
-          >
-            {continueLabel}
-          </Button>
-        </PanelFooter>
-      )}
-    </PanelContainer>
+      {
+        items.length > 0 && (
+          <ContinueButtonArea>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={onContinue}
+              sx={{ textTransform: 'none' }}
+            >
+              <ContinueButtonContent>
+                <Typography component="span">{continueLabel}</Typography>
+                <Typography component="span">{formatCurrency(totalPrice)}</Typography>
+              </ContinueButtonContent>
+            </Button>
+          </ContinueButtonArea>
+        )
+      }
+    </PanelContainer >
   );
 }

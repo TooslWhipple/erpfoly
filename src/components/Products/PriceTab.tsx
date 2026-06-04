@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Typography, Grid, Button, Stack, Divider, Box, CircularProgress, useTheme } from "@mui/material";
 import numeral from "numeral";
 import { useQuery } from "@tanstack/react-query";
@@ -7,16 +7,19 @@ import { ProductPromotionModal } from "@/components/ProductPromotionModal";
 import { TabFilters } from "@/components/TabFilters";
 import type { TabOption } from "@/components/TabFilters";
 import { getPromotionFormConfiguration } from "@/services/promociones.service";
+import { getProductCostHistory } from "@/services/productos.service";
 import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
 import type {
     PriceFormState,
     CostHistoryEntry,
     ProductBasePrice,
     ProductPromotionDraft,
+    FormErrors,
 } from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
 import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
+import { formatDate } from "@/utils/date";
 
 function getReferenceCostForCalculation(formState: PriceFormState): number {
     const list = Number(formState.listCost) || 0;
@@ -49,12 +52,12 @@ function computeEstimatedPromotionalPrice(
 
 interface PriceTabProps {
     formState: PriceFormState;
+    errors?: FormErrors;
     onFieldChange: (field: keyof PriceFormState, value: string | boolean) => void;
     currencies: Array<{ value: string; label: string }>;
     costBasisOptions: Array<{ value: string; label: string }>;
     basePrices: ProductBasePrice[];
     onAddBasePrice: (entry: Omit<ProductBasePrice, "id">) => void;
-    costHistory: CostHistoryEntry[];
     costHistoryOpen: boolean;
     onCostHistoryOpen: () => void;
     onCostHistoryClose: () => void;
@@ -66,12 +69,12 @@ interface PriceTabProps {
 
 export function PriceTab({
     formState,
+    errors = {},
     onFieldChange,
     currencies,
     costBasisOptions,
     basePrices,
     onAddBasePrice,
-    costHistory,
     costHistoryOpen,
     onCostHistoryOpen,
     onCostHistoryClose,
@@ -84,6 +87,9 @@ export function PriceTab({
     const [promotionModalOpen, setPromotionModalOpen] = useState(false);
     const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
     const [activePurchaseTypeTab, setActivePurchaseTypeTab] = useState("");
+    const [costHistory, setCostHistory] = useState<CostHistoryEntry[]>([]);
+    const [costHistoryLoading, setCostHistoryLoading] = useState(false);
+    const [costHistoryError, setCostHistoryError] = useState<string | null>(null);
 
     const promotionFormConfigurationQuery = useQuery({
         queryKey: ["promotion-form-configuration", "price-tab"],
@@ -155,6 +161,49 @@ export function PriceTab({
 
     const referenceCost = useMemo(() => getReferenceCostForCalculation(formState), [formState]);
 
+    const loadCostHistory = useCallback(async () => {
+        if (productNumericId == null) {
+            setCostHistory([]);
+            setCostHistoryError(null);
+            setCostHistoryLoading(false);
+            return;
+        }
+
+        setCostHistoryLoading(true);
+        setCostHistoryError(null);
+        try {
+            const result = await getProductCostHistory(productNumericId);
+            if (result.error) {
+                setCostHistory([]);
+                setCostHistoryError(result.error.message);
+                return;
+            }
+            setCostHistory(result.data ?? []);
+        } catch (err) {
+            console.error("[PriceTab] Error loading cost history:", err);
+            setCostHistory([]);
+            setCostHistoryError("No se pudo cargar el historial de costos.");
+        } finally {
+            setCostHistoryLoading(false);
+        }
+    }, [productNumericId]);
+
+    useEffect(() => {
+        if (!costHistoryOpen) {
+            return;
+        }
+        void loadCostHistory();
+    }, [costHistoryOpen, loadCostHistory]);
+
+    const handleOpenCostHistory = () => {
+        onCostHistoryOpen();
+    };
+
+    const costHistoryEmptyMessage =
+        productNumericId == null
+            ? "Guarda el producto para consultar el historial de costos."
+            : "Este artículo aún no cuenta con histórico de costos.";
+
     return (
         <>
             <Grid container spacing={3}>
@@ -169,7 +218,9 @@ export function PriceTab({
                             {(formState.lastEditedDate || formState.lastEditedBy) && (
                                 <Typography variant="body2" color="text.secondary">
                                     Modificado por última vez
-                                    {formState.lastEditedDate ? `: ${formState.lastEditedDate}` : ""}
+                                    {formState.lastEditedDate
+                                        ? `: ${formatDate(formState.lastEditedDate, "dateMonthTime12h")}`
+                                        : ""}
                                     {formState.lastEditedBy
                                         ? `${formState.lastEditedDate ? " · " : ": "}${formState.lastEditedBy}`
                                         : ""}
@@ -181,8 +232,11 @@ export function PriceTab({
                                         label="Costo de lista"
                                         placeholder="0.00"
                                         type="number"
+                                        required
                                         value={formState.listCost}
                                         onChange={(e) => onFieldChange("listCost", e.target.value)}
+                                        error={Boolean(errors.listCost)}
+                                        helperText={errors.listCost}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
@@ -232,7 +286,7 @@ export function PriceTab({
                                         </Stack>
                                         <Button
                                             variant="text"
-                                            onClick={onCostHistoryOpen}>
+                                            onClick={handleOpenCostHistory}>
                                             Ver historial de costos
                                         </Button>
                                     </Stack>
@@ -400,7 +454,11 @@ export function PriceTab({
             <CostHistoryModal
                 open={costHistoryOpen}
                 onClose={onCostHistoryClose}
-                history={costHistory} />
+                history={costHistory}
+                loading={costHistoryLoading}
+                errorMessage={costHistoryError}
+                emptyMessage={costHistoryEmptyMessage}
+            />
 
             <AddBasePriceModal
                 open={addBasePriceOpen}

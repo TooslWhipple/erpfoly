@@ -45,7 +45,7 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
 
     return {
         id: order.id,
-        supplier: order.branch?.name ?? "Sin sucursal",
+        supplier: order.supplier?.name ?? "Sin proveedor",
         supplierDate: formattedDate,
         destination: order.branch?.name ?? "Bodega",
         deliveryDate: formattedDelivery,

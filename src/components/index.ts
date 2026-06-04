@@ -39,6 +39,8 @@ export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
 export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues } from "./AddDamagedGoodsModal";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
+export { ConfirmModal } from "./ConfirmModal";
+export type { ConfirmModalProps } from "./ConfirmModal";
 export { MultiSelectChips } from "./MultiSelectChips";
 export type { MultiSelectChipsProps, SelectableItem } from "./MultiSelectChips";
 export { MultiSelectAutocomplete } from "./MultiSelectAutocomplete";
@@ -126,6 +128,8 @@ export { RouteCircuitMap } from "./RouteCircuitMap";
 export type { RouteCircuitMapProps } from "./RouteCircuitMap";
 export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
 export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
+export { AutomatedCollectionActivityModal } from "./AutomatedCollectionActivityModal";
+export type { AutomatedCollectionActivityModalProps } from "./AutomatedCollectionActivityModal";
 export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 

@@ -85,3 +85,47 @@ export async function deleteAutomatedCollectionRule(
 ): Promise<ApiResult<ApiSuccessPayload>> {
   return del<ApiSuccessPayload>(`${BASE}/${id}`);
 }
+
+export type AutomatedCollectionMessageDeliveryStatus =
+  | "SUCCESS"
+  | "FAILED"
+  | "PENDING";
+
+export interface AutomatedCollectionMessageLogItem {
+  id: number;
+  sentAt: string;
+  phone: string;
+  clientName: string;
+  status: AutomatedCollectionMessageDeliveryStatus;
+}
+
+export interface AutomatedCollectionMessageHistoryResponse {
+  items: AutomatedCollectionMessageLogItem[];
+  page: number;
+  limit: number;
+  total: number;
+  messagesSentLastMonth: number;
+}
+
+export interface ListAutomatedCollectionMessageHistoryParams {
+  page?: number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export async function getAutomatedCollectionMessageHistory(
+  ruleId: number,
+  params?: ListAutomatedCollectionMessageHistoryParams
+): Promise<ApiResult<AutomatedCollectionMessageHistoryResponse>> {
+  const searchParams = new URLSearchParams();
+  if (params?.page != null) searchParams.set("page", String(params.page));
+  if (params?.limit != null) searchParams.set("limit", String(params.limit));
+  if (params?.dateFrom) searchParams.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) searchParams.set("dateTo", params.dateTo);
+  const query = searchParams.toString();
+  const url = query
+    ? `${BASE}/${ruleId}/message-history?${query}`
+    : `${BASE}/${ruleId}/message-history`;
+  return get<AutomatedCollectionMessageHistoryResponse>(url);
+}

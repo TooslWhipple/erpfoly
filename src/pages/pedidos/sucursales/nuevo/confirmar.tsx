@@ -1,33 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, Typography, Button, CircularProgress, Stack, Grid, Divider } from "@mui/material";
+import { Box, Typography, Button, CircularProgress, Stack, Grid } from "@mui/material";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
     PageContainer,
     PageHeader,
     SummaryCard,
-    ItemCard,
-    ItemImage,
 } from "@/styles/pedidos/confirmar.styles";
-import {
-    StepperContainer,
-    StepperButton,
-    StepperInput,
-} from "@/components/SelectedItemsPanel/styles";
+import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
+import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
 import { createOrderWithItems } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-
-interface ConfirmOrderItem {
-    productId: number;
-    productCode: string;
-    productName: string;
-    previewImage: string | null;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-}
 
 interface ConfirmOrderData {
     orderType: "external" | "internal";
@@ -37,6 +22,26 @@ interface ConfirmOrderData {
     branchName?: string;
     items: ConfirmOrderItem[];
     total: number;
+}
+
+const IVA_RATE = 0.16;
+
+function withPlaceholderOnlinePrices(item: ConfirmOrderItem): ConfirmOrderItem {
+    if (item.onlinePrices) return item;
+
+    const averagePrice = Math.round(item.unitPrice * 1.78 * 100) / 100;
+
+    return {
+        ...item,
+        onlinePrices: {
+            averagePrice,
+            retailers: [
+                { retailer: "Liverpool", price: averagePrice, url: "https://www.liverpool.com.mx" },
+                { retailer: "Walmart", price: averagePrice, url: "https://www.walmart.com.mx" },
+                { retailer: "Coppel", price: averagePrice, url: "https://www.coppel.com" },
+            ],
+        },
+    };
 }
 
 function formatCurrency(value: number): string {
@@ -63,7 +68,7 @@ export default function ConfirmarArticulosPage() {
                 const parsed = JSON.parse(stored) as ConfirmOrderData;
                 if (parsed.items?.length) {
                     setOrderData(parsed);
-                    setItems(parsed.items);
+                    setItems(parsed.items.map(withPlaceholderOnlinePrices));
                     setStatus("idle");
                 } else {
                     setStatus("empty");
@@ -76,10 +81,9 @@ export default function ConfirmarArticulosPage() {
         }
     }, []);
 
-    const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
-    const totalPrice = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
-
-    const supplierName = orderData?.supplierName;
+    const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
+    const iva = useMemo(() => subtotal * IVA_RATE, [subtotal]);
+    const total = useMemo(() => subtotal + iva, [subtotal, iva]);
 
     const handleBack = () => {
         router.push({
@@ -99,28 +103,6 @@ export default function ConfirmarArticulosPage() {
                     : item
             )
         );
-    };
-
-    const handleDecrement = (productId: number) => {
-        const item = items.find((i) => i.productId === productId);
-        if (item && item.quantity > 1) {
-            handleQuantityChange(productId, item.quantity - 1);
-        }
-    };
-
-    const handleIncrement = (productId: number) => {
-        const item = items.find((i) => i.productId === productId);
-        if (item) {
-            handleQuantityChange(productId, item.quantity + 1);
-        }
-    };
-
-    const handleInputChange = (productId: number, raw: string) => {
-        if (raw === "") return;
-        const parsed = parseInt(raw, 10);
-        if (Number.isFinite(parsed) && parsed > 0) {
-            handleQuantityChange(productId, parsed);
-        }
     };
 
     const handleSolicitarPedido = async () => {
@@ -146,6 +128,9 @@ export default function ConfirmarArticulosPage() {
                 branch_id: branchId,
                 folio: `PED-${Date.now()}`,
                 order_date: new Date().toISOString().split("T")[0],
+                supplier_id: orderData.orderType === "external" && orderData.supplierId
+                    ? Number(orderData.supplierId)
+                    : undefined,
                 items: items.map((item) => ({
                     product_id: item.productId,
                     requested_quantity: item.quantity,
@@ -229,96 +214,15 @@ export default function ConfirmarArticulosPage() {
                 <Grid container spacing={4}>
                     <Grid size={{ xs: 12, md: 8, xl: 9 }}>
                         <Stack spacing={2}>
-                            {items.map((item) => (
-                                <ItemCard key={item.productId}>
-                                    <Stack direction="row" spacing={2} alignItems="center">
-                                        <Box
-                                            sx={{
-                                                width: 48,
-                                                height: 48,
-                                                borderRadius: 2,
-                                                overflow: "hidden",
-                                                flexShrink: 0,
-                                                backgroundColor: "background.lowGray",
-                                                border: (theme) => `1px solid ${theme.palette.app.border}`,
-                                            }}
-                                        >
-                                            {item.previewImage ? (
-                                                <Box
-                                                    component="img"
-                                                    src={item.previewImage}
-                                                    alt={item.productName}
-                                                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                />
-                                            ) : (
-                                                <ItemImage />
-                                            )}
-                                        </Box>
-
-                                        <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                                                {item.productCode}
-                                            </Typography>
-                                            <Typography
-                                                variant="body1"
-                                                fontWeight={600}
-                                                sx={{
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                            >
-                                                {item.productName}
-                                            </Typography>
-                                        </Stack>
-
-                                        <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "center" }}>
-                                            <Typography variant="body2" color="text.secondary">Precio</Typography>
-                                            <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
-                                        </Stack>
-
-                                        <Stack spacing={0.5} sx={{ minWidth: 100 }}>
-                                            <Typography variant="body2" color="text.secondary" textAlign="center">
-                                                Cantidad
-                                            </Typography>
-                                            <StepperContainer sx={{ justifyContent: "center" }}>
-                                                <StepperButton
-                                                    size="small"
-                                                    onClick={() => handleDecrement(item.productId)}
-                                                    disabled={item.quantity <= 1}
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                    </svg>
-                                                </StepperButton>
-                                                <StepperInput
-                                                    type="number"
-                                                    value={item.quantity}
-                                                    onChange={(e) => handleInputChange(item.productId, e.target.value)}
-                                                    min={1}
-                                                    max={9999}
-                                                />
-                                                <StepperButton
-                                                    size="small"
-                                                    onClick={() => handleIncrement(item.productId)}
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <line x1="12" y1="5" x2="12" y2="19" />
-                                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                                    </svg>
-                                                </StepperButton>
-                                            </StepperContainer>
-                                        </Stack>
-
-                                        <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "right" }}>
-                                            <Typography variant="body2" color="text.secondary">Total</Typography>
-                                            <Typography variant="body1" fontWeight={700} color="primary.main">
-                                                {formatCurrency(item.totalPrice)}
-                                            </Typography>
-                                        </Stack>
-                                    </Stack>
-                                </ItemCard>
-                            ))}
+                            {
+                                items.map((item) => (
+                                    <ConfirmOrderItemCard
+                                        key={item.productId}
+                                        item={item}
+                                        onQuantityChange={handleQuantityChange}
+                                    />
+                                ))
+                            }
                         </Stack>
                     </Grid>
 
@@ -326,31 +230,33 @@ export default function ConfirmarArticulosPage() {
                         <SummaryCard>
                             <Stack spacing={2}>
                                 <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">Artículos</Typography>
-                                    <Typography variant="body1" fontWeight={600}>{totalItems}</Typography>
+                                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                                    <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
                                 </Stack>
-                                <Divider />
                                 <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="h5" fontWeight={700}>Total:</Typography>
-                                    <Typography variant="h5" fontWeight={700} color="primary.main">
-                                        {formatCurrency(totalPrice)}
-                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">IVA</Typography>
+                                    <Typography variant="body1">{formatCurrency(iva)}</Typography>
                                 </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="h6" fontWeight={700}>Total:</Typography>
+                                    <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
+                                </Stack>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    fullWidth
+                                    size="large"
+                                    disabled={status === "submitting" || items.length === 0}
+                                    onClick={handleSolicitarPedido}
+                                    sx={{ textTransform: "none", fontWeight: 600 }}
+                                >
+                                    {status === "submitting" ? (
+                                        <CircularProgress size={24} color="inherit" />
+                                    ) : (
+                                        "Guardar pedido"
+                                    )}
+                                </Button>
                             </Stack>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                fullWidth
-                                size="large"
-                                disabled={status === "submitting" || items.length === 0}
-                                onClick={handleSolicitarPedido}
-                            >
-                                {status === "submitting" ? (
-                                    <CircularProgress size={24} color="inherit" />
-                                ) : (
-                                    "Solicitar pedido"
-                                )}
-                            </Button>
                         </SummaryCard>
                     </Grid>
                 </Grid>

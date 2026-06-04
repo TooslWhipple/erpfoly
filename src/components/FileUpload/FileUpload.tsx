@@ -21,6 +21,7 @@ export interface FileUploadProps {
   accept?: string[];
   maxFileSizeBytes?: number;
   placeholder?: string;
+  fileLabel?: string;
   disabled?: boolean;
   error?: string;
 }
@@ -46,6 +47,7 @@ export function FileUpload({
   accept = DEFAULT_ACCEPT,
   maxFileSizeBytes = DEFAULT_MAX_SIZE,
   placeholder = "Drag and drop files here or click to browse",
+  fileLabel,
   disabled = false,
   error,
 }: FileUploadProps) {
@@ -190,7 +192,7 @@ export function FileUpload({
             </FileIconContainer>
             <Stack spacing={0.5}>
               <Stack minWidth={0}>
-                <Typography variant="subtitle2">{currentFile.name}</Typography>
+                <Typography variant="subtitle2">{fileLabel ?? currentFile.name}</Typography>
                 {
                   currentFile.uploadedAt &&
                   <Stack direction="row" alignItems="center" spacing={0.5}>

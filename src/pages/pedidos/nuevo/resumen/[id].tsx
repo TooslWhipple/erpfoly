@@ -76,7 +76,7 @@ export default function ResumenPedido() {
 
     const breadcrumbs: BreadcrumbItem[] = [
         { label: "Pedidos", href: "/pedidos" },
-        { label: order?.branch?.name || "Nuevo pedido", href: "/pedidos" },
+        { label: order?.supplier?.name || order?.branch?.name || "Nuevo pedido", href: "/pedidos" },
         { label: "Resumen del pedido" },
     ];
 
@@ -142,7 +142,7 @@ export default function ResumenPedido() {
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     <Typography variant="h1">Resumen del pedido</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Proveedor: {order.branch?.name || "—"}
+                        Proveedor: {order.supplier?.name || "—"}
                     </Typography>
                 </Stack>
 

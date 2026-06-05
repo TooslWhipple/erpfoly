@@ -1,5 +1,5 @@
 import { Button, CircularProgress, Grid, MenuItem, Stack, Switch, Typography } from "@mui/material";
-import { FormTextField } from "@/components/Form";
+import { FormDatePicker, FormTextField } from "@/components/Form";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
@@ -139,17 +139,17 @@ export function GuarantorTab({
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField
+          <FormDatePicker
             fullWidth
             required
+            openTo="year"
+            views={["year", "month", "day"]}
             label="Fecha de Nacimiento"
             placeholder="Selecciona"
-            type="date"
             value={values.birthDate}
-            onChange={(event) => onFieldChange("birthDate", event.target.value)}
+            onChange={(nextValue) => onFieldChange("birthDate", nextValue)}
             error={Boolean(errors.birthDate)}
             helperText={errors.birthDate}
-            InputLabelProps={{ shrink: true }}
             disabled={saving}
           />
         </Grid>

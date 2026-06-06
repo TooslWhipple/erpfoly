@@ -1,0 +1,228 @@
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Box, Stack } from "@mui/material";
+import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import type { TabOption } from "@/components/TabFilters";
+import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { getSales } from "@/services/ventas.service";
+import type { SaleListItem, SaleStatus, SalePaymentType, SaleStatusTab } from "@/types/ventas.types";
+import { SALES_CREATE } from "@/lib/permissions";
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+const STATUS_TABS: TabOption[] = [
+  { label: "Todas", value: "all" },
+  { label: "Realizadas", value: "completed" },
+  { label: "Pendientes", value: "pending" },
+];
+
+const STATUS_CHIP_LABELS: Record<SaleStatus, string> = {
+  DRAFT: "Borrador",
+  PENDING_PAYMENT: "Pago pendiente",
+  PAID: "Pagada",
+  CANCELLED: "Cancelada",
+};
+
+const STATUS_CHIP_VARIANTS: Record<SaleStatus, StatusChipVariant> = {
+  DRAFT: "default",
+  PENDING_PAYMENT: "warning",
+  PAID: "success",
+  CANCELLED: "error",
+};
+
+const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
+  CREDIT: "#a855f7",
+  CASH: "#10b981",
+  LAYAWAY: "#f59e0b",
+};
+
+const PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
+  CREDIT: "Crédito",
+  CASH: "Contado",
+  LAYAWAY: "Apartado",
+};
+
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  if (diffDays === 1) return "Ayer";
+  return date.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+}
+
+export default function Ventas() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("all");
+
+  const statusTabExtra =
+    activeTab === "all" ? undefined : { statusTab: activeTab as SaleStatusTab };
+
+  const {
+    data: ventas,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+  } = usePaginatedList<SaleListItem>({
+    queryKey: ["sales", activeTab],
+    queryFn: getSales,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: statusTabExtra,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPage(0);
+  };
+
+  const tabs = STATUS_TABS.map((t) => ({
+    ...t,
+    count: t.value === activeTab ? totalRows : undefined,
+  }));
+
+  const handleRowClick = (row: SaleListItem) => {
+    void router.push(`/ventas/${row.id}`);
+  };
+
+  const columns: Column<SaleListItem>[] = [
+    {
+      id: "status",
+      label: "Estatus",
+      size: "sm",
+      type: "chip",
+      chipLabelMap: STATUS_CHIP_LABELS,
+      chipVariantMap: STATUS_CHIP_VARIANTS,
+    },
+    {
+      id: "productName",
+      label: "Artículo",
+      size: "xl",
+      format: (value, row) => (
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Box
+            component="img"
+            src={row.productImageUrl ?? "/placeholder-product.png"}
+            alt={String(value ?? "")}
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: 1,
+              objectFit: "cover",
+              flexShrink: 0,
+              bgcolor: "grey.100",
+            }}
+          />
+          <span>{String(value ?? "—")}</span>
+        </Stack>
+      ),
+    },
+    {
+      id: "clientName",
+      label: "Cliente",
+      size: "lg",
+      format: (value) => String(value ?? "—"),
+    },
+    {
+      id: "createdAt",
+      label: "Fecha",
+      size: "md",
+      format: (value) => formatRelativeDate(String(value ?? "")),
+    },
+    {
+      id: "paymentType",
+      label: "Tipo",
+      size: "sm",
+      format: (value) => {
+        const type = value as SalePaymentType;
+        const color = PAYMENT_TYPE_COLORS[type] ?? "#6b7280";
+        const label = PAYMENT_TYPE_LABELS[type] ?? String(value);
+        return (
+          <Box
+            component="span"
+            sx={{
+              display: "inline-block",
+              px: 1,
+              py: 0.25,
+              borderRadius: "4px",
+              border: `1px solid ${color}`,
+              color,
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              lineHeight: 1.6,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </Box>
+        );
+      },
+    },
+  ];
+
+  return (
+    <MainLayout>
+      <Stack direction="column" spacing={3}>
+        <Title
+          title="Ventas"
+          actions={[
+            {
+              id: "nueva-venta",
+              label: "Nueva",
+              onClick: () => void router.push("/ventas/nueva"),
+              variant: "contained",
+              color: "primary",
+              permission: SALES_CREATE,
+            },
+          ]}
+        />
+
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          showSearch
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Buscar"
+        />
+
+        <TableCrud
+          columns={columns}
+          rows={ventas}
+          loading={loading}
+          rowKey="id"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalRows={totalRows}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onRowClick={handleRowClick}
+          emptyMessage="No hay ventas registradas"
+        />
+      </Stack>
+    </MainLayout>
+  );
+}

@@ -28,6 +28,7 @@ export {
   Users,
   ShoppingCart,
   Store,
+  Warehouse,
   ClipboardList,
   Truck,
   Package,

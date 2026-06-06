@@ -52,6 +52,9 @@ import {
   BRANCH_ORDERS_UPDATE,
   BRANCH_REQUESTS_READ,
   ROUTES_READ,
+  SALES_READ,
+  SALES_CREATE,
+  QUOTATIONS_READ,
   type PermissionCode,
 } from "@/lib/permissions";
 
@@ -81,6 +84,11 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes-credito\/(nuevo|nueva)$/, permission: CREDIT_APPLICATIONS_CREATE },
   { pattern: /^\/solicitudes-credito\/[^/]+\/revision$/, permission: CREDIT_APPLICATIONS_UPDATE },
   { pattern: /^\/solicitudes-credito(\/.*)?$/, permission: CREDIT_APPLICATIONS_READ },
+
+  { pattern: /^\/ventas\/nueva$/, permission: SALES_CREATE },
+  { pattern: /^\/ventas(\/.*)?$/, permission: SALES_READ },
+  { pattern: /^\/cotizaciones-guardadas(\/.*)?$/, permission: QUOTATIONS_READ },
+  { pattern: /^\/cotizaciones(\/.*)?$/, permission: QUOTATIONS_READ },
 
   { pattern: /^\/cajas(\/.*)?$/, permission: CASH_REGISTERS_READ },
 

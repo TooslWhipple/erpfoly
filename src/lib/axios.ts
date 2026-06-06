@@ -39,6 +39,29 @@ type BackendBody<T> =
 	| { success?: boolean; message?: string; errorCode?: unknown; data: T; error?: never }
 	| { error: { message: string;[k: string]: unknown }; data?: never };
 
+type RetryableAxiosRequestConfig = AxiosRequestConfig & {
+	_retry?: boolean;
+	_rateLimitRetryCount?: number;
+};
+
+const MAX_RATE_LIMIT_RETRIES = 3;
+const DEFAULT_RATE_LIMIT_RETRY_DELAY_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRateLimitRetryDelayMs(error: AxiosError): number {
+	const retryAfter = error.response?.headers?.["retry-after"];
+	if (typeof retryAfter === "string" && retryAfter.trim()) {
+		const seconds = Number(retryAfter);
+		if (!Number.isNaN(seconds) && seconds > 0) {
+			return seconds * 1000;
+		}
+	}
+	return DEFAULT_RATE_LIMIT_RETRY_DELAY_MS;
+}
+
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
 	const url = config?.url ?? "";
 	return typeof url === "string" && url.includes("/auth/refresh");
@@ -107,7 +130,20 @@ api.interceptors.response.use(
 		return response;
 	},
 	async (error: AxiosError) => {
-		const originalRequest = error.config;
+		const originalRequest = error.config as RetryableAxiosRequestConfig | undefined;
+
+		if (error.response?.status === 429 && originalRequest) {
+			const retryCount = originalRequest._rateLimitRetryCount ?? 0;
+
+			if (retryCount < MAX_RATE_LIMIT_RETRIES) {
+				originalRequest._rateLimitRetryCount = retryCount + 1;
+				await sleep(getRateLimitRetryDelayMs(error));
+				return api.request(originalRequest);
+			}
+
+			useSnackbarStore.getState().showError(getErrorMessage(error));
+			return Promise.reject(error);
+		}
 
 		if (error.response?.status !== 401) {
 			useSnackbarStore.getState().showError(getErrorMessage(error));
@@ -122,7 +158,7 @@ api.interceptors.response.use(
 		if (
 			isPublicAuthRequest(originalRequest) ||
 			isRefreshRequest(originalRequest) ||
-			(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry
+			originalRequest._retry
 		) {
 			if (isPublicAuthRequest(originalRequest)) {
 				return Promise.reject(error);
@@ -153,7 +189,7 @@ api.interceptors.response.use(
 				.catch((e) => Promise.reject(e));
 		}
 
-		(originalRequest as AxiosRequestConfig & { _retry?: boolean })._retry = true;
+		originalRequest._retry = true;
 		isRefreshing = true;
 
 		try {

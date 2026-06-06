@@ -37,6 +37,7 @@ interface TabFiltersProps {
   tabs: TabOption[];
   activeTab: string;
   onTabChange: (value: string) => void;
+  disabled?: boolean;
   showSearch?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -54,6 +55,7 @@ export function TabFilters({
   tabs,
   activeTab,
   onTabChange,
+  disabled = false,
   showSearch = false,
   searchValue = "",
   onSearchChange,
@@ -62,6 +64,7 @@ export function TabFilters({
 }: TabFiltersProps) {
   const { hasPermission } = usePermissions();
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
+    if (disabled) return;
     onTabChange(newValue);
   };
 
@@ -104,6 +107,7 @@ export function TabFilters({
               onChange={handleTabChange}
               variant="scrollable"
               scrollButtons={false}
+              sx={disabled ? { pointerEvents: "none", opacity: 0.6 } : undefined}
             >
               {
                 tabs.map((tab) => (

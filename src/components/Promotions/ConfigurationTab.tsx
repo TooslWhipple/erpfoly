@@ -107,7 +107,7 @@ export function ConfigurationTab({
               placeholder="Ej. Buen fin"
             />
           </Grid>
-          <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: 3 }}>
+          <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: purchaseType?.code === "APARTADO" ? 3 : 6 }}>
             <FormTextField
               label="Porcentaje"
               value={formState.percentage}
@@ -123,25 +123,27 @@ export function ConfigurationTab({
               }}
             />
           </Grid>
-          <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: 6 }}>
-            <FormTextField
-              label="Anticipo"
-              value={formState.advancePercentage}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "" || /^\d{0,3}(\.\d*)?$/.test(v)) {
-                  onFieldChange("advancePercentage", v);
-                  if (errors.advancePercentage) onErrorClear("advancePercentage");
-                }
-              }}
-              error={Boolean(errors.advancePercentage)}
-              helperText={errors.advancePercentage}
-              placeholder="0"
-              InputProps={{
-                endAdornment: <Box component="span" sx={{ color: "text.secondary" }}>%</Box>,
-              }}
-            />
-          </Grid>
+          {purchaseType?.code === "APARTADO" ? (
+            <Grid size={(isModal) ? { xs: 6 } : { xs: 12, sm: 3 }}>
+              <FormTextField
+                label="Anticipo"
+                value={formState.advancePercentage}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "" || /^\d{0,3}(\.\d*)?$/.test(v)) {
+                    onFieldChange("advancePercentage", v);
+                    if (errors.advancePercentage) onErrorClear("advancePercentage");
+                  }
+                }}
+                error={Boolean(errors.advancePercentage)}
+                helperText={errors.advancePercentage}
+                placeholder="0"
+                InputProps={{
+                  endAdornment: <Box component="span" sx={{ color: "text.secondary" }}>%</Box>,
+                }}
+              />
+            </Grid>
+          ) : null}
         </Grid>
       </FormCard>
 
@@ -169,9 +171,14 @@ export function ConfigurationTab({
                       checked={formState.purchaseTypeId === item.id}
                       onChange={(e) => {
                         const nextId = Number(e.target.value);
+                        const nextType = configuration?.purchaseTypes.find((p) => p.id === nextId);
                         onFieldChange("purchaseTypeId", Number.isFinite(nextId) ? nextId : null);
                         onFieldChange("creditTermIds", []);
                         onFieldChange("layawayTermIds", []);
+                        if (nextType?.code !== "APARTADO") {
+                          onFieldChange("advancePercentage", "");
+                          onErrorClear("advancePercentage");
+                        }
                         if (errors.purchaseTypeId) onErrorClear("purchaseTypeId");
                       }}
                     />

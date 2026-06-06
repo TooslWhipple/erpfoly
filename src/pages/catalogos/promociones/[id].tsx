@@ -27,7 +27,7 @@ import { usePromotionDepartmentsCatalog } from "@/hooks/usePromotionDepartmentsC
 import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog";
 import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
-import { validatePromotionEndDate } from "@/lib/promotionFormValidation";
+import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
 import { CATALOG_PROMOTIONS_CREATE, CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
 import { parsePositiveIntParam } from "@/utils/query";
 
@@ -68,10 +68,14 @@ function mapDetailToForm(
 ): PromotionFormState {
   const deptIds = [...new Set(detail.products.map((p) => p.department_id))];
   const lineIds = [...new Set(detail.products.map((p) => p.line_id))];
+  const purchaseType = configuration.purchaseTypes.find(
+    (p) => p.id === detail.purchase_type_id
+  );
+  const isApartado = purchaseType?.code === "APARTADO";
   return {
     name: detail.name,
     percentage: String(detail.discount_rate),
-    advancePercentage: "",
+    advancePercentage: isApartado ? String(detail.advance_rate) : "",
     purchaseTypeId: detail.purchase_type_id,
     creditTermIds: [...detail.credit_term_ids],
     layawayTermIds: [...detail.layaway_term_ids],
@@ -271,10 +275,12 @@ export default function PromotionFormPage() {
       newErrors.percentage = "El porcentaje debe ser mayor a 0";
     }
 
-    const advanceNum =
-      formState.advancePercentage === "" ? NaN : Number(formState.advancePercentage);
-    if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
-      newErrors.advancePercentage = "El anticipo debe estar entre 0 y 100";
+    const advancePercentageError = validatePromotionAdvancePercentage(
+      purchaseTypeMeta?.code,
+      formState.advancePercentage
+    );
+    if (advancePercentageError) {
+      newErrors.advancePercentage = advancePercentageError;
     }
 
     if (!formState.startDate) {
@@ -327,6 +333,10 @@ export default function PromotionFormPage() {
     return {
       name: formState.name.trim(),
       discountRate: Number(formState.percentage),
+      advanceRate: resolvePromotionAdvanceRate(
+        purchaseTypeMeta?.code,
+        formState.advancePercentage
+      ),
       startDate: formState.startDate,
       endDate:
         formState.hasEndDate && formState.endDate && String(formState.endDate).trim()

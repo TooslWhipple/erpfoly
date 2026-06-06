@@ -9,7 +9,7 @@ import { ConfigurationTab } from "@/components/Promotions/ConfigurationTab";
 import { defineFormFields } from "@/forms";
 import { getApiErrorMessage } from "@/lib/axios";
 import { buildSelectedTermOptionLabels } from "@/lib/promotionTermOptionLabels";
-import { validatePromotionEndDate } from "@/lib/promotionFormValidation";
+import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
 import {
   getPromotionFormConfiguration,
   type PromotionFormConfiguration,
@@ -63,10 +63,15 @@ function mapPayloadToFormState(
       ? Array.from(new Set([...(payload.productIds ?? []), productId]))
       : [...(payload.productIds ?? [])];
 
+  const purchaseType = configuration.purchaseTypes.find(
+    (p) => p.id === (payload.purchaseTypeId ?? null)
+  );
+  const isApartado = purchaseType?.code === "APARTADO";
+
   return {
     name: payload.name,
     percentage: String(payload.discountRate),
-    advancePercentage: "",
+    advancePercentage: isApartado ? String(payload.advanceRate) : "",
     purchaseTypeId: payload.purchaseTypeId ?? null,
     creditTermIds: [...(payload.creditTermIds ?? [])],
     layawayTermIds: [...(payload.layawayTermIds ?? [])],
@@ -202,6 +207,7 @@ export function ProductPromotionModal({
 
   const runValidation = (): { ok: boolean; nextErrors: FormErrors } => {
     const newErrors: FormErrors = {};
+    const code = purchaseTypeMeta?.code;
 
     if (!formState.name.trim()) {
       newErrors.name = "El nombre es requerido";
@@ -211,10 +217,12 @@ export function ProductPromotionModal({
       newErrors.percentage = "El porcentaje debe ser mayor a 0";
     }
 
-    const advanceNum =
-      formState.advancePercentage === "" ? NaN : Number(formState.advancePercentage);
-    if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
-      newErrors.advancePercentage = "El anticipo debe estar entre 0 y 100";
+    const advancePercentageError = validatePromotionAdvancePercentage(
+      code,
+      formState.advancePercentage
+    );
+    if (advancePercentageError) {
+      newErrors.advancePercentage = advancePercentageError;
     }
 
     if (!formState.startDate) {
@@ -230,7 +238,6 @@ export function ProductPromotionModal({
       newErrors.purchaseTypeId = "Selecciona un tipo de aplicación";
     }
 
-    const code = purchaseTypeMeta?.code;
     if (code === "CREDITO" && formState.creditTermIds.length === 0) {
       newErrors.creditTermIds = "Selecciona al menos una opción de meses";
     }
@@ -273,6 +280,7 @@ export function ProductPromotionModal({
     return {
       name: formState.name.trim(),
       discountRate: Number(formState.percentage),
+      advanceRate: resolvePromotionAdvanceRate(code, formState.advancePercentage),
       startDate: formState.startDate,
       endDate:
         formState.hasEndDate && formState.endDate && String(formState.endDate).trim()

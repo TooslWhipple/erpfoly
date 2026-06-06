@@ -59,6 +59,7 @@ export interface PromotionDetail {
 	id: number;
 	name: string;
 	discount_rate: number;
+	advance_rate: number;
 	start_date: string;
 	end_date: string | null;
 	purchase_type_id: number | null;
@@ -82,6 +83,7 @@ export interface PromotionDetail {
 export interface SavePromotionPayload {
 	name: string;
 	discountRate: number;
+	advanceRate: number;
 	startDate: string;
 	endDate?: string | null;
 	purchaseTypeId?: number | null;
@@ -102,6 +104,7 @@ export interface SavePromotionPayload {
 export interface CreatePromotionApiPayload {
 	name: string;
 	discount_rate: number;
+	advance_rate: number;
 	start_date: string;
 	end_date?: string | null;
 	purchase_type_id?: number | null;
@@ -122,6 +125,7 @@ function mapSavePromotionPayloadToApi(
 	return {
 		name: payload.name,
 		discount_rate: payload.discountRate,
+		advance_rate: payload.advanceRate,
 		start_date: payload.startDate,
 		end_date: payload.endDate ?? null,
 		purchase_type_id: payload.purchaseTypeId ?? null,

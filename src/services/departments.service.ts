@@ -81,6 +81,7 @@ export interface DepartmentCatalogItem {
   id: number;
   name: string;
   code: string | null;
+  margin: number;
 }
 
 export async function getDepartmentsCatalog(): Promise<DepartmentCatalogItem[]> {

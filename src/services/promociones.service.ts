@@ -78,7 +78,7 @@ export interface PromotionDetail {
 	supplier_ids: number[];
 }
 
-/** Body for POST/PATCH promotions and nested `promotions` on product create/update (camelCase API). */
+/** Frontend form / nested product promotions (camelCase). */
 export interface SavePromotionPayload {
 	name: string;
 	discountRate: number;
@@ -96,6 +96,47 @@ export interface SavePromotionPayload {
 	productIds?: number[];
 	branchIds?: number[];
 	supplierIds?: number[];
+}
+
+/** POST/PATCH /promotions body (snake_case). */
+export interface CreatePromotionApiPayload {
+	name: string;
+	discount_rate: number;
+	start_date: string;
+	end_date?: string | null;
+	purchase_type_id?: number | null;
+	credit_term_ids?: number[];
+	layaway_term_ids?: number[];
+	customer_level_down_payments?: Array<{
+		customer_level_id: number;
+		percentage: number;
+	}>;
+	product_ids?: number[];
+	branch_ids?: number[];
+	supplier_ids?: number[];
+}
+
+function mapSavePromotionPayloadToApi(
+	payload: SavePromotionPayload
+): CreatePromotionApiPayload {
+	return {
+		name: payload.name,
+		discount_rate: payload.discountRate,
+		start_date: payload.startDate,
+		end_date: payload.endDate ?? null,
+		purchase_type_id: payload.purchaseTypeId ?? null,
+		credit_term_ids: payload.creditTermIds ?? [],
+		layaway_term_ids: payload.layawayTermIds ?? [],
+		customer_level_down_payments: (payload.customerLevelDownPayments ?? []).map(
+			(row) => ({
+				customer_level_id: row.customerLevelId,
+				percentage: row.percentage,
+			})
+		),
+		product_ids: payload.productIds ?? [],
+		branch_ids: payload.branchIds ?? [],
+		supplier_ids: payload.supplierIds ?? [],
+	};
 }
 
 function recordUnknown(v: unknown): Record<string, unknown> {
@@ -179,14 +220,17 @@ export async function getPromotionById(id: number): Promise<PromotionDetail> {
 export async function createPromotion(
 	payload: SavePromotionPayload
 ): Promise<ApiResult<PromotionDetail>> {
-	return post<PromotionDetail>(BASE, payload);
+	return post<PromotionDetail>(BASE, mapSavePromotionPayloadToApi(payload));
 }
 
 export async function updatePromotion(
 	id: number,
 	payload: SavePromotionPayload
 ): Promise<ApiResult<PromotionDetail>> {
-	return patch<PromotionDetail>(`${BASE}/${id}`, payload);
+	return patch<PromotionDetail>(
+		`${BASE}/${id}`,
+		mapSavePromotionPayloadToApi(payload)
+	);
 }
 
 export interface GetPromotionsParams {

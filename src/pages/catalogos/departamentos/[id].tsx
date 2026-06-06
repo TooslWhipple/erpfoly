@@ -19,7 +19,9 @@ import {
   type LineFormOutput,
 } from "@/components/DepartmentDetailTabs";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDepartmentPromotions } from "@/hooks/useDepartmentPromotions";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import type { PromotionListItem } from "@/types/promociones.types";
 import { getDepartmentById, updateDepartment } from "@/services/departments.service";
 import {
   getProductLines,
@@ -78,6 +80,19 @@ export default function DepartmentDetailPage() {
     initialRowsPerPage: 10,
     initialSearch: "",
     enabled: isDepartmentReady && activeTab === "lines",
+  });
+
+  const {
+    data: departmentPromotions,
+    total: promotionsTotalRows,
+    page: promotionsPage,
+    rowsPerPage: promotionsRowsPerPage,
+    setPage: setPromotionsPage,
+    setRowsPerPage: setPromotionsRowsPerPage,
+    isLoading: loadingPromotions,
+  } = useDepartmentPromotions({
+    departmentId: isDepartmentReady ? departmentId : null,
+    enabled: isDepartmentReady && activeTab === "settings",
   });
 
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -201,6 +216,18 @@ export default function DepartmentDetailPage() {
       await Promise.all([refetchProductLines(), fetchDepartment()]);
     },
     [fetchDepartment, refetchProductLines, showError, showSnackbar],
+  );
+
+  const handleNewPromotion = useCallback(() => {
+    if (departmentId == null || Number.isNaN(departmentId)) return;
+    router.push(`/catalogos/promociones/nuevo?departmentId=${departmentId}`);
+  }, [departmentId, router]);
+
+  const handleOpenPromotion = useCallback(
+    (promotion: PromotionListItem) => {
+      router.push(`/catalogos/promociones/${promotion.id}`);
+    },
+    [router]
   );
 
   const handleSaveSettings = useCallback(async () => {
@@ -382,6 +409,15 @@ export default function DepartmentDetailPage() {
             marginHelperText={marginFieldState?.helperText ?? ""}
             savingMargin={savingSettings}
             canCreatePromotion={hasPermission(CATALOG_PROMOTIONS_CREATE)}
+            promotions={departmentPromotions}
+            promotionsLoading={loadingPromotions}
+            promotionsPage={promotionsPage}
+            promotionsRowsPerPage={promotionsRowsPerPage}
+            promotionsTotalRows={promotionsTotalRows}
+            onPromotionsPageChange={setPromotionsPage}
+            onPromotionsRowsPerPageChange={setPromotionsRowsPerPage}
+            onNewPromotion={handleNewPromotion}
+            onOpenPromotion={handleOpenPromotion}
           />
         )}
       </Stack>

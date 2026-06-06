@@ -162,9 +162,8 @@ export function ConfigurationTab({
             <Grid container spacing={1} flexWrap="wrap">
               {
                 configuration?.purchaseTypes.map((item) => (
-                  <Grid size={{ xs: 'auto' }}>
+                  <Grid key={item.id} size={{ xs: 'auto' }}>
                     <RadioButton
-                      key={item.id}
                       value={String(item.id)}
                       label={item.label}
                       checked={formState.purchaseTypeId === item.id}
@@ -188,10 +187,8 @@ export function ConfigurationTab({
               <Grid container spacing={1} flexWrap="wrap">
                 {
                   purchaseType.options.map((item) => (
-                    <Grid size={{ xs: 'auto' }}>
-
+                    <Grid key={item.id} size={{ xs: 'auto' }}>
                       <Checkbox
-                        key={item.id}
                         value={String(item.id)}
                         label={`${item.label} meses`}
                         checked={formState.creditTermIds.includes(item.id)}
@@ -211,9 +208,8 @@ export function ConfigurationTab({
                 <Typography variant="body1" fontWeight={500}>{purchaseType.optionLabel} </Typography>
                 <Grid container spacing={1} flexWrap="wrap">
                   {purchaseType.options.map((opt) => (
-                    <Grid size={{ xs: 'auto' }}>
+                    <Grid key={opt.id} size={{ xs: 'auto' }}>
                       <Checkbox
-                        key={opt.id}
                         value={String(opt.id)}
                         label={`${opt.label} días`}
                         checked={formState.layawayTermIds.includes(opt.id)}

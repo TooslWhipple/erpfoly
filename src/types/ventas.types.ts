@@ -73,3 +73,67 @@ export interface CartItem {
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
+
+export interface SaleDetailItem {
+  id: number;
+  quantity: number;
+  unitPrice: number;
+  discountAmount: number;
+  totalAmount: number;
+  product: {
+    id: number;
+    code: string;
+    name: string;
+    imageUrl: string | null;
+  };
+}
+
+export interface SaleDetailClient {
+  id: number;
+  fullName: string;
+  phoneNumber: string | null;
+  email: string | null;
+  primaryAddress: {
+    formatted: string;
+    latitude: string | null;
+    longitude: string | null;
+  } | null;
+}
+
+export interface SaleDetailPayment {
+  id: number;
+  paymentMethod: string;
+  amount: number;
+  receivedAmount: number | null;
+  changeAmount: number | null;
+}
+
+export interface SaleDetail {
+  id: number;
+  folio: string;
+  status: string;
+  subtotal: number;
+  discountAmount: number;
+  totalAmount: number;
+  createdAt: string;
+  branchId?: number | null;
+  deliveryDate?: string | null;
+  deliveryStatus?: string | null;
+  deliveryType?: string | null;
+  client: SaleDetailClient | null;
+  items: SaleDetailItem[];
+  payments: SaleDetailPayment[];
+}
+
+export type DeliveryAvailability = 'available' | 'low' | 'none';
+
+export interface DeliveryAvailabilityItem {
+  date: string;
+  count: number;
+  availability: DeliveryAvailability;
+}
+
+export interface SetDeliveryDatePayload {
+  delivery_date: string;
+  delivery_type?: 'ADDRESS' | 'BRANCH';
+}

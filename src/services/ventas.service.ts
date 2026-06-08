@@ -1,4 +1,5 @@
-import { get, post } from "@/lib/axios";
+import { get, post, del } from "@/lib/axios";
+import { unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
@@ -6,6 +7,9 @@ import type {
   GetSalesParams,
   ProductSearchResult,
   ProductDetail,
+  SaleDetail,
+  DeliveryAvailabilityItem,
+  SetDeliveryDatePayload,
 } from "@/types/ventas.types";
 
 export type { SaleListItem, GetSalesParams };
@@ -111,5 +115,48 @@ export async function confirmSalePayment(
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return post<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm`
+  );
+}
+
+export async function getSaleDetail(
+  saleId: number
+): Promise<ApiResult<SaleDetail>> {
+  return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+}
+
+export async function getDeliveryAvailability(
+  month: number,
+  year: number,
+  branchId?: number
+): Promise<DeliveryAvailabilityItem[]> {
+  const params = new URLSearchParams({
+    month: String(month),
+    year: String(year),
+  });
+  if (branchId) params.append("branch_id", String(branchId));
+  return unwrapOrThrow(
+    await get<DeliveryAvailabilityItem[]>(
+      `${BASE}/delivery-availability?${params.toString()}`
+    )
+  );
+}
+
+export async function setDeliveryDate(
+  saleId: number,
+  payload: SetDeliveryDatePayload
+): Promise<{ id: number; delivery_date: string }> {
+  return unwrapOrThrow(
+    await post<{ id: number; delivery_date: string }>(
+      `${BASE}/sales/${saleId}/delivery-date`,
+      payload
+    )
+  );
+}
+
+export async function removeDeliveryDate(
+  saleId: number
+): Promise<void> {
+  return unwrapOrThrow(
+    await del<void>(`${BASE}/sales/${saleId}/delivery-date`)
   );
 }

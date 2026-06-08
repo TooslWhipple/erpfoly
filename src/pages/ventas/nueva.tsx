@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
+import type { Props as GoogleMapReactProps } from "google-map-react";
 import {
   Box,
   Button,
@@ -46,8 +48,36 @@ import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { TableCrud } from "@/components/TableCrud";
+import { googleMapsBrowserApiKey } from "@/config/maps";
 
 const SEARCH_DEBOUNCE_MS = 350;
+
+const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
+
+const GOOGLE_MAPS_API_KEY = googleMapsBrowserApiKey;
+
+interface MapMarkerProps {
+  lat: number;
+  lng: number;
+}
+
+function MapMarker({ lat, lng }: MapMarkerProps) {
+  return (
+    <div
+      data-lat={lat}
+      data-lng={lng}
+      style={{
+        width: "18px",
+        height: "18px",
+        borderRadius: "50%",
+        border: "2px solid #FFFFFF",
+        backgroundColor: "#ef4444",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
+        transform: "translate(-50%, -50%)",
+      }}
+    />
+  );
+}
 
 // TODO: Obtener branch real de la sesion de caja activa
 const CURRENT_BRANCH_ID = 2;
@@ -59,6 +89,16 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "MXN",
   }).format(value);
+}
+
+function formatNumberInput(raw: string): string {
+  if (!raw) return "";
+  const parts = raw.split(".");
+  const intPart = Number(parts[0] || "0").toLocaleString("es-MX");
+  if (parts.length > 1) {
+    return `${intPart}.${parts[1]}`;
+  }
+  return intPart;
 }
 
 export default function NuevaVenta() {
@@ -92,6 +132,18 @@ export default function NuevaVenta() {
     postalCode: "",
     email: "",
   });
+
+  const primaryCoords = useMemo(() => {
+    if (!selectedClient?.addresses?.length) return null;
+    const primary =
+      selectedClient.addresses.find((a) => a.isPrimary) ??
+      selectedClient.addresses[0];
+    if (!primary?.latitude || !primary?.longitude) return null;
+    const lat = Number(primary.latitude);
+    const lng = Number(primary.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  }, [selectedClient]);
 
   const [productSearch, setProductSearch] = useState("");
   const [productPage, setProductPage] = useState(0);
@@ -191,8 +243,7 @@ export default function NuevaVenta() {
       return confirmRes.data!;
     },
     onSuccess: (data) => {
-      snackbar.showSuccess(`Venta ${data.folio} registrada exitosamente`);
-      void router.push("/ventas");
+      void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
       snackbar.showError(err.message);
@@ -927,10 +978,17 @@ export default function NuevaVenta() {
                   $
                 </Typography>
                 <OutlinedInput
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  value={formatNumberInput(paymentAmount)}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, "");
+                    const parts = val.split(".");
+                    const sanitized = parts.length > 2
+                      ? parts[0] + "." + parts.slice(1).join("")
+                      : val;
+                    setPaymentAmount(sanitized);
+                  }}
                   placeholder="0.00"
-                  inputProps={{ style: { fontSize: "2rem", fontWeight: 400, textAlign: "center", padding: "4px 0", width: 120 } }}
+                  inputProps={{ style: { fontSize: "2rem", fontWeight: 400, textAlign: "center", padding: "4px 0", width: 140 } }}
                   sx={{ "& .MuiOutlinedInput-notchedOutline": { border: "none" }, fontSize: "2rem" }}
                 />
               </Stack>
@@ -994,7 +1052,7 @@ export default function NuevaVenta() {
           open={billingModalOpen}
           onClose={() => setBillingModalOpen(false)}
           title="Agregar datos de facturación"
-          maxWidth="sm"
+          maxWidth="xl"
         >
           <Stack spacing={0}>
             <Button
@@ -1480,23 +1538,50 @@ export default function NuevaVenta() {
 
               {deliveryType === "delivery" && (
                 <>
-                  <Box
-                    sx={{
-                      width: "100%",
-                      height: 130,
-                      bgcolor: "grey.200",
-                      borderRadius: 1,
-                      mb: 1.5,
-                      overflow: "hidden",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Typography variant="caption" color="text.disabled">
-                      Vista de mapa
-                    </Typography>
-                  </Box>
+                  {primaryCoords && GOOGLE_MAPS_API_KEY ? (
+                    <Box
+                      sx={{
+                        width: "100%",
+                        height: 130,
+                        borderRadius: 1,
+                        mb: 1.5,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <GoogleMapReact
+                        bootstrapURLKeys={{ key: GOOGLE_MAPS_API_KEY }}
+                        center={primaryCoords}
+                        defaultCenter={primaryCoords}
+                        defaultZoom={16}
+                        zoom={16}
+                        options={{
+                          fullscreenControl: false,
+                          mapTypeControl: false,
+                          streetViewControl: false,
+                        }}
+                      >
+                        <MapMarker lat={primaryCoords.lat} lng={primaryCoords.lng} />
+                      </GoogleMapReact>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        width: "100%",
+                        height: 130,
+                        bgcolor: "grey.200",
+                        borderRadius: 1,
+                        mb: 1.5,
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.disabled">
+                        {primaryCoords ? "Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa" : "Sin coordenadas registradas"}
+                      </Typography>
+                    </Box>
+                  )}
 
                   <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.5}>
                     <Typography variant="caption" color="text.secondary">

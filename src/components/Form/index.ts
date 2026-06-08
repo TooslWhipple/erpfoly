@@ -10,3 +10,5 @@ export { FormTextField } from "./FormTextField";
 export type { FormTextFieldProps } from "./FormTextField";
 export { FormSelect } from "./FormSelect";
 export type { FormSelectProps } from "./FormSelect";
+export { FormDatePicker } from "./FormDatePicker";
+export type { FormDatePickerProps } from "./FormDatePicker";

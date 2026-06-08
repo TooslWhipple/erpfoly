@@ -503,7 +503,7 @@ async function uploadCreditApplicationFile(
 
 async function ensureDocumentFilesUploaded(
   applicationId: string,
-  files: Array<{ id: string; name: string; file?: File; filePath?: string; url?: string }>,
+  files: Array<{ id: string; name: string; file?: File; filePath?: string; url?: string; uploadedAt?: string }>,
   type: CreditApplicationDocumentTypeCode
 ) {
   const resolved = [];
@@ -511,9 +511,11 @@ async function ensureDocumentFilesUploaded(
     if (item.file) {
       const uploaded = await uploadCreditApplicationFile(applicationId, type, item.file);
       resolved.push({
-        id: item.id,
+        id: String(uploaded.documentId ?? item.id),
         name: item.name,
         filePath: uploaded.filePath,
+        url: uploaded.fileUrl,
+        uploadedAt: item.uploadedAt ?? "Cargado",
       });
       continue;
     }
@@ -523,6 +525,8 @@ async function ensureDocumentFilesUploaded(
         id: item.id,
         name: item.name,
         filePath: existingPath,
+        url: item.url,
+        uploadedAt: item.uploadedAt,
       });
     }
   }
@@ -693,7 +697,10 @@ export async function validateSecurityCode(code: string): Promise<boolean> {
 
 export async function saveCreditApplication(
   payload: CreditApplicationFormPayload,
-  options?: { includeGuarantorSection?: boolean }
+  options?: {
+    includeGuarantorSection?: boolean;
+    sections?: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">>;
+  }
 ): Promise<{ id: string }> {
   const applicationId = payload.id?.trim();
   if (!applicationId) {
@@ -702,7 +709,7 @@ export async function saveCreditApplication(
   }
 
   const includeGuarantorSection = options?.includeGuarantorSection ?? true;
-  const sections: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">> = [
+  const defaultSections: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">> = [
     "basicInformation",
     "family",
     "address",
@@ -711,6 +718,7 @@ export async function saveCreditApplication(
     "documentation",
     ...(includeGuarantorSection ? ["guarantor" as const] : []),
   ];
+  const sections = options?.sections ?? defaultSections;
 
   for (const section of sections) {
     await saveCreditApplicationSection(applicationId, section, payload);

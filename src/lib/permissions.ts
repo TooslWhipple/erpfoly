@@ -47,6 +47,8 @@ export type PermissionModule =
   | "catalogos.metas"
   | "catalogos.costos_envio"
   | "catalogos.folypuntos"
+  | "ventas"
+  | "cotizaciones"
   | "reportes";
 
 export type PermissionCode = `${PermissionModule}.${CrudAction}`;
@@ -282,6 +284,20 @@ export const CATALOG_POINTS_READ = CATALOG_POINTS_PERMISSIONS.read;
 export const CATALOG_POINTS_UPDATE = CATALOG_POINTS_PERMISSIONS.update;
 export const CATALOG_POINTS_DELETE = CATALOG_POINTS_PERMISSIONS.delete;
 
+// Sales (Ventas)
+export const SALES_PERMISSIONS = createCrudPermissions("ventas");
+export const SALES_CREATE = SALES_PERMISSIONS.create;
+export const SALES_READ = SALES_PERMISSIONS.read;
+export const SALES_UPDATE = SALES_PERMISSIONS.update;
+export const SALES_DELETE = SALES_PERMISSIONS.delete;
+
+// Cotizaciones
+export const QUOTATIONS_PERMISSIONS = createCrudPermissions("cotizaciones");
+export const QUOTATIONS_CREATE = QUOTATIONS_PERMISSIONS.create;
+export const QUOTATIONS_READ = QUOTATIONS_PERMISSIONS.read;
+export const QUOTATIONS_UPDATE = QUOTATIONS_PERMISSIONS.update;
+export const QUOTATIONS_DELETE = QUOTATIONS_PERMISSIONS.delete;
+
 // Reports
 export const REPORTS_PERMISSIONS = createCrudPermissions("reportes");
 export const REPORTS_CREATE = REPORTS_PERMISSIONS.create;
@@ -336,5 +352,7 @@ export const PERMISSIONS_BY_MODULE = {
     shippingCosts: Object.values(CATALOG_SHIPPING_COSTS_PERMISSIONS),
     points: Object.values(CATALOG_POINTS_PERMISSIONS),
   },
+  sales: Object.values(SALES_PERMISSIONS),
+  quotations: Object.values(QUOTATIONS_PERMISSIONS),
   reports: Object.values(REPORTS_PERMISSIONS),
 } as const;

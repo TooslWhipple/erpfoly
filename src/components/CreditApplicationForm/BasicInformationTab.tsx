@@ -1,6 +1,6 @@
 import { CircularProgress, Grid, Button, MenuItem, Typography } from "@mui/material";
 import { Check, ShieldCheck } from "lucide-react";
-import { FormTextField } from "@/components/Form";
+import { FormDatePicker, FormTextField } from "@/components/Form";
 import type { MaritalStatusCatalogItem } from "@/services/catalog.service";
 import type {
   BasicInformationFormErrors,
@@ -39,9 +39,10 @@ export function BasicInformationTab({
   onContinue,
   saving,
 }: BasicInformationTabProps) {
+  const isSendMode = otpActionLabel !== "Validar";
+
   return (
     <Card>
-      <Typography variant="h5">Información básica</Typography>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <FormTextField
@@ -82,17 +83,17 @@ export function BasicInformationTab({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField
+          <FormDatePicker
             fullWidth
             required
+            openTo="year"
+            views={["year", "month", "day"]}
             label="Fecha de nacimiento"
             placeholder="Selecciona"
-            type="date"
             value={values.birthDate}
-            onChange={(event) => onFieldChange("birthDate", event.target.value)}
+            onChange={(nextValue) => onFieldChange("birthDate", nextValue)}
             error={Boolean(errors.birthDate)}
             helperText={errors.birthDate}
-            InputLabelProps={{ shrink: true }}
             disabled={saving}
           />
         </Grid>
@@ -159,7 +160,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 'grow' }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             fullWidth
             required={isSecurityCodeValid !== true}

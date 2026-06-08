@@ -19,6 +19,8 @@ export interface ClientAddressItem {
   internalNumber: string | null;
   postalCode: string | null;
   neighborhoodName: string;
+  latitude?: string | null;
+  longitude?: string | null;
 }
 
 export interface Client {

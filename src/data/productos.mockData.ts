@@ -86,7 +86,7 @@ export const COST_BASIS_FOR_PRICE_OPTIONS: Array<{ value: CostBasisForCalculatio
 ];
 
 export const DEFAULT_PRODUCT_BASE_PRICES: ProductBasePrice[] = [
-    { id: "bp-default-1", name: "Contado", marginPercent: 35.75, lastEditedBy: "Gerente" },
+    { id: "bp-default-1", name: "Contado", marginPercent: 0, lastEditedBy: "Gerente" },
 ];
 
 export const MOCK_COST_HISTORY: CostHistoryEntry[] = [

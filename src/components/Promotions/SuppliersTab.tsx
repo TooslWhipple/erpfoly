@@ -20,10 +20,27 @@ import {
   SupplierTableHeader,
   SupplierTableRow,
   SupplierTableCell,
+  SupplierRemoveIconButton,
 } from "@/styles/catalogos/productos.styles";
 import type { PromotionFormState, PromotionSupplier } from "@/types/promociones.types";
 import type { SupplierCatalogItem } from "@/services/suppliers.service";
-import { PlusIcon, Search } from "lucide-react";
+import { Minus, PlusIcon, Search } from "lucide-react";
+
+function supplierDisplayName(
+  row: PromotionSupplier,
+  catalog: SupplierCatalogItem[]
+): string {
+  const item = catalog.find((c) => c.id === row.supplierId);
+  if (!item) {
+    return row.supplierName;
+  }
+  const name = item.name?.trim() ?? "";
+  const business = item.businessName?.trim() ?? "";
+  if (name && business && name !== business) {
+    return `${name} - ${business}`;
+  }
+  return business || name || row.supplierName;
+}
 
 interface SuppliersTabProps {
   formState: PromotionFormState;
@@ -52,12 +69,14 @@ export function SuppliersTab({
     const suppliers = formState.suppliers || [];
     if (!searchTerm.trim()) return suppliers;
     const term = searchTerm.toLowerCase().trim();
-    return suppliers.filter(
-      (s) =>
+    return suppliers.filter((s) => {
+      const displayName = supplierDisplayName(s, catalog);
+      return (
         String(s.supplierId).toLowerCase().includes(term) ||
-        s.supplierName.toLowerCase().includes(term)
-    );
-  }, [formState.suppliers, searchTerm]);
+        displayName.toLowerCase().includes(term)
+      );
+    });
+  }, [formState.suppliers, searchTerm, catalog]);
 
   const handleOpenModal = () => {
     setModalOpen(true);
@@ -174,14 +193,17 @@ export function SuppliersTab({
                       filteredSuppliers.map((supplier) => (
                         <SupplierTableRow key={supplier.id}>
                           <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
-                          <SupplierTableCell>{supplier.supplierName}</SupplierTableCell>
+                          <SupplierTableCell>
+                            {supplierDisplayName(supplier, catalog)}
+                          </SupplierTableCell>
                           <SupplierTableCell align="right">
-                            <Button
-                              variant="text"
+                            <SupplierRemoveIconButton
+                              size="small"
+                              aria-label="Quitar proveedor"
                               onClick={() => handleRemoveSupplier(supplier.id)}
                             >
-                              Remover
-                            </Button>
+                              <Minus size={16} strokeWidth={2} />
+                            </SupplierRemoveIconButton>
                           </SupplierTableCell>
                         </SupplierTableRow>
                       ))

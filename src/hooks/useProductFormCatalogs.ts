@@ -14,6 +14,7 @@ import {
     productLineCatalogToSelectOptions,
     warrantyCatalogToFormOptions,
 } from "@/lib/productFormCatalogMappers";
+import type { DepartmentCatalogItem } from "@/services/departments.service";
 import type { WarrantyType } from "@/types/productos.types";
 
 export interface ProductFormCatalogSelectOption {
@@ -22,7 +23,11 @@ export interface ProductFormCatalogSelectOption {
 }
 
 export interface UseProductFormCatalogsResult {
+    /** Initial load of catalogs that do not depend on the selected department. */
     catalogsLoading: boolean;
+    /** Product lines fetch for the currently selected department. */
+    linesLoading: boolean;
+    departmentCatalogItems: DepartmentCatalogItem[];
     departmentOptions: ProductFormCatalogSelectOption[];
     lineOptions: ProductFormCatalogSelectOption[];
     suppliersCatalog: SupplierCatalogItem[];
@@ -134,11 +139,16 @@ export function useProductFormCatalogs(
         departmentsQuery.isLoading ||
         suppliersQuery.isLoading ||
         branchesQuery.isLoading ||
-        productsCatalogQuery.isLoading ||
-        (hasDepartmentSelection && linesQuery.isLoading);
+        productsCatalogQuery.isLoading;
+
+    const linesLoading = hasDepartmentSelection && linesQuery.isLoading;
+
+    const departmentCatalogItems = departmentsQuery.data ?? [];
 
     return {
         catalogsLoading,
+        linesLoading,
+        departmentCatalogItems,
         departmentOptions,
         lineOptions,
         suppliersCatalog,

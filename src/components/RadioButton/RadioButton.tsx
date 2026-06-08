@@ -1,5 +1,10 @@
 import React from "react";
-import { RadioOptionIcon, RadioOptionButton } from "./RadioButton.styles";
+import {
+    RadioOptionAdornment,
+    RadioOptionButton,
+    RadioOptionIcon,
+    RadioOptionLabel,
+} from "./RadioButton.styles";
 
 export interface RadioButtonProps {
     value: string;
@@ -7,6 +12,11 @@ export interface RadioButtonProps {
     checked: boolean;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     disabled?: boolean;
+    fullWidth?: boolean;
+    size?: "small" | "medium";
+    backgroundColor?: string;
+    startIcon?: React.ReactNode;
+    endIcon?: React.ReactNode;
 }
 
 export function RadioButton({
@@ -15,6 +25,11 @@ export function RadioButton({
     checked,
     onChange,
     disabled = false,
+    fullWidth = false,
+    size = "medium",
+    backgroundColor = "transparent",
+    startIcon,
+    endIcon
 }: RadioButtonProps) {
     const handleClick = () => {
         if (disabled) return;
@@ -26,11 +41,16 @@ export function RadioButton({
             role="radio"
             aria-checked={checked}
             selected={checked}
+            fullWidth={fullWidth}
+            size={size}
             disabled={disabled}
+            backgroundColor={backgroundColor}
             onClick={handleClick}
         >
             <RadioOptionIcon selected={checked} />
-            {label}
+            {startIcon && <RadioOptionAdornment>{startIcon}</RadioOptionAdornment>}
+            <RadioOptionLabel>{label}</RadioOptionLabel>
+            {endIcon && <RadioOptionAdornment>{endIcon}</RadioOptionAdornment>}
         </RadioOptionButton>
     );
 }

@@ -21,6 +21,8 @@ export function CashRegisterDashboard({
     cashRegister,
     searchQuery,
     onSearchQueryChange,
+    onSearch,
+    isSearching = false,
     canCut = true,
     canWithdraw = true,
     onCut,
@@ -53,8 +55,10 @@ export function CashRegisterDashboard({
 
                 <Button
                     variant="contained"
-                    onClick={() => { }}>
-                    Buscar
+                    disabled={!searchQuery.trim() || isSearching}
+                    onClick={onSearch}
+                >
+                    {isSearching ? "Buscando..." : "Buscar"}
                 </Button>
             </SearchBarContainer>
 

@@ -233,7 +233,12 @@ export default function ClientDetailPage() {
             onTabChange={(value: string) => setActiveTab(value)}
           />
 
-          <Button variant="contained" color="primary" style={{ minWidth: "144px" }}>
+          <Button
+            variant="contained"
+            color="primary"
+            style={{ minWidth: "144px" }}
+            onClick={() => router.push(`/clientes/${id}/abonos`)}
+          >
             Agregar abono
           </Button>
         </Stack>

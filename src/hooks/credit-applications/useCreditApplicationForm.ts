@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import {
   getCreditApplicationById,
@@ -18,10 +18,18 @@ import { useFamilyTab } from "./tabs/useFamilyTab";
 import { hasValidGuarantorInformation, useGuarantorTab } from "./tabs/useGuarantorTab";
 import { useReferencesTab } from "./tabs/useReferencesTab";
 import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
+import {
+  buildCreditApplicationSectionSnapshots,
+  creditApplicationTabIdToSection,
+  getDirtyCreditApplicationSections,
+  serializeCreditApplicationSection,
+  type CreditApplicationSectionKey,
+} from "@/utils/credit-application-form";
 import type {
   AddressTabValues,
   BasicInformationFormValues,
   CreditApplicationBiometricsData,
+  CreditApplicationFormPayload,
   CreditApplicationTabId,
   DocumentationTabValues,
   EmploymentTabValues,
@@ -170,8 +178,16 @@ function getCreditApplicationDetailOnce(applicationId: string): Promise<CreditAp
     inFlightCreditApplicationRequests.delete(applicationId);
   });
 
+
   inFlightCreditApplicationRequests.set(applicationId, nextRequest);
   return nextRequest;
+}
+
+async function fetchDocumentationValuesFromServer(
+  applicationId: string,
+): Promise<DocumentationTabValues> {
+  const refreshedApplication = await getCreditApplicationDetailOnce(applicationId);
+  return mapCreditApplicationToFormValues(refreshedApplication).documentation;
 }
 
 function isDraftStale(updatedAt: string | undefined): boolean {
@@ -327,13 +343,16 @@ function mapCreditApplicationToFormValues(
         }>
       | undefined
   ) =>
-    (list ?? []).map((item) => ({
-      id: String(item.id),
-      name: `${item.typeName} (${item.typeCode})`,
-      filePath: item.filePath,
-      url: item.fileUrl,
-      uploadedAt: "Cargado",
-    }));
+    (list ?? []).map((item) => {
+      const fileNameFromPath = item.filePath.split("/").pop()?.split("?")[0]?.trim();
+      return {
+        id: String(item.id),
+        name: fileNameFromPath || item.typeName,
+        filePath: item.filePath,
+        url: item.fileUrl,
+        uploadedAt: "Cargado",
+      };
+    });
 
   const documentation: DocumentationTabValues = {
     requiredAlertVisible: true,
@@ -428,17 +447,29 @@ interface UseCreditApplicationFormParams {
   isCreateMode: boolean;
 }
 
+type FormActionPhase = "idle" | "validating" | "saving" | "submitting";
+
+export interface SubmitCreditApplicationResult {
+  success: boolean;
+  invalidTabs: CreditApplicationTabId[];
+  message?: string;
+}
+
 export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCreditApplicationFormParams) {
   const router = useRouter();
   
   const [loading, setLoading] = useState(!isCreateMode);
   const [loadingApplicationDetail, setLoadingApplicationDetail] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [formAction, setFormAction] = useState<FormActionPhase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [isEmptyState, setIsEmptyState] = useState(false);
   const [activeTab, setActiveTab] = useState<CreditApplicationTabId>("basic-information");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [biometricsData, setBiometricsData] = useState<CreditApplicationBiometricsData | null>(null);
+  const [savedSectionSnapshots, setSavedSectionSnapshots] = useState<
+    Partial<Record<CreditApplicationSectionKey, string>>
+  >({});
+  const formActionRef = useRef(false);
   const [additionalInformationRequested, setAdditionalInformationRequested] = useState<
     AdditionalInformationRequestedItem[]
   >([]);
@@ -620,6 +651,17 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
           upsertReferences(draftKey, mappedValues.references);
           upsertDocumentation(draftKey, mappedValues.documentation);
           upsertGuarantor(draftKey, mappedValues.guarantor);
+          setSavedSectionSnapshots(
+            buildCreditApplicationSectionSnapshots({
+              basicInformation: mappedValues.basicInformation,
+              family: mappedValues.family,
+              address: mappedValues.address,
+              employment: mappedValues.employment,
+              references: mappedValues.references,
+              documentation: mappedValues.documentation,
+              guarantor: mappedValues.guarantor,
+            })
+          );
         } else if (shouldForceVerifiedPhoneState) {
           // Even with a fresh draft, the backend verified phone state is authoritative.
           setBasicInformationValuesFromExternal(mappedValues.basicInformation, {
@@ -713,6 +755,167 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     upsertGuarantor(draftKey, values);
     setSaveSuccess(false);
   }, [draftKey, upsertGuarantor]);
+
+  const isFormLocked = formAction !== "idle" || loadingApplicationDetail;
+  const saving = isFormLocked;
+
+  const beginFormAction = useCallback((phase: Exclude<FormActionPhase, "idle">): boolean => {
+    if (formActionRef.current) {
+      return false;
+    }
+    formActionRef.current = true;
+    setFormAction(phase);
+    return true;
+  }, []);
+
+  const setFormActionPhase = useCallback((phase: Exclude<FormActionPhase, "idle">) => {
+    setFormAction(phase);
+  }, []);
+
+  const endFormAction = useCallback(() => {
+    formActionRef.current = false;
+    setFormAction("idle");
+  }, []);
+
+  const getCurrentFormPayload = useCallback(
+    (): CreditApplicationFormPayload => ({
+      id: isCreateMode ? undefined : applicationId,
+      basicInformation: basicInformationTab.values,
+      family: familyTab.values,
+      address: addressTab.values,
+      employment: employmentTab.values,
+      references: referencesTab.values,
+      documentation: documentationTab.values,
+      guarantor: guarantorTab.values,
+      biometrics: biometricsData,
+    }),
+    [
+      addressTab.values,
+      applicationId,
+      basicInformationTab.values,
+      biometricsData,
+      documentationTab.values,
+      employmentTab.values,
+      familyTab.values,
+      guarantorTab.values,
+      isCreateMode,
+      referencesTab.values,
+    ]
+  );
+
+  const updateSectionSnapshots = useCallback(
+    (
+      payload: Pick<CreditApplicationFormPayload, CreditApplicationSectionKey>,
+      sections: CreditApplicationSectionKey[]
+    ) => {
+      setSavedSectionSnapshots((previousSnapshots) => {
+        const nextSnapshots = { ...previousSnapshots };
+        for (const section of sections) {
+          nextSnapshots[section] = serializeCreditApplicationSection(section, payload);
+        }
+        return nextSnapshots;
+      });
+    },
+    []
+  );
+
+  const persistFormPayload = useCallback(
+    (payload: Pick<CreditApplicationFormPayload, CreditApplicationSectionKey>) => {
+      persistBasicInformation(payload.basicInformation);
+      persistFamily(payload.family);
+      persistAddress(payload.address);
+      persistEmployment(payload.employment);
+      persistReferences(payload.references);
+      persistDocumentation(payload.documentation);
+      persistGuarantor(payload.guarantor);
+    },
+    [
+      persistAddress,
+      persistBasicInformation,
+      persistDocumentation,
+      persistEmployment,
+      persistFamily,
+      persistGuarantor,
+      persistReferences,
+    ]
+  );
+
+  const validateActiveTab = useCallback(async (): Promise<boolean> => {
+    if (activeTab === "basic-information") {
+      const basicFormIsValid = basicInformationTab.validateValues();
+      if (!basicFormIsValid) {
+        return false;
+      }
+      return basicInformationTab.validateIdentityUniqueness(isCreateMode ? undefined : applicationId);
+    }
+    if (activeTab === "family") return familyTab.validateValues();
+    if (activeTab === "address") return addressTab.validateValues();
+    if (activeTab === "employment") return employmentTab.validateValues();
+    if (activeTab === "references") return referencesTab.validateValues();
+    if (activeTab === "documentation") {
+      return documentationTab.validateValues({
+        requireIncomeProof: requiresIncomeProof,
+        requireEmploymentProofLetter: requiresEmploymentProofLetter,
+      });
+    }
+    if (activeTab === "guarantor" && requiresGuarantorInformation) {
+      return guarantorTab.validateValues();
+    }
+    return true;
+  }, [
+    activeTab,
+    addressTab,
+    applicationId,
+    basicInformationTab,
+    documentationTab,
+    employmentTab,
+    familyTab,
+    guarantorTab,
+    isCreateMode,
+    referencesTab,
+    requiresEmploymentProofLetter,
+    requiresGuarantorInformation,
+    requiresIncomeProof,
+  ]);
+
+  const saveActiveTabSection = useCallback(
+    async (currentPayload: CreditApplicationFormPayload): Promise<boolean> => {
+      if (isCreateMode || !applicationId) {
+        return true;
+      }
+
+      const activeSection = creditApplicationTabIdToSection(activeTab);
+      if (!activeSection) {
+        return true;
+      }
+      if (activeSection === "guarantor" && !requiresGuarantorInformation) {
+        return true;
+      }
+
+      await saveCreditApplicationSection(applicationId, activeSection, currentPayload);
+
+      if (activeSection === "documentation") {
+        const refreshedDocumentation = await fetchDocumentationValuesFromServer(applicationId);
+        currentPayload.documentation = refreshedDocumentation;
+        setDocumentationValuesFromExternal(refreshedDocumentation);
+      }
+      if (activeSection === "guarantor") {
+        setGuarantorValuesFromExternal(currentPayload.guarantor);
+      }
+
+      updateSectionSnapshots(currentPayload, [activeSection]);
+      return true;
+    },
+    [
+      activeTab,
+      applicationId,
+      isCreateMode,
+      requiresGuarantorInformation,
+      setDocumentationValuesFromExternal,
+      setGuarantorValuesFromExternal,
+      updateSectionSnapshots,
+    ]
+  );
 
   const handleBiometricsCompleted = useCallback(
     (biometrics: CreditApplicationBiometricsData) => {
@@ -817,230 +1020,122 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     requiresIncomeProof,
   ]);
 
-  const handleSave = useCallback(async (options?: { skipValidation?: boolean }) => {
-    if (!options?.skipValidation) {
-      const invalidTabs = await validateSubmissionTabs();
-      if (invalidTabs.length > 0) {
+  const handleSave = useCallback(
+    async (options?: {
+      skipValidation?: boolean;
+      sections?: CreditApplicationSectionKey[];
+    }): Promise<boolean> => {
+      if (!beginFormAction("validating")) {
         return false;
       }
-    }
 
-    const basicFormIsValid = options?.skipValidation ? true : basicInformationTab.validateValues();
-    const basicIdentityIsValid =
-      options?.skipValidation
-        ? true
-        : basicFormIsValid
-          ? await basicInformationTab.validateIdentityUniqueness(isCreateMode ? undefined : applicationId)
-          : false;
-    const familyFormIsValid = options?.skipValidation ? true : familyTab.validateValues();
-    const addressFormIsValid = options?.skipValidation ? true : addressTab.validateValues();
-    const employmentFormIsValid = options?.skipValidation ? true : employmentTab.validateValues();
-    const referencesFormIsValid = options?.skipValidation ? true : referencesTab.validateValues();
-    const documentationFormIsValid = options?.skipValidation
-      ? true
-      : documentationTab.validateValues({
-          requireIncomeProof: requiresIncomeProof,
-          requireEmploymentProofLetter: requiresEmploymentProofLetter,
-        });
-    const guarantorFormIsValid = options?.skipValidation
-      ? true
-      : !requiresGuarantorInformation || guarantorTab.validateValues();
-
-    const formIsValid =
-      basicFormIsValid &&
-      basicIdentityIsValid &&
-      familyFormIsValid &&
-      addressFormIsValid &&
-      employmentFormIsValid &&
-      referencesFormIsValid &&
-      documentationFormIsValid &&
-      guarantorFormIsValid;
-    if (!formIsValid) return false;
-
-    setSaving(true);
-    setSaveSuccess(false);
-    setError(null);
-    try {
-      const formPayload = {
-        id: isCreateMode ? undefined : applicationId,
-        basicInformation: basicInformationTab.values,
-        family: familyTab.values,
-        address: addressTab.values,
-        employment: employmentTab.values,
-        references: referencesTab.values,
-        documentation: documentationTab.values,
-        guarantor: guarantorTab.values,
-        biometrics: biometricsData,
-      };
-      const result = await saveCreditApplication(formPayload, {
-        includeGuarantorSection: requiresGuarantorInformation,
-      });
-
-      setDocumentationValuesFromExternal(formPayload.documentation);
-      setGuarantorValuesFromExternal(formPayload.guarantor);
-
-      persistBasicInformation(formPayload.basicInformation);
-      persistFamily(formPayload.family);
-      persistAddress(formPayload.address);
-      persistEmployment(formPayload.employment);
-      persistReferences(formPayload.references);
-      persistDocumentation(formPayload.documentation);
-      persistGuarantor(formPayload.guarantor);
-      setSaveSuccess(true);
-
-      if (isCreateMode && result.id) {
-        router.replace(`/solicitudes-credito/${result.id}`);
-      }
-
-      return true;
-    } catch (saveError) {
-      console.error("[CreditApplicationForm] Unable to save credit application", saveError);
-      setError("No se pudo guardar la solicitud.");
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    applicationId,
-    basicInformationTab,
-    familyTab,
-    addressTab,
-    employmentTab,
-    referencesTab,
-    documentationTab,
-    guarantorTab,
-    validateSubmissionTabs,
-    requiresIncomeProof,
-    requiresEmploymentProofLetter,
-    requiresGuarantorInformation,
-    biometricsData,
-    isCreateMode,
-    persistBasicInformation,
-    persistFamily,
-    persistAddress,
-    persistEmployment,
-    persistReferences,
-    persistDocumentation,
-    persistGuarantor,
-    setDocumentationValuesFromExternal,
-    setGuarantorValuesFromExternal,
-    router,
-  ]);
-
-  const handleSaveActiveTab = useCallback(async () => {
-    let isValid = true;
-
-    if (activeTab === "basic-information") {
-      isValid = basicInformationTab.validateValues();
-      if (isValid) {
-        isValid = await basicInformationTab.validateIdentityUniqueness(
-          isCreateMode ? undefined : applicationId
-        );
-      }
-    }
-    if (activeTab === "family") isValid = familyTab.validateValues();
-    if (activeTab === "address") isValid = addressTab.validateValues();
-    if (activeTab === "employment") isValid = employmentTab.validateValues();
-    if (activeTab === "references") isValid = referencesTab.validateValues();
-    if (activeTab === "documentation") {
-      isValid = documentationTab.validateValues({
-        requireIncomeProof: requiresIncomeProof,
-        requireEmploymentProofLetter: requiresEmploymentProofLetter,
-      });
-    }
-    if (activeTab === "guarantor" && requiresGuarantorInformation) {
-      isValid = guarantorTab.validateValues();
-    }
-    if (!isValid) return false;
-
-    setSaving(true);
-    setSaveSuccess(false);
-
-    const currentPayload = {
-      id: isCreateMode ? undefined : applicationId,
-      basicInformation: basicInformationTab.values,
-      family: familyTab.values,
-      address: addressTab.values,
-      employment: employmentTab.values,
-      references: referencesTab.values,
-      documentation: documentationTab.values,
-      guarantor: guarantorTab.values,
-      biometrics: biometricsData,
-    };
-
-    if (!isCreateMode && applicationId) {
       try {
-        if (activeTab === "basic-information") {
-          await saveCreditApplicationSection(applicationId, "basicInformation", currentPayload);
-        }
-        if (activeTab === "family") {
-          await saveCreditApplicationSection(applicationId, "family", currentPayload);
-        }
-        if (activeTab === "address") {
-          await saveCreditApplicationSection(applicationId, "address", currentPayload);
-        }
-        if (activeTab === "employment") {
-          await saveCreditApplicationSection(applicationId, "employment", currentPayload);
-        }
-        if (activeTab === "references") {
-          await saveCreditApplicationSection(applicationId, "references", currentPayload);
-        }
-        if (activeTab === "documentation") {
-          await saveCreditApplicationSection(applicationId, "documentation", currentPayload);
-        }
-        if (activeTab === "guarantor" && requiresGuarantorInformation) {
-          await saveCreditApplicationSection(applicationId, "guarantor", currentPayload);
+        if (!options?.skipValidation) {
+          const invalidTabs = await validateSubmissionTabs();
+          if (invalidTabs.length > 0) {
+            return false;
+          }
         }
 
-        if (activeTab === "documentation") {
-          setDocumentationValuesFromExternal(currentPayload.documentation);
+        setFormActionPhase("saving");
+        setSaveSuccess(false);
+        setError(null);
+
+        const formPayload = getCurrentFormPayload();
+        const sectionsToSave =
+          options?.sections ??
+          getDirtyCreditApplicationSections(formPayload, savedSectionSnapshots, {
+            includeGuarantorSection: requiresGuarantorInformation,
+          });
+
+        if (!isCreateMode && applicationId && sectionsToSave.length > 0) {
+          await saveCreditApplication(formPayload, {
+            includeGuarantorSection: requiresGuarantorInformation,
+            sections: sectionsToSave,
+          });
+          if (sectionsToSave.includes("documentation")) {
+            formPayload.documentation = await fetchDocumentationValuesFromServer(applicationId);
+          }
+          updateSectionSnapshots(formPayload, sectionsToSave);
+        } else if (isCreateMode) {
+          const result = await saveCreditApplication(formPayload, {
+            includeGuarantorSection: requiresGuarantorInformation,
+          });
+          if (result.id) {
+            router.replace(`/solicitudes-credito/${result.id}`);
+          }
         }
-        if (activeTab === "guarantor") {
-          setGuarantorValuesFromExternal(currentPayload.guarantor);
-        }
+
+        setDocumentationValuesFromExternal(formPayload.documentation);
+        setGuarantorValuesFromExternal(formPayload.guarantor);
+        persistFormPayload(formPayload);
+        setSaveSuccess(true);
+        return true;
       } catch (saveError) {
-        console.error("[CreditApplicationForm] Unable to save active section", saveError);
-        setError("No se pudo guardar la sección.");
+        console.error("[CreditApplicationForm] Unable to save credit application", saveError);
+        setError("No se pudo guardar la solicitud.");
         return false;
       } finally {
-        setSaving(false);
+        endFormAction();
       }
+    },
+    [
+      applicationId,
+      beginFormAction,
+      endFormAction,
+      getCurrentFormPayload,
+      isCreateMode,
+      persistFormPayload,
+      requiresGuarantorInformation,
+      router,
+      savedSectionSnapshots,
+      setDocumentationValuesFromExternal,
+      setFormActionPhase,
+      setGuarantorValuesFromExternal,
+      updateSectionSnapshots,
+      validateSubmissionTabs,
+    ]
+  );
+
+  const handleSaveActiveTab = useCallback(async (): Promise<boolean> => {
+    if (!beginFormAction("validating")) {
+      return false;
     }
 
-    persistBasicInformation(currentPayload.basicInformation);
-    persistFamily(currentPayload.family);
-    persistAddress(currentPayload.address);
-    persistEmployment(currentPayload.employment);
-    persistReferences(currentPayload.references);
-    persistDocumentation(currentPayload.documentation);
-    persistGuarantor(currentPayload.guarantor);
-    setSaveSuccess(true);
-    setSaving(false);
-    return true;
+    try {
+      const isValid = await validateActiveTab();
+      if (!isValid) {
+        return false;
+      }
+
+      setFormActionPhase("saving");
+      setSaveSuccess(false);
+      setError(null);
+
+      const currentPayload = getCurrentFormPayload();
+      const wasSaved = await saveActiveTabSection(currentPayload);
+      if (!wasSaved) {
+        return false;
+      }
+
+      persistFormPayload(currentPayload);
+      setSaveSuccess(true);
+      return true;
+    } catch (saveError) {
+      console.error("[CreditApplicationForm] Unable to save active section", saveError);
+      setError("No se pudo guardar la sección.");
+      return false;
+    } finally {
+      endFormAction();
+    }
   }, [
-    activeTab,
-    applicationId,
-    basicInformationTab,
-    biometricsData,
-    familyTab,
-    addressTab,
-    employmentTab,
-    referencesTab,
-    documentationTab,
-    guarantorTab,
-    requiresGuarantorInformation,
-    requiresIncomeProof,
-    requiresEmploymentProofLetter,
-    persistBasicInformation,
-    persistFamily,
-    persistAddress,
-    persistEmployment,
-    persistReferences,
-    persistDocumentation,
-    persistGuarantor,
-    setDocumentationValuesFromExternal,
-    setGuarantorValuesFromExternal,
-    isCreateMode,
+    beginFormAction,
+    endFormAction,
+    getCurrentFormPayload,
+    persistFormPayload,
+    saveActiveTabSection,
+    setFormActionPhase,
+    validateActiveTab,
   ]);
 
   const handleSubmitForReview = useCallback(async () => {
@@ -1049,24 +1144,95 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       return null;
     }
 
+    if (!beginFormAction("submitting")) {
+      return null;
+    }
+
     try {
-      setSaving(true);
       setError(null);
-      const result = await submitCreditApplicationForReview(applicationId);
-      return result;
+      return await submitCreditApplicationForReview(applicationId);
     } catch (submitError) {
       console.error("[CreditApplicationForm] Unable to submit credit application", submitError);
       setError("No se pudo enviar la solicitud a revisión.");
       return null;
     } finally {
-      setSaving(false);
+      endFormAction();
     }
-  }, [applicationId, isCreateMode]);
+  }, [applicationId, beginFormAction, endFormAction, isCreateMode]);
+
+  const handleSubmitApplication = useCallback(async (): Promise<SubmitCreditApplicationResult> => {
+    if (isCreateMode || !applicationId) {
+      setError("No se encontró el identificador de la solicitud.");
+      return { success: false, invalidTabs: [] };
+    }
+
+    if (!beginFormAction("validating")) {
+      return { success: false, invalidTabs: [] };
+    }
+
+    try {
+      const invalidTabs = await validateSubmissionTabs();
+      if (invalidTabs.length > 0) {
+        return { success: false, invalidTabs };
+      }
+
+      const formPayload = getCurrentFormPayload();
+      const dirtySections = getDirtyCreditApplicationSections(formPayload, savedSectionSnapshots, {
+        includeGuarantorSection: requiresGuarantorInformation,
+      });
+
+      if (dirtySections.length > 0) {
+        setFormActionPhase("saving");
+        setError(null);
+        await saveCreditApplication(formPayload, {
+          includeGuarantorSection: requiresGuarantorInformation,
+          sections: dirtySections,
+        });
+        if (dirtySections.includes("documentation") && applicationId) {
+          formPayload.documentation = await fetchDocumentationValuesFromServer(applicationId);
+        }
+        updateSectionSnapshots(formPayload, dirtySections);
+        setDocumentationValuesFromExternal(formPayload.documentation);
+        setGuarantorValuesFromExternal(formPayload.guarantor);
+        persistFormPayload(formPayload);
+      }
+
+      setFormActionPhase("submitting");
+      const submitResult = await submitCreditApplicationForReview(applicationId);
+      return {
+        success: true,
+        invalidTabs: [],
+        message: submitResult.message,
+      };
+    } catch (submitError) {
+      console.error("[CreditApplicationForm] Unable to submit credit application", submitError);
+      setError("No se pudo enviar la solicitud a revisión.");
+      return { success: false, invalidTabs: [] };
+    } finally {
+      endFormAction();
+    }
+  }, [
+    applicationId,
+    beginFormAction,
+    endFormAction,
+    getCurrentFormPayload,
+    isCreateMode,
+    persistFormPayload,
+    requiresGuarantorInformation,
+    savedSectionSnapshots,
+    setDocumentationValuesFromExternal,
+    setFormActionPhase,
+    setGuarantorValuesFromExternal,
+    updateSectionSnapshots,
+    validateSubmissionTabs,
+  ]);
 
   return {
     loading,
     loadingApplicationDetail,
     saving,
+    isFormLocked,
+    formAction,
     error,
     saveSuccess,
     isEmptyState,
@@ -1098,6 +1264,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     handleSave,
     handleSaveActiveTab,
     handleSubmitForReview,
+    handleSubmitApplication,
     handleBiometricsCompleted,
   };
 }

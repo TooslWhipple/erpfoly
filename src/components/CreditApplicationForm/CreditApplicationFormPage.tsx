@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
 import { CircleAlert } from "lucide-react";
 import { X } from "@/components/Icons";
 import { MainLayout, TabFilters } from "@/components";
@@ -38,6 +38,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     loading,
     loadingApplicationDetail,
     saving,
+    isFormLocked,
+    formAction,
     activeTab,
     tabs,
     requiresIncomeProof,
@@ -60,10 +62,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     persistReferences,
     persistDocumentation,
     persistGuarantor,
-    handleSave,
     handleSaveActiveTab,
-    validateSubmissionTabs,
-    handleSubmitForReview,
+    handleSubmitApplication,
   } = useCreditApplicationForm({ applicationId, isCreateMode });
 
   const { data: maritalStatuses = [], isPending: maritalStatusesLoading } = useMaritalStatuses();
@@ -115,58 +115,35 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     router.push("/solicitudes-credito");
   };
 
-  const handleContinueBasicTab = async () => {
-    const invalidTabs = await validateSubmissionTabs();
-    if (invalidTabs.length > 0) {
-      setTabsWithSubmissionValidationErrors(invalidTabs);
-      const invalidTabLabels = invalidTabs
-        .map((tabId) => tabs.find((tab) => tab.value === tabId)?.label)
-        .filter((label): label is string => typeof label === "string");
-      const uniqueInvalidTabLabels = Array.from(new Set(invalidTabLabels));
+  const handleSubmitApplicationClick = async () => {
+    const submitResult = await handleSubmitApplication();
+    if (!submitResult.success) {
+      if (submitResult.invalidTabs.length > 0) {
+        setTabsWithSubmissionValidationErrors(submitResult.invalidTabs);
+        const invalidTabLabels = submitResult.invalidTabs
+          .map((tabId) => tabs.find((tab) => tab.value === tabId)?.label)
+          .filter((label): label is string => typeof label === "string");
+        const uniqueInvalidTabLabels = Array.from(new Set(invalidTabLabels));
 
-      if (invalidTabs[0]) {
-        setActiveTab(invalidTabs[0]);
+        if (submitResult.invalidTabs[0]) {
+          setActiveTab(submitResult.invalidTabs[0]);
+        }
+
+        showError(
+          uniqueInvalidTabLabels.length > 0
+            ? `Completa los campos requeridos en: ${uniqueInvalidTabLabels.join(", ")}.`
+            : "Completa los campos requeridos para continuar."
+        );
+      } else {
+        showError("No fue posible enviar la solicitud a revisión.");
       }
-
-      showError(
-        uniqueInvalidTabLabels.length > 0
-          ? `Completa los campos requeridos en: ${uniqueInvalidTabLabels.join(", ")}.`
-          : "Completa los campos requeridos para continuar."
-      );
       return false;
     }
 
     setTabsWithSubmissionValidationErrors([]);
-
-    const wasSaved = await handleSave({ skipValidation: true });
-    if (!wasSaved) {
-      showError("No fue posible guardar la solicitud.");
-      return false;
-    }
-
-    const submitResult = await handleSubmitForReview();
-    if (!submitResult) {
-      showError("No fue posible enviar la solicitud a revisión.");
-      return false;
-    }
-
     showSuccess(submitResult.message || "Solicitud enviada a revisión correctamente.");
     router.push("/solicitudes-credito");
     return true;
-  };
-
-  const handleBasicFieldChange = (field: Parameters<typeof basicInformationTab.setFieldValue>[0], value: string) => {
-    const nextValues = basicInformationTab.setFieldValue(field, value);
-    persistBasicInformation(nextValues);
-
-    if (field === "whatsappNumber" && addressTab.values.useClientPhone) {
-      const trimmedWhatsapp = value.trim();
-      const nextAddressValues = addressTab.mergeFieldValues({
-        receiverPhone: trimmedWhatsapp,
-        useClientPhone: trimmedWhatsapp.length > 0,
-      });
-      persistAddress(nextAddressValues);
-    }
   };
 
   const handleContinueToNextTab = async () => {
@@ -190,9 +167,25 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
   const handleGuarantorSave = async () => {
     if (!requiresGuarantorInformation) {
-      return handleContinueBasicTab();
+      return handleSubmitApplicationClick();
     }
     return handleContinueToNextTab();
+  };
+
+  const isSubmitButtonLoading = formAction === "saving" || formAction === "submitting";
+
+  const handleBasicFieldChange = (field: Parameters<typeof basicInformationTab.setFieldValue>[0], value: string) => {
+    const nextValues = basicInformationTab.setFieldValue(field, value);
+    persistBasicInformation(nextValues);
+
+    if (field === "whatsappNumber" && addressTab.values.useClientPhone) {
+      const trimmedWhatsapp = value.trim();
+      const nextAddressValues = addressTab.mergeFieldValues({
+        receiverPhone: trimmedWhatsapp,
+        useClientPhone: trimmedWhatsapp.length > 0,
+      });
+      persistAddress(nextAddressValues);
+    }
   };
 
   return (
@@ -206,7 +199,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           }}
         >
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton size="small" onClick={handleGoBack}>
+            <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}>
               <X size={18} />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
@@ -216,10 +209,14 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <Button
             variant="contained"
             color="inherit"
-            disabled={saving || loading || loadingApplicationDetail}
-            onClick={handleContinueBasicTab}
+            disabled={isFormLocked || loading}
+            onClick={handleSubmitApplicationClick}
           >
-            Enviar solicitud
+            {isSubmitButtonLoading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Enviar solicitud"
+            )}
           </Button>
         </Box>
 
@@ -237,7 +234,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           showSearch={false}
           tabs={tabsWithErrorState}
           activeTab={activeTab}
-          onTabChange={(value) => setActiveTab(value as typeof activeTab)}
+          disabled={isFormLocked}
+          onTabChange={(value) => {
+            if (isFormLocked) return;
+            setActiveTab(value as typeof activeTab);
+          }}
         />
 
         {

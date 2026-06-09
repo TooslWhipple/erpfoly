@@ -1,10 +1,7 @@
 import numeral from "numeral";
 import {
   CreditLimitBarRoot,
-  CreditLimitBarTitle,
   CreditLimitProgress,
-  CreditLimitLabelsRow,
-  CreditLimitLabel,
 } from "./styles";
 import { Stack, Typography } from "@mui/material";
 

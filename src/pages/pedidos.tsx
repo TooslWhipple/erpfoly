@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { MainLayout, Title, Tabs, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
+import { Divider, Stack } from "@mui/material";
+import { MainLayout, Title, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
@@ -8,8 +9,7 @@ import type { ProductSuggestion } from "@/types/suggestions.types";
 import type { Supplier } from "@/types/pedidos.types";
 import type { OrderListItem } from "@/types/orders.types";
 import { getOrders, getSuggestions } from "@/services/orders.service";
-import { PageContent, SidebarPanel } from "@/styles/pedidos.styles";
-import { Stack } from "@mui/material";
+import { SidebarPanel } from "@/styles/pedidos.styles";
 import { ORDERS_CREATE } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "in_progress" | "received";
@@ -157,8 +157,8 @@ export default function Pedidos() {
 
     return (
         <MainLayout>
-            <PageContent>
-                <Stack direction="column" spacing={3} flex={1}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
+                <Stack direction="column" spacing={3} flex="0 1 768px">
                     <Title title="Pedidos" actions={titleActions} />
 
                     <TabFilters
@@ -178,7 +178,7 @@ export default function Pedidos() {
                 <SidebarPanel>
                     <SuggestionsCard products={suggestions} loading={suggestionsLoading} />
                 </SidebarPanel>
-            </PageContent>
+            </Stack>
 
             <SupplierSelectionModal
                 open={supplierModalOpen}

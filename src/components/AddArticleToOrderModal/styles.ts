@@ -15,6 +15,16 @@ export const AddArticleModalContainer = styled('div')({
 export const ProductImage = styled('img')({
     width: "64px",
     height: "64px",
+    objectFit: "cover",
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "12px",
+    backgroundColor: theme.palette.background.default,
+    flexShrink: 0,
+});
+
+export const ImagePlaceholder = styled('div')({
+    width: "64px",
+    height: "64px",
     border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "12px",
     backgroundColor: theme.palette.background.default,

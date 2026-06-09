@@ -1,9 +1,8 @@
-
 import { Button, Grid, Stack, Typography } from "@mui/material";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { theme } from "@/styles/theme";
 import type { ProductSuggestion } from "@/types/suggestions.types";
-import { SuggestionCard, ProductImage } from "./styles";
+import { SuggestionCard, ProductImage, ImagePlaceholder } from "./styles";
 
 export interface ProductSuggestionCardProps {
     product: ProductSuggestion;
@@ -27,7 +26,11 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
     return (
         <SuggestionCard>
             <Stack direction="row" spacing={1} alignItems="center">
-                <ProductImage />
+                {product.imageUrl ? (
+                    <ProductImage src={product.imageUrl} alt={product.name} />
+                ) : (
+                    <ImagePlaceholder />
+                )}
                 <Stack>
                     <Typography variant="body1" fontWeight={600}>{product.name}</Typography>
                     <Typography variant="caption" fontWeight={400} color="text.secondary">{product.sku}</Typography>

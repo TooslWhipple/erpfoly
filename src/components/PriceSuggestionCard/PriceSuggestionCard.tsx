@@ -4,6 +4,7 @@ import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
   CardContainer,
   ProductImage,
+  ImagePlaceholder,
   PriceListContainer,
   PriceListItem,
   TimelineColumn,
@@ -59,7 +60,11 @@ export function PriceSuggestionCard({ item, onApply }: PriceSuggestionCardProps)
   return (
     <CardContainer>
       <Stack direction="row" spacing={1} alignItems="center">
-        <ProductImage />
+        {item.imageUrl ? (
+          <ProductImage src={item.imageUrl} alt={item.productName} />
+        ) : (
+          <ImagePlaceholder />
+        )}
         <Stack>
           <Typography variant="body1" fontWeight={700}>{item.productName}</Typography>
           <Typography variant="caption">{item.sku}</Typography>

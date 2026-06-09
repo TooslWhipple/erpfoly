@@ -10,6 +10,9 @@ export interface AppPalette {
     sidebar: string;
     content: string;
     lowGray: string;
+    lowerGray: string;
+    mediumGray: string;
+    lowBlue: string;
   };
   border: string;
   text: {
@@ -53,6 +56,9 @@ export const appPalette: AppPalette = {
     sidebar: "#FFFFFF",
     content: "#F8FAFC",
     lowGray: "#E2E8F0",
+    lowerGray: "#F1F5F9",
+    mediumGray: "#CBD5E1",
+    lowBlue: "#BFDBFE"
   },
   border: "#D4D4D8",
   text: {
@@ -135,6 +141,9 @@ export const theme = createTheme({
       paper: appPalette.background.sidebar,
       content: appPalette.background.content,
       lowGray: appPalette.background.lowGray,
+      lowerGray: appPalette.background.lowerGray,
+      mediumGray: appPalette.background.mediumGray,
+      lowBlue: appPalette.background.lowBlue,
     },
     text: {
       primary: appPalette.text.primary,
@@ -352,6 +361,9 @@ declare module "@mui/material/styles" {
   interface TypeBackground {
     content: string;
     lowGray: string;
+    lowerGray: string;
+    mediumGray: string;
+    lowBlue: string;
   }
   interface Palette {
     app: AppPalette;

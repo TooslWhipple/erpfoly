@@ -27,6 +27,7 @@ export interface PriceSuggestionItem {
   id: string;
   productName: string;
   sku: string;
+  imageUrl?: string | null;
   suggestedPrice: number;
   changePercent: number;
   direction: "up" | "down";

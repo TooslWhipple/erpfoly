@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
 import { MainLayout, StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
@@ -30,6 +31,7 @@ import {
   type CashMovement,
 } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { searchClientForPayment } from "@/data/clientPayments.mockData";
 
 const MOVEMENT_TYPE_MAP: Record<string, string> = {
   PAYMENT: "Abono",
@@ -39,6 +41,7 @@ const MOVEMENT_TYPE_MAP: Record<string, string> = {
 };
 
 export default function Cajas() {
+  const router = useRouter();
   const { hasPermission } = usePermissions();
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
   const user = useAuthStore((state) => state.user);
@@ -52,6 +55,7 @@ export default function Cajas() {
   const [isCutting, setIsCutting] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchingClient, setIsSearchingClient] = useState(false);
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
 
@@ -282,6 +286,27 @@ export default function Cajas() {
     // TODO: Implement view all history functionality
   };
 
+  const handleSearchClient = async () => {
+    const query = searchQuery.trim();
+    if (!query || !cashRegister) return;
+
+    try {
+      setIsSearchingClient(true);
+      const client = await searchClientForPayment(query);
+      if (!client) {
+        showError("No se encontró un cliente con ese código o nombre.");
+        return;
+      }
+
+      const caja = encodeURIComponent(cashRegister.name);
+      router.push(`/clientes/${client.id}/abonos?from=cajas&caja=${caja}`);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setIsSearchingClient(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -339,6 +364,8 @@ export default function Cajas() {
               canCut={canUpdateCashRegister}
               canWithdraw={canUpdateCashRegister}
               onSearchQueryChange={setSearchQuery}
+              onSearch={() => void handleSearchClient()}
+              isSearching={isSearchingClient}
               onCut={handleCut}
               onWithdrawal={handleWithdrawal}
               onViewAllHistory={handleViewAllHistory}

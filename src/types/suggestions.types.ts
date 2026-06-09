@@ -17,6 +17,7 @@ export interface ProductSuggestion {
     id: string;
     name: string;
     sku: string;
+    imageUrl?: string | null;
     currentStock: number;
     demandData: DemandData;
     trendData: DemandTrendPoint[];

@@ -88,6 +88,7 @@ export function TabFilters({
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
+        flexWrap: "wrap",
       }}
     >
       <Grid

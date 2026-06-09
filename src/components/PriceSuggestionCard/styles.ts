@@ -16,7 +16,16 @@ export const CardContainer = styled(Box)(({ theme }) => ({
   padding: "16px"
 }));
 
-export const ProductImage = styled(Box)({
+export const ProductImage = styled('img')({
+  width: "48px",
+  height: "48px",
+  borderRadius: "10px",
+  objectFit: "cover",
+  backgroundColor: "#F3F4F6",
+  flexShrink: 0,
+});
+
+export const ImagePlaceholder = styled('div')({
   width: "48px",
   height: "48px",
   borderRadius: "10px",

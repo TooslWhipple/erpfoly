@@ -1,21 +1,24 @@
 import { useRouter } from "next/router";
-import type { ClientDetail, ClientMovement } from "@/types/clientes.types";
 import { MovementsTable } from "./MovementsTable";
+import type { ClientMovementItem } from "@/services/client-movements.service";
 
 export interface PurchasesTabProps {
-  client: ClientDetail;
+  purchases: ClientMovementItem[];
+  loading: boolean;
 }
 
-export function PurchasesTab({ client }: PurchasesTabProps) {
+export function PurchasesTab({ purchases, loading }: PurchasesTabProps) {
   const router = useRouter();
+  const clientId = router.query.id as string;
 
-  const handlePurchaseClick = (movement: ClientMovement) => {
-    router.push(`/clientes/${client.id}/compras/${movement.id}`);
+  const handlePurchaseClick = (movement: ClientMovementItem) => {
+    router.push(`/clientes/${clientId}/compras/${movement.id}`);
   };
 
   return (
     <MovementsTable
-      movements={client.purchases}
+      movements={purchases}
+      loading={loading}
       onRowClick={handlePurchaseClick}
     />
   );

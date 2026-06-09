@@ -1,12 +1,13 @@
-import type { ClientDetail } from "@/types/clientes.types";
 import { MovementsTable } from "./MovementsTable";
+import type { ClientMovementItem } from "@/services/client-movements.service";
 
 export interface PaymentsTabProps {
-  client: ClientDetail;
+  payments: ClientMovementItem[];
+  loading: boolean;
 }
 
-export function PaymentsTab({ client }: PaymentsTabProps) {
-  return <MovementsTable movements={client.payments} />;
+export function PaymentsTab({ payments, loading }: PaymentsTabProps) {
+  return <MovementsTable movements={payments} loading={loading} />;
 }
 
 const PaymentsTabPage = () => null;

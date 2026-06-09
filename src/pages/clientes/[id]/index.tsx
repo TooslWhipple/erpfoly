@@ -24,6 +24,11 @@ import {
   getClientCollectionActivityTypes,
   getClientDetail,
 } from "@/services/clients.service";
+import {
+  getClientMovements,
+  getClientPayments,
+  getClientPurchases,
+} from "@/services/client-movements.service";
 import { unwrapOrThrow } from "@/lib/axios";
 
 function formatCurrency(value: number): string {
@@ -116,6 +121,33 @@ export default function ClientDetailPage() {
     },
   });
 
+  const movementsQuery = useQuery({
+    queryKey: ["clients", "movements", numericClientId],
+    enabled: numericClientId !== null,
+    queryFn: async () => {
+      const result = await getClientMovements(numericClientId as number, { limit: 100 });
+      return unwrapOrThrow(result);
+    },
+  });
+
+  const purchasesQuery = useQuery({
+    queryKey: ["clients", "purchases", numericClientId],
+    enabled: numericClientId !== null,
+    queryFn: async () => {
+      const result = await getClientPurchases(numericClientId as number, { limit: 100 });
+      return unwrapOrThrow(result);
+    },
+  });
+
+  const paymentsQuery = useQuery({
+    queryKey: ["clients", "payments", numericClientId],
+    enabled: numericClientId !== null,
+    queryFn: async () => {
+      const result = await getClientPayments(numericClientId as number, { limit: 100 });
+      return unwrapOrThrow(result);
+    },
+  });
+
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Clientes", href: "/clientes" },
     {
@@ -169,11 +201,26 @@ export default function ClientDetailPage() {
           />
         );
       case "movimientos":
-        return <MovementsTab client={client} />;
+        return (
+          <MovementsTab
+            movements={movementsQuery.data?.rows ?? []}
+            loading={movementsQuery.isLoading}
+          />
+        );
       case "compras":
-        return <PurchasesTab client={client} />;
+        return (
+          <PurchasesTab
+            purchases={purchasesQuery.data?.rows ?? []}
+            loading={purchasesQuery.isLoading}
+          />
+        );
       case "abonos":
-        return <PaymentsTab client={client} />;
+        return (
+          <PaymentsTab
+            payments={paymentsQuery.data?.rows ?? []}
+            loading={paymentsQuery.isLoading}
+          />
+        );
       case "informacion":
         return <InformationTab />;
       default:
@@ -185,7 +232,11 @@ export default function ClientDetailPage() {
     <MainLayout>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 1, sm: 0 }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}>
           <Stack spacing={0.5} flex={1}>
             <Typography variant="body2" color="text.secondary">
               {clientHeaderQuery.data?.curp || client.clientId}
@@ -225,7 +276,7 @@ export default function ClientDetailPage() {
           />
         </Stack>
         <Divider />
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems="center">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems="center">
           <TabFilters
             showSearch={false}
             tabs={TABS}
@@ -236,7 +287,7 @@ export default function ClientDetailPage() {
           <Button
             variant="contained"
             color="primary"
-            style={{ minWidth: "144px" }}
+            sx={{ minWidth: { xs: "100%", sm: "144px" } }}
             onClick={() => router.push(`/clientes/${id}/abonos`)}
           >
             Agregar abono

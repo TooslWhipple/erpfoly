@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, Checkbox, FormControlLabel, InputAdornment, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import type { ClientPaymentMethod } from "@/types/clientPayment.types";
@@ -40,6 +41,19 @@ export function PaymentCapturePanel({
   onCashDepositChange,
   onSubmit,
 }: PaymentCapturePanelProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const handleInputChange = (raw: string) => {
+    const cleaned = raw.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
+    setInputValue(sanitized);
+    const parsed = parseFloat(sanitized);
+    onPaymentAmountChange(Number.isNaN(parsed) ? 0 : parsed);
+  };
+
+  const displayValue = inputValue.length > 0 ? inputValue : "";
+
   return (
     <CaptureCard>
       <Typography variant="body2" fontWeight={600} textAlign="center">
@@ -47,20 +61,14 @@ export function PaymentCapturePanel({
       </Typography>
 
       <CaptureAmountInput
-        value={paymentAmount > 0 ? formatCurrency(paymentAmount).replace("$", "") : ""}
+        value={displayValue}
         placeholder="0.00"
         startAdornment={
           <InputAdornment position="start">
             <Typography variant="h4" color="text.secondary">$</Typography>
           </InputAdornment>
         }
-        onChange={(event) => {
-          const raw = event.target.value.replace(/[^0-9.]/g, "");
-          const parts = raw.split(".");
-          const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : raw;
-          const parsed = parseFloat(sanitized);
-          onPaymentAmountChange(Number.isNaN(parsed) ? 0 : parsed);
-        }}
+        onChange={(event) => handleInputChange(event.target.value)}
       />
 
       <Stack direction="row" spacing={1}>

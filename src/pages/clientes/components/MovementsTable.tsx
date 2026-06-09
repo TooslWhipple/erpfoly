@@ -1,7 +1,7 @@
 import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
-import type { ClientMovement } from "@/types/clientes.types";
+import type { ClientMovementItem } from "@/services/client-movements.service";
 
 const MOVEMENT_TYPE_CHIP_LABELS: Record<string, string> = {
   payment: "Abono",
@@ -12,7 +12,19 @@ const MOVEMENT_TYPE_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   purchase: "default",
 };
 
-const COLUMNS: DataTableColumn<ClientMovement>[] = [
+const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function formatDate(value: unknown): string {
+  if (!value) return "";
+  try {
+    const date = new Date(value as string);
+    return `${date.getDate()} de ${MONTHS[date.getMonth()]}, ${date.getFullYear()}`;
+  } catch {
+    return String(value);
+  }
+}
+
+const COLUMNS: DataTableColumn<ClientMovementItem>[] = [
   {
     id: "type",
     label: "Tipo",
@@ -23,22 +35,28 @@ const COLUMNS: DataTableColumn<ClientMovement>[] = [
   { id: "description", label: "Descripción" },
   { id: "invoice", label: "Factura" },
   { id: "reference", label: "Referencia" },
-  { id: "date", label: "Fecha" },
+  {
+    id: "date",
+    label: "Fecha",
+    format: (value) => formatDate(value),
+  },
   { id: "amount", label: "Monto", type: "currency", align: "right" },
 ];
 
 export interface MovementsTableProps {
-  movements: ClientMovement[];
-  onRowClick?: (movement: ClientMovement) => void;
+  movements: ClientMovementItem[];
+  loading?: boolean;
+  onRowClick?: (movement: ClientMovementItem) => void;
 }
 
-export function MovementsTable({ movements, onRowClick }: MovementsTableProps) {
+export function MovementsTable({ movements, loading, onRowClick }: MovementsTableProps) {
   return (
-    <DataTable<ClientMovement>
+    <DataTable<ClientMovementItem>
       columns={COLUMNS}
       rows={movements}
       rowKey="id"
       emptyMessage="No hay registros"
+      loading={loading}
       onRowClick={onRowClick}
     />
   );

@@ -10,5 +10,5 @@ export function parseLoginIdentifier(identifier: string): {
   if (/^\d{10}$/.test(trimmed)) {
     return { cellphone: trimmed };
   }
-  return { username: trimmed.toUpperCase() };
+  return { username: trimmed };
 }

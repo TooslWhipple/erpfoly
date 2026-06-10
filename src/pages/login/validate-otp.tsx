@@ -2,13 +2,13 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import {
-	Alert,
 	Button,
 	CircularProgress,
 	InputAdornment,
 	Typography,
+	useTheme,
 } from "@mui/material";
-import { ArrowBack as ArrowBackIcon, Pin as PinIcon } from "@mui/icons-material";
+import { ArrowLeft, KeyRound } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, type ResendOtpRequest } from "@/services/auth.service";
 import { canAccessPath, getFirstAllowedRoute, normalizePathname } from "@/lib/routeAccess";
@@ -19,6 +19,7 @@ import {
 	LogoContainer,
 	FormWrapper,
 	Form,
+	LoginTitle,
 	StyledTextField,
 	BackLink,
 	RecoveryRow,
@@ -27,21 +28,37 @@ import {
 const OTP_LENGTH = 6;
 const OTP_REGEX = /^\d{6}$/;
 
+type FeedbackState = {
+	message: string;
+	severity: "error" | "success";
+} | null;
+
 export default function ValidateOtpPage() {
 	const router = useRouter();
+	const theme = useTheme();
 	const setAuth = useAuthStore((s) => s.setAuth);
 
 	const [otp, setOtp] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [feedback, setFeedback] = useState<FeedbackState>(null);
 
 	const [resendLoading, setResendLoading] = useState(false);
-	const [resendSuccess, setResendSuccess] = useState(false);
-	const [resendError, setResendError] = useState<string | null>(null);
 
 	const otpTrimmed = otp.replace(/\D/g, "").slice(0, OTP_LENGTH);
 	const isValidOtp = OTP_REGEX.test(otpTrimmed);
 	const canSubmit = isValidOtp && !loading;
+
+	const otpFieldError =
+		otp.length > 0 && !isValidOtp ? `Ingresa ${OTP_LENGTH} dígitos` : "";
+	const feedbackError = feedback?.severity === "error" ? feedback.message : "";
+	const feedbackSuccess = feedback?.severity === "success" ? feedback.message : "";
+	const otpHelperText =
+		otpFieldError ||
+		feedbackError ||
+		feedbackSuccess ||
+		"Revisa el mensaje de WhatsApp que enviamos a tu teléfono";
+	const otpHasError = !!otpFieldError || !!feedbackError;
+	const otpHasSuccess = !otpHasError && !!feedbackSuccess;
 
 	const handleBackToLogin = (event: React.MouseEvent<HTMLAnchorElement>) => {
 		event.preventDefault();
@@ -52,13 +69,16 @@ export default function ValidateOtpPage() {
 		e.preventDefault();
 		if (!canSubmit) return;
 
-		setError(null);
+		setFeedback(null);
 		setLoading(true);
 
 		const result = await authService.validateOtp(otpTrimmed);
 
 		if (result.error) {
-			setError(result.error.message || "Código inválido o expirado. Intenta de nuevo.");
+			setFeedback({
+				message: result.error.message || "Código de verificación no válido o expirado. Intenta de nuevo.",
+				severity: "error",
+			});
 			setLoading(false);
 			return;
 		}
@@ -73,8 +93,7 @@ export default function ValidateOtpPage() {
 	};
 
 	const handleResend = async () => {
-		setResendError(null);
-		setResendSuccess(false);
+		setFeedback(null);
 		setResendLoading(true);
 
 		const identifier: ResendOtpRequest = {};
@@ -88,9 +107,15 @@ export default function ValidateOtpPage() {
 		);
 
 		if (result.error) {
-			setResendError(result.error.message || "No se pudo reenviar el código.");
+			setFeedback({
+				message: result.error.message || "No se pudo reenviar el código.",
+				severity: "error",
+			});
 		} else {
-			setResendSuccess(true);
+			setFeedback({
+				message: "Te enviamos un nuevo código.",
+				severity: "success",
+			});
 		}
 		setResendLoading(false);
 	};
@@ -110,10 +135,10 @@ export default function ValidateOtpPage() {
 				</LogoContainer>
 
 				<FormWrapper>
-					<Typography variant="h1">Verifica tu cuenta</Typography>
+					<LoginTitle>Verifica tu cuenta</LoginTitle>
 
 					<BackLink href="/login" onClick={handleBackToLogin}>
-						<ArrowBackIcon fontSize="small" />
+						<ArrowLeft size={16} color={theme.palette.text.secondary} />
 						Volver al inicio de sesión
 					</BackLink>
 
@@ -124,12 +149,14 @@ export default function ValidateOtpPage() {
 							type="text"
 							inputMode="numeric"
 							value={otpTrimmed}
-							onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-							error={otp.length > 0 && !isValidOtp}
-							helperText={
-								otp.length > 0 && !isValidOtp
-									? `Ingresa ${OTP_LENGTH} dígitos`
-									: "Revisa el SMS que enviamos a tu teléfono"
+							onChange={(e) => {
+								setFeedback(null);
+								setOtp(e.target.value.replace(/\D/g, ""));
+							}}
+							error={otpHasError}
+							helperText={otpHelperText}
+							FormHelperTextProps={
+								otpHasSuccess ? { sx: { color: "success.main" } } : undefined
 							}
 							fullWidth
 							autoComplete="one-time-code"
@@ -137,17 +164,11 @@ export default function ValidateOtpPage() {
 							InputProps={{
 								startAdornment: (
 									<InputAdornment position="start">
-										<PinIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+										<KeyRound size={20} color={theme.palette.text.secondary} />
 									</InputAdornment>
 								),
 							}}
 						/>
-
-						{error && <Alert severity="error">{error}</Alert>}
-						{resendError && <Alert severity="error">{resendError}</Alert>}
-						{resendSuccess && (
-							<Alert severity="success">Te enviamos un nuevo código.</Alert>
-						)}
 
 						<Button
 							fullWidth

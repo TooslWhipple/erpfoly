@@ -31,7 +31,13 @@ export const Card = styled('div')(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
-    padding: "24px"
+    padding: "24px",
+    [theme.breakpoints.down("sm")]: {
+        padding: "0px",
+        backgroundColor: "transparent",
+        border: "none",
+        borderRadius: "0px",
+    },
 }));
 
 export const SuppliersList = styled(Box)(({ theme }) => ({

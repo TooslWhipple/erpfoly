@@ -23,3 +23,29 @@ export function validatePromotionEndDate(
   }
   return undefined;
 }
+
+export function validatePromotionAdvancePercentage(
+  purchaseTypeCode: string | undefined,
+  advancePercentage: string
+): string | undefined {
+  if (purchaseTypeCode !== "APARTADO") {
+    return undefined;
+  }
+  const advanceNum =
+    advancePercentage === "" ? NaN : Number(advancePercentage);
+  if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
+    return "El anticipo debe estar entre 0 y 100";
+  }
+  return undefined;
+}
+
+export function resolvePromotionAdvanceRate(
+  purchaseTypeCode: string | undefined,
+  advancePercentage: string
+): number {
+  if (purchaseTypeCode !== "APARTADO") {
+    return 0;
+  }
+  const advanceNum = Number(advancePercentage);
+  return Number.isFinite(advanceNum) ? advanceNum : 0;
+}

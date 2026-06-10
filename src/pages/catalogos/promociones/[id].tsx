@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 import {
   MainLayout,
@@ -27,8 +27,9 @@ import { usePromotionDepartmentsCatalog } from "@/hooks/usePromotionDepartmentsC
 import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog";
 import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
-import { validatePromotionEndDate } from "@/lib/promotionFormValidation";
+import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
 import { CATALOG_PROMOTIONS_CREATE, CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
+import { parsePositiveIntParam } from "@/utils/query";
 
 function emptyForm(): PromotionFormState {
   return {
@@ -67,10 +68,14 @@ function mapDetailToForm(
 ): PromotionFormState {
   const deptIds = [...new Set(detail.products.map((p) => p.department_id))];
   const lineIds = [...new Set(detail.products.map((p) => p.line_id))];
+  const purchaseType = configuration.purchaseTypes.find(
+    (p) => p.id === detail.purchase_type_id
+  );
+  const isApartado = purchaseType?.code === "APARTADO";
   return {
     name: detail.name,
     percentage: String(detail.discount_rate),
-    advancePercentage: "",
+    advancePercentage: isApartado ? String(detail.advance_rate) : "",
     purchaseTypeId: detail.purchase_type_id,
     creditTermIds: [...detail.credit_term_ids],
     layawayTermIds: [...detail.layaway_term_ids],
@@ -95,6 +100,7 @@ function mapDetailToForm(
 
 export default function PromotionFormPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const rawId = router.query.id;
   const isNew = rawId === "nuevo";
   const promotionId =
@@ -107,7 +113,9 @@ export default function PromotionFormPage() {
   const [formState, setFormState] = useState<PromotionFormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const hydratedEditRef = useRef<number | null>(null);
+  const lastHydratedDetailAtRef = useRef<number | null>(null);
+  const lastFetchedProductIdsRef = useRef<number[]>([]);
+  const prefillAppliedRef = useRef(false);
 
   const configurationQuery = useQuery({
     queryKey: ["promotion-form-configuration"],
@@ -121,7 +129,8 @@ export default function PromotionFormPage() {
     queryFn: () => getPromotionById(promotionId),
     enabled:
       router.isReady && !isNew && Number.isFinite(promotionId),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const departmentsCatalogQuery = usePromotionDepartmentsCatalog(router.isReady);
@@ -129,7 +138,8 @@ export default function PromotionFormPage() {
   const suppliersCatalogQuery = usePromotionSuppliersCatalog(router.isReady);
 
   useEffect(() => {
-    hydratedEditRef.current = null;
+    lastHydratedDetailAtRef.current = null;
+    lastFetchedProductIdsRef.current = [];
   }, [promotionId]);
 
   useEffect(() => {
@@ -149,48 +159,95 @@ export default function PromotionFormPage() {
   }, [configurationQuery.data, isNew]);
 
   useEffect(() => {
+    if (!router.isReady || !isNew || prefillAppliedRef.current) return;
+
+    const departmentId = parsePositiveIntParam(router.query.departmentId);
+    if (departmentId == null) return;
+
+    prefillAppliedRef.current = true;
+    setFormState((prev) => {
+      if (prev.selectedDepartmentIds.length > 0) return prev;
+      return { ...prev, selectedDepartmentIds: [departmentId] };
+    });
+    setActiveTab("departments");
+  }, [router.isReady, isNew, router.query.departmentId]);
+
+  useEffect(() => {
     if (
       isNew ||
       !promotionQuery.data ||
       !configurationQuery.data ||
-      hydratedEditRef.current === promotionId
+      promotionQuery.isFetching
     ) {
       return;
     }
-    hydratedEditRef.current = promotionId;
+    if (lastHydratedDetailAtRef.current === promotionQuery.dataUpdatedAt) {
+      return;
+    }
+    lastHydratedDetailAtRef.current = promotionQuery.dataUpdatedAt;
+    lastFetchedProductIdsRef.current = [];
     setFormState(mapDetailToForm(promotionQuery.data, configurationQuery.data));
   }, [
     isNew,
     promotionId,
     promotionQuery.data,
+    promotionQuery.dataUpdatedAt,
+    promotionQuery.isFetching,
     configurationQuery.data,
   ]);
 
+  const supplierIdsKey = formState.suppliers
+    .map((s) => s.supplierId)
+    .sort((a, b) => a - b)
+    .join(",");
+
   useEffect(() => {
     const catalog = suppliersCatalogQuery.data;
-    if (!catalog?.length) return;
-    setFormState((prev) => ({
-      ...prev,
-      suppliers: prev.suppliers.map((s) => {
+    if (!catalog?.length || !supplierIdsKey) return;
+    setFormState((prev) => {
+      if (!prev.suppliers.length) return prev;
+      const next = prev.suppliers.map((s) => {
         const row = catalog.find((c) => c.id === s.supplierId);
         const name =
           row?.businessName?.trim() || row?.name?.trim() || s.supplierName;
+        if (name === s.supplierName) return s;
         return { ...s, supplierName: name };
-      }),
-    }));
-  }, [suppliersCatalogQuery.data]);
+      });
+      const changed = next.some(
+        (s, i) => s.supplierName !== prev.suppliers[i]?.supplierName
+      );
+      if (!changed) return prev;
+      return { ...prev, suppliers: next };
+    });
+  }, [suppliersCatalogQuery.data, supplierIdsKey]);
 
   const configuration = configurationQuery.data;
   const purchaseTypeMeta = configuration?.purchaseTypes.find(
     (p) => p.id === formState.purchaseTypeId
   );
 
+  useEffect(() => {
+    if (formState.selectedLineIds.length === 0) {
+      lastFetchedProductIdsRef.current = [];
+    }
+  }, [formState.selectedLineIds.length]);
+
   const handleProductsFetched = useCallback((productIds: number[]) => {
     setFormState((prev) => {
-      const oldSet = new Set(prev.selectedProductIds);
-      const next = productIds.filter(
-        (id) => !oldSet.has(id) || prev.selectedProductIds.includes(id)
-      );
+      const fetchedSet = new Set(productIds);
+      const previousFetchSet = new Set(lastFetchedProductIdsRef.current);
+      lastFetchedProductIdsRef.current = productIds;
+
+      const kept = prev.selectedProductIds.filter((id) => fetchedSet.has(id));
+
+      const toAdd =
+        previousFetchSet.size === 0
+          ? prev.selectedProductIds.length > 0
+            ? []
+            : productIds
+          : productIds.filter((id) => !previousFetchSet.has(id));
+
+      const next = [...new Set([...kept, ...toAdd])];
       const same =
         next.length === prev.selectedProductIds.length &&
         next.every((id) => prev.selectedProductIds.includes(id));
@@ -204,7 +261,8 @@ export default function PromotionFormPage() {
     !router.isReady ||
     (!isNew &&
       (promotionQuery.isLoading ||
-        (promotionQuery.isFetching && !promotionQuery.data)));
+        promotionQuery.isFetching ||
+        !promotionQuery.data));
 
   const runValidation = (): { ok: boolean; nextErrors: FormErrors } => {
     const newErrors: FormErrors = {};
@@ -217,10 +275,12 @@ export default function PromotionFormPage() {
       newErrors.percentage = "El porcentaje debe ser mayor a 0";
     }
 
-    const advanceNum =
-      formState.advancePercentage === "" ? NaN : Number(formState.advancePercentage);
-    if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
-      newErrors.advancePercentage = "El anticipo debe estar entre 0 y 100";
+    const advancePercentageError = validatePromotionAdvancePercentage(
+      purchaseTypeMeta?.code,
+      formState.advancePercentage
+    );
+    if (advancePercentageError) {
+      newErrors.advancePercentage = advancePercentageError;
     }
 
     if (!formState.startDate) {
@@ -273,6 +333,10 @@ export default function PromotionFormPage() {
     return {
       name: formState.name.trim(),
       discountRate: Number(formState.percentage),
+      advanceRate: resolvePromotionAdvanceRate(
+        purchaseTypeMeta?.code,
+        formState.advancePercentage
+      ),
       startDate: formState.startDate,
       endDate:
         formState.hasEndDate && formState.endDate && String(formState.endDate).trim()
@@ -324,7 +388,14 @@ export default function PromotionFormPage() {
         await unwrapOrThrow(await createPromotion(payload));
       } else {
         await unwrapOrThrow(await updatePromotion(promotionId, payload));
+        await queryClient.invalidateQueries({
+          queryKey: ["promotion-detail", promotionId],
+        });
       }
+      await queryClient.invalidateQueries({ queryKey: ["promotions", "list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["promotions", "list", "department"],
+      });
       router.push("/catalogos/promociones");
     } catch (err) {
       console.error("[PromotionForm] Error saving:", err);

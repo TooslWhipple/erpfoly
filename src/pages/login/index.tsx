@@ -1,14 +1,19 @@
 import { useState } from "react";
 import Image from "next/image";
-import { Alert, CircularProgress, InputAdornment, IconButton, Typography, Button } from "@mui/material";
-import {
-	Visibility,
-	VisibilityOff,
-	Badge as BadgeIcon,
-	Lock as LockIcon,
-} from "@mui/icons-material";
+import { CircularProgress, InputAdornment, IconButton, Typography, Button, useTheme } from "@mui/material";
+import { useRouter } from "next/router";
+import { Eye, EyeOff, IdCard, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { parseLoginIdentifier } from "@/utils/login-identifier";
+import {
+	getIdentifierValidationError,
+	getPasswordValidationError,
+	isValidIdentifier,
+	isValidPassword,
+	sanitizeIdentifierInput,
+	sanitizePasswordInput,
+	USERNAME_MAX_LENGTH,
+} from "@/utils/auth-credentials";
 import {
 	PageContainer,
 	LeftPanel,
@@ -16,12 +21,15 @@ import {
 	FormWrapper,
 	LogoContainer,
 	Form,
+	LoginTitle,
 	StyledTextField,
 	RecoveryRow,
 	RecoveryLink,
 } from "@/styles/login/styles";
 
 export default function LoginPage() {
+	const router = useRouter();
+	const theme = useTheme();
 	const { login, isLoading, error, clearError } = useAuth();
 	const [showPassword, setShowPassword] = useState(false);
 
@@ -29,15 +37,13 @@ export default function LoginPage() {
 	const [password, setPassword] = useState("");
 
 	const trimmedId = identifier.trim();
-	const isValidPassword = (value: string) => value.length >= 8;
-
-	const identifierError = "";
-	const passwordError = password && !isValidPassword(password) ? "La contraseña debe tener al menos 8 caracteres" : "";
+	const identifierValidationError = getIdentifierValidationError(trimmedId) ?? "";
+	const passwordValidationError = getPasswordValidationError(password) ?? "";
+	const passwordFieldError = passwordValidationError || error || "";
+	const hasLoginError = !!error;
 
 	const canSubmitLogin =
-		trimmedId.length > 0 &&
-		password &&
-		isValidPassword(password);
+		isValidIdentifier(trimmedId) && isValidPassword(password);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -64,13 +70,7 @@ export default function LoginPage() {
 					/>
 				</LogoContainer>
 				<FormWrapper>
-					<Typography variant="h1">Ingresa a tu cuenta</Typography>
-
-					{error && (
-						<Alert severity="error" onClose={clearError} sx={{ mb: 2 }}>
-							{error}
-						</Alert>
-					)}
+					<LoginTitle>Ingresa a tu cuenta</LoginTitle>
 
 					<Form onSubmit={handleLogin}>
 						<StyledTextField
@@ -80,17 +80,18 @@ export default function LoginPage() {
 							value={identifier}
 							onChange={(e) => {
 								clearError();
-								setIdentifier(e.target.value);
+								setIdentifier(sanitizeIdentifierInput(e.target.value));
 							}}
-							error={!!identifierError}
-							helperText={identifierError}
+							error={!!identifierValidationError || hasLoginError}
+							helperText={identifierValidationError}
 							fullWidth
 							autoComplete="username"
 							autoFocus
+							inputProps={{ maxLength: USERNAME_MAX_LENGTH }}
 							InputProps={{
 								startAdornment: (
 									<InputAdornment position="start">
-										<BadgeIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+										<IdCard size={20} color={theme.palette.text.secondary} />
 									</InputAdornment>
 								),
 							}}
@@ -101,15 +102,18 @@ export default function LoginPage() {
 							placeholder="Ingresa tu contraseña"
 							type={showPassword ? "text" : "password"}
 							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							error={!!passwordError}
-							helperText={passwordError}
+							onChange={(e) => {
+								clearError();
+								setPassword(sanitizePasswordInput(e.target.value));
+							}}
+							error={!!passwordFieldError}
+							helperText={passwordFieldError}
 							fullWidth
 							autoComplete="current-password"
 							InputProps={{
 								startAdornment: (
 									<InputAdornment position="start">
-										<LockIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+										<Lock size={20} color={theme.palette.text.secondary} />
 									</InputAdornment>
 								),
 								endAdornment: (
@@ -120,12 +124,17 @@ export default function LoginPage() {
 											size="small"
 											aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 										>
-											{showPassword ? <VisibilityOff /> : <Visibility />}
+											{showPassword ? (
+												<EyeOff size={20} color={theme.palette.text.secondary} />
+											) : (
+												<Eye size={20} color={theme.palette.text.secondary} />
+											)}
 										</IconButton>
 									</InputAdornment>
 								),
 							}}
 						/>
+
 						<Button
 							fullWidth
 							type="submit"
@@ -138,7 +147,13 @@ export default function LoginPage() {
 
 					<RecoveryRow>
 						<Typography variant="body2" color="text.secondary">¿Olvidaste tu contraseña?</Typography>
-						<RecoveryLink href="#" onClick={(e: React.MouseEvent) => e.preventDefault()}>
+						<RecoveryLink
+							href="/login/recover"
+							onClick={(e: React.MouseEvent) => {
+								e.preventDefault();
+								router.push("/login/recover");
+							}}
+						>
 							Recuperar
 						</RecoveryLink>
 					</RecoveryRow>

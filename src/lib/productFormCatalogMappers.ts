@@ -2,7 +2,7 @@ import type { BranchCatalogItem } from "@/services/branches.service";
 import type { DepartmentCatalogItem } from "@/services/departments.service";
 import type { ProductLineCatalogItem } from "@/services/product-lines.service";
 import type { ProductDetailBranchDto } from "@/services/productos.service";
-import type { ProductBranch, SelectableItem, WarrantyType } from "@/types/productos.types";
+import type { ProductBasePrice, ProductBranch, SelectableItem, WarrantyType } from "@/types/productos.types";
 
 export function departmentCatalogToSelectOptions(
     items: DepartmentCatalogItem[]
@@ -12,6 +12,38 @@ export function departmentCatalogToSelectOptions(
         value: String(d.id),
         label: `${String(d.id).padStart(2, "0")} — ${d.name}`
     }));
+}
+
+export function resolveDepartmentMarginFromCatalog(
+    items: DepartmentCatalogItem[],
+    departmentId: string
+): number | null {
+    const numericId = Number(departmentId);
+    if (departmentId.trim().length === 0 || !Number.isFinite(numericId)) {
+        return null;
+    }
+    const match = items.find((d) => d.id === numericId);
+    return match != null ? match.margin : null;
+}
+
+export function syncDefaultBasePriceDepartmentMargin(
+    basePrices: ProductBasePrice[],
+    departmentMargin: number | null
+): ProductBasePrice[] {
+    const marginPercent = departmentMargin ?? 0;
+    if (basePrices.length === 0) {
+        return [
+            {
+                id: "bp-default-1",
+                name: "Contado",
+                marginPercent,
+                lastEditedBy: "Gerente",
+            },
+        ];
+    }
+    return basePrices.map((bp, index) =>
+        index === 0 ? { ...bp, marginPercent } : bp
+    );
 }
 
 export function productLineCatalogToSelectOptions(

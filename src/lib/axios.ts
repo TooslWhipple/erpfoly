@@ -3,6 +3,7 @@ import { apiBaseUrl } from "@/config/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
+import { AUTH_GENERIC_ERROR, mapApiErrorToUserMessage } from "@/utils/auth-feedback";
 
 export const api = axios.create({
 	baseURL: apiBaseUrl,
@@ -22,6 +23,8 @@ api.interceptors.request.use(
 				"/auth/validate-otp",
 				"/auth/login/otp/resend",
 				"/auth/password/recovery",
+				"/auth/password/recovery/validate",
+				"/auth/password/recovery/reset",
 			].some((path) => url.includes(path));
 
 		if (!isPublicAuth) {
@@ -76,8 +79,18 @@ function isPublicAuthRequest(config: AxiosRequestConfig | undefined): boolean {
 		"/auth/validate-otp",
 		"/auth/login/otp/resend",
 		"/auth/password/recovery",
+		"/auth/password/recovery/validate",
+		"/auth/password/recovery/reset",
 		"/auth/logout",
 	].some((path) => url.includes(path));
+}
+
+function shouldShowGlobalErrorToast(config: AxiosRequestConfig | undefined): boolean {
+	if (!config) return true;
+	if ((config as AxiosRequestConfig & { skipGlobalErrorToast?: boolean }).skipGlobalErrorToast) {
+		return false;
+	}
+	return !isPublicAuthRequest(config);
 }
 
 let isRefreshing = false;
@@ -91,23 +104,25 @@ function processQueue(err: AxiosError | null, token: string | null) {
 	failedQueue.length = 0;
 }
 
-const DEFAULT_ERROR_MESSAGE = "Ha ocurrido un error. Intenta de nuevo.";
+const DEFAULT_ERROR_MESSAGE = AUTH_GENERIC_ERROR;
 
 function getErrorMessage(error: AxiosError): string {
 	const data = error.response?.data;
 	if (data && typeof data === "object" && "message" in data) {
 		const msg = (data as { message?: unknown }).message;
-		if (typeof msg === "string" && msg.trim()) return msg;
-		if (Array.isArray(msg)) return msg.map(String).join(". ") || DEFAULT_ERROR_MESSAGE;
+		if (typeof msg === "string" && msg.trim()) return mapApiErrorToUserMessage(msg);
+		if (Array.isArray(msg)) {
+			return mapApiErrorToUserMessage(msg.map(String).join(". "));
+		}
 	}
 	if (data && typeof data === "object" && "errors" in data) {
 		const errors = (data as { errors?: Record<string, string[]> }).errors;
 		if (errors && typeof errors === "object") {
 			const lines = Object.entries(errors).flatMap(([, arr]) => arr ?? []);
-			if (lines.length) return lines.join(". ");
+			if (lines.length) return mapApiErrorToUserMessage(lines.join(". "));
 		}
 	}
-	return DEFAULT_ERROR_MESSAGE;
+	return mapApiErrorToUserMessage(error.message || DEFAULT_ERROR_MESSAGE);
 }
 
 api.interceptors.response.use(
@@ -141,12 +156,16 @@ api.interceptors.response.use(
 				return api.request(originalRequest);
 			}
 
-			useSnackbarStore.getState().showError(getErrorMessage(error));
+			if (shouldShowGlobalErrorToast(originalRequest)) {
+				useSnackbarStore.getState().showError(getErrorMessage(error));
+			}
 			return Promise.reject(error);
 		}
 
 		if (error.response?.status !== 401) {
-			useSnackbarStore.getState().showError(getErrorMessage(error));
+			if (shouldShowGlobalErrorToast(originalRequest)) {
+				useSnackbarStore.getState().showError(getErrorMessage(error));
+			}
 			return Promise.reject(error);
 		}
 
@@ -288,9 +307,9 @@ function messageFromPayload(data: unknown): string | null {
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
 	const message = messageFromPayload(data);
-	if (message) return { message };
+	if (message) return { message: mapApiErrorToUserMessage(message) };
 	return {
-		message: error.message || "Network or server error",
+		message: mapApiErrorToUserMessage(error.message || "Network or server error"),
 	};
 }
 

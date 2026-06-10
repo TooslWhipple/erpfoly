@@ -42,6 +42,8 @@ import {
     branchCatalogToPackageSelectableItems,
     branchCatalogToProductBranches,
     mergeBranchCatalogWithProductDetail,
+    resolveDepartmentMarginFromCatalog,
+    syncDefaultBasePriceDepartmentMargin,
 } from "@/lib/productFormCatalogMappers";
 import {
     CURRENCIES,
@@ -146,6 +148,8 @@ export default function ProductFormPage() {
 
     const {
         catalogsLoading,
+        linesLoading,
+        departmentCatalogItems,
         departmentOptions,
         lineOptions,
         suppliersCatalog,
@@ -359,6 +363,31 @@ export default function ProductFormPage() {
         }
         setBranches(branchCatalogToProductBranches(branchCatalogItems));
     }, [isNew, catalogsLoading, branchCatalogItems]);
+
+    useEffect(() => {
+        if (departmentCatalogItems.length === 0) {
+            return;
+        }
+        const departmentMargin = resolveDepartmentMarginFromCatalog(
+            departmentCatalogItems,
+            generalData.departmentId
+        );
+        setBasePrices((prev) => {
+            const next = syncDefaultBasePriceDepartmentMargin(prev, departmentMargin);
+            if (
+                prev.length === next.length &&
+                prev.every(
+                    (bp, index) =>
+                        bp.id === next[index]?.id &&
+                        bp.name === next[index]?.name &&
+                        bp.marginPercent === next[index]?.marginPercent
+                )
+            ) {
+                return prev;
+            }
+            return next;
+        });
+    }, [departmentCatalogItems, generalData.departmentId]);
 
     useEffect(() => {
         if (isNew || detailBranchRows === null) {
@@ -778,6 +807,7 @@ export default function ProductFormPage() {
                                 onErrorClear={handleErrorClear}
                                 departments={departmentOptions}
                                 lines={lineOptions}
+                                linesLoading={linesLoading}
                                 warrantyOptions={warrantyOptions}
                                 onOpenNewDepartmentModal={() => setDepartmentModalOpen(true)}
                                 onOpenNewLineModal={() => setLineModalOpen(true)}

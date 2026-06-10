@@ -9,6 +9,7 @@ interface PasswordFieldAdornmentProps {
 	onToggleVisibility: () => void;
 	iconColor: string;
 	showCounter?: boolean;
+	disabled?: boolean;
 }
 
 export function PasswordFieldAdornment({
@@ -18,6 +19,7 @@ export function PasswordFieldAdornment({
 	onToggleVisibility,
 	iconColor,
 	showCounter = true,
+	disabled = false,
 }: PasswordFieldAdornmentProps) {
 	return (
 		<InputAdornment position="end">
@@ -36,6 +38,7 @@ export function PasswordFieldAdornment({
 					onClick={onToggleVisibility}
 					edge="end"
 					size="small"
+					disabled={disabled}
 					aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 				>
 					{showPassword ? <EyeOff size={20} color={iconColor} /> : <Eye size={20} color={iconColor} />}

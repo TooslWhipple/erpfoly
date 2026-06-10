@@ -161,6 +161,7 @@ export default function ValidateOtpPage() {
 							fullWidth
 							autoComplete="one-time-code"
 							autoFocus
+							disabled={loading}
 							InputProps={{
 								startAdornment: (
 									<InputAdornment position="start">

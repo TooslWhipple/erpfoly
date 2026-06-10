@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { CircularProgress, Box } from "@mui/material";
+import { CircularProgress, Box, Stack } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import {
   MainLayout,
@@ -39,6 +39,10 @@ function ruleToCollectionRule(rule: AutomatedCollectionRule): CollectionRuleData
   };
 }
 
+function sortRulesByNewest(rules: CollectionRuleData[]): CollectionRuleData[] {
+  return [...rules].sort((a, b) => Number(b.id) - Number(a.id));
+}
+
 export default function CobranzaAutomatica() {
   const { hasPermission } = usePermissions();
   const canUpdateRule = hasPermission(CUSTOMER_COLLECTION_UPDATE);
@@ -52,6 +56,7 @@ export default function CobranzaAutomatica() {
     null
   );
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -61,7 +66,9 @@ export default function CobranzaAutomatica() {
         getAutomatedCollectionCatalogs(),
       ]);
       if (rulesRes.data) {
-        setRules(rulesRes.data.data.map(ruleToCollectionRule));
+        setRules(
+          sortRulesByNewest(rulesRes.data.data.map(ruleToCollectionRule))
+        );
       }
       if (catalogsRes.data) {
         setCatalogs(catalogsRes.data);
@@ -114,7 +121,7 @@ export default function CobranzaAutomatica() {
   );
 
   const handleCreateRule = async () => {
-    if (!catalogs) return;
+    if (!catalogs || createLoading) return;
     const firstCondition = catalogs.conditionTypes[0];
     const firstOperator = catalogs.comparisonOperators[0];
     const firstPeriod = catalogs.timePeriods[0];
@@ -123,6 +130,7 @@ export default function CobranzaAutomatica() {
 
     if (!firstCondition || !firstOperator || !firstPeriod || !firstMessage || !firstMessageType) return;
 
+    setCreateLoading(true);
     try {
       const result = await createAutomatedCollectionRule({
         name: `Nueva regla ${Date.now()}`,
@@ -134,10 +142,15 @@ export default function CobranzaAutomatica() {
         status: false,
       });
       if (result.data) {
-        setRules((prev) => [...prev, ruleToCollectionRule(result.data!)]);
+        setRules((prev) => [
+          ruleToCollectionRule(result.data!),
+          ...prev,
+        ]);
       }
     } catch (err) {
       console.error("[CobranzaAutomatica] Error creating rule:", err);
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -230,7 +243,7 @@ export default function CobranzaAutomatica() {
     try {
       const result = await deleteAutomatedCollectionRule(Number(ruleId));
       if (result.error) {
-        setRules((prev) => [...prev, ruleToDelete]);
+        setRules((prev) => sortRulesByNewest([...prev, ruleToDelete]));
         return;
       }
       setRulePendingDelete(null);
@@ -238,7 +251,7 @@ export default function CobranzaAutomatica() {
         setActivityRuleId(null);
       }
     } catch {
-      setRules((prev) => [...prev, ruleToDelete]);
+      setRules((prev) => sortRulesByNewest([...prev, ruleToDelete]));
     } finally {
       setDeleteLoading(false);
     }
@@ -283,47 +296,51 @@ export default function CobranzaAutomatica() {
       variant: "contained",
       color: "primary",
       permission: CUSTOMER_COLLECTION_CREATE,
+      loading: createLoading,
+      disabled: loading || !catalogs,
     },
   ];
 
   return (
     <MainLayout>
-      <Title
-        title="Cobranza automática"
-        description="Configura las condiciones que se deben cumplir para mandar los mensajes o correos automáticos."
-        actions={titleActions}
-      />
-
-      {loading ? (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: 200,
-          }}
-        >
-          <CircularProgress size={40} />
-        </Box>
-      ) : (
-        <RulesList
-          rules={rules}
-          triggerOptions={triggerOptions}
-          operatorOptions={operatorOptions}
-          periodOptions={periodOptions}
-          messageOptions={messageOptions}
-          onTriggerChange={handleTriggerChange}
-          onOperatorChange={handleOperatorChange}
-          onPeriodChange={handlePeriodChange}
-          onMessageChange={handleMessageChange}
-          onToggleActive={handleToggleActive}
-          onDelete={handleRequestDeleteRule}
-          onViewActivity={handleViewActivity}
-          canUpdate={canUpdateRule}
-          canDelete={canDeleteRule}
-          emptyMessage="No hay reglas de cobranza configuradas. Crea una nueva regla para comenzar."
+      <Stack spacing={3} sx={{ width: "100%", minWidth: 0 }}>
+        <Title
+          title="Cobranza automática"
+          description="Configura las condiciones que se deben cumplir para mandar los mensajes o correos automáticos."
+          actions={titleActions}
         />
-      )}
+
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: 200,
+            }}
+          >
+            <CircularProgress size={40} />
+          </Box>
+        ) : (
+          <RulesList
+            rules={rules}
+            triggerOptions={triggerOptions}
+            operatorOptions={operatorOptions}
+            periodOptions={periodOptions}
+            messageOptions={messageOptions}
+            onTriggerChange={handleTriggerChange}
+            onOperatorChange={handleOperatorChange}
+            onPeriodChange={handlePeriodChange}
+            onMessageChange={handleMessageChange}
+            onToggleActive={handleToggleActive}
+            onDelete={handleRequestDeleteRule}
+            onViewActivity={handleViewActivity}
+            canUpdate={canUpdateRule}
+            canDelete={canDeleteRule}
+            emptyMessage="No hay reglas de cobranza configuradas. Crea una nueva regla para comenzar."
+          />
+        )}
+      </Stack>
 
       <AutomatedCollectionActivityModal
         open={activityRuleId !== null}

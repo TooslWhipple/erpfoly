@@ -18,6 +18,7 @@ interface GeneralDataTabProps {
     onErrorClear: (field: string) => void;
     departments: Array<{ value: string; label: string }>;
     lines: Array<{ value: string; label: string }>;
+    linesLoading?: boolean;
     warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
     onOpenNewDepartmentModal?: () => void;
     onOpenNewLineModal?: () => void;
@@ -30,6 +31,7 @@ export function GeneralDataTab({
     onErrorClear,
     departments,
     lines,
+    linesLoading = false,
     warrantyOptions,
     onOpenNewDepartmentModal,
     onOpenNewLineModal,
@@ -82,8 +84,10 @@ export function GeneralDataTab({
                         }}
                         options={lines}
                         error={Boolean(errors.lineId)}
-                        helperText={errors.lineId}
-                        disabled={!formState.departmentId}
+                        helperText={
+                            linesLoading ? "Cargando líneas…" : errors.lineId
+                        }
+                        disabled={!formState.departmentId || linesLoading}
                         required
                     />
                     <Button

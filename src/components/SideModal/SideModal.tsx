@@ -47,7 +47,10 @@ export function SideModal({
   const panelWidth = PANEL_WIDTHS[maxWidth] ?? PANEL_WIDTHS.sm;
 
   const handleClose = (_event: object, reason: string) => {
-    if (reason === "backdropClick" || reason === "escapeKeyDown") {
+    if (reason === "backdropClick") {
+      return;
+    }
+    if (reason === "escapeKeyDown") {
       if (!disableClose) onClose();
     }
   };

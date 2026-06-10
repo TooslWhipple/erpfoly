@@ -41,7 +41,7 @@ export function MultiSelectChips({
     helperText,
     emptyText = "No hay elementos seleccionados",
     searchable = false,
-    searchPlaceholder = "Buscar...",
+    searchPlaceholder = "Buscar",
 }: MultiSelectChipsProps) {
     const [searchValue, setSearchValue] = useState("");
 

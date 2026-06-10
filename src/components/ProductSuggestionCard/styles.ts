@@ -13,7 +13,17 @@ export const SuggestionCard = styled('div')(({ theme }) => ({
     maxWidth: "272px"
 }));
 
-export const ProductImage = styled('div')(({ theme }) => ({
+export const ProductImage = styled('img')(({ theme }) => ({
+    width: "40px",
+    height: "40px",
+    borderRadius: "4px",
+    objectFit: "cover",
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.app.border}`,
+    flexShrink: 0,
+}));
+
+export const ImagePlaceholder = styled('div')(({ theme }) => ({
     width: "40px",
     height: "40px",
     borderRadius: "4px",

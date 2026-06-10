@@ -355,7 +355,6 @@ export default function RecepcionMercancias() {
                 showSearch
                 searchValue={searchValue}
                 onSearchChange={handleSearchChange}
-                searchPlaceholder="Buscar"
                 actions={[
                     {
                         label: "Nuevo",

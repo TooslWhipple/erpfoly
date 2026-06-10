@@ -42,6 +42,7 @@ export interface TrackSliderProps {
   marks?: readonly number[];
   onChange: (event: Event, value: number) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   /** Filled portion color (empty track uses theme border tone). */
   filledTrackColor?: string;
   /** Label aligned to the left edge of the control (same width as track). */
@@ -63,6 +64,7 @@ export function TrackSlider({
   marks,
   onChange,
   disabled = false,
+  readOnly = false,
   filledTrackColor = theme.palette.app.sidebar.textSelected,
   startLabel,
   endLabel,
@@ -134,7 +136,7 @@ export function TrackSlider({
       : undefined;
 
   return (
-    <Root className={className} isDisabled={disabled}>
+    <Root className={className} isDisabled={disabled} isReadOnly={readOnly}>
       <TrackShell style={trackShellStyle}>
         <TrackRail>
           <TrackFill fillColor={filledTrackColor} />
@@ -147,6 +149,7 @@ export function TrackSlider({
           step={rangeStep}
           value={rangeValue}
           disabled={disabled}
+          readOnly={readOnly}
           onChange={handleRangeChange}
           aria-valuemin={isDiscrete ? marks![0] : min}
           aria-valuemax={isDiscrete ? marks![marks!.length - 1] : max}

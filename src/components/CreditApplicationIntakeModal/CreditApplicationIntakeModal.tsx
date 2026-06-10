@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { theme } from "@/styles/theme";
@@ -185,102 +185,134 @@ export function CreditApplicationIntakeModal({
       disableClose={saving}
       maxWidth="lg"
       fullWidth
+      contentSx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
-      <Stack spacing={3} sx={{ minHeight: 600 }}>
-        {activeStep === "ine-front" && (
-          <Stack spacing={3}>
-            <DeviceCameraCapture
-              facingMode="environment"
-              capturedImage={ineImageDataUrl}
-              onCapture={setIneImageDataUrl}
-              onRetake={() => setIneImageDataUrl(null)}
-              imageAlt="INE frontal"
-              cameraIndication="Acerca más la INE para que sea más legible"
-            />
-          </Stack>
-        )}
-        {activeStep === "ine-back" && (
-          <Stack spacing={3}>
-            <DeviceCameraCapture
-              facingMode="environment"
-              capturedImage={ineBackImageDataUrl}
-              onCapture={setIneBackImageDataUrl}
-              onRetake={() => setIneBackImageDataUrl(null)}
-              imageAlt="INE posterior"
-              cameraIndication="Asegúrate de capturar claramente el reverso de la INE"
-            />
-          </Stack>
-        )}
-
-        {activeStep === "selfie" && (
-          <Stack spacing={3}>
-            <DeviceCameraCapture
-              facingMode="user"
-              capturedImage={selfieImageDataUrl}
-              onCapture={setSelfieImageDataUrl}
-              onRetake={() => setSelfieImageDataUrl(null)}
-              imageAlt="Selfie del cliente"
-            />
-            <Typography variant="h6" textAlign="center">
-              Asegúrate de enfocar la cara dentro de la zona marcada
-            </Typography>
-          </Stack>
-        )}
-
-        {activeStep === "fingerprint" && (
-          <Stack spacing={3} alignItems="center" justifyContent="center" sx={{ flex: 1 }}>
-            <Fingerprint size={160} color="#22c55e" />
-            <Typography variant="h5">Dedo índice registrado</Typography>
-            <Button
-              variant={fingerprintConfirmed ? "contained" : "outlined"}
-              onClick={() => setFingerprintConfirmed(true)}
-            >
-              {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
-            </Button>
-          </Stack>
-        )}
-
-        {activeStep === "signature" && (
-          <Stack spacing={3} alignItems="flex-end">
-            <Typography variant="h5">
-              Para continuar con el proceso, solicita la autorización para revisar el
-              historial crediticio del cliente a través del Buró de Crédito.
-            </Typography>
-            <Stack style={{ borderRadius: "16px", overflow: "hidden" }}>
-              <canvas
-                ref={signatureCanvasRef}
-                width={900}
-                height={400}
-                style={{
-                  width: "100%",
-                  backgroundColor: theme.palette.background.paper,
-                  cursor: saving ? "not-allowed" : "crosshair",
-                }}
-                onMouseDown={saving ? undefined : handleStartDrawing}
-                onMouseMove={saving ? undefined : handleDraw}
-                onMouseUp={saving ? undefined : handleEndDrawing}
-                onMouseLeave={saving ? undefined : handleEndDrawing}
+      <Stack
+        spacing={3}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+        }}
+      >
+        <Stack spacing={3} sx={{ minHeight: "600px" }}>
+          {
+            activeStep === "ine-front" &&
+            <Stack spacing={3}>
+              <DeviceCameraCapture
+                facingMode="environment"
+                capturedImage={ineImageDataUrl}
+                onCapture={setIneImageDataUrl}
+                onRetake={() => setIneImageDataUrl(null)}
+                imageAlt="INE frontal"
+                cameraIndication="Acerca más la INE para que sea más legible"
               />
             </Stack>
-            <Typography variant="body1" textAlign="center" alignSelf="center">
-              Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
-              S.A. de C.V.
-            </Typography>
-            <Button
-              variant="text"
-              startIcon={<PenSquare size={16} />}
-              onClick={clearSignatureCanvas}
-              disabled={saving}>
-              Limpiar firma
-            </Button>
-          </Stack>
-        )}
+          }
+          {
+            activeStep === "ine-back" &&
+            <Stack spacing={3}>
+              <DeviceCameraCapture
+                facingMode="environment"
+                capturedImage={ineBackImageDataUrl}
+                onCapture={setIneBackImageDataUrl}
+                onRetake={() => setIneBackImageDataUrl(null)}
+                imageAlt="INE posterior"
+                cameraIndication="Asegúrate de capturar claramente el reverso de la INE"
+              />
+            </Stack>
+          }
 
+          {
+            activeStep === "selfie" &&
+            <Stack spacing={3}>
+              <DeviceCameraCapture
+                facingMode="user"
+                capturedImage={selfieImageDataUrl}
+                onCapture={setSelfieImageDataUrl}
+                onRetake={() => setSelfieImageDataUrl(null)}
+                imageAlt="Selfie del cliente"
+              />
+              <Typography variant="h6" textAlign="center">
+                Asegúrate de enfocar la cara dentro de la zona marcada
+              </Typography>
+            </Stack>
+          }
+
+          {
+            activeStep === "fingerprint" &&
+            <Stack spacing={3} alignItems="center" justifyContent="center" sx={{ flex: 1 }}>
+              <Fingerprint size={160} color="#22c55e" />
+              <Typography variant="h5">Dedo índice registrado</Typography>
+              <Button
+                variant={fingerprintConfirmed ? "contained" : "outlined"}
+                onClick={() => setFingerprintConfirmed(true)}
+              >
+                {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
+              </Button>
+            </Stack>
+          }
+
+          {
+            activeStep === "signature" &&
+            <Stack spacing={3} alignItems="flex-end">
+              <Typography variant="h5">
+                Para continuar con el proceso, solicita la autorización para revisar el
+                historial crediticio del cliente a través del Buró de Crédito.
+              </Typography>
+              <Stack style={{ borderRadius: "16px", overflow: "hidden" }}>
+                <canvas
+                  ref={signatureCanvasRef}
+                  width={900}
+                  height={400}
+                  style={{
+                    width: "100%",
+                    backgroundColor: theme.palette.background.paper,
+                    cursor: saving ? "not-allowed" : "crosshair",
+                  }}
+                  onMouseDown={saving ? undefined : handleStartDrawing}
+                  onMouseMove={saving ? undefined : handleDraw}
+                  onMouseUp={saving ? undefined : handleEndDrawing}
+                  onMouseLeave={saving ? undefined : handleEndDrawing}
+                />
+              </Stack>
+              <Typography variant="body1" textAlign="center" alignSelf="center">
+                Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
+                S.A. de C.V.
+              </Typography>
+              <Button
+                variant="text"
+                startIcon={<PenSquare size={16} />}
+                onClick={clearSignatureCanvas}
+                disabled={saving}>
+                Limpiar firma
+              </Button>
+            </Stack>
+          }
+        </Stack>
+      </Stack>
+
+      <Box
+        sx={{
+          flexShrink: 0,
+          backgroundColor: theme.palette.background.paper,
+          py: 1,
+          zIndex: 2,
+          position: "relative",
+        }}
+      >
         <Button
           fullWidth
           variant="contained"
           onClick={goToNextStep}
-          disabled={!canContinue || saving}>
+          disabled={!canContinue || saving}
+        >
           {
             (saving) ?
               <CircularProgress size={20} color="inherit" />
@@ -288,7 +320,7 @@ export function CreditApplicationIntakeModal({
               (isLastStep) ? "Finalizar" : "Siguiente"
           }
         </Button>
-      </Stack>
+      </Box>
     </SideModal>
   );
 }
@@ -441,17 +473,13 @@ function DeviceCameraCapture({
         )}
       </Stack>
 
-      {cameraError && (
-        <Typography variant="body2" color="error.main">
-          {cameraError}
-        </Typography>
-      )}
+      {
+        cameraError && <Typography variant="body2" color="error.main">{cameraError}</Typography>
+      }
 
-      {cameraIndication && (
-        <Typography variant="subtitle2" textAlign="center">
-          {cameraIndication}
-        </Typography>
-      )}
+      {
+        cameraIndication && <Typography variant="subtitle2" textAlign="center">{cameraIndication}</Typography>
+      }
 
       <button
         type="button"

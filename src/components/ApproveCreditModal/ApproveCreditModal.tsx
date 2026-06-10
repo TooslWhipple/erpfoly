@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { TrackSlider } from "@/components/TrackSlider";
-import { getApiErrorMessage } from "@/lib/axios";
 import {
   approveCreditApplication,
   getCreditApplicationApprovalOptions,
@@ -39,7 +38,6 @@ export function ApproveCreditModal({
   onApproveSuccess,
 }: ApproveCreditModalProps) {
   const [creditLine, setCreditLine] = useState(0);
-  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
 
   const approvalOptionsQuery = useQuery({
     queryKey: ["credit-application", "approval-options", applicationId],
@@ -64,7 +62,7 @@ export function ApproveCreditModal({
     if (!open) {
       return;
     }
-    setSubmitErrorMessage(null);
+
     if (approvalOptionsQuery.data) {
       setCreditLine(approvalOptionsQuery.data.suggestedApprovedAmount);
     }
@@ -78,14 +76,10 @@ export function ApproveCreditModal({
   );
 
   const handleApproveClick = async () => {
-    setSubmitErrorMessage(null);
     try {
       await approveMutation.mutateAsync(creditLine);
     } catch (error) {
-      const parsedErrorMessage = getApiErrorMessage(error);
-      setSubmitErrorMessage(
-        parsedErrorMessage || "No fue posible aprobar la solicitud. Intenta de nuevo.",
-      );
+      console.error(error);
     }
   };
 
@@ -177,13 +171,13 @@ export function ApproveCreditModal({
             middleLabel={
               hasMidMark
                 ? {
-                    value: midValue,
-                    content: (
-                      <Typography variant="body1">
-                        ${formatCurrency(midValue)}
-                      </Typography>
-                    ),
-                  }
+                  value: midValue,
+                  content: (
+                    <Typography variant="body1">
+                      ${formatCurrency(midValue)}
+                    </Typography>
+                  ),
+                }
                 : undefined
             }
           />
@@ -198,18 +192,15 @@ export function ApproveCreditModal({
           >
             {approveMutation.isPending ? "Aprobando..." : "Aprobar solicitud"}
           </Button>
-          {approvalOptionsQuery.isError && (
-            <Typography variant="body2" color="error">
-              No fue posible cargar los montos de aprobación. Cierra y vuelve a intentar.
-            </Typography>
-          )}
-          {submitErrorMessage && (
-            <Typography variant="body2" color="error">
-              {submitErrorMessage}
-            </Typography>
-          )}
+          {
+            approvalOptionsQuery.isError && (
+              <Typography variant="body2" color="error">
+                No fue posible cargar los montos de aprobación. Cierra y vuelve a intentar.
+              </Typography>
+            )
+          }
         </Stack>
-      </DialogContent >
-    </Dialog >
+      </DialogContent>
+    </Dialog>
   );
 }

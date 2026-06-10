@@ -641,7 +641,7 @@ export async function getProductsCatalog(): Promise<
 export async function getProductsByLineIds(lineIds: number[]): Promise<ProductListItem[]> {
     return unwrapOrThrow(
         await post<ProductListItem[]>(`${PRODUCTS_BASE}/by-lines`, {
-            line_ids: lineIds,
+            lineIds,
         })
     );
 }

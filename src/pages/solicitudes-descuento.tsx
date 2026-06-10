@@ -141,7 +141,6 @@ export default function SolicitudesDescuentoPage() {
           showSearch
           searchValue={searchValue}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

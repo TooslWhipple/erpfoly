@@ -1,12 +1,23 @@
 import React from "react";
-import { RadioOptionIcon, RadioOptionButton } from "./RadioButton.styles";
+import {
+    RadioOptionAdornment,
+    RadioOptionButton,
+    RadioOptionIcon,
+    RadioOptionLabel,
+} from "./RadioButton.styles";
 
 export interface RadioButtonProps {
     value: string;
     label: string;
     checked: boolean;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     disabled?: boolean;
+    readOnly?: boolean;
+    fullWidth?: boolean;
+    size?: "small" | "medium";
+    backgroundColor?: string;
+    startIcon?: React.ReactNode;
+    endIcon?: React.ReactNode;
 }
 
 export function RadioButton({
@@ -15,22 +26,35 @@ export function RadioButton({
     checked,
     onChange,
     disabled = false,
+    readOnly = false,
+    fullWidth = false,
+    size = "medium",
+    backgroundColor = "transparent",
+    startIcon,
+    endIcon,
 }: RadioButtonProps) {
     const handleClick = () => {
-        if (disabled) return;
-        onChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+        if (disabled || readOnly) return;
+        onChange?.({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
     };
 
     return (
         <RadioOptionButton
             role="radio"
             aria-checked={checked}
+            aria-readonly={readOnly || undefined}
             selected={checked}
+            fullWidth={fullWidth}
+            size={size}
             disabled={disabled}
+            readOnly={readOnly}
+            backgroundColor={backgroundColor}
             onClick={handleClick}
         >
             <RadioOptionIcon selected={checked} />
-            {label}
+            {startIcon && <RadioOptionAdornment>{startIcon}</RadioOptionAdornment>}
+            <RadioOptionLabel>{label}</RadioOptionLabel>
+            {endIcon && <RadioOptionAdornment>{endIcon}</RadioOptionAdornment>}
         </RadioOptionButton>
     );
 }

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, Button, Typography, Skeleton } from "@mui/material";
+import { Stack, Button, Typography, Skeleton, Grid } from "@mui/material";
 import {
   MainLayout,
   Breadcrumbs,
@@ -166,28 +166,49 @@ export default function CreditApplicationReviewPage() {
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-          {detail.status === "APPROVED" ? (
-            <CreditApplicationStatusCard
-              variant="approved"
-              approvedBaseCreditLineAmount={detail.approvedBaseCreditLineAmount}
-              onGoToProfile={handleGoToClientProfile}
-              disableGoToProfile={!detail.approvedClientId}
-            />
-          ) : detail.status === "REJECTED" ? (
-            <CreditApplicationStatusCard variant="rejected" />
-          ) : (
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Button variant="outlined" onClick={() => setRequestAdditionalInfoOpen(true)}>
-                Solicitar inf. adicional
-              </Button>
-              <Button variant="outlined" color="error" onClick={() => setRejectModalOpen(true)}>
-                Rechazar solicitud
-              </Button>
-              <Button variant="contained" onClick={() => setApproveModalOpen(true)}>
-                Aprobar solicitud
-              </Button>
-            </Stack>
-          )}
+          {
+            detail.status === "APPROVED" ?
+              <CreditApplicationStatusCard
+                variant="approved"
+                approvedBaseCreditLineAmount={detail.approvedBaseCreditLineAmount}
+                onGoToProfile={handleGoToClientProfile}
+                disableGoToProfile={!detail.approvedClientId}
+              />
+              : detail.status === "REJECTED" ?
+                <CreditApplicationStatusCard variant="rejected" />
+                :
+                <Grid container spacing={1} flexWrap="wrap">
+                  <Grid size={{ xs: 6, md: 'auto' }}>
+                    <Button
+                      fullWidth
+                      variant="option"
+                      style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                      onClick={() => setRequestAdditionalInfoOpen(true)}
+                      disabled={detail.status === 'CANCELLED'}>
+                      Solicitar inf. adicional
+                    </Button>
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 'auto' }}>
+                    <Button
+                      fullWidth
+                      variant="option"
+                      color="error"
+                      onClick={() => setRejectModalOpen(true)}
+                      disabled={detail.status === 'CANCELLED'}>
+                      Rechazar solicitud
+                    </Button>
+                  </Grid>
+                  <Grid size={{ xs: 6, md: 'auto' }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => setApproveModalOpen(true)}
+                      disabled={detail.status === 'DRAFT' || detail.status === 'CANCELLED'}>
+                      Aprobar solicitud
+                    </Button>
+                  </Grid>
+                </Grid>
+          }
         </Stack>
 
         <DetailLayout>

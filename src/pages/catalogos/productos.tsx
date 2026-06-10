@@ -181,7 +181,6 @@ export default function Productos() {
                     showSearch
                     searchValue={searchInput}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar por código o nombre"
                     actions={[
                         {
                             label: "Nuevo",

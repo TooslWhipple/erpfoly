@@ -82,13 +82,20 @@ export function DepartmentsTab({
     .sort((a, b) => a - b)
     .join(",");
 
+  const linesLoading = lineQueries.some((q) => q.isPending || q.isFetching);
+  const linesReady =
+    formState.selectedDepartmentIds.length > 0 &&
+    lineQueries.length === formState.selectedDepartmentIds.length &&
+    lineQueries.every((q) => q.isFetched);
+
   useEffect(() => {
+    if (!linesReady) return;
     const allowed = new Set(mergedLines.map((l) => l.id));
     const filtered = formState.selectedLineIds.filter((id) => allowed.has(id));
     if (filtered.length !== formState.selectedLineIds.length) {
       onFieldChange("selectedLineIds", filtered);
     }
-  }, [allowedLineIdsKey]);
+  }, [allowedLineIdsKey, linesReady, formState.selectedLineIds, onFieldChange]);
 
   const sortedLineKey = [...formState.selectedLineIds].sort((a, b) => a - b).join(",");
 
@@ -100,6 +107,7 @@ export function DepartmentsTab({
   });
 
   useEffect(() => {
+    if (linesLoading) return;
     if (formState.selectedLineIds.length === 0) {
       if (formState.selectedProductIds.length > 0) {
         onFieldChange("selectedProductIds", []);
@@ -114,12 +122,11 @@ export function DepartmentsTab({
     productsQuery.isFetching,
     formState.selectedLineIds.length,
     sortedLineKey,
-    formState.selectedProductIds.length,
+    linesLoading,
     onFieldChange,
     onProductsFetched,
   ]);
 
-  const linesLoading = lineQueries.some((q) => q.isFetching);
   const firstLineQueryError = lineQueries.find((q) => q.isError);
 
   const filteredProducts = useMemo(() => {
@@ -231,7 +238,8 @@ export function DepartmentsTab({
         </Stack>
 
         {
-          productsQuery.isFetching && formState.selectedLineIds.length > 0 ?
+          (linesLoading || productsQuery.isFetching) &&
+          formState.selectedLineIds.length > 0 ?
             <div
               style={{ display: "flex", justifyContent: "center", paddingTop: "32px" }}>
               <CircularProgress size={28} />

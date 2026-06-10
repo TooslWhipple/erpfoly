@@ -101,7 +101,6 @@ export default function VendedoresPage() {
           showSearch
           searchValue={searchValue}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

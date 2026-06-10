@@ -59,7 +59,16 @@ export const ProductRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
 }));
 
-export const ProductImage = styled(Box)({
+export const ProductImage = styled('img')({
+  width: 56,
+  height: 56,
+  borderRadius: 8,
+  objectFit: "cover",
+  backgroundColor: "#F3F4F6",
+  flexShrink: 0,
+});
+
+export const ImagePlaceholder = styled('div')({
   width: 56,
   height: 56,
   borderRadius: 8,

@@ -34,6 +34,8 @@ export interface CashRegisterDashboardProps {
   cashRegister: CashRegisterState;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
+  onSearch?: () => void;
+  isSearching?: boolean;
   canCut?: boolean;
   canWithdraw?: boolean;
   onCut: () => void;

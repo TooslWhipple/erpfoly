@@ -467,7 +467,6 @@ export default function ClientesMorosidad() {
           showSearch
           searchValue={searchValue}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar por nombre"
         />
 
         <TableCrud

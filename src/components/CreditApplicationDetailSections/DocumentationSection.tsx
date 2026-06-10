@@ -26,29 +26,27 @@ export function DocumentationSection({ detail, onOpenImageViewer }: Documentatio
       </Stack>
       <Divider />
       <Stack spacing={2}>
-        {hasDocuments ? (
-          documentation.documents.map((doc) => (
-            <VerifiedRow
-              key={doc.id}
-              style={{ cursor: "pointer", marginBottom: 0 }}
-              onClick={() => onOpenImageViewer(doc.name, doc.verifiedBy, doc.fullImageUrl)}
-            >
-              <VerifiedCheck>
-                <Check size={18} color="#059669" strokeWidth={2} />
-              </VerifiedCheck>
-              <Stack>
-                <Typography variant="subtitle2" fontWeight={600}>{doc.name}</Typography>
-                <Typography variant="caption" color="text.secondary">{doc.verifiedBy}</Typography>
-              </Stack>
+        {
+          hasDocuments ?
+            documentation.documents.map((doc) => (
+              <VerifiedRow
+                key={doc.id}
+                style={{ cursor: "pointer", marginBottom: 0 }}
+                onClick={() => onOpenImageViewer(doc.name, doc.verifiedBy, doc.fullImageUrl)}>
+                <VerifiedCheck>
+                  <Check size={18} color="#059669" strokeWidth={2} />
+                </VerifiedCheck>
+                <Stack>
+                  <Typography variant="subtitle2" fontWeight={600}>{doc.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">{doc.verifiedBy}</Typography>
+                </Stack>
 
-              <VerifiedThumb src={doc.thumbnailUrl} alt={doc.name} />
-            </VerifiedRow>
-          ))
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No se ha solicitado información adicional al cliente.
-          </Typography>
-        )}
+                <VerifiedThumb src={doc.thumbnailUrl} alt={doc.name} />
+              </VerifiedRow>
+            ))
+            :
+            <Typography variant="body2" color="text.secondary">No se ha solicitado información adicional al cliente.</Typography>
+        }
       </Stack>
     </Stack>
   );

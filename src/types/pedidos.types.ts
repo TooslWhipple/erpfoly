@@ -11,6 +11,7 @@ export interface Article {
     id: string;
     name: string;
     folio: string;
+    image?: string;
     salesYear: number;
     salesLastMonth: number;
     salesCurrentMonth: number;

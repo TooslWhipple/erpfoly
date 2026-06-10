@@ -10,6 +10,10 @@ export interface AppPalette {
     sidebar: string;
     content: string;
     lowGray: string;
+    lowerGray: string;
+    mediumGray: string;
+    lowBlue: string;
+    readOnlyControl: string;
   };
   border: string;
   text: {
@@ -33,6 +37,8 @@ export interface AppPalette {
       info: { background: string; color: string };
       infoAlt: { background: string; color: string };
       disabled: { background: string; color: string };
+      nuevo: { background: string; color: string };
+      aumento: { background: string; color: string };
     };
   };
   segmentControl: {
@@ -53,6 +59,10 @@ export const appPalette: AppPalette = {
     sidebar: "#FFFFFF",
     content: "#F8FAFC",
     lowGray: "#E2E8F0",
+    lowerGray: "#F1F5F9",
+    mediumGray: "#CBD5E1",
+    lowBlue: "#BFDBFE",
+    readOnlyControl: "#F4F4F5",
   },
   border: "#D4D4D8",
   text: {
@@ -76,6 +86,8 @@ export const appPalette: AppPalette = {
       info: { background: "#DBEAFE", color: "#2563EB" },
       infoAlt: { background: "#FEF3C7", color: "#D97706" },
       disabled: { background: "#E2E8F0", color: "#475569" },
+      nuevo: { background: "#FAF5FF", color: "#9333EA" },
+      aumento: { background: "#FDF2F8", color: "#DB2777" },
     },
   },
   segmentControl: {
@@ -135,6 +147,9 @@ export const theme = createTheme({
       paper: appPalette.background.sidebar,
       content: appPalette.background.content,
       lowGray: appPalette.background.lowGray,
+      lowerGray: appPalette.background.lowerGray,
+      mediumGray: appPalette.background.mediumGray,
+      lowBlue: appPalette.background.lowBlue,
     },
     text: {
       primary: appPalette.text.primary,
@@ -260,6 +275,26 @@ export const theme = createTheme({
         },
       ],
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.MuiInputBase-readOnly": {
+            backgroundColor: appPalette.background.main,
+            pointerEvents: "none",
+            "& .MuiOutlinedInput-input": {
+              color: theme.palette.text.primary,
+              WebkitTextFillColor: theme.palette.text.primary,
+            },
+            "& fieldset": {
+              borderColor: appPalette.border,
+            },
+            "&:hover fieldset": {
+              borderColor: appPalette.border,
+            },
+          },
+        }),
+      },
+    },
     MuiTextField: {
       styleOverrides: {
         root: {
@@ -344,6 +379,32 @@ export const theme = createTheme({
           },
         },
       },
+      variants: [
+        {
+          props: { readOnly: true },
+          style: {
+            pointerEvents: "none",
+            "& .MuiSwitch-track": {
+              backgroundColor: appPalette.neutral.switchTrack,
+            },
+          },
+        },
+      ],
+    },
+    MuiRadio: {
+      styleOverrides: {
+        root: {
+          padding: 8,
+        },
+      },
+      variants: [
+        {
+          props: { readOnly: true },
+          style: {
+            pointerEvents: "none",
+          },
+        },
+      ],
     },
   },
 });
@@ -352,6 +413,9 @@ declare module "@mui/material/styles" {
   interface TypeBackground {
     content: string;
     lowGray: string;
+    lowerGray: string;
+    mediumGray: string;
+    lowBlue: string;
   }
   interface Palette {
     app: AppPalette;

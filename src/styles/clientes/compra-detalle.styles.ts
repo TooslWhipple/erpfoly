@@ -40,13 +40,11 @@ export const PaymentDotsRow = styled("div")(({ theme }) => ({
   gap: theme.spacing(0.5),
 }));
 
-export const PaymentDot = styled("span", {
-  shouldForwardProp: (prop) => prop !== "active",
-})<{ active: boolean }>(({ theme, active }) => ({
-  width: "12px",
-  height: "12px",
+export const PaymentDot = styled("span", { shouldForwardProp: (prop) => prop !== "active" })<{ active: boolean }>(({ theme, active }) => ({
+  width: "8px",
+  height: "8px",
   borderRadius: "50%",
-  backgroundColor: active ? theme.palette.primary.main : theme.palette.app.background.lowGray,
+  backgroundColor: (active) ? "#16A34A" : theme.palette.app.background.lowGray,
 }));
 
 export const ReadOnlyField = styled("div")(({ theme }) => ({

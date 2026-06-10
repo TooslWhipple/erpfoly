@@ -22,22 +22,22 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
       <Typography variant="subtitle1">Referencia laboral</Typography>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Empresa" value={references.work.company} disabled fullWidth />
+          <FormTextField label="Empresa" value={references.work.company} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField label="Teléfono" value={references.work.phone} disabled fullWidth />
+          <FormTextField label="Teléfono" value={references.work.phone} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField label="Puesto del cliente" value={references.work.clientPosition} disabled fullWidth />
+          <FormTextField label="Puesto del cliente" value={references.work.clientPosition} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField label="Antigüedad (años)" value={String(references.work.tenureYears)} disabled fullWidth />
+          <FormTextField label="Antigüedad (años)" value={String(references.work.tenureYears)} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <FormTextField
             label="Persona que contestó y puesto"
             value={references.work.contactNameAndPosition}
-            disabled
+            readOnly
             fullWidth
           />
         </Grid>
@@ -49,16 +49,16 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
             <SectionCard key={index}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <FormTextField label="Nombre" value={ref.name} disabled fullWidth />
+                  <FormTextField label="Nombre" value={ref.name} readOnly fullWidth />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <FormTextField label="Parentesco" value={ref.relationship} disabled fullWidth />
+                  <FormTextField label="Parentesco" value={ref.relationship} readOnly fullWidth />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                  <FormTextField label="Dirección" value={ref.address} disabled fullWidth />
+                  <FormTextField label="Dirección" value={ref.address} readOnly fullWidth />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <FormTextField label="Teléfono" value={ref.phone} disabled fullWidth />
+                  <FormTextField label="Teléfono" value={ref.phone} readOnly fullWidth />
                 </Grid>
               </Grid>
             </SectionCard>

@@ -242,7 +242,6 @@ export default function SolicitudesSucursales() {
                     showSearch
                     searchValue={searchValue}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar (folio, sucursal, solicitante)"
                 />
 
                 <TableCrud

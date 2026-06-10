@@ -59,7 +59,7 @@ export function TabFilters({
   showSearch = false,
   searchValue = "",
   onSearchChange,
-  searchPlaceholder = "Buscar...",
+  searchPlaceholder = "Buscar",
   actions,
 }: TabFiltersProps) {
   const { hasPermission } = usePermissions();
@@ -88,6 +88,7 @@ export function TabFilters({
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
+        flexWrap: "wrap",
       }}
     >
       <Grid

@@ -2,7 +2,7 @@ import { styled } from "@mui/material/styles";
 import { Box } from "@mui/material";
 import { theme } from "@/styles/theme";
 
-export type StatusChipVariant = "default" | "success" | "pending" | "error" | "warning" | "info" | "infoAlt" | "disabled";
+export type StatusChipVariant = "default" | "success" | "pending" | "error" | "warning" | "info" | "infoAlt" | "disabled" | "nuevo" | "aumento";
 
 export type StatusChipSize = "default" | "small";
 
@@ -14,7 +14,9 @@ const variantStyles: Record<StatusChipVariant, { background: string; color: stri
   warning: theme.palette.app.chip.variants.warning,
   info: theme.palette.app.chip.variants.info,
   infoAlt: theme.palette.app.chip.variants.infoAlt,
-  disabled: theme.palette.app.chip.variants.disabled
+  disabled: theme.palette.app.chip.variants.disabled,
+  nuevo: theme.palette.app.chip.variants.nuevo,
+  aumento: theme.palette.app.chip.variants.aumento,
 };
 
 const sizeStyles: Record<

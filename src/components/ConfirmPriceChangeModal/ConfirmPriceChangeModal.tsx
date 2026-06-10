@@ -11,6 +11,7 @@ import {
   ProductCard,
   ProductRow,
   ProductImage,
+  ImagePlaceholder,
   ProductInfo,
   ProductName,
   ProductSku,
@@ -32,6 +33,7 @@ export interface ConfirmPriceChangeModalProps {
   onClose: () => void;
   productName: string;
   sku: string;
+  imageUrl?: string | null;
   /** Previous price before change */
   previousPrice: number;
   /** New suggested price */
@@ -60,6 +62,7 @@ export function ConfirmPriceChangeModal({
   onClose,
   productName,
   sku,
+  imageUrl,
   previousPrice,
   newPrice,
   changePercent,
@@ -105,7 +108,11 @@ export function ConfirmPriceChangeModal({
 
         <ProductCard>
           <ProductRow>
-            <ProductImage />
+            {imageUrl ? (
+              <ProductImage src={imageUrl} alt={productName} />
+            ) : (
+              <ImagePlaceholder />
+            )}
             <ProductInfo>
               <ProductName>{productName}</ProductName>
               <ProductSku>{sku}</ProductSku>

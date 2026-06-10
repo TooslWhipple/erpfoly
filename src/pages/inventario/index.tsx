@@ -427,7 +427,6 @@ export default function Inventario() {
                     showSearch
                     searchValue={searchValue}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar por código"
                 />
 
                 <TableCrud

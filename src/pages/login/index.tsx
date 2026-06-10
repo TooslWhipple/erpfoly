@@ -6,10 +6,6 @@ import { Eye, EyeOff, IdCard, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { parseLoginIdentifier } from "@/utils/login-identifier";
 import {
-	getIdentifierValidationError,
-	getPasswordValidationError,
-	isValidIdentifier,
-	isValidPassword,
 	sanitizeIdentifierInput,
 	sanitizePasswordInput,
 	USERNAME_MAX_LENGTH,
@@ -37,13 +33,9 @@ export default function LoginPage() {
 	const [password, setPassword] = useState("");
 
 	const trimmedId = identifier.trim();
-	const identifierValidationError = getIdentifierValidationError(trimmedId) ?? "";
-	const passwordValidationError = getPasswordValidationError(password) ?? "";
-	const passwordFieldError = passwordValidationError || error || "";
 	const hasLoginError = !!error;
 
-	const canSubmitLogin =
-		isValidIdentifier(trimmedId) && isValidPassword(password);
+	const canSubmitLogin = trimmedId.length > 0 && password.length > 0 && !isLoading;
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -82,8 +74,9 @@ export default function LoginPage() {
 								clearError();
 								setIdentifier(sanitizeIdentifierInput(e.target.value));
 							}}
-							error={!!identifierValidationError || hasLoginError}
-							helperText={identifierValidationError}
+							disabled={isLoading}
+							error={hasLoginError}
+							helperText=""
 							fullWidth
 							autoComplete="username"
 							autoFocus
@@ -106,8 +99,9 @@ export default function LoginPage() {
 								clearError();
 								setPassword(sanitizePasswordInput(e.target.value));
 							}}
-							error={!!passwordFieldError}
-							helperText={passwordFieldError}
+							disabled={isLoading}
+							error={hasLoginError}
+							helperText={error ?? ""}
 							fullWidth
 							autoComplete="current-password"
 							InputProps={{
@@ -122,6 +116,7 @@ export default function LoginPage() {
 											onClick={() => setShowPassword(!showPassword)}
 											edge="end"
 											size="small"
+											disabled={isLoading}
 											aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 										>
 											{showPassword ? (
@@ -140,7 +135,8 @@ export default function LoginPage() {
 							type="submit"
 							variant="contained"
 							color="primary"
-							disabled={isLoading}>
+							disabled={!canSubmitLogin}
+						>
 							{isLoading ? <CircularProgress size={24} color="inherit" /> : "Ingresar"}
 						</Button>
 					</Form>

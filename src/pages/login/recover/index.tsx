@@ -91,6 +91,7 @@ export default function RecoverPasswordPage() {
 							helperText={identifierFieldError}
 							fullWidth
 							autoFocus
+							disabled={isLoading}
 							inputProps={{ maxLength: USERNAME_MAX_LENGTH }}
 							InputProps={{
 								startAdornment: (

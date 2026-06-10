@@ -49,6 +49,8 @@ export default function ResetPasswordPage() {
 			? "Las contraseñas no coinciden"
 			: "";
 
+	const formDisabled = isLoading || !!tokenError;
+
 	const canSubmit =
 		!!token &&
 		!tokenError &&
@@ -145,7 +147,7 @@ export default function ResetPasswordPage() {
 								helperText={passwordError}
 								fullWidth
 								autoFocus
-								disabled={!!tokenError}
+								disabled={formDisabled}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position="start">
@@ -158,6 +160,7 @@ export default function ResetPasswordPage() {
 											showPassword={showNewPassword}
 											onToggleVisibility={() => setShowNewPassword((value) => !value)}
 											iconColor={theme.palette.text.secondary}
+											disabled={formDisabled}
 										/>
 									),
 								}}
@@ -175,7 +178,7 @@ export default function ResetPasswordPage() {
 								error={!!confirmFieldError}
 								helperText={confirmFieldError}
 								fullWidth
-								disabled={!!tokenError}
+								disabled={formDisabled}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position="start">
@@ -188,6 +191,7 @@ export default function ResetPasswordPage() {
 											showPassword={showConfirmPassword}
 											onToggleVisibility={() => setShowConfirmPassword((value) => !value)}
 											iconColor={theme.palette.text.secondary}
+											disabled={formDisabled}
 										/>
 									),
 								}}

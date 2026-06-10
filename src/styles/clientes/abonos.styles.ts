@@ -39,6 +39,8 @@ export const InnerCard = styled("div")<{ gap?: string }>(({ theme, gap = "16px" 
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
+  width: "100%",
+  minWidth: 0,
 }));
 
 export const GrayCard = styled("div")(({ theme }) => ({
@@ -47,10 +49,18 @@ export const GrayCard = styled("div")(({ theme }) => ({
   padding: "12px",
   borderRadius: "12px",
   backgroundColor: theme.palette.background.lowerGray,
+  width: "100%",
+  minWidth: 0,
 }));
 
-export const InstallmentsTable = styled("table")(({ theme }) => ({
+export const InstallmentsTableWrapper = styled("div")({
   width: "100%",
+  overflowX: "auto",
+});
+
+export const InstallmentsTable = styled("table")(({ theme }) => ({
+  width: "max-content",
+  minWidth: "100%",
   borderCollapse: "collapse",
   marginTop: "12px",
   "& th": {
@@ -91,6 +101,9 @@ export const CaptureCard = styled("div")(({ theme }) => ({
   backgroundColor: theme.palette.background.lowGray,
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
+  [theme.breakpoints.down("md")]: {
+    minHeight: "auto",
+  },
 }));
 
 export const CaptureCardActions = styled("div")(({ theme }) => ({

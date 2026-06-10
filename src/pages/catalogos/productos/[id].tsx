@@ -736,7 +736,7 @@ export default function ProductFormPage() {
                     <Breadcrumbs items={breadcrumbItems} />
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
-                            variant="outlined"
+                            variant="option"
                             onClick={handleDiscard}
                             disabled={saving}>
                             Descartar cambios

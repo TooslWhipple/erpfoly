@@ -56,25 +56,6 @@ export const LiquidationSwitch = styled(Switch)(({ theme }) => ({
     },
 }));
 
-export const SectionTitle = styled(Typography)(({ theme }) => ({
-    fontSize: "1rem",
-    fontWeight: 600,
-    color: "#232325",
-    marginBottom: theme.spacing(2),
-}));
-
-export const SectionDescription = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(2),
-}));
-
-export const Section = styled('div')(({ theme }) => ({
-    marginBottom: theme.spacing(4),
-    "&:last-child": {
-        marginBottom: 0,
-    },
-}));
 
 export const RadioGroupContainer = styled('div')(({ theme }) => ({
     display: "flex",
@@ -258,62 +239,49 @@ export const HiddenFileInput = styled("input")({
     display: "none",
 });
 
-export const BranchListContainer = styled('div')(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
-    marginTop: theme.spacing(2),
-}));
-
 export const BranchItem = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
-    padding: theme.spacing(2),
+    justifyContent: "space-between",
+    padding: "16px",
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
-    borderRadius: 8,
-    gap: theme.spacing(2),
-    boxShadow: "none",
-}));
-
-export const BranchName = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-    flex: 1,
+    borderRadius: "8px",
+    gap: "16px",
+    [theme.breakpoints.down("sm")]: {
+        flexDirection: "column",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        gap: "8px"
+    },
 }));
 
 export const InventoryControl = styled('div')(({ theme }) => ({
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1),
-}));
-
-export const InventoryLabel = styled(Typography)(({ theme }) => ({
-    fontSize: "0.875rem",
-    color: theme.palette.text.secondary,
-    minWidth: 40,
+    height: 32,
+    border: `1px solid ${theme.palette.app.border}`,
+    borderRadius: "8px",
+    gap: "4px",
+    padding: "0 8px",
 }));
 
 export const InventoryInput = styled(TextField)(({ theme }) => ({
-    width: 80,
+    width: "48px",
     "& .MuiOutlinedInput-root": {
-        height: 32,
-        "& input": {
-            padding: theme.spacing(0.5, 1),
-            textAlign: "center",
-            fontSize: "0.875rem",
+        height: "20px",
+        "& fieldset": {
+            border: "none",
         },
-    },
-}));
-
-export const InventoryButton = styled(IconButton)(({ theme }) => ({
-    width: 32,
-    height: 32,
-    padding: 0,
-    border: `1px solid ${theme.palette.app.border}`,
-    "&:hover": {
-        backgroundColor: theme.palette.action.hover,
+        "&:hover fieldset": {
+            border: "none",
+        },
+        "&.Mui-focused fieldset": {
+            border: "none",
+        },
+        "& input": {
+            textAlign: "center",
+        },
     },
 }));
 

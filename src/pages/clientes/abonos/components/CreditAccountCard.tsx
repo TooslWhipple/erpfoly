@@ -4,6 +4,7 @@ import type { ClientCreditAccount, InstallmentSelection } from "@/types/clientPa
 import {
   InnerCard,
   GrayCard,
+  InstallmentsTableWrapper,
   InstallmentsTable,
   AmountInput,
   PaymentDot,
@@ -101,62 +102,64 @@ export function CreditAccountCardComponent({
       <GrayCard>
         <Typography variant="body2" color="text.secondary">Siguientes parcialidades pendientes</Typography>
 
-        <InstallmentsTable>
-          <thead>
-            <tr>
-              <th aria-label="Seleccionar" />
-              <th>Pago</th>
-              <th>Fecha</th>
-              <th>Monto</th>
-              <th>Interes</th>
-              <th>Total</th>
-              <th>A pagar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              account.pendingInstallments.map((installment) => {
-                const selection = getSelection(selections, account.id, installment.id);
-                const amountToPay = selection?.amountToPay ?? 0;
+        <InstallmentsTableWrapper>
+          <InstallmentsTable>
+            <thead>
+              <tr>
+                <th aria-label="Seleccionar" />
+                <th>Pago</th>
+                <th>Fecha</th>
+                <th>Monto</th>
+                <th>Interes</th>
+                <th>Total</th>
+                <th>A pagar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                account.pendingInstallments.map((installment) => {
+                  const selection = getSelection(selections, account.id, installment.id);
+                  const amountToPay = selection?.amountToPay ?? 0;
 
-                return (
-                  <tr key={installment.id}>
-                    <td>
-                      <Checkbox
-                        size="small"
-                        checked={selection?.selected ?? false}
-                        onChange={() =>
-                          onToggleInstallment(account.id, installment.id, installment.totalAmount)
-                        }
-                      />
-                    </td>
-                    <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
-                    <td>{installment.dueDate}</td>
-                    <td>{formatCurrency(installment.principalAmount)}</td>
-                    <td>{formatCurrency(installment.interestAmount)}</td>
-                    <td>{formatCurrency(installment.totalAmount)}</td>
-                    <td>
-                      <AmountInput
-                        size="small"
-                        value={amountToPay > 0 ? amountToPay.toFixed(2) : ""}
-                        placeholder="0.00"
-                        onChange={(event) => {
-                          const raw = event.target.value.replace(/[^0-9.]/g, "");
-                          const parsed = parseFloat(raw);
-                          onAmountChange(
-                            account.id,
-                            installment.id,
-                            Number.isNaN(parsed) ? 0 : parsed,
-                          );
-                        }}
-                      />
-                    </td>
-                  </tr>
-                );
-              })
-            }
-          </tbody>
-        </InstallmentsTable>
+                  return (
+                    <tr key={installment.id}>
+                      <td>
+                        <Checkbox
+                          size="small"
+                          checked={selection?.selected ?? false}
+                          onChange={() =>
+                            onToggleInstallment(account.id, installment.id, installment.totalAmount)
+                          }
+                        />
+                      </td>
+                      <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
+                      <td>{installment.dueDate}</td>
+                      <td>{formatCurrency(installment.principalAmount)}</td>
+                      <td>{formatCurrency(installment.interestAmount)}</td>
+                      <td>{formatCurrency(installment.totalAmount)}</td>
+                      <td>
+                        <AmountInput
+                          size="small"
+                          value={amountToPay > 0 ? amountToPay.toFixed(2) : ""}
+                          placeholder="0.00"
+                          onChange={(event) => {
+                            const raw = event.target.value.replace(/[^0-9.]/g, "");
+                            const parsed = parseFloat(raw);
+                            onAmountChange(
+                              account.id,
+                              installment.id,
+                              Number.isNaN(parsed) ? 0 : parsed,
+                            );
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              }
+            </tbody>
+          </InstallmentsTable>
+        </InstallmentsTableWrapper>
       </GrayCard>
     </InnerCard >
   );

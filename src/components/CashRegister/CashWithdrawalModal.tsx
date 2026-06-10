@@ -116,7 +116,7 @@ export function CashWithdrawalModal({
           />
         </Stack>
 
-        <Stack direction="row" spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <FormSelect
             label="Banco"
             value={selectedBank}
@@ -125,7 +125,7 @@ export function CashWithdrawalModal({
             placeholder="Seleccione un banco"
           />
           <FormTextField
-            label="Numero de cheque"
+            label="Número de cheque"
             placeholder="Ingrese"
             value={checkNumber}
             onChange={(e) => setCheckNumber(e.target.value)}

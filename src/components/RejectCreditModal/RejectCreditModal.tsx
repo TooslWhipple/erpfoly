@@ -85,25 +85,20 @@ export function RejectCreditModal({
       <DialogContent sx={{ padding: "24px" }}>
         <Stack spacing={2.5}>
           <Stack spacing={0.5}>
-            <Typography variant="h5" fontWeight={600}>
-              Rechazar solicitud
-            </Typography>
+            <Typography variant="h5" fontWeight={600}>Rechazar solicitud</Typography>
             <Typography variant="body2" color="text.secondary">
               Al realizar esta acción, esta persona no podrá volver a realizar una nueva solicitud en{" "}
               {cooldownMonths} meses.
             </Typography>
           </Stack>
-          <Typography variant="body2" color="text.primary">
-            ¿Estás seguro que deseas realizar esta acción?
-          </Typography>
+          <Typography variant="body2" color="text.primary">¿Estás seguro que deseas realizar esta acción?</Typography>
           <Button
             variant="contained"
             color="error"
             sx={{ width: "208px" }}
             onClick={() => void handleConfirmReject()}
             disabled={submitting}
-            startIcon={submitting ? <CircularProgress color="inherit" size={18} /> : undefined}
-          >
+            startIcon={submitting ? <CircularProgress color="inherit" size={18} /> : undefined}>
             {submitting ? "Rechazando…" : "Sí, rechazar solicitud"}
           </Button>
         </Stack>

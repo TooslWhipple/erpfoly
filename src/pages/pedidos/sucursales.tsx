@@ -258,7 +258,6 @@ export default function PedidosSucursales() {
                     showSearch
                     searchValue={searchValue}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar"
                     actions={[
                         {
                             label: "Nuevo",

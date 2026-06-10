@@ -285,7 +285,6 @@ export default function Departamentos() {
           showSearch
           searchValue={searchInput}
           onSearchChange={(value) => setSearchInput(value)}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

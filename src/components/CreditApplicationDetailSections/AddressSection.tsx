@@ -2,7 +2,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Props as GoogleMapReactProps } from "google-map-react";
 import { Divider, Grid, Stack, Typography, FormControlLabel, Switch, Radio, RadioGroup } from "@mui/material";
-import { FormTextField } from "@/components";
+import { FormTextField, RadioButton } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
 import { theme } from "@/styles/theme";
@@ -120,19 +120,19 @@ export function AddressSection({ detail }: AddressSectionProps) {
       <Divider />
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Código Postal" value={address.postalCode} disabled fullWidth />
+          <FormTextField label="Código Postal" value={address.postalCode} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Colonia" value={neighborhoodName} disabled fullWidth />
+          <FormTextField label="Colonia" value={neighborhoodName} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Estado" value={neighborhoodState} disabled fullWidth />
+          <FormTextField label="Estado" value={neighborhoodState} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Ciudad" value={neighborhoodCity} disabled fullWidth />
+          <FormTextField label="Ciudad" value={neighborhoodCity} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Calle y número" value={address.streetAndNumber} disabled fullWidth />
+          <FormTextField label="Calle y número" value={address.streetAndNumber} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <div
@@ -208,43 +208,51 @@ export function AddressSection({ detail }: AddressSectionProps) {
           </div>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Entre calles" value={address.betweenStreets} disabled fullWidth />
+          <FormTextField label="Entre calles" value={address.betweenStreets} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <FormTextField
             label="Núm. de teléfono de quién recibirá los artículos"
             value={address.deliveryPhone}
-            disabled
+            readOnly
             fullWidth
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormTextField label="Nombre de quién recibe" value={address.receiverName} disabled fullWidth />
+          <FormTextField label="Nombre de quién recibe" value={address.receiverName} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <FormControlLabel
             sx={formControlLabelSpacingSx}
-            control={<Switch checked={address.useClientPhone} disabled />}
+            control={<Switch checked={address.useClientPhone} readOnly />}
             label="Utilizar número del cliente"
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1">Propiedad de la Vivienda</Typography>
-          <RadioGroup value={address.housingOwnership} row>
-            <FormControlLabel sx={formControlLabelSpacingSx} value="own" control={<Radio disabled />} label="Casa propia" />
-            <FormControlLabel sx={formControlLabelSpacingSx} value="rented" control={<Radio disabled />} label="Alquilada" />
-            <FormControlLabel sx={formControlLabelSpacingSx} value="paying" control={<Radio disabled />} label="Pagandola" />
-            <FormControlLabel sx={formControlLabelSpacingSx} value="relatives" control={<Radio disabled />} label="Familiares" />
-          </RadioGroup>
+          <Grid container spacing={1} mt={3}>
+            <Grid size={{ xs: 6, md: 'auto' }}>
+              <RadioButton value="own" label="Casa propia" checked={address.housingOwnership === "own"} readOnly />
+            </Grid>
+            <Grid size={{ xs: 6, md: 'auto' }}>
+              <RadioButton value="rented" label="Alquilada" checked={address.housingOwnership === "rented"} readOnly />
+            </Grid>
+            <Grid size={{ xs: 6, md: 'auto' }}>
+              <RadioButton value="paying" label="Pagandola" checked={address.housingOwnership === "paying"} readOnly />
+            </Grid>
+            <Grid size={{ xs: 6, md: 'auto' }}>
+              <RadioButton value="relatives" label="Familiares" checked={address.housingOwnership === "relatives"} readOnly />
+            </Grid>
+          </Grid>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Tiempo en el domicilio" value={address.timeAtAddress} disabled fullWidth />
+          <FormTextField label="Tiempo en el domicilio" value={address.timeAtAddress} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 8 }}>
-          <FormTextField label="Domicilio anterior" value={address.previousAddress} disabled fullWidth />
+          <FormTextField label="Domicilio anterior" value={address.previousAddress} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <FormTextField label="Tiempo" value={address.previousTime} disabled fullWidth />
+          <FormTextField label="Tiempo" value={address.previousTime} readOnly fullWidth />
         </Grid>
       </Grid>
     </Stack>

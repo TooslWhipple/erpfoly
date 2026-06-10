@@ -14,13 +14,19 @@ export const Card = styled(Stack, {
   border: `1px solid ${(selected) ? theme.palette.app.sidebar.itemSelected : theme.palette.divider}`,
   backgroundColor: (selected) ? theme.palette.app.sidebar.itemSelected : 'transparent',
   transition: 'border-color 0.2s, background-color 0.2s',
+  [theme.breakpoints.down('sm')]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    justifyContent: "flex-start",
+    gap: "16px",
+  },
 }));
 
 export const IconCircle = styled('div', {
   shouldForwardProp: (prop) => prop !== "selected",
 })<{ selected?: boolean }>(({ theme, selected }) => ({
-  width: "42px",
-  height: "42px",
+  minWidth: "42px",
+  minHeight: "42px",
   borderRadius: "50%",
   display: "flex",
   alignItems: "center",

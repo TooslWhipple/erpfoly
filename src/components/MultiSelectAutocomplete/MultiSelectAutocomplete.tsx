@@ -33,7 +33,7 @@ export interface MultiSelectAutocompleteProps {
 
 export function MultiSelectAutocomplete({
     label,
-    placeholder = "Buscar...",
+    placeholder = "Buscar",
     items,
     selectedIds,
     onChange,

@@ -283,7 +283,6 @@ export default function MercanciaDanada() {
                     showSearch
                     searchValue={searchInput}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar por código, producto o sucursal"
                     actions={[
                         {
                             label: "Ingresar",

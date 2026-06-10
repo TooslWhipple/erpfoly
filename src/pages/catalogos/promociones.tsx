@@ -267,7 +267,6 @@ export default function Promociones() {
             showSearch
             searchValue={searchInput}
             onSearchChange={handleSearchChange}
-            searchPlaceholder="Buscar por nombre"
             actions={[
               {
                 label: "Nuevo",

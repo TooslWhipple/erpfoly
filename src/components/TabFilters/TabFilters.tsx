@@ -59,7 +59,7 @@ export function TabFilters({
   showSearch = false,
   searchValue = "",
   onSearchChange,
-  searchPlaceholder = "Buscar...",
+  searchPlaceholder = "Buscar",
   actions,
 }: TabFiltersProps) {
   const { hasPermission } = usePermissions();

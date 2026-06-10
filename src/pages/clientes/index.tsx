@@ -163,7 +163,6 @@ export default function Clientes() {
           showSearch
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Buscar por nombre, correo o teléfono"
         />
         <TableCrud
           columns={columns}

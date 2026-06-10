@@ -206,7 +206,6 @@ export default function Ventas() {
           showSearch
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Buscar"
         />
 
         <TableCrud

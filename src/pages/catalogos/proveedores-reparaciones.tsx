@@ -360,7 +360,6 @@ export default function ProveedoresReparaciones() {
                     showSearch={activeTab === "suppliers"}
                     searchValue={searchInput}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar"
                     actions={
                         activeTab === "suppliers"
                             ? [

@@ -88,7 +88,6 @@ export default function Roles() {
           showSearch
           searchValue={searchInput}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

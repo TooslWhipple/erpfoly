@@ -44,9 +44,14 @@ const STATUS_CHIP_VARIANTS: Record<CreditApplicationStatus, StatusChipVariant> =
   CANCELLED: "error",
 };
 
-const TIPO_CONFIG: Record<ApplicationTypeCode, { label: string; color: string }> = {
-  NEW: { label: "Nuevo", color: "#22c55e" },
-  LINE_INCREASE: { label: "Aumento", color: "#ef4444" },
+const TIPO_CHIP_LABELS: Record<ApplicationTypeCode, string> = {
+  NEW: "Nuevo",
+  LINE_INCREASE: "Aumento",
+};
+
+const TIPO_CHIP_VARIANTS: Record<ApplicationTypeCode, StatusChipVariant> = {
+  NEW: "nuevo",
+  LINE_INCREASE: "aumento",
 };
 
 export default function SolicitudesCredito() {
@@ -145,21 +150,9 @@ export default function SolicitudesCredito() {
       id: "applicationTypeCode",
       label: "Tipo",
       size: "sm",
-      format: (value) => {
-        const normalized = String(value ?? "")
-          .trim()
-          .toUpperCase();
-        const config =
-          normalized === "NEW" || normalized === "LINE_INCREASE"
-            ? TIPO_CONFIG[normalized]
-            : undefined;
-        if (!config) {
-          return "—";
-        }
-        return (
-          <span style={{ color: config.color, fontWeight: 500 }}>{config.label}</span>
-        );
-      },
+      type: "chip",
+      chipLabelMap: TIPO_CHIP_LABELS,
+      chipVariantMap: TIPO_CHIP_VARIANTS,
     },
   ];
 
@@ -190,7 +183,6 @@ export default function SolicitudesCredito() {
           showSearch
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Buscar por nombre, teléfono o folio"
         />
 
         <TableCrud

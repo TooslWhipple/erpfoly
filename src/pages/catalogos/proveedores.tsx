@@ -126,7 +126,6 @@ export default function Proveedores() {
                     showSearch
                     searchValue={searchInput}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Buscar"
                     actions={[
                         {
                             label: "Nuevo",

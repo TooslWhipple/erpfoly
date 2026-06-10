@@ -5,13 +5,28 @@ import { FieldLabel, FieldWrapper, StyledTextField } from "./FormTextField.style
 export interface FormTextFieldProps extends Omit<TextFieldProps, "variant" | "label"> {
     label?: string;
     required?: boolean;
+    readOnly?: boolean;
+    disabled?: boolean;
 }
 
+const HiddenSelectIcon = () => null;
+
 export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
-    ({ label, required, error, helperText, select, SelectProps, ...props }, ref) => {
+    ({ label, required, error, helperText, select, SelectProps, readOnly, disabled, InputProps, ...props }, ref) => {
         const mergedSelectProps = select
-            ? { displayEmpty: true, ...SelectProps }
+            ? {
+                displayEmpty: true,
+                ...SelectProps,
+                ...(readOnly
+                    ? { open: false, IconComponent: HiddenSelectIcon }
+                    : {}),
+            }
             : SelectProps;
+
+        const mergedInputProps = {
+            ...InputProps,
+            ...(readOnly ? { readOnly: true } : {}),
+        };
 
         return (
             <FieldWrapper>
@@ -32,6 +47,8 @@ export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
                     error={error}
                     helperText={helperText}
                     select={select}
+                    disabled={disabled}
+                    InputProps={mergedInputProps}
                     SelectProps={mergedSelectProps}
                     {...props}
                 />

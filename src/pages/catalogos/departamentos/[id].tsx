@@ -363,7 +363,6 @@ export default function DepartmentDetailPage() {
           showSearch={activeTab === "lines"}
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Buscar"
           actions={
             activeTab === "lines"
               ? [

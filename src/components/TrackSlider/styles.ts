@@ -2,12 +2,17 @@ import { styled } from "@mui/material/styles";
 import { theme } from "@/styles/theme";
 
 export const Root = styled("div", {
-  shouldForwardProp: (prop) => prop !== "isDisabled",
-})<{ isDisabled?: boolean }>(({ isDisabled }) => ({
+  shouldForwardProp: (prop) => prop !== "isDisabled" && prop !== "isReadOnly",
+})<{ isDisabled?: boolean; isReadOnly?: boolean }>(({ isDisabled, isReadOnly }) => ({
   width: "100%",
   ...(isDisabled
     ? {
         opacity: 0.55,
+        pointerEvents: "none",
+      }
+    : null),
+  ...(isReadOnly
+    ? {
         pointerEvents: "none",
       }
     : null),

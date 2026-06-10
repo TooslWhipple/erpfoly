@@ -20,17 +20,17 @@ export function FamilySection({ detail }: FamilySectionProps) {
       <Divider />
       <FormControlLabel
         sx={formControlLabelSpacingSx}
-        control={<Switch checked={family.hasSpouse} disabled />}
+        control={<Switch checked={family.hasSpouse} readOnly />}
         label="¿Cuenta con cónyuge?"
       />
       {
         family.hasSpouse && (
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField label="Nombre del cónyuge" value={family.spouseName} disabled fullWidth />
+              <FormTextField label="Nombre del cónyuge" value={family.spouseName} readOnly fullWidth />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField label="Teléfono celular" value={family.spousePhone} disabled fullWidth />
+              <FormTextField label="Teléfono celular" value={family.spousePhone} readOnly fullWidth />
             </Grid>
           </Grid>
         )
@@ -42,7 +42,7 @@ export function FamilySection({ detail }: FamilySectionProps) {
         max={10}
         step={1}
         marks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
-        disabled
+        readOnly
         onChange={() => {
           /* read-only display */
         }}

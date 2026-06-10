@@ -237,7 +237,6 @@ export default function Mensajes() {
           showSearch
           searchValue={searchInput}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

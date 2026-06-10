@@ -226,7 +226,6 @@ export default function Sucursales() {
           showSearch
           searchValue={searchValue}
           onSearchChange={handleSearchChange}
-          searchPlaceholder="Buscar"
           actions={[
             {
               label: "Nuevo",

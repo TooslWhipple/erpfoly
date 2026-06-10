@@ -28,7 +28,7 @@ export function RadioButton({
     disabled = false,
     readOnly = false,
     fullWidth = false,
-    size = "medium",
+    size = "small",
     backgroundColor = "transparent",
     startIcon,
     endIcon,

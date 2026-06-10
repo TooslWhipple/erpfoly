@@ -1,7 +1,8 @@
 import { Grid, Typography, Stack, Divider, Button } from "@mui/material";
 import { FormTextField, FormSelect, Plus, Minus, RadioButton } from "@/components";
-import { FormCard, InventoryInput, InventoryButton } from "@/styles/catalogos/productos.styles";
+import { FormCard } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
+import NumberSpinner from "../NumberSpinner";
 
 const MIN_PIECES = 1;
 const MAX_PIECES = 9999;
@@ -149,53 +150,12 @@ export function GeneralDataTab({
                         <Typography variant="body1" fontWeight={600} component="span">
                             Número de piezas:
                         </Typography>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                            <InventoryButton
-                                size="small"
-                                onClick={() => {
-                                    const current = Math.max(MIN_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
-                                    const next = Math.max(MIN_PIECES, current - 1);
-                                    onFieldChange("piecesCount", String(next));
-                                    onErrorClear("piecesCount");
-                                }}
-                            >
-                                <Minus size={16} />
-                            </InventoryButton>
-                            <InventoryInput
-                                type="number"
-                                inputProps={{
-                                    min: MIN_PIECES,
-                                    max: MAX_PIECES,
-                                }}
-                                value={formState.piecesCount}
-                                onChange={(e) => {
-                                    const raw = e.target.value;
-                                    if (raw === "" || /^\d+$/.test(raw)) {
-                                        onFieldChange("piecesCount", raw);
-                                        onErrorClear("piecesCount");
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    const num = parseInt(e.target.value, 10);
-                                    if (Number.isNaN(num) || num < MIN_PIECES) {
-                                        onFieldChange("piecesCount", String(MIN_PIECES));
-                                    } else if (num > MAX_PIECES) {
-                                        onFieldChange("piecesCount", String(MAX_PIECES));
-                                    }
-                                }}
-                            />
-                            <InventoryButton
-                                size="small"
-                                onClick={() => {
-                                    const current = Math.min(MAX_PIECES, parseInt(formState.piecesCount, 10) || MIN_PIECES);
-                                    const next = Math.min(MAX_PIECES, current + 1);
-                                    onFieldChange("piecesCount", String(next));
-                                    onErrorClear("piecesCount");
-                                }}
-                            >
-                                <Plus size={16} />
-                            </InventoryButton>
-                        </Stack>
+                        <NumberSpinner
+                            value={parseInt(formState.piecesCount, 10)}
+                            onChange={(value) => onFieldChange("piecesCount", String(value))}
+                            min={MIN_PIECES}
+                            max={MAX_PIECES}
+                        />
                     </Stack>
                 </Grid>
             </Grid>

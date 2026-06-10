@@ -153,17 +153,19 @@ export function SupplierSelectionModal({
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {filteredSuppliers.map((supplier) => (
-                                <TableRow key={supplier.id}>
-                                    <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
-                                    <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
-                                    <TableCell style={{ padding: "12px 8px" }}>
-                                        <Button color="primary" onClick={() => handleSelect(supplier)}>
-                                            Seleccionar
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                            {
+                                filteredSuppliers.map((supplier) => (
+                                    <TableRow key={supplier.id}>
+                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
+                                        <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
+                                        <TableCell style={{ padding: "12px 8px" }}>
+                                            <Button color="primary" onClick={() => handleSelect(supplier)}>
+                                                Seleccionar
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            }
                         </TableBody>
                     </Table>
                 )}

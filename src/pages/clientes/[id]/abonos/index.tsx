@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
-import { Button, Divider, Skeleton, Stack, Typography } from "@mui/material";
+import { Button, Divider, Grid, Skeleton, Stack, Typography } from "@mui/material";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useClientPayment } from "@/hooks/clientes/useClientPayment";
@@ -147,51 +147,47 @@ export default function ClientPaymentPage() {
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
         <Divider />
-        <PageLayout>
-          <Card>
-            <Typography variant="h6" fontWeight={600}>Selecciona las letras que deseas cobrar:</Typography>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, lg: 8, xl: 9 }}>
+            <Card>
+              <Typography variant="h6" fontWeight={600}>Selecciona las letras que deseas cobrar:</Typography>
 
-            {
-              context.creditAccounts.map((account) => (
-                <CreditAccountCard
-                  key={account.id}
-                  account={account}
-                  selections={selections}
-                  onToggleInstallment={toggleInstallment}
-                  onAmountChange={updateAmountToPay}
-                />
-              ))
-            }
-          </Card>
+              {
+                context.creditAccounts.map((account) => (
+                  <CreditAccountCard
+                    key={account.id}
+                    account={account}
+                    selections={selections}
+                    onToggleInstallment={toggleInstallment}
+                    onAmountChange={updateAmountToPay}
+                  />
+                ))
+              }
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, lg: 4, xl: 3 }}>
+            <Stack width="100%" spacing={2}>
+              <PaymentSummaryPanel
+                subtotal={subtotal}
+                totalInterest={totalInterest}
+                totalDue={totalDue}
+              />
+              <PaymentCapturePanel
+                paymentAmount={paymentAmount}
+                paymentMethod={paymentMethod}
+                isCashDeposit={isCashDeposit}
+                change={change}
+                canRegister={canRegister}
+                isSubmitting={isSubmitting}
+                onPaymentAmountChange={setPaymentAmount}
+                onPaymentMethodChange={setPaymentMethod}
+                onCashDepositChange={setIsCashDeposit}
+                onSubmit={() => void submitPayment()}
+              />
+            </Stack>
+          </Grid>
 
-          <SidebarColumn>
-            <PaymentSummaryPanel
-              subtotal={subtotal}
-              totalInterest={totalInterest}
-              totalDue={totalDue}
-            />
-            <PaymentCapturePanel
-              paymentAmount={paymentAmount}
-              paymentMethod={paymentMethod}
-              isCashDeposit={isCashDeposit}
-              change={change}
-              canRegister={canRegister}
-              isSubmitting={isSubmitting}
-              onPaymentAmountChange={setPaymentAmount}
-              onPaymentMethodChange={setPaymentMethod}
-              onCashDepositChange={setIsCashDeposit}
-              onSubmit={() => void submitPayment()}
-            />
-          </SidebarColumn>
-        </PageLayout>
-
-        {
-          error && (
-            <Typography variant="body2" color="error.main">
-              {error}
-            </Typography>
-          )
-        }
+        </Grid>
       </Stack>
     </MainLayout>
   );

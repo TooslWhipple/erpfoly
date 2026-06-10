@@ -189,7 +189,7 @@ export function CutModal({
                                                     </Typography>
                                                 </Stack>
 
-                                                <Stack direction="row" alignItems="center" spacing={6}>
+                                                <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 6 }}>
                                                     <NumberInput
                                                         size="small"
                                                         value={quantity}

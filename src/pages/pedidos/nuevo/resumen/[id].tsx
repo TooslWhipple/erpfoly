@@ -139,80 +139,83 @@ export default function ResumenPedido() {
 
                 <Divider />
 
-                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 0, sm: 2 }} alignItems={{ xs: "flex-start", sm: "center" }} flexWrap="wrap">
                     <Typography variant="h1">Resumen del pedido</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Proveedor: {order.supplier?.name || "—"}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Proveedor: {order.supplier?.name || "—"}</Typography>
                 </Stack>
 
                 <Grid container spacing={4} justifyContent="revert">
                     <Grid size={{ xs: 12, md: 8, xl: 9 }}>
                         <Stack spacing={3}>
-                            <Typography variant="h5" fontWeight={600}>
-                                Artículos ({order.order_items.length})
-                            </Typography>
+                            <Typography variant="h5" fontWeight={600}>Artículos ({order.order_items.length})</Typography>
 
-                            {order.order_items.map((item) => {
-                                const unitPrice = Number(item.unit_price ?? 0);
-                                const itemTotal = unitPrice * item.requested_quantity;
-                                const productImage = item.product?.product_images?.[0]?.image_url;
 
-                                return (
-                                    <ItemCard key={item.id}>
-                                        <Stack direction="row" spacing={2} alignItems="flex-start">
-                                            <Box
-                                                sx={{
-                                                    width: 48,
-                                                    height: 48,
-                                                    borderRadius: 2,
-                                                    overflow: "hidden",
-                                                    flexShrink: 0,
-                                                    backgroundColor: "background.lowGray",
-                                                    border: (theme) => `1px solid ${theme.palette.app.border}`,
-                                                }}
-                                            >
-                                                {productImage ? (
+                            {
+                                order.order_items.map((item) => {
+                                    const unitPrice = Number(item.unit_price ?? 0);
+                                    const itemTotal = unitPrice * item.requested_quantity;
+                                    const productImage = item.product?.product_images?.[0]?.image_url;
+
+                                    return (
+                                        <ItemCard key={item.id}>
+                                            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent={{ xs: "flex-start", sm: "space-between" }}>
+                                                <Stack direction="row" spacing={2} alignItems="center">
                                                     <Box
-                                                        component="img"
-                                                        src={productImage}
-                                                        alt={item.product?.short_name ?? ""}
-                                                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                    />
-                                                ) : (
-                                                    <Box sx={{ width: "100%", height: "100%" }} />
-                                                )}
-                                            </Box>
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 2,
+                                                            overflow: "hidden",
+                                                            flexShrink: 0,
+                                                            backgroundColor: "background.lowGray",
+                                                            border: (theme) => `1px solid ${theme.palette.app.border}`,
+                                                        }}>
+                                                        {
+                                                            productImage ?
+                                                                <Box
+                                                                    component="img"
+                                                                    src={productImage}
+                                                                    alt={item.product?.short_name ?? ""}
+                                                                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                                />
+                                                                :
+                                                                <Box sx={{ width: "100%", height: "100%" }} />
+                                                        }
+                                                    </Box>
 
-                                            <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                                                <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                                                    {item.product?.code ?? "—"}
-                                                </Typography>
-                                                <Typography variant="body1" fontWeight={600} sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                    {item.product?.short_name ?? "Producto sin nombre"}
-                                                </Typography>
-                                            </Stack>
+                                                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                                                            {item.product?.code ?? "—"}
+                                                        </Typography>
+                                                        <Typography variant="body1" fontWeight={600} sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {item.product?.short_name ?? "Producto sin nombre"}
+                                                        </Typography>
+                                                    </Stack>
+                                                </Stack>
 
-                                            <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
-                                                <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
-                                                <Typography variant="body1" fontWeight={600}>{formatCurrency(unitPrice)}</Typography>
-                                            </Stack>
+                                                <Stack direction="row" spacing={2} alignItems="center">
+                                                    <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
+                                                        <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
+                                                        <Typography variant="body1" fontWeight={600}>{formatCurrency(unitPrice)}</Typography>
+                                                    </Stack>
 
-                                            <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "center" }}>
-                                                <Typography variant="body2" color="text.secondary">Cantidad</Typography>
-                                                <Typography variant="body1" fontWeight={600}>{item.requested_quantity}</Typography>
-                                            </Stack>
+                                                    <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "center" }}>
+                                                        <Typography variant="body2" color="text.secondary">Cantidad</Typography>
+                                                        <Typography variant="body1" fontWeight={600}>{item.requested_quantity}</Typography>
+                                                    </Stack>
 
-                                            <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "right" }}>
-                                                <Typography variant="body2" color="text.secondary">Total</Typography>
-                                                <Typography variant="body1" fontWeight={600} color="primary.main">
-                                                    {formatCurrency(itemTotal)}
-                                                </Typography>
+                                                    <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "right" }}>
+                                                        <Typography variant="body2" color="text.secondary">Total</Typography>
+                                                        <Typography variant="body1" fontWeight={600} color="primary.main">
+                                                            {formatCurrency(itemTotal)}
+                                                        </Typography>
+                                                    </Stack>
+                                                </Stack>
                                             </Stack>
-                                        </Stack>
-                                    </ItemCard>
-                                );
-                            })}
+                                        </ItemCard>
+                                    );
+                                })
+                            }
                         </Stack>
                     </Grid>
 

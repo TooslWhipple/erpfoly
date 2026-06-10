@@ -24,8 +24,19 @@ export interface LoginResponse {
 	user: User;
 }
 
-export interface ForgotPasswordRequest {
-	email: string;
+export interface RequestPasswordRecoveryRequest {
+	username?: string;
+	cellphone?: string;
+}
+
+export interface ResetPasswordRequest {
+	token: string;
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export interface ValidateRecoveryTokenResponse {
+	valid: true;
 }
 
 type BackendRole =
@@ -319,8 +330,22 @@ export const authService = {
 		return { data: mapBackendUserToFrontend(result.data!), error: null };
 	},
 
-	async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResult<ApiSuccessPayload>> {
+	async requestPasswordRecovery(
+		data: RequestPasswordRecoveryRequest
+	): Promise<ApiResult<ApiSuccessPayload>> {
 		return post<ApiSuccessPayload>("/auth/password/recovery", data);
+	},
+
+	async validateRecoveryToken(
+		token: string
+	): Promise<ApiResult<ValidateRecoveryTokenResponse>> {
+		return get<ValidateRecoveryTokenResponse>(
+			`/auth/password/recovery/validate?token=${encodeURIComponent(token)}`
+		);
+	},
+
+	async resetPassword(data: ResetPasswordRequest): Promise<ApiResult<ApiSuccessPayload>> {
+		return post<ApiSuccessPayload>("/auth/password/recovery/reset", data);
 	},
 };
 

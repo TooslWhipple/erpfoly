@@ -11,7 +11,7 @@ export const SimplePageContainer = styled(Box)(({ theme }) => ({
 }));
 
 export const PageContainer = styled(Box)({
-	minHeight: "100vh",
+	minHeight: "100dvh",
 	display: "flex",
 	flexDirection: "row",
 	alignItems: "stretch",
@@ -35,33 +35,63 @@ export const RightPanel = styled(Box)(({ theme }) => ({
 	flexDirection: "column",
 	flex: 1,
 	minWidth: 0,
+	minHeight: "100dvh",
 	alignItems: "center",
 	justifyContent: "center",
 	backgroundColor: theme.palette.background.paper,
-	padding: "48px 0px",
+	padding: theme.spacing(6, 3),
+	gap: theme.spacing(4),
+	overflowY: "auto",
+	[theme.breakpoints.down("sm")]: {
+		padding: theme.spacing(4, 2),
+		gap: theme.spacing(3),
+	},
 }));
 
-export const FormWrapper = styled(Box)({
+export const FormWrapper = styled(Box)(({ theme }) => ({
 	display: "flex",
 	flexDirection: "column",
 	alignItems: "center",
+	justifyContent: "center",
 	width: "100%",
-	maxWidth: "560px",
-	gap: "32px"
-});
+	maxWidth: 560,
+	gap: theme.spacing(4),
+	flexShrink: 0,
+	[theme.breakpoints.down("sm")]: {
+		gap: theme.spacing(3),
+		maxWidth: "100%",
+	},
+}));
 
 export const LogoContainer = styled(Box)({
 	display: "flex",
 	justifyContent: "center",
-	marginBottom: "64px"
+	flexShrink: 0,
 });
 
-export const Form = styled("form")({
+export const LoginTitle = styled(Typography)(({ theme }) => ({
+	...theme.typography.h1,
+	textAlign: "center",
+	width: "100%",
+	[theme.breakpoints.down("sm")]: {
+		fontSize: 26,
+		lineHeight: 1.25,
+	},
+}));
+
+export const LoginDescription = styled(Typography)(({ theme }) => ({
+	textAlign: "center",
+	color: theme.palette.text.secondary,
+	width: "100%",
+	paddingInline: theme.spacing(0.5),
+}));
+
+export const Form = styled("form")(({ theme }) => ({
 	display: "flex",
 	flexDirection: "column",
 	width: "100%",
-	gap: "24px",
-});
+	gap: theme.spacing(3),
+}));
 
 export const StyledTextField = styled(TextField)(({ theme }) => ({
 	"& .MuiOutlinedInput-root": {
@@ -75,6 +105,11 @@ export const StyledTextField = styled(TextField)(({ theme }) => ({
 		"&.Mui-focused fieldset": {
 			borderColor: theme.palette.app.sidebar.textSelected,
 			borderWidth: "1px",
+		},
+	},
+	"& .MuiInputBase-input": {
+		[theme.breakpoints.down("sm")]: {
+			fontSize: 16,
 		},
 	},
 	"& .MuiInputLabel-root": {
@@ -144,6 +179,8 @@ export const BackLink = styled(Link)(({ theme }) => ({
 	border: "none",
 	padding: 0,
 	marginBottom: 0,
+	width: "100%",
+	flexWrap: "wrap",
 	"&:hover": {
 		color: theme.palette.text.primary,
 	},

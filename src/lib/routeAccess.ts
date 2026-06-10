@@ -58,7 +58,14 @@ import {
   type PermissionCode,
 } from "@/lib/permissions";
 
-export const PUBLIC_ROUTES = ["/login", "/login/validate-otp"] as const;
+export const PUBLIC_ROUTES = [
+	"/login",
+	"/login/validate-otp",
+	"/login/recover",
+	"/login/recover/sent",
+	"/login/recover/reset",
+	"/login/recover/success",
+] as const;
 export const FORBIDDEN_ROUTE = "/403";
 export const DEFAULT_AUTHENTICATED_ROUTE = "/solicitudes-credito";
 

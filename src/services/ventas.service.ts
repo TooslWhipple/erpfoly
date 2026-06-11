@@ -118,6 +118,22 @@ export async function confirmSalePayment(
   );
 }
 
+export interface ConfirmCreditSalePayload {
+  term_months: number;
+  down_payment: number;
+  payment_method: "CASH" | "CARD";
+}
+
+export async function confirmCreditSale(
+  saleId: number,
+  payload: ConfirmCreditSalePayload
+): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
+  return post<{ id: number; folio: string; status: string }>(
+    `${BASE}/sales/${saleId}/confirm-credit`,
+    payload
+  );
+}
+
 export async function getSaleDetail(
   saleId: number
 ): Promise<ApiResult<SaleDetail>> {

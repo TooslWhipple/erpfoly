@@ -10,7 +10,7 @@ import type {
   AdditionalInformationRequestedItem,
   CreditApplicationDetailResponse,
 } from "@/services/creditApplications.service";
-import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
+import { parseBasicInformationServerErrors, useBasicInformationTab } from "./tabs/useBasicInformationTab";
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
 import { useEmploymentTab } from "./tabs/useEmploymentTab";
@@ -759,6 +759,19 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const isFormLocked = formAction !== "idle" || loadingApplicationDetail;
   const saving = isFormLocked;
 
+  const isFormComplete =
+    basicInformationTab.validateValues(true) &&
+    familyTab.validateValues(true) &&
+    addressTab.validateValues(true) &&
+    employmentTab.validateValues(true) &&
+    referencesTab.validateValues(true) &&
+    documentationTab.validateValues({
+      requireIncomeProof: requiresIncomeProof,
+      requireEmploymentProofLetter: requiresEmploymentProofLetter,
+      silent: true,
+    }) &&
+    guarantorTab.validateValues(true);
+
   const beginFormAction = useCallback((phase: Exclude<FormActionPhase, "idle">): boolean => {
     if (formActionRef.current) {
       return false;
@@ -858,7 +871,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         requireEmploymentProofLetter: requiresEmploymentProofLetter,
       });
     }
-    if (activeTab === "guarantor" && requiresGuarantorInformation) {
+    if (activeTab === "guarantor") {
       return guarantorTab.validateValues();
     }
     return true;
@@ -874,7 +887,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     isCreateMode,
     referencesTab,
     requiresEmploymentProofLetter,
-    requiresGuarantorInformation,
     requiresIncomeProof,
   ]);
 
@@ -1000,7 +1012,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     });
     if (!documentationFormIsValid) invalidTabs.push("documentation");
 
-    if (requiresGuarantorInformation && !guarantorTab.validateValues()) {
+    if (!guarantorTab.validateValues()) {
       invalidTabs.push("guarantor");
     }
 
@@ -1016,7 +1028,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     isCreateMode,
     referencesTab,
     requiresEmploymentProofLetter,
-    requiresGuarantorInformation,
     requiresIncomeProof,
   ]);
 
@@ -1123,12 +1134,25 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       return true;
     } catch (saveError) {
       console.error("[CreditApplicationForm] Unable to save active section", saveError);
-      setError("No se pudo guardar la sección.");
+
+      const apiError = (saveError as Error & { apiError?: { message?: string; validationMessages?: string[] } }).apiError;
+      if (apiError?.validationMessages && apiError.validationMessages.length > 0) {
+        const activeSection = creditApplicationTabIdToSection(activeTab);
+        if (activeSection === "basicInformation") {
+          const fieldErrors = parseBasicInformationServerErrors(apiError.validationMessages);
+          basicInformationTab.setServerErrors(fieldErrors);
+        }
+        setError("Corrige los campos marcados antes de continuar.");
+      } else {
+        setError("No se pudo guardar la sección.");
+      }
       return false;
     } finally {
       endFormAction();
     }
   }, [
+    activeTab,
+    basicInformationTab,
     beginFormAction,
     endFormAction,
     getCurrentFormPayload,
@@ -1232,6 +1256,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     loadingApplicationDetail,
     saving,
     isFormLocked,
+    isFormComplete,
     formAction,
     error,
     saveSuccess,

@@ -39,6 +39,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     loadingApplicationDetail,
     saving,
     isFormLocked,
+    isFormComplete,
     formAction,
     activeTab,
     tabs,
@@ -47,6 +48,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     requiresGuarantorInformation,
     missingAdditionalInformationLabels,
     tabsWithMissingRequestedInformation,
+    error,
     setActiveTab,
     basicInformationTab,
     familyTab,
@@ -149,7 +151,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   const handleContinueToNextTab = async () => {
     const wasSaved = await handleSaveActiveTab();
     if (!wasSaved) {
-      showError("Completa los campos requeridos para continuar.");
+      showError("Corrige los campos marcados antes de continuar.");
       return false;
     }
 
@@ -208,9 +210,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           </Stack>
           <Button
             variant="contained"
-            color="inherit"
-            disabled={isFormLocked || loading}
+            disabled={isFormLocked || loading || !isFormComplete}
             onClick={handleSubmitApplicationClick}
+            sx={{ minWidth: 160 }}
           >
             {isSubmitButtonLoading ? (
               <CircularProgress size={20} color="inherit" />
@@ -219,6 +221,16 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             )}
           </Button>
         </Box>
+
+        {
+          error &&
+          <StatusAlertCard
+            variant="error"
+            title="Error al guardar"
+            message={error}
+            icon={<CircleAlert size={18} />}
+          />
+        }
 
         {
           missingAdditionalInformationLabels.length > 0 &&

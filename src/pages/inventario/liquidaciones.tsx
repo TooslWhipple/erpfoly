@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Typography, Box, Skeleton, Stack } from "@mui/material";
+import { Typography, Skeleton, Stack, Divider } from "@mui/material";
 import {
   FilterList as FilterListIcon,
   InfoOutlined as InfoIcon,
@@ -9,10 +9,10 @@ import {
 import {
   MainLayout,
   Title,
-  StatsCardGroup,
   DepartmentCard,
   PriceSuggestionsSidebar,
   ConfirmPriceChangeModal,
+  StatsCardGroup
 } from "@/components";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
@@ -20,22 +20,10 @@ import {
   getLowRotationStrategy,
   applyPriceSuggestion,
 } from "@/data/liquidaciones.mockData";
-import {
-  PageContent,
-  SidebarPanel,
-  DepartmentsList,
-} from "@/styles/inventario/liquidaciones.styles";
+import { SidebarPanel } from "@/styles/inventario/liquidaciones.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 type PageState = "loading" | "success" | "empty" | "error";
-
-// ============================================================================
-// PAGE
-// ============================================================================
 
 export default function LiquidacionesPage() {
   const router = useRouter();
@@ -136,75 +124,34 @@ export default function LiquidacionesPage() {
 
   return (
     <MainLayout>
-
-      <PageContent>
-        <Stack direction="column" spacing={3} flex={1}>
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
+        <Stack direction="column" spacing={3} flex="0 1 768px">
           <Title title="Estrategia de baja rotación" />
-          {state === "loading" && (
-            <Stack direction="column" spacing={3}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 2,
-                  mb: 1,
-                }}
-              >
-                {[1, 2, 3].map((i) => (
+          <StatsCardGroup cards={statsCards} loading={state === "loading"} columns={3} />
+          <Stack spacing={1}>
+            <Typography variant="body1" color="text.secondary" fontWeight={700}>Departamentos</Typography>
+            {
+              (state === "loading") ?
+                [1, 2, 3, 4].map((i) => (
                   <Skeleton
                     key={i}
                     variant="rectangular"
-                    height={120}
-                    sx={{ borderRadius: 2 }}
+                    height="96px"
                     animation="wave"
+                    style={{ borderRadius: "16px" }}
                   />
-                ))}
-              </Box>
-              <Skeleton variant="text" width={200} height={32} animation="wave" />
-              <Stack direction="column" spacing={2}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton
-                    key={i}
-                    variant="rectangular"
-                    height={88}
-                    sx={{ borderRadius: 2 }}
-                    animation="wave"
+                ))
+                :
+                departments.map((item) => (
+                  <DepartmentCard
+                    key={item.id}
+                    department={item}
+                    onClick={handleDepartmentClick}
                   />
-                ))}
-              </Stack>
-            </Stack>
-          )}
-          {state === "error" && (
-            <p style={{ color: "var(--mui-palette-error-main)" }}>
-              Error al cargar los datos. Intenta de nuevo.
-            </p>
-          )}
-          {state === "empty" && (
-            <p style={{ color: "var(--mui-palette-text-secondary)" }}>
-              No hay datos de baja rotación disponibles.
-            </p>
-          )}
-
-          {state === "success" && (
-            <>
-              <StatsCardGroup cards={statsCards} columns={3} />
-
-              <Typography variant="h5" color="text.secondary" fontWeight={700}>Departamentos</Typography>
-              <DepartmentsList>
-                {
-                  departments.map((dept) => (
-                    <DepartmentCard
-                      key={dept.id}
-                      department={dept}
-                      onClick={handleDepartmentClick}
-                    />
-                  ))
-                }
-              </DepartmentsList>
-            </>
-          )}
+                ))
+            }
+          </Stack>
         </Stack>
-
         <SidebarPanel>
           <PriceSuggestionsSidebar
             suggestions={suggestions}
@@ -212,7 +159,7 @@ export default function LiquidacionesPage() {
             onApply={handleApplyClick}
           />
         </SidebarPanel>
-      </PageContent>
+      </Stack>
 
       <ConfirmPriceChangeModal
         open={confirmModalOpen}

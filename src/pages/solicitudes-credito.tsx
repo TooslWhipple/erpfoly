@@ -197,6 +197,7 @@ export default function SolicitudesCredito() {
           onPageChange={setPage}
           onRowsPerPageChange={setRowsPerPage}
           emptyMessage="No hay solicitudes de crédito"
+          onRowClick={handleVerDetalle}
         />
       </Stack>
     </MainLayout>

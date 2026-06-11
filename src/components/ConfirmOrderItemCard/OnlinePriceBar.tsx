@@ -1,15 +1,12 @@
-import { Fragment } from "react";
-import Typography from "@mui/material/Typography";
 import { Globe, ExternalLink } from "lucide-react";
 import type { OnlinePriceComparison } from "./ConfirmOrderItemCard";
 import {
     OnlinePriceBarContainer,
-    GlobeWrapper,
-    PriceSegment,
-    VerticalSeparator,
-    RetailerLink,
-    RetailerEntry,
+    OnlinePriceDivider,
+    OnlinePriceSegment,
+    OnlinePriceText,
 } from "./styles";
+import { theme } from "@/styles/theme";
 
 interface OnlinePriceBarProps {
     onlinePrices: OnlinePriceComparison;
@@ -26,49 +23,25 @@ function formatCurrency(value: number): string {
 export function OnlinePriceBar({ onlinePrices }: OnlinePriceBarProps) {
     return (
         <OnlinePriceBarContainer>
-            <GlobeWrapper>
-                <Globe size={14} />
-            </GlobeWrapper>
+            <OnlinePriceSegment>
+                <Globe size={12} color={theme.palette.text.secondary} />
+                <OnlinePriceText variant="caption" color="text.secondary">
+                    Precio en internet prom: <strong>{formatCurrency(onlinePrices.averagePrice)}</strong>
+                </OnlinePriceText>
+            </OnlinePriceSegment>
 
-            <PriceSegment>
-                <Typography variant="caption" color="text.secondary">
-                    Precio en internet prom:
-                </Typography>
-                <Typography variant="caption">
-                    {formatCurrency(onlinePrices.averagePrice)}
-                </Typography>
-            </PriceSegment>
-
-            <VerticalSeparator />
+            <OnlinePriceDivider />
 
             {onlinePrices.retailers.map((retailer, index) => (
-                <Fragment key={retailer.retailer}>
-                    {retailer.url ? (
-                        <RetailerLink
-                            href={retailer.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <Typography variant="caption" color="text.secondary">
-                                {retailer.retailer}:
-                            </Typography>
-                            <Typography variant="caption">
-                                {formatCurrency(retailer.price)}
-                            </Typography>
-                            <ExternalLink size={12} />
-                        </RetailerLink>
-                    ) : (
-                        <RetailerEntry>
-                            <Typography variant="caption" color="text.secondary">
-                                {retailer.retailer}:
-                            </Typography>
-                            <Typography variant="caption">
-                                {formatCurrency(retailer.price)}
-                            </Typography>
-                        </RetailerEntry>
+                <OnlinePriceSegment key={retailer.retailer}>
+                    <OnlinePriceText variant="caption" color="text.secondary">
+                        {retailer.retailer}: <strong>{formatCurrency(retailer.price)}</strong>
+                    </OnlinePriceText>
+                    {retailer.url && (
+                        <ExternalLink size={12} color={theme.palette.text.secondary} />
                     )}
-                    {index < onlinePrices.retailers.length - 1 && <VerticalSeparator />}
-                </Fragment>
+                    {index < onlinePrices.retailers.length - 1 && <OnlinePriceDivider />}
+                </OnlinePriceSegment>
             ))}
         </OnlinePriceBarContainer>
     );

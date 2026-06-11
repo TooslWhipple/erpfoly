@@ -107,6 +107,7 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/pedidos\/sucursales\/nuevo\/confirmar$/, permission: BRANCH_ORDERS_UPDATE },
   { pattern: /^\/pedidos\/sucursales\/nuevo$/, permission: BRANCH_ORDERS_CREATE },
+  { pattern: /^\/pedidos\/sucursales\/[^/]+\/editar$/, permission: BRANCH_ORDERS_UPDATE },
   { pattern: /^\/pedidos\/sucursales(\/.*)?$/, permission: BRANCH_ORDERS_READ },
   { pattern: /^\/pedidos\/nuevo$/, permission: ORDERS_CREATE },
   { pattern: /^\/pedidos(\/.*)?$/, permission: ORDERS_READ },

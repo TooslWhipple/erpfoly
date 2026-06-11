@@ -67,7 +67,7 @@ export interface Column<T> {
   sticky?: boolean;
   stickyPosition?: "left" | "right";
   buttonLabel?: string;
-  buttonVariant?: "text" | "outlined" | "contained";
+  buttonVariant?: "text" | "outlined" | "contained" | "option" | "white";
   buttonColor?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
   onButtonClick?: (row: T) => void;
   chipColor?: "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success";
@@ -134,7 +134,7 @@ export function TableCrud<T>({
     if (column.size) {
       return COLUMN_SIZES[column.size];
     }
-    
+
     switch (column.type) {
       case "id":
         return COLUMN_SIZES.xs;

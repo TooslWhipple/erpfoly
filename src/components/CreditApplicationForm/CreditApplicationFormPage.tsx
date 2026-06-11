@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
 import { CircleAlert } from "lucide-react";
 import { X } from "@/components/Icons";
 import { MainLayout, TabFilters } from "@/components";
@@ -40,6 +40,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     saving,
     isFormLocked,
     formAction,
+    error,
     activeTab,
     tabs,
     requiresIncomeProof,
@@ -71,7 +72,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     useFamilyRelationships();
   const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
 
-  const pageTitle = isCreateMode ? "Nueva solicitud de crédito" : "Editar solicitud de crédito";
+  // const pageTitle = isCreateMode ? "Nueva solicitud de crédito" : "Editar solicitud de crédito";
 
   const additionalInformationAlertMessage = useMemo(() => {
     if (missingAdditionalInformationLabels.length === 0) {
@@ -131,11 +132,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
         showError(
           uniqueInvalidTabLabels.length > 0
-            ? `Completa los campos requeridos en: ${uniqueInvalidTabLabels.join(", ")}.`
-            : "Completa los campos requeridos para continuar."
+            ? `Hay errores en: ${uniqueInvalidTabLabels.join(", ")}.`
+            : "Hay errores en los campos. Revisa y corrige antes de continuar."
         );
       } else {
-        showError("No fue posible enviar la solicitud a revisión.");
+        showError(error || "No fue posible enviar la solicitud a revisión. Verifica la información e intenta nuevamente.");
       }
       return false;
     }
@@ -149,7 +150,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   const handleContinueToNextTab = async () => {
     const wasSaved = await handleSaveActiveTab();
     if (!wasSaved) {
-      showError("Completa los campos requeridos para continuar.");
+      if (error) {
+        showError("Hay errores en los campos. Revisa y corrige antes de continuar.");
+      } else {
+        showError("Completa los campos requeridos para continuar.");
+      }
       return false;
     }
 
@@ -174,17 +179,47 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
   const isSubmitButtonLoading = formAction === "saving" || formAction === "submitting";
 
+  const spouseFieldsEnabled = useMemo(() => {
+    const selectedStatus = maritalStatuses.find(
+      (status) => String(status.id) === basicInformationTab.values.maritalStatus
+    );
+    return selectedStatus?.code === "CASADO" || selectedStatus?.code === "UNION_LIBRE";
+  }, [maritalStatuses, basicInformationTab.values.maritalStatus]);
+
   const handleBasicFieldChange = (field: Parameters<typeof basicInformationTab.setFieldValue>[0], value: string) => {
     const nextValues = basicInformationTab.setFieldValue(field, value);
     persistBasicInformation(nextValues);
 
-    if (field === "whatsappNumber" && addressTab.values.useClientPhone) {
-      const trimmedWhatsapp = value.trim();
-      const nextAddressValues = addressTab.mergeFieldValues({
-        receiverPhone: trimmedWhatsapp,
-        useClientPhone: trimmedWhatsapp.length > 0,
-      });
-      persistAddress(nextAddressValues);
+    if (field === "maritalStatus") {
+      const selectedStatus = maritalStatuses.find(
+        (status) => String(status.id) === value
+      );
+      const hasSpouse = selectedStatus?.code === "CASADO" || selectedStatus?.code === "UNION_LIBRE";
+
+      if (hasSpouse) {
+        const nextFamilyValues = familyTab.setFieldValue("hasSpouse", true);
+        persistFamily(nextFamilyValues);
+      } else {
+        const nextFamilyValues = familyTab.setFieldValue("hasSpouse", false);
+        familyTab.setFieldValue("spouseName", "");
+        familyTab.setFieldValue("spousePhone", "");
+        persistFamily(nextFamilyValues);
+
+        employmentTab.setFieldValue("spouseCompany", "");
+        employmentTab.setFieldValue("spousePostalCode", "");
+        employmentTab.setFieldValue("spouseNeighborhoodFullCode", "");
+        employmentTab.setFieldValue("spouseState", "");
+        employmentTab.setFieldValue("spouseCity", "");
+        employmentTab.setFieldValue("spouseStreetAndNumber", "");
+        employmentTab.setFieldValue("spouseSeniorityYears", "");
+        employmentTab.setFieldValue("spousePosition", "");
+        employmentTab.setFieldValue("spouseDepartment", "");
+        employmentTab.setFieldValue("spouseMonthlyIncome", "");
+        employmentTab.setFieldValue("spouseCompanyPhone", "");
+
+        const nextEmploymentValues = employmentTab.values;
+        persistEmployment(nextEmploymentValues);
+      }
     }
   };
 
@@ -193,16 +228,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
       <Stack spacing={3}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}>
-              <X size={18} />
-            </IconButton>
-            <Typography variant="h6" fontWeight={700}>
-              {pageTitle}
-            </Typography>
+            <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}><X size={18} /></IconButton>
+            <Typography variant="h6" fontWeight={700}>Nueva solicitud de crédito</Typography>
           </Stack>
           <Button
             variant="contained"
-            color="inherit"
             disabled={isFormLocked || loading}
             style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
             onClick={handleSubmitApplicationClick}
@@ -260,26 +290,10 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <FamilyTab
             values={familyTab.values}
             errors={familyTab.errors}
+            spouseFieldsEnabled={spouseFieldsEnabled}
             onFieldChange={(field, value) => {
               const nextValues = familyTab.setFieldValue(field, value);
               persistFamily(nextValues);
-
-              if (field === "hasSpouse" && value === false) {
-                const nextEmploymentValues = employmentTab.mergeFieldValues({
-                  spouseCompany: "",
-                  spousePostalCode: "",
-                  spouseNeighborhoodFullCode: "",
-                  spouseState: "",
-                  spouseCity: "",
-                  spouseStreetAndNumber: "",
-                  spouseSeniorityYears: "",
-                  spousePosition: "",
-                  spouseDepartment: "",
-                  spouseMonthlyIncome: "",
-                  spouseCompanyPhone: "",
-                });
-                persistEmployment(nextEmploymentValues);
-              }
             }}
             onContinue={handleContinueToNextTab}
             saving={saving}
@@ -290,8 +304,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <AddressTab
             values={addressTab.values}
             errors={addressTab.errors}
-            clientWhatsappNumber={basicInformationTab.values.whatsappNumber}
-            canUseClientPhone={basicInformationTab.values.whatsappNumber.trim().length > 0}
             housingTypeOptions={housingTypes}
             housingTypesLoading={housingTypesLoading}
             mergeFieldValues={(patch) => {
@@ -300,11 +312,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
               return nextValues;
             }}
             onFieldChange={(field, value) => {
-              const normalizedValue =
-                field === "receiverPhone" && addressTab.values.useClientPhone
-                  ? basicInformationTab.values.whatsappNumber
-                  : value;
-              const nextValues = addressTab.setFieldValue(field, normalizedValue);
+              const nextValues = addressTab.setFieldValue(field, value);
               persistAddress(nextValues);
             }}
             onSave={handleContinueToNextTab}
@@ -316,7 +324,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           <EmploymentTab
             values={employmentTab.values}
             errors={employmentTab.errors}
-            spouseSectionEnabled={familyTab.values.hasSpouse}
+            spouseSectionEnabled={spouseFieldsEnabled}
             mergeFieldValues={(patch) => {
               const nextValues = employmentTab.mergeFieldValues(patch);
               persistEmployment(nextValues);

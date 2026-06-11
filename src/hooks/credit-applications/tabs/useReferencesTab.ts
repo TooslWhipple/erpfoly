@@ -21,7 +21,12 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
   const [errors, setErrors] = useState<ReferencesTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof Omit<ReferencesTabValues, "familyReferences">, value: string) => {
-    const nextValue = field === "phone" ? normalizeMxPhone(value) : value;
+    let nextValue = field === "phone" ? normalizeMxPhone(value) : value;
+
+    if (field === "seniorityYears") {
+      nextValue = String(value).replace(/[^0-9]/g, "");
+    }
+
     const nextValues = { ...values, [field]: nextValue };
     setValues(nextValues);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -97,8 +102,8 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
     else {
       const seniorityYears = parseNumericValue(values.seniorityYears);
-      if (!Number.isFinite(seniorityYears) || seniorityYears < 0) {
-        nextErrors.seniorityYears = "La antigüedad debe ser un número mayor o igual a 0";
+      if (!Number.isFinite(seniorityYears) || seniorityYears <= 0 || !Number.isInteger(seniorityYears)) {
+        nextErrors.seniorityYears = "La antigüedad debe ser un número entero positivo";
       }
     }
     if (!values.respondentNameAndPosition.trim()) nextErrors.respondentNameAndPosition = "Este campo es requerido";

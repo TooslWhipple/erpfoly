@@ -1,7 +1,6 @@
-import { Divider, Grid, Stack, Typography, FormControlLabel, Switch } from "@mui/material";
+import { Divider, Grid, Stack, Typography } from "@mui/material";
 import { FormTextField, TrackSlider } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
-import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
 
 interface FamilySectionProps {
   detail: CreditApplicationDetail;
@@ -18,11 +17,6 @@ export function FamilySection({ detail }: FamilySectionProps) {
         </Typography>
       </Stack>
       <Divider />
-      <FormControlLabel
-        sx={formControlLabelSpacingSx}
-        control={<Switch checked={family.hasSpouse} readOnly />}
-        label="¿Cuenta con cónyuge?"
-      />
       {
         family.hasSpouse && (
           <Grid container spacing={2}>

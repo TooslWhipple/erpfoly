@@ -5,6 +5,7 @@ import {
   verifyCreditApplicationOtp,
 } from "@/services/creditApplications.service";
 import { useOtpCooldown } from "@/hooks/common/useOtpCooldown";
+import { getApiErrorMessage } from "@/lib/axios";
 import type {
   BasicInformationFormErrors,
   BasicInformationFormValues,
@@ -135,7 +136,6 @@ export function useBasicInformationTab(
 
     if (!values.firstName.trim()) nextErrors.firstName = "Nombre(s) es requerido";
     if (!values.lastName.trim()) nextErrors.lastName = "Primer apellido es requerido";
-    if (!values.secondLastName.trim()) nextErrors.secondLastName = "Segundo apellido es requerido";
     if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
     else if (!isAdultBirthDate(values.birthDate)) {
       nextErrors.birthDate = "La fecha de nacimiento debe corresponder a una persona mayor de edad";
@@ -212,6 +212,13 @@ export function useBasicInformationTab(
           targetApplicationId,
           values.whatsappNumber,
         );
+        if (!response) {
+          setErrors((prev) => ({
+            ...prev,
+            securityCode: "No se pudo enviar el OTP por WhatsApp",
+          }));
+          return false;
+        }
         otpCooldown.syncFromTimestamp(response.cooldownUntil);
         setIsSecurityCodeValid(response.verified ? true : null);
         setErrors((prev) => ({
@@ -244,6 +251,13 @@ export function useBasicInformationTab(
         values.whatsappNumber,
         values.securityCode,
       );
+      if (!response) {
+        setErrors((prev) => ({
+          ...prev,
+          securityCode: "No se pudo validar el código OTP",
+        }));
+        return false;
+      }
       otpCooldown.syncFromTimestamp(response.cooldownUntil);
       setIsSecurityCodeValid(response.verified);
       setErrors((prev) => ({
@@ -257,13 +271,7 @@ export function useBasicInformationTab(
       const fallbackMessage = shouldSendOtp
         ? "No se pudo enviar el OTP por WhatsApp"
         : "No se pudo validar el código OTP";
-      const errorMessage =
-        typeof error === "object" &&
-        error !== null &&
-        "message" in error &&
-        typeof (error as { message?: unknown }).message === "string"
-          ? ((error as { message: string }).message || fallbackMessage)
-          : fallbackMessage;
+      const errorMessage = getApiErrorMessage(error) || fallbackMessage;
       setErrors((prev) => ({
         ...prev,
         securityCode: errorMessage,

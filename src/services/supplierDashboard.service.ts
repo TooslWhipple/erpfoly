@@ -8,7 +8,6 @@ export type SupplierDashboardResult =
 export async function fetchSupplierDashboard(id: number): Promise<SupplierDashboardResult> {
   try {
     const response = await unwrapOrThrow(await get(`/suppliers/${id}/dashboard`));
-    console.log("response: ", response);
     return { data: response as SupplierDashboard, error: null };
   } catch (err: any) {
     const message = err?.apiError?.message ?? err?.message ?? "Error al obtener el dashboard del proveedor.";

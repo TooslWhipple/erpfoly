@@ -57,7 +57,7 @@ function mapHousingTypeToOwnership(
   if (normalized.includes("rent") || normalized.includes("alq")) return "rented";
   if (normalized.includes("pag")) return "paying";
   if (normalized.includes("fam")) return "relatives";
-  return "own";
+  return null;
 }
 
 function formatMxCurrency(amount: number): string {
@@ -176,16 +176,13 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       rfc: basicInformation.rfc ?? "",
       email: basicInformation.email ?? "",
       whatsapp: basicInformation.phoneNumber ?? "",
-      whatsappValidated: false,
+      whatsappValidated: Boolean(basicInformation.phoneVerifiedAt),
     },
     address: {
       postalCode: address.postalCode ?? "",
       neighborhood,
       streetAndNumber: buildStreetAndNumber(address),
       betweenStreets: address.betweenStreets ?? "",
-      deliveryPhone: address.receiverPhone ?? "",
-      receiverName: address.receiverName ?? "",
-      useClientPhone: Boolean(address.useClientPhone),
       housingOwnership: mapHousingTypeToOwnership(address.housingType?.name),
       timeAtAddress: address.residenceTime ?? "",
       previousAddress: address.previousAddress ?? "",

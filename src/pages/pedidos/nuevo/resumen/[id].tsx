@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
-import { Edit as EditIcon, Download as DownloadIcon } from "@mui/icons-material";
 import { MainLayout, Breadcrumbs, Pencil, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -20,7 +19,6 @@ import {
     ItemCard,
 } from "@/styles/pedidos/styles";
 import { theme } from "@/styles/theme";
-import { Download } from "lucide-react";
 
 function formatCurrency(value: number): string {
     return new Intl.NumberFormat("es-MX", {
@@ -85,10 +83,6 @@ export default function ResumenPedido() {
         router.push(`/pedidos/${id}/editar`);
     };
 
-    const handleDownloadPdf = () => {
-        console.log("[ResumenPedido] Download PDF");
-    };
-
     const subtotal = order
         ? order.order_items.reduce((sum, item) => {
             const unitPrice = Number(item.unit_price ?? 0);
@@ -116,7 +110,7 @@ export default function ResumenPedido() {
                 </HeaderSection>
                 <PageContainer>
                     <MainContent>
-                        {[1, 2].map((i) => (
+                        {[1, 2, 3, 4].map((i) => (
                             <ItemCard key={i}>
                                 <Skeleton variant="rectangular" height={80} />
                             </ItemCard>
@@ -161,12 +155,6 @@ export default function ResumenPedido() {
                             startIcon={<Pencil size={16} color={theme.palette.text.secondary} />}
                             onClick={handleEdit}>
                             Editar
-                        </Button>
-                        <Button
-                            variant="option"
-                            startIcon={<Download size={16} color={theme.palette.text.secondary} />}
-                            onClick={handleDownloadPdf}>
-                            Descargar PDF
                         </Button>
                         <StatusChip
                             label={getStatusLabel(order.status)}

@@ -90,14 +90,3 @@ export const TimelineContent = styled('div')({
     gap: theme.spacing(0.5),
     width: "100%",
 });
-
-export const TimelineOrderLink = styled("a")({
-    fontSize: 14,
-    color: "#71717A",
-    textDecoration: "underline",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-    "&:hover": {
-        color: theme.palette.primary.main,
-    },
-}); 

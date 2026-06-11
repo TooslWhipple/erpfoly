@@ -99,6 +99,7 @@ export function BasicInformationTab({
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
+            required
             label="Estado civil"
             select
             value={values.maritalStatus}

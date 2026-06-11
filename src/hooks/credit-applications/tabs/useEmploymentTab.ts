@@ -12,10 +12,22 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
   const [errors, setErrors] = useState<EmploymentTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => {
-    const nextValue =
-      field === "companyPhone" || field === "spouseCompanyPhone"
-        ? normalizeMxPhone(String(value))
-        : value;
+    let nextValue = value;
+    
+    if (field === "companyPhone" || field === "spouseCompanyPhone") {
+      nextValue = normalizeMxPhone(String(value));
+    }
+    
+    if (field === "seniorityYears" || field === "spouseSeniorityYears") {
+      const numericValue = String(value).replace(/[^0-9]/g, "");
+      nextValue = numericValue as EmploymentTabValues[keyof EmploymentTabValues];
+    }
+    
+    if (field === "monthlyIncome" || field === "spouseMonthlyIncome" || field === "otherIncomeAmount") {
+      const numericValue = String(value).replace(/[^0-9]/g, "");
+      nextValue = numericValue as EmploymentTabValues[keyof EmploymentTabValues];
+    }
+    
     const nextValues = { ...values, [field]: nextValue };
     setValues(nextValues);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -58,8 +70,8 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
     else {
       const seniorityYears = parseNumericValue(values.seniorityYears);
-      if (!Number.isFinite(seniorityYears) || seniorityYears < 0) {
-        nextErrors.seniorityYears = "La antigüedad debe ser un número mayor o igual a 0";
+      if (!Number.isFinite(seniorityYears) || seniorityYears <= 0 || !Number.isInteger(seniorityYears)) {
+        nextErrors.seniorityYears = "La antigüedad debe ser un número entero positivo";
       }
     }
     if (!values.position.trim()) nextErrors.position = "Puesto es requerido";
@@ -67,8 +79,8 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     if (!values.monthlyIncome.trim()) nextErrors.monthlyIncome = "Ingreso mensual es requerido";
     else {
       const monthlyIncome = parseNumericValue(values.monthlyIncome);
-      if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) {
-        nextErrors.monthlyIncome = "El ingreso mensual debe ser mayor a 0";
+      if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0 || !Number.isInteger(monthlyIncome)) {
+        nextErrors.monthlyIncome = "El ingreso mensual debe ser un número entero positivo";
       }
     }
     if (!values.companyPhone.trim()) nextErrors.companyPhone = "Teléfono de la empresa es requerido";
@@ -88,6 +100,20 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
       }
       if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";
       if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
+      
+      if (values.spouseSeniorityYears.trim()) {
+        const spouseSeniorityYears = parseNumericValue(values.spouseSeniorityYears);
+        if (!Number.isFinite(spouseSeniorityYears) || spouseSeniorityYears <= 0 || !Number.isInteger(spouseSeniorityYears)) {
+          nextErrors.spouseSeniorityYears = "La antigüedad debe ser un número entero positivo";
+        }
+      }
+      
+      if (values.spouseMonthlyIncome.trim()) {
+        const spouseMonthlyIncome = parseNumericValue(values.spouseMonthlyIncome);
+        if (!Number.isFinite(spouseMonthlyIncome) || spouseMonthlyIncome <= 0 || !Number.isInteger(spouseMonthlyIncome)) {
+          nextErrors.spouseMonthlyIncome = "El ingreso mensual debe ser un número entero positivo";
+        }
+      }
     }
 
     setErrors(nextErrors);

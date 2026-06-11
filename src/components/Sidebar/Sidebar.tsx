@@ -310,9 +310,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       throw e;
     }
 
-    const { id } = await createCreditApplicationFromIntake(payload);
+    const result = await createCreditApplicationFromIntake(payload);
+    if (!result?.id) {
+      showError("No se pudo crear la solicitud, intenta nuevamente.");
+      return;
+    }
     clearDraftById(NEW_CREDIT_APPLICATION_DRAFT_ID);
-    await router.push(`/solicitudes-credito/${id}`);
+    await router.push(`/solicitudes-credito/${result.id}`);
   };
 
   const handleLogout = async () => {

@@ -276,6 +276,10 @@ export interface ApiResult<T> {
 	error: ApiError | null;
 }
 
+export interface AxiosConfigWithSkipToast extends AxiosRequestConfig {
+	skipGlobalErrorToast?: boolean;
+}
+
 function isBackendErrorBody(
 	value: unknown
 ): value is { error: { message: string } } {
@@ -317,7 +321,7 @@ export async function request<T>(
 	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 	url: string,
 	payload?: unknown,
-	config?: AxiosRequestConfig
+	config?: AxiosConfigWithSkipToast
 ): Promise<ApiResult<T>> {
 	try {
 		const response = await api.request<BackendBody<T> | T>({
@@ -347,23 +351,22 @@ export async function request<T>(
 	}
 }
 
-export const get = <T>(url: string, config?: AxiosRequestConfig) =>
+export const get = <T>(url: string, config?: AxiosConfigWithSkipToast) =>
 	request<T>("GET", url, undefined, config);
 
-export const post = <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+export const post = <T>(url: string, data?: unknown, config?: AxiosConfigWithSkipToast) =>
 	request<T>("POST", url, data, config);
 
-export const put = <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+export const put = <T>(url: string, data?: unknown, config?: AxiosConfigWithSkipToast) =>
 	request<T>("PUT", url, data, config);
 
-export const patch = <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+export const patch = <T>(url: string, data?: unknown, config?: AxiosConfigWithSkipToast) =>
 	request<T>("PATCH", url, data, config);
 
-export const del = <T>(url: string, config?: AxiosRequestConfig) =>
+export const del = <T>(url: string, config?: AxiosConfigWithSkipToast) =>
 	request<T>("DELETE", url, undefined, config);
 
 export function unwrapOrThrow<T>(result: ApiResult<T>): T {
-	console.log("result: ", result);
 	if (result.error) {
 		const e = new Error(result.error.message) as Error & { apiError?: ApiError };
 		e.apiError = result.error;

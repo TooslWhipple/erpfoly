@@ -1,10 +1,9 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Props as GoogleMapReactProps } from "google-map-react";
-import { Divider, Grid, Stack, Typography, FormControlLabel, Switch, Radio, RadioGroup } from "@mui/material";
+import { Divider, Grid, Stack, Typography, Radio, RadioGroup } from "@mui/material";
 import { FormTextField, RadioButton } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
-import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
 import { theme } from "@/styles/theme";
 
 const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
@@ -210,26 +209,11 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12 }}>
           <FormTextField label="Entre calles" value={address.betweenStreets} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            label="Núm. de teléfono de quién recibirá los artículos"
-            value={address.deliveryPhone}
-            readOnly
-            fullWidth
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField label="Nombre de quién recibe" value={address.receiverName} readOnly fullWidth />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormControlLabel
-            sx={formControlLabelSpacingSx}
-            control={<Switch checked={address.useClientPhone} readOnly />}
-            label="Utilizar número del cliente"
-          />
-        </Grid>
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1">Propiedad de la Vivienda</Typography>
+          {
+            address.housingOwnership 
+          }
           <Grid container spacing={1} mt={3}>
             <Grid size={{ xs: 6, sm: 'auto' }}>
               <RadioButton value="own" label="Casa propia" checked={address.housingOwnership === "own"} readOnly />

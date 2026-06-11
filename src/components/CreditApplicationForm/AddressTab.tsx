@@ -1,4 +1,4 @@
-import { Button, CircularProgress, Grid, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, Stack, Typography } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import type { HousingTypeCatalogItem } from "@/services/address.service";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
@@ -10,8 +10,6 @@ import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
-  clientWhatsappNumber: string;
-  canUseClientPhone: boolean;
   housingTypeOptions: HousingTypeCatalogItem[];
   housingTypesLoading: boolean;
   mergeFieldValues: (patch: Partial<AddressTabValues>) => AddressTabValues;
@@ -23,8 +21,6 @@ interface AddressTabProps {
 export function AddressTab({
   values,
   errors,
-  clientWhatsappNumber,
-  canUseClientPhone,
   housingTypeOptions,
   housingTypesLoading,
   mergeFieldValues,
@@ -104,58 +100,6 @@ export function AddressTab({
             helperText={errors.betweenStreets}
             disabled={saving}
           />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Núm. de teléfono de quién recibirá los artículos"
-            placeholder="Ingresa"
-            value={values.receiverPhone}
-            onChange={(event) => onFieldChange("receiverPhone", event.target.value)}
-            disabled={values.useClientPhone || saving}
-            error={Boolean(errors.receiverPhone)}
-            helperText={errors.receiverPhone}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Nombre de quién recibe"
-            placeholder="Ingresa"
-            value={values.receiverName}
-            onChange={(event) => onFieldChange("receiverName", event.target.value)}
-            error={Boolean(errors.receiverName)}
-            helperText={errors.receiverName}
-            disabled={saving}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Switch
-              checked={values.useClientPhone}
-              disabled={!canUseClientPhone || saving}
-              onChange={(event) => {
-                const checked = event.target.checked;
-                if (checked) {
-                  mergeFieldValues({
-                    useClientPhone: true,
-                    receiverPhone: clientWhatsappNumber,
-                  });
-                  return;
-                }
-
-                mergeFieldValues({
-                  useClientPhone: false,
-                  receiverPhone: "",
-                });
-              }}
-            />
-            <Typography variant="body1">Utilizar número del cliente</Typography>
-          </Stack>
         </Grid>
 
         <Grid size={{ xs: 12 }}>

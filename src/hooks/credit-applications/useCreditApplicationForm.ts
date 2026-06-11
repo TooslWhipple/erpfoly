@@ -10,6 +10,7 @@ import type {
   AdditionalInformationRequestedItem,
   CreditApplicationDetailResponse,
 } from "@/services/creditApplications.service";
+import { getApiErrorMessage } from "@/lib/axios";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
@@ -85,9 +86,6 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   city: "",
   streetAndNumber: "",
   betweenStreets: "",
-  receiverPhone: "",
-  receiverName: "",
-  useClientPhone: false,
   housingType: "",
   residenceTime: "",
   previousAddress: "",
@@ -165,10 +163,10 @@ const DRAFT_STALE_AFTER_MS = 5 * 60 * 1000;
 const VERIFIED_SECURITY_CODE_VALUE = "Verificado";
 const inFlightCreditApplicationRequests = new Map<
   string,
-  Promise<CreditApplicationDetailResponse>
+  Promise<CreditApplicationDetailResponse | null>
 >();
 
-function getCreditApplicationDetailOnce(applicationId: string): Promise<CreditApplicationDetailResponse> {
+function getCreditApplicationDetailOnce(applicationId: string): Promise<CreditApplicationDetailResponse | null> {
   const existingRequest = inFlightCreditApplicationRequests.get(applicationId);
   if (existingRequest) {
     return existingRequest;
@@ -185,8 +183,9 @@ function getCreditApplicationDetailOnce(applicationId: string): Promise<CreditAp
 
 async function fetchDocumentationValuesFromServer(
   applicationId: string,
-): Promise<DocumentationTabValues> {
+): Promise<DocumentationTabValues | null> {
   const refreshedApplication = await getCreditApplicationDetailOnce(applicationId);
+  if (!refreshedApplication) return null;
   return mapCreditApplicationToFormValues(refreshedApplication).documentation;
 }
 
@@ -252,9 +251,6 @@ function mapCreditApplicationToFormValues(
     city: creditApplication.address.neighborhood.municipality ?? "",
     streetAndNumber: fullStreet,
     betweenStreets: creditApplication.address.betweenStreets ?? "",
-    receiverPhone: creditApplication.address.receiverPhone ?? "",
-    receiverName: creditApplication.address.receiverName ?? "",
-    useClientPhone: Boolean(creditApplication.address.useClientPhone),
     housingType:
       creditApplication.address.housingType.id != null
         ? String(creditApplication.address.housingType.id)
@@ -526,42 +522,17 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const guarantorTab = useGuarantorTab(EMPTY_GUARANTOR_VALUES);
   const prepareBasicInformationForOtpSend = useCallback(
     async (
-      basicInformationValues: BasicInformationFormValues,
+      _basicInformationValues: BasicInformationFormValues,
     ): Promise<string | undefined> => {
       if (isCreateMode || !applicationId) {
         return undefined;
       }
 
-      const currentPayload = {
-        id: applicationId,
-        basicInformation: basicInformationValues,
-        family: familyTab.values,
-        address: addressTab.values,
-        employment: employmentTab.values,
-        references: referencesTab.values,
-        documentation: documentationTab.values,
-        guarantor: guarantorTab.values,
-        biometrics: biometricsData,
-      };
-
-      await saveCreditApplicationSection(
-        applicationId,
-        "basicInformation",
-        currentPayload,
-      );
-
       return applicationId;
     },
     [
-      addressTab.values,
       applicationId,
-      biometricsData,
-      documentationTab.values,
-      employmentTab.values,
-      familyTab.values,
-      guarantorTab.values,
       isCreateMode,
-      referencesTab.values,
     ],
   );
   const basicInformationTab = useBasicInformationTab(
@@ -626,6 +597,11 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       try {
         const loadedApplication = await getCreditApplicationDetailOnce(applicationId!);
         if (isCancelled) return;
+        if (!loadedApplication) {
+          setIsEmptyState(true);
+          setError("No se pudo cargar la solicitud, intenta nuevamente.");
+          return;
+        }
         setAdditionalInformationRequested(loadedApplication.additionalInformationRequested ?? []);
 
         const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
@@ -892,12 +868,15 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         return true;
       }
 
-      await saveCreditApplicationSection(applicationId, activeSection, currentPayload);
+      const saved = await saveCreditApplicationSection(applicationId, activeSection, currentPayload);
+      if (!saved) return false;
 
       if (activeSection === "documentation") {
         const refreshedDocumentation = await fetchDocumentationValuesFromServer(applicationId);
-        currentPayload.documentation = refreshedDocumentation;
-        setDocumentationValuesFromExternal(refreshedDocumentation);
+        if (refreshedDocumentation) {
+          currentPayload.documentation = refreshedDocumentation;
+          setDocumentationValuesFromExternal(refreshedDocumentation);
+        }
       }
       if (activeSection === "guarantor") {
         setGuarantorValuesFromExternal(currentPayload.guarantor);
@@ -1049,19 +1028,21 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
           });
 
         if (!isCreateMode && applicationId && sectionsToSave.length > 0) {
-          await saveCreditApplication(formPayload, {
+          const saveResult = await saveCreditApplication(formPayload, {
             includeGuarantorSection: requiresGuarantorInformation,
             sections: sectionsToSave,
           });
+          if (!saveResult) return false;
           if (sectionsToSave.includes("documentation")) {
-            formPayload.documentation = await fetchDocumentationValuesFromServer(applicationId);
+            const refreshedDoc = await fetchDocumentationValuesFromServer(applicationId);
+            if (refreshedDoc) formPayload.documentation = refreshedDoc;
           }
           updateSectionSnapshots(formPayload, sectionsToSave);
         } else if (isCreateMode) {
           const result = await saveCreditApplication(formPayload, {
             includeGuarantorSection: requiresGuarantorInformation,
           });
-          if (result.id) {
+          if (result?.id) {
             router.replace(`/solicitudes-credito/${result.id}`);
           }
         }
@@ -1073,7 +1054,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         return true;
       } catch (saveError) {
         console.error("[CreditApplicationForm] Unable to save credit application", saveError);
-        setError("No se pudo guardar la solicitud.");
+        setError(getApiErrorMessage(saveError));
         return false;
       } finally {
         endFormAction();
@@ -1123,7 +1104,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       return true;
     } catch (saveError) {
       console.error("[CreditApplicationForm] Unable to save active section", saveError);
-      setError("No se pudo guardar la sección.");
+      setError(getApiErrorMessage(saveError));
       return false;
     } finally {
       endFormAction();
@@ -1153,7 +1134,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       return await submitCreditApplicationForReview(applicationId);
     } catch (submitError) {
       console.error("[CreditApplicationForm] Unable to submit credit application", submitError);
-      setError("No se pudo enviar la solicitud a revisión.");
+      setError(getApiErrorMessage(submitError));
       return null;
     } finally {
       endFormAction();
@@ -1184,12 +1165,14 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       if (dirtySections.length > 0) {
         setFormActionPhase("saving");
         setError(null);
-        await saveCreditApplication(formPayload, {
+        const saveResult = await saveCreditApplication(formPayload, {
           includeGuarantorSection: requiresGuarantorInformation,
           sections: dirtySections,
         });
+        if (!saveResult) return { success: false, invalidTabs: [] };
         if (dirtySections.includes("documentation") && applicationId) {
-          formPayload.documentation = await fetchDocumentationValuesFromServer(applicationId);
+          const refreshedDoc = await fetchDocumentationValuesFromServer(applicationId);
+          if (refreshedDoc) formPayload.documentation = refreshedDoc;
         }
         updateSectionSnapshots(formPayload, dirtySections);
         setDocumentationValuesFromExternal(formPayload.documentation);
@@ -1199,6 +1182,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
 
       setFormActionPhase("submitting");
       const submitResult = await submitCreditApplicationForReview(applicationId);
+      if (!submitResult) return { success: false, invalidTabs: [] };
       return {
         success: true,
         invalidTabs: [],
@@ -1206,7 +1190,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       };
     } catch (submitError) {
       console.error("[CreditApplicationForm] Unable to submit credit application", submitError);
-      setError("No se pudo enviar la solicitud a revisión.");
+      setError(getApiErrorMessage(submitError));
       return { success: false, invalidTabs: [] };
     } finally {
       endFormAction();

@@ -45,7 +45,7 @@ export default function ConfirmarArticulosPage() {
     const [orderData, setOrderData] = useState<ConfirmOrderData | null>(null);
     const [items, setItems] = useState<ConfirmOrderItem[]>([]);
     const [status, setStatus] = useState<"loading" | "idle" | "submitting" | "empty" | "error">("loading");
-    const { showError } = useSnackbarStore();
+    const { showError, showSuccess } = useSnackbarStore();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -156,6 +156,7 @@ export default function ConfirmarArticulosPage() {
             }
 
             sessionStorage.removeItem("newOrderData");
+            showSuccess(result.data?.message ?? "El pedido fue confirmado correctamente.");
             const returnUrl = orderData.orderType === "internal"
                 ? "/pedidos/sucursales"
                 : `/pedidos/nuevo/resumen/${result.data.id}`;

@@ -76,6 +76,7 @@ export interface CreateOrderResponse {
   folio: string;
   status: string;
   order_date: string;
+  message?: string;
   items: Array<{
     id: number;
     product_id: number;

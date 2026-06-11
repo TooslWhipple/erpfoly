@@ -10,11 +10,6 @@ import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 import {
-    PageContainer,
-    MainContent,
-    SidePanel,
-    HeaderSection,
-    TitleSection,
     SummaryCard,
     ItemCard,
 } from "@/styles/pedidos/styles";
@@ -101,25 +96,86 @@ export default function ResumenPedido() {
     if (loading) {
         return (
             <MainLayout>
-                <Breadcrumbs items={breadcrumbs} />
-                <HeaderSection>
-                    <TitleSection>
-                        <Skeleton variant="text" width={200} height={40} />
-                        <Skeleton variant="text" width={150} height={20} />
-                    </TitleSection>
-                </HeaderSection>
-                <PageContainer>
-                    <MainContent>
-                        {[1, 2, 3, 4].map((i) => (
-                            <ItemCard key={i}>
-                                <Skeleton variant="rectangular" height={80} />
-                            </ItemCard>
-                        ))}
-                    </MainContent>
-                    <SidePanel>
-                        <Skeleton variant="rectangular" height={200} />
-                    </SidePanel>
-                </PageContainer>
+                <Stack spacing={3}>
+                    <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={2}
+                        justifyContent="space-between"
+                        alignItems={{ xs: "flex-start", sm: "center" }}
+                    >
+                        <Stack spacing={1} sx={{ width: "100%" }}>
+                            <Breadcrumbs items={breadcrumbs} />
+                            <Skeleton variant="text" width={240} height={48} />
+                            <Skeleton variant="text" width={200} height={20} />
+                        </Stack>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <Skeleton variant="rounded" width={96} height={36} />
+                            <Skeleton variant="rounded" width={96} height={24} sx={{ borderRadius: "6px" }} />
+                        </Stack>
+                    </Stack>
+
+                    <Divider />
+
+                    <Grid container spacing={4} justifyContent="revert">
+                        <Grid size={{ xs: 12, md: 8, xl: 9 }}>
+                            <Stack spacing={2}>
+                                {[1, 2, 3].map((i) => (
+                                    <ItemCard key={i}>
+                                        <Stack spacing={2}>
+                                            <Stack
+                                                direction={{ xs: "column", sm: "row" }}
+                                                spacing={2}
+                                                alignItems={{ xs: "flex-start", sm: "center" }}
+                                                justifyContent={{ xs: "flex-start", sm: "space-between" }}
+                                            >
+                                                <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Skeleton
+                                                        variant="rounded"
+                                                        width={48}
+                                                        height={48}
+                                                        sx={{ borderRadius: 2, flexShrink: 0 }}
+                                                    />
+                                                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Skeleton variant="text" width="35%" height={16} />
+                                                        <Skeleton variant="text" width="75%" height={24} />
+                                                    </Stack>
+                                                </Stack>
+
+                                                <Stack direction="row" spacing={2} alignItems="center">
+                                                    {[100, 80, 100].map((minWidth) => (
+                                                        <Stack
+                                                            key={minWidth}
+                                                            spacing={0.5}
+                                                            sx={{ minWidth, alignItems: "center" }}
+                                                        >
+                                                            <Skeleton variant="text" width={72} height={16} />
+                                                            <Skeleton variant="text" width={56} height={24} />
+                                                        </Stack>
+                                                    ))}
+                                                </Stack>
+                                            </Stack>
+
+                                            <Skeleton variant="rounded" height={36} sx={{ borderRadius: 1 }} />
+                                        </Stack>
+                                    </ItemCard>
+                                ))}
+                            </Stack>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+                            <SummaryCard>
+                                <Stack spacing={2}>
+                                    {[1, 2, 3].map((i) => (
+                                        <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
+                                            <Skeleton variant="text" width={i === 3 ? 48 : 64} height={i === 3 ? 28 : 20} />
+                                            <Skeleton variant="text" width={80} height={i === 3 ? 28 : 20} />
+                                        </Stack>
+                                    ))}
+                                </Stack>
+                            </SummaryCard>
+                        </Grid>
+                    </Grid>
+                </Stack>
             </MainLayout>
         );
     }

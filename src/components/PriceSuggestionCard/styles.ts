@@ -1,12 +1,6 @@
 import { styled } from "@mui/material/styles";
-import { Box, Button, Typography } from "@mui/material";
-import { theme } from "@/styles/theme";
 
-// ============================================================================
-// CARD
-// ============================================================================
-
-export const CardContainer = styled(Box)(({ theme }) => ({
+export const CardContainer = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
@@ -33,91 +27,40 @@ export const ImagePlaceholder = styled('div')({
   flexShrink: 0,
 });
 
-export const PriceListContainer = styled(Box)({
+export const PriceList = styled('div')({
   display: "flex",
   flexDirection: "column",
+  position: "relative",
   gap: 0,
 });
 
-export const PriceListItem = styled(Box)({
+export const PriceListItem = styled('div')<{ isSuggested?: boolean }>(({ theme, isSuggested }) => ({
   display: "flex",
-  alignItems: "stretch",
-  gap: 0,
-});
-
-export const TimelineColumn = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
+  flexDirection: "row",
+  gap: "8px",
+  padding: "8px",
   alignItems: "center",
-  width: 24,
-  flexShrink: 0,
-  paddingTop: 6,
-  paddingBottom: 2,
+  ...(isSuggested && {
+    justifyContent: "space-between",
+    backgroundColor: theme.palette.background.lowerBlue,
+    borderRadius: "12px",
+  })
 }));
 
-export const TimelineDot = styled(Box)<{ active?: boolean }>(({ theme, active }) => ({
-  width: 8,
-  height: 8,
+export const TimelineDot = styled('div')(({ theme }) => ({
+  width: "11px",
+  height: "11px",
   borderRadius: "50%",
-  backgroundColor: active ? theme.palette.primary.main : theme.palette.app.border,
+  backgroundColor: theme.palette.app.border,
   flexShrink: 0,
   zIndex: 1,
 }));
 
-export const TimelineLine = styled(Box)({
-  width: 2,
-  flex: 1,
-  minHeight: 12,
+export const TimelineLine = styled('div')(({ theme }) => ({
+  position: "absolute",
+  width: "1px",
+  top: "30px",
+  bottom: "15px",
+  left: "13px",
   backgroundColor: theme.palette.app.border,
-  marginTop: 6,
-  marginBottom: 2,
-});
-
-export const PriceRow = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "highlighted",
-})<{ highlighted?: boolean }>(({ theme, highlighted }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  flexWrap: "wrap",
-  padding: "8px",
-  borderRadius: "12px",
-  backgroundColor: highlighted ? theme.palette.app.sidebar.itemSelected : "transparent",
-  flex: 1,
-  minWidth: 0,
-  marginLeft: theme.spacing(1.5),
-}));
-
-export const PriceRowContent = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  minWidth: 0,
-  flex: 1,
-});
-
-export const PriceAmount = styled(Typography)<{ active?: boolean }>(({ theme, active }) => ({
-  fontSize: 18,
-  fontWeight: 700,
-  color: active !== false ? theme.palette.text.primary : theme.palette.text.secondary,
-}));
-
-export const PriceChange = styled(Box)<{ active?: boolean }>(({ theme, active }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  fontSize: 12,
-  fontWeight: 700,
-  color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-}));
-
-export const ApplyButton = styled(Button)(({ theme }) => ({
-  flexShrink: 0,
-  textTransform: "none",
-  fontWeight: 600,
-  paddingLeft: theme.spacing(2),
-  paddingRight: theme.spacing(2),
-  boxShadow: "none",
-  "&:hover": {
-    boxShadow: "none",
-  },
 }));

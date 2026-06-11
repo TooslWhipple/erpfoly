@@ -72,7 +72,10 @@ export const PermissionLabel = styled(Typography)(({ theme }) => ({
 
 export const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   padding: 4,
-  "&.Mui-checked": {
-    color: theme.palette.primary.main,
+  '& .MuiFormControlLabel-label': {
+    color: 'text.primary',
+  },
+  '& .MuiCheckbox-root.Mui-checked + .MuiFormControlLabel-label': {
+    color: 'primary.main',
   },
 }));

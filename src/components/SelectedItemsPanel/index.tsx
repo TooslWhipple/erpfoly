@@ -1,13 +1,8 @@
-import { Typography, Button } from '@mui/material';
-import { ShoppingCart } from 'lucide-react';
+import { Typography, Button, Stack, Divider } from '@mui/material';
 import type { SelectedOrderItem as SelectedOrderItemType } from '@/types/orders.types';
 import {
   PanelContainer,
-  PanelHeader,
-  ItemsList,
-  EmptyState,
   ContinueButtonArea,
-  ContinueButtonContent,
 } from './styles';
 import SelectedOrderItem from './SelectedOrderItem';
 
@@ -17,6 +12,7 @@ interface SelectedItemsPanelProps {
   onRemove: (productId: number) => void;
   onContinue: () => void;
   continueLabel?: string;
+  hidePrices?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -33,13 +29,14 @@ export default function SelectedItemsPanel({
   onRemove,
   onContinue,
   continueLabel = "Continuar",
+  hidePrices = false,
 }: SelectedItemsPanelProps) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
   return (
     <PanelContainer>
-      <PanelHeader>
+      <Stack direction="column" spacing={1} padding="16px">
         <Typography variant="body1" fontWeight={600}>Artículos</Typography>
         <Typography variant="body2" color="text.secondary">
           {
@@ -48,50 +45,40 @@ export default function SelectedItemsPanel({
               : `${items.length} artículo${items.length !== 1 ? 's' : ''} · ${totalItems} unidad${totalItems !== 1 ? 'es' : ''}`
           }
         </Typography>
-      </PanelHeader>
+      </Stack>
 
-      {
-        items.length === 0 ?
-          < EmptyState >
-            <ShoppingCart size={32} strokeWidth={1.5} />
-            <Typography variant="body2" align="center">
-              No hay artículos seleccionados
-            </Typography>
-          </EmptyState>
-          :
-          <ItemsList>
-            {
-              items.map((item) => (
-                <SelectedOrderItem
-                  key={item.productId}
-                  item={item}
-                  onQuantityChange={onQuantityChange}
-                  onRemove={onRemove}
-                />
-              ))
-            }
-          </ItemsList>
-      }
+      <Stack direction="column" spacing={1}>
+        {
+          items.map((item) => (
+            <SelectedOrderItem
+              key={item.productId}
+              item={item}
+              onQuantityChange={onQuantityChange}
+              onRemove={onRemove}
+              hidePrices={hidePrices}
+            />
+          ))
+        }
+      </Stack>
 
-      {
-        items.length > 0 && (
-          <ContinueButtonArea>
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              size="large"
-              onClick={onContinue}
-              sx={{ textTransform: 'none' }}
-            >
-              <ContinueButtonContent>
-                <Typography component="span">{continueLabel}</Typography>
-                <Typography component="span">{formatCurrency(totalPrice)}</Typography>
-              </ContinueButtonContent>
-            </Button>
-          </ContinueButtonArea>
-        )
-      }
+      <Divider />
+
+      <ContinueButtonArea>
+        <Button
+          fullWidth
+          variant="contained"
+          color="primary"
+          disabled={items.length === 0}
+          onClick={onContinue}
+          sx={{ textTransform: 'none' }}>
+          <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant='body1' fontWeight={500}>{continueLabel}</Typography>
+            {!hidePrices && (
+              <Typography variant='body1' fontWeight={500} style={{ opacity: 0.6 }}>{formatCurrency(totalPrice)}</Typography>
+            )}
+          </Stack>
+        </Button>
+      </ContinueButtonArea>
     </PanelContainer >
   );
 }

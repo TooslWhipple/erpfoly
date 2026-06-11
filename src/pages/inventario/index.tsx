@@ -404,7 +404,7 @@ export default function Inventario() {
                 <Title title="Inventario" />
 
                 {
-                    stats ? <StatsCardGroup cards={statsCards} /> :
+                    stats ? <StatsCardGroup cards={statsCards} columns={4} /> :
                         <Grid container spacing={2}>
                             {[1, 2, 3, 4].map((i) => (
                                 <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>

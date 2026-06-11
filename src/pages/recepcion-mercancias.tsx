@@ -7,6 +7,7 @@ import type { TabOption } from "@/components/TabFilters";
 import { StatusChip } from "@/styles/recepcion-mercancias.styles";
 import type { MerchandiseReception, ReceptionStatus } from "@/types/recepcion-mercancias.types";
 import { MERCHANDISE_RECEPTION_CREATE, MERCHANDISE_RECEPTION_READ } from "@/lib/permissions";
+import { Stack } from "@mui/material";
 
 interface GetReceptionsParams {
     page: number;
@@ -346,47 +347,49 @@ export default function RecepcionMercancias() {
 
     return (
         <MainLayout>
-            <Title title="Recepción de mercancía" />
+            <Stack direction="column" spacing={3}>
+                <Title title="Recepción de mercancía" />
 
-            <TabFilters
-                tabs={tabs}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showSearch
-                searchValue={searchValue}
-                onSearchChange={handleSearchChange}
-                actions={[
-                    {
-                        label: "Nuevo",
-                        onClick: handleCreate,
-                        variant: "contained",
-                        color: "primary",
-                        permission: MERCHANDISE_RECEPTION_CREATE,
-                    },
-                ]}
-            />
+                <TabFilters
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showSearch
+                    searchValue={searchValue}
+                    onSearchChange={handleSearchChange}
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                            permission: MERCHANDISE_RECEPTION_CREATE,
+                        },
+                    ]}
+                />
 
-            <TableCrud
-                columns={columns}
-                rows={receptions}
-                actions={actions}
-                loading={loading}
-                rowKey="id"
-                page={page}
-                rowsPerPage={rowsPerPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-                onRowClick={handleViewReception}
-                emptyMessage="No hay recepciones de mercancía"
-            />
+                <TableCrud
+                    columns={columns}
+                    rows={receptions}
+                    actions={actions}
+                    loading={loading}
+                    rowKey="id"
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalRows={totalRows}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onRowClick={handleViewReception}
+                    emptyMessage="No hay recepciones de mercancía"
+                />
 
-            <ReceptionOrdersModal
-                open={modalOpen}
-                onClose={handleCloseModal}
-                onConfirm={handleConfirmOrders}
-                loading={submitting}
-            />
+                <ReceptionOrdersModal
+                    open={modalOpen}
+                    onClose={handleCloseModal}
+                    onConfirm={handleConfirmOrders}
+                    loading={submitting}
+                />
+            </Stack>
         </MainLayout>
     );
 }

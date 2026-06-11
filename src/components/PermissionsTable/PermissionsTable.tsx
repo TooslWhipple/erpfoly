@@ -1,4 +1,4 @@
-import { TableBody } from "@mui/material";
+import { TableBody, Typography } from "@mui/material";
 import {
     CheckboxWrapper,
     HeaderModuleCell,
@@ -63,55 +63,61 @@ export function PermissionsTable({
                 <StyledTableHead>
                     <HeaderRow>
                         <HeaderModuleCell>Módulo</HeaderModuleCell>
-                        {permissionColumns.map((col) => {
-                            const state = groupState?.[col.key];
-                            return (
-                                <HeaderPermissionCell key={col.key}>
-                                    <CheckboxWrapper>
-                                        <StyledCheckbox
-                                            checked={Boolean(state?.checked)}
-                                            indeterminate={Boolean(state?.indeterminate)}
-                                            onChange={(e) =>
-                                                onGroupChange?.(
-                                                    col.key,
-                                                    e.target.checked,
-                                                )
-                                            }
-                                            disabled={
-                                                disabled ||
-                                                modules.length === 0 ||
-                                                !onGroupChange
-                                            }
-                                            size="small"
-                                        />
-                                        <PermissionLabel>{col.label}</PermissionLabel>
-                                    </CheckboxWrapper>
-                                </HeaderPermissionCell>
-                            );
-                        })}
+                        {
+                            permissionColumns.map((col) => {
+                                const state = groupState?.[col.key];
+                                return (
+                                    <HeaderPermissionCell key={col.key}>
+                                        <CheckboxWrapper>
+                                            <StyledCheckbox
+                                                checked={Boolean(state?.checked)}
+                                                indeterminate={Boolean(state?.indeterminate)}
+                                                onChange={(e) =>
+                                                    onGroupChange?.(
+                                                        col.key,
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                                disabled={
+                                                    disabled ||
+                                                    modules.length === 0 ||
+                                                    !onGroupChange
+                                                }
+                                                size="small"
+                                            />
+                                            <PermissionLabel>{col.label}</PermissionLabel>
+                                        </CheckboxWrapper>
+                                    </HeaderPermissionCell>
+                                );
+                            })
+                        }
                     </HeaderRow>
                 </StyledTableHead>
                 <TableBody>
-                    {modules.map((module) => (
-                        <StyledTableRow key={module.id}>
-                            <ModuleCell>{module.name}</ModuleCell>
-                            {permissionColumns.map((col) => (
-                                <PermissionCell key={col.key}>
-                                    <CheckboxWrapper>
-                                        <StyledCheckbox
-                                            checked={module.permissions[col.key]}
-                                            onChange={(e) =>
-                                                onChange(module.id, col.key, e.target.checked)
-                                            }
-                                            disabled={disabled}
-                                            size="small"
-                                        />
-                                        <PermissionLabel>{col.label}</PermissionLabel>
-                                    </CheckboxWrapper>
-                                </PermissionCell>
-                            ))}
-                        </StyledTableRow>
-                    ))}
+                    {
+                        modules.map((module) => (
+                            <StyledTableRow key={module.id}>
+                                <ModuleCell>{module.name}</ModuleCell>
+                                {
+                                    permissionColumns.map((col) => (
+                                        <PermissionCell key={col.key}>
+                                            <CheckboxWrapper>
+                                                <StyledCheckbox
+                                                    checked={module.permissions[col.key]}
+                                                    onChange={(e) =>
+                                                        onChange(module.id, col.key, e.target.checked)
+                                                    }
+                                                    disabled={disabled}
+                                                    size="small"
+                                                />
+                                                <Typography variant="body1" fontWeight={500} color={(module.permissions[col.key] ? 'primary.main' : 'text.main')}>{col.label}</Typography>
+                                            </CheckboxWrapper>
+                                        </PermissionCell>
+                                    ))
+                                }
+                            </StyledTableRow>
+                        ))
+                    }
                 </TableBody>
             </StyledTable>
         </TableContainer>

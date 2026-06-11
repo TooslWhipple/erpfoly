@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
 import { Edit as EditIcon, Download as DownloadIcon } from "@mui/icons-material";
-import { MainLayout, Breadcrumbs } from "@/components";
+import { MainLayout, Breadcrumbs, Pencil, StatusChip } from "@/components";
+import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { OnlinePriceBar } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
+import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 import {
     PageContainer,
     MainContent,
@@ -15,6 +19,8 @@ import {
     SummaryCard,
     ItemCard,
 } from "@/styles/pedidos/styles";
+import { theme } from "@/styles/theme";
+import { Download } from "lucide-react";
 
 function formatCurrency(value: number): string {
     return new Intl.NumberFormat("es-MX", {
@@ -25,6 +31,28 @@ function formatCurrency(value: number): string {
 }
 
 const IVA_RATE = 0.16;
+
+type DisplayStatus = "pending" | "partially_delivered" | "delivered" | "cancelled";
+
+function getStatusLabel(status: string): string {
+    const labels: Record<DisplayStatus, string> = {
+        pending: "Por recibir",
+        partially_delivered: "En curso",
+        delivered: "Recibido",
+        cancelled: "Cancelado",
+    };
+    return labels[status as DisplayStatus] ?? labels.pending;
+}
+
+function getStatusVariant(status: string): StatusChipVariant {
+    const variants: Record<DisplayStatus, StatusChipVariant> = {
+        pending: "pending",
+        partially_delivered: "info",
+        delivered: "success",
+        cancelled: "error",
+    };
+    return variants[status as DisplayStatus] ?? "pending";
+}
 
 export default function ResumenPedido() {
     const router = useRouter();
@@ -59,10 +87,6 @@ export default function ResumenPedido() {
 
     const handleDownloadPdf = () => {
         console.log("[ResumenPedido] Download PDF");
-    };
-
-    const handleContinue = () => {
-        router.push("/pedidos");
     };
 
     const subtotal = order
@@ -126,30 +150,37 @@ export default function ResumenPedido() {
         <MainLayout>
             <Stack spacing={3}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }}>
-                    <Breadcrumbs items={breadcrumbs} />
-                    <Stack direction="row" spacing={2}>
-                        <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEdit}>
+                    <Stack spacing={1}>
+                        <Breadcrumbs items={breadcrumbs} />
+                        <Typography variant="h1">Pedido {order.folio}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>Fecha de alta: {dayjs(order.created_at).format("DD [de] MMMM, YYYY")}</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Button
+                            variant="option"
+                            startIcon={<Pencil size={16} color={theme.palette.text.secondary} />}
+                            onClick={handleEdit}>
                             Editar
                         </Button>
-                        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleDownloadPdf}>
+                        <Button
+                            variant="option"
+                            startIcon={<Download size={16} color={theme.palette.text.secondary} />}
+                            onClick={handleDownloadPdf}>
                             Descargar PDF
                         </Button>
+                        <StatusChip
+                            label={getStatusLabel(order.status)}
+                            size="small"
+                            variant={getStatusVariant(order.status)}
+                        />
                     </Stack>
                 </Stack>
 
                 <Divider />
 
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 0, sm: 2 }} alignItems={{ xs: "flex-start", sm: "center" }} flexWrap="wrap">
-                    <Typography variant="h1">Resumen del pedido</Typography>
-                    <Typography variant="body2" color="text.secondary">Proveedor: {order.supplier?.name || "—"}</Typography>
-                </Stack>
-
                 <Grid container spacing={4} justifyContent="revert">
                     <Grid size={{ xs: 12, md: 8, xl: 9 }}>
-                        <Stack spacing={3}>
-                            <Typography variant="h5" fontWeight={600}>Artículos ({order.order_items.length})</Typography>
-
-
+                        <Stack spacing={2}>
                             {
                                 order.order_items.map((item) => {
                                     const unitPrice = Number(item.unit_price ?? 0);
@@ -158,59 +189,61 @@ export default function ResumenPedido() {
 
                                     return (
                                         <ItemCard key={item.id}>
-                                            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent={{ xs: "flex-start", sm: "space-between" }}>
-                                                <Stack direction="row" spacing={2} alignItems="center">
-                                                    <Box
-                                                        sx={{
-                                                            width: 48,
-                                                            height: 48,
-                                                            borderRadius: 2,
-                                                            overflow: "hidden",
-                                                            flexShrink: 0,
-                                                            backgroundColor: "background.lowGray",
-                                                            border: (theme) => `1px solid ${theme.palette.app.border}`,
-                                                        }}>
-                                                        {
-                                                            productImage ?
-                                                                <Box
-                                                                    component="img"
-                                                                    src={productImage}
-                                                                    alt={item.product?.short_name ?? ""}
-                                                                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                                />
-                                                                :
-                                                                <Box sx={{ width: "100%", height: "100%" }} />
-                                                        }
-                                                    </Box>
+                                            <Stack spacing={2}>
+                                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent={{ xs: "flex-start", sm: "space-between" }}>
+                                                    <Stack direction="row" spacing={2} alignItems="center">
+                                                        <Box
+                                                            sx={{
+                                                                width: 48,
+                                                                height: 48,
+                                                                borderRadius: 2,
+                                                                overflow: "hidden",
+                                                                flexShrink: 0,
+                                                                backgroundColor: "background.lowGray",
+                                                                border: (theme) => `1px solid ${theme.palette.app.border}`,
+                                                            }}>
+                                                            {
+                                                                productImage ?
+                                                                    <Box
+                                                                        component="img"
+                                                                        src={productImage}
+                                                                        alt={item.product?.short_name ?? ""}
+                                                                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                                    />
+                                                                    :
+                                                                    <Box sx={{ width: "100%", height: "100%" }} />
+                                                            }
+                                                        </Box>
 
-                                                    <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                                                            {item.product?.code ?? "—"}
-                                                        </Typography>
-                                                        <Typography variant="body1" fontWeight={600} sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                            {item.product?.short_name ?? "Producto sin nombre"}
-                                                        </Typography>
+                                                        <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                                                                {item.product?.code ?? "—"}
+                                                            </Typography>
+                                                            <Typography variant="body1" fontWeight={600} sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                {item.product?.short_name ?? "Producto sin nombre"}
+                                                            </Typography>
+                                                        </Stack>
+                                                    </Stack>
+
+                                                    <Stack direction="row" spacing={2} alignItems="center">
+                                                        <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
+                                                            <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
+                                                            <Typography variant="body1" fontWeight={600}>{formatCurrency(unitPrice)}</Typography>
+                                                        </Stack>
+
+                                                        <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "center" }}>
+                                                            <Typography variant="body2" color="text.secondary">Cantidad</Typography>
+                                                            <Typography variant="body1" fontWeight={600}>{item.requested_quantity}</Typography>
+                                                        </Stack>
+
+                                                        <Stack spacing={0.5} sx={{ minWidth: 100 }}>
+                                                            <Typography variant="body2" color="text.secondary">Total</Typography>
+                                                            <Typography variant="body1" fontWeight={600}>{formatCurrency(itemTotal)}</Typography>
+                                                        </Stack>
                                                     </Stack>
                                                 </Stack>
 
-                                                <Stack direction="row" spacing={2} alignItems="center">
-                                                    <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "center" }}>
-                                                        <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
-                                                        <Typography variant="body1" fontWeight={600}>{formatCurrency(unitPrice)}</Typography>
-                                                    </Stack>
-
-                                                    <Stack spacing={0.5} sx={{ minWidth: 80, textAlign: "center" }}>
-                                                        <Typography variant="body2" color="text.secondary">Cantidad</Typography>
-                                                        <Typography variant="body1" fontWeight={600}>{item.requested_quantity}</Typography>
-                                                    </Stack>
-
-                                                    <Stack spacing={0.5} sx={{ minWidth: 100, textAlign: "right" }}>
-                                                        <Typography variant="body2" color="text.secondary">Total</Typography>
-                                                        <Typography variant="body1" fontWeight={600} color="primary.main">
-                                                            {formatCurrency(itemTotal)}
-                                                        </Typography>
-                                                    </Stack>
-                                                </Stack>
+                                                <OnlinePriceBar onlinePrices={buildPlaceholderOnlinePrices(unitPrice)} />
                                             </Stack>
                                         </ItemCard>
                                     );
@@ -227,17 +260,13 @@ export default function ResumenPedido() {
                                     <Typography variant="body1" fontWeight={600}>{formatCurrency(subtotal)}</Typography>
                                 </Stack>
                                 <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">IVA (16%)</Typography>
+                                    <Typography variant="body2" color="text.secondary">IVA</Typography>
                                     <Typography variant="body1" fontWeight={600}>{formatCurrency(iva)}</Typography>
                                 </Stack>
-                                <Divider />
                                 <Stack direction="row" justifyContent="space-between">
                                     <Typography variant="h6" fontWeight={700}>Total</Typography>
-                                    <Typography variant="h6" fontWeight={700} color="primary.main">{formatCurrency(total)}</Typography>
+                                    <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
                                 </Stack>
-                                <Button variant="contained" color="primary" fullWidth size="large" onClick={handleContinue}>
-                                    Continuar
-                                </Button>
                             </Stack>
                         </SummaryCard>
                     </Grid>

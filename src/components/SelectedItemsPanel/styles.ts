@@ -12,20 +12,6 @@ export const PanelContainer = styled('div')(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
 }));
 
-export const PanelHeader = styled('div')(({ theme }) => ({
-  padding: '16px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4px',
-}));
-
-export const ItemsList = styled('div')({
-  flex: 1,
-  overflowY: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-});
-
 export const ItemContainer = styled('div')({
   position: 'relative',
   display: 'flex',
@@ -84,29 +70,6 @@ export const StepperInput = styled('input')(({ theme }) => ({
   MozAppearance: 'textfield',
 }));
 
-export const ContinueButtonArea = styled('div')(({ theme }) => ({
-  padding: theme.spacing(2),
-  paddingTop: 0,
-  flexShrink: 0,
-}));
-
-export const ContinueButtonContent = styled('div')({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  width: '100%',
-  '& span': {
-    fontSize: 16,
-    fontWeight: 600,
-  },
+export const ContinueButtonArea = styled('div')({
+  padding: '16px',
 });
-
-export const EmptyState = styled('div')(({ theme }) => ({
-  padding: '32px 16px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  color: theme.palette.text.secondary,
-}));

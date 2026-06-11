@@ -1,4 +1,4 @@
-import { Button, CircularProgress, Grid, Stack, Switch, Typography } from "@mui/material";
+import { Button, CircularProgress, Grid, Stack, Typography } from "@mui/material";
 import { TrackSlider } from "@/components";
 import { FormTextField } from "@/components/Form";
 import type { FamilyTabErrors, FamilyTabValues } from "@/types/credit-application-form.types";
@@ -7,6 +7,7 @@ import { Card } from "./styles";
 interface FamilyTabProps {
   values: FamilyTabValues;
   errors: FamilyTabErrors;
+  spouseFieldsEnabled: boolean;
   onFieldChange: (field: keyof FamilyTabValues, value: FamilyTabValues[keyof FamilyTabValues]) => void;
   onContinue: () => Promise<boolean>;
   saving: boolean;
@@ -14,45 +15,34 @@ interface FamilyTabProps {
 
 const DEPENDENTS_MARKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export function FamilyTab({ values, errors, onFieldChange, onContinue, saving }: FamilyTabProps) {
+export function FamilyTab({ values, errors, spouseFieldsEnabled, onFieldChange, onContinue, saving }: FamilyTabProps) {
   return (
     <Card>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Switch
-              checked={values.hasSpouse}
-              onChange={(event) => onFieldChange("hasSpouse", event.target.checked)}
-              disabled={saving}
-            />
-            <Typography variant="h6">¿Cuenta con cónyuge?</Typography>
-          </Stack>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
-            required
+            required={spouseFieldsEnabled}
             label="Nombre del cónyuge"
             placeholder="Ingresa"
             value={values.spouseName}
             onChange={(event) => onFieldChange("spouseName", event.target.value)}
             error={Boolean(errors.spouseName)}
             helperText={errors.spouseName}
-            disabled={!values.hasSpouse || saving}
+            disabled={!spouseFieldsEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
-            required
+            required={spouseFieldsEnabled}
             label="Teléfono celular"
             placeholder="Ingresa"
             value={values.spousePhone}
             onChange={(event) => onFieldChange("spousePhone", event.target.value)}
             error={Boolean(errors.spousePhone)}
             helperText={errors.spousePhone}
-            disabled={!values.hasSpouse || saving}
+            disabled={!spouseFieldsEnabled || saving}
           />
         </Grid>
 

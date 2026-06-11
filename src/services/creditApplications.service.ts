@@ -1,9 +1,10 @@
-import { get, patch, post, unwrapOrThrow } from "@/lib/axios";
+import { get, patch, post } from "@/lib/axios";
 import type { ApiSuccessPayload } from "@/lib/axios";
 import type { PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
+import { sanitizeFormValues } from "@/utils/sanitizeInput";
 import type {
   CreditApplicationFormPayload,
   FamilyReference,
@@ -390,9 +391,9 @@ function buildSectionPayload(
           externalNumber: parsed.externalNumber,
           internalNumber: parsed.internalNumber,
           betweenStreets: payload.address.betweenStreets.trim(),
-          receiverPhone: payload.address.receiverPhone.trim(),
-          receiverName: payload.address.receiverName.trim(),
-          useClientPhone: payload.address.useClientPhone,
+          receiverPhone: "",
+          receiverName: "",
+          useClientPhone: false,
           housingTypeId: Number.isFinite(housingTypeId) ? housingTypeId : null,
           residenceTime: payload.address.residenceTime.trim(),
           previousAddress: payload.address.previousAddress.trim(),
@@ -495,7 +496,7 @@ async function uploadCreditApplicationFile(
   applicationId: string,
   type: CreditApplicationDocumentTypeCode,
   file: File
-): Promise<UploadDocumentResponse> {
+): Promise<UploadDocumentResponse | null> {
   const formData = new FormData();
   formData.append("file", file);
   const result = await post<UploadDocumentResponse>(
@@ -503,9 +504,11 @@ async function uploadCreditApplicationFile(
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
     }
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 async function ensureDocumentFilesUploaded(
@@ -517,6 +520,7 @@ async function ensureDocumentFilesUploaded(
   for (const item of files) {
     if (item.file) {
       const uploaded = await uploadCreditApplicationFile(applicationId, type, item.file);
+      if (!uploaded) continue;
       resolved.push({
         id: String(uploaded.documentId ?? item.id),
         name: item.name,
@@ -542,14 +546,14 @@ async function ensureDocumentFilesUploaded(
 
 export async function createCreditApplicationFromIntake(
   payload: CreditApplicationBiometricsData
-): Promise<CreateCreditApplicationFromIntakeResult> {
+): Promise<CreateCreditApplicationFromIntakeResult | null> {
   const ineFront = payload.ineFrontImage?.trim();
   const ineBack = payload.ineBackImage?.trim();
   const faceCapture = payload.selfieImage?.trim();
   const signature = payload.signatureDataUrl?.trim();
 
   if (!ineFront || !ineBack || !faceCapture || !signature) {
-    throw new Error("Faltan capturas obligatorias para crear la solicitud.");
+    throw new Error("Faltan capturas obligatorias para crear la solicitud. Asegúrate de completar la captura biométrica antes de continuar.");
   }
 
   const formData = new FormData();
@@ -574,9 +578,11 @@ export async function createCreditApplicationFromIntake(
     {
       timeout: INTAKE_CREATE_TIMEOUT_MS,
       headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
     },
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 function wait(ms: number) {
@@ -585,9 +591,12 @@ function wait(ms: number) {
 
 export async function getCreditApplicationById(
   applicationId: string
-): Promise<CreditApplicationDetailResponse> {
-  const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`);
-  return unwrapOrThrow(result);
+): Promise<CreditApplicationDetailResponse | null> {
+  const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`, {
+    skipGlobalErrorToast: true,
+  });
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function checkIdentityConflicts(
@@ -608,19 +617,27 @@ export async function checkIdentityConflicts(
         page: 1,
         limit: 1,
         search: normalizedIdentityValue,
-      })
+      }),
+      { skipGlobalErrorToast: true }
     ),
     get<PaginatedRowsResponse<{ id: number }>>(
       buildListUrl(BASE, {
         page: 1,
         limit: 5,
         search: normalizedIdentityValue,
-      })
+      }),
+      { skipGlobalErrorToast: true }
     ),
   ]);
 
-  const clients = unwrapOrThrow(clientsResponse);
-  const applications = unwrapOrThrow(applicationsResponse);
+  const clients = clientsResponse.data;
+  const applications = applicationsResponse.data;
+  if (!clients || !applications) {
+    return {
+      hasExistingClient: false,
+      hasExistingApplication: false,
+    };
+  }
   const parsedCurrentApplicationId = Number.parseInt(currentApplicationId ?? "", 10);
   const hasCurrentApplicationId = Number.isFinite(parsedCurrentApplicationId);
 
@@ -635,8 +652,10 @@ export async function checkIdentityConflicts(
 }
 
 export async function getAdditionalInformationCatalog(): Promise<AdditionalInformationCatalogItem[]> {
-  const result = await get<AdditionalInformationCatalogApiItem[]>(`${BASE}/additional-information/catalog`);
-  const catalogItems = unwrapOrThrow(result);
+  const result = await get<AdditionalInformationCatalogApiItem[]>(`${BASE}/additional-information/catalog`, {
+    skipGlobalErrorToast: true,
+  });
+  const catalogItems = result.data ?? [];
 
   return catalogItems.reduce<AdditionalInformationCatalogItem[]>((acc, item) => {
     const code = typeof item.code === "string" ? item.code.trim() : "";
@@ -664,37 +683,44 @@ export async function getAdditionalInformationCatalog(): Promise<AdditionalInfor
 export async function requestCreditApplicationAdditionalInformation(
   applicationId: string,
   codes: string[]
-): Promise<ApiSuccessPayload> {
-  const result = await post<ApiSuccessPayload>(`${BASE}/${applicationId}/additional-information`, { codes });
-  return unwrapOrThrow(result);
+): Promise<ApiSuccessPayload | null> {
+  const result = await post<ApiSuccessPayload>(`${BASE}/${applicationId}/additional-information`, { codes }, {
+    skipGlobalErrorToast: true,
+  });
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function sendCreditApplicationOtp(
   applicationId: string,
   whatsappNumber: string,
-): Promise<CreditApplicationOtpStateResponse> {
+): Promise<CreditApplicationOtpStateResponse | null> {
   const result = await post<CreditApplicationOtpStateResponse>(
     `${BASE}/${applicationId}/otp/send`,
     {
       whatsappNumber,
     },
+    { skipGlobalErrorToast: true },
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function verifyCreditApplicationOtp(
   applicationId: string,
   whatsappNumber: string,
   otpCode: string,
-): Promise<CreditApplicationOtpStateResponse> {
+): Promise<CreditApplicationOtpStateResponse | null> {
   const result = await post<CreditApplicationOtpStateResponse>(
     `${BASE}/${applicationId}/otp/verify`,
     {
       whatsappNumber,
       otpCode,
     },
+    { skipGlobalErrorToast: true },
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function validateSecurityCode(code: string): Promise<boolean> {
@@ -708,7 +734,7 @@ export async function saveCreditApplication(
     includeGuarantorSection?: boolean;
     sections?: Array<keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">>;
   }
-): Promise<{ id: string }> {
+): Promise<{ id: string } | null> {
   const applicationId = payload.id?.trim();
   if (!applicationId) {
     await wait(800);
@@ -728,7 +754,8 @@ export async function saveCreditApplication(
   const sections = options?.sections ?? defaultSections;
 
   for (const section of sections) {
-    await saveCreditApplicationSection(applicationId, section, payload);
+    const saved = await saveCreditApplicationSection(applicationId, section, payload);
+    if (!saved) return null;
   }
 
   return { id: applicationId };
@@ -738,7 +765,7 @@ export async function saveCreditApplicationSection(
   applicationId: string,
   section: keyof Omit<CreditApplicationFormPayload, "id" | "biometrics">,
   payload: CreditApplicationFormPayload
-): Promise<SaveSectionResponse> {
+): Promise<SaveSectionResponse | null> {
   if (section === "documentation") {
     payload.documentation = {
       ...payload.documentation,
@@ -781,44 +808,56 @@ export async function saveCreditApplicationSection(
     };
   }
 
-  const requestPayload = buildSectionPayload(section, payload);
-  const result = await patch<SaveSectionResponse>(`${BASE}/${applicationId}`, requestPayload);
-  return unwrapOrThrow(result);
+  const requestPayload = sanitizeFormValues(buildSectionPayload(section, payload));
+  const result = await patch<SaveSectionResponse>(`${BASE}/${applicationId}`, requestPayload, {
+    skipGlobalErrorToast: true,
+  });
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function submitCreditApplicationForReview(
   applicationId: string
-): Promise<SubmitCreditApplicationResponse> {
+): Promise<SubmitCreditApplicationResponse | null> {
   const result = await patch<SubmitCreditApplicationResponse>(
     `${BASE}/${applicationId}/submit`,
-    {}
+    {},
+    { skipGlobalErrorToast: true }
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function rejectCreditApplication(
   applicationId: string,
-): Promise<RejectCreditApplicationResponse> {
-  const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`);
-  return unwrapOrThrow(result);
+): Promise<RejectCreditApplicationResponse | null> {
+  const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`, undefined, {
+    skipGlobalErrorToast: true,
+  });
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function getCreditApplicationApprovalOptions(
   applicationId: string,
-): Promise<CreditApplicationApprovalOptionsResponse> {
+): Promise<CreditApplicationApprovalOptionsResponse | null> {
   const result = await get<CreditApplicationApprovalOptionsResponse>(
     `${BASE}/${applicationId}/approval-options`,
+    { skipGlobalErrorToast: true },
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }
 
 export async function approveCreditApplication(
   applicationId: string,
   payload: ApproveCreditApplicationRequest,
-): Promise<ApproveCreditApplicationResponse> {
+): Promise<ApproveCreditApplicationResponse | null> {
   const result = await patch<ApproveCreditApplicationResponse>(
     `${BASE}/${applicationId}/approve`,
     payload,
+    { skipGlobalErrorToast: true },
   );
-  return unwrapOrThrow(result);
+  if (result.error) return null;
+  return result.data;
 }

@@ -7,8 +7,6 @@ import {
   Button,
   CircularProgress,
 } from "@mui/material";
-import { FormTextField } from "@/components/Form";
-import { getApiErrorMessage } from "@/lib/axios";
 import { rejectCreditApplication } from "@/services/creditApplications.service";
 import type { RejectCreditApplicationResponse } from "@/types/solicitud-credito-detail.types";
 
@@ -28,15 +26,12 @@ export function RejectCreditModal({
   cooldownMonths = 6,
   onRejectSuccess,
 }: RejectCreditModalProps) {
-  const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       return;
     }
-    setReason("");
     setSubmitting(false);
   }, [open, applicationId]);
 
@@ -51,8 +46,10 @@ export function RejectCreditModal({
     setSubmitting(true);
     try {
       const response = await rejectCreditApplication(applicationId);
-      onRejectSuccess?.(response);
-      onClose();
+      if (response) {
+        onRejectSuccess?.(response);
+        onClose();
+      }
     } catch (err) {
       console.log(err);
     } finally {

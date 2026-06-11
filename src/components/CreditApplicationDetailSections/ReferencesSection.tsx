@@ -24,13 +24,13 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
         <Grid size={{ xs: 12 }}>
           <FormTextField label="Empresa" value={references.work.company} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Teléfono" value={references.work.phone} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Puesto del cliente" value={references.work.clientPosition} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Antigüedad (años)" value={String(references.work.tenureYears)} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -48,16 +48,16 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
           references.family.map((ref, index) => (
             <SectionCard key={index}>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormTextField label="Nombre" value={ref.name} readOnly fullWidth />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormTextField label="Parentesco" value={ref.relationship} readOnly fullWidth />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
                   <FormTextField label="Dirección" value={ref.address} readOnly fullWidth />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormTextField label="Teléfono" value={ref.phone} readOnly fullWidth />
                 </Grid>
               </Grid>

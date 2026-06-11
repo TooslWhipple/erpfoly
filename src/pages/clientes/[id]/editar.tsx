@@ -100,6 +100,13 @@ export default function ClientEditPage() {
     useFamilyRelationships();
   const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
 
+  const spouseFieldsEnabled = useMemo(() => {
+    const selectedStatus = maritalStatuses.find(
+      (status) => String(status.id) === basicInformationTab.values.maritalStatus
+    );
+    return selectedStatus?.code === "CASADO" || selectedStatus?.code === "UNION_LIBRE";
+  }, [maritalStatuses, basicInformationTab.values.maritalStatus]);
+
   const selectedTab = useMemo(() => resolveClientEditTab(tab), [tab]);
 
   useEffect(() => {
@@ -188,6 +195,7 @@ export default function ClientEditPage() {
         <FamilyTab
           values={familyTab.values}
           errors={familyTab.errors}
+          spouseFieldsEnabled={spouseFieldsEnabled}
           onFieldChange={(field, value) => {
             const nextValues = familyTab.setFieldValue(field, value);
             persistFamily(nextValues);
@@ -203,8 +211,6 @@ export default function ClientEditPage() {
         <AddressTab
           values={addressTab.values}
           errors={addressTab.errors}
-          clientWhatsappNumber={basicInformationTab.values.whatsappNumber}
-          canUseClientPhone={basicInformationTab.values.whatsappNumber.trim().length > 0}
           housingTypeOptions={housingTypes}
           housingTypesLoading={housingTypesLoading}
           mergeFieldValues={(patch) => {
@@ -213,11 +219,7 @@ export default function ClientEditPage() {
             return nextValues;
           }}
           onFieldChange={(field, value) => {
-            const normalizedValue =
-              field === "receiverPhone" && addressTab.values.useClientPhone
-                ? basicInformationTab.values.whatsappNumber
-                : value;
-            const nextValues = addressTab.setFieldValue(field, normalizedValue);
+            const nextValues = addressTab.setFieldValue(field, value);
             persistAddress(nextValues);
           }}
           onSave={handleSaveActiveTab}
@@ -231,7 +233,7 @@ export default function ClientEditPage() {
         <EmploymentTab
           values={employmentTab.values}
           errors={employmentTab.errors}
-          spouseSectionEnabled={familyTab.values.hasSpouse}
+          spouseSectionEnabled={spouseFieldsEnabled}
           mergeFieldValues={(patch) => {
             const nextValues = employmentTab.mergeFieldValues(patch);
             persistEmployment(nextValues);

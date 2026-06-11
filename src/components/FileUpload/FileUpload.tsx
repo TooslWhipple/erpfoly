@@ -220,7 +220,7 @@ export function FileUpload({
                 e.stopPropagation();
                 downloadFile(currentFile);
               }}>
-              Download
+              Descargar
             </Button>
           </Stack>
         </FileItemRow>

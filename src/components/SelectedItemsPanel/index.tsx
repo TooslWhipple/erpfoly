@@ -12,6 +12,7 @@ interface SelectedItemsPanelProps {
   onRemove: (productId: number) => void;
   onContinue: () => void;
   continueLabel?: string;
+  hidePrices?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -28,6 +29,7 @@ export default function SelectedItemsPanel({
   onRemove,
   onContinue,
   continueLabel = "Continuar",
+  hidePrices = false,
 }: SelectedItemsPanelProps) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -53,6 +55,7 @@ export default function SelectedItemsPanel({
               item={item}
               onQuantityChange={onQuantityChange}
               onRemove={onRemove}
+              hidePrices={hidePrices}
             />
           ))
         }
@@ -70,7 +73,9 @@ export default function SelectedItemsPanel({
           sx={{ textTransform: 'none' }}>
           <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant='body1' fontWeight={500}>{continueLabel}</Typography>
-            <Typography variant='body1' fontWeight={500} style={{ opacity: 0.6 }}>{formatCurrency(totalPrice)}</Typography>
+            {!hidePrices && (
+              <Typography variant='body1' fontWeight={500} style={{ opacity: 0.6 }}>{formatCurrency(totalPrice)}</Typography>
+            )}
           </Stack>
         </Button>
       </ContinueButtonArea>

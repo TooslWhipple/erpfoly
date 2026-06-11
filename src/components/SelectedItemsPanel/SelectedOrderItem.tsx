@@ -12,6 +12,7 @@ interface SelectedOrderItemProps {
   item: SelectedOrderItemType;
   onQuantityChange: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
+  hidePrices?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -26,6 +27,7 @@ export default function SelectedOrderItem({
   item,
   onQuantityChange,
   onRemove,
+  hidePrices = false,
 }: SelectedOrderItemProps) {
   return (
     <ItemContainer>
@@ -40,7 +42,9 @@ export default function SelectedOrderItem({
           />
         </Stack>
       </Stack>
-      <Typography variant='subtitle2' fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
+      {!hidePrices && (
+        <Typography variant='subtitle2' fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
+      )}
 
       <RemoveButton
         size="small"

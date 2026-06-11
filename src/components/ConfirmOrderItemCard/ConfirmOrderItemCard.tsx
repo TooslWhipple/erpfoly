@@ -36,6 +36,7 @@ export interface ConfirmOrderItemCardProps {
     item: ConfirmOrderItem;
     onQuantityChange?: (productId: number, quantity: number) => void;
     readOnly?: boolean;
+    hidePrices?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -46,7 +47,7 @@ function formatCurrency(value: number): string {
     }).format(value);
 }
 
-export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false }: ConfirmOrderItemCardProps) {
+export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false, hidePrices = false }: ConfirmOrderItemCardProps) {
     return (
         <Card>
             <Stack width="100%" direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between">
@@ -67,10 +68,12 @@ export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false 
                 </Stack>
 
                 <Stack direction="row" spacing={3} alignItems="center" justifyContent="space-between">
-                    <Stack direction="column" spacing={0.5}>
-                        <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
-                        <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
-                    </Stack>
+                    {!hidePrices && (
+                        <Stack direction="column" spacing={0.5}>
+                            <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
+                            <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
+                        </Stack>
+                    )}
 
                     <Stack direction="column" spacing={0.5}>
                         <Typography variant="body2" color="text.secondary" textAlign="center">Cantidad</Typography>
@@ -87,15 +90,17 @@ export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false 
                         }
                     </Stack>
 
-                    <Stack direction="column" spacing={0.5}>
-                        <Typography variant="body2" color="text.secondary">Total</Typography>
-                        <Typography variant="body1" fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
-                    </Stack>
+                    {!hidePrices && (
+                        <Stack direction="column" spacing={0.5}>
+                            <Typography variant="body2" color="text.secondary">Total</Typography>
+                            <Typography variant="body1" fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
+                        </Stack>
+                    )}
                 </Stack>
             </Stack>
 
             {
-                item.onlinePrices && !readOnly &&
+                item.onlinePrices && !readOnly && !hidePrices &&
                 <OnlinePriceBar onlinePrices={item.onlinePrices} />
             }
 

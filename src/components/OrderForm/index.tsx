@@ -101,6 +101,15 @@ export default function OrderForm({
     const [orderLoading, setOrderLoading] = useState(mode === "edit");
     const [originalOrder, setOriginalOrder] = useState<OrderFullDetail | null>(null);
 
+    const effectiveOrderType = useMemo((): "external" | "internal" => {
+        if (mode === "edit" && originalOrder) {
+            return originalOrder.order_type;
+        }
+        return orderType;
+    }, [mode, originalOrder, orderType]);
+
+    const isInternalOrder = effectiveOrderType === "internal";
+
     const resolvedSupplierId = propSupplierId ?? (router.query.supplierId as string | undefined);
     const resolvedSupplierName = propSupplierName ?? (router.query.supplierName as string | undefined);
     const resolvedBranchId = propBranchId ?? (router.query.branchId as string | undefined);
@@ -129,29 +138,38 @@ export default function OrderForm({
         setOrderLoading(true);
         try {
             const result = await getOrderFull(id);
-            if (result.data) {
-                setOriginalOrder(result.data);
+            const orderData = result.data;
+            if (orderData) {
+                setOriginalOrder(orderData);
 
-                if (result.data.order_type === "internal") {
+                if (orderData.order_type === "internal") {
                     setBranch({
-                        id: String(result.data.branch?.id ?? ""),
-                        name: result.data.branch?.name ?? "",
+                        id: String(orderData.branch?.id ?? ""),
+                        name: orderData.branch?.name ?? "",
+                    });
+                    getMainWarehouse().then((mw) => {
+                        if (mw) setMainWarehouse(mw);
                     });
                 } else {
                     setSupplier({
-                        id: String(result.data.supplier?.id ?? ""),
-                        name: result.data.supplier?.name ?? "",
+                        id: String(orderData.supplier?.id ?? ""),
+                        name: orderData.supplier?.name ?? "",
                     });
                 }
 
-                const items: SelectedOrderItem[] = result.data.order_items.map((item) => ({
+                const isInternal = orderData.order_type === "internal";
+                const items: SelectedOrderItem[] = orderData.order_items.map((item) => ({
                     productId: item.product?.id ?? 0,
                     productCode: item.product?.code ?? "",
                     productName: item.product?.short_name ?? "",
                     previewImage: item.product?.product_images?.[0]?.image_url ?? null,
                     quantity: item.requested_quantity,
-                    unitPrice: Number(item.product?.list_cost ?? 0),
-                    totalPrice: Number(item.product?.list_cost ?? 0) * item.requested_quantity,
+                    unitPrice: isInternal
+                        ? 0
+                        : Number(item.unit_price ?? item.product?.list_cost ?? 0),
+                    totalPrice: isInternal
+                        ? 0
+                        : Number(item.unit_price ?? item.product?.list_cost ?? 0) * item.requested_quantity,
                 }));
                 setSelectedItems(items);
             }
@@ -163,18 +181,18 @@ export default function OrderForm({
     };
 
     const sourceEntityId = useMemo(() => {
-        if (orderType === "external") {
+        if (effectiveOrderType === "external") {
             if (!supplier) return 0;
             const parsed = Number(supplier.id);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
         }
-        if (orderType === "internal") {
+        if (effectiveOrderType === "internal") {
             if (!mainWarehouse) return 0;
             const parsed = Number(mainWarehouse.id);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
         }
         return 0;
-    }, [orderType, supplier, mainWarehouse]);
+    }, [effectiveOrderType, supplier, mainWarehouse]);
 
     useEffect(() => {
         if (!sourceEntityId) return;
@@ -182,7 +200,7 @@ export default function OrderForm({
         const fetchSuggestions = async () => {
             setSuggestionsLoading(true);
             try {
-                if (orderType === "external") {
+                if (effectiveOrderType === "external") {
                     const result = await getSuggestionsBySupplier(sourceEntityId, 10);
                     if (result.data) {
                         setSuggestions(result.data);
@@ -201,15 +219,15 @@ export default function OrderForm({
         };
 
         fetchSuggestions();
-    }, [sourceEntityId, orderType]);
+    }, [sourceEntityId, effectiveOrderType]);
 
     const {
         data: productRows,
         isFetching: articlesFetching,
     } = useQuery({
-        queryKey: [orderType === "external" ? "products-by-supplier" : "products-by-branch", sourceEntityId],
+        queryKey: [effectiveOrderType === "external" ? "products-by-supplier" : "products-by-branch", sourceEntityId],
         queryFn: async () => {
-            if (orderType === "external") {
+            if (effectiveOrderType === "external") {
                 return unwrapOrThrow(await getProductsBySupplier(sourceEntityId));
             }
             return unwrapOrThrow(await getProductsByBranch(sourceEntityId));
@@ -233,13 +251,27 @@ export default function OrderForm({
     const articlesLoading = sourceEntityId > 0 && articlesFetching;
     const emptyArticlesMessage = isSearchActive
         ? "No se encontraron artículos para la búsqueda"
-        : "No hay artículos disponibles para este proveedor";
+        : isInternalOrder
+            ? "No hay artículos disponibles para esta sucursal"
+            : "No hay artículos disponibles para este proveedor";
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
     };
 
     const handleAddArticle = async (article: ArticleRow) => {
+        if (isInternalOrder) {
+            handleAddToOrder({
+                articleId: article.id,
+                articleName: article.name,
+                folio: article.folio,
+                quantity: 1,
+                unitPrice: 0,
+                totalPrice: 0,
+            });
+            return;
+        }
+
         setSelectedArticle(article);
         setAddArticleModalOpen(true);
         setCostHistoryLoading(true);
@@ -334,7 +366,7 @@ export default function OrderForm({
         if (selectedItems.length === 0) return;
 
         if (mode === "create") {
-            if (orderType === "external") {
+            if (effectiveOrderType === "external") {
                 const orderData = {
                     orderType: "external" as const,
                     supplierId: supplier?.id,
@@ -405,13 +437,13 @@ export default function OrderForm({
             .join(' ') + '...';
     }
 
-    const displayName = orderType === "external" ? supplier?.name : branch?.name;
+    const displayName = effectiveOrderType === "external" ? supplier?.name : branch?.name;
 
     const breadcrumbs: BreadcrumbItem[] = mode === "create"
         ? [
-            { label: "Pedidos", href: orderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
-            { label: truncatedName(displayName), href: displayName ? (orderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
-            { label: orderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido" },
+            { label: "Pedidos", href: effectiveOrderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
+            { label: truncatedName(displayName), href: displayName ? (effectiveOrderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
+            { label: effectiveOrderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido" },
         ]
         : [
             { label: "Pedidos", href: originalOrder?.order_type === "internal" ? "/pedidos/sucursales" : "/pedidos" },
@@ -420,7 +452,7 @@ export default function OrderForm({
         ];
 
     const pageTitle = mode === "create"
-        ? (orderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido")
+        ? (effectiveOrderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido")
         : `Editar pedido ${originalOrder?.folio ?? ""}`;
 
     const columns: Column<ArticleRow>[] = [
@@ -551,7 +583,7 @@ export default function OrderForm({
         );
     }
 
-    if (mode === "create" && orderType === "external" && !supplier) {
+    if (mode === "create" && effectiveOrderType === "external" && !supplier) {
         return (
             <MainLayout>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
@@ -561,7 +593,7 @@ export default function OrderForm({
         );
     }
 
-    if (mode === "create" && orderType === "internal" && (!branch || !mainWarehouse)) {
+    if (effectiveOrderType === "internal" && (!branch || !mainWarehouse)) {
         return (
             <MainLayout>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
@@ -634,17 +666,20 @@ export default function OrderForm({
                         onRemove={handleRemoveItem}
                         onContinue={handleContinue}
                         continueLabel={mode === "edit" ? "Guardar cambios" : "Continuar"}
+                        hidePrices={isInternalOrder}
                     />
                 </StickySidebarGrid>
             </Grid>
 
-            <AddArticleToOrderModal
-                open={addArticleModalOpen}
-                onClose={handleCloseAddArticleModal}
-                article={selectedArticle}
-                onAddToOrder={handleAddToOrder}
-                costHistory={costHistory}
-            />
+            {!isInternalOrder && (
+                <AddArticleToOrderModal
+                    open={addArticleModalOpen}
+                    onClose={handleCloseAddArticleModal}
+                    article={selectedArticle}
+                    onAddToOrder={handleAddToOrder}
+                    costHistory={costHistory}
+                />
+            )}
 
             <BranchSelectionModal
                 open={branchModalOpen}

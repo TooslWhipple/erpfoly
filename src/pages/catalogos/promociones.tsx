@@ -239,8 +239,8 @@ export default function Promociones() {
     <MainLayout>
       <Stack direction="column" spacing={3}>
         <Title title="Promociones" />
-        <Stack direction="row" spacing={2} alignContent="center" justifyContent="space-between">
-          <Stack direction="row" spacing={2} alignContent="center">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignContent="center" justifyContent="space-between">
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignContent="center">
             <FilterMenu
               label="sucursales"
               title="Sucursales"
@@ -263,7 +263,7 @@ export default function Promociones() {
           <TabFilters
             tabs={[]}
             activeTab=""
-            onTabChange={() => {}}
+            onTabChange={() => { }}
             showSearch
             searchValue={searchInput}
             onSearchChange={handleSearchChange}

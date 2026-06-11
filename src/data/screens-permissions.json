@@ -59,7 +59,19 @@
       "code": "pedidos-sucursales",
       "name": "Pedidos por sucursal",
       "path": "/pedidos/sucursales",
-      "actions": ["view", "create"]
+      "actions": ["view", "create", "edit"]
+    },
+    {
+      "code": "pedidos-sucursales-detalle",
+      "name": "Detalle de pedido sucursal",
+      "path": "/pedidos/sucursales/[id]",
+      "actions": ["view", "edit"]
+    },
+    {
+      "code": "pedidos-sucursales-editar",
+      "name": "Editar pedido sucursal",
+      "path": "/pedidos/sucursales/[id]/editar",
+      "actions": ["view", "edit"]
     },
     {
       "code": "pedidos-sucursales-nuevo",

@@ -56,7 +56,12 @@ export default function ConfirmarArticulosPage() {
                 const parsed = JSON.parse(stored) as ConfirmOrderData;
                 if (parsed.items?.length) {
                     setOrderData(parsed);
-                    setItems(parsed.items.map(withPlaceholderOnlinePrices));
+                    const isInternal = parsed.orderType === "internal";
+                    setItems(
+                        isInternal
+                            ? parsed.items
+                            : parsed.items.map(withPlaceholderOnlinePrices)
+                    );
                     setStatus("idle");
                 } else {
                     setStatus("empty");
@@ -69,11 +74,26 @@ export default function ConfirmarArticulosPage() {
         }
     }, []);
 
+    const isInternalOrder = orderData?.orderType === "internal";
+
     const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
     const iva = useMemo(() => subtotal * IVA_RATE, [subtotal]);
     const total = useMemo(() => subtotal + iva, [subtotal, iva]);
+    const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
     const handleBack = () => {
+        if (orderData?.orderType === "internal") {
+            router.push({
+                pathname: "/pedidos/sucursales/nuevo",
+                query: {
+                    orderType: "internal",
+                    branchId: orderData.branchId,
+                    branchName: orderData.branchName,
+                },
+            });
+            return;
+        }
+
         router.push({
             pathname: "/pedidos/nuevo",
             query: orderData?.supplierId && orderData?.supplierName
@@ -205,7 +225,9 @@ export default function ConfirmarArticulosPage() {
                                     <ConfirmOrderItemCard
                                         key={item.productId}
                                         item={item}
-                                        onQuantityChange={handleQuantityChange}
+                                        readOnly={isInternalOrder}
+                                        hidePrices={isInternalOrder}
+                                        onQuantityChange={isInternalOrder ? undefined : handleQuantityChange}
                                     />
                                 ))
                             }
@@ -215,18 +237,27 @@ export default function ConfirmarArticulosPage() {
                     <Grid size={{ xs: 12, md: 4, xl: 3 }}>
                         <SummaryCard>
                             <Stack spacing={2}>
-                                <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
-                                    <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
-                                </Stack>
-                                <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">IVA</Typography>
-                                    <Typography variant="body1">{formatCurrency(iva)}</Typography>
-                                </Stack>
-                                <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="h6" fontWeight={700}>Total:</Typography>
-                                    <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
-                                </Stack>
+                                {isInternalOrder ? (
+                                    <Stack direction="row" justifyContent="space-between">
+                                        <Typography variant="body2" color="text.secondary">Total:</Typography>
+                                        <Typography variant="h6" fontWeight={700}>{totalQuantity} {(totalQuantity) > 1 ? "Artículos" : "Artículo"}</Typography>
+                                    </Stack>
+                                ) : (
+                                    <>
+                                        <Stack direction="row" justifyContent="space-between">
+                                            <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                                            <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
+                                        </Stack>
+                                        <Stack direction="row" justifyContent="space-between">
+                                            <Typography variant="body2" color="text.secondary">IVA</Typography>
+                                            <Typography variant="body1">{formatCurrency(iva)}</Typography>
+                                        </Stack>
+                                        <Stack direction="row" justifyContent="space-between">
+                                            <Typography variant="h6" fontWeight={700}>Total:</Typography>
+                                            <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
+                                        </Stack>
+                                    </>
+                                )}
                                 <Button
                                     variant="contained"
                                     color="primary"
@@ -239,7 +270,7 @@ export default function ConfirmarArticulosPage() {
                                     {status === "submitting" ? (
                                         <CircularProgress size={24} color="inherit" />
                                     ) : (
-                                        "Guardar pedido"
+                                        isInternalOrder ? "Solicitar pedido" : "Guardar pedido"
                                     )}
                                 </Button>
                             </Stack>

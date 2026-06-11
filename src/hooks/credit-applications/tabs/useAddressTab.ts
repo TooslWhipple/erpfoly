@@ -33,7 +33,7 @@ export function useAddressTab(initialValues: AddressTabValues) {
     setErrors({});
   }, []);
 
-  const validateValues = useCallback(() => {
+  const validateValues = useCallback((silent?: boolean) => {
     const nextErrors: AddressTabErrors = {};
 
     if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
@@ -50,7 +50,9 @@ export function useAddressTab(initialValues: AddressTabValues) {
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";
 
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [values]);
 

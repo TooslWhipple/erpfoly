@@ -248,6 +248,7 @@ export interface ApiResponse<T> {
 export interface ApiError {
 	message: string;
 	errors?: Record<string, string[]>;
+	validationMessages?: string[];
 }
 
 export interface ApiSuccessPayload {
@@ -311,7 +312,29 @@ function messageFromPayload(data: unknown): string | null {
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
 	const message = messageFromPayload(data);
-	if (message) return { message: mapApiErrorToUserMessage(message) };
+	if (message) {
+		const apiError: ApiError = { message: mapApiErrorToUserMessage(message) };
+		if (data && typeof data === "object" && "message" in data) {
+			const rawMessage = (data as { message: unknown }).message;
+			if (Array.isArray(rawMessage)) {
+				apiError.validationMessages = rawMessage.map(String);
+			}
+		}
+		if (
+			data &&
+			typeof data === "object" &&
+			"error" in data &&
+			data.error &&
+			typeof data.error === "object" &&
+			"message" in data.error
+		) {
+			const rawMessage = (data.error as { message: unknown }).message;
+			if (Array.isArray(rawMessage)) {
+				apiError.validationMessages = rawMessage.map(String);
+			}
+		}
+		return apiError;
+	}
 	return {
 		message: mapApiErrorToUserMessage(error.message || "Network or server error"),
 	};

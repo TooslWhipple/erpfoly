@@ -108,6 +108,12 @@ export interface SaleDetailPayment {
   changeAmount: number | null;
 }
 
+export interface SaleDetailCredit {
+  downPayment: number;
+  termMonths: number;
+  installmentAmount: number;
+}
+
 export interface SaleDetail {
   id: number;
   folio: string;
@@ -115,6 +121,8 @@ export interface SaleDetail {
   subtotal: number;
   discountAmount: number;
   totalAmount: number;
+  loyaltyPointsValue: number;
+  purchaseType: string | null;
   createdAt: string;
   branchId?: number | null;
   deliveryDate?: string | null;
@@ -123,6 +131,7 @@ export interface SaleDetail {
   client: SaleDetailClient | null;
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];
+  credit: SaleDetailCredit | null;
 }
 
 export type DeliveryAvailability = 'available' | 'low' | 'none';

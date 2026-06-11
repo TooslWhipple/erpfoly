@@ -10,8 +10,12 @@ import type {
   AdditionalInformationRequestedItem,
   CreditApplicationDetailResponse,
 } from "@/services/creditApplications.service";
+<<<<<<< HEAD
 import { getApiErrorMessage } from "@/lib/axios";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
+=======
+import { parseBasicInformationServerErrors, useBasicInformationTab } from "./tabs/useBasicInformationTab";
+>>>>>>> 913abc709fc7e1bfcbc195999cb4990c278a4e5d
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
 import { useEmploymentTab } from "./tabs/useEmploymentTab";
@@ -314,29 +318,29 @@ function mapCreditApplicationToFormValues(
     familyReferences:
       creditApplication.references.family.length > 0
         ? creditApplication.references.family.map((reference, index) => ({
-            id: `reference-${index + 1}`,
-            name: [reference.firstName, reference.lastName]
-              .filter((value) => value.trim().length > 0)
-              .join(" "),
-            relationshipId:
-              reference.relationship.id != null
-                ? String(reference.relationship.id)
-                : "",
-            address: reference.address ?? "",
-            phone: reference.phone ?? "",
-          }))
+          id: `reference-${index + 1}`,
+          name: [reference.firstName, reference.lastName]
+            .filter((value) => value.trim().length > 0)
+            .join(" "),
+          relationshipId:
+            reference.relationship.id != null
+              ? String(reference.relationship.id)
+              : "",
+          address: reference.address ?? "",
+          phone: reference.phone ?? "",
+        }))
         : [{ id: "reference-1", name: "", relationshipId: "", address: "", phone: "" }],
   };
 
   const mapDocumentItems = (
     list:
       | Array<{
-          id: number;
-          typeCode: string;
-          typeName: string;
-          filePath: string;
-          fileUrl: string;
-        }>
+        id: number;
+        typeCode: string;
+        typeName: string;
+        filePath: string;
+        fileUrl: string;
+      }>
       | undefined
   ) =>
     (list ?? []).map((item) => {
@@ -417,23 +421,23 @@ function mapDocumentationFromBiometrics(
     ...currentDocumentation,
     ineFrontFiles: biometrics.ineFrontImage
       ? [
-          {
-            id: `ine-front-${Date.now()}`,
-            name: "ine-frontal-capturada.png",
-            url: biometrics.ineFrontImage,
-            uploadedAt: "Capturada",
-          },
-        ]
+        {
+          id: `ine-front-${Date.now()}`,
+          name: "ine-frontal-capturada.png",
+          url: biometrics.ineFrontImage,
+          uploadedAt: "Capturada",
+        },
+      ]
       : currentDocumentation.ineFrontFiles,
     ineBackFiles: biometrics.ineBackImage
       ? [
-          {
-            id: `ine-back-${Date.now()}`,
-            name: "ine-posterior-capturada.png",
-            url: biometrics.ineBackImage,
-            uploadedAt: "Capturada",
-          },
-        ]
+        {
+          id: `ine-back-${Date.now()}`,
+          name: "ine-posterior-capturada.png",
+          url: biometrics.ineBackImage,
+          uploadedAt: "Capturada",
+        },
+      ]
       : currentDocumentation.ineBackFiles,
   };
 }
@@ -453,7 +457,7 @@ export interface SubmitCreditApplicationResult {
 
 export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCreditApplicationFormParams) {
   const router = useRouter();
-  
+
   const [loading, setLoading] = useState(!isCreateMode);
   const [loadingApplicationDetail, setLoadingApplicationDetail] = useState(false);
   const [formAction, setFormAction] = useState<FormActionPhase>("idle");
@@ -735,6 +739,19 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const isFormLocked = formAction !== "idle" || loadingApplicationDetail;
   const saving = isFormLocked;
 
+  const isFormComplete =
+    basicInformationTab.validateValues(true) &&
+    familyTab.validateValues(true) &&
+    addressTab.validateValues(true) &&
+    employmentTab.validateValues(true) &&
+    referencesTab.validateValues(true) &&
+    documentationTab.validateValues({
+      requireIncomeProof: requiresIncomeProof,
+      requireEmploymentProofLetter: requiresEmploymentProofLetter,
+      silent: true,
+    }) &&
+    guarantorTab.validateValues(true);
+
   const beginFormAction = useCallback((phase: Exclude<FormActionPhase, "idle">): boolean => {
     if (formActionRef.current) {
       return false;
@@ -834,7 +851,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
         requireEmploymentProofLetter: requiresEmploymentProofLetter,
       });
     }
-    if (activeTab === "guarantor" && requiresGuarantorInformation) {
+    if (activeTab === "guarantor") {
       return guarantorTab.validateValues();
     }
     return true;
@@ -850,7 +867,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     isCreateMode,
     referencesTab,
     requiresEmploymentProofLetter,
-    requiresGuarantorInformation,
     requiresIncomeProof,
   ]);
 
@@ -979,7 +995,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     });
     if (!documentationFormIsValid) invalidTabs.push("documentation");
 
-    if (requiresGuarantorInformation && !guarantorTab.validateValues()) {
+    if (!guarantorTab.validateValues()) {
       invalidTabs.push("guarantor");
     }
 
@@ -995,7 +1011,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     isCreateMode,
     referencesTab,
     requiresEmploymentProofLetter,
-    requiresGuarantorInformation,
     requiresIncomeProof,
   ]);
 
@@ -1110,6 +1125,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       endFormAction();
     }
   }, [
+    activeTab,
+    basicInformationTab,
     beginFormAction,
     endFormAction,
     getCurrentFormPayload,
@@ -1216,6 +1233,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     loadingApplicationDetail,
     saving,
     isFormLocked,
+    isFormComplete,
     formAction,
     error,
     saveSuccess,

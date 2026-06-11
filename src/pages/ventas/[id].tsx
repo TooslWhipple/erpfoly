@@ -517,14 +517,54 @@ export default function VentaDetalle() {
                       </Typography>
                     </Stack>
                   )}
+                  {sale.loyaltyPointsValue > 0 && (
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Descuento Foly Puntos
+                      </Typography>
+                      <Typography variant="body2" color="error.main">
+                        -{formatCurrency(sale.loyaltyPointsValue)}
+                      </Typography>
+                    </Stack>
+                  )}
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body1" fontWeight={700}>
-                      Total:
+                    <Typography
+                      variant={sale.credit ? "body2" : "body1"}
+                      color={sale.credit ? "text.secondary" : undefined}
+                      fontWeight={sale.credit ? undefined : 700}
+                    >
+                      {sale.credit ? "Total" : "Total:"}
                     </Typography>
-                    <Typography variant="body1" fontWeight={700}>
+                    <Typography
+                      variant={sale.credit ? "body2" : "body1"}
+                      fontWeight={sale.credit ? undefined : 700}
+                    >
                       {formatCurrency(sale.totalAmount)}
                     </Typography>
                   </Stack>
+
+                  {sale.credit && (
+                    <>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="h6" fontWeight={700}>
+                          Enganche:
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700}>
+                          {formatCurrency(sale.credit.downPayment)}
+                        </Typography>
+                      </Stack>
+                      <Box sx={{ bgcolor: "grey.100", borderRadius: 1, px: 2, py: 1 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Typography variant="body2" color="text.secondary">
+                            {sale.credit.termMonths} Meses de
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600}>
+                            {formatCurrency(sale.credit.installmentAmount)}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </>
+                  )}
                 </Stack>
               </CardContent>
             </Card>

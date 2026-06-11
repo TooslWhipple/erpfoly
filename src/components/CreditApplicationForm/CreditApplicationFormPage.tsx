@@ -36,11 +36,10 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
   const {
     loading,
-    loadingApplicationDetail,
     saving,
     isFormLocked,
+    isFormComplete,
     formAction,
-    error,
     activeTab,
     tabs,
     requiresIncomeProof,
@@ -48,6 +47,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     requiresGuarantorInformation,
     missingAdditionalInformationLabels,
     tabsWithMissingRequestedInformation,
+    error,
     setActiveTab,
     basicInformationTab,
     familyTab,
@@ -233,9 +233,10 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           </Stack>
           <Button
             variant="contained"
-            disabled={isFormLocked || loading}
             style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
+            disabled={isFormLocked || loading || !isFormComplete}
             onClick={handleSubmitApplicationClick}
+            sx={{ minWidth: 160 }}
           >
             {
               (isSubmitButtonLoading) ?
@@ -245,6 +246,16 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             }
           </Button>
         </Stack>
+
+        {
+          error &&
+          <StatusAlertCard
+            variant="error"
+            title="Error al guardar"
+            message={error}
+            icon={<CircleAlert size={18} />}
+          />
+        }
 
         {
           missingAdditionalInformationLabels.length > 0 &&

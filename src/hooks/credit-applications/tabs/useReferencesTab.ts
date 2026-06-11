@@ -93,7 +93,7 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
     setErrors({});
   }, []);
 
-  const validateValues = useCallback(() => {
+  const validateValues = useCallback((silent?: boolean) => {
     const nextErrors: ReferencesTabErrors = {};
     if (!values.company.trim()) nextErrors.company = "Empresa es requerida";
     if (!values.phone.trim()) nextErrors.phone = "Teléfono es requerido";
@@ -138,7 +138,9 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
       nextErrors.familyReferenceItems = familyReferenceItems;
     }
 
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [values]);
 

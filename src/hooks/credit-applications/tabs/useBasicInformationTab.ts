@@ -21,6 +21,36 @@ import {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VERIFIED_SECURITY_CODE_VALUE = "Verificado";
 
+const SERVER_ERROR_FIELD_MAP: Record<string, keyof BasicInformationFormErrors> = {
+  "basicInformation.firstName": "firstName",
+  "basicInformation.lastName": "lastName",
+  "basicInformation.secondLastName": "secondLastName",
+  "basicInformation.birthDate": "birthDate",
+  "basicInformation.maritalStatusId": "maritalStatus",
+  "basicInformation.curp": "curp",
+  "basicInformation.rfc": "rfc",
+  "basicInformation.email": "email",
+  "basicInformation.whatsappNumber": "whatsappNumber",
+};
+
+export function parseBasicInformationServerErrors(
+  validationMessages: string[]
+): Partial<BasicInformationFormErrors> {
+  const errors: Partial<BasicInformationFormErrors> = {};
+  for (const msg of validationMessages) {
+    const match = msg.match(/^([a-zA-Z0-9_.]+)\s+(.+)$/);
+    if (!match) continue;
+    const [, fieldPath, errorMessage] = match;
+    const localField = SERVER_ERROR_FIELD_MAP[fieldPath];
+    if (localField) {
+      const capitalized =
+        errorMessage.charAt(0).toUpperCase() + errorMessage.slice(1);
+      errors[localField] = capitalized;
+    }
+  }
+  return errors;
+}
+
 type BasicInformationTabOptions = {
   applicationId?: string;
   prepareForOtpSend?: (
@@ -130,7 +160,14 @@ export function useBasicInformationTab(
     [],
   );
 
-  const validateValues = useCallback((): boolean => {
+  const setServerErrors = useCallback(
+    (serverErrors: Partial<BasicInformationFormErrors>) => {
+      setErrors((prev) => ({ ...prev, ...serverErrors }));
+    },
+    [],
+  );
+
+  const validateValues = useCallback((silent?: boolean): boolean => {
     const nextErrors: BasicInformationFormErrors = {};
 
     if (!values.firstName.trim()) nextErrors.firstName = "Nombre(s) es requerido";
@@ -169,7 +206,9 @@ export function useBasicInformationTab(
         nextErrors.securityCode ?? "Debes validar el código de seguridad";
     }
 
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [isSecurityCodeValid, values]);
 
@@ -254,6 +293,13 @@ export function useBasicInformationTab(
       }));
       return response.verified;
     } catch (error) {
+      const apiError = (error as Error & { apiError?: { message?: string; validationMessages?: string[] } }).apiError;
+      if (apiError?.validationMessages && apiError.validationMessages.length > 0) {
+        const fieldErrors = parseBasicInformationServerErrors(apiError.validationMessages);
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        return false;
+      }
+
       const fallbackMessage = shouldSendOtp
         ? "No se pudo enviar el OTP por WhatsApp"
         : "No se pudo validar el código OTP";
@@ -356,6 +402,7 @@ export function useBasicInformationTab(
     isSecurityCodeFieldDisabled,
     setFieldValue,
     setValuesFromExternalSource,
+    setServerErrors,
     validateValues,
     validateCurrentSecurityCode,
     validateIdentityField,

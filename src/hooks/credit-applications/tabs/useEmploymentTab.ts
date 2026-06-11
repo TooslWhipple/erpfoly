@@ -42,7 +42,7 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     setErrors({});
   }, []);
 
-  const validateValues = useCallback(() => {
+  const validateValues = useCallback((silent?: boolean) => {
     const nextErrors: EmploymentTabErrors = {};
     if (!values.company.trim()) nextErrors.company = "Empresa es requerida";
     if (!values.postalCode.trim()) nextErrors.postalCode = "Código postal es requerido";
@@ -90,7 +90,9 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
       if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
     }
 
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [values]);
 

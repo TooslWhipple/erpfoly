@@ -25,7 +25,7 @@ export function useDocumentationTab(initialValues: DocumentationTabValues) {
     values,
     setFieldValue,
     setValuesFromExternalSource,
-    validateValues: (options?: { requireIncomeProof?: boolean; requireEmploymentProofLetter?: boolean }) => {
+    validateValues: (options?: { requireIncomeProof?: boolean; requireEmploymentProofLetter?: boolean; silent?: boolean }) => {
       const requiresIncomeProof = options?.requireIncomeProof ?? false;
       const requiresEmploymentProofLetter = options?.requireEmploymentProofLetter ?? false;
       const hasIncomeProof = values.incomeProofFiles.length > 0;

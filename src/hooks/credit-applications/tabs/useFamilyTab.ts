@@ -22,7 +22,7 @@ export function useFamilyTab(initialValues: FamilyTabValues) {
     setErrors({});
   }, []);
 
-  const validateValues = useCallback(() => {
+  const validateValues = useCallback((silent?: boolean) => {
     const nextErrors: FamilyTabErrors = {};
 
     if (values.hasSpouse) {
@@ -36,7 +36,9 @@ export function useFamilyTab(initialValues: FamilyTabValues) {
       }
     }
 
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [values]);
 

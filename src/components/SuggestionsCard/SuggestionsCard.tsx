@@ -28,24 +28,6 @@ function normalizeTrendValue(value: number, maxValue: number, height: number): n
 }
 
 export function SuggestionsCard({ products, loading = false }: SuggestionsCardProps) {
-    if (loading) {
-        return (
-            <>
-                <Stack sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>Cargando...</Stack>
-            </>
-        );
-    }
-
-    if (products.length === 0) {
-        return (
-            <>
-                <Stack sx={{ padding: 2, color: "#71717A", fontSize: 14 }}>
-                    No hay sugerencias disponibles
-                </Stack>
-            </>
-        );
-    }
-
     return (
         <>
             <Stack spacing={1}>
@@ -72,11 +54,12 @@ export function SuggestionsCard({ products, loading = false }: SuggestionsCardPr
                             return (
                                 <ProductItem key={product.id}>
                                     <Stack direction="row" spacing={1}>
-                                        {product.imageUrl ? (
-                                            <ProductImage src={product.imageUrl} alt={product.name} />
-                                        ) : (
-                                            <ImagePlaceholder />
-                                        )}
+                                        {
+                                            (product.imageUrl) ?
+                                                <ProductImage src={product.imageUrl} alt={product.name} />
+                                                :
+                                                <ImagePlaceholder />
+                                        }
                                         <Stack spacing={0.5}>
                                             <Typography variant="subtitle1" fontWeight={600}>{product.name}</Typography>
                                             <Typography variant="body2" color="text.secondary">{product.sku}</Typography>

@@ -193,6 +193,7 @@ export default function CotizacionesGuardadas() {
           onPageChange={setPage}
           onRowsPerPageChange={setRowsPerPage}
           emptyMessage="No hay cotizaciones guardadas"
+          onRowClick={(row) => void router.push(`/cotizaciones/${row.id}`)}
         />
       </Stack>
     </MainLayout>

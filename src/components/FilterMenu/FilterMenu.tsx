@@ -2,21 +2,15 @@ import { useState, useRef } from "react";
 import {
   Button,
   Popover,
-  Divider,
   useTheme,
+  Typography,
+  Stack,
+  ListItem,
+  ListItemButton,
+  Checkbox,
 } from "@mui/material";
-import { FilterList as FilterIcon } from "@mui/icons-material";
-import {
-  ClearButton,
-  MenuContainer,
-  MenuHeader,
-  MenuTitle,
-  OptionLabel,
-  OptionsList,
-  StyledCheckbox,
-  StyledListItem,
-  StyledListItemButton,
-} from "./FilterMenu.styles";
+import { MenuContainer, MenuHeader } from "./FilterMenu.styles";
+import { ListFilter } from "lucide-react";
 
 export interface FilterOption {
   id: string | number;
@@ -54,7 +48,7 @@ export function FilterMenu({
   const areAllOptionsSelected =
     selectedIds.length > 0 &&
     selectedIds.filter((id) => id !== allOptionId).length ===
-      options.filter((opt) => opt.id !== allOptionId).length;
+    options.filter((opt) => opt.id !== allOptionId).length;
 
   const handleOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!disabled) {
@@ -110,24 +104,31 @@ export function FilterMenu({
       if (labelText.includes("sucursales")) {
         return "Todas las sucursales";
       }
+
       if (labelText.includes("departamentos")) {
         return "Todos los departamentos";
       }
+
       return `Todas las ${labelText}`;
     }
+
     if (selectedWithoutAll.length === 0) {
       if (labelText.includes("sucursales")) {
         return "Todas las sucursales";
       }
+
       if (labelText.includes("departamentos")) {
         return "Todos los departamentos";
       }
+
       return label;
     }
+
     if (selectedWithoutAll.length === 1) {
       const selected = options.find((opt) => opt.id === selectedWithoutAll[0]);
       return selected?.label || label;
     }
+
     return `${selectedWithoutAll.length} seleccionadas`;
   };
 
@@ -152,24 +153,14 @@ export function FilterMenu({
     <>
       <Button
         ref={buttonRef}
-        variant="outlined"
-        startIcon={<FilterIcon />}
-        onClick={handleOpen}
+        variant="option"
+        startIcon={<ListFilter size={16} color={theme.palette.text.secondary} />}
         disabled={disabled}
-        sx={{
-          height: 40,
-          whiteSpace: "nowrap",
-          textTransform: "none",
-          backgroundColor: showingAll ? app.background.sidebar : "transparent",
-          color: showingAll ? theme.palette.text.secondary : theme.palette.text.primary,
-          borderColor: app.border,
-          "&:hover": {
-            borderColor: app.sidebar.textSelected,
-            backgroundColor: app.background.sidebar,
-          },
-        }}
-      >
-        {getButtonLabel()}
+        style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
+        onClick={handleOpen}>
+        {
+          getButtonLabel()
+        }
       </Button>
 
       <Popover
@@ -194,39 +185,35 @@ export function FilterMenu({
       >
         <MenuContainer>
           <MenuHeader>
-            <MenuTitle>{title}</MenuTitle>
-            <ClearButton onClick={handleClear} disabled={selectedIds.length === 0}>
-              Limpiar
-            </ClearButton>
+            <Typography variant="body2" color="text.secondary" fontWeight={600}>{title}</Typography>
+            <Button variant="text" size="small" onClick={handleClear} disabled={selectedIds.length === 0}>Limpiar</Button>
           </MenuHeader>
 
-          <Divider />
-
-          <OptionsList>
-            <StyledListItem disablePadding>
-              <StyledListItemButton onClick={handleToggleAll}>
-                <StyledCheckbox
+          <Stack>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleToggleAll}>
+                <Checkbox
                   checked={isAllSelected}
                   indeterminate={areAllOptionsSelected && !isAllSelected}
                 />
-                <OptionLabel primary={allOptionLabel} />
-              </StyledListItemButton>
-            </StyledListItem>
+                <Typography variant="body2" fontWeight={400}>{allOptionLabel}</Typography>
+              </ListItemButton>
+            </ListItem>
 
             {options
               .filter((opt) => opt.id !== allOptionId)
               .map((option) => {
                 const isSelected = selectedIds.includes(option.id);
                 return (
-                  <StyledListItem key={option.id} disablePadding>
-                    <StyledListItemButton onClick={() => handleToggleOption(option.id)}>
-                      <StyledCheckbox checked={isSelected} />
-                      <OptionLabel primary={option.label} />
-                    </StyledListItemButton>
-                  </StyledListItem>
+                  <ListItem key={option.id} disablePadding>
+                    <ListItemButton onClick={() => handleToggleOption(option.id)}>
+                      <Checkbox checked={isSelected} />
+                      <Typography variant="body2" fontWeight={400}>{option.label}</Typography>
+                    </ListItemButton>
+                  </ListItem>
                 );
               })}
-          </OptionsList>
+          </Stack>
         </MenuContainer>
       </Popover>
     </>

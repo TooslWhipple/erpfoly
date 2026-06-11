@@ -90,7 +90,7 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
             </Stack>
 
             <Button
-                variant="text"
+                variant="white"
                 color="primary"
                 onClick={handleAdd} fullWidth>
                 Agregar

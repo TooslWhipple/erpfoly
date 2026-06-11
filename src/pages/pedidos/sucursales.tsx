@@ -8,7 +8,7 @@ import type { Supplier } from "@/types/pedidos.types";
 import type { OrderListItem } from "@/types/orders.types";
 import { getOrders } from "@/services/orders.service";
 import { Stack } from "@mui/material";
-import { BRANCH_ORDERS_CREATE, BRANCH_ORDERS_READ } from "@/lib/permissions";
+import { BRANCH_ORDERS_CREATE, BRANCH_ORDERS_READ, BRANCH_ORDERS_UPDATE } from "@/lib/permissions";
 
 type OrderStatus = "pending" | "partially_delivered" | "delivered" | "cancelled";
 
@@ -183,6 +183,10 @@ export default function PedidosSucursales() {
         router.push(`/pedidos/sucursales/${order.id}`);
     };
 
+    const handleEditOrder = (order: BranchOrder) => {
+        router.push(`/pedidos/sucursales/${order.id}/editar`);
+    };
+
     const handlePageChange = (newPage: number) => {
         setPage(newPage);
     };
@@ -243,6 +247,13 @@ export default function PedidosSucursales() {
             icon: <EditIcon fontSize="small" />,
             onClick: handleViewOrder,
             permission: BRANCH_ORDERS_READ,
+        },
+        {
+            id: "edit",
+            label: "Editar pedido",
+            icon: <EditIcon fontSize="small" />,
+            onClick: handleEditOrder,
+            permission: BRANCH_ORDERS_UPDATE,
         },
     ];
 

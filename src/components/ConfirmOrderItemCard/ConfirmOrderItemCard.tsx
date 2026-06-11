@@ -3,17 +3,12 @@ import QuantityStepper from "@/components/SelectedItemsPanel/QuantityStepper";
 import { OnlinePriceBar } from "./OnlinePriceBar";
 import {
     Card,
-    Content,
     ImageWrapper,
     ProductImage,
     ImagePlaceholder,
-    ProductInfo,
-    ProductCode,
-    ProductName,
-    PriceColumn,
-    MetricColumn,
     StepperWrapper,
 } from "./styles";
+import { Stack } from "@mui/material";
 
 export interface OnlineRetailerPrice {
     retailer: string;
@@ -39,7 +34,9 @@ export interface ConfirmOrderItem {
 
 export interface ConfirmOrderItemCardProps {
     item: ConfirmOrderItem;
-    onQuantityChange: (productId: number, quantity: number) => void;
+    onQuantityChange?: (productId: number, quantity: number) => void;
+    readOnly?: boolean;
+    hidePrices?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -50,52 +47,63 @@ function formatCurrency(value: number): string {
     }).format(value);
 }
 
-export function ConfirmOrderItemCard({ item, onQuantityChange }: ConfirmOrderItemCardProps) {
+export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false, hidePrices = false }: ConfirmOrderItemCardProps) {
     return (
         <Card>
-            <Content>
-                <ImageWrapper>
-                    {item.previewImage ? (
-                        <ProductImage src={item.previewImage} alt={item.productName} />
-                    ) : (
-                        <ImagePlaceholder />
+            <Stack width="100%" direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between">
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <ImageWrapper>
+                        {
+                            (item.previewImage) ?
+                                <ProductImage src={item.previewImage} alt={item.productName} />
+                                :
+                                <ImagePlaceholder />
+
+                        }
+                    </ImageWrapper>
+                    <Stack direction="column" spacing={0.5}>
+                        <Typography variant="body2" color="text.secondary">{item.productCode}</Typography>
+                        <Typography variant="subtitle1">{item.productName}</Typography>
+                    </Stack>
+                </Stack>
+
+                <Stack direction="row" spacing={3} alignItems="center" justifyContent="space-between">
+                    {!hidePrices && (
+                        <Stack direction="column" spacing={0.5}>
+                            <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
+                            <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
+                        </Stack>
                     )}
-                </ImageWrapper>
 
-                <ProductInfo>
-                    <ProductCode variant="caption" color="text.secondary">
-                        {item.productCode}
-                    </ProductCode>
-                    <ProductName variant="subtitle1">
-                        {item.productName}
-                    </ProductName>
-                </ProductInfo>
+                    <Stack direction="column" spacing={0.5}>
+                        <Typography variant="body2" color="text.secondary" textAlign="center">Cantidad</Typography>
+                        {
+                            (readOnly) ?
+                                <Typography variant="body1" fontWeight={600} textAlign="center">{item.quantity}</Typography>
+                                :
+                                <StepperWrapper>
+                                    <QuantityStepper
+                                        value={item.quantity}
+                                        onChange={(qty) => onQuantityChange?.(item.productId, qty)}
+                                    />
+                                </StepperWrapper>
+                        }
+                    </Stack>
 
-                <PriceColumn>
-                    <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
-                    <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
-                </PriceColumn>
-
-                <MetricColumn>
-                    <Typography variant="body2" color="text.secondary">Cantidad</Typography>
-                    <StepperWrapper>
-                        <QuantityStepper
-                            value={item.quantity}
-                            onChange={(qty) => onQuantityChange(item.productId, qty)}
-                        />
-                    </StepperWrapper>
-                </MetricColumn>
-
-                <MetricColumn>
-                    <Typography variant="body2" color="text.secondary">Total</Typography>
-                    <Typography variant="h6">{formatCurrency(item.totalPrice)}</Typography>
-                </MetricColumn>
-            </Content>
+                    {!hidePrices && (
+                        <Stack direction="column" spacing={0.5}>
+                            <Typography variant="body2" color="text.secondary">Total</Typography>
+                            <Typography variant="body1" fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
+                        </Stack>
+                    )}
+                </Stack>
+            </Stack>
 
             {
-                item.onlinePrices &&
+                item.onlinePrices && !readOnly && !hidePrices &&
                 <OnlinePriceBar onlinePrices={item.onlinePrices} />
             }
+
         </Card>
     );
 }

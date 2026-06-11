@@ -1,4 +1,4 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme, darken } from "@mui/material/styles";
 
 export const SIDEBAR_WIDTH = 240;
 export const CONTENT_PADDING = 32;
@@ -13,6 +13,7 @@ export interface AppPalette {
     lowerGray: string;
     mediumGray: string;
     lowBlue: string;
+    lowerBlue: string;
     readOnlyControl: string;
   };
   border: string;
@@ -62,6 +63,7 @@ export const appPalette: AppPalette = {
     lowerGray: "#F1F5F9",
     mediumGray: "#CBD5E1",
     lowBlue: "#BFDBFE",
+    lowerBlue: "#EFF6FF",
     readOnlyControl: "#F4F4F5",
   },
   border: "#D4D4D8",
@@ -150,6 +152,7 @@ export const theme = createTheme({
       lowerGray: appPalette.background.lowerGray,
       mediumGray: appPalette.background.mediumGray,
       lowBlue: appPalette.background.lowBlue,
+      lowerBlue: appPalette.background.lowerBlue,
     },
     text: {
       primary: appPalette.text.primary,
@@ -263,13 +266,24 @@ export const theme = createTheme({
             color: theme.palette.text.primary,
             border: `1px solid ${theme.palette.app.border}`,
             "&:hover": {
-              backgroundColor: theme.palette.background.paper,
-              borderColor: theme.palette.text.secondary,
+              backgroundColor: darken(theme.palette.background.paper, 0.05),
+              borderColor: darken(theme.palette.app.border, 0.05),
             },
             "&.Mui-disabled": {
               backgroundColor: theme.palette.background.paper,
               color: theme.palette.action.disabled,
               borderColor: theme.palette.action.disabledBackground,
+            },
+          }),
+        },
+        {
+          props: { variant: "white" },
+          style: ({ theme }) => ({
+            backgroundColor: '#F8FAFC',
+            color: theme.palette.text.primary,
+            border: 'none',
+            "&:hover": {
+              backgroundColor: darken('#F8FAFC', 0.05),
             },
           }),
         },
@@ -416,6 +430,7 @@ declare module "@mui/material/styles" {
     lowerGray: string;
     mediumGray: string;
     lowBlue: string;
+    lowerBlue: string;
   }
   interface Palette {
     app: AppPalette;
@@ -428,5 +443,6 @@ declare module "@mui/material/styles" {
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
     option: true;
+    white: true;
   }
 }

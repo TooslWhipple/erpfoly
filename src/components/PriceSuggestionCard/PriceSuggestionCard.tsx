@@ -1,22 +1,17 @@
 import numeral from "numeral";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
   CardContainer,
   ProductImage,
   ImagePlaceholder,
-  PriceListContainer,
+  PriceList,
   PriceListItem,
-  TimelineColumn,
   TimelineDot,
-  TimelineLine,
-  PriceRow,
-  PriceRowContent,
-  PriceAmount,
-  PriceChange,
-  ApplyButton,
+  TimelineLine
 } from "./styles";
-import { Stack, Typography } from "@mui/material";
+import { Button, Stack, Typography } from "@mui/material";
+import { theme } from "@/styles/theme";
 
 export interface PriceSuggestionCardProps {
   item: PriceSuggestionItem;
@@ -60,56 +55,69 @@ export function PriceSuggestionCard({ item, onApply }: PriceSuggestionCardProps)
   return (
     <CardContainer>
       <Stack direction="row" spacing={1} alignItems="center">
-        {item.imageUrl ? (
-          <ProductImage src={item.imageUrl} alt={item.productName} />
-        ) : (
-          <ImagePlaceholder />
-        )}
-        <Stack>
+        {
+          (item.imageUrl) ?
+            <ProductImage src={item.imageUrl} alt={item.productName} />
+            :
+            <ImagePlaceholder />
+        }
+        <Stack spacing={0.5}>
           <Typography variant="body1" fontWeight={700}>{item.productName}</Typography>
-          <Typography variant="caption">{item.sku}</Typography>
+          <Typography variant="body2" color="text.secondary">{item.sku}</Typography>
         </Stack>
       </Stack>
 
-      <PriceListContainer>
-        {priceRows.map((row, index) => (
-          <PriceListItem key={index}>
-            <TimelineColumn>
-              <TimelineDot active={row.isSuggested} />
-              {index < priceRows.length - 1 && <TimelineLine />}
-            </TimelineColumn>
-            <PriceRow highlighted={row.isSuggested}>
-              <PriceRowContent>
-                {
-                  row.isSuggested &&
-                  <Typography variant="body1" color="text.secondary" fontWeight={500}>Nuevo precio sugerido</Typography>
-                }
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <PriceAmount active={row.isSuggested}>{formatPrice(row.price)}</PriceAmount>
-                  <PriceChange active={row.isSuggested}>
-                    {row.direction === "down" ? (
-                      <ChevronDown size={14} />
-                    ) : (
-                      <ChevronUp size={14} />
-                    )}
-                    <span>{row.changePercent}%</span>
-                  </PriceChange>
+      <PriceList>
+        <TimelineLine />
+        {
+          priceRows.map((row, index) => (
+            <PriceListItem isSuggested={row.isSuggested}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TimelineDot />
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  {
+                    row.isSuggested ?
+                      <Stack>
+                        <Typography variant="body2" color="text.secondary">Nuevo precio sugerido</Typography>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Typography variant="body1" fontWeight={600}>{formatPrice(row.price)}</Typography>
+                          {
+                            row.direction === "up" ?
+                              <ArrowUp size={14} strokeWidth={2} color={theme.palette.primary.main} />
+                              :
+                              <ArrowDown size={14} strokeWidth={2} color={theme.palette.primary.main} />
+                          }
+                          <Typography variant="body2" color="primary.main" fontWeight={600}>{row.changePercent}%</Typography>
+                        </Stack>
+                      </Stack>
+                      :
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography variant="body2" color="text.secondary">{formatPrice(row.price)}</Typography>
+                        {
+                          row.direction === "up" ?
+                            <ArrowUp size={14} strokeWidth={2} color={theme.palette.text.secondary} />
+                            :
+                            <ArrowDown size={14} strokeWidth={2} color={theme.palette.text.secondary} />
+                        }
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>{row.changePercent}%</Typography>
+                      </Stack>
+                  }
                 </Stack>
-              </PriceRowContent>
-              {row.isSuggested && (
-                <ApplyButton
+              </Stack>
+              {
+                row.isSuggested &&
+                <Button
                   variant="contained"
                   color="primary"
                   size="small"
-                  onClick={handleApply}
-                >
+                  onClick={handleApply}>
                   Aplicar
-                </ApplyButton>
-              )}
-            </PriceRow>
-          </PriceListItem>
-        ))}
-      </PriceListContainer>
+                </Button>
+              }
+            </PriceListItem>
+          ))
+        }
+      </PriceList>
     </CardContainer>
   );
 }

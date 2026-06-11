@@ -255,7 +255,7 @@ export default function RoleFormPage() {
     <MainLayout>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbItems} />
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="center">
+        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
           <Typography variant="h5">{isNew ? "Nuevo rol" : "Editar rol"}</Typography>
           <Button
             variant="contained"

@@ -12,6 +12,7 @@ import {
   DialogTitle,
   InputAdornment,
   Snackbar,
+  Stack,
   Typography,
 } from "@mui/material";
 import {
@@ -22,8 +23,6 @@ import {
   DividerSpace,
   LeftPanel,
   MainContent,
-  PageHeader,
-  PageTitle,
   PriceInput,
   RightPanel,
   SectionSubtitle,
@@ -286,9 +285,9 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-              ...prev,
-              [field]: Math.max(0, parseCurrencyInput(sanitized)),
-            }
+            ...prev,
+            [field]: Math.max(0, parseCurrencyInput(sanitized)),
+          }
       );
     },
     []
@@ -317,10 +316,10 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-              ...prev,
-              mapCenter: viewport.center,
-              mapDefaultZoom: viewport.zoom,
-            }
+            ...prev,
+            mapCenter: viewport.center,
+            mapDefaultZoom: viewport.zoom,
+          }
       );
     },
     []
@@ -429,9 +428,9 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-              ...prev,
-              zones: prev.zones.filter((zone) => zone.id != null),
-            }
+            ...prev,
+            zones: prev.zones.filter((zone) => zone.id != null),
+          }
       );
     } else if (editMode.type === "editing" && editingZoneSnapshotRef.current) {
       const snapshot = editingZoneSnapshotRef.current;
@@ -439,13 +438,13 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-              ...prev,
-              zones: prev.zones.map((zone) =>
-                zone.id === snapshot.zoneId
-                  ? { ...zone, polygon: clonePolygon(snapshot.polygon) }
-                  : zone
-              ),
-            }
+            ...prev,
+            zones: prev.zones.map((zone) =>
+              zone.id === snapshot.zoneId
+                ? { ...zone, polygon: clonePolygon(snapshot.polygon) }
+                : zone
+            ),
+          }
       );
     }
     editingZoneSnapshotRef.current = null;
@@ -498,13 +497,13 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-              ...prev,
-              zones: prev.zones.map((zone) =>
-                zone.id === zoneId || (zoneId == null && zone.id == null)
-                  ? { ...zone, ...patch }
-                  : zone
-              ),
-            }
+            ...prev,
+            zones: prev.zones.map((zone) =>
+              zone.id === zoneId || (zoneId == null && zone.id == null)
+                ? { ...zone, ...patch }
+                : zone
+            ),
+          }
       );
     },
     []
@@ -543,240 +542,242 @@ export default function CostosEnvioPage() {
 
   return (
     <MainLayout>
-      <PageHeader>
-        <PageTitle>Costos de envío</PageTitle>
-        <Button
-          variant="contained"
-          onClick={handleSaveChanges}
-          disabled={!canUpdateShippingCosts || !isDirty || saveMutation.isPending}
-          startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : null}
-        >
-          Guardar cambios
-        </Button>
-      </PageHeader>
+      <Stack spacing={3}>
+        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+          <Typography variant="h5">Costos de envío</Typography>
+          <Button
+            variant="contained"
+            onClick={handleSaveChanges}
+            disabled={!canUpdateShippingCosts || !isDirty || saveMutation.isPending}
+            startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : null}
+          >
+            Guardar cambios
+          </Button>
+        </Stack>
 
-      <MainContent>
-        <LeftPanel>
-          <ShippingMunicipalityAutocomplete
-            value={municipalityId}
-            configuredMunicipalities={catalogData}
-            disabled={!canUpdateShippingCosts || editMode.type !== "idle"}
-            onChange={handleSelectMunicipalityFromCatalog}
-          />
+        <MainContent>
+          <LeftPanel>
+            <ShippingMunicipalityAutocomplete
+              value={municipalityId}
+              configuredMunicipalities={catalogData}
+              disabled={!canUpdateShippingCosts || editMode.type !== "idle"}
+              onChange={handleSelectMunicipalityFromCatalog}
+            />
 
-          {draftConfig == null ? (
-            <SectionSubtitle>
-              {municipalityId != null && configQuery.isLoading
-                ? "Cargando configuración del municipio seleccionado..."
-                : "Selecciona una ciudad para cargar o crear su configuración de costos de envío."}
-            </SectionSubtitle>
-          ) : (
-            <>
-              <SectionTitle>Configuración de costos de envío</SectionTitle>
+            {draftConfig == null ? (
               <SectionSubtitle>
-                Define los costos de envío por municipio para dentro y fuera de zona.
+                {municipalityId != null && configQuery.isLoading
+                  ? "Cargando configuración del municipio seleccionado..."
+                  : "Selecciona una ciudad para cargar o crear su configuración de costos de envío."}
               </SectionSubtitle>
+            ) : (
+              <>
+                <SectionTitle>Configuración de costos de envío</SectionTitle>
+                <SectionSubtitle>
+                  Define los costos de envío por municipio para dentro y fuera de zona.
+                </SectionSubtitle>
 
-              <PriceInput
-                size="small"
-                label="Costo dentro de zona"
-                value={priceInZoneInput}
-                disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                onChange={(event) => handlePriceChange("priceInZone", event.target.value)}
-                onBlur={() => handlePriceBlur("priceInZone")}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                }}
-              />
-
-              <PriceInput
-                size="small"
-                label="Costo fuera de zona"
-                value={priceOutOfZoneInput}
-                disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                onChange={(event) => handlePriceChange("priceOutOfZone", event.target.value)}
-                onBlur={() => handlePriceBlur("priceOutOfZone")}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                }}
-              />
-
-              <DividerSpace />
-
-              <ZoneHeader>
-                <SectionTitle>Configuración de zonas</SectionTitle>
-                <Button
-                  variant="outlined"
+                <PriceInput
                   size="small"
+                  label="Costo dentro de zona"
+                  value={priceInZoneInput}
                   disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                  onClick={handleCreateZone}
-                >
-                  Nueva
-                </Button>
-              </ZoneHeader>
+                  onChange={(event) => handlePriceChange("priceInZone", event.target.value)}
+                  onBlur={() => handlePriceBlur("priceInZone")}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                />
 
-              <ZoneList>
-                {draftConfig.zones.map((zone, index) => (
-                  <ZoneItem key={zone.id ?? `new-${index}`}>
-                    <ZoneColor style={{ backgroundColor: zone.color }} />
-                    <ZoneName
+                <PriceInput
+                  size="small"
+                  label="Costo fuera de zona"
+                  value={priceOutOfZoneInput}
+                  disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                  onChange={(event) => handlePriceChange("priceOutOfZone", event.target.value)}
+                  onBlur={() => handlePriceBlur("priceOutOfZone")}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                />
+
+                <DividerSpace />
+
+                <ZoneHeader>
+                  <SectionTitle>Configuración de zonas</SectionTitle>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                    onClick={handleCreateZone}
+                  >
+                    Nueva
+                  </Button>
+                </ZoneHeader>
+
+                <ZoneList>
+                  {draftConfig.zones.map((zone, index) => (
+                    <ZoneItem key={zone.id ?? `new-${index}`}>
+                      <ZoneColor style={{ backgroundColor: zone.color }} />
+                      <ZoneName
+                        size="small"
+                        value={zone.name}
+                        disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
+                        onChange={(event) =>
+                          handleZoneChange(zone.id, { name: event.target.value })
+                        }
+                        placeholder={`Zona ${index + 1}`}
+                      />
+                      <PriceInput
+                        size="small"
+                        type="color"
+                        value={zone.color}
+                        disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
+                        onChange={(event) =>
+                          handleZoneChange(zone.id, { color: event.target.value })
+                        }
+                        sx={{ width: 46 }}
+                      />
+                      <Button
+                        variant="text"
+                        size="small"
+                        disabled={
+                          !canUpdateShippingCosts ||
+                          isMapZoneEditing ||
+                          zone.id == null
+                        }
+                        onClick={() => handleStartZoneEdit(zone)}
+                      >
+                        Editar
+                      </Button>
+                    </ZoneItem>
+                  ))}
+                </ZoneList>
+
+                {isMapZoneEditing ? (
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Button
+                      variant="contained"
                       size="small"
-                      value={zone.name}
-                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                      onChange={(event) =>
-                        handleZoneChange(zone.id, { name: event.target.value })
-                      }
-                      placeholder={`Zona ${index + 1}`}
-                    />
-                    <PriceInput
-                      size="small"
-                      type="color"
-                      value={zone.color}
-                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                      onChange={(event) =>
-                        handleZoneChange(zone.id, { color: event.target.value })
-                      }
-                      sx={{ width: 46 }}
-                    />
+                      onClick={handleFinishZoneMapEdit}
+                      disabled={!canUpdateShippingCosts}
+                    >
+                      {editMode.type === "creating" ? "Finalizar zona" : "Terminar edición"}
+                    </Button>
                     <Button
                       variant="text"
                       size="small"
-                      disabled={
-                        !canUpdateShippingCosts ||
-                        isMapZoneEditing ||
-                        zone.id == null
-                      }
-                      onClick={() => handleStartZoneEdit(zone)}
+                      onClick={handleCancelZoneMapEdit}
+                      disabled={!canUpdateShippingCosts}
                     >
-                      Editar
+                      Cancelar
                     </Button>
-                  </ZoneItem>
-                ))}
-              </ZoneList>
+                  </Box>
+                ) : null}
 
-              {isMapZoneEditing ? (
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={handleFinishZoneMapEdit}
-                    disabled={!canUpdateShippingCosts}
-                  >
-                    {editMode.type === "creating" ? "Finalizar zona" : "Terminar edición"}
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={handleCancelZoneMapEdit}
-                    disabled={!canUpdateShippingCosts}
-                  >
-                    Cancelar
-                  </Button>
-                </Box>
-              ) : null}
+                {isMapZoneEditing ? (
+                  <SectionSubtitle>
+                    {editMode.type === "creating"
+                      ? "Marca 3 puntos en el mapa para definir la zona. Después podrás arrastrar los vértices y añadir más desde los puntos intermedios."
+                      : "Arrastra los vértices del polígono para ajustar la zona. Click derecho en un vértice para eliminarlo."}
+                  </SectionSubtitle>
+                ) : null}
+              </>
+            )}
+          </LeftPanel>
 
-              {isMapZoneEditing ? (
-                <SectionSubtitle>
-                  {editMode.type === "creating"
-                    ? "Marca 3 puntos en el mapa para definir la zona. Después podrás arrastrar los vértices y añadir más desde los puntos intermedios."
-                    : "Arrastra los vértices del polígono para ajustar la zona. Click derecho en un vértice para eliminarlo."}
-                </SectionSubtitle>
-              ) : null}
-            </>
-          )}
-        </LeftPanel>
-
-        <RightPanel>
-          {draftConfig == null ? (
-            <Box
-              sx={{
-                minHeight: 520,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                px: 3,
-              }}
-            >
-              {municipalityId != null && configQuery.isLoading ? (
+          <RightPanel>
+            {draftConfig == null ? (
+              <Box
+                sx={{
+                  minHeight: 520,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  px: 3,
+                }}
+              >
+                {municipalityId != null && configQuery.isLoading ? (
+                  <CircularProgress size={24} />
+                ) : (
+                  <Typography variant="body2" color="text.secondary" textAlign="center">
+                    Selecciona una ciudad para visualizar y editar sus zonas en el mapa.
+                  </Typography>
+                )}
+              </Box>
+            ) : mapViewportQuery.isLoading || !mapViewportQuery.data ? (
+              <Box
+                sx={{
+                  minHeight: 520,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <CircularProgress size={24} />
-              ) : (
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Selecciona una ciudad para visualizar y editar sus zonas en el mapa.
+              </Box>
+            ) : mapViewportQuery.isError ? (
+              <Box
+                sx={{
+                  minHeight: 520,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  px: 3,
+                }}
+              >
+                <Typography variant="body2" color="error" textAlign="center">
+                  {(mapViewportQuery.error as Error).message ||
+                    "No se pudo centrar el mapa en la ciudad seleccionada."}
                 </Typography>
-              )}
-            </Box>
-          ) : mapViewportQuery.isLoading || !mapViewportQuery.data ? (
-            <Box
-              sx={{
-                minHeight: 520,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <CircularProgress size={24} />
-            </Box>
-          ) : mapViewportQuery.isError ? (
-            <Box
-              sx={{
-                minHeight: 520,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                px: 3,
-              }}
-            >
-              <Typography variant="body2" color="error" textAlign="center">
-                {(mapViewportQuery.error as Error).message ||
-                  "No se pudo centrar el mapa en la ciudad seleccionada."}
-              </Typography>
-            </Box>
-          ) : (
-            <ShippingZonesMap
-              key={`shipping-map-${mapSession}-${draftConfig.municipalityId}`}
-              initialCenter={mapViewportQuery.data.center}
-              initialZoom={mapViewportQuery.data.zoom}
-              zones={draftConfig.zones}
-              canEdit={canUpdateShippingCosts}
-              editMode={editMode}
-              selectedZoneId={selectedZoneId}
-              onZoneSelect={(zoneId) => setSelectedZoneId(zoneId)}
-              onZonePathChange={handleZonePathChange}
-              onViewportChange={handleMapViewportChange}
-            />
-          )}
-        </RightPanel>
-      </MainContent>
+              </Box>
+            ) : (
+              <ShippingZonesMap
+                key={`shipping-map-${mapSession}-${draftConfig.municipalityId}`}
+                initialCenter={mapViewportQuery.data.center}
+                initialZoom={mapViewportQuery.data.zoom}
+                zones={draftConfig.zones}
+                canEdit={canUpdateShippingCosts}
+                editMode={editMode}
+                selectedZoneId={selectedZoneId}
+                onZoneSelect={(zoneId) => setSelectedZoneId(zoneId)}
+                onZonePathChange={handleZonePathChange}
+                onViewportChange={handleMapViewportChange}
+              />
+            )}
+          </RightPanel>
+        </MainContent>
 
-      <Dialog open={confirmLeaveOpen} onClose={() => resolveConfirmLeave(false)}>
-        <DialogTitle>Cambios sin guardar</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => resolveConfirmLeave(false)}>Quedarme</Button>
-          <Button color="error" onClick={() => resolveConfirmLeave(true)}>
-            Salir sin guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Dialog open={confirmLeaveOpen} onClose={() => resolveConfirmLeave(false)}>
+          <DialogTitle>Cambios sin guardar</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2">
+              Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => resolveConfirmLeave(false)}>Quedarme</Button>
+            <Button color="error" onClick={() => resolveConfirmLeave(true)}>
+              Salir sin guardar
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={5000}
           onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Stack>
     </MainLayout>
   );
 }

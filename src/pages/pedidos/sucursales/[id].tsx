@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
-import { MainLayout, Breadcrumbs, StatusChipVariant, StatusChip, SendToWarehouseModal } from "@/components";
+import { MainLayout, Breadcrumbs, StatusChipVariant, StatusChip, Pencil } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
 import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
-import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
-import { Download } from "lucide-react";
 import { theme } from "@/styles/theme";
-
-const IVA_RATE = 0.16;
+import { usePermissions } from "@/hooks/usePermissions";
+import { BRANCH_ORDERS_UPDATE } from "@/lib/permissions";
 
 type DisplayStatus = "pending" | "in_progress" | "received" | "cancelled";
 
@@ -52,16 +51,7 @@ function getStatusVariant(status: DisplayStatus): StatusChipVariant {
     return variants[status] as StatusChipVariant;
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("es-MX", {
-        style: "currency",
-        currency: "MXN",
-        minimumFractionDigits: 2,
-    }).format(value);
-}
-
 function mapOrderItemToConfirmItem(item: OrderFullDetail["order_items"][number]): ConfirmOrderItem {
-    const unitPrice = Number(item.unit_price ?? 0);
     const quantity = item.requested_quantity;
 
     return {
@@ -70,19 +60,19 @@ function mapOrderItemToConfirmItem(item: OrderFullDetail["order_items"][number])
         productName: item.product?.short_name ?? "Producto sin nombre",
         previewImage: item.product?.product_images?.[0]?.image_url ?? null,
         quantity,
-        unitPrice,
-        totalPrice: unitPrice * quantity,
-        onlinePrices: buildPlaceholderOnlinePrices(unitPrice),
+        unitPrice: 0,
+        totalPrice: 0,
     };
 }
 
-export default function PedidoDetalle() {
+export default function PedidoSucursalDetalle() {
     const router = useRouter();
     const { id } = router.query;
+    const { hasPermission } = usePermissions();
+    const canEdit = hasPermission(BRANCH_ORDERS_UPDATE);
 
     const [order, setOrder] = useState<OrderFullDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [sendModalOpen, setSendModalOpen] = useState(false);
 
     useEffect(() => {
         if (id && typeof id === "string") {
@@ -95,34 +85,41 @@ export default function PedidoDetalle() {
         try {
             const result = await getOrderFull(Number(orderId));
             if (result.data) {
+                if (result.data.order_type !== "internal") {
+                    router.replace(`/pedidos/${orderId}`);
+                    return;
+                }
                 setOrder(result.data);
             }
         } catch (err) {
-            console.error("[PedidoDetalle] Error loading order:", err);
+            console.error("[PedidoSucursalDetalle] Error loading order:", err);
         } finally {
             setLoading(false);
         }
     };
 
     const handleDownloadPdf = () => {
-        console.log("[PedidoDetalle] Download PDF");
+        console.log("[PedidoSucursalDetalle] Download PDF");
+    };
+
+    const handleEdit = () => {
+        if (id && typeof id === "string") {
+            router.push(`/pedidos/sucursales/${id}/editar`);
+        }
     };
 
     const displayStatus = order ? mapBackendStatus(order.status) : "pending";
-    const showSendButton = order?.order_type === "external" && displayStatus === "pending";
 
-    const subtotal = order
-        ? order.order_items.reduce(
-            (sum, item) => sum + Number(item.unit_price ?? 0) * item.requested_quantity,
-            0
-        )
+    const totalQuantity = order
+        ? order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0)
         : 0;
-    const iva = subtotal * IVA_RATE;
-    const total = subtotal + iva;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { label: "Pedidos", href: "/pedidos" },
-        { label: order?.supplier?.name || order?.branch?.name || "...", href: "/pedidos" },
+        { label: "Pedidos", href: "/pedidos/sucursales" },
+        {
+            label: order?.branch?.name ? `Sucursal ${order.branch.name}` : "...",
+            href: order?.branch?.id ? `/pedidos/sucursales?branch=${order.branch.id}` : "/pedidos/sucursales",
+        },
         { label: `Pedido ${order?.folio || "..."}` },
     ];
 
@@ -130,7 +127,7 @@ export default function PedidoDetalle() {
         return (
             <MainLayout>
                 <Stack spacing={3}>
-                    <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
+                    <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos/sucursales")} />
                     <Grid container spacing={4}>
                         <Grid size={{ xs: 12, md: 8, xl: 9 }}>
                             <Stack spacing={2}>
@@ -151,13 +148,13 @@ export default function PedidoDetalle() {
     if (!order) {
         return (
             <MainLayout>
-                <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
+                <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos/sucursales")} />
                 <Box sx={{ marginTop: 4, textAlign: "center" }}>
                     <Typography variant="h5" color="text.secondary">
                         Pedido no encontrado
                     </Typography>
-                    <Button variant="contained" sx={{ marginTop: 2 }} onClick={() => router.push("/pedidos")}>
-                        Volver a pedidos
+                    <Button variant="contained" sx={{ marginTop: 2 }} onClick={() => router.push("/pedidos/sucursales")}>
+                        Volver a pedidos por sucursal
                     </Button>
                 </Box>
             </MainLayout>
@@ -172,27 +169,21 @@ export default function PedidoDetalle() {
                     spacing={2}
                     justifyContent="space-between"
                     alignItems={{ xs: "flex-start", sm: "center" }}>
-                    <Breadcrumbs
-                        showBackButton
-                        items={breadcrumbs}
-                        onBack={() => router.push("/pedidos")} />
+                    <Stack spacing={1}>
+                        <Breadcrumbs items={breadcrumbs} />
+                        <Typography variant="h1">Pedido {order.folio}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>Fecha de alta: {dayjs(order.created_at).format("DD [de] MMMM, YYYY")}</Typography>
+                    </Stack>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }}>
                         <Stack direction="row" spacing={2} alignItems="center">
-                            <Button
-                                variant="option"
-                                startIcon={<Download size={16} color={theme.palette.text.secondary} />}
-                                onClick={handleDownloadPdf}>
-                                Descargar PDF
-                            </Button>
-                            {
-                                showSendButton &&
+                            {canEdit && (
                                 <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={() => setSendModalOpen(true)}>
-                                    Enviar a Almacén
+                                    variant="option"
+                                    startIcon={<Pencil size={16} color={theme.palette.text.secondary} />}
+                                    onClick={handleEdit}>
+                                    Editar
                                 </Button>
-                            }
+                            )}
                         </Stack>
                         <StatusChip
                             size="small"
@@ -213,6 +204,7 @@ export default function PedidoDetalle() {
                                         key={item.id}
                                         item={mapOrderItemToConfirmItem(item)}
                                         readOnly
+                                        hidePrices
                                     />
                                 ))
                             }
@@ -223,29 +215,14 @@ export default function PedidoDetalle() {
                         <SummaryCard>
                             <Stack spacing={2}>
                                 <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
-                                    <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
-                                </Stack>
-                                <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">IVA</Typography>
-                                    <Typography variant="body1">{formatCurrency(iva)}</Typography>
-                                </Stack>
-                                <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="h6" fontWeight={700}>Total:</Typography>
-                                    <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
+                                    <Typography variant="body2" color="text.secondary">Total:</Typography>
+                                    <Typography variant="h6" fontWeight={700}>{totalQuantity} {(totalQuantity) > 1 ? "Artículos" : "Artículo"}</Typography>
                                 </Stack>
                             </Stack>
                         </SummaryCard>
                     </Grid>
                 </Grid>
             </Stack>
-
-            <SendToWarehouseModal
-                open={sendModalOpen}
-                onClose={() => setSendModalOpen(false)}
-                orderId={Number(id)}
-                onSuccess={() => loadOrder(String(id))}
-            />
         </MainLayout>
     );
 }

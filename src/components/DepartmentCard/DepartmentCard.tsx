@@ -1,7 +1,8 @@
-import { Calendar } from "@/components/Icons";
 import type { DepartmentLowRotation } from "@/types/liquidaciones.types";
 import { Card } from "./styles";
 import { Divider, Stack, Typography } from "@mui/material";
+import { Settings2 } from "lucide-react";
+import { theme } from "@/styles/theme";
 
 export interface DepartmentCardProps {
   department: DepartmentLowRotation;
@@ -16,10 +17,10 @@ export function DepartmentCard({ department, onClick }: DepartmentCardProps) {
       sx={onClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : undefined}
     >
       <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
-        <Stack flex={1}>
+        <Stack flex={2}>
           <Typography variant="h6" fontWeight={700}>{department.name}</Typography>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Calendar size={14} />
+            <Settings2 size={12} color={theme.palette.text.secondary} />
             <Typography variant="body2" color="text.secondary">{department.description}</Typography>
           </Stack>
         </Stack>

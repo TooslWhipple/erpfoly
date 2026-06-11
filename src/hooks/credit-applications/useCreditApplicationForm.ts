@@ -10,12 +10,8 @@ import type {
   AdditionalInformationRequestedItem,
   CreditApplicationDetailResponse,
 } from "@/services/creditApplications.service";
-<<<<<<< HEAD
 import { getApiErrorMessage } from "@/lib/axios";
 import { useBasicInformationTab } from "./tabs/useBasicInformationTab";
-=======
-import { parseBasicInformationServerErrors, useBasicInformationTab } from "./tabs/useBasicInformationTab";
->>>>>>> 913abc709fc7e1bfcbc195999cb4990c278a4e5d
 import { useAddressTab } from "./tabs/useAddressTab";
 import { useDocumentationTab } from "./tabs/useDocumentationTab";
 import { useEmploymentTab } from "./tabs/useEmploymentTab";

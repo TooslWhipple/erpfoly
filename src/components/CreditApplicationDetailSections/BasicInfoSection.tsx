@@ -18,35 +18,35 @@ export function BasicInfoSection({ detail }: BasicInfoSectionProps) {
       </Stack>
       <Divider />
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Nombres" value={basicInfo.firstName} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Primer Apellido" value={basicInfo.firstSurname} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Segundo Apellido" value={basicInfo.secondSurname} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Fecha de Nacimiento" value={basicInfo.birthDate} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Estado Civil" value={basicInfo.maritalStatus} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="CURP" value={basicInfo.curp} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="RFC" value={basicInfo.rfc} readOnly fullWidth />
         </Grid>
       </Grid>
       <Typography variant="subtitle1">Datos de contacto</Typography>
       <FormTextField label="Correo electrónico" value={basicInfo.email} readOnly fullWidth />
       <Grid container spacing={2} wrap="nowrap" alignItems="flex-end">
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Número de Whatsapp" value={basicInfo.whatsapp} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           {
             basicInfo.whatsappValidated && (
               <div

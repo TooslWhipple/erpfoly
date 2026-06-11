@@ -98,10 +98,6 @@ export default function PedidoSucursalDetalle() {
         }
     };
 
-    const handleDownloadPdf = () => {
-        console.log("[PedidoSucursalDetalle] Download PDF");
-    };
-
     const handleEdit = () => {
         if (id && typeof id === "string") {
             router.push(`/pedidos/sucursales/${id}/editar`);

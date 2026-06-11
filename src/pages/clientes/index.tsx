@@ -134,22 +134,7 @@ export default function Clientes() {
       icon: <ViewIcon />,
       onClick: (row) => router.push(`/clientes/${row.id}`),
       permission: CUSTOMERS_READ,
-    },
-    {
-      id: "edit",
-      label: "Editar",
-      icon: <EditIcon />,
-      onClick: (row) => console.log("Editar:", row),
-      permission: CUSTOMERS_UPDATE,
-    },
-    {
-      id: "delete",
-      label: "Eliminar",
-      icon: <DeleteIcon />,
-      onClick: (row) => console.log("Eliminar:", row),
-      color: "error",
-      permission: CUSTOMERS_DELETE,
-    },
+    }
   ];
 
   return (

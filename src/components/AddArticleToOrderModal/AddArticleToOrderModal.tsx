@@ -13,7 +13,6 @@ import {
     TimelineItem,
     TimelineDot,
     TimelineContent,
-    TimelineOrderLink,
     UnitPriceSection,
 } from "./styles";
 
@@ -118,8 +117,7 @@ export function AddArticleToOrderModal({
                         <Typography variant="body2" color="text.secondary">{article.folio}</Typography>
                     </Stack>
                 </Stack>
-            }
-        >
+            }>
             <AddArticleModalContainer>
                 <Typography variant="h6">Historial de costos de este artículo.</Typography>
 
@@ -151,15 +149,7 @@ export function AddArticleToOrderModal({
                             variant="contained"
                             color="primary"
                             onClick={handleAddToOrder}
-                            disabled={unitPrice <= 0}
-                            sx={{
-                                textTransform: "none",
-                                fontWeight: 600,
-                                borderRadius: 1.5,
-                                padding: (theme) => theme.spacing(1.25, 2.5),
-                                whiteSpace: "nowrap",
-                            }}
-                        >
+                            disabled={unitPrice <= 0}>
                             Agregar
                         </Button>
                     </UnitPriceSection>
@@ -173,15 +163,9 @@ export function AddArticleToOrderModal({
                                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ width: "100%" }}>
                                         <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
                                             <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {formatDate(entry.date)}
-                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">{formatDate(entry.date)}</Typography>
                                                 {
-                                                    entry.orderId && (
-                                                        <TimelineOrderLink href={`/pedidos/${entry.orderId}`}>
-                                                            Pedido {entry.orderId}
-                                                        </TimelineOrderLink>
-                                                    )
+                                                    entry.orderId && <Typography variant="body2" color="text.secondary">Pedido {entry.orderId}</Typography>
                                                 }
                                             </Stack>
                                             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>

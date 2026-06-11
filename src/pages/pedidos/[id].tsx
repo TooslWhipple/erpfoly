@@ -9,8 +9,6 @@ import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
 import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
-import { Download } from "lucide-react";
-import { theme } from "@/styles/theme";
 
 const IVA_RATE = 0.16;
 
@@ -104,10 +102,6 @@ export default function PedidoDetalle() {
         }
     };
 
-    const handleDownloadPdf = () => {
-        console.log("[PedidoDetalle] Download PDF");
-    };
-
     const displayStatus = order ? mapBackendStatus(order.status) : "pending";
     const showSendButton = order?.order_type === "external" && displayStatus === "pending";
 
@@ -177,23 +171,15 @@ export default function PedidoDetalle() {
                         items={breadcrumbs}
                         onBack={() => router.push("/pedidos")} />
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }}>
-                        <Stack direction="row" spacing={2} alignItems="center">
+                        {
+                            showSendButton &&
                             <Button
-                                variant="option"
-                                startIcon={<Download size={16} color={theme.palette.text.secondary} />}
-                                onClick={handleDownloadPdf}>
-                                Descargar PDF
+                                variant="contained"
+                                color="primary"
+                                onClick={() => setSendModalOpen(true)}>
+                                Enviar a Almacén
                             </Button>
-                            {
-                                showSendButton &&
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={() => setSendModalOpen(true)}>
-                                    Enviar a Almacén
-                                </Button>
-                            }
-                        </Stack>
+                        }
                         <StatusChip
                             size="small"
                             label={getStatusLabel(displayStatus)}

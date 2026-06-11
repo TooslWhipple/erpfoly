@@ -23,10 +23,7 @@ export interface CreditApplicationAddress {
   neighborhood: CreditApplicationNeighborhood;
   streetAndNumber: string;
   betweenStreets: string;
-  deliveryPhone: string;
-  receiverName: string;
-  useClientPhone: boolean;
-  housingOwnership: "own" | "rented" | "paying" | "relatives";
+  housingOwnership: "own" | "rented" | "paying" | "relatives" | null;
   timeAtAddress: string;
   previousAddress: string;
   previousTime: string;

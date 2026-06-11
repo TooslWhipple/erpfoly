@@ -53,8 +53,10 @@ export function ApproveCreditModal({
         interestRate: approvalOptionsQuery.data?.interestRate ?? 0,
       }),
     onSuccess: (response) => {
-      onApproveSuccess?.(response.clientId);
-      onClose();
+      if (response) {
+        onApproveSuccess?.(response.clientId);
+        onClose();
+      }
     },
   });
 

@@ -61,9 +61,6 @@ export interface AddressTabValues {
   city: string;
   streetAndNumber: string;
   betweenStreets: string;
-  receiverPhone: string;
-  receiverName: string;
-  useClientPhone: boolean;
   /** Housing type catalog id as string (empty until selected). */
   housingType: string;
   residenceTime: string;
@@ -77,8 +74,6 @@ export interface AddressTabErrors {
   state?: string;
   city?: string;
   streetAndNumber?: string;
-  receiverPhone?: string;
-  receiverName?: string;
   residenceTime?: string;
   previousAddress?: string;
   previousResidenceTime?: string;
@@ -131,6 +126,8 @@ export interface EmploymentTabErrors {
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;
   spouseCity?: string;
+  spouseSeniorityYears?: string;
+  spouseMonthlyIncome?: string;
 }
 
 export interface FamilyReference {

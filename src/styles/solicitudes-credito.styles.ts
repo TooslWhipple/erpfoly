@@ -23,6 +23,7 @@ export const SidebarColumn = styled("div")(({ theme }) => ({
 }));
 
 export const ContentColumn = styled("div")(({ theme }) => ({
+  width: "100%",
   flex: 1,
   minWidth: 0,
 }));

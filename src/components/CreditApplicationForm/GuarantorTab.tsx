@@ -87,7 +87,7 @@ export function GuarantorTab({
           }}
         />
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -98,7 +98,7 @@ export function GuarantorTab({
             helperText={errors.state}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -138,7 +138,7 @@ export function GuarantorTab({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormDatePicker
             fullWidth
             required
@@ -153,7 +153,7 @@ export function GuarantorTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -176,7 +176,7 @@ export function GuarantorTab({
           </FormTextField>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -189,7 +189,7 @@ export function GuarantorTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -217,7 +217,7 @@ export function GuarantorTab({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FileUpload
             value={mapStoredToUploadItems(values.identificationFrontFiles)}
             onChange={(files) => onFieldChange("identificationFrontFiles", mapUploadToStoredItems(files))}
@@ -228,7 +228,7 @@ export function GuarantorTab({
             error={errors.identificationFrontFiles}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FileUpload
             value={mapStoredToUploadItems(values.identificationBackFiles)}
             onChange={(files) => onFieldChange("identificationBackFiles", mapUploadToStoredItems(files))}

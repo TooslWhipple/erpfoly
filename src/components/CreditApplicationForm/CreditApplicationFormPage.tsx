@@ -191,13 +191,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   return (
     <MainLayout>
       <Stack spacing={3}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}>
               <X size={18} />
@@ -210,15 +204,17 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             variant="contained"
             color="inherit"
             disabled={isFormLocked || loading}
+            style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
             onClick={handleSubmitApplicationClick}
           >
-            {isSubmitButtonLoading ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              "Enviar solicitud"
-            )}
+            {
+              (isSubmitButtonLoading) ?
+                <CircularProgress size={20} color="inherit" />
+                :
+                "Enviar solicitud"
+            }
           </Button>
-        </Box>
+        </Stack>
 
         {
           missingAdditionalInformationLabels.length > 0 &&

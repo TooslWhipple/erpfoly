@@ -119,16 +119,16 @@ export function AddressSection({ detail }: AddressSectionProps) {
       </Stack>
       <Divider />
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Código Postal" value={address.postalCode} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Colonia" value={neighborhoodName} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Estado" value={neighborhoodState} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Ciudad" value={neighborhoodCity} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -210,7 +210,7 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12 }}>
           <FormTextField label="Entre calles" value={address.betweenStreets} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             label="Núm. de teléfono de quién recibirá los artículos"
             value={address.deliveryPhone}
@@ -218,7 +218,7 @@ export function AddressSection({ detail }: AddressSectionProps) {
             fullWidth
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Nombre de quién recibe" value={address.receiverName} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -231,16 +231,16 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1">Propiedad de la Vivienda</Typography>
           <Grid container spacing={1} mt={3}>
-            <Grid size={{ xs: 6, md: 'auto' }}>
+            <Grid size={{ xs: 6, sm: 'auto' }}>
               <RadioButton value="own" label="Casa propia" checked={address.housingOwnership === "own"} readOnly />
             </Grid>
-            <Grid size={{ xs: 6, md: 'auto' }}>
+            <Grid size={{ xs: 6, sm: 'auto' }}>
               <RadioButton value="rented" label="Alquilada" checked={address.housingOwnership === "rented"} readOnly />
             </Grid>
-            <Grid size={{ xs: 6, md: 'auto' }}>
+            <Grid size={{ xs: 6, sm: 'auto' }}>
               <RadioButton value="paying" label="Pagandola" checked={address.housingOwnership === "paying"} readOnly />
             </Grid>
-            <Grid size={{ xs: 6, md: 'auto' }}>
+            <Grid size={{ xs: 6, sm: 'auto' }}>
               <RadioButton value="relatives" label="Familiares" checked={address.housingOwnership === "relatives"} readOnly />
             </Grid>
           </Grid>
@@ -248,10 +248,10 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12 }}>
           <FormTextField label="Tiempo en el domicilio" value={address.timeAtAddress} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 8 }}>
+        <Grid size={{ xs: 12, sm: 8 }}>
           <FormTextField label="Domicilio anterior" value={address.previousAddress} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Tiempo" value={address.previousTime} readOnly fullWidth />
         </Grid>
       </Grid>

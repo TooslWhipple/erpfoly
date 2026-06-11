@@ -60,7 +60,7 @@ export function EmploymentTab({
             mergeFieldValues(patch as Partial<EmploymentTabValues>);
           }}
         />
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -71,7 +71,7 @@ export function EmploymentTab({
             helperText={errors.state}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -95,7 +95,7 @@ export function EmploymentTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -108,7 +108,7 @@ export function EmploymentTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -121,7 +121,7 @@ export function EmploymentTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -134,7 +134,7 @@ export function EmploymentTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -147,7 +147,7 @@ export function EmploymentTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -171,7 +171,7 @@ export function EmploymentTab({
             <Typography variant="body1">¿Cuenta con otros ingresos?</Typography>
           </Stack>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Monto"
@@ -181,7 +181,7 @@ export function EmploymentTab({
             disabled={!values.hasOtherIncome || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Especifique"
@@ -223,7 +223,7 @@ export function EmploymentTab({
             mergeFieldValues(patch as Partial<EmploymentTabValues>);
           }}
         />
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -234,7 +234,7 @@ export function EmploymentTab({
             helperText={errors.spouseState}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -255,7 +255,7 @@ export function EmploymentTab({
             disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             label="Antiguedad (años)"
@@ -265,7 +265,7 @@ export function EmploymentTab({
             disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             label="Puesto"
@@ -275,7 +275,7 @@ export function EmploymentTab({
             disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             label="Departamento"
@@ -285,7 +285,7 @@ export function EmploymentTab({
             disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Ingreso mensual"
@@ -295,7 +295,7 @@ export function EmploymentTab({
             disabled={!spouseSectionEnabled || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Teléfono de la empresa"

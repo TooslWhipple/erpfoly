@@ -26,10 +26,10 @@ export function FamilySection({ detail }: FamilySectionProps) {
       {
         family.hasSpouse && (
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormTextField label="Nombre del cónyuge" value={family.spouseName} readOnly fullWidth />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormTextField label="Teléfono celular" value={family.spousePhone} readOnly fullWidth />
             </Grid>
           </Grid>

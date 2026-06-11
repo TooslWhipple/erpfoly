@@ -29,7 +29,7 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue, saving }:
           </Stack>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -42,7 +42,7 @@ export function FamilyTab({ values, errors, onFieldChange, onContinue, saving }:
             disabled={!values.hasSpouse || saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required

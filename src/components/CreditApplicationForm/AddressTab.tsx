@@ -55,7 +55,7 @@ export function AddressTab({
           }}
         />
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -66,7 +66,7 @@ export function AddressTab({
             helperText={errors.state}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             disabled
@@ -106,7 +106,7 @@ export function AddressTab({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -119,7 +119,7 @@ export function AddressTab({
             helperText={errors.receiverPhone}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -200,7 +200,7 @@ export function AddressTab({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 9 }}>
+        <Grid size={{ xs: 12, sm: 9 }}>
           <FormTextField
             fullWidth
             label="Domicilio anterior"
@@ -210,7 +210,7 @@ export function AddressTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <FormTextField
             fullWidth
             label="Tiempo"

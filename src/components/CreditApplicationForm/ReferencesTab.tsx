@@ -51,7 +51,7 @@ export function ReferencesTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -64,7 +64,7 @@ export function ReferencesTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -77,7 +77,7 @@ export function ReferencesTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
             required
@@ -124,7 +124,7 @@ export function ReferencesTab({
             </Stack>
 
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 8 }}>
+              <Grid size={{ xs: 12, sm: 8 }}>
                 <FormTextField
                   fullWidth
                   required
@@ -137,7 +137,7 @@ export function ReferencesTab({
                   disabled={saving}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FormTextField
                   fullWidth
                   required
@@ -165,7 +165,7 @@ export function ReferencesTab({
                   ))}
                 </FormTextField>
               </Grid>
-              <Grid size={{ xs: 12, md: 8 }}>
+              <Grid size={{ xs: 12, sm: 8 }}>
                 <FormTextField
                   fullWidth
                   required
@@ -178,7 +178,7 @@ export function ReferencesTab({
                   disabled={saving}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <FormTextField
                   fullWidth
                   required

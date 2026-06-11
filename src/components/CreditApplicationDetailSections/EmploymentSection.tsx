@@ -13,31 +13,31 @@ function EmploymentFields({ data }: { data: EmploymentInfo }) {
       <Grid size={{ xs: 12 }}>
         <FormTextField label="Empresa" value={data.company} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 6, md: 4 }}>
+      <Grid size={{ xs: 6, sm: 4 }}>
         <FormTextField label="Código Postal" value={data.postalCode} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 6, md: 4 }}>
+      <Grid size={{ xs: 6, sm: 4 }}>
         <FormTextField label="Estado" value={data.state} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 6, md: 4 }}>
+      <Grid size={{ xs: 6, sm: 4 }}>
         <FormTextField label="Ciudad" value={data.city} readOnly fullWidth />
       </Grid>
       <Grid size={{ xs: 12 }}>
         <FormTextField label="Calle y número" value={data.streetAndNumber} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <FormTextField label="Antigüedad (años)" value={String(data.tenureYears)} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <FormTextField label="Puesto" value={data.position} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <FormTextField label="Departamento" value={data.department} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12, sm: 6 }}>
         <FormTextField label="Ingreso mensual" value={data.monthlyIncome} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12, sm: 6 }}>
         <FormTextField label="Teléfono de la empresa" value={data.companyPhone} readOnly fullWidth />
       </Grid>
     </Grid>

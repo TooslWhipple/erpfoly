@@ -57,7 +57,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -70,7 +70,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Segundo Apellido"
@@ -82,7 +82,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormDatePicker
             fullWidth
             required
@@ -97,7 +97,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             label="Estado civil"
             select
@@ -118,7 +118,7 @@ export function BasicInformationTab({
             ))}
           </FormTextField>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -131,7 +131,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
@@ -160,7 +160,7 @@ export function BasicInformationTab({
             disabled={saving}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required={isSecurityCodeValid !== true}

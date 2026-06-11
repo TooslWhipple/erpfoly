@@ -16,6 +16,7 @@ export interface TitleAction {
   color?: ActionColor;
   permission?: string;
   disabled?: boolean;
+  loading?: boolean;
 }
 
 interface TitleProps {
@@ -71,7 +72,8 @@ export function Title({ title, description, actions }: TitleProps) {
               key={action.id}
               variant={action.variant || "contained"}
               color={action.color || "primary"}
-              disabled={action.disabled}
+              disabled={action.disabled || action.loading}
+              loading={action.loading}
               onClick={() => handleAction(action)}
               startIcon={action.icon}
             >

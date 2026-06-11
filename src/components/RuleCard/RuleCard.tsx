@@ -2,12 +2,14 @@ import { MenuItem, SelectChangeEvent, Typography } from "@mui/material";
 import {
   RuleCardContainer,
   RuleContent,
+  RuleFieldGroup,
   RuleLabel,
   TriggerSelect,
   OperatorSelect,
   PeriodSelect,
   MessageSelect,
   StatusChip,
+  RuleCardFooter,
   ActionsContainer,
   ActionIconButton,
   RulesListContainer,
@@ -97,86 +99,91 @@ export function RuleCard({
   return (
     <RuleCardContainer>
       <RuleContent>
-        <RuleLabel>Si</RuleLabel>
-        
-        <TriggerSelect
-          size="small"
-          value={rule.trigger}
-          onChange={handleTriggerChange}
-          disabled={!canUpdate}
-        >
-          {triggerOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </TriggerSelect>
+        <RuleFieldGroup>
+          <RuleLabel>Si</RuleLabel>
+          <TriggerSelect
+            size="small"
+            value={rule.trigger}
+            onChange={handleTriggerChange}
+            disabled={!canUpdate}
+          >
+            {triggerOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TriggerSelect>
+        </RuleFieldGroup>
 
-        <RuleLabel>es</RuleLabel>
+        <RuleFieldGroup>
+          <RuleLabel>es</RuleLabel>
+          <OperatorSelect
+            size="small"
+            value={rule.operator}
+            onChange={handleOperatorChange}
+            disabled={!canUpdate}
+          >
+            {operatorOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </OperatorSelect>
+        </RuleFieldGroup>
 
-        <OperatorSelect
-          size="small"
-          value={rule.operator}
-          onChange={handleOperatorChange}
-          disabled={!canUpdate}
-        >
-          {operatorOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </OperatorSelect>
+        <RuleFieldGroup>
+          <RuleLabel>a</RuleLabel>
+          <PeriodSelect
+            size="small"
+            value={rule.period}
+            onChange={handlePeriodChange}
+            disabled={!canUpdate}
+          >
+            {periodOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </PeriodSelect>
+        </RuleFieldGroup>
 
-        <RuleLabel>a</RuleLabel>
+        <RuleFieldGroup>
+          <RuleLabel>enviar:</RuleLabel>
+          <MessageSelect
+            size="small"
+            value={rule.message}
+            onChange={handleMessageChange}
+            disabled={!canUpdate}
+          >
+            {messageOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </MessageSelect>
+        </RuleFieldGroup>
+      </RuleContent>
 
-        <PeriodSelect
-          size="small"
-          value={rule.period}
-          onChange={handlePeriodChange}
-          disabled={!canUpdate}
-        >
-          {periodOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </PeriodSelect>
-
-        <RuleLabel>enviar:</RuleLabel>
-
-        <MessageSelect
-          size="small"
-          value={rule.message}
-          onChange={handleMessageChange}
-          disabled={!canUpdate}
-        >
-          {messageOptions.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </MessageSelect>
-
+      <RuleCardFooter>
         <StatusChip
           label={rule.isActive ? "Activo" : "Inactivo"}
           status={rule.isActive ? "active" : "inactive"}
           onClick={canUpdate ? () => onToggleActive(rule.id) : undefined}
           clickable={canUpdate}
         />
-      </RuleContent>
-
-      <ActionsContainer>
-        {onViewActivity && (
-          <ActionIconButton onClick={() => onViewActivity(rule.id)} size="small">
-            <ListCollapseIcon fontSize="small" />
-          </ActionIconButton>
-        )}
-        {canDelete && (
-          <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
-            <Trash2Icon fontSize="small" />
-          </ActionIconButton>
-        )}
-      </ActionsContainer>
+        <ActionsContainer>
+          {onViewActivity && (
+            <ActionIconButton onClick={() => onViewActivity(rule.id)} size="small">
+              <ListCollapseIcon fontSize="small" />
+            </ActionIconButton>
+          )}
+          {canDelete && (
+            <ActionIconButton onClick={() => onDelete(rule.id)} size="small">
+              <Trash2Icon fontSize="small" />
+            </ActionIconButton>
+          )}
+        </ActionsContainer>
+      </RuleCardFooter>
     </RuleCardContainer>
   );
 }

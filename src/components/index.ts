@@ -55,8 +55,8 @@ export { SuggestionsCard } from "./SuggestionsCard";
 export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";
 export type { SupplierSelectionModalProps } from "./SupplierSelectionModal";
-export { BranchSelectionModal } from "./BranchSelectionModal/BranchSelectionModal";
-export type { BranchSelectionModalProps } from "./BranchSelectionModal/BranchSelectionModal";
+export { BranchSelectionModal } from "./BranchSelectionModal";
+export type { BranchSelectionModalProps } from "./BranchSelectionModal";
 export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";
@@ -96,6 +96,8 @@ export { ApproveCreditModal } from "./ApproveCreditModal";
 export type { ApproveCreditModalProps } from "./ApproveCreditModal";
 export { RejectCreditModal } from "./RejectCreditModal";
 export type { RejectCreditModalProps } from "./RejectCreditModal";
+export { SendToWarehouseModal } from "./SendToWarehouseModal";
+export type { SendToWarehouseModalProps } from "./SendToWarehouseModal";
 export { RequestAdditionalInfoModal } from "./RequestAdditionalInfoModal";
 export type {
   RequestAdditionalInfoModalProps,

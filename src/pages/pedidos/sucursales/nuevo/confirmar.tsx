@@ -3,16 +3,13 @@ import { useRouter } from "next/router";
 import { Box, Typography, Button, CircularProgress, Stack, Grid } from "@mui/material";
 import { MainLayout, Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import {
-    PageContainer,
-    PageHeader,
-    SummaryCard,
-} from "@/styles/pedidos/confirmar.styles";
+import { SummaryCard, } from "@/styles/pedidos/confirmar.styles";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
 import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
 import { createOrderWithItems } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 
 interface ConfirmOrderData {
     orderType: "external" | "internal";
@@ -29,18 +26,9 @@ const IVA_RATE = 0.16;
 function withPlaceholderOnlinePrices(item: ConfirmOrderItem): ConfirmOrderItem {
     if (item.onlinePrices) return item;
 
-    const averagePrice = Math.round(item.unitPrice * 1.78 * 100) / 100;
-
     return {
         ...item,
-        onlinePrices: {
-            averagePrice,
-            retailers: [
-                { retailer: "Liverpool", price: averagePrice, url: "https://www.liverpool.com.mx" },
-                { retailer: "Walmart", price: averagePrice, url: "https://www.walmart.com.mx" },
-                { retailer: "Coppel", price: averagePrice, url: "https://www.coppel.com" },
-            ],
-        },
+        onlinePrices: buildPlaceholderOnlinePrices(item.unitPrice),
     };
 }
 
@@ -204,12 +192,10 @@ export default function ConfirmarArticulosPage() {
 
     return (
         <MainLayout>
-            <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
 
-            <PageContainer>
-                <PageHeader>
-                    <Typography variant="h1">Confirmar artículos</Typography>
-                </PageHeader>
+            <Stack direction="column" spacing={3}>
+                <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
+                <Typography variant="h1">Confirmar artículos</Typography>
 
                 <Grid container spacing={4}>
                     <Grid size={{ xs: 12, md: 8, xl: 9 }}>
@@ -260,7 +246,7 @@ export default function ConfirmarArticulosPage() {
                         </SummaryCard>
                     </Grid>
                 </Grid>
-            </PageContainer>
+            </Stack>
         </MainLayout>
     );
 }

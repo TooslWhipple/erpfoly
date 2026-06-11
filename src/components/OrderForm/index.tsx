@@ -427,46 +427,45 @@ export default function OrderForm({
         {
             id: "name",
             label: "Nombre",
-            size: "xl",
+            size: "lg",
             truncate: true,
             format: (value, row) => (
                 <Stack direction="row" alignItems="center" spacing={1.5}>
-                    {row.image ? (
-                        <Box
-                            component="img"
-                            src={row.image}
-                            alt={String(value)}
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 1,
-                                objectFit: "cover",
-                                border: `1px solid ${theme.palette.app.border}`,
-                                flexShrink: 0,
-                            }}
-                        />
-                    ) : (
-                        <Box
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 1,
-                                backgroundColor: theme.palette.background.lowGray,
-                                border: `1px solid ${theme.palette.app.border}`,
-                                flexShrink: 0,
-                            }}
-                        />
-                    )}
-                    <Typography variant="body2" sx={{ flex: 1 }}>
-                        {String(value)}
-                    </Typography>
+                    {
+                        row.image ?
+                            <Box
+                                component="img"
+                                src={row.image}
+                                alt={String(value)}
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 1,
+                                    objectFit: "cover",
+                                    border: `1px solid ${theme.palette.app.border}`,
+                                    flexShrink: 0,
+                                }}
+                            />
+                            :
+                            <Box
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 1,
+                                    backgroundColor: theme.palette.background.lowGray,
+                                    border: `1px solid ${theme.palette.app.border}`,
+                                    flexShrink: 0,
+                                }}
+                            />
+                    }
+                    <Typography variant="body2" sx={{ flex: 1 }}>{String(value)}</Typography>
                 </Stack>
             ),
         },
         {
             id: "folio",
             label: "Folio",
-            size: "md",
+            size: "sm",
         },
         {
             id: "salesYear",
@@ -525,8 +524,7 @@ export default function OrderForm({
             type: "button",
             size: "md",
             buttonLabel: "Agregar",
-            buttonVariant: "text",
-            buttonColor: "primary",
+            buttonVariant: "white",
             onButtonClick: (row) => handleAddArticle(row),
             sticky: true,
             stickyPosition: "right",
@@ -581,21 +579,23 @@ export default function OrderForm({
                         <Breadcrumbs items={breadcrumbs} />
                         <Typography variant="h1">{pageTitle}</Typography>
                         <SuggestionsList>
-                            {suggestionsLoading
-                                ? [1, 2, 3, 4].map((i) => (
-                                    <Skeleton
-                                        key={i}
-                                        variant="rectangular"
-                                        style={{ borderRadius: "12px", flex: "1 1 272px", minWidth: "272px", maxWidth: "272px", height: "304px" }}
-                                    />
-                                ))
-                                : suggestions.map((suggestion) => (
-                                    <ProductSuggestionCard
-                                        key={suggestion.id}
-                                        product={suggestion}
-                                        onAdd={handleAddFromSuggestion}
-                                    />
-                                ))}
+                            {
+                                suggestionsLoading
+                                    ? [1, 2, 3, 4].map((i) => (
+                                        <Skeleton
+                                            key={i}
+                                            variant="rectangular"
+                                            style={{ borderRadius: "12px", flex: "1 1 272px", minWidth: "272px", maxWidth: "272px", height: "304px" }}
+                                        />
+                                    ))
+                                    : suggestions.map((suggestion) => (
+                                        <ProductSuggestionCard
+                                            key={suggestion.id}
+                                            product={suggestion}
+                                            onAdd={handleAddFromSuggestion}
+                                        />
+                                    ))
+                            }
                         </SuggestionsList>
                         <Card>
                             <Stack spacing={1}>
@@ -614,6 +614,7 @@ export default function OrderForm({
                                         ),
                                     }}
                                 />
+                                <Typography variant="body2" color="text.secondary">{filteredArticles?.length ?? 0} Resultados</Typography>
                             </Stack>
                         </Card>
 

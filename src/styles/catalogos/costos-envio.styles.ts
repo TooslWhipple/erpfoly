@@ -1,20 +1,6 @@
 import { Box, Divider, TextField, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const PageHeader = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: theme.spacing(2),
-  marginBottom: theme.spacing(3),
-}));
-
-export const PageTitle = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.primary,
-  fontSize: "1.75rem",
-  fontWeight: 700,
-}));
-
 export const MainContent = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "420px 1fr",

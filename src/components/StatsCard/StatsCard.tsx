@@ -3,7 +3,7 @@ import numeral from "numeral";
 import {
   CardContainer
 } from "./styles";
-import { Grid, Stack, Typography } from "@mui/material";
+import { Grid, Skeleton, Stack, Typography } from "@mui/material";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 export interface StatsCardData {
@@ -78,14 +78,31 @@ export function StatsCard({
 interface StatsCardGroupProps {
   cards: StatsCardData[];
   columns?: number;
+  loading?: boolean;
 }
 
-export function StatsCardGroup({ cards }: StatsCardGroupProps) {
+export function StatsCardGroup({ cards, columns = 3, loading = false }: StatsCardGroupProps) {
+  const size = 12 / columns;
+
+  if (loading) {
+    return (
+      <Grid container spacing={2} alignItems="stretch">
+        {
+          [1, 2, 3].map((i) => (
+            <Grid key={i} size={{ xs: 12, sm: 6, md: size }}>
+              <Skeleton variant="rectangular" width="100%" height="96px" style={{ borderRadius: "16px" }} animation="wave" />
+            </Grid>
+          ))
+        }
+      </Grid>
+    )
+  }
+
   return (
     <Grid container spacing={2} alignItems="stretch">
       {
         cards.map((card) => (
-          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 'grow' }}>
+          <Grid key={card.id} size={{ xs: 12, sm: 6, md: size }}>
             <StatsCard
               label={card.label}
               value={card.value}

@@ -289,6 +289,7 @@ export default function Promociones() {
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
           emptyMessage="No hay promociones registradas"
+          onRowClick={handleViewDetails}
         />
       </Stack>
     </MainLayout>

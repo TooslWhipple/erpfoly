@@ -93,9 +93,11 @@ export function useGuarantorTab(initialValues: GuarantorTabValues) {
     setErrors({});
   }, []);
 
-  const validateValues = useCallback(() => {
+  const validateValues = useCallback((silent?: boolean) => {
     const nextErrors = buildGuarantorValidationErrors(values);
-    setErrors(nextErrors);
+    if (!silent) {
+      setErrors(nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
   }, [values]);
 

@@ -7,7 +7,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -18,8 +17,10 @@ import {
   TextField,
   Typography,
   Paper,
+  Dialog,
+  DialogContent,
 } from "@mui/material";
-import { Trash2, ScanLine, Pencil, RefreshCw } from "lucide-react";
+import { Trash2, ScanLine, Pencil, RefreshCw, Fingerprint } from "lucide-react";
 import {
   X,
   Search,
@@ -40,6 +41,7 @@ import {
   addSaleItem,
   registerSalePayment,
   confirmSalePayment,
+  confirmCreditSale,
 } from "@/services/ventas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
@@ -117,6 +119,9 @@ export default function NuevaVenta() {
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
+  const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
+  const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(12);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingData, setBillingData] = useState<{
     rfc: string;
@@ -228,6 +233,17 @@ export default function NuevaVenta() {
           discount_amount: item.discountAmount > 0 ? item.discountAmount : undefined,
         });
         if (itemRes.error) throw new Error(itemRes.error.message);
+      }
+
+      if (paymentType === "CREDIT") {
+        if (!selectedClient) throw new Error("Se requiere un cliente para venta a crédito");
+        const creditRes = await confirmCreditSale(saleId, {
+          term_months: selectedTermMonths,
+          down_payment: enganche,
+          payment_method: paymentMethod === "cash" ? "CASH" : "CARD",
+        });
+        if (creditRes.error) throw new Error(creditRes.error.message);
+        return creditRes.data!;
       }
 
       const paymentRes = await registerSalePayment(saleId, {
@@ -343,9 +359,10 @@ export default function NuevaVenta() {
   const totalDiscounts = cart.reduce((s, item) => s + item.discountAmount * item.quantity, 0);
   const totalFinal = subtotalOriginal - totalDiscounts;
   const payAmtNum = parseFloat(paymentAmount.replace(/[^0-9.]/g, "")) || 0;
-  const change = Math.max(0, payAmtNum - totalFinal);
   const ENGANCHE_PCT = 0.1;
   const enganche = subtotal * ENGANCHE_PCT;
+  const amountToPay = paymentType === "CREDIT" ? enganche : totalFinal;
+  const change = Math.max(0, payAmtNum - amountToPay);
 
   const PAYMENT_OPTIONS: { value: "CREDIT" | "CASH" | "LAYAWAY"; label: string }[] = [
     { value: "CREDIT", label: "Crédito" },
@@ -762,7 +779,7 @@ export default function NuevaVenta() {
   if (view === "checkout") {
     const canRegister =
       !cobrarMutation.isPending &&
-      (paymentMethod === "card" || payAmtNum >= totalFinal);
+      (paymentMethod === "card" || payAmtNum >= amountToPay);
 
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
@@ -944,29 +961,54 @@ export default function NuevaVenta() {
           </Stack>
 
           <Stack spacing={2}>
-            <Stack spacing={0.75}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2">Subtotal</Typography>
-                <Typography variant="body2">{formatCurrency(subtotalOriginal)}</Typography>
-              </Stack>
-              {totalDiscounts > 0 && (
+            <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
+              <Stack spacing={1}>
                 <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2">Descuentos</Typography>
-                  <Typography variant="body2" color="error.main">
-                    -{formatCurrency(totalDiscounts)}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                  <Typography variant="body2">{formatCurrency(subtotalOriginal)}</Typography>
                 </Stack>
-              )}
-              <Divider />
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="subtitle2" fontWeight={700}>
-                  Total:
-                </Typography>
-                <Typography variant="subtitle2" fontWeight={700}>
-                  {formatCurrency(totalFinal)}
-                </Typography>
+                {totalDiscounts > 0 && (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Descuentos</Typography>
+                    <Typography variant="body2" color="error.main">
+                      -{formatCurrency(totalDiscounts)}
+                    </Typography>
+                  </Stack>
+                )}
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Total</Typography>
+                  <Typography variant="body2">{formatCurrency(totalFinal)}</Typography>
+                </Stack>
+
+                {paymentType === "CREDIT" && (
+                  <>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
+                      <Typography variant="h6" fontWeight={700}>
+                        Enganche:
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(enganche)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                      <Select
+                        size="small"
+                        value={selectedTermMonths}
+                        onChange={(e) => setSelectedTermMonths(e.target.value as 12 | 18 | 24)}
+                        sx={{ minWidth: 110 }}
+                      >
+                        <MenuItem value={12}>12 meses</MenuItem>
+                        <MenuItem value={18}>18 meses</MenuItem>
+                        <MenuItem value={24}>24 meses</MenuItem>
+                      </Select>
+                      <Typography variant="body2" fontWeight={600}>
+                        {formatCurrency((totalFinal - enganche) / selectedTermMonths)}
+                      </Typography>
+                    </Stack>
+                  </>
+                )}
               </Stack>
-            </Stack>
+            </Paper>
 
             <Box sx={{ bgcolor: "rgba(25, 118, 210, 0.06)", borderRadius: 2, p: 2.5 }}>
               <Typography variant="body2" fontWeight={600} textAlign="center" mb={1.5}>
@@ -1152,7 +1194,14 @@ export default function NuevaVenta() {
             variant="contained"
             disabled={!canProceed}
             sx={{ borderRadius: 2, textTransform: "none" }}
-            onClick={() => setView("checkout")}
+            onClick={() => {
+              if (paymentType === "CREDIT") {
+                setFingerprintConfirmed(false);
+                setFingerprintModalOpen(true);
+              } else {
+                setView("checkout");
+              }
+            }}
           >
             Proceder al cobro
           </Button>
@@ -1503,7 +1552,6 @@ export default function NuevaVenta() {
                     </InputAdornment>
                   }
                   sx={{ mb: 1.5, cursor: "pointer" }}
-                  readOnly
                 />
 
                 <Button
@@ -1650,6 +1698,48 @@ export default function NuevaVenta() {
               )}
             </Paper>
           )}
+
+          <Dialog
+            open={fingerprintModalOpen}
+            onClose={() => setFingerprintModalOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+          >
+            <DialogContent sx={{ p: 4 }}>
+              <Stack spacing={4} alignItems="center" textAlign="center">
+                <Typography variant="h5" fontWeight={600}>
+                  Validación de identidad
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Para continuar, captura la huella dactilar del cliente
+                </Typography>
+                <Box sx={{ py: 2 }}>
+                  <Fingerprint size={180} color={fingerprintConfirmed ? "#22c55e" : "#94a3b8"} />
+                </Box>
+                <Typography variant="body1">
+                  {fingerprintConfirmed
+                    ? "Dedo índice registrado"
+                    : "Coloca el dedo índice del cliente en el lector."}
+                </Typography>
+                <Button
+                  variant={fingerprintConfirmed ? "contained" : "outlined"}
+                  sx={{ borderRadius: 2, textTransform: "none" }}
+                  onClick={() => {
+                    if (fingerprintConfirmed) {
+                      setFingerprintModalOpen(false);
+                      setPaymentAmount(enganche.toFixed(2));
+                      setView("checkout");
+                    } else {
+                      setFingerprintConfirmed(true);
+                    }
+                  }}
+                >
+                  {fingerprintConfirmed ? "Continuar" : "Confirmar huella"}
+                </Button>
+              </Stack>
+            </DialogContent>
+          </Dialog>
 
           <SideModal
             open={clientModalOpen}

@@ -297,6 +297,13 @@ function parseStreetAddress(value: string): {
   }
 
   const street = tokens.slice(0, -1).join(" ").trim();
+
+  // If the input is a single numeric token (e.g. "2323"), don't leave street empty.
+  // Use the full value as the street so the backend doesn't reject it.
+  if (!street) {
+    return { street: normalized, externalNumber: "", internalNumber: "" };
+  }
+
   const internalMatch = lastToken.match(/^(.+?)[-/](.+)$/);
   if (!internalMatch) {
     return { street, externalNumber: lastToken, internalNumber: "" };

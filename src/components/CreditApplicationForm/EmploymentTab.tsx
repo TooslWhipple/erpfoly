@@ -41,6 +41,7 @@ export function EmploymentTab({
             error={Boolean(errors.company)}
             helperText={errors.company}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <PostalCodeSettlementFields
@@ -93,6 +94,7 @@ export function EmploymentTab({
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -102,10 +104,11 @@ export function EmploymentTab({
             label="Antiguedad (años)"
             placeholder="Ingresa"
             value={values.seniorityYears}
-            onChange={(event) => onFieldChange("seniorityYears", event.target.value)}
+            onChange={(event) => onFieldChange("seniorityYears", event.target.value.replace(/\D/g, '').slice(0, 4))}
             error={Boolean(errors.seniorityYears)}
             helperText={errors.seniorityYears}
             disabled={saving}
+            inputProps={{ maxLength: 4, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -119,6 +122,7 @@ export function EmploymentTab({
             error={Boolean(errors.position)}
             helperText={errors.position}
             disabled={saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -132,6 +136,7 @@ export function EmploymentTab({
             error={Boolean(errors.department)}
             helperText={errors.department}
             disabled={saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -141,10 +146,16 @@ export function EmploymentTab({
             label="Ingreso mensual"
             placeholder="Ingresa"
             value={values.monthlyIncome}
-            onChange={(event) => onFieldChange("monthlyIncome", event.target.value)}
+            onChange={(event) => {
+              const val = event.target.value.replace(/[^0-9.]/g, '');
+              const parts = val.split('.');
+              const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val;
+              onFieldChange("monthlyIncome", sanitized.slice(0, 16));
+            }}
             error={Boolean(errors.monthlyIncome)}
             helperText={errors.monthlyIncome}
             disabled={saving}
+            inputProps={{ maxLength: 16, inputMode: 'decimal' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -154,10 +165,11 @@ export function EmploymentTab({
             label="Teléfono de la empresa"
             placeholder="Ingresa"
             value={values.companyPhone}
-            onChange={(event) => onFieldChange("companyPhone", event.target.value)}
+            onChange={(event) => onFieldChange("companyPhone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.companyPhone)}
             helperText={errors.companyPhone}
             disabled={saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
 
@@ -177,8 +189,14 @@ export function EmploymentTab({
             label="Monto"
             placeholder="Ingresa"
             value={values.otherIncomeAmount}
-            onChange={(event) => onFieldChange("otherIncomeAmount", event.target.value)}
+            onChange={(event) => {
+              const val = event.target.value.replace(/[^0-9.]/g, '');
+              const parts = val.split('.');
+              const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val;
+              onFieldChange("otherIncomeAmount", sanitized.slice(0, 16));
+            }}
             disabled={!values.hasOtherIncome || saving}
+            inputProps={{ maxLength: 16, inputMode: 'decimal' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -189,6 +207,7 @@ export function EmploymentTab({
             value={values.otherIncomeSource}
             onChange={(event) => onFieldChange("otherIncomeSource", event.target.value)}
             disabled={!values.hasOtherIncome || saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
       </Grid>
@@ -203,6 +222,7 @@ export function EmploymentTab({
             value={values.spouseCompany}
             onChange={(event) => onFieldChange("spouseCompany", event.target.value)}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <PostalCodeSettlementFields
@@ -253,6 +273,7 @@ export function EmploymentTab({
             value={values.spouseStreetAndNumber}
             onChange={(event) => onFieldChange("spouseStreetAndNumber", event.target.value)}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -261,8 +282,9 @@ export function EmploymentTab({
             label="Antiguedad (años)"
             placeholder="Ingresa"
             value={values.spouseSeniorityYears}
-            onChange={(event) => onFieldChange("spouseSeniorityYears", event.target.value)}
+            onChange={(event) => onFieldChange("spouseSeniorityYears", event.target.value.replace(/\D/g, '').slice(0, 4))}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 4, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -273,6 +295,7 @@ export function EmploymentTab({
             value={values.spousePosition}
             onChange={(event) => onFieldChange("spousePosition", event.target.value)}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -283,6 +306,7 @@ export function EmploymentTab({
             value={values.spouseDepartment}
             onChange={(event) => onFieldChange("spouseDepartment", event.target.value)}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -291,8 +315,14 @@ export function EmploymentTab({
             label="Ingreso mensual"
             placeholder="Ingresa"
             value={values.spouseMonthlyIncome}
-            onChange={(event) => onFieldChange("spouseMonthlyIncome", event.target.value)}
+            onChange={(event) => {
+              const val = event.target.value.replace(/[^0-9.]/g, '');
+              const parts = val.split('.');
+              const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val;
+              onFieldChange("spouseMonthlyIncome", sanitized.slice(0, 16));
+            }}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 16, inputMode: 'decimal' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -301,10 +331,11 @@ export function EmploymentTab({
             label="Teléfono de la empresa"
             placeholder="Ingresa"
             value={values.spouseCompanyPhone}
-            onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value)}
+            onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.spouseCompanyPhone)}
             helperText={errors.spouseCompanyPhone}
             disabled={!spouseSectionEnabled || saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
       </Grid>

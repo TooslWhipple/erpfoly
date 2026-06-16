@@ -66,6 +66,7 @@ export function GuarantorTab({
             error={Boolean(errors.fullName)}
             helperText={errors.fullName}
             disabled={saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
 
@@ -121,6 +122,7 @@ export function GuarantorTab({
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
 
@@ -135,6 +137,7 @@ export function GuarantorTab({
             error={Boolean(errors.betweenStreets)}
             helperText={errors.betweenStreets}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
 
@@ -183,10 +186,11 @@ export function GuarantorTab({
             label="CURP"
             placeholder="Ingresa"
             value={values.curp}
-            onChange={(event) => onFieldChange("curp", event.target.value)}
+            onChange={(event) => onFieldChange("curp", event.target.value.toUpperCase())}
             error={Boolean(errors.curp)}
             helperText={errors.curp}
             disabled={saving}
+            inputProps={{ maxLength: 18 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -196,10 +200,11 @@ export function GuarantorTab({
             label="RFC"
             placeholder="Ingresa"
             value={values.rfc}
-            onChange={(event) => onFieldChange("rfc", event.target.value)}
+            onChange={(event) => onFieldChange("rfc", event.target.value.toUpperCase())}
             error={Boolean(errors.rfc)}
             helperText={errors.rfc}
             disabled={saving}
+            inputProps={{ maxLength: 13 }}
           />
         </Grid>
 
@@ -210,10 +215,11 @@ export function GuarantorTab({
             label="Teléfono"
             placeholder="Ingresa"
             value={values.phone}
-            onChange={(event) => onFieldChange("phone", event.target.value)}
+            onChange={(event) => onFieldChange("phone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.phone)}
             helperText={errors.phone}
             disabled={saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
 

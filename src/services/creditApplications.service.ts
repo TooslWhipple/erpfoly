@@ -551,6 +551,10 @@ export async function createCreditApplicationFromIntake(
   }
 
   const formData = new FormData();
+  const ineExecutionId = payload.ineExecutionId?.trim();
+  if (ineExecutionId) {
+    formData.append("ineExecutionId", ineExecutionId);
+  }
   formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
   formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));
   formData.append("faceCapture", dataUrlToFile(faceCapture, "face-capture"));

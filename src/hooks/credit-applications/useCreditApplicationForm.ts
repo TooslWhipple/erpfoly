@@ -505,7 +505,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     ADDITIONAL_INFORMATION_CODES.guarantorInformation
   );
 
-  const shouldShowGuarantorTab = true;
+  const shouldShowGuarantorTab = requiresGuarantorInformation;
 
   const tabs = useMemo(() => {
     if (!shouldShowGuarantorTab) {
@@ -746,7 +746,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       requireEmploymentProofLetter: requiresEmploymentProofLetter,
       silent: true,
     }) &&
-    guarantorTab.validateValues(true);
+    (!shouldShowGuarantorTab || guarantorTab.validateValues(true));
 
   const beginFormAction = useCallback((phase: Exclude<FormActionPhase, "idle">): boolean => {
     if (formActionRef.current) {
@@ -991,7 +991,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     });
     if (!documentationFormIsValid) invalidTabs.push("documentation");
 
-    if (!guarantorTab.validateValues()) {
+    if (shouldShowGuarantorTab && !guarantorTab.validateValues()) {
       invalidTabs.push("guarantor");
     }
 
@@ -1008,6 +1008,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     referencesTab,
     requiresEmploymentProofLetter,
     requiresIncomeProof,
+    shouldShowGuarantorTab,
   ]);
 
   const handleSave = useCallback(

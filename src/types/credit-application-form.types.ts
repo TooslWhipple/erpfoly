@@ -33,10 +33,23 @@ export interface BasicInformationFormErrors {
   securityCode?: string;
 }
 
+export interface CreditApplicationBiometricsOcrPreview {
+  curp?: string;
+  name?: string;
+  lastName?: string;
+  secondLastName?: string;
+  rfc?: string;
+  birthDate?: string;
+  address?: string;
+}
+
 export interface CreditApplicationBiometricsData {
   ineFrontImage: string | null;
   ineBackImage: string | null;
   selfieImage: string | null;
+  ineExecutionId?: string | null;
+  livenessExecutionId?: string | null;
+  ocrPreview?: CreditApplicationBiometricsOcrPreview | null;
   fingerprintConfirmed: boolean;
   signatureDataUrl: string | null;
   completedAt: string | null;

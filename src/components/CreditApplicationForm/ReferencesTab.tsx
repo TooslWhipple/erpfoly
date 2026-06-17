@@ -49,6 +49,7 @@ export function ReferencesTab({
             error={Boolean(errors.company)}
             helperText={errors.company}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -58,10 +59,11 @@ export function ReferencesTab({
             label="Teléfono"
             placeholder="Ingresa"
             value={values.phone}
-            onChange={(event) => onFieldChange("phone", event.target.value)}
+            onChange={(event) => onFieldChange("phone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.phone)}
             helperText={errors.phone}
             disabled={saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -75,6 +77,7 @@ export function ReferencesTab({
             error={Boolean(errors.clientPosition)}
             helperText={errors.clientPosition}
             disabled={saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -84,10 +87,11 @@ export function ReferencesTab({
             label="Antiguedad (años)"
             placeholder="Ingresa"
             value={values.seniorityYears}
-            onChange={(event) => onFieldChange("seniorityYears", event.target.value)}
+            onChange={(event) => onFieldChange("seniorityYears", event.target.value.replace(/\D/g, '').slice(0, 4))}
             error={Boolean(errors.seniorityYears)}
             helperText={errors.seniorityYears}
             disabled={saving}
+            inputProps={{ maxLength: 4, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -101,6 +105,7 @@ export function ReferencesTab({
             error={Boolean(errors.respondentNameAndPosition)}
             helperText={errors.respondentNameAndPosition}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
       </Grid>
@@ -135,6 +140,7 @@ export function ReferencesTab({
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.name)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.name}
                   disabled={saving}
+                  inputProps={{ maxLength: 32 }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
@@ -176,6 +182,7 @@ export function ReferencesTab({
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.address)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.address}
                   disabled={saving}
+                  inputProps={{ maxLength: 128 }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
@@ -185,10 +192,11 @@ export function ReferencesTab({
                   label="Teléfono"
                   placeholder="Ingresa"
                   value={reference.phone}
-                  onChange={(event) => onReferenceFieldChange(reference.id, "phone", event.target.value)}
+                  onChange={(event) => onReferenceFieldChange(reference.id, "phone", event.target.value.replace(/\D/g, '').slice(0, 10))}
                   error={Boolean(errors.familyReferenceItems?.[reference.id]?.phone)}
                   helperText={errors.familyReferenceItems?.[reference.id]?.phone}
                   disabled={saving}
+                  inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
                 />
               </Grid>
             </Grid>

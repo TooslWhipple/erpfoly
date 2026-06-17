@@ -1,5 +1,4 @@
-import { get, post, patch } from "@/lib/axios";
-import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import { get, post, patch, type ApiResult, type ApiSuccessPayload, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   RoleListItem,
@@ -38,8 +37,8 @@ export interface CreateRolePayload {
 
 export async function createRole(
   payload: CreateRolePayload
-): Promise<ApiResult<{ id: number; name: string; description?: string | null }>> {
-  return post<{ id: number; name: string; description?: string | null }>(
+): Promise<ApiResult<ApiSuccessPayload & { id: number }>> {
+  return post<ApiSuccessPayload & { id: number }>(
     '/role',
     payload
   );

@@ -55,6 +55,7 @@ export function BasicInformationTab({
             error={Boolean(errors.firstName)}
             helperText={errors.firstName}
             disabled={saving}
+            inputProps={{ maxLength: 32 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -68,6 +69,7 @@ export function BasicInformationTab({
             error={Boolean(errors.lastName)}
             helperText={errors.lastName}
             disabled={saving}
+            inputProps={{ maxLength: 32 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -80,6 +82,7 @@ export function BasicInformationTab({
             error={Boolean(errors.secondLastName)}
             helperText={errors.secondLastName}
             disabled={saving}
+            inputProps={{ maxLength: 32 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -126,10 +129,11 @@ export function BasicInformationTab({
             label="CURP"
             placeholder="Ingresa"
             value={values.curp}
-            onChange={(event) => onFieldChange("curp", event.target.value)}
+            onChange={(event) => onFieldChange("curp", event.target.value.toUpperCase())}
             error={Boolean(errors.curp)}
             helperText={errors.curp}
             disabled={saving}
+            inputProps={{ maxLength: 18 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -139,10 +143,11 @@ export function BasicInformationTab({
             label="RFC"
             placeholder="Ingresa"
             value={values.rfc}
-            onChange={(event) => onFieldChange("rfc", event.target.value)}
+            onChange={(event) => onFieldChange("rfc", event.target.value.toUpperCase())}
             error={Boolean(errors.rfc)}
             helperText={errors.rfc}
             disabled={saving}
+            inputProps={{ maxLength: 13 }}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -159,6 +164,7 @@ export function BasicInformationTab({
             error={Boolean(errors.email)}
             helperText={errors.email}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -168,48 +174,51 @@ export function BasicInformationTab({
             label="Número de Whatsapp"
             placeholder="Ingresa"
             value={values.whatsappNumber}
-            onChange={(event) => onFieldChange("whatsappNumber", event.target.value)}
+            onChange={(event) => onFieldChange("whatsappNumber", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.whatsappNumber)}
             helperText={errors.whatsappNumber}
             disabled={isSecurityCodeValid === true || saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
-        <Grid size={{ xs: 'grow' }}>
-          <FormTextField
-            fullWidth
-            required={isSecurityCodeValid !== true}
-            label="Código de seguridad"
-            placeholder="Ingresa"
-            value={values.securityCode}
-            onChange={(event) => onFieldChange("securityCode", event.target.value)}
-            error={Boolean(errors.securityCode)}
-            helperText={errors.securityCode}
-            disabled={isSecurityCodeFieldDisabled || saving}
-            inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
-          />
-        </Grid>
-        <Grid size={{ xs: 'auto' }} alignSelf="flex-end">
-          <Button
-            variant="outlined"
-            startIcon={<ShieldCheck size={16} />}
-            onClick={onValidateSecurityCode}
-            disabled={isOtpActionDisabled || saving}
-            sx={{ minWidth: 108, alignSelf: "stretch" }}>
-            {validatingSecurityCode ? "Procesando..." : otpActionLabel}
-          </Button>
+        <Grid container size={{ xs: 'grow' }}>
+          <Grid size={{ xs: 'grow' }}>
+            <FormTextField
+              fullWidth
+              required={isSecurityCodeValid !== true}
+              label="Código de seguridad"
+              placeholder="Ingresa"
+              value={values.securityCode}
+              onChange={(event) => onFieldChange("securityCode", event.target.value)}
+              error={Boolean(errors.securityCode)}
+              helperText={errors.securityCode}
+              disabled={isSecurityCodeFieldDisabled || saving}
+              inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
+            />
+          </Grid>
+          <Grid size={{ xs: 'auto' }} alignSelf="flex-start" style={{ marginTop: 24 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ShieldCheck size={16} />}
+              onClick={onValidateSecurityCode}
+              disabled={isOtpActionDisabled || saving}
+              sx={{ minWidth: 108, alignSelf: "stretch" }}>
+              {validatingSecurityCode ? "Procesando..." : otpActionLabel}
+            </Button>
+          </Grid>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          {isSecurityCodeValid === true && (
+          {
+            isSecurityCodeValid &&
             <Typography
               variant="body2"
               color="success.main"
-              sx={{ display: "flex", alignItems: "center", gap: 1 }}
-            >
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Check size={14} />
               Código validado correctamente
             </Typography>
-          )}
+          }
         </Grid>
 
         <Grid size={{ xs: 12 }}>

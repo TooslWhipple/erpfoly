@@ -26,6 +26,7 @@ import {
     type BranchItem,
 } from "@/services/users.service";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
 
 async function loadCatalogs() {
@@ -67,6 +68,7 @@ const initialUser: UserFormState = {
 export default function UserFormPage() {
     const router = useRouter();
     const { hasPermission } = usePermissions();
+    const { showSuccess, showError } = useSnackbarStore();
     const { id } = router.query;
 
     const isNew = id === "nuevo";
@@ -186,10 +188,19 @@ export default function UserFormPage() {
                 branchIds: user.branchIds,
             });
 
-        if (!result.error) {
-            router.push("/catalogos/usuarios");
+        if (result.error) {
+            showError(result.error.message);
+            setSendingInvite(false);
+            return;
         }
 
+        showSuccess(
+            result.data?.message ??
+                (isNew
+                    ? "Se ha enviado una invitación al usuario."
+                    : "Usuario actualizado correctamente."),
+        );
+        router.push("/catalogos/usuarios");
         setSendingInvite(false);
     };
 

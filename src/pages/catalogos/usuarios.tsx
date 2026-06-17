@@ -5,6 +5,7 @@ import { Edit as EditIcon } from "@mui/icons-material";
 import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
+import { formatListDateTime } from "@/utils/date";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
 
 type User = UserListItem;
@@ -119,14 +120,14 @@ export default function Usuarios() {
         {
             id: "createdAt",
             label: "Fecha registro",
-            type: "date",
             size: "sm",
+            format: (value) => formatListDateTime(value as string | null | undefined),
         },
         {
             id: "updatedAt",
             label: "Últ. actualización",
-            type: "date",
             size: "sm",
+            format: (value) => formatListDateTime(value as string | null | undefined),
         }
     ];
 

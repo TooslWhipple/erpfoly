@@ -36,6 +36,8 @@ export type DateFormatPreset =
   | "datetimeShort"
   /** Compacto con am/pm. Ej.: `8 abr 2026, 2:30 pm` */
   | "datetimeShort12h"
+  /** Fecha numérica compacta + hora 12h. Ej.: `05/06/26 12:35pm` */
+  | "listCompactDateTime12h"
   /** Fecha ISO. Ej.: `2026-04-08` */
   | "isoDate"
   /** Fecha y hora ISO (24h). Ej.: `2026-04-08 14:30:00` */
@@ -58,6 +60,7 @@ export const dateFormatPresets: Record<DateFormatPreset, string> = {
   datetimeNumeric12h: "L h:mm a",
   datetimeShort: "D MMM YYYY, H:mm",
   datetimeShort12h: "D MMM YYYY, h:mm a",
+  listCompactDateTime12h: "DD/MM/YY h:mma",
   isoDate: "YYYY-MM-DD",
   isoDatetime: "YYYY-MM-DD HH:mm:ss",
   isoDatetime12h: "YYYY-MM-DD h:mm:ss a",
@@ -167,4 +170,9 @@ export function formatDateTimeShort(
     return fallback;
   }
   return `${d.format("D")} ${capitalizeWord(d.format("MMM"))}, ${d.format("YYYY h:mm a")}`;
+}
+
+/** Compact list format: `05/06/26 12:35pm` */
+export function formatListDateTime(dateStr: DateInput): string {
+  return formatDate(dateStr, "listCompactDateTime12h");
 }

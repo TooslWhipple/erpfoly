@@ -103,7 +103,7 @@ export async function getBranches(): Promise<ApiResult<BranchItem[]>> {
 
 export async function createUser(
     payload: CreateUserPayload
-): Promise<ApiResult<UserListItem & ApiSuccessPayload>> {
+): Promise<ApiResult<ApiSuccessPayload>> {
     const body = {
         firstName: payload.firstName,
         lastName: payload.lastName,
@@ -114,13 +114,13 @@ export async function createUser(
         roleId: payload.roleId,
         branchIds: payload.branchIds,
     };
-    return post<UserListItem & ApiSuccessPayload>(BASE, body);
+    return post<ApiSuccessPayload>(BASE, body);
 }
 
 export async function updateUser(
     id: number,
     payload: UpdateUserPayload
-): Promise<ApiResult<UserDetail & ApiSuccessPayload>> {
+): Promise<ApiResult<ApiSuccessPayload>> {
     const body: Record<string, unknown> = {};
     if (payload.firstName !== undefined) body.firstName = payload.firstName;
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
@@ -130,7 +130,7 @@ export async function updateUser(
     if (payload.password !== undefined) body.password = payload.password;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
-    return patch<UserDetail & ApiSuccessPayload>(`${BASE}/${id}`, body);
+    return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
 }
 
 export async function deleteUser(id: number): Promise<ApiResult<{ id: number; message: string }>> {

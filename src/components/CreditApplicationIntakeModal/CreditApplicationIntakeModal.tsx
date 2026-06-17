@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
+import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
+import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
+import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import { theme } from "@/styles/theme";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 
@@ -13,28 +15,23 @@ interface CreditApplicationIntakeModalProps {
   onFinalize: (payload: CreditApplicationBiometricsData) => Promise<void>;
 }
 
-type IntakeStepId = "ine-front" | "ine-back" | "selfie" | "fingerprint" | "signature";
+type IntakeStepId = "ine-capture" | "liveness" | "fingerprint" | "signature";
 
 const STEP_ORDER: IntakeStepId[] = [
-  "ine-front",
-  "ine-back",
-  "selfie",
+  "ine-capture",
+  "liveness",
   "fingerprint",
   "signature",
 ];
 
 const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
-  "ine-front": {
+  "ine-capture": {
     title: "Nuevo cliente",
-    subtitle: "Captura la parte frontal de la INE del cliente",
+    subtitle: "Captura la INE del cliente (frente y reverso)",
   },
-  "ine-back": {
+  liveness: {
     title: "Nuevo cliente",
-    subtitle: "Captura la parte posterior de la INE del cliente",
-  },
-  selfie: {
-    title: "Nuevo cliente",
-    subtitle: "Captura una fotografía de la cara de la persona",
+    subtitle: "Realiza la prueba de vida del cliente",
   },
   fingerprint: {
     title: "Nuevo cliente",
@@ -51,47 +48,119 @@ export function CreditApplicationIntakeModal({
   onClose,
   onFinalize,
 }: CreditApplicationIntakeModalProps) {
-  const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-front");
-  const [ineImageDataUrl, setIneImageDataUrl] = useState<string | null>(null);
-  const [ineBackImageDataUrl, setIneBackImageDataUrl] = useState<string | null>(null);
-  const [selfieImageDataUrl, setSelfieImageDataUrl] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
+  const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
+  const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
+  const [ineBackImage, setIneBackImage] = useState<string | null>(null);
+  const [ocrPreview, setOcrPreview] = useState<CreditApplicationBiometricsData["ocrPreview"]>(null);
+  const [livenessExecutionId, setLivenessExecutionId] = useState<string | null>(null);
+  const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [signatureDrawn, setSignatureDrawn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [ineCaptureSessionKey, setIneCaptureSessionKey] = useState(0);
+  const [livenessCaptureSessionKey, setLivenessCaptureSessionKey] = useState(0);
 
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
 
+  const clearSignatureCanvas = () => {
+    const canvas = signatureCanvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureDrawn(false);
+  };
+
+  const { isReady: sdkReady, isLoading: sdkLoading, token: sdkToken, error: sdkError, reloadToken } =
+    useNubariumSdk({ enabled: open });
+
   const currentStepIndex = STEP_ORDER.indexOf(activeStep);
   const isLastStep = currentStepIndex === STEP_ORDER.length - 1;
-
   const stepContent = STEP_TITLES[activeStep];
 
   const canContinue = useMemo(() => {
-    if (activeStep === "ine-front") return Boolean(ineImageDataUrl);
-    if (activeStep === "ine-back") return Boolean(ineBackImageDataUrl);
-    if (activeStep === "selfie") return Boolean(selfieImageDataUrl);
+    if (activeStep === "ine-capture") return Boolean(ineFrontImage && ineBackImage);
+    if (activeStep === "liveness") return Boolean(selfieImage);
     if (activeStep === "fingerprint") return fingerprintConfirmed;
     return signatureDrawn;
   }, [
     activeStep,
     fingerprintConfirmed,
-    ineBackImageDataUrl,
-    ineImageDataUrl,
-    selfieImageDataUrl,
+    ineBackImage,
+    ineFrontImage,
+    selfieImage,
     signatureDrawn,
   ]);
 
+  const resetModalState = useCallback(() => {
+    setActiveStep("ine-capture");
+    setIneExecutionId(null);
+    setIneFrontImage(null);
+    setIneBackImage(null);
+    setOcrPreview(null);
+    setLivenessExecutionId(null);
+    setSelfieImage(null);
+    setFingerprintConfirmed(false);
+    setSignatureDrawn(false);
+    setIneCaptureSessionKey(0);
+    setLivenessCaptureSessionKey(0);
+    clearSignatureCanvas();
+  }, []);
+
+  const handleCloseModal = () => {
+    if (saving) return;
+    onClose();
+    resetModalState();
+  };
+
+  const handleIneCaptureSuccess = useCallback((result: NubariumIdCaptureResult) => {
+    setIneExecutionId(result.executionId);
+    setIneFrontImage(result.frontDataUrl);
+    setIneBackImage(result.backDataUrl);
+    setOcrPreview(result.ocrPreview);
+  }, []);
+
+  const handleIneCaptureReset = useCallback(() => {
+    setIneExecutionId(null);
+    setIneFrontImage(null);
+    setIneBackImage(null);
+    setOcrPreview(null);
+    setIneCaptureSessionKey((current) => current + 1);
+  }, []);
+
+  const handleLivenessSuccess = useCallback((result: { executionId: string; faceDataUrl: string }) => {
+    setLivenessExecutionId(result.executionId);
+    setSelfieImage(result.faceDataUrl);
+  }, []);
+
+  const handleLivenessReset = useCallback(() => {
+    setLivenessExecutionId(null);
+    setSelfieImage(null);
+    setLivenessCaptureSessionKey((current) => current + 1);
+  }, []);
+
   const goToNextStep = async (): Promise<void> => {
     if (!canContinue) return;
+
+    if (activeStep === "ine-capture" && !sdkToken) {
+      await reloadToken();
+    }
+
+    if (activeStep === "liveness" && !sdkToken) {
+      await reloadToken();
+    }
 
     if (isLastStep) {
       setSaving(true);
       try {
         await onFinalize({
-          ineFrontImage: ineImageDataUrl,
-          ineBackImage: ineBackImageDataUrl,
-          selfieImage: selfieImageDataUrl,
+          ineFrontImage,
+          ineBackImage,
+          selfieImage,
+          ineExecutionId,
+          livenessExecutionId,
+          ocrPreview,
           fingerprintConfirmed,
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
           completedAt: new Date().toISOString(),
@@ -107,22 +176,6 @@ export function CreditApplicationIntakeModal({
 
     const nextStep = STEP_ORDER[currentStepIndex + 1];
     setActiveStep(nextStep);
-  };
-
-  const resetModalState = () => {
-    setActiveStep("ine-front");
-    setIneImageDataUrl(null);
-    setIneBackImageDataUrl(null);
-    setSelfieImageDataUrl(null);
-    setFingerprintConfirmed(false);
-    setSignatureDrawn(false);
-    clearSignatureCanvas();
-  };
-
-  const handleCloseModal = () => {
-    if (saving) return;
-    onClose();
-    resetModalState();
   };
 
   const getCanvasCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -168,13 +221,21 @@ export function CreditApplicationIntakeModal({
     isDrawingRef.current = false;
   };
 
-  const clearSignatureCanvas = () => {
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    setSignatureDrawn(false);
-  };
+  const renderSdkBootstrapState = () => (
+    <Stack spacing={2} alignItems="center" justifyContent="center" sx={{ minHeight: "420px" }}>
+      {sdkLoading && <CircularProgress />}
+      <Typography variant="body2" textAlign="center">
+        {sdkLoading
+          ? "Preparando captura biométrica de Nubarium..."
+          : (sdkError ?? "No fue posible inicializar el SDK de Nubarium.")}
+      </Typography>
+      {!sdkLoading && sdkError && (
+        <Button variant="outlined" onClick={() => void reloadToken()}>
+          Reintentar
+        </Button>
+      )}
+    </Stack>
+  );
 
   return (
     <SideModal
@@ -202,51 +263,59 @@ export function CreditApplicationIntakeModal({
         }}
       >
         <Stack spacing={3} sx={{ minHeight: "600px" }}>
-          {
-            activeStep === "ine-front" &&
+          {activeStep === "ine-capture" && (
             <Stack spacing={3}>
-              <DeviceCameraCapture
-                facingMode="environment"
-                capturedImage={ineImageDataUrl}
-                onCapture={setIneImageDataUrl}
-                onRetake={() => setIneImageDataUrl(null)}
-                imageAlt="INE frontal"
-                cameraIndication="Acerca más la INE para que sea más legible"
-              />
+              {!sdkReady || !sdkToken
+                ? renderSdkBootstrapState()
+                : (
+                  <NubariumIdCapture
+                    key={ineCaptureSessionKey}
+                    token={sdkToken}
+                    active={open && activeStep === "ine-capture"}
+                    completed={Boolean(ineFrontImage && ineBackImage)}
+                    completedResult={
+                      ineFrontImage && ineBackImage
+                        ? {
+                          executionId: ineExecutionId ?? "",
+                          frontDataUrl: ineFrontImage,
+                          backDataUrl: ineBackImage,
+                          ocrPreview: ocrPreview ?? null,
+                        }
+                        : null
+                    }
+                    onSuccess={handleIneCaptureSuccess}
+                    onReset={handleIneCaptureReset}
+                  />
+                )}
             </Stack>
-          }
-          {
-            activeStep === "ine-back" &&
-            <Stack spacing={3}>
-              <DeviceCameraCapture
-                facingMode="environment"
-                capturedImage={ineBackImageDataUrl}
-                onCapture={setIneBackImageDataUrl}
-                onRetake={() => setIneBackImageDataUrl(null)}
-                imageAlt="INE posterior"
-                cameraIndication="Asegúrate de capturar claramente el reverso de la INE"
-              />
-            </Stack>
-          }
+          )}
 
-          {
-            activeStep === "selfie" &&
+          {activeStep === "liveness" && (
             <Stack spacing={3}>
-              <DeviceCameraCapture
-                facingMode="user"
-                capturedImage={selfieImageDataUrl}
-                onCapture={setSelfieImageDataUrl}
-                onRetake={() => setSelfieImageDataUrl(null)}
-                imageAlt="Selfie del cliente"
-              />
-              <Typography variant="h6" textAlign="center">
-                Asegúrate de enfocar la cara dentro de la zona marcada
-              </Typography>
+              {!sdkReady || !sdkToken
+                ? renderSdkBootstrapState()
+                : (
+                  <NubariumFaceCapture
+                    key={livenessCaptureSessionKey}
+                    token={sdkToken}
+                    active={open && activeStep === "liveness"}
+                    completed={Boolean(selfieImage)}
+                    completedResult={
+                      selfieImage
+                        ? {
+                          executionId: livenessExecutionId ?? "",
+                          faceDataUrl: selfieImage,
+                        }
+                        : null
+                    }
+                    onSuccess={handleLivenessSuccess}
+                    onReset={handleLivenessReset}
+                  />
+                )}
             </Stack>
-          }
+          )}
 
-          {
-            activeStep === "fingerprint" &&
+          {activeStep === "fingerprint" && (
             <Stack spacing={3} alignItems="center" justifyContent="center" sx={{ flex: 1 }}>
               <Fingerprint size={160} color="#22c55e" />
               <Typography variant="h5">Dedo índice registrado</Typography>
@@ -257,10 +326,9 @@ export function CreditApplicationIntakeModal({
                 {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
               </Button>
             </Stack>
-          }
+          )}
 
-          {
-            activeStep === "signature" &&
+          {activeStep === "signature" && (
             <Stack spacing={3} alignItems="flex-end">
               <Typography variant="h5">
                 Para continuar con el proceso, solicita la autorización para revisar el
@@ -290,11 +358,12 @@ export function CreditApplicationIntakeModal({
                 variant="text"
                 startIcon={<PenSquare size={16} />}
                 onClick={clearSignatureCanvas}
-                disabled={saving}>
+                disabled={saving}
+              >
                 Limpiar firma
               </Button>
             </Stack>
-          }
+          )}
         </Stack>
       </Stack>
 
@@ -311,206 +380,13 @@ export function CreditApplicationIntakeModal({
           fullWidth
           variant="contained"
           onClick={goToNextStep}
-          disabled={!canContinue || saving}
+          disabled={!canContinue || saving || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)}
         >
-          {
-            (saving) ?
-              <CircularProgress size={20} color="inherit" />
-              :
-              (isLastStep) ? "Finalizar" : "Siguiente"
-          }
+          {saving
+            ? <CircularProgress size={20} color="inherit" />
+            : (isLastStep ? "Finalizar" : "Siguiente")}
         </Button>
       </Box>
     </SideModal>
-  );
-}
-
-interface DeviceCameraCaptureProps {
-  facingMode: "user" | "environment";
-  capturedImage: string | null;
-  onCapture: (imageDataUrl: string) => void;
-  onRetake: () => void;
-  imageAlt: string;
-  cameraIndication?: string | null;
-}
-
-function DeviceCameraCapture({
-  facingMode,
-  capturedImage,
-  onCapture,
-  onRetake,
-  imageAlt,
-  cameraIndication,
-}: DeviceCameraCaptureProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const stopCurrentStream = () => {
-      if (!streamRef.current) return;
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    };
-
-    const startCamera = async () => {
-      if (capturedImage) {
-        stopCurrentStream();
-        return;
-      }
-
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError("Tu dispositivo no soporta captura de cámara en este navegador.");
-        return;
-      }
-
-      try {
-        stopCurrentStream();
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode },
-          audio: false,
-        });
-
-        if (isCancelled) {
-          mediaStream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = mediaStream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play();
-        }
-        setCameraError(null);
-      } catch (error) {
-        console.error("[DeviceCameraCapture] Unable to access camera", error);
-        if (!isCancelled) {
-          setCameraError(
-            "No fue posible acceder a la cámara. Revisa permisos del dispositivo.",
-          );
-        }
-      }
-    };
-
-    startCamera();
-
-    return () => {
-      isCancelled = true;
-      stopCurrentStream();
-    };
-  }, [capturedImage, facingMode]);
-
-  const handleCapture = () => {
-    if (capturedImage) {
-      onRetake();
-      return;
-    }
-
-    const videoElement = videoRef.current;
-    const canvas = captureCanvasRef.current;
-    if (!videoElement || !canvas) return;
-
-    const width = videoElement.videoWidth || 1280;
-    const height = videoElement.videoHeight || 720;
-    canvas.width = width;
-    canvas.height = height;
-
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    context.drawImage(videoElement, 0, 0, width, height);
-
-    onCapture(canvas.toDataURL("image/png"));
-  };
-
-  const captureDisabled = !capturedImage && Boolean(cameraError);
-
-  return (
-    <Stack spacing={2} alignItems="center">
-      <Stack
-        justifyContent="center"
-        alignItems="center"
-        spacing={2}
-        sx={{
-          borderRadius: "16px",
-          width: "100%",
-          minHeight: "400px",
-          backgroundColor: theme.palette.background.default,
-          overflow: "hidden",
-        }}
-      >
-        {capturedImage ? (
-          <Image
-            src={capturedImage}
-            alt={imageAlt}
-            width={920}
-            height={400}
-            unoptimized
-            style={{
-              width: "100%",
-              maxHeight: "400px",
-              objectFit: "cover",
-              borderRadius: "16px",
-              height: "auto",
-            }}
-          />
-        ) : (
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            style={{
-              width: "100%",
-              maxHeight: "400px",
-              borderRadius: "16px",
-              backgroundColor: "#111827",
-              objectFit: "cover",
-            }}
-          />
-        )}
-      </Stack>
-
-      {
-        cameraError && <Typography variant="body2" color="error.main">{cameraError}</Typography>
-      }
-
-      {
-        cameraIndication && <Typography variant="subtitle2" textAlign="center">{cameraIndication}</Typography>
-      }
-
-      <button
-        type="button"
-        onClick={handleCapture}
-        disabled={captureDisabled}
-        aria-label={capturedImage ? "Retomar fotografía" : "Tomar fotografía"}
-        style={{
-          width: "88px",
-          height: "88px",
-          borderRadius: "50%",
-          backgroundColor: "#DC2626",
-          border: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: captureDisabled ? "not-allowed" : "pointer",
-          opacity: captureDisabled ? 0.5 : 1,
-        }}
-      >
-        <span
-          style={{
-            border: "4px solid #FFFFFF",
-            width: "78px",
-            height: "78px",
-            borderRadius: "50%",
-            backgroundColor: "#DC2626",
-          }}
-        />
-      </button>
-
-      <canvas ref={captureCanvasRef} style={{ display: "none" }} />
-    </Stack>
   );
 }

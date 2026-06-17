@@ -85,6 +85,7 @@ export function AddressTab({
             error={Boolean(errors.streetAndNumber)}
             helperText={errors.streetAndNumber}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
 
@@ -99,6 +100,7 @@ export function AddressTab({
             error={Boolean(errors.betweenStreets)}
             helperText={errors.betweenStreets}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
 
@@ -141,6 +143,7 @@ export function AddressTab({
             error={Boolean(errors.residenceTime)}
             helperText={errors.residenceTime}
             disabled={saving}
+            inputProps={{ maxLength: 32 }}
           />
         </Grid>
 
@@ -152,6 +155,7 @@ export function AddressTab({
             value={values.previousAddress}
             onChange={(event) => onFieldChange("previousAddress", event.target.value)}
             disabled={saving}
+            inputProps={{ maxLength: 128 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 3 }}>
@@ -162,6 +166,7 @@ export function AddressTab({
             value={values.previousResidenceTime}
             onChange={(event) => onFieldChange("previousResidenceTime", event.target.value)}
             disabled={saving}
+            inputProps={{ maxLength: 32 }}
           />
         </Grid>
 

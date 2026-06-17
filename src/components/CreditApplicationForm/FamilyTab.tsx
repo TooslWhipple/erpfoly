@@ -30,6 +30,7 @@ export function FamilyTab({ values, errors, spouseFieldsEnabled, onFieldChange, 
             error={Boolean(errors.spouseName)}
             helperText={errors.spouseName}
             disabled={!spouseFieldsEnabled || saving}
+            inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -39,10 +40,11 @@ export function FamilyTab({ values, errors, spouseFieldsEnabled, onFieldChange, 
             label="Teléfono celular"
             placeholder="Ingresa"
             value={values.spousePhone}
-            onChange={(event) => onFieldChange("spousePhone", event.target.value)}
+            onChange={(event) => onFieldChange("spousePhone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.spousePhone)}
             helperText={errors.spousePhone}
             disabled={!spouseFieldsEnabled || saving}
+            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
 

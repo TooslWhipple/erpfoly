@@ -7,7 +7,7 @@ import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getRolesList } from "@/services/roles.service";
-import { formatDateTime } from "@/utils/date";
+import { formatListDateTime } from "@/utils/date";
 import type { RoleListItem } from "@/types/roles.types";
 import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
 
@@ -63,7 +63,7 @@ export default function Roles() {
       id: "updatedAt",
       label: "Últ. Actualización",
       size: "xl",
-      format: (value) => formatDateTime(value as string | null | undefined),
+      format: (value) => formatListDateTime(value as string | null | undefined),
     },
   ];
 

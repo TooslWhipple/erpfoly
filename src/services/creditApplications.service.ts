@@ -56,9 +56,6 @@ interface CreditApplicationAddressResponse {
   betweenStreets: string;
   latitude: string;
   longitude: string;
-  receiverName: string;
-  receiverPhone: string;
-  useClientPhone: boolean;
   housingType: CreditApplicationCatalogItem;
   residenceTime: string;
   previousAddress: string;
@@ -391,9 +388,6 @@ function buildSectionPayload(
           externalNumber: parsed.externalNumber,
           internalNumber: parsed.internalNumber,
           betweenStreets: payload.address.betweenStreets.trim(),
-          receiverPhone: "",
-          receiverName: "",
-          useClientPhone: false,
           housingTypeId: Number.isFinite(housingTypeId) ? housingTypeId : null,
           residenceTime: payload.address.residenceTime.trim(),
           previousAddress: payload.address.previousAddress.trim(),
@@ -557,6 +551,10 @@ export async function createCreditApplicationFromIntake(
   }
 
   const formData = new FormData();
+  const ineExecutionId = payload.ineExecutionId?.trim();
+  if (ineExecutionId) {
+    formData.append("ineExecutionId", ineExecutionId);
+  }
   formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
   formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));
   formData.append("faceCapture", dataUrlToFile(faceCapture, "face-capture"));
@@ -694,15 +692,18 @@ export async function requestCreditApplicationAdditionalInformation(
 export async function sendCreditApplicationOtp(
   applicationId: string,
   whatsappNumber: string,
-): Promise<CreditApplicationOtpStateResponse | null> {
-  const result = await post<CreditApplicationOtpStateResponse>(
-    `${BASE}/${applicationId}/otp/send`,
-    {
-      whatsappNumber,
-    },
-    { skipGlobalErrorToast: true },
-  );
-  if (result.error) return null;
+): Promise<CreditApplicationOtpStateResponse> {
+  const result = await post<CreditApplicationOtpStateResponse>(`${BASE}/${applicationId}/otp/send`, { whatsappNumber }, { skipGlobalErrorToast: true });
+  if (result.error) {
+    const e = new Error(result.error.message) as Error & { apiError?: { message: string } };
+    e.apiError = { message: result.error.message };
+    throw e;
+  }
+  if (!result.data) {
+    const e = new Error("No se pudo enviar el OTP por WhatsApp") as Error & { apiError?: { message: string } };
+    e.apiError = { message: "No se pudo enviar el OTP por WhatsApp" };
+    throw e;
+  }
   return result.data;
 }
 

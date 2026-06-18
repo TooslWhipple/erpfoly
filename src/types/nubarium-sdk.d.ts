@@ -9,7 +9,6 @@ export interface NubariumIdCaptureSuccessData {
   front?: string;
   back?: string;
   result?: NubariumSdkEvaluationResult;
-  ocr?: Record<string, unknown>;
   resources?: {
     front?: string;
     back?: string;

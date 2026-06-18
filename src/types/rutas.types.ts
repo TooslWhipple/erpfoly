@@ -43,3 +43,20 @@ export interface RouteDetail extends RouteSummary {
   driver: RoutePerson | null;
   assistants: RoutePerson[];
 }
+
+export interface RouteDriverCandidate {
+  id: number;
+  firstName: string;
+  lastName: string;
+  licenseNumber: string | null;
+  phone: string | null;
+  status: string | null;
+}
+
+export interface RouteAssistantCandidate {
+  id: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+  cellphone: string;
+}

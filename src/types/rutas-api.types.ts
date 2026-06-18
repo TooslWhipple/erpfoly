@@ -65,3 +65,22 @@ export interface PaginatedRowsApi<T> {
   limit: number;
   totalPages: number;
 }
+
+/** Candidate driver available to be assigned to a route (GET /routes/:id/available-drivers) */
+export interface RouteDriverCandidateApi {
+  id: number;
+  first_name: string;
+  last_name: string;
+  license_number: string | null;
+  phone: string | null;
+  status: string | null;
+}
+
+/** Candidate assistant available to be added to a route (GET /routes/:id/available-assistants) */
+export interface RouteAssistantCandidateApi {
+  id: number;
+  first_name: string;
+  last_name: string;
+  username: string;
+  cellphone: string;
+}

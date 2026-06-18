@@ -70,7 +70,6 @@ import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
-import { useCreditApplicationDraftStore } from "@/store/useCreditApplicationDraftStore";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 
@@ -246,7 +245,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.logout);
-  const clearDraftById = useCreditApplicationDraftStore((state) => state.clearDraftById);
   const showError = useSnackbarStore((state) => state.showError);
   const visibleNavItems = useMemo(() => filterNavItemsByAccess(navItems, user), [user]);
   const canCreateCreditApplication = hasAccessRequirement(user, { permission: CREDIT_APPLICATIONS_CREATE });
@@ -299,23 +297,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     setIntakeModalOpen(true);
   };
 
-  const NEW_CREDIT_APPLICATION_DRAFT_ID = "new-credit-application";
-
   const handleIntakeFinalize = async (payload: CreditApplicationBiometricsData) => {
-    try {
-      // Service will validate required captures and build multipart payload.
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Datos incompletos.";
-      showError(message);
-      throw e;
-    }
-
     const result = await createCreditApplicationFromIntake(payload);
     if (!result?.id) {
       showError("No se pudo crear la solicitud, intenta nuevamente.");
       return;
     }
-    clearDraftById(NEW_CREDIT_APPLICATION_DRAFT_ID);
+
     await router.push(`/solicitudes-credito/${result.id}`);
   };
 

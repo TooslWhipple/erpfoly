@@ -611,6 +611,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       references: referencesTab.values,
       documentation: documentationTab.values,
       guarantor: guarantorTab.values,
+      biometrics: null,
     }),
     [
       addressTab.values,

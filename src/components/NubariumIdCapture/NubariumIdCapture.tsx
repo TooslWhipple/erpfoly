@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { theme } from "@/styles/theme";
+import { Button, Stack, Typography } from "@mui/material";
+import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
+import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractIdCaptureImages,
+  NUBARIUM_ID_CAPTURE_CONFIG,
   safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
@@ -52,27 +54,8 @@ export function NubariumIdCapture({
         captureRef.current = capture;
 
         capture.init({
+          ...NUBARIUM_ID_CAPTURE_CONFIG,
           rootElement: rootElementId,
-          timeouts: {
-            front: 180000,
-            back: 180000,
-          },
-          captureMode: {
-            front: { enabled: false },
-            back: { enabled: false },
-          },
-          guide: {
-            front: { enabled: true },
-            back: { enabled: true, until: 10000 },
-          },
-          autorotate: true,
-          antispoofing: {
-            enabled: true,
-            level: 3,
-          },
-          custom: {
-            document: "MEX_IdCard",
-          },
         });
 
         capture.setToken(token);
@@ -133,86 +116,34 @@ export function NubariumIdCapture({
 
   const showPreview = Boolean(completed && completedResult?.frontDataUrl && completedResult?.backDataUrl);
 
+  if (showPreview && completedResult) {
+    return (
+      <NubariumCapturePreview
+        title="INE capturada"
+        images={[
+          { label: "Frontal", alt: "INE frontal", src: completedResult.frontDataUrl },
+          { label: "Posterior", alt: "INE posterior", src: completedResult.backDataUrl },
+        ]}
+        retryLabel="Volver a capturar INE"
+        onRetry={handleRetry}
+      />
+    );
+  }
+
   return (
-    <Stack spacing={2}>
-      {showPreview && completedResult && (
-        <>
-          <Typography variant="subtitle1" textAlign="center">
-            INE capturada correctamente
+    <Stack spacing={2} alignItems="center">
+      <CaptureViewport id={rootElementId} />
+
+      {errorMessage ? (
+        <CaptureErrorState>
+          <Typography variant="body2" color="error.main" textAlign="center">
+            {errorMessage}
           </Typography>
-          <Stack direction="row" spacing={2}>
-            <PreviewImage alt="INE frontal" src={completedResult.frontDataUrl} label="Frontal" />
-            <PreviewImage alt="INE posterior" src={completedResult.backDataUrl} label="Posterior" />
-          </Stack>
           <Button variant="outlined" onClick={handleRetry}>
-            Volver a capturar INE
+            Reintentar captura
           </Button>
-        </>
-      )}
-
-      {!showPreview && (
-        <Stack spacing={2} alignItems="center">
-          <Box
-            id={rootElementId}
-            sx={{
-              width: "100%",
-              minHeight: "320px",
-              borderRadius: "16px",
-              overflow: "hidden",
-              backgroundColor: theme.palette.background.default,
-            }}
-          />
-
-          {
-            errorMessage &&
-            <Stack spacing={1} alignItems="center" sx={{ width: "100%" }}>
-              <Typography variant="body2" color="error.main" textAlign="center">{errorMessage}
-              </Typography>
-              <Button variant="outlined" onClick={handleRetry}>
-                Reintentar captura
-              </Button>
-            </Stack>
-          }
-        </Stack>
-      )}
-    </Stack>
-  );
-}
-
-function PreviewImage({
-  alt,
-  src,
-  label,
-}: {
-  alt: string;
-  src: string;
-  label: string;
-}) {
-  return (
-    <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-      <Typography variant="caption" textAlign="center">{label}</Typography>
-      <Box
-        sx={{
-          width: "100%",
-          minHeight: "208px",
-          borderRadius: "12px",
-          overflow: "hidden",
-          backgroundColor: theme.palette.background.default,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-        <img
-          src={src}
-          alt={alt}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            display: "block",
-          }}
-        />
-      </Box>
+        </CaptureErrorState>
+      ) : null}
     </Stack>
   );
 }

@@ -33,23 +33,12 @@ export interface BasicInformationFormErrors {
   securityCode?: string;
 }
 
-export interface CreditApplicationBiometricsOcrPreview {
-  curp?: string;
-  name?: string;
-  lastName?: string;
-  secondLastName?: string;
-  rfc?: string;
-  birthDate?: string;
-  address?: string;
-}
-
 export interface CreditApplicationBiometricsData {
   ineFrontImage: string | null;
   ineBackImage: string | null;
   selfieImage: string | null;
   ineExecutionId?: string | null;
   livenessExecutionId?: string | null;
-  ocrPreview?: CreditApplicationBiometricsOcrPreview | null;
   fingerprintConfirmed: boolean;
   signatureDataUrl: string | null;
   completedAt: string | null;
@@ -229,19 +218,6 @@ export interface GuarantorTabErrors {
   phone?: string;
   identificationFrontFiles?: string;
   identificationBackFiles?: string;
-}
-
-export interface CreditApplicationDraft {
-  id: string;
-  basicInformation: BasicInformationFormValues;
-  family: FamilyTabValues;
-  address: AddressTabValues;
-  employment: EmploymentTabValues;
-  references: ReferencesTabValues;
-  documentation: DocumentationTabValues;
-  guarantor: GuarantorTabValues;
-  biometrics: CreditApplicationBiometricsData | null;
-  updatedAt: string;
 }
 
 export interface CreditApplicationFormPayload {

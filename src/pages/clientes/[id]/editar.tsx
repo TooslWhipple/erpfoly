@@ -84,12 +84,6 @@ export default function ClientEditPage() {
     employmentTab,
     referencesTab,
     documentationTab,
-    persistBasicInformation,
-    persistFamily,
-    persistAddress,
-    persistEmployment,
-    persistReferences,
-    persistDocumentation,
     handleSaveActiveTab,
   } = useCreditApplicationForm({
     isCreateMode: true,
@@ -180,8 +174,7 @@ export default function ClientEditPage() {
           maritalStatusOptions={maritalStatuses}
           maritalStatusesLoading={maritalStatusesLoading}
           onFieldChange={(field, value) => {
-            const nextValues = basicInformationTab.setFieldValue(field, value);
-            persistBasicInformation(nextValues);
+            basicInformationTab.setFieldValue(field, value);
           }}
           onValidateSecurityCode={basicInformationTab.validateCurrentSecurityCode}
           saving={false}
@@ -197,8 +190,7 @@ export default function ClientEditPage() {
           errors={familyTab.errors}
           spouseFieldsEnabled={spouseFieldsEnabled}
           onFieldChange={(field, value) => {
-            const nextValues = familyTab.setFieldValue(field, value);
-            persistFamily(nextValues);
+            familyTab.setFieldValue(field, value);
           }}
           saving={false}
           onContinue={handleSaveActiveTab}
@@ -213,14 +205,9 @@ export default function ClientEditPage() {
           errors={addressTab.errors}
           housingTypeOptions={housingTypes}
           housingTypesLoading={housingTypesLoading}
-          mergeFieldValues={(patch) => {
-            const nextValues = addressTab.mergeFieldValues(patch);
-            persistAddress(nextValues);
-            return nextValues;
-          }}
+          mergeFieldValues={(patch) => addressTab.mergeFieldValues(patch)}
           onFieldChange={(field, value) => {
-            const nextValues = addressTab.setFieldValue(field, value);
-            persistAddress(nextValues);
+            addressTab.setFieldValue(field, value);
           }}
           onSave={handleSaveActiveTab}
           saving={false}
@@ -234,14 +221,9 @@ export default function ClientEditPage() {
           values={employmentTab.values}
           errors={employmentTab.errors}
           spouseSectionEnabled={spouseFieldsEnabled}
-          mergeFieldValues={(patch) => {
-            const nextValues = employmentTab.mergeFieldValues(patch);
-            persistEmployment(nextValues);
-            return nextValues;
-          }}
+          mergeFieldValues={(patch) => employmentTab.mergeFieldValues(patch)}
           onFieldChange={(field, value) => {
-            const nextValues = employmentTab.setFieldValue(field, value);
-            persistEmployment(nextValues);
+            employmentTab.setFieldValue(field, value);
           }}
           onSave={handleSaveActiveTab}
           saving={false}
@@ -255,22 +237,18 @@ export default function ClientEditPage() {
           values={referencesTab.values}
           errors={referencesTab.errors}
           onFieldChange={(field, value) => {
-            const nextValues = referencesTab.setFieldValue(field, value);
-            persistReferences(nextValues);
+            referencesTab.setFieldValue(field, value);
           }}
           onReferenceFieldChange={(referenceId, field, value) => {
-            const nextValues = referencesTab.setReferenceFieldValue(referenceId, field, value);
-            persistReferences(nextValues);
+            referencesTab.setReferenceFieldValue(referenceId, field, value);
           }}
           relationshipOptions={familyRelationships}
           relationshipsLoading={familyRelationshipsLoading}
           onAddReference={() => {
-            const nextValues = referencesTab.addReference();
-            persistReferences(nextValues);
+            referencesTab.addReference();
           }}
           onRemoveReference={(referenceId) => {
-            const nextValues = referencesTab.removeReference(referenceId);
-            persistReferences(nextValues);
+            referencesTab.removeReference(referenceId);
           }}
           onSave={handleSaveActiveTab}
           saving={false}
@@ -287,20 +265,16 @@ export default function ClientEditPage() {
           requireIncomeProof={requiresIncomeProof}
           requireEmploymentProofLetter={requiresEmploymentProofLetter}
           onIncomeProofChange={(files) => {
-            const nextValues = documentationTab.setFieldValue("incomeProofFiles", files);
-            persistDocumentation(nextValues);
+            documentationTab.setFieldValue("incomeProofFiles", files);
           }}
           onEmploymentProofLetterChange={(files) => {
-            const nextValues = documentationTab.setFieldValue("employmentProofLetterFiles", files);
-            persistDocumentation(nextValues);
+            documentationTab.setFieldValue("employmentProofLetterFiles", files);
           }}
           onIneFrontChange={(files) => {
-            const nextValues = documentationTab.setFieldValue("ineFrontFiles", files);
-            persistDocumentation(nextValues);
+            documentationTab.setFieldValue("ineFrontFiles", files);
           }}
           onIneBackChange={(files) => {
-            const nextValues = documentationTab.setFieldValue("ineBackFiles", files);
-            persistDocumentation(nextValues);
+            documentationTab.setFieldValue("ineBackFiles", files);
           }}
           onSave={handleSaveActiveTab}
           saving={false}

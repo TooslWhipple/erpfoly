@@ -3,10 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { theme } from "@/styles/theme";
-import type { NubariumOcrPreview } from "@/services/nubarium.service";
 import {
   extractIdCaptureImages,
-  mapIdCaptureOcrPreview,
   safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
@@ -16,7 +14,6 @@ export interface NubariumIdCaptureResult {
   executionId: string;
   frontDataUrl: string;
   backDataUrl: string;
-  ocrPreview: NubariumOcrPreview | null;
 }
 
 interface NubariumIdCaptureProps {
@@ -39,14 +36,12 @@ export function NubariumIdCapture({
   const reactId = useId().replace(/:/g, "");
   const rootElementId = `nubarium-id-capture-${reactId}`;
   const captureRef = useRef<IdCapture | null>(null);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!active || completed || !token.trim()) return;
 
     let cancelled = false;
-    setIsInitializing(true);
     setErrorMessage(null);
 
     const mountCapture = () => {
@@ -98,7 +93,6 @@ export function NubariumIdCapture({
               executionId: data.id,
               frontDataUrl,
               backDataUrl,
-              ocrPreview: mapIdCaptureOcrPreview(data.ocr),
             });
           })
           .onFail((fail) => {
@@ -111,10 +105,8 @@ export function NubariumIdCapture({
         capture.load(() => {
           if (cancelled) return;
           capture.start();
-          setIsInitializing(false);
         });
       } catch (mountError) {
-        setIsInitializing(false);
         setErrorMessage(
           mountError instanceof Error
             ? mountError.message
@@ -148,40 +140,10 @@ export function NubariumIdCapture({
           <Typography variant="subtitle1" textAlign="center">
             INE capturada correctamente
           </Typography>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+          <Stack direction="row" spacing={2}>
             <PreviewImage alt="INE frontal" src={completedResult.frontDataUrl} label="Frontal" />
             <PreviewImage alt="INE posterior" src={completedResult.backDataUrl} label="Posterior" />
           </Stack>
-          {completedResult.ocrPreview && (
-            <Box
-              sx={{
-                borderRadius: "12px",
-                backgroundColor: theme.palette.background.default,
-                p: 2,
-              }}
-            >
-              <Typography variant="subtitle2" gutterBottom>
-                Datos leídos de la INE
-              </Typography>
-              <Stack spacing={0.5}>
-                {completedResult.ocrPreview.name && (
-                  <Typography variant="body2">Nombre: {completedResult.ocrPreview.name}</Typography>
-                )}
-                {completedResult.ocrPreview.lastName && (
-                  <Typography variant="body2">Apellido paterno: {completedResult.ocrPreview.lastName}</Typography>
-                )}
-                {completedResult.ocrPreview.secondLastName && (
-                  <Typography variant="body2">Apellido materno: {completedResult.ocrPreview.secondLastName}</Typography>
-                )}
-                {completedResult.ocrPreview.curp && (
-                  <Typography variant="body2">CURP: {completedResult.ocrPreview.curp}</Typography>
-                )}
-                {completedResult.ocrPreview.rfc && (
-                  <Typography variant="body2">RFC: {completedResult.ocrPreview.rfc}</Typography>
-                )}
-              </Stack>
-            </Box>
-          )}
           <Button variant="outlined" onClick={handleRetry}>
             Volver a capturar INE
           </Button>
@@ -194,34 +156,23 @@ export function NubariumIdCapture({
             id={rootElementId}
             sx={{
               width: "100%",
-              minHeight: "420px",
+              minHeight: "320px",
               borderRadius: "16px",
               overflow: "hidden",
               backgroundColor: theme.palette.background.default,
             }}
           />
 
-          {isInitializing && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
-              <Typography variant="body2">Iniciando captura de INE...</Typography>
-            </Stack>
-          )}
-
-          {errorMessage && (
+          {
+            errorMessage &&
             <Stack spacing={1} alignItems="center" sx={{ width: "100%" }}>
-              <Typography variant="body2" color="error.main" textAlign="center">
-                {errorMessage}
+              <Typography variant="body2" color="error.main" textAlign="center">{errorMessage}
               </Typography>
               <Button variant="outlined" onClick={handleRetry}>
                 Reintentar captura
               </Button>
             </Stack>
-          )}
-
-          <Typography variant="subtitle2" textAlign="center">
-            Acomoda la INE dentro del marco; la foto se tomará automáticamente cuando la imagen sea óptima.
-          </Typography>
+          }
         </Stack>
       )}
     </Stack>
@@ -239,28 +190,24 @@ function PreviewImage({
 }) {
   return (
     <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-      <Typography variant="caption" textAlign="center">
-        {label}
-      </Typography>
+      <Typography variant="caption" textAlign="center">{label}</Typography>
       <Box
         sx={{
           width: "100%",
-          minHeight: 220,
+          minHeight: "208px",
           borderRadius: "12px",
           overflow: "hidden",
           backgroundColor: theme.palette.background.default,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        }}>
         <img
           src={src}
           alt={alt}
           style={{
             width: "100%",
-            maxHeight: 280,
+            height: "100%",
             objectFit: "contain",
             display: "block",
           }}

@@ -128,15 +128,14 @@ export function NubariumFaceCapture({
 
   return (
     <Stack spacing={2}>
-      {showPreview && completedResult && (
+      {
+        showPreview && completedResult &&
         <>
-          <Typography variant="subtitle1" textAlign="center">
-            Prueba de vida completada
-          </Typography>
+          <Typography variant="subtitle1" textAlign="center">Prueba de vida completada</Typography>
           <Box
             sx={{
               width: "100%",
-              minHeight: 280,
+              minHeight: "296px",
               borderRadius: "12px",
               overflow: "hidden",
               backgroundColor: theme.palette.background.default,
@@ -145,60 +144,54 @@ export function NubariumFaceCapture({
               justifyContent: "center",
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={completedResult.faceDataUrl}
               alt="Selfie del cliente"
               style={{
                 width: "100%",
-                maxHeight: 400,
+                maxHeight: "296px",
                 objectFit: "contain",
                 display: "block",
               }}
             />
           </Box>
-          <Button variant="outlined" onClick={handleRetry}>
-            Repetir prueba de vida
-          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleRetry}>Repetir prueba de vida</Button>
         </>
-      )}
+      }
 
-      {!showPreview && (
+      {
+        !showPreview &&
         <Stack spacing={2} alignItems="center">
           <Box
             id={rootElementId}
             sx={{
               width: "100%",
-              minHeight: "420px",
+              minHeight: "296px",
               borderRadius: "16px",
               overflow: "hidden",
               backgroundColor: theme.palette.background.default,
             }}
           />
 
-          {isInitializing && (
+          {
+            isInitializing &&
             <Stack direction="row" spacing={1} alignItems="center">
               <CircularProgress size={18} />
               <Typography variant="body2">Iniciando prueba de vida...</Typography>
             </Stack>
-          )}
+          }
 
-          {errorMessage && (
+          {
+            errorMessage &&
             <Stack spacing={1} alignItems="center" sx={{ width: "100%" }}>
-              <Typography variant="body2" color="error.main" textAlign="center">
-                {errorMessage}
-              </Typography>
-              <Button variant="outlined" onClick={handleRetry}>
-                Reintentar captura
-              </Button>
+              <Typography variant="body2" color="error.main" textAlign="center">{errorMessage}</Typography>
+              <Button variant="outlined" onClick={handleRetry}>Reintentar captura</Button>
             </Stack>
-          )}
-
-          <Typography variant="subtitle2" textAlign="center">
-            Enfoca tu rostro dentro del área marcada y sigue las instrucciones en pantalla.
-          </Typography>
+          }
         </Stack>
-      )}
+      }
     </Stack>
   );
 }

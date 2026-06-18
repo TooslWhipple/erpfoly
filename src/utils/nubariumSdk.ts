@@ -91,42 +91,6 @@ export function extractFaceCaptureImage(data: {
   );
 }
 
-export function mapIdCaptureOcrPreview(
-  ocr: Record<string, unknown> | undefined,
-): {
-  curp?: string;
-  name?: string;
-  lastName?: string;
-  secondLastName?: string;
-  rfc?: string;
-  birthDate?: string;
-  address?: string;
-} | null {
-  if (!ocr) return null;
-
-  const read = (keys: string[]): string | undefined => {
-    for (const key of keys) {
-      const value = ocr[key];
-      if (typeof value === "string" && value.trim()) {
-        return value.trim();
-      }
-    }
-    return undefined;
-  };
-
-  const preview = {
-    name: read(["name", "firstName", "first_name", "nombre", "NOMBRE"]),
-    lastName: read(["lastName", "last_name", "paternalLastName", "paternal_last_name"]),
-    secondLastName: read(["secondLastName", "second_last_name", "maternalLastName", "maternal_last_name"]),
-    curp: read(["curp", "CURP", "CURP_VAL"]),
-    rfc: read(["rfc", "RFC"]),
-    birthDate: read(["birthDate", "birth_date", "birthdate", "NACIMIENTO", "NACIMIENTO_VAL"]),
-    address: read(["address", "domicilio", "DOMICILIO"]),
-  };
-
-  return Object.values(preview).some(Boolean) ? preview : null;
-}
-
 export function translateNubariumFailReason(reason: string | undefined): string {
   switch (reason) {
     case "capture_front_timeout":

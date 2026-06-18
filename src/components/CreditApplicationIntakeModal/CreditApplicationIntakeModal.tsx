@@ -52,7 +52,6 @@ export function CreditApplicationIntakeModal({
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
   const [ineBackImage, setIneBackImage] = useState<string | null>(null);
-  const [ocrPreview, setOcrPreview] = useState<CreditApplicationBiometricsData["ocrPreview"]>(null);
   const [livenessExecutionId, setLivenessExecutionId] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
@@ -98,7 +97,6 @@ export function CreditApplicationIntakeModal({
     setIneExecutionId(null);
     setIneFrontImage(null);
     setIneBackImage(null);
-    setOcrPreview(null);
     setLivenessExecutionId(null);
     setSelfieImage(null);
     setFingerprintConfirmed(false);
@@ -118,14 +116,12 @@ export function CreditApplicationIntakeModal({
     setIneExecutionId(result.executionId);
     setIneFrontImage(result.frontDataUrl);
     setIneBackImage(result.backDataUrl);
-    setOcrPreview(result.ocrPreview);
   }, []);
 
   const handleIneCaptureReset = useCallback(() => {
     setIneExecutionId(null);
     setIneFrontImage(null);
     setIneBackImage(null);
-    setOcrPreview(null);
     setIneCaptureSessionKey((current) => current + 1);
   }, []);
 
@@ -160,7 +156,6 @@ export function CreditApplicationIntakeModal({
           selfieImage,
           ineExecutionId,
           livenessExecutionId,
-          ocrPreview,
           fingerprintConfirmed,
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
           completedAt: new Date().toISOString(),
@@ -244,7 +239,7 @@ export function CreditApplicationIntakeModal({
       title={stepContent.title}
       description={stepContent.subtitle}
       disableClose={saving}
-      maxWidth="lg"
+      maxWidth="md"
       fullWidth
       contentSx={{
         flex: 1,
@@ -256,12 +251,7 @@ export function CreditApplicationIntakeModal({
     >
       <Stack
         spacing={3}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: "auto",
-        }}
-      >
+        sx={{ flex: 1, minHeight: 0, overflowY: "auto", }}>
         <Stack spacing={3} sx={{ minHeight: "600px" }}>
           {activeStep === "ine-capture" && (
             <Stack spacing={3}>
@@ -279,7 +269,6 @@ export function CreditApplicationIntakeModal({
                           executionId: ineExecutionId ?? "",
                           frontDataUrl: ineFrontImage,
                           backDataUrl: ineBackImage,
-                          ocrPreview: ocrPreview ?? null,
                         }
                         : null
                     }
@@ -328,7 +317,8 @@ export function CreditApplicationIntakeModal({
             </Stack>
           )}
 
-          {activeStep === "signature" && (
+          {
+            activeStep === "signature" &&
             <Stack spacing={3} alignItems="flex-end">
               <Typography variant="h5">
                 Para continuar con el proceso, solicita la autorización para revisar el
@@ -338,7 +328,7 @@ export function CreditApplicationIntakeModal({
                 <canvas
                   ref={signatureCanvasRef}
                   width={900}
-                  height={400}
+                  height={"296px"}
                   style={{
                     width: "100%",
                     backgroundColor: theme.palette.background.paper,
@@ -358,19 +348,17 @@ export function CreditApplicationIntakeModal({
                 variant="text"
                 startIcon={<PenSquare size={16} />}
                 onClick={clearSignatureCanvas}
-                disabled={saving}
-              >
+                disabled={saving}>
                 Limpiar firma
               </Button>
             </Stack>
-          )}
+          }
         </Stack>
       </Stack>
 
       <Box
         sx={{
           flexShrink: 0,
-          backgroundColor: theme.palette.background.paper,
           py: 1,
           zIndex: 2,
           position: "relative",
@@ -380,8 +368,7 @@ export function CreditApplicationIntakeModal({
           fullWidth
           variant="contained"
           onClick={goToNextStep}
-          disabled={!canContinue || saving || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)}
-        >
+          disabled={!canContinue || saving || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)}>
           {saving
             ? <CircularProgress size={20} color="inherit" />
             : (isLastStep ? "Finalizar" : "Siguiente")}

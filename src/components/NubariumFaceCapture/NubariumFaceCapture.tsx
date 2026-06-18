@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { theme } from "@/styles/theme";
+import { Button, Stack, Typography } from "@mui/material";
+import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
+import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractFaceCaptureImage,
+  NUBARIUM_FACE_CAPTURE_CONFIG,
   safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
@@ -35,14 +37,12 @@ export function NubariumFaceCapture({
   const reactId = useId().replace(/:/g, "");
   const rootElementId = `nubarium-face-capture-${reactId}`;
   const captureRef = useRef<FaceCapture | null>(null);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!active || completed || !token.trim()) return;
 
     let cancelled = false;
-    setIsInitializing(true);
     setErrorMessage(null);
 
     const mountCapture = () => {
@@ -53,18 +53,8 @@ export function NubariumFaceCapture({
         captureRef.current = capture;
 
         capture.init({
+          ...NUBARIUM_FACE_CAPTURE_CONFIG,
           rootElement: rootElementId,
-          maxValidations: 3,
-          features: {
-            disabled: ["glasses", "facemask"],
-            enabled: [],
-          },
-          antispoofing: {
-            enabled: true,
-            level: 3,
-          },
-          cameras: "front",
-          timeout: 180000,
         });
 
         capture.setToken(token);
@@ -96,10 +86,8 @@ export function NubariumFaceCapture({
         capture.load(() => {
           if (cancelled) return;
           capture.start();
-          setIsInitializing(false);
         });
       } catch (mountError) {
-        setIsInitializing(false);
         setErrorMessage(
           mountError instanceof Error
             ? mountError.message
@@ -126,79 +114,33 @@ export function NubariumFaceCapture({
 
   const showPreview = Boolean(completed && completedResult?.faceDataUrl);
 
+  if (showPreview && completedResult) {
+    return (
+      <NubariumCapturePreview
+        title="Prueba de vida completada"
+        images={[
+          { label: "Selfie", alt: "Selfie del cliente", src: completedResult.faceDataUrl },
+        ]}
+        retryLabel="Repetir prueba de vida"
+        onRetry={handleRetry}
+      />
+    );
+  }
+
   return (
-    <Stack spacing={2}>
-      {showPreview && completedResult && (
-        <>
-          <Typography variant="subtitle1" textAlign="center">
-            Prueba de vida completada
+    <Stack spacing={2} alignItems="center">
+      <CaptureViewport id={rootElementId} />
+
+      {errorMessage ? (
+        <CaptureErrorState>
+          <Typography variant="body2" color="error.main" textAlign="center">
+            {errorMessage}
           </Typography>
-          <Box
-            sx={{
-              width: "100%",
-              minHeight: 280,
-              borderRadius: "12px",
-              overflow: "hidden",
-              backgroundColor: theme.palette.background.default,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={completedResult.faceDataUrl}
-              alt="Selfie del cliente"
-              style={{
-                width: "100%",
-                maxHeight: 400,
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          </Box>
           <Button variant="outlined" onClick={handleRetry}>
-            Repetir prueba de vida
+            Reintentar captura
           </Button>
-        </>
-      )}
-
-      {!showPreview && (
-        <Stack spacing={2} alignItems="center">
-          <Box
-            id={rootElementId}
-            sx={{
-              width: "100%",
-              minHeight: "420px",
-              borderRadius: "16px",
-              overflow: "hidden",
-              backgroundColor: theme.palette.background.default,
-            }}
-          />
-
-          {isInitializing && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
-              <Typography variant="body2">Iniciando prueba de vida...</Typography>
-            </Stack>
-          )}
-
-          {errorMessage && (
-            <Stack spacing={1} alignItems="center" sx={{ width: "100%" }}>
-              <Typography variant="body2" color="error.main" textAlign="center">
-                {errorMessage}
-              </Typography>
-              <Button variant="outlined" onClick={handleRetry}>
-                Reintentar captura
-              </Button>
-            </Stack>
-          )}
-
-          <Typography variant="subtitle2" textAlign="center">
-            Enfoca tu rostro dentro del área marcada y sigue las instrucciones en pantalla.
-          </Typography>
-        </Stack>
-      )}
+        </CaptureErrorState>
+      ) : null}
     </Stack>
   );
 }

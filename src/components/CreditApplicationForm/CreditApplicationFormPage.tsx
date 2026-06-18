@@ -56,13 +56,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     referencesTab,
     documentationTab,
     guarantorTab,
-    persistBasicInformation,
-    persistFamily,
-    persistAddress,
-    persistEmployment,
-    persistReferences,
-    persistDocumentation,
-    persistGuarantor,
     handleSaveActiveTab,
     handleSubmitApplication,
   } = useCreditApplicationForm({ applicationId, isCreateMode });
@@ -187,8 +180,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   }, [maritalStatuses, basicInformationTab.values.maritalStatus]);
 
   const handleBasicFieldChange = (field: Parameters<typeof basicInformationTab.setFieldValue>[0], value: string) => {
-    const nextValues = basicInformationTab.setFieldValue(field, value);
-    persistBasicInformation(nextValues);
+    basicInformationTab.setFieldValue(field, value);
 
     if (field === "maritalStatus") {
       const selectedStatus = maritalStatuses.find(
@@ -197,13 +189,11 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
       const hasSpouse = selectedStatus?.code === "CASADO" || selectedStatus?.code === "UNION_LIBRE";
 
       if (hasSpouse) {
-        const nextFamilyValues = familyTab.setFieldValue("hasSpouse", true);
-        persistFamily(nextFamilyValues);
+        familyTab.setFieldValue("hasSpouse", true);
       } else {
-        const nextFamilyValues = familyTab.setFieldValue("hasSpouse", false);
+        familyTab.setFieldValue("hasSpouse", false);
         familyTab.setFieldValue("spouseName", "");
         familyTab.setFieldValue("spousePhone", "");
-        persistFamily(nextFamilyValues);
 
         employmentTab.setFieldValue("spouseCompany", "");
         employmentTab.setFieldValue("spousePostalCode", "");
@@ -216,9 +206,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
         employmentTab.setFieldValue("spouseDepartment", "");
         employmentTab.setFieldValue("spouseMonthlyIncome", "");
         employmentTab.setFieldValue("spouseCompanyPhone", "");
-
-        const nextEmploymentValues = employmentTab.values;
-        persistEmployment(nextEmploymentValues);
       }
     }
   };
@@ -303,8 +290,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={familyTab.errors}
             spouseFieldsEnabled={spouseFieldsEnabled}
             onFieldChange={(field, value) => {
-              const nextValues = familyTab.setFieldValue(field, value);
-              persistFamily(nextValues);
+              familyTab.setFieldValue(field, value);
             }}
             onContinue={handleContinueToNextTab}
             saving={saving}
@@ -317,14 +303,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={addressTab.errors}
             housingTypeOptions={housingTypes}
             housingTypesLoading={housingTypesLoading}
-            mergeFieldValues={(patch) => {
-              const nextValues = addressTab.mergeFieldValues(patch);
-              persistAddress(nextValues);
-              return nextValues;
-            }}
+            mergeFieldValues={(patch) => addressTab.mergeFieldValues(patch)}
             onFieldChange={(field, value) => {
-              const nextValues = addressTab.setFieldValue(field, value);
-              persistAddress(nextValues);
+              addressTab.setFieldValue(field, value);
             }}
             onSave={handleContinueToNextTab}
             saving={saving}
@@ -336,14 +317,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             values={employmentTab.values}
             errors={employmentTab.errors}
             spouseSectionEnabled={spouseFieldsEnabled}
-            mergeFieldValues={(patch) => {
-              const nextValues = employmentTab.mergeFieldValues(patch);
-              persistEmployment(nextValues);
-              return nextValues;
-            }}
+            mergeFieldValues={(patch) => employmentTab.mergeFieldValues(patch)}
             onFieldChange={(field, value) => {
-              const nextValues = employmentTab.setFieldValue(field, value);
-              persistEmployment(nextValues);
+              employmentTab.setFieldValue(field, value);
             }}
             onSave={handleContinueToNextTab}
             saving={saving}
@@ -355,22 +331,18 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             values={referencesTab.values}
             errors={referencesTab.errors}
             onFieldChange={(field, value) => {
-              const nextValues = referencesTab.setFieldValue(field, value);
-              persistReferences(nextValues);
+              referencesTab.setFieldValue(field, value);
             }}
             onReferenceFieldChange={(referenceId, field, value) => {
-              const nextValues = referencesTab.setReferenceFieldValue(referenceId, field, value);
-              persistReferences(nextValues);
+              referencesTab.setReferenceFieldValue(referenceId, field, value);
             }}
             relationshipOptions={familyRelationships}
             relationshipsLoading={familyRelationshipsLoading}
             onAddReference={() => {
-              const nextValues = referencesTab.addReference();
-              persistReferences(nextValues);
+              referencesTab.addReference();
             }}
             onRemoveReference={(referenceId) => {
-              const nextValues = referencesTab.removeReference(referenceId);
-              persistReferences(nextValues);
+              referencesTab.removeReference(referenceId);
             }}
             onSave={handleContinueToNextTab}
             saving={saving}
@@ -385,20 +357,16 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             requireIncomeProof={requiresIncomeProof}
             requireEmploymentProofLetter={requiresEmploymentProofLetter}
             onIncomeProofChange={(files) => {
-              const nextValues = documentationTab.setFieldValue("incomeProofFiles", files);
-              persistDocumentation(nextValues);
+              documentationTab.setFieldValue("incomeProofFiles", files);
             }}
             onEmploymentProofLetterChange={(files) => {
-              const nextValues = documentationTab.setFieldValue("employmentProofLetterFiles", files);
-              persistDocumentation(nextValues);
+              documentationTab.setFieldValue("employmentProofLetterFiles", files);
             }}
             onIneFrontChange={(files) => {
-              const nextValues = documentationTab.setFieldValue("ineFrontFiles", files);
-              persistDocumentation(nextValues);
+              documentationTab.setFieldValue("ineFrontFiles", files);
             }}
             onIneBackChange={(files) => {
-              const nextValues = documentationTab.setFieldValue("ineBackFiles", files);
-              persistDocumentation(nextValues);
+              documentationTab.setFieldValue("ineBackFiles", files);
             }}
             onSave={handleContinueToNextTab}
             saving={saving}
@@ -411,14 +379,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             errors={guarantorTab.errors}
             maritalStatusOptions={maritalStatuses}
             maritalStatusesLoading={maritalStatusesLoading}
-            mergeFieldValues={(patch) => {
-              const nextValues = guarantorTab.mergeFieldValues(patch);
-              persistGuarantor(nextValues);
-              return nextValues;
-            }}
+            mergeFieldValues={(patch) => guarantorTab.mergeFieldValues(patch)}
             onFieldChange={(field, value) => {
-              const nextValues = guarantorTab.setFieldValue(field, value);
-              persistGuarantor(nextValues);
+              guarantorTab.setFieldValue(field, value);
             }}
             onSave={handleGuarantorSave}
             saving={saving}

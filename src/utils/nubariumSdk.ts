@@ -1,3 +1,34 @@
+export const NUBARIUM_ID_CAPTURE_CONFIG = {
+  timeouts: { front: 180000, back: 180000 },
+  captureMode: {
+    front: { enabled: true, after: 5000 },
+    back: { enabled: true, after: 5000 },
+  },
+  guide: {
+    front: { enabled: true },
+    back: { enabled: true, until: 10000 },
+  },
+  autorotate: true,
+  antispoofing: {
+    enabled: true,
+    level: 1,
+  },
+  custom: { document: "MEX_IdCard" },
+} as const;
+
+export const NUBARIUM_FACE_CAPTURE_CONFIG = {
+  maxValidations: 10,
+  features: {
+    disabled: [],
+    enabled: ["glasses", "facemask"],
+  },
+  antispoofing: {
+    enabled: false,
+  },
+  cameras: ["front", "default"],
+  timeout: 180000,
+} as const;
+
 export function inferImageMimeType(base64Payload: string): string {
   const normalized = base64Payload.trim();
   if (normalized.startsWith("iVBORw0KGgo")) return "image/png";
@@ -89,42 +120,6 @@ export function extractFaceCaptureImage(data: {
     resources && typeof resources === "object" ? resources.face : undefined,
     resources && typeof resources === "object" ? resources.frame : undefined,
   );
-}
-
-export function mapIdCaptureOcrPreview(
-  ocr: Record<string, unknown> | undefined,
-): {
-  curp?: string;
-  name?: string;
-  lastName?: string;
-  secondLastName?: string;
-  rfc?: string;
-  birthDate?: string;
-  address?: string;
-} | null {
-  if (!ocr) return null;
-
-  const read = (keys: string[]): string | undefined => {
-    for (const key of keys) {
-      const value = ocr[key];
-      if (typeof value === "string" && value.trim()) {
-        return value.trim();
-      }
-    }
-    return undefined;
-  };
-
-  const preview = {
-    name: read(["name", "firstName", "first_name", "nombre", "NOMBRE"]),
-    lastName: read(["lastName", "last_name", "paternalLastName", "paternal_last_name"]),
-    secondLastName: read(["secondLastName", "second_last_name", "maternalLastName", "maternal_last_name"]),
-    curp: read(["curp", "CURP", "CURP_VAL"]),
-    rfc: read(["rfc", "RFC"]),
-    birthDate: read(["birthDate", "birth_date", "birthdate", "NACIMIENTO", "NACIMIENTO_VAL"]),
-    address: read(["address", "domicilio", "DOMICILIO"]),
-  };
-
-  return Object.values(preview).some(Boolean) ? preview : null;
 }
 
 export function translateNubariumFailReason(reason: string | undefined): string {

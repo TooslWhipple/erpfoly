@@ -1,12 +1,25 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { Fingerprint, PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
-import { theme } from "@/styles/theme";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
+import {
+  FingerprintIconWrapper,
+  FooterActions,
+  SdkBootstrapState,
+  SignatureCanvas,
+  SignatureCanvasWrapper,
+  SignatureLegalText,
+  SignatureSection,
+  StepContainer,
+  StepContent,
+  StepProgress,
+  StepSection,
+} from "./styles";
 
 interface CreditApplicationIntakeModalProps {
   open: boolean;
@@ -24,22 +37,26 @@ const STEP_ORDER: IntakeStepId[] = [
   "signature",
 ];
 
-const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
+const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string; progressLabel: string }> = {
   "ine-capture": {
-    title: "Nuevo cliente",
-    subtitle: "Captura la INE del cliente (frente y reverso)",
+    title: "Identificación oficial",
+    subtitle: "Verifica la INE del cliente",
+    progressLabel: "Identificación oficial",
   },
   liveness: {
-    title: "Nuevo cliente",
-    subtitle: "Realiza la prueba de vida del cliente",
+    title: "Prueba de vida",
+    subtitle: "Confirma la identidad del cliente",
+    progressLabel: "Prueba de vida",
   },
   fingerprint: {
-    title: "Nuevo cliente",
-    subtitle: "Captura de huella digital",
+    title: "Huella digital",
+    subtitle: "Registra la huella del cliente",
+    progressLabel: "Huella digital",
   },
   signature: {
-    title: "Nuevo cliente",
-    subtitle: "Revisión de Buró de Crédito",
+    title: "Autorización de Buró",
+    subtitle: "Firma del cliente para consulta crediticia",
+    progressLabel: "Autorización de Buró",
   },
 };
 
@@ -48,11 +65,11 @@ export function CreditApplicationIntakeModal({
   onClose,
   onFinalize,
 }: CreditApplicationIntakeModalProps) {
+  const theme = useTheme();
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
   const [ineBackImage, setIneBackImage] = useState<string | null>(null);
-  const [ocrPreview, setOcrPreview] = useState<CreditApplicationBiometricsData["ocrPreview"]>(null);
   const [livenessExecutionId, setLivenessExecutionId] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
@@ -98,7 +115,6 @@ export function CreditApplicationIntakeModal({
     setIneExecutionId(null);
     setIneFrontImage(null);
     setIneBackImage(null);
-    setOcrPreview(null);
     setLivenessExecutionId(null);
     setSelfieImage(null);
     setFingerprintConfirmed(false);
@@ -118,14 +134,12 @@ export function CreditApplicationIntakeModal({
     setIneExecutionId(result.executionId);
     setIneFrontImage(result.frontDataUrl);
     setIneBackImage(result.backDataUrl);
-    setOcrPreview(result.ocrPreview);
   }, []);
 
   const handleIneCaptureReset = useCallback(() => {
     setIneExecutionId(null);
     setIneFrontImage(null);
     setIneBackImage(null);
-    setOcrPreview(null);
     setIneCaptureSessionKey((current) => current + 1);
   }, []);
 
@@ -160,7 +174,6 @@ export function CreditApplicationIntakeModal({
           selfieImage,
           ineExecutionId,
           livenessExecutionId,
-          ocrPreview,
           fingerprintConfirmed,
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
           completedAt: new Date().toISOString(),
@@ -209,7 +222,7 @@ export function CreditApplicationIntakeModal({
 
     const { x, y } = getCanvasCoordinates(event);
     context.lineTo(x, y);
-    context.strokeStyle = "#111827";
+    context.strokeStyle = theme.palette.text.primary;
     context.lineWidth = 2;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -222,19 +235,25 @@ export function CreditApplicationIntakeModal({
   };
 
   const renderSdkBootstrapState = () => (
-    <Stack spacing={2} alignItems="center" justifyContent="center" sx={{ minHeight: "420px" }}>
-      {sdkLoading && <CircularProgress />}
+    <SdkBootstrapState>
+      {sdkLoading ? <CircularProgress /> : null}
       <Typography variant="body2" textAlign="center">
         {sdkLoading
-          ? "Preparando captura biométrica de Nubarium..."
-          : (sdkError ?? "No fue posible inicializar el SDK de Nubarium.")}
+          ? "Preparando captura biométrica..."
+          : (sdkError ?? "No fue posible inicializar la captura biométrica.")}
       </Typography>
-      {!sdkLoading && sdkError && (
+      {!sdkLoading && sdkError ? (
         <Button variant="outlined" onClick={() => void reloadToken()}>
           Reintentar
         </Button>
-      )}
-    </Stack>
+      ) : null}
+    </SdkBootstrapState>
+  );
+
+  const stepProgressHeader = (
+    <StepProgress variant="body2">
+      {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
+    </StepProgress>
   );
 
   return (
@@ -243,8 +262,9 @@ export function CreditApplicationIntakeModal({
       onClose={handleCloseModal}
       title={stepContent.title}
       description={stepContent.subtitle}
+      headerContent={stepProgressHeader}
       disableClose={saving}
-      maxWidth="lg"
+      maxWidth="md"
       fullWidth
       contentSx={{
         flex: 1,
@@ -254,139 +274,126 @@ export function CreditApplicationIntakeModal({
         flexDirection: "column",
       }}
     >
-      <Stack
-        spacing={3}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: "auto",
-        }}
-      >
-        <Stack spacing={3} sx={{ minHeight: "600px" }}>
-          {activeStep === "ine-capture" && (
-            <Stack spacing={3}>
-              {!sdkReady || !sdkToken
-                ? renderSdkBootstrapState()
-                : (
-                  <NubariumIdCapture
-                    key={ineCaptureSessionKey}
-                    token={sdkToken}
-                    active={open && activeStep === "ine-capture"}
-                    completed={Boolean(ineFrontImage && ineBackImage)}
-                    completedResult={
-                      ineFrontImage && ineBackImage
-                        ? {
-                          executionId: ineExecutionId ?? "",
-                          frontDataUrl: ineFrontImage,
-                          backDataUrl: ineBackImage,
-                          ocrPreview: ocrPreview ?? null,
-                        }
-                        : null
-                    }
-                    onSuccess={handleIneCaptureSuccess}
-                    onReset={handleIneCaptureReset}
-                  />
-                )}
-            </Stack>
-          )}
+      <StepContainer sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {activeStep === "ine-capture" && (
+          <StepContent>
+            {!sdkReady || !sdkToken ? (
+              renderSdkBootstrapState()
+            ) : (
+              <NubariumIdCapture
+                key={ineCaptureSessionKey}
+                token={sdkToken}
+                active={open && activeStep === "ine-capture"}
+                completed={Boolean(ineFrontImage && ineBackImage)}
+                completedResult={
+                  ineFrontImage && ineBackImage
+                    ? {
+                        executionId: ineExecutionId ?? "",
+                        frontDataUrl: ineFrontImage,
+                        backDataUrl: ineBackImage,
+                      }
+                    : null
+                }
+                onSuccess={handleIneCaptureSuccess}
+                onReset={handleIneCaptureReset}
+              />
+            )}
+          </StepContent>
+        )}
 
-          {activeStep === "liveness" && (
-            <Stack spacing={3}>
-              {!sdkReady || !sdkToken
-                ? renderSdkBootstrapState()
-                : (
-                  <NubariumFaceCapture
-                    key={livenessCaptureSessionKey}
-                    token={sdkToken}
-                    active={open && activeStep === "liveness"}
-                    completed={Boolean(selfieImage)}
-                    completedResult={
-                      selfieImage
-                        ? {
-                          executionId: livenessExecutionId ?? "",
-                          faceDataUrl: selfieImage,
-                        }
-                        : null
-                    }
-                    onSuccess={handleLivenessSuccess}
-                    onReset={handleLivenessReset}
-                  />
-                )}
-            </Stack>
-          )}
+        {activeStep === "liveness" && (
+          <StepContent>
+            {!sdkReady || !sdkToken ? (
+              renderSdkBootstrapState()
+            ) : (
+              <NubariumFaceCapture
+                key={livenessCaptureSessionKey}
+                token={sdkToken}
+                active={open && activeStep === "liveness"}
+                completed={Boolean(selfieImage)}
+                completedResult={
+                  selfieImage
+                    ? {
+                        executionId: livenessExecutionId ?? "",
+                        faceDataUrl: selfieImage,
+                      }
+                    : null
+                }
+                onSuccess={handleLivenessSuccess}
+                onReset={handleLivenessReset}
+              />
+            )}
+          </StepContent>
+        )}
 
-          {activeStep === "fingerprint" && (
-            <Stack spacing={3} alignItems="center" justifyContent="center" sx={{ flex: 1 }}>
-              <Fingerprint size={160} color="#22c55e" />
-              <Typography variant="h5">Dedo índice registrado</Typography>
-              <Button
-                variant={fingerprintConfirmed ? "contained" : "outlined"}
-                onClick={() => setFingerprintConfirmed(true)}
-              >
-                {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
-              </Button>
-            </Stack>
-          )}
+        {activeStep === "fingerprint" && (
+          <StepSection>
+            <FingerprintIconWrapper>
+              <Fingerprint size={120} strokeWidth={1.25} />
+            </FingerprintIconWrapper>
+            <Typography variant="subtitle1">Dedo índice</Typography>
+            <Button
+              variant={fingerprintConfirmed ? "contained" : "outlined"}
+              onClick={() => setFingerprintConfirmed(true)}
+            >
+              {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
+            </Button>
+          </StepSection>
+        )}
 
-          {activeStep === "signature" && (
-            <Stack spacing={3} alignItems="flex-end">
-              <Typography variant="h5">
-                Para continuar con el proceso, solicita la autorización para revisar el
-                historial crediticio del cliente a través del Buró de Crédito.
-              </Typography>
-              <Stack style={{ borderRadius: "16px", overflow: "hidden" }}>
-                <canvas
-                  ref={signatureCanvasRef}
-                  width={900}
-                  height={400}
-                  style={{
-                    width: "100%",
-                    backgroundColor: theme.palette.background.paper,
-                    cursor: saving ? "not-allowed" : "crosshair",
-                  }}
-                  onMouseDown={saving ? undefined : handleStartDrawing}
-                  onMouseMove={saving ? undefined : handleDraw}
-                  onMouseUp={saving ? undefined : handleEndDrawing}
-                  onMouseLeave={saving ? undefined : handleEndDrawing}
-                />
-              </Stack>
-              <Typography variant="body1" textAlign="center" alignSelf="center">
-                Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
-                S.A. de C.V.
-              </Typography>
-              <Button
-                variant="text"
-                startIcon={<PenSquare size={16} />}
-                onClick={clearSignatureCanvas}
+        {activeStep === "signature" && (
+          <SignatureSection>
+            <Typography variant="body2" color="text.secondary">
+              Solicita la autorización del cliente para revisar su historial crediticio
+              a través del Buró de Crédito.
+            </Typography>
+            <SignatureCanvasWrapper>
+              <SignatureCanvas
+                ref={signatureCanvasRef}
+                width={900}
+                height={296}
                 disabled={saving}
-              >
-                Limpiar firma
-              </Button>
-            </Stack>
-          )}
-        </Stack>
-      </Stack>
+                onMouseDown={saving ? undefined : handleStartDrawing}
+                onMouseMove={saving ? undefined : handleDraw}
+                onMouseUp={saving ? undefined : handleEndDrawing}
+                onMouseLeave={saving ? undefined : handleEndDrawing}
+              />
+            </SignatureCanvasWrapper>
+            <SignatureLegalText variant="body2">
+              Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
+              S.A. de C.V.
+            </SignatureLegalText>
+            <Button
+              variant="text"
+              startIcon={<PenSquare size={16} />}
+              onClick={clearSignatureCanvas}
+              disabled={saving}
+              sx={{ alignSelf: "flex-end" }}
+            >
+              Limpiar firma
+            </Button>
+          </SignatureSection>
+        )}
+      </StepContainer>
 
-      <Box
-        sx={{
-          flexShrink: 0,
-          backgroundColor: theme.palette.background.paper,
-          py: 1,
-          zIndex: 2,
-          position: "relative",
-        }}
-      >
+      <FooterActions>
         <Button
           fullWidth
           variant="contained"
           onClick={goToNextStep}
-          disabled={!canContinue || saving || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)}
+          disabled={
+            !canContinue
+            || saving
+            || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)
+          }
         >
-          {saving
-            ? <CircularProgress size={20} color="inherit" />
-            : (isLastStep ? "Finalizar" : "Siguiente")}
+          {saving ? (
+            <CircularProgress size={20} color="inherit" />
+          ) : (
+            isLastStep ? "Finalizar" : "Siguiente"
+          )}
         </Button>
-      </Box>
+      </FooterActions>
     </SideModal>
   );
 }

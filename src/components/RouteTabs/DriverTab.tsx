@@ -1,37 +1,77 @@
 import { Stack, Typography, Button, IconButton } from "@mui/material";
-import { CircleMinus, CirclePlus, User } from "lucide-react";
+import { CircleMinus, Plus, User } from "lucide-react";
 import { IconContainer, PersonRow } from "@/styles/rutas.styles";
 import { theme } from "@/styles/theme";
 import type { RouteDetail } from "@/types/rutas.types";
 
+export const MAX_ASSISTANTS_PER_ROUTE = 2;
+
 export interface DriverTabProps {
   routeDetail: RouteDetail;
-  onAddPerson?: () => void;
+  onAddDriver?: () => void;
+  onAddAssistant?: () => void;
   onRemoveDriver?: () => void;
   onRemoveAssistant?: (assistantId: string) => void;
+  canManage?: boolean;
+  loadingDriver?: boolean;
+  loadingAssistant?: boolean;
 }
 
 export function DriverTab({
   routeDetail,
-  onAddPerson,
+  onAddDriver,
+  onAddAssistant,
   onRemoveDriver,
   onRemoveAssistant,
+  canManage = true,
+  loadingDriver = false,
+  loadingAssistant = false,
 }: DriverTabProps) {
+  const hasDriver = Boolean(routeDetail.driver);
+  const assistantCount = routeDetail.assistants.length;
+  const maxAssistantsReached = assistantCount >= MAX_ASSISTANTS_PER_ROUTE;
+
   return (
-    <Stack spacing={2} alignItems="flex-start">
+    <Stack spacing={3} alignItems="flex-start">
       <Stack spacing={1} width="100%">
-        <Typography variant="subtitle2">Chofer</Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          width="100%"
+        >
+          <Typography variant="subtitle2">Chofer</Typography>
+          {canManage && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Plus size={16} />}
+              onClick={onAddDriver}
+              disabled={loadingDriver || hasDriver}
+            >
+              Agregar chofer
+            </Button>
+          )}
+        </Stack>
         {routeDetail.driver ? (
           <PersonRow>
             <Stack direction="row" alignItems="center" spacing={1}>
               <IconContainer>
                 <User size={18} />
               </IconContainer>
-              <Typography variant="subtitle2">{routeDetail.driver.name}</Typography>
+              <Typography variant="subtitle2">
+                {routeDetail.driver.name}
+              </Typography>
             </Stack>
-            <IconButton size="small" onClick={onRemoveDriver}>
-              <CircleMinus size={16} color={theme.palette.text.secondary} />
-            </IconButton>
+            {canManage && (
+              <IconButton
+                size="small"
+                onClick={onRemoveDriver}
+                disabled={loadingDriver}
+              >
+                <CircleMinus size={16} color={theme.palette.text.secondary} />
+              </IconButton>
+            )}
           </PersonRow>
         ) : (
           <Typography variant="body2" color="text.secondary">
@@ -39,8 +79,27 @@ export function DriverTab({
           </Typography>
         )}
       </Stack>
+
       <Stack spacing={1} width="100%">
-        <Typography variant="subtitle2">Ayudantes</Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          width="100%"
+        >
+          <Typography variant="subtitle2">Ayudantes</Typography>
+          {canManage && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Plus size={16} />}
+              onClick={onAddAssistant}
+              disabled={loadingAssistant || maxAssistantsReached}
+            >
+              Agregar ayudante
+            </Button>
+          )}
+        </Stack>
         {routeDetail.assistants.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             Sin ayudantes
@@ -54,25 +113,19 @@ export function DriverTab({
                 </IconContainer>
                 <Typography variant="subtitle2">{assistant.name}</Typography>
               </Stack>
-              <IconButton
-                size="small"
-                onClick={() => onRemoveAssistant?.(assistant.id)}
-              >
-                <CircleMinus size={16} color={theme.palette.text.secondary} />
-              </IconButton>
+              {canManage && (
+                <IconButton
+                  size="small"
+                  onClick={() => onRemoveAssistant?.(assistant.id)}
+                  disabled={loadingAssistant}
+                >
+                  <CircleMinus size={16} color={theme.palette.text.secondary} />
+                </IconButton>
+              )}
             </PersonRow>
           ))
         )}
       </Stack>
-
-      <Button
-        variant="outlined"
-        size="small"
-        startIcon={<CirclePlus size={16} />}
-        onClick={onAddPerson}
-      >
-        Agregar otro
-      </Button>
     </Stack>
   );
 }

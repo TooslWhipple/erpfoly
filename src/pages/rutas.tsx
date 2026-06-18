@@ -6,6 +6,7 @@ import {
   Skeleton,
   Divider,
   Button,
+  TextField,
 } from "@mui/material";
 import {
   ChevronLeft,
@@ -16,6 +17,9 @@ import {
   Truck,
   PlusCircle,
   Save,
+  Pencil,
+  Check,
+  X as XIcon,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +29,9 @@ import {
   StatusChip,
   TabFilters,
   AddArticlesToRouteModal,
+  AddDriverToRouteModal,
+  AddAssistantToRouteModal,
+  ConfirmModal,
 } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -39,14 +46,24 @@ import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/components/Ro
 import type { RouteSummary } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
-import { ROUTE_ARTICLES_UPDATE } from "@/lib/permissions";
+import {
+  ROUTE_ARTICLES_UPDATE,
+  ROUTES_UPDATE,
+} from "@/lib/permissions";
 
 import {
+  addAssistantToRoute,
   addProductsToRoute,
+  assignDriverToRoute,
   deleteCartaPorteDocument,
+  fetchAvailableAssistants,
+  fetchAvailableDrivers,
   fetchAvailableProducts,
   fetchRouteDetail,
   fetchRoutesForDate,
+  removeAssistantFromRoute,
+  removeDriverFromRoute,
+  updateRouteVehicleInfo,
   uploadCartaPorte,
 } from "@/services/rutas.service";
 import type { RouteDetailApi } from "@/types/rutas-api.types";
@@ -55,7 +72,7 @@ import {
   mapRouteListRowToSummary,
   type RouteDetailView,
 } from "@/utils/rutas-api.mapper";
-import { unwrapOrThrow } from "@/lib/axios";
+import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 interface RouteCartaUploadSectionProps {
@@ -112,10 +129,6 @@ function RouteCartaUploadSection({
   return <CartaPorteTab value={merged} onChange={handleChange} />;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const TAB_ARTICLES = "articles";
 const TAB_ROUTE = "route";
 const TAB_CARTA_PORTE = "carta_porte";
@@ -135,9 +148,11 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelada",
 };
 
-// ============================================================================
-// DATE HELPERS
-// ============================================================================
+type PendingRemoval =
+  | { kind: "driver"; name: string }
+  | { kind: "assistant"; id: number; name: string }
+  | null;
+
 
 function formatDateLabel(date: Date): string {
   const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -145,16 +160,14 @@ function formatDateLabel(date: Date): string {
   return `${days[date.getDay()]} ${date.getDate()} de ${months[date.getMonth()]}`;
 }
 
-// ============================================================================
-// PAGE
-// ============================================================================
-
 export default function RutaPage() {
   const { hasPermission } = usePermissions();
   const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
+  const canManageRoute = hasPermission(ROUTES_UPDATE);
 
   const queryClient = useQueryClient();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
 
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const routeDateStr = useMemo(
@@ -165,8 +178,13 @@ export default function RutaPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
   const [addArticlesModalOpen, setAddArticlesModalOpen] = useState(false);
+  const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
+  const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
   const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<File | undefined>(undefined);
   const [cartaPanelKey, setCartaPanelKey] = useState(0);
+  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
+  const [vehicleDraft, setVehicleDraft] = useState("");
 
   const routesQuery = useQuery({
     queryKey: ["routes", routeDateStr],
@@ -185,7 +203,6 @@ export default function RutaPage() {
     return rows.map(mapRouteListRowToSummary);
   }, [routesQuery.data?.rows]);
 
-  /** Picks a valid route for the current day list; ignores stale selection after refetch. */
   const resolvedRouteId = useMemo(() => {
     if (!routes.length) return null;
     if (
@@ -239,13 +256,7 @@ export default function RutaPage() {
       file: File;
     }) => {
       const res = await uploadCartaPorte(routeId, file);
-      if (res.error) {
-        throw new Error(res.error.message);
-      }
-      if (res.data == null) {
-        throw new Error("Respuesta vacía al guardar la carta porte.");
-      }
-      return res.data;
+      return unwrapOrThrow(res);
     },
     onSuccess: (data, vars) => {
       queryClient.setQueryData<RouteDetailApi>(
@@ -256,6 +267,14 @@ export default function RutaPage() {
       setPendingCartaLocalFile(undefined);
       setCartaPanelKey((k) => k + 1);
       showSuccess("Carta porte guardada.");
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo guardar la carta porte: ${detail}`
+          : "No se pudo guardar la carta porte.",
+      );
     },
   });
 
@@ -288,13 +307,19 @@ export default function RutaPage() {
       }
       return { previous };
     },
-    onError: (_err, vars, ctx) => {
+    onError: (err, vars, ctx) => {
       if (ctx?.previous) {
         queryClient.setQueryData(
           ["route-detail", vars.routeId],
           ctx.previous,
         );
       }
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo eliminar la carta porte: ${detail}`
+          : "No se pudo eliminar la carta porte.",
+      );
     },
     onSuccess: (data, vars) => {
       queryClient.setQueryData<RouteDetailApi>(
@@ -306,10 +331,128 @@ export default function RutaPage() {
     },
   });
 
+  // ----- Driver / assistants mutations -----
+
+  const assignDriverMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      userId,
+    }: {
+      routeId: number;
+      userId: number;
+    }) => {
+      const res = await assignDriverToRoute(routeId, userId);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Chofer asignado correctamente.");
+    },
+  });
+
+  const removeDriverMutation = useMutation({
+    mutationFn: async ({ routeId }: { routeId: number }) => {
+      const res = await removeDriverFromRoute(routeId);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Chofer eliminado correctamente.");
+    },
+  });
+
+  const addAssistantMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      userId,
+    }: {
+      routeId: number;
+      userId: number;
+    }) => {
+      const res = await addAssistantToRoute(routeId, userId);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Ayudante agregado correctamente.");
+    },
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      userId,
+    }: {
+      routeId: number;
+      userId: number;
+    }) => {
+      const res = await removeAssistantFromRoute(routeId, userId);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Ayudante eliminado correctamente.");
+    },
+  });
+
+  const updateVehicleMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      vehicleInfo,
+    }: {
+      routeId: number;
+      vehicleInfo: string;
+    }) => {
+      const res = await updateRouteVehicleInfo(routeId, vehicleInfo);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Información del vehículo actualizada.");
+      setIsEditingVehicle(false);
+    },
+  });
+
   const fetchArticlesForModal = useCallback(async (routeId: number) => {
     const res = await fetchAvailableProducts(routeId);
     const data = unwrapOrThrow(res);
     return data.rows;
+  }, []);
+
+  const fetchDriversForModal = useCallback(async (routeId: number) => {
+    const res = await fetchAvailableDrivers(routeId, {
+      page: 1,
+      limit: 100,
+    });
+    return unwrapOrThrow(res).rows;
+  }, []);
+
+  const fetchAssistantsForModal = useCallback(async (routeId: number) => {
+    const res = await fetchAvailableAssistants(routeId, {
+      page: 1,
+      limit: 100,
+    });
+    return unwrapOrThrow(res).rows;
   }, []);
 
   const handlePrevDay = () => {
@@ -348,6 +491,22 @@ export default function RutaPage() {
     });
   };
 
+  const handleConfirmAssignDriver = async (userId: number) => {
+    if (!resolvedRouteId) return;
+    await assignDriverMutation.mutateAsync({
+      routeId: resolvedRouteId,
+      userId,
+    });
+  };
+
+  const handleConfirmAddAssistant = async (userId: number) => {
+    if (!resolvedRouteId) return;
+    await addAssistantMutation.mutateAsync({
+      routeId: resolvedRouteId,
+      userId,
+    });
+  };
+
   const handleSaveCartaPorte = async () => {
     if (!resolvedRouteId || !pendingCartaLocalFile) return;
     await uploadCartaMutation.mutateAsync({
@@ -367,8 +526,50 @@ export default function RutaPage() {
     [resolvedRouteId, deleteCartaMutation],
   );
 
+  const handleRequestRemoveAssistant = (assistantId: string) => {
+    const assistant = routeDetail?.assistants.find(
+      (a) => a.id === assistantId,
+    );
+    setPendingRemoval({
+      kind: "assistant",
+      id: Number(assistantId),
+      name: assistant?.name ?? "",
+    });
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!pendingRemoval || !resolvedRouteId) return;
+    if (pendingRemoval.kind === "assistant") {
+      await removeAssistantMutation.mutateAsync({
+        routeId: resolvedRouteId,
+        userId: pendingRemoval.id,
+      });
+    } else if (pendingRemoval.kind === "driver") {
+      await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
+    }
+    setPendingRemoval(null);
+  };
+
+  const handleStartEditVehicle = () => {
+    setVehicleDraft(routeDetail?.vehicleInfo && routeDetail.vehicleInfo !== "—" ? routeDetail.vehicleInfo : "");
+    setIsEditingVehicle(true);
+  };
+
+  const handleCancelEditVehicle = () => {
+    setIsEditingVehicle(false);
+    setVehicleDraft("");
+  };
+
+  const handleSaveVehicle = async () => {
+    if (!resolvedRouteId) return;
+    await updateVehicleMutation.mutateAsync({
+      routeId: resolvedRouteId,
+      vehicleInfo: vehicleDraft,
+    });
+    setVehicleDraft("");
+  };
+
   const routesLoading = routesQuery.isLoading;
-  const routesError = routesQuery.isError ? "No se pudieron cargar las rutas." : null;
 
   const detailLoading = detailQuery.isFetching;
 
@@ -421,19 +622,21 @@ export default function RutaPage() {
             <IconButton size="small" onClick={handleNextDay}>
               <ChevronRight size={20} />
             </IconButton>
-            <Typography variant="body1" fontWeight={500}>
-              {formatDateLabel(selectedDate)}
-            </Typography>
-            <Button size="small" variant="text" onClick={handleToday}>
-              Hoy
-            </Button>
+            <Typography variant="body1" fontWeight={500}>{formatDateLabel(selectedDate)}</Typography>
+            <Button
+              size="small"
+              variant="text"
+              onClick={handleToday}>Hoy</Button>
           </Stack>
           {routesLoading ? (
             [1, 2, 3].map((i) => (
-              <Skeleton key={i} variant="rectangular" height={100} sx={{ borderRadius: 1 }} />
+              <Skeleton
+                key={i}
+                variant="rectangular"
+                height={100}
+                sx={{ borderRadius: 1 }}
+              />
             ))
-          ) : routesError ? (
-            <Typography variant="body2" color="error">{routesError}</Typography>
           ) : (
             routes.map((route) => (
               <RouteCard
@@ -442,6 +645,7 @@ export default function RutaPage() {
                 onClick={() => {
                   setSelectedRouteId(route.id);
                   setActiveTab(TAB_ARTICLES);
+                  setIsEditingVehicle(false);
                 }}
               >
                 {route.miniMapUrl ? (
@@ -455,21 +659,31 @@ export default function RutaPage() {
                   <MapPlaceholder />
                 )}
                 <Stack flex={1} spacing={0.5} alignItems="flex-start">
-                  <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    color="primary.main"
+                  >
                     {route.name}
                   </Typography>
                   <StatusChip
                     size="small"
                     label={STATUS_LABEL[route.status] ?? route.status}
                   />
-                  <Typography variant="body1" fontWeight={600}>{route.location}</Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {route.location}
+                  </Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Box size={16} />
-                    <Typography variant="body1">{route.articleCount} artículos</Typography>
+                    <Typography variant="body1">
+                      {route.articleCount} artículos
+                    </Typography>
                   </Stack>
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <Route size={16} />
-                    <Typography variant="body1">{route.pointCount} puntos</Typography>
+                    <Typography variant="body1">
+                      {route.pointCount} puntos
+                    </Typography>
                   </Stack>
                 </Stack>
               </RouteCard>
@@ -478,160 +692,263 @@ export default function RutaPage() {
         </Stack>
 
         <Stack flex={1}>
-          {routesLoading ? (
-            <Stack flex={1} p={3} spacing={2}>
-              <Skeleton variant="text" width="60%" height={32} />
-              <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1 }} />
-            </Stack>
-          ) : !routes.length ? (
-            <Stack flex={1} alignItems="center" justifyContent="center" p={4}>
-              <Typography variant="body2" color="text.secondary">
-                No hay rutas para esta fecha
-              </Typography>
-            </Stack>
-          ) : resolvedRouteId == null ? (
-            <Stack flex={1} alignItems="center" justifyContent="center" p={4}>
-              <Typography variant="body2" color="text.secondary">
-                Selecciona una ruta
-              </Typography>
-            </Stack>
-          ) : detailLoading && !routeDetail ? (
-            <Stack flex={1} p={3} spacing={2}>
-              <Skeleton variant="text" width="60%" height={32} />
-              <Skeleton variant="text" width="40%" />
-              <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 1 }} />
-            </Stack>
-          ) : detailQuery.isError ? (
-            <Typography variant="body2" color="error">
-              No se pudo cargar el detalle de la ruta.
-            </Typography>
-          ) : routeDetail ? (
-            <Stack spacing={2}>
-              <DetailHeader>
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: "flex-start", sm: "flex-start" }}
-                  gap={2}
-                >
-                  <Stack spacing={1} flex={1} minWidth={0}>
-                    <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                      <Typography variant="h6" color="primary.main">{routeDetail.name}</Typography>
-                      <StatusChip
-                        variant="pending"
-                        size="small"
-                        label={STATUS_LABEL[routeDetail.status] ?? routeDetail.status}
-                      />
-                    </Stack>
-
-                    <Typography variant="h5">{routeDetail.location}</Typography>
-
-                    <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Box size={16} color={theme.palette.text.secondary} />
-                        <Typography variant="body2">{routeDetail.articleCount} artículos</Typography>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Route size={16} color={theme.palette.text.secondary} />
-                        <Typography variant="body2">{routeDetail.pointCount} puntos</Typography>
-                      </Stack>
-                    </Stack>
-
-                    <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <User size={16} color={theme.palette.text.secondary} />
-                        <Typography variant="body2">{routeDetail.driverName}</Typography>
-                      </Stack>
-                      <Stack direction="row" alignItems="center" gap={0.5}>
-                        <Truck size={16} color={theme.palette.text.secondary} />
-                        <Typography variant="body2">{routeDetail.vehicleInfo}</Typography>
-                      </Stack>
-                    </Stack>
-                  </Stack>
-                  {routeDetail.miniMapUrl ? (
-                    <DetailMiniMap
-                      src={routeDetail.miniMapUrl}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : null}
+          {
+            (routesLoading) ?
+              <Stack flex={1} p={3} spacing={2}>
+                <Skeleton variant="text" width="60%" height={32} />
+                <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1 }} />
+              </Stack>
+              : (routes.length === 0) ?
+                <Stack flex={1} alignItems="center" justifyContent="center" p={4}>
+                  <Typography variant="body2" color="text.secondary">No hay rutas para esta fecha</Typography>
                 </Stack>
-              </DetailHeader>
+                : (resolvedRouteId == null) ?
+                  <Stack flex={1} alignItems="center" justifyContent="center" p={4}>
+                    <Typography variant="body2" color="text.secondary">Selecciona una ruta</Typography>
+                  </Stack>
+                  : (detailLoading && !routeDetail) ?
+                    <Stack flex={1} p={3} spacing={2}>
+                      <Skeleton variant="text" width="60%" height={32} />
+                      <Skeleton variant="text" width="40%" />
+                      <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 1 }} />
+                    </Stack>
+                    : detailQuery.isError
+                      ? <Typography variant="body2" color="error">No se pudo cargar el detalle de la ruta.</Typography>
+                      : (routeDetail) ?
+                        <Stack spacing={2}>
+                          <DetailHeader>
+                            <Stack
+                              direction={{ xs: "column", sm: "row" }}
+                              justifyContent="space-between"
+                              alignItems={{ xs: "flex-start", sm: "flex-start" }}
+                              gap={2}
+                            >
+                              <Stack spacing={1} flex={1} minWidth={0}>
+                                <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                                  <Typography variant="h6" color="primary.main">{routeDetail.name}</Typography>
+                                  <StatusChip
+                                    variant="pending"
+                                    size="small"
+                                    label={STATUS_LABEL[routeDetail.status] ?? routeDetail.status}
+                                  />
+                                </Stack>
 
-              <Stack
-                spacing={2}
-                direction={{ xs: "column", md: "row" }}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <TabFilters
-                  tabs={TABS}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                />
-                {
-                  canUpdateRouteArticles && (
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      startIcon={<PlusCircle size={16} />}
-                      onClick={() => setAddArticlesModalOpen(true)}
-                    >
-                      Agregar
-                    </Button>
-                  )
-                }
-                {renderTabActionButton()}
-              </Stack >
+                                <Typography variant="h5">{routeDetail.location}</Typography>
 
-              {activeTab === TAB_ARTICLES && (
-                <ArticlesTab articles={routeDetail.articles} />
-              )
-              }
+                                <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                                  <Stack direction="row" alignItems="center" gap={0.5}>
+                                    <Box size={16} color={theme.palette.text.secondary} />
+                                    <Typography variant="body2">{routeDetail.articleCount} artículos</Typography>
+                                  </Stack>
+                                  <Stack direction="row" alignItems="center" gap={0.5}>
+                                    <Route size={16} color={theme.palette.text.secondary} />
+                                    <Typography variant="body2">{routeDetail.pointCount} puntos</Typography>
+                                  </Stack>
+                                </Stack>
 
-              {
-                activeTab === TAB_ROUTE && (
-                  <RouteTab map={routeDetail.map ?? null} />
-                )
-              }
+                                <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                                  <Stack direction="row" alignItems="center" gap={0.5}>
+                                    <User size={16} color={theme.palette.text.secondary} />
+                                    <Typography variant="body2">{routeDetail.driverName}</Typography>
+                                  </Stack>
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    gap={0.5}
+                                    flexWrap="wrap"
+                                  >
+                                    <Truck size={16} color={theme.palette.text.secondary} />
+                                    {
+                                      (isEditingVehicle) ?
+                                        <Stack
+                                          direction="row"
+                                          alignItems="center"
+                                          spacing={0.5}
+                                          flexWrap="wrap">
+                                          <TextField
+                                            size="small"
+                                            variant="outlined"
+                                            value={vehicleDraft}
+                                            onChange={(e) => setVehicleDraft(e.target.value)}
+                                            placeholder="Marca, modelo, placa..."
+                                            disabled={updateVehicleMutation.isPending}
+                                            sx={{ minWidth: 220 }}
+                                            inputProps={{ maxLength: 128 }}
+                                          />
+                                          <IconButton
+                                            size="small"
+                                            color="primary"
+                                            onClick={() => void handleSaveVehicle()}
+                                            disabled={updateVehicleMutation.isPending}
+                                          >
+                                            <Check size={16} />
+                                          </IconButton>
+                                          <IconButton
+                                            size="small"
+                                            onClick={handleCancelEditVehicle}
+                                            disabled={updateVehicleMutation.isPending}
+                                          >
+                                            <XIcon size={16} />
+                                          </IconButton>
+                                        </Stack>
+                                        :
+                                        <Stack
+                                          direction="row"
+                                          alignItems="center"
+                                          spacing={0.5}>
+                                          <Typography variant="body2">{routeDetail.vehicleInfo || "—"}</Typography>
+                                          {
+                                            canManageRoute &&
+                                            <IconButton
+                                              size="small"
+                                              onClick={handleStartEditVehicle}>
+                                              <Pencil size={14} />
+                                            </IconButton>
+                                          }
+                                        </Stack>
+                                    }
+                                  </Stack>
+                                </Stack>
+                              </Stack>
 
-              {
-                activeTab === TAB_CARTA_PORTE && (
-                  <RouteCartaUploadSection
-                    key={`${resolvedRouteId}-${cartaPanelKey}`}
-                    serverFiles={routeDetail.cartaPorteRemoteFiles}
-                    onPendingLocalFile={setPendingCartaLocalFile}
-                    onRemoveServerDocument={handleRemoveCartaServerDocument}
-                  />
-                )
-              }
+                              {
+                                routeDetail.miniMapUrl &&
+                                <DetailMiniMap
+                                  src={routeDetail.miniMapUrl}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              }
+                            </Stack>
+                          </DetailHeader>
 
-              {
-                activeTab === TAB_DRIVER && (
-                  <DriverTab routeDetail={routeDetail} />
-                )
-              }
+                          <Stack
+                            spacing={2}
+                            direction={{ xs: "column", md: "row" }}
+                            justifyContent="space-between"
+                            alignItems="center">
 
-              {
-                resolvedRouteId ? (
-                  <AddArticlesToRouteModal
-                    open={addArticlesModalOpen}
-                    onClose={() => setAddArticlesModalOpen(false)}
-                    routeId={resolvedRouteId}
-                    fetchAvailableArticles={fetchArticlesForModal}
-                    onConfirm={handleConfirmAddArticles}
-                  />
-                ) : null
-              }
-            </Stack >
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No se encontró la ruta
-            </Typography>
-          )}
-        </Stack >
-      </Stack >
-    </MainLayout >
+                            <TabFilters
+                              tabs={TABS}
+                              activeTab={activeTab}
+                              onTabChange={setActiveTab}
+                            />
+
+                            {
+                              canUpdateRouteArticles &&
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                startIcon={<PlusCircle size={16} />}
+                                onClick={() => setAddArticlesModalOpen(true)}>
+                                Agregar
+                              </Button>
+                            }
+                            {
+                              renderTabActionButton()
+                            }
+                          </Stack>
+
+                          {
+                            activeTab === TAB_ARTICLES && <ArticlesTab articles={routeDetail.articles} />
+                          }
+
+                          {
+                            activeTab === TAB_ROUTE && <RouteTab map={routeDetail.map ?? null} />
+                          }
+
+                          {
+                            activeTab === TAB_CARTA_PORTE && (
+                              <RouteCartaUploadSection
+                                key={`${resolvedRouteId}-${cartaPanelKey}`}
+                                serverFiles={routeDetail.cartaPorteRemoteFiles}
+                                onPendingLocalFile={setPendingCartaLocalFile}
+                                onRemoveServerDocument={handleRemoveCartaServerDocument}
+                              />
+                            )
+                          }
+
+                          {
+                            activeTab === TAB_DRIVER &&
+                            <DriverTab
+                              routeDetail={routeDetail}
+                              canManage={canManageRoute}
+                              loadingDriver={
+                                assignDriverMutation.isPending ||
+                                removeDriverMutation.isPending
+                              }
+                              loadingAssistant={
+                                addAssistantMutation.isPending ||
+                                removeAssistantMutation.isPending
+                              }
+                              onAddDriver={() => setAddDriverModalOpen(true)}
+                              onAddAssistant={() => setAddAssistantModalOpen(true)}
+                              onRemoveDriver={() =>
+                                setPendingRemoval({
+                                  kind: "driver",
+                                  name: routeDetail.driver?.name ?? "",
+                                })
+                              }
+                              onRemoveAssistant={handleRequestRemoveAssistant}
+                            />
+                          }
+
+                          {
+                            resolvedRouteId &&
+                            <AddArticlesToRouteModal
+                              open={addArticlesModalOpen}
+                              onClose={() => setAddArticlesModalOpen(false)}
+                              routeId={resolvedRouteId}
+                              fetchAvailableArticles={fetchArticlesForModal}
+                              onConfirm={handleConfirmAddArticles}
+                            />
+                          }
+
+                          {
+                            resolvedRouteId &&
+                            <AddDriverToRouteModal
+                              open={addDriverModalOpen}
+                              onClose={() => setAddDriverModalOpen(false)}
+                              routeId={resolvedRouteId}
+                              fetchAvailableDrivers={fetchDriversForModal}
+                              onConfirm={handleConfirmAssignDriver}
+                            />
+                          }
+
+                          {
+                            resolvedRouteId &&
+                            <AddAssistantToRouteModal
+                              open={addAssistantModalOpen}
+                              onClose={() => setAddAssistantModalOpen(false)}
+                              routeId={resolvedRouteId}
+                              fetchAvailableAssistants={fetchAssistantsForModal}
+                              onConfirm={handleConfirmAddAssistant}
+                            />
+                          }
+
+                          <ConfirmModal
+                            open={pendingRemoval != null}
+                            onClose={() => setPendingRemoval(null)}
+                            onConfirm={() => void handleConfirmRemove()}
+                            title={
+                              pendingRemoval?.kind === "driver"
+                                ? "Quitar chofer"
+                                : "Quitar ayudante"
+                            }
+                            itemName={pendingRemoval?.name}
+                            confirmLabel="Quitar"
+                            loading={
+                              removeAssistantMutation.isPending ||
+                              removeDriverMutation.isPending
+                            }
+                          />
+                        </Stack>
+                        :
+                        <Typography variant="body2" color="text.secondary">No se encontró la ruta</Typography>
+          }
+        </Stack>
+      </Stack>
+    </MainLayout>
   );
 }

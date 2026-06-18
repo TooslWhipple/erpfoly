@@ -1,11 +1,15 @@
 import type { UploadedFileItem } from "@/components/FileUpload";
 import type {
+  RouteAssistantCandidateApi,
   RouteDetailApi,
+  RouteDriverCandidateApi,
   RouteListRowApi,
 } from "@/types/rutas-api.types";
 import type {
   RouteArticle,
+  RouteAssistantCandidate,
   RouteDetail,
+  RouteDriverCandidate,
   RoutePerson,
   RouteStatus,
   RouteSummary,
@@ -88,5 +92,30 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     miniMapUrl: data.mini_map_url ?? undefined,
     map: data.map,
     cartaPorteRemoteFiles,
+  };
+}
+
+export function mapDriverCandidateToView(
+  row: RouteDriverCandidateApi,
+): RouteDriverCandidate {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    licenseNumber: row.license_number,
+    phone: row.phone,
+    status: row.status,
+  };
+}
+
+export function mapAssistantCandidateToView(
+  row: RouteAssistantCandidateApi,
+): RouteAssistantCandidate {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    cellphone: row.cellphone,
   };
 }

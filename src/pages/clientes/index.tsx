@@ -13,6 +13,7 @@ import {
   TabFilters,
   TableCrud,
 } from "@/components";
+<<<<<<< Updated upstream
 import type { Column, RowAction, TitleAction } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
 import { CUSTOMERS_CREATE, CUSTOMERS_DELETE, CUSTOMERS_READ, CUSTOMERS_UPDATE, REPORTS_READ } from "@/lib/permissions";
@@ -29,6 +30,11 @@ const STATUS_TABS: { label: string; value: string }[] = [
   { label: "Inactivos", value: "inactive" },
   { label: "Bloqueados", value: "blocked" },
 ];
+=======
+import { CLIENTES_CREAR, REPORTES_EXPORTAR } from "@/lib/permissions";
+import { useClientes } from "@/hooks/useClientes";
+import type { ClienteListItem } from "@/types/clientes.types";
+>>>>>>> Stashed changes
 
 const STATUS_CHIP_LABELS: Record<string, string> = {
   active: "Activo",
@@ -41,7 +47,11 @@ const STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   blocked: "error",
 };
 
+<<<<<<< Updated upstream
 const columns: Column<Client>[] = [
+=======
+const columns: Column<ClienteListItem>[] = [
+>>>>>>> Stashed changes
   {
     id: "id",
     label: "ID",
@@ -55,7 +65,11 @@ const columns: Column<Client>[] = [
     size: "lg",
   },
   {
+<<<<<<< Updated upstream
     id: "phoneNumber",
+=======
+    id: "phone",
+>>>>>>> Stashed changes
     label: "Teléfono",
     type: "text",
     size: "md",
@@ -75,7 +89,11 @@ const columns: Column<Client>[] = [
     chipVariantMap: STATUS_CHIP_VARIANTS,
   },
   {
+<<<<<<< Updated upstream
     id: "primaryAddressFormatted",
+=======
+    id: "domicilio",
+>>>>>>> Stashed changes
     label: "Domicilio",
     size: "xl",
     truncate: true,
@@ -86,6 +104,7 @@ export default function Clientes() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
 
+<<<<<<< Updated upstream
   const statusParam: { status?: ClientStatus } | undefined =
     activeTab === "all" ? undefined : { status: activeTab as ClientStatus };
 
@@ -128,6 +147,32 @@ export default function Clientes() {
   }));
 
   const rowActions: RowAction<Client>[] = [
+=======
+  const { data, isLoading, isError } = useClientes();
+  const rows = data?.rows ?? [];
+  const totalRows = rows.length;
+
+  const actions: TitleAction[] = [
+    {
+      id: "export",
+      label: "Exportar",
+      icon: <ExportIcon />,
+      variant: "outlined",
+      onClick: () => console.log("Exportar clientes"),
+      permission: REPORTES_EXPORTAR,
+    },
+    {
+      id: "create",
+      label: "Nuevo cliente",
+      icon: <AddIcon />,
+      variant: "contained",
+      href: "/clientes/nuevo",
+      permission: CLIENTES_CREAR,
+    },
+  ];
+
+  const rowActions: RowAction<ClienteListItem>[] = [
+>>>>>>> Stashed changes
     {
       id: "view",
       label: "Ver detalles",
@@ -139,6 +184,7 @@ export default function Clientes() {
 
   return (
     <MainLayout>
+<<<<<<< Updated upstream
       <Stack direction="column" spacing={3}>
         <Title title="Clientes" />
         <TabFilters
@@ -164,6 +210,34 @@ export default function Clientes() {
           emptyMessage="No hay clientes registrados"
         />
       </Stack>
+=======
+      <Title
+        title="Clientes"
+        actions={actions}
+      />
+      <TabFilters
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        showSearch
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nombre"
+      />
+      <TableCrud
+        columns={columns}
+        rows={rows}
+        actions={rowActions}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
+        loading={isLoading}
+      />
+>>>>>>> Stashed changes
     </MainLayout>
   );
 }

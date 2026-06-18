@@ -1,9 +1,33 @@
+<<<<<<< Updated upstream
 export type CollectionActivityTypeCode =
   | "CALL"
   | "MESSAGE"
   | "EMAIL"
   | "VISIT"
   | "NOTE";
+=======
+// ============================================================================
+// TYPES & INTERFACES - Client List (API)
+// ============================================================================
+
+export interface ClienteListItem {
+  id: number;
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  status: string | null;
+  domicilio: string | null;
+  createdAt: string;
+}
+
+export interface GetClientesResponse {
+  rows: ClienteListItem[];
+}
+
+// ============================================================================
+// TYPES & INTERFACES - Client Detail Module
+// ============================================================================
+>>>>>>> Stashed changes
 
 export interface ClientCollectionActivityType {
   id: number;

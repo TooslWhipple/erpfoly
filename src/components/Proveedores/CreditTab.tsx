@@ -7,6 +7,7 @@ import {
     DeleteButton,
     DeleteButtonWrapper
 } from "@/styles/catalogos/proveedores.styles";
+import { SUPPLIER_TEXT_MAX_LENGTH } from "@/hooks/proveedores/supplierForm.constants";
 import type { BankAccount, CreditData } from "@/types/proveedores.types";
 import type { ContactOption } from "./ContactsTab";
 import { Trash } from "lucide-react";
@@ -15,6 +16,7 @@ export interface CreditTabProps {
     creditData: CreditData;
     bankAccounts: BankAccount[];
     jobTitleOptions: ContactOption[];
+    errors: Record<string, string>;
     onCreditDataChange: (field: keyof CreditData, value: string | number | null) => void;
     onAddBankAccount: () => void;
     onRemoveBankAccount: (accountId: string) => void;
@@ -25,20 +27,26 @@ export interface CreditTabProps {
     ) => void;
 }
 
-const emptyOption = { value: "", label: "Selecciona..." };
-
 export function CreditTab({
     creditData,
     bankAccounts,
     jobTitleOptions,
+    errors,
     onCreditDataChange,
     onAddBankAccount,
     onRemoveBankAccount,
     onBankAccountChange,
 }: CreditTabProps) {
-    const jobTitleSelectOptions = [emptyOption, ...jobTitleOptions];
+    const jobTitleSelectOptions = jobTitleOptions.map((o) => ({
+        value: String(o.value),
+        label: o.label,
+    }));
+    const attentionError = errors["creditData.attention"];
+    const jobTitleError = errors["creditData.jobTitleId"];
+    const phoneError = errors["creditData.phone"];
+
     return (
-        <>
+        <Stack spacing={2} width="100%">
             <FormCard>
                 <Typography variant="h6">Crédito y cobranza</Typography>
                 <Grid container spacing={2} width="100%">
@@ -50,6 +58,10 @@ export function CreditTab({
                             onChange={(e) =>
                                 onCreditDataChange("attention", e.target.value)
                             }
+                            required
+                            error={Boolean(attentionError)}
+                            helperText={attentionError}
+                            inputProps={{ maxLength: SUPPLIER_TEXT_MAX_LENGTH }}
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
@@ -69,6 +81,9 @@ export function CreditTab({
                                 );
                             }}
                             options={jobTitleSelectOptions}
+                            required
+                            error={Boolean(jobTitleError)}
+                            helperText={jobTitleError}
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
@@ -80,6 +95,10 @@ export function CreditTab({
                             onChange={(e) =>
                                 onCreditDataChange("phone", e.target.value)
                             }
+                            required
+                            error={Boolean(phoneError)}
+                            helperText={phoneError}
+                            inputProps={{ maxLength: 10 }}
                         />
                     </Grid>
                 </Grid>
@@ -179,6 +198,6 @@ export function CreditTab({
                     Agregar otra
                 </Button>
             </FormCard>
-        </>
+        </Stack>
     );
 }

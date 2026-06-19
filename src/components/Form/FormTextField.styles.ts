@@ -23,16 +23,22 @@ export const StyledTextField = styled(TextField)(({ theme }) => ({
       borderColor: theme.palette.divider,
       borderWidth: 1,
     },
-    "&:hover fieldset": {
-      borderColor: theme.palette.text.disabled,
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: theme.palette.primary.main,
-      borderWidth: 1,
-    },
-    "&.Mui-error fieldset": {
-      borderColor: theme.palette.error.main,
-    },
+  "&:hover:not(.Mui-error) fieldset": {
+    borderColor: theme.palette.text.disabled,
+  },
+  "&.Mui-focused:not(.Mui-error) fieldset": {
+    borderColor: theme.palette.primary.main,
+    borderWidth: 1,
+  },
+  "&.Mui-error fieldset": {
+    borderColor: theme.palette.error.main,
+  },
+  "&.Mui-error:hover fieldset": {
+    borderColor: theme.palette.error.main,
+  },
+  "&.Mui-error.Mui-focused fieldset": {
+    borderColor: theme.palette.error.main,
+  },
     "&.Mui-disabled": {
       backgroundColor: theme.palette.action.disabledBackground,
       "& fieldset": {

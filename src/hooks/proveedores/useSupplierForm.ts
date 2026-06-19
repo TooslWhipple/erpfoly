@@ -6,7 +6,11 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getSupplierById, createSupplier, updateSupplier, inviteSupplier } from "@/services/suppliers.service";
 import { unwrapOrThrow, getApiErrorMessage } from "@/lib/axios";
 import { useContactJobTitles } from "./useContactJobTitles";
-import { validateGeneralForm } from "@/forms";
+import {
+    validateGeneralForm,
+    validateContactsForm,
+    validateCreditForm,
+} from "@/forms";
 import {
     getDefaultFormState,
     supplierDetailToFormState,
@@ -19,10 +23,12 @@ import type {
 import {
     SUPPLIER_FORM_TABS,
     isSupplierFormTab,
+    hasSupplierTabErrors,
     type SupplierFormTab,
 } from "./supplierForm.constants";
 import { supplierFormReducer } from "./supplierForm.reducer";
 import { useSupplierFormHandlers } from "./useSupplierFormHandlers";
+import { theme } from "@/styles/theme";
 
 export function useSupplierForm() {
     const router = useRouter();
@@ -116,8 +122,8 @@ export function useSupplierForm() {
         showError(getApiErrorMessage(supplierQuery.error));
     }, [supplierQuery.error, showError]);
 
-    const validateGeneral = useCallback((): boolean => {
-        const { success, errors: nextErrors } = validateGeneralForm({
+    const runAllValidations = useCallback(() => {
+        const general = validateGeneralForm({
             name: formState.name.trim(),
             businessName: formState.businessName.trim(),
             rfc: formState.rfc.trim(),
@@ -125,13 +131,55 @@ export function useSupplierForm() {
             email: formState.email.trim() || undefined,
             paymentTerm: formState.paymentTerm,
         });
-        setErrors(nextErrors);
-        return success;
-    }, [formState.name, formState.businessName, formState.rfc, formState.website, formState.email, formState.paymentTerm]);
+        const contacts = validateContactsForm(
+            formState.contacts.map((c) => ({
+                jobTitleId: c.jobTitleId,
+                name: c.name,
+                phone: c.phone,
+            })),
+        );
+        const credit = validateCreditForm({
+            attention: formState.creditAttention,
+            jobTitleId: formState.creditJobTitleId,
+            phone: formState.creditPhone,
+        });
+
+        const mergedErrors = {
+            ...general.errors,
+            ...contacts.errors,
+            ...credit.errors,
+        };
+        const firstInvalidTab: SupplierFormTab | null = !general.success
+            ? "general"
+            : !contacts.success
+              ? "contacts"
+              : !credit.success
+                ? "credit"
+                : null;
+
+        return {
+            success: general.success && contacts.success && credit.success,
+            errors: mergedErrors,
+            firstInvalidTab,
+        };
+    }, [
+        formState.name,
+        formState.businessName,
+        formState.rfc,
+        formState.website,
+        formState.email,
+        formState.paymentTerm,
+        formState.contacts,
+        formState.creditAttention,
+        formState.creditJobTitleId,
+        formState.creditPhone,
+    ]);
 
     const handleSave = useCallback(async () => {
-        if (!validateGeneral()) {
-            setActiveTab("general");
+        const validation = runAllValidations();
+        setErrors(validation.errors);
+        if (!validation.success) {
+            if (validation.firstInvalidTab) setActiveTab(validation.firstInvalidTab);
             return;
         }
         try {
@@ -170,7 +218,7 @@ export function useSupplierForm() {
         isNew,
         hasValidSupplierId,
         supplierId,
-        validateGeneral,
+        runAllValidations,
         showError,
         showSuccess,
         queryClient,
@@ -188,9 +236,6 @@ export function useSupplierForm() {
         handleAddBankAccount,
         handleRemoveBankAccount,
         handleBankAccountChange,
-        handleAddPromotion,
-        handleRemovePromotion,
-        handlePromotionChange,
     } = useSupplierFormHandlers({
         dispatchForm,
         errors,
@@ -272,18 +317,28 @@ export function useSupplierForm() {
         router.push(`/catalogos/proveedores/${supplierId}/editar`);
     };
 
+    const tabs = useMemo(
+        () =>
+            SUPPLIER_FORM_TABS.map((tab) => ({
+                ...tab,
+                textColor: hasSupplierTabErrors(tab.value, errors)
+                    ? theme.palette.error.main
+                    : undefined,
+            })),
+        [errors],
+    );
+
 
     return {
         isNew,
         showLoader,
         breadcrumbItems,
-        tabs: SUPPLIER_FORM_TABS,
+        tabs,
         generalFormValues,
         errors,
         contacts: formState.contacts,
         creditData,
         bankAccounts: formState.bankAccounts,
-        promotions: formState.promotions,
         jobTitleOptions,
         activeTab,
         setActiveTab: handleTabChange,
@@ -300,9 +355,6 @@ export function useSupplierForm() {
         handleAddBankAccount,
         handleRemoveBankAccount,
         handleBankAccountChange,
-        handleAddPromotion,
-        handleRemovePromotion,
-        handlePromotionChange,
         handleEdit
     };
 }

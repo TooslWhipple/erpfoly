@@ -37,7 +37,7 @@ export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
             <FieldWrapper>
                 {
                     label &&
-                    <FieldLabel component="div" sx={{ display: "flex", alignItems: "center" }}>
+                    <FieldLabel sx={{ display: "flex", alignItems: "center" }}>
                         {label}
                         {
                             required &&

@@ -44,7 +44,7 @@ export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
                     ref={ref}
                     variant="outlined"
                     fullWidth
-                    error={error}
+                    error={Boolean(error)}
                     helperText={helperText}
                     select={select}
                     disabled={disabled}

@@ -1,6 +1,14 @@
 export { schemas } from "./common";
 
-export { validateGeneralForm, type GeneralSchemaInput } from "./proveedores";
+export {
+    validateGeneralForm,
+    validateContactsForm,
+    validateCreditForm,
+    SUPPLIER_TEXT_MAX_LENGTH,
+    type GeneralSchemaInput,
+    type ContactsSchemaInput,
+    type CreditSchemaInput,
+} from "./proveedores";
 
 export { sanitizeMxPostalCodeInput, isValidMxPostalCode } from "./mxPostalCode";
 

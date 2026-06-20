@@ -1,6 +1,6 @@
 import { CircularProgress, Stack } from "@mui/material";
 import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
-import { GeneralTab, ContactsTab, CreditTab, PromotionsTab } from "@/components/Proveedores";
+import { GeneralTab, ContactsTab, CreditTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
 import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 import { Mail, PencilIcon } from "lucide-react";
@@ -16,7 +16,6 @@ export default function SupplierEditPage() {
         contacts,
         creditData,
         bankAccounts,
-        promotions,
         jobTitleOptions,
         activeTab,
         setActiveTab,
@@ -31,9 +30,6 @@ export default function SupplierEditPage() {
         handleAddBankAccount,
         handleRemoveBankAccount,
         handleBankAccountChange,
-        handleAddPromotion,
-        handleRemovePromotion,
-        handlePromotionChange,
         handleEdit,
         handleInvite,
         hasUser
@@ -91,49 +87,35 @@ export default function SupplierEditPage() {
                     onTabChange={setActiveTab}
                 />
 
-                {
-                    activeTab === "general" && (
-                        <GeneralTab
-                            values={generalFormValues}
-                            errors={errors}
-                            onFieldChange={handleGeneralFieldChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "contacts" && (
-                        <ContactsTab
-                            contacts={contacts}
-                            jobTitleOptions={jobTitleOptions}
-                            onAddContact={handleAddContact}
-                            onRemoveContact={handleRemoveContact}
-                            onContactChange={handleContactChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "credit" && (
-                        <CreditTab
-                            creditData={creditData}
-                            bankAccounts={bankAccounts}
-                            jobTitleOptions={jobTitleOptions}
-                            onCreditDataChange={handleCreditDataChange}
-                            onAddBankAccount={handleAddBankAccount}
-                            onRemoveBankAccount={handleRemoveBankAccount}
-                            onBankAccountChange={handleBankAccountChange}
-                        />
-                    )
-                }
-                {
-                    activeTab === "promotions" && (
-                        <PromotionsTab
-                            promotions={promotions}
-                            onAddPromotion={handleAddPromotion}
-                            onRemovePromotion={handleRemovePromotion}
-                            onPromotionChange={handlePromotionChange}
-                        />
-                    )
-                }
+                {activeTab === "general" && (
+                    <GeneralTab
+                        values={generalFormValues}
+                        errors={errors}
+                        onFieldChange={handleGeneralFieldChange}
+                    />
+                )}
+                {activeTab === "contacts" && (
+                    <ContactsTab
+                        contacts={contacts}
+                        jobTitleOptions={jobTitleOptions}
+                        errors={errors}
+                        onAddContact={handleAddContact}
+                        onRemoveContact={handleRemoveContact}
+                        onContactChange={handleContactChange}
+                    />
+                )}
+                {activeTab === "credit" && (
+                    <CreditTab
+                        creditData={creditData}
+                        bankAccounts={bankAccounts}
+                        jobTitleOptions={jobTitleOptions}
+                        errors={errors}
+                        onCreditDataChange={handleCreditDataChange}
+                        onAddBankAccount={handleAddBankAccount}
+                        onRemoveBankAccount={handleRemoveBankAccount}
+                        onBankAccountChange={handleBankAccountChange}
+                    />
+                )}
             </Stack>
         </MainLayout>
     );

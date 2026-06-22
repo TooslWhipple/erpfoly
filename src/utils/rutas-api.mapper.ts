@@ -4,23 +4,51 @@ import type {
   RouteDetailApi,
   RouteDriverCandidateApi,
   RouteListRowApi,
+  RouteOrderApi,
+  RouteOrderItemApi,
 } from "@/types/rutas-api.types";
 import type {
-  RouteArticle,
   RouteAssistantCandidate,
   RouteDetail,
   RouteDriverCandidate,
+  RouteOrder,
+  RouteOrderItem,
+  RouteOrderItemStatus,
   RoutePerson,
   RouteStatus,
+  RouteStopType,
   RouteSummary,
 } from "@/types/rutas.types";
 
-function mapArticleStatus(
-  s: string,
-): RouteArticle["status"] {
-  if (s === "delivered") return "delivered";
-  if (s === "cancelled") return "cancelled";
+function mapOrderItemStatus(status: string): RouteOrderItemStatus {
+  if (status === "delivered") return "delivered";
+  if (status === "not_delivered") return "not_delivered";
   return "pending";
+}
+
+function mapStopType(stopType: string): RouteStopType {
+  return stopType === "recovery" ? "recovery" : "delivery";
+}
+
+function mapOrderItem(item: RouteOrderItemApi): RouteOrderItem {
+  return {
+    id: item.id,
+    articleName: item.article_name,
+    status: mapOrderItemStatus(item.status),
+  };
+}
+
+function mapOrder(order: RouteOrderApi): RouteOrder {
+  return {
+    id: order.id,
+    orderId: order.order_id,
+    orderNumber: order.order_number,
+    sequence: order.sequence,
+    address: order.address,
+    zone: order.zone,
+    stopType: mapStopType(order.stop_type),
+    items: order.items.map(mapOrderItem),
+  };
 }
 
 export function mapRouteListRowToSummary(row: RouteListRowApi): RouteSummary {
@@ -43,14 +71,7 @@ export interface RouteDetailView extends RouteDetail {
 }
 
 export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
-  const articles: RouteArticle[] = data.articles.map((a) => ({
-    id: a.id,
-    invoiceNumber: a.invoice_number,
-    status: mapArticleStatus(a.status),
-    articleName: a.article_name,
-    zone: a.zone,
-    address: a.address,
-  }));
+  const orders: RouteOrder[] = data.orders.map(mapOrder);
 
   const driver: RoutePerson | null = data.driver
     ? {
@@ -86,7 +107,7 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     vehicleInfo: data.vehicle_info?.trim()
       ? data.vehicle_info
       : "—",
-    articles,
+    orders,
     driver,
     assistants,
     miniMapUrl: data.mini_map_url ?? undefined,

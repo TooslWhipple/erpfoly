@@ -1,4 +1,6 @@
 import { post, get, unwrapOrThrow } from "@/lib/axios";
+import type { ClientSearchResult } from "@/components/CashRegister";
+import type { CashMovementType, CashMovementPaymentForm } from "@/lib/cashMovement.constants";
 
 export interface CashRegisterSummary {
   id: number;
@@ -25,7 +27,9 @@ export interface CashRegisterSession {
 export interface CashMovement {
   id: number;
   amount: number;
-  movement_type: string;
+  movement_type: CashMovementType;
+  payment_form?: CashMovementPaymentForm | null;
+  payment_form_label?: string;
   reference_folio: string | null;
   created_at: string;
   created_by_name: string;
@@ -122,6 +126,41 @@ export async function createPayment(
 export async function getSessionHistory(): Promise<CashMovement[]> {
   const result = await get<CashMovement[]>("/cash-movements/session-history");
   return unwrapOrThrow(result);
+}
+
+interface CashRegisterClientSearchResponse {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string;
+  paymentStatus: "overdue" | "current";
+  address: string;
+}
+
+export async function searchClientsForPayment(
+  search: string,
+): Promise<ClientSearchResult[]> {
+  const trimmed = search.trim();
+  if (!trimmed) return [];
+
+  const params = new URLSearchParams({
+    search: trimmed,
+    limit: "20",
+  });
+
+  const result = await get<CashRegisterClientSearchResponse[]>(
+    `/cash-registers/clients/search?${params.toString()}`,
+  );
+  const clients = unwrapOrThrow(result) ?? [];
+
+  return clients.map((client) => ({
+    id: client.id,
+    fullName: client.fullName,
+    phone: client.phone,
+    email: client.email,
+    paymentStatus: client.paymentStatus,
+    address: client.address,
+  }));
 }
 
 export async function createPartialCut(

@@ -18,13 +18,29 @@ export interface RouteMapPayloadApi {
   stops: { sequence: number; lat: number; lng: number }[];
 }
 
-export interface RouteArticleApi {
+export interface RouteOrderItemApi {
   id: string;
-  invoice_number: string;
-  status: string;
   article_name: string;
-  zone: string;
+  status: string;
+}
+
+export interface RouteOrderApi {
+  id: string;
+  order_id: number;
+  order_number: string;
+  sequence: number;
   address: string;
+  zone: string;
+  stop_type: string;
+  items: RouteOrderItemApi[];
+}
+
+export interface OrderToAddApi {
+  id: string;
+  order_number: string;
+  address: string;
+  zone: string;
+  article_count: number;
 }
 
 export interface RoutePersonApi {
@@ -50,7 +66,7 @@ export interface RouteDetailApi {
   point_count: number;
   driver_name: string;
   vehicle_info: string;
-  articles: RouteArticleApi[];
+  orders: RouteOrderApi[];
   driver: RoutePersonApi | null;
   assistants: RoutePersonApi[];
   mini_map_url: string | null;

@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
 import { MainLayout, StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCashRegisterSession } from "@/hooks/useCashRegisterSession";
 import { CASH_REGISTERS_UPDATE } from "@/lib/permissions";
 import { getApiErrorMessage } from "@/lib/axios";
+import { buildCashRegisterSearchUrl, CASH_REGISTER_HISTORY_PATH } from "@/lib/cashRegisterRoutes";
+import { CashMovementType } from "@/lib/cashMovement.constants";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
   CutModal,
   CashWithdrawalModal,
-  type CashRegisterState,
   type CutType,
   type Denomination,
 } from "@/components/CashRegister";
@@ -21,58 +22,48 @@ import {
   CashRegisterIconContainer,
 } from "@/styles/cajas.styles";
 import {
-  getUserAssignedCashRegister,
   openCashRegister as openCashRegisterApi,
   createWithdrawal,
   createPartialCut,
   createFinalCut,
-  getSessionHistory,
-  getSessionSummary,
-  type CashMovement,
 } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { searchClientForPayment } from "@/data/clientPayments.mockData";
-
-const MOVEMENT_TYPE_MAP: Record<string, string> = {
-  PAYMENT: "Abono",
-  PARTIAL_CUT: "Corte parcial",
-  FINAL_CUT: "Corte final",
-  WITHDRAWAL: "Retiro de efectivo",
-};
 
 export default function Cajas() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
-  const user = useAuthStore((state) => state.user);
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
 
-  const [cashRegister, setCashRegister] = useState<CashRegisterState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    cashRegister,
+    setCashRegister,
+    movements,
+    isLoading,
+    loadMovements,
+  } = useCashRegisterSession({ loadMovementsOnOpen: true });
+
   const [isOpening, setIsOpening] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isCutting, setIsCutting] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchingClient, setIsSearchingClient] = useState(false);
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
 
   const [initialFund, setInitialFund] = useState("1500");
   const [exchangeRate, setExchangeRate] = useState("17.6");
 
-  const [movements, setMovements] = useState<CashMovement[]>([]);
-
   const cutModalData = useMemo(() => {
     const withdrawals = movements.filter(
-      (m) => m.movement_type === "WITHDRAWAL"
+      (m) => m.movement_type === CashMovementType.WITHDRAWAL
     );
     const payments = movements.filter(
-      (m) => m.movement_type === "PAYMENT"
+      (m) => m.movement_type === CashMovementType.PAYMENT
     );
     const partialCuts = movements.filter(
-      (m) => m.movement_type === "PARTIAL_CUT"
+      (m) => m.movement_type === CashMovementType.PARTIAL_CUT
     );
 
     const withdrawalCount = withdrawals.length;
@@ -106,51 +97,6 @@ export default function Cajas() {
     };
   }, [movements, cashRegister]);
 
-  const loadAssignedCashRegister = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      setIsLoading(true);
-      const summary = await getSessionSummary();
-      if (!summary) {
-        showError("No tienes una caja asignada. Contacta a un administrador.");
-        return;
-      }
-      setCashRegister({
-        id: String(summary.cash_register_id),
-        name: summary.cash_register_name,
-        status: summary.status === "OPEN" ? "open" : "closed",
-        initialFund: summary.opening_balance ?? 0,
-        exchangeRate: summary.exchange_rate ?? 17.6,
-        currentCash: summary.current_cash ?? 0,
-        limit: summary.limit ?? 20000,
-      });
-      if (summary.status === "CLOSED") {
-        setInitialFund("1500");
-        setExchangeRate("17.6");
-      }
-      if (summary.status === "OPEN") {
-        await loadMovements();
-      }
-    } catch (err) {
-      showError(getApiErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, showError]);
-
-  const loadMovements = useCallback(async () => {
-    try {
-      const history = await getSessionHistory();
-      setMovements(history);
-    } catch {
-      // Silently fail, history is optional
-    }
-  }, []);
-
-  useEffect(() => {
-    loadAssignedCashRegister();
-  }, [loadAssignedCashRegister]);
-
   const handleOpenCashRegister = async () => {
     if (!cashRegister) return;
     try {
@@ -162,12 +108,12 @@ export default function Cajas() {
       setCashRegister((prev) =>
         prev
           ? {
-              ...prev,
-              status: "open",
-              initialFund: parseFloat(initialFund) || 0,
-              exchangeRate: parseFloat(exchangeRate) || 0,
-              currentCash: parseFloat(initialFund) || 0,
-            }
+            ...prev,
+            status: "open",
+            initialFund: parseFloat(initialFund) || 0,
+            exchangeRate: parseFloat(exchangeRate) || 0,
+            currentCash: parseFloat(initialFund) || 0,
+          }
           : prev
       );
       showSuccess("Caja abierta exitosamente");
@@ -176,14 +122,6 @@ export default function Cajas() {
     } finally {
       setIsOpening(false);
     }
-  };
-
-  const handleInitialFundChange = (value: string) => {
-    setInitialFund(value);
-  };
-
-  const handleExchangeRateChange = (value: string) => {
-    setExchangeRate(value);
   };
 
   const getStatusLabel = (status: CashRegisterStatus) => {
@@ -283,28 +221,19 @@ export default function Cajas() {
   ];
 
   const handleViewAllHistory = () => {
-    // TODO: Implement view all history functionality
+    router.push(CASH_REGISTER_HISTORY_PATH);
   };
 
-  const handleSearchClient = async () => {
+  const handleSearchClient = () => {
     const query = searchQuery.trim();
     if (!query || !cashRegister) return;
 
-    try {
-      setIsSearchingClient(true);
-      const client = await searchClientForPayment(query);
-      if (!client) {
-        showError("No se encontró un cliente con ese código o nombre.");
-        return;
-      }
-
-      const caja = encodeURIComponent(cashRegister.name);
-      router.push(`/clientes/${client.id}/abonos?from=cajas&caja=${caja}`);
-    } catch (err) {
-      showError(getApiErrorMessage(err));
-    } finally {
-      setIsSearchingClient(false);
+    if (cashRegister.status === "closed") {
+      showError("La caja debe estar abierta para buscar clientes.");
+      return;
     }
+
+    router.push(buildCashRegisterSearchUrl(query));
   };
 
   if (isLoading) {
@@ -331,12 +260,13 @@ export default function Cajas() {
 
   return (
     <MainLayout>
-      <Stack spacing={3} justifyContent="center" alignItems="center" style={{ marginTop: "112px" }}>
+      <Stack spacing={3} justifyContent="center" alignItems="center" style={{ marginTop: "112px", width: "100%" }}>
         <Stack
           direction="row"
           spacing={2}
           alignSelf="center"
-          alignItems="center">
+          alignItems="center"
+        >
           <CashRegisterIconContainer>
             <Monitor size={24} />
           </CashRegisterIconContainer>
@@ -344,7 +274,8 @@ export default function Cajas() {
           <StatusChip
             label={getStatusLabel(cashRegister.status)}
             variant={cashRegister.status === "open" ? "success" : "disabled"}
-            size="small" />
+            size="small"
+          />
         </Stack>
         {
           cashRegister.status === "closed" ?
@@ -353,8 +284,8 @@ export default function Cajas() {
               exchangeRate={exchangeRate}
               canOpen={canUpdateCashRegister}
               isLoading={isOpening}
-              onInitialFundChange={handleInitialFundChange}
-              onExchangeRateChange={handleExchangeRateChange}
+              onInitialFundChange={setInitialFund}
+              onExchangeRateChange={setExchangeRate}
               onOpen={handleOpenCashRegister}
             />
             :
@@ -364,17 +295,14 @@ export default function Cajas() {
               canCut={canUpdateCashRegister}
               canWithdraw={canUpdateCashRegister}
               onSearchQueryChange={setSearchQuery}
-              onSearch={() => void handleSearchClient()}
-              isSearching={isSearchingClient}
+              onSearch={handleSearchClient}
               onCut={handleCut}
               onWithdrawal={handleWithdrawal}
               onViewAllHistory={handleViewAllHistory}
               movements={movements}
-              movementTypeMap={MOVEMENT_TYPE_MAP}
             />
         }
       </Stack>
-
 
       <CutModal
         open={cutModalOpen}

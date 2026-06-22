@@ -327,15 +327,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <NotificationInbox />
         </Stack>
 
-        {canCreateCreditApplication && (
-          <Button
-            variant="outlined"
-            startIcon={<Plus size={18} />}
-            onClick={handleOpenNewCreditApplicationIntake}
-          >
-            Nueva solicitud
-          </Button>
-        )}
+        {
+          canCreateCreditApplication && (
+            <Button
+              variant="outlined"
+              startIcon={<Plus size={18} />}
+              onClick={handleOpenNewCreditApplicationIntake}>
+              Nueva solicitud
+            </Button>
+          )
+        }
 
         <List component="nav" disablePadding>
           {visibleNavItems.map((item) => {
@@ -427,8 +428,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         variant={isMobile ? "temporary" : "permanent"}
         open={isMobile ? open : true}
         onClose={onClose}
-        isMobile={isMobile}
-      >
+        isMobile={isMobile}>
         {drawerContent}
       </StyledDrawer>
 

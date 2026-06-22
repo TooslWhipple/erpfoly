@@ -1,4 +1,5 @@
 import { CashRegisterStatus } from "@/styles/cajas.styles";
+import type { CashMovementType, CashMovementPaymentForm } from "@/lib/cashMovement.constants";
 
 export interface CashRegisterState {
   id: string;
@@ -13,7 +14,9 @@ export interface CashRegisterState {
 export interface CashMovement {
   id: number;
   amount: number;
-  movement_type: string;
+  movement_type: CashMovementType;
+  payment_form?: CashMovementPaymentForm | null;
+  payment_form_label?: string;
   reference_folio: string | null;
   created_at: string;
   created_by_name: string;
@@ -30,6 +33,45 @@ export interface OpenCashRegisterFormProps {
   onOpen: () => void;
 }
 
+export type ClientPaymentStatus = "overdue" | "current";
+
+export interface ClientSearchResult {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string;
+  paymentStatus: ClientPaymentStatus;
+  address: string;
+}
+
+export interface CashRegisterSearchBarProps {
+  searchQuery: string;
+  isSearching?: boolean;
+  onSearchQueryChange: (value: string) => void;
+  onSearch?: () => void;
+}
+
+export interface ClientSearchResultsProps {
+  cashRegisterName: string;
+  cashRegisterStatusLabel: string;
+  cashRegisterStatus: CashRegisterStatus;
+  searchQuery: string;
+  results: ClientSearchResult[];
+  isSearching?: boolean;
+  onSearchQueryChange: (value: string) => void;
+  onSearch?: () => void;
+  onBack: () => void;
+  onRowClick: (client: ClientSearchResult) => void;
+}
+
+export interface CashRegisterHistoryProps {
+  cashRegisterName: string;
+  cashRegisterStatusLabel: string;
+  cashRegisterStatus: CashRegisterStatus;
+  movements: CashMovement[];
+  onBack: () => void;
+}
+
 export interface CashRegisterDashboardProps {
   cashRegister: CashRegisterState;
   searchQuery: string;
@@ -42,5 +84,4 @@ export interface CashRegisterDashboardProps {
   onWithdrawal: () => void;
   onViewAllHistory: () => void;
   movements?: CashMovement[];
-  movementTypeMap?: Record<string, string>;
 }

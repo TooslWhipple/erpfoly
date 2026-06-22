@@ -38,15 +38,22 @@ export function tableModulesToPayload(
   modules: PermissionsTemplateResponse,
   tableModules: ModulePermission[],
 ): Array<{ screenId: number; actionIds: number[] }> {
+  const actionIdByCode = new Map<string, number>();
+  for (const apiMod of modules) {
+    for (const permission of apiMod.permissions) {
+      const key = permission.name as keyof Permission;
+      if (PERMISSION_KEYS.includes(key)) {
+        actionIdByCode.set(key, permission.id);
+      }
+    }
+  }
+
   return modules.map((apiMod) => {
     const tableMod = tableModules.find((t) => t.id === apiMod.screenCode);
     const actionIds = tableMod
-      ? apiMod.permissions
-          .filter((p) => {
-            const key = p.name as keyof Permission;
-            return PERMISSION_KEYS.includes(key) && tableMod.permissions[key];
-          })
-          .map((p) => p.id)
+      ? PERMISSION_KEYS.filter((key) => tableMod.permissions[key])
+          .map((key) => actionIdByCode.get(key))
+          .filter((id): id is number => id != null)
       : [];
     return { screenId: apiMod.screenId, actionIds };
   });

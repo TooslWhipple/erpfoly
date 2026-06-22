@@ -201,7 +201,7 @@ export function PriceTab({
 
     const costHistoryEmptyMessage =
         productNumericId == null
-            ? "Guarda el producto para consultar el historial de costos."
+            ? "Guarda el artículo para consultar el historial de costos."
             : "Este artículo aún no cuenta con histórico de costos.";
 
     return (
@@ -310,7 +310,7 @@ export function PriceTab({
                                 {
                                     promotionDrafts.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary">
-                                            No hay promociones. Agrega una para vincularla al guardar el producto.
+                                            No hay promociones. Agrega una para vincularla al guardar el artículo.
                                         </Typography>
                                     ) : (
                                         promotionDrafts.map((row) => (

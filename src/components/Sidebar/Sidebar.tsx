@@ -169,7 +169,7 @@ const navItems: NavItem[] = [
     path: "/catalogos",
     icon: <LayoutList size={ICON_SIZE} />,
     subItems: [
-      { label: "Productos", path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
+      { label: "Artículos", path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
       { label: "Departamentos", path: "/catalogos/departamentos", requirement: { permission: CATALOG_DEPARTMENTS_READ } },
       { label: "Promociones", path: "/catalogos/promociones", requirement: { permission: CATALOG_PROMOTIONS_READ } },
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },

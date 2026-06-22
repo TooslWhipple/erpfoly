@@ -85,7 +85,7 @@ export function PackagesTab({
                             Paquetes
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Configura los artículos que se podrán vender como paquete junto con este producto
+                            Configura los artículos que se podrán vender como paquete junto con este artículo
                         </Typography>
                     </Stack>
                     <Button
@@ -123,7 +123,7 @@ export function PackagesTab({
                                             <Typography
                                                 variant="body2"
                                                 color="text.secondary">
-                                                Se entrega gratis con el producto
+                                                Se entrega gratis con el artículo
                                             </Typography>
                                         </PackageStatusBadge>
                                     }

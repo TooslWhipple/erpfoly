@@ -64,8 +64,10 @@ export default function LoginPage() {
 				<FormWrapper>
 					<LoginTitle>Ingresa a tu cuenta</LoginTitle>
 
-					<Form onSubmit={handleLogin}>
+					<Form id="login-form" method="post" action="/login" onSubmit={handleLogin}>
 						<StyledTextField
+							id="username"
+							name="username"
 							label="Número de empleado *"
 							placeholder="Ingresa tu número de empleado"
 							type="text"
@@ -91,6 +93,8 @@ export default function LoginPage() {
 						/>
 
 						<StyledTextField
+							id="password"
+							name="password"
 							label="Ingresa tu contraseña *"
 							placeholder="Ingresa tu contraseña"
 							type={showPassword ? "text" : "password"}
@@ -113,6 +117,7 @@ export default function LoginPage() {
 								endAdornment: (
 									<InputAdornment position="end">
 										<IconButton
+											type="button"
 											onClick={() => setShowPassword(!showPassword)}
 											edge="end"
 											size="small"

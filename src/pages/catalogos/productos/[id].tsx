@@ -116,6 +116,63 @@ function serializeProductFormDirtyState(input: {
     });
 }
 
+function getProductFormValidationErrors(
+    generalData: GeneralDataFormState,
+    priceData: PriceFormState,
+    isNew: boolean,
+): FormErrors {
+    const newErrors: FormErrors = {};
+
+    if (!generalData.departmentId) {
+        newErrors.departmentId = "El departamento es requerido";
+    }
+
+    if (!generalData.lineId) {
+        newErrors.lineId = "La línea es requerida";
+    } else if (!Number.isFinite(Number(generalData.lineId))) {
+        newErrors.lineId = "La línea debe ser un identificador válido";
+    }
+
+    if (!Number.isFinite(Number(generalData.departmentId))) {
+        newErrors.departmentId = "El departamento debe ser un identificador válido";
+    }
+
+    if (!generalData.description.trim()) {
+        newErrors.description = "La descripción es requerida";
+    }
+
+    if (!generalData.shortName.trim()) {
+        newErrors.shortName = "El nombre corto es requerido";
+    }
+
+    if (
+        generalData.warrantyType === "months" &&
+        (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)
+    ) {
+        newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
+    }
+
+    if (generalData.warrantyType === "policy" && !generalData.warrantyPolicy.trim()) {
+        newErrors.warrantyPolicy = "Describe la garantía por póliza anexa";
+    }
+
+    const piecesNum = parseInt(generalData.piecesCount, 10);
+    if (!generalData.piecesCount.trim() || Number.isNaN(piecesNum) || piecesNum < 1) {
+        newErrors.piecesCount = "El número de piezas debe ser al menos 1";
+    } else if (piecesNum > 9999) {
+        newErrors.piecesCount = "El número de piezas no puede ser mayor a 9999";
+    }
+
+    if (isNew) {
+        const listCost = Number(priceData.listCost);
+        if (!priceData.listCost.trim() || !Number.isFinite(listCost) || listCost <= 0) {
+            newErrors.listCost = "El costo de lista debe ser mayor a 0";
+        }
+    }
+
+    return newErrors;
+}
+
 export default function ProductFormPage() {
     const router = useRouter();
     const { hasPermission } = usePermissions();
@@ -320,7 +377,7 @@ export default function ProductFormPage() {
             try {
                 const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
-                    showError("Identificador de producto inválido.");
+                    showError("Identificador de artículo inválido.");
                     return;
                 }
                 const result = await getProductByIdDeduped(idNum);
@@ -341,7 +398,7 @@ export default function ProductFormPage() {
                 }
             } catch (err) {
                 console.error("[ProductForm] Error loading product:", err);
-                showError("No se pudo cargar el producto.");
+                showError("No se pudo cargar el artículo.");
             } finally {
                 setProductLoading(false);
             }
@@ -399,55 +456,12 @@ export default function ProductFormPage() {
         setBranches(mergeBranchCatalogWithProductDetail(branchCatalogItems, detailBranchRows));
     }, [isNew, detailBranchRows, branchCatalogItems]);
 
-    const collectFormValidationErrors = (): FormErrors => {
-        const newErrors: FormErrors = {};
-
-        if (!generalData.departmentId) {
-            newErrors.departmentId = "El departamento es requerido";
-        }
-
-        if (!generalData.lineId) {
-            newErrors.lineId = "La línea es requerida";
-        } else if (!Number.isFinite(Number(generalData.lineId))) {
-            newErrors.lineId = "La línea debe ser un identificador válido";
-        }
-
-        if (!Number.isFinite(Number(generalData.departmentId))) {
-            newErrors.departmentId = "El departamento debe ser un identificador válido";
-        }
-
-        if (!generalData.description.trim()) {
-            newErrors.description = "La descripción es requerida";
-        }
-
-        if (!generalData.shortName.trim()) {
-            newErrors.shortName = "El nombre corto es requerido";
-        }
-
-        if (generalData.warrantyType === "months" && (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)) {
-            newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
-        }
-
-        if (generalData.warrantyType === "policy" && !generalData.warrantyPolicy.trim()) {
-            newErrors.warrantyPolicy = "Describe la garantía por póliza anexa";
-        }
-
-        const piecesNum = parseInt(generalData.piecesCount, 10);
-        if (!generalData.piecesCount.trim() || Number.isNaN(piecesNum) || piecesNum < 1) {
-            newErrors.piecesCount = "El número de piezas debe ser al menos 1";
-        } else if (piecesNum > 9999) {
-            newErrors.piecesCount = "El número de piezas no puede ser mayor a 9999";
-        }
-
-        if (isNew) {
-            const listCost = Number(priceData.listCost);
-            if (!priceData.listCost.trim() || !Number.isFinite(listCost) || listCost <= 0) {
-                newErrors.listCost = "El costo de lista debe ser mayor a 0";
-            }
-        }
-
-        return newErrors;
-    };
+    const isNewFormComplete = useMemo(
+        () =>
+            !isNew ||
+            Object.keys(getProductFormValidationErrors(generalData, priceData, isNew)).length === 0,
+        [isNew, generalData, priceData],
+    );
 
     const firstTabWithValidationErrors = (validationErrors: FormErrors): string => {
         const generalFields = new Set([
@@ -466,7 +480,7 @@ export default function ProductFormPage() {
     };
 
     const handleSave = async () => {
-        const validationErrors = collectFormValidationErrors();
+        const validationErrors = getProductFormValidationErrors(generalData, priceData, isNew);
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             setActiveTab(firstTabWithValidationErrors(validationErrors));
@@ -500,11 +514,11 @@ export default function ProductFormPage() {
                     showError(result.error.message);
                     return;
                 }
-                showSuccess("Producto creado correctamente.");
+                showSuccess("Artículo creado correctamente.");
             } else {
                 const idNum = Number(editProductIdStr);
                 if (!Number.isFinite(idNum)) {
-                    showError("Identificador de producto inválido.");
+                    showError("Identificador de artículo inválido.");
                     return;
                 }
                 const result = await updateProduct(idNum, payload, {
@@ -515,7 +529,7 @@ export default function ProductFormPage() {
                     showError(result.error.message);
                     return;
                 }
-                showSuccess("Producto actualizado correctamente.");
+                showSuccess("Artículo actualizado correctamente.");
             }
             navigateWithoutGuard("/catalogos/productos");
         } catch (err) {
@@ -728,7 +742,7 @@ export default function ProductFormPage() {
     };
 
     const breadcrumbItems: BreadcrumbItem[] = [
-        { label: "Productos", href: "/catalogos/productos" },
+        { label: "Artículos", href: "/catalogos/productos" },
         { label: isNew ? "Nuevo" : "Editar" },
     ];
 
@@ -774,13 +788,13 @@ export default function ProductFormPage() {
                             variant="contained"
                             color="primary"
                             onClick={handleSave}
-                            disabled={saving || !canSaveProduct}
+                            disabled={saving || !canSaveProduct || (isNew && !isNewFormComplete)}
                         >
                             {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
                         </Button>
                     </Stack>
                 </Stack>
-                <Title title={(isNew) ? "Nuevo producto" : "Editar producto"} />
+                <Title title={isNew ? "Nuevo artículo" : "Editar artículo"} />
                 <Divider />
 
                 <Grid container spacing={5} flexWrap="nowrap">

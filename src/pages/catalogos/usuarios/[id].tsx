@@ -9,6 +9,14 @@ import {
     FormSelect,
     MultiSelectChips,
 } from "@/components";
+import {
+    UserDriverFields,
+    initialDriverForm,
+    type DriverFormState,
+    type DriverFormErrors,
+} from "@/components/UserDriverFields";
+import type { UserDriverDetailsPayload } from "@/services/users.service";
+import { ROLE_CODES, isDriverRoleCode } from "@/constants/role-codes";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { SelectableItem } from "@/components/MultiSelectChips";
 import {
@@ -83,6 +91,10 @@ export default function UserFormPage() {
 
     const [user, setUser] = useState<UserFormState>(initialUser);
     const [errors, setErrors] = useState<UserFormErrors>({});
+    const [driverForm, setDriverForm] = useState<DriverFormState>(initialDriverForm);
+    const [driverErrors, setDriverErrors] = useState<DriverFormErrors>({});
+
+    const selectedRoleCode = roles.find((role) => role.id === user.roleId)?.code;
 
     useAsyncEffect(async (isCancelled) => {
         const { rolesResult, branchesResult } = await loadCatalogs();
@@ -112,6 +124,18 @@ export default function UserFormPage() {
                 roleId: data.roleId,
                 branchIds: data.branchIds,
             });
+            if (data.driverDetails) {
+                setDriverForm({
+                    licenseNumber: data.driverDetails.licenseNumber ?? "",
+                    postalCode: data.driverDetails.address?.postalCode ?? "",
+                    neighborhoodFullCode: data.driverDetails.address?.neighborhoodFullCode ?? "-1",
+                    state: "",
+                    city: "",
+                    street: data.driverDetails.address?.street ?? "",
+                    externalNumber: data.driverDetails.address?.externalNumber ?? "",
+                    internalNumber: data.driverDetails.address?.internalNumber ?? "",
+                });
+            }
         }
         if (!isCancelled()) setLoading(false);
     }, [isNew, userId]);
@@ -120,6 +144,78 @@ export default function UserFormPage() {
         setUser((prev) => ({ ...prev, [key]: value }));
         setErrors((prev) => ({ ...prev, [key]: "" }));
     }, []);
+
+    const setDriverField = useCallback(<K extends keyof DriverFormState>(key: K, value: DriverFormState[K]) => {
+        setDriverForm((prev) => ({ ...prev, [key]: value }));
+        setDriverErrors((prev) => ({ ...prev, [key]: "" }));
+    }, []);
+
+    const mergeDriverPatch = useCallback((patch: Partial<DriverFormState>) => {
+        setDriverForm((prev) => ({ ...prev, ...patch }));
+        setDriverErrors((prev) => {
+            const next = { ...prev };
+            for (const key of Object.keys(patch) as Array<keyof DriverFormState>) {
+                next[key] = "";
+            }
+            return next;
+        });
+    }, []);
+
+    const buildDriverDetailsPayload = (): UserDriverDetailsPayload | undefined => {
+        if (!isDriverRoleCode(selectedRoleCode)) return undefined;
+
+        const payload: UserDriverDetailsPayload = {
+            licenseNumber: driverForm.licenseNumber.trim().toUpperCase(),
+        };
+
+        if (selectedRoleCode === ROLE_CODES.CHOFER) {
+            payload.address = {
+                postalCode: driverForm.postalCode.trim(),
+                neighborhoodFullCode: driverForm.neighborhoodFullCode,
+                street: driverForm.street.trim(),
+                externalNumber: driverForm.externalNumber.trim(),
+                internalNumber: driverForm.internalNumber.trim() || undefined,
+            };
+        }
+
+        return payload;
+    };
+
+    const validateDriverForm = (): boolean => {
+        if (!isDriverRoleCode(selectedRoleCode)) {
+            setDriverErrors({});
+            return true;
+        }
+
+        const next: DriverFormErrors = {};
+        const license = driverForm.licenseNumber.trim().toUpperCase();
+
+        if (!license) {
+            next.licenseNumber = "La licencia es requerida";
+        } else if (!/^[A-Z0-9]{10}$/.test(license)) {
+            next.licenseNumber = "Debe tener 10 caracteres alfanuméricos";
+        }
+
+        if (selectedRoleCode === ROLE_CODES.CHOFER) {
+            if (!driverForm.postalCode.trim()) {
+                next.postalCode = "El código postal es requerido";
+            } else if (driverForm.postalCode.trim().length !== 5) {
+                next.postalCode = "Ingresa un código postal válido";
+            }
+            if (!driverForm.neighborhoodFullCode || driverForm.neighborhoodFullCode === "-1") {
+                next.neighborhoodFullCode = "Selecciona una colonia";
+            }
+            if (!driverForm.street.trim()) {
+                next.street = "La calle es requerida";
+            }
+            if (!driverForm.externalNumber.trim()) {
+                next.externalNumber = "El número exterior es requerido";
+            }
+        }
+
+        setDriverErrors(next);
+        return Object.keys(next).length === 0;
+    };
 
     const validateForm = (): boolean => {
         const next: UserFormErrors = {};
@@ -162,11 +258,14 @@ export default function UserFormPage() {
         }
 
         setErrors(next);
-        return Object.keys(next).length === 0;
+        const driverValid = validateDriverForm();
+        return Object.keys(next).length === 0 && driverValid;
     };
 
     const handleConfirm = async () => {
         if (!validateForm()) return;
+
+        const driverDetails = buildDriverDetailsPayload();
 
         setSendingInvite(true);
         const result = isNew
@@ -178,6 +277,7 @@ export default function UserFormPage() {
                 password: user.password.trim(),
                 roleId: user.roleId as number,
                 branchIds: user.branchIds,
+                driverDetails,
             })
             : await updateUser(userId!, {
                 firstName: user.firstName.trim(),
@@ -186,6 +286,7 @@ export default function UserFormPage() {
                 cellphone: user.cellphone.trim(),
                 roleId: user.roleId as number,
                 branchIds: user.branchIds,
+                driverDetails,
             });
 
         if (result.error) {
@@ -218,6 +319,15 @@ export default function UserFormPage() {
         { label: isNew ? "Nuevo" : "Editar" },
     ];
 
+    const driverFieldsValid = !isDriverRoleCode(selectedRoleCode) || (
+        /^[A-Z0-9]{10}$/.test(driverForm.licenseNumber.trim().toUpperCase()) &&
+        (selectedRoleCode !== ROLE_CODES.CHOFER ||
+            (driverForm.postalCode.trim().length === 5 &&
+                driverForm.neighborhoodFullCode !== "-1" &&
+                driverForm.street.trim().length > 0 &&
+                driverForm.externalNumber.trim().length > 0))
+    );
+
     const canSendInvite =
         user.firstName.trim().length > 0 &&
         user.lastName.trim().length > 0 &&
@@ -226,6 +336,7 @@ export default function UserFormPage() {
         user.cellphone.trim().length >= 10 &&
         user.roleId !== "" &&
         user.branchIds.length > 0 &&
+        driverFieldsValid &&
         (isNew ? user.password.trim().length >= 10 : true);
 
     if (loading) {
@@ -347,6 +458,19 @@ export default function UserFormPage() {
                             <HelperTextLink>Si deseas crear un rol nuevo, ve hacia el módulo{" "}<Link href="/catalogos/roles">Roles</Link></HelperTextLink>
                         </Grid>
                     </Grid>
+                    {isDriverRoleCode(selectedRoleCode) && (
+                        <>
+                            <Divider />
+                            <UserDriverFields
+                                roleCode={selectedRoleCode}
+                                values={driverForm}
+                                errors={driverErrors}
+                                onFieldChange={setDriverField}
+                                onMergePatch={mergeDriverPatch}
+                                disabled={sendingInvite}
+                            />
+                        </>
+                    )}
                     <Divider />
                     <Typography variant="subtitle2" fontWeight={600}>Sucursal asignada</Typography>
                     <MultiSelectChips

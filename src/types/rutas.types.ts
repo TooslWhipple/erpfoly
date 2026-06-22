@@ -12,22 +12,33 @@ export interface RouteSummary {
   driverName?: string;
 }
 
-export interface RouteArticle {
+export type RouteOrderItemStatus = "pending" | "delivered" | "not_delivered";
+export type RouteStopType = "delivery" | "recovery";
+
+export interface RouteOrderItem {
   id: string;
-  invoiceNumber: string;
-  status: "pending" | "delivered" | "cancelled";
   articleName: string;
-  zone: string;
-  address: string;
+  status: RouteOrderItemStatus;
 }
 
-/** Article from catalog that can be added to a route (SKU, type, name, zone) */
-export interface ArticleToAdd {
+export interface RouteOrder {
   id: string;
-  sku: string;
-  type: "Venta" | "Servicio";
-  articleName: string;
+  orderId: number;
+  orderNumber: string;
+  sequence: number;
+  address: string;
   zone: string;
+  stopType: RouteStopType;
+  items: RouteOrderItem[];
+}
+
+/** Order eligible to be added to a route */
+export interface OrderToAdd {
+  id: string;
+  orderNumber: string;
+  address: string;
+  zone: string;
+  articleCount: number;
 }
 
 export interface RoutePerson {
@@ -39,7 +50,7 @@ export interface RoutePerson {
 export interface RouteDetail extends RouteSummary {
   driverName: string;
   vehicleInfo: string;
-  articles: RouteArticle[];
+  orders: RouteOrder[];
   driver: RoutePerson | null;
   assistants: RoutePerson[];
 }

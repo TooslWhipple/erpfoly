@@ -158,7 +158,7 @@ export default function Pedidos() {
     return (
         <MainLayout>
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
-                <Stack direction="column" spacing={3} flex="0 1 768px">
+                <Stack direction="column" spacing={3} flex="1 1 768px">
                     <Title title="Pedidos" actions={titleActions} />
 
                     <TabFilters

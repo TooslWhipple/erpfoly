@@ -14,9 +14,9 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import { StatusChip, SideModal } from "@/components";
+import { SideModal } from "@/components";
 import { theme } from "@/styles/theme";
-import type { ArticleToAdd } from "@/types/rutas.types";
+import type { OrderToAdd } from "@/types/rutas.types";
 import {
   SearchInput,
   TableContainer,
@@ -25,22 +25,25 @@ import {
   EmptyStateContainer,
 } from "./styles";
 
-export interface AddArticlesToRouteModalProps {
+export interface AddOrdersToRouteModalProps {
   open: boolean;
   onClose: () => void;
   routeId: number;
-  fetchAvailableArticles: (routeId: number) => Promise<ArticleToAdd[]>;
-  onConfirm: (articleIds: string[]) => void | Promise<void>;
+  fetchAvailableOrders: (routeId: number) => Promise<OrderToAdd[]>;
+  onConfirm: (orderIds: string[]) => void | Promise<void>;
 }
 
-export function AddArticlesToRouteModal({
+/** @deprecated Use AddOrdersToRouteModal */
+export type AddArticlesToRouteModalProps = AddOrdersToRouteModalProps;
+
+export function AddOrdersToRouteModal({
   open,
   onClose,
   routeId,
-  fetchAvailableArticles,
+  fetchAvailableOrders,
   onConfirm,
-}: AddArticlesToRouteModalProps) {
-  const [articles, setArticles] = useState<ArticleToAdd[]>([]);
+}: AddOrdersToRouteModalProps) {
+  const [orders, setOrders] = useState<OrderToAdd[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,18 +54,20 @@ export function AddArticlesToRouteModal({
       setLoading(true);
       setSelectedIds(new Set());
       setSearchQuery("");
-      fetchAvailableArticles(routeId)
-        .then((data) => setArticles(data))
-        .catch(() => setArticles([]))
+      fetchAvailableOrders(routeId)
+        .then((data) => setOrders(data))
+        .catch(() => setOrders([]))
         .finally(() => setLoading(false));
     }
-  }, [open, routeId, fetchAvailableArticles]);
+  }, [open, routeId, fetchAvailableOrders]);
 
-  const filteredArticles = useMemo(() => {
-    if (!searchQuery.trim()) return articles;
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
     const query = searchQuery.toLowerCase();
-    return articles.filter((article) => article.sku.toLowerCase().includes(query));
-  }, [articles, searchQuery]);
+    return orders.filter((order) =>
+      order.orderNumber.toLowerCase().includes(query),
+    );
+  }, [orders, searchQuery]);
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
@@ -70,12 +75,12 @@ export function AddArticlesToRouteModal({
 
   const handleSelectAll = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      setSelectedIds(new Set(filteredArticles.map((article) => article.id)));
+      setSelectedIds(new Set(filteredOrders.map((order) => order.id)));
       return;
     }
 
     const nextSelectedIds = new Set(selectedIds);
-    filteredArticles.forEach((article) => nextSelectedIds.delete(article.id));
+    filteredOrders.forEach((order) => nextSelectedIds.delete(order.id));
     setSelectedIds(nextSelectedIds);
   };
 
@@ -87,10 +92,10 @@ export function AddArticlesToRouteModal({
   };
 
   const isAllSelected =
-    filteredArticles.length > 0 &&
-    filteredArticles.every((article) => selectedIds.has(article.id));
+    filteredOrders.length > 0 &&
+    filteredOrders.every((order) => selectedIds.has(order.id));
   const isIndeterminate =
-    filteredArticles.some((article) => selectedIds.has(article.id)) &&
+    filteredOrders.some((order) => selectedIds.has(order.id)) &&
     !isAllSelected;
 
   const handleConfirm = async () => {
@@ -111,8 +116,8 @@ export function AddArticlesToRouteModal({
     <SideModal
       open={open}
       onClose={onClose}
-      title="Agregar articulos a esta ruta"
-      description="Selecciona los articulos que deseas agregar a esta ruta"
+      title="Agregar pedidos a esta ruta"
+      description="Selecciona los pedidos que deseas agregar a esta ruta"
       maxWidth="md"
       headerActions={
         <Button
@@ -132,7 +137,7 @@ export function AddArticlesToRouteModal({
       contentSx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
     >
       <SearchInput
-        placeholder="Buscar SKU"
+        placeholder="Buscar por número de pedido"
         value={searchQuery}
         onChange={handleSearchChange}
         size="small"
@@ -152,12 +157,12 @@ export function AddArticlesToRouteModal({
           <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
             <CircularProgress size={32} />
           </Stack>
-        ) : filteredArticles.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <EmptyStateContainer>
             <Typography variant="body2" color="text.secondary">
               {searchQuery
-                ? "No se encontraron articulos"
-                : "No hay articulos disponibles para agregar"}
+                ? "No se encontraron pedidos"
+                : "No hay pedidos disponibles para agregar"}
             </Typography>
           </EmptyStateContainer>
         ) : (
@@ -172,14 +177,14 @@ export function AddArticlesToRouteModal({
                     disabled={submitting}
                   />
                 </StyledTableCell>
-                <StyledTableCell>SKU</StyledTableCell>
-                <StyledTableCell>Tipo</StyledTableCell>
-                <StyledTableCell>Articulo</StyledTableCell>
+                <StyledTableCell>Número</StyledTableCell>
+                <StyledTableCell>Dirección</StyledTableCell>
                 <StyledTableCell>Zona</StyledTableCell>
+                <StyledTableCell>Artículos</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredArticles.map((row) => {
+              {filteredOrders.map((row) => {
                 const isSelected = selectedIds.has(row.id);
                 return (
                   <StyledTableRow key={row.id} selected={isSelected} hover>
@@ -190,14 +195,7 @@ export function AddArticlesToRouteModal({
                         disabled={submitting}
                       />
                     </StyledTableCell>
-                    <StyledTableCell>{row.sku}</StyledTableCell>
-                    <StyledTableCell>
-                      <StatusChip
-                        size="small"
-                        label={row.type}
-                        variant={row.type === "Venta" ? "default" : "pending"}
-                      />
-                    </StyledTableCell>
+                    <StyledTableCell>{row.orderNumber}</StyledTableCell>
                     <StyledTableCell
                       sx={{
                         maxWidth: 280,
@@ -206,9 +204,10 @@ export function AddArticlesToRouteModal({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {row.articleName}
+                      {row.address}
                     </StyledTableCell>
                     <StyledTableCell>{row.zone}</StyledTableCell>
+                    <StyledTableCell>{row.articleCount}</StyledTableCell>
                   </StyledTableRow>
                 );
               })}
@@ -219,3 +218,6 @@ export function AddArticlesToRouteModal({
     </SideModal>
   );
 }
+
+/** @deprecated Use AddOrdersToRouteModal */
+export const AddArticlesToRouteModal = AddOrdersToRouteModal;

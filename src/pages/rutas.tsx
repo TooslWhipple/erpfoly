@@ -28,7 +28,7 @@ import {
   MainLayout,
   StatusChip,
   TabFilters,
-  AddArticlesToRouteModal,
+  AddOrdersToRouteModal,
   AddDriverToRouteModal,
   AddAssistantToRouteModal,
   ConfirmModal,
@@ -53,12 +53,12 @@ import {
 
 import {
   addAssistantToRoute,
-  addProductsToRoute,
+  addOrdersToRoute,
   assignDriverToRoute,
   deleteCartaPorteDocument,
   fetchAvailableAssistants,
   fetchAvailableDrivers,
-  fetchAvailableProducts,
+  fetchAvailableOrders,
   fetchRouteDetail,
   fetchRoutesForDate,
   removeAssistantFromRoute,
@@ -177,7 +177,7 @@ export default function RutaPage() {
 
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
-  const [addArticlesModalOpen, setAddArticlesModalOpen] = useState(false);
+  const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
   const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
   const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
@@ -229,21 +229,21 @@ export default function RutaPage() {
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
 
-  const addProductsMutation = useMutation({
+  const addOrdersMutation = useMutation({
     mutationFn: async ({
       routeId,
-      productIds,
+      orderIds,
     }: {
       routeId: number;
-      productIds: number[];
+      orderIds: number[];
     }) => {
-      const res = await addProductsToRoute(routeId, productIds);
+      const res = await addOrdersToRoute(routeId, orderIds);
       return unwrapOrThrow(res);
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
       queryClient.invalidateQueries({ queryKey: ["route-detail", vars.routeId] });
-      showSuccess("Artículos agregados a la ruta.");
+      showSuccess("Pedidos agregados a la ruta.");
     },
   });
 
@@ -433,10 +433,16 @@ export default function RutaPage() {
     },
   });
 
-  const fetchArticlesForModal = useCallback(async (routeId: number) => {
-    const res = await fetchAvailableProducts(routeId);
+  const fetchOrdersForModal = useCallback(async (routeId: number) => {
+    const res = await fetchAvailableOrders(routeId);
     const data = unwrapOrThrow(res);
-    return data.rows;
+    return data.rows.map((row) => ({
+      id: row.id,
+      orderNumber: row.order_number,
+      address: row.address,
+      zone: row.zone,
+      articleCount: row.article_count,
+    }));
   }, []);
 
   const fetchDriversForModal = useCallback(async (routeId: number) => {
@@ -480,14 +486,14 @@ export default function RutaPage() {
     }
   };
 
-  const handleConfirmAddArticles = async (articleIds: string[]) => {
-    if (!resolvedRouteId || articleIds.length === 0) return;
-    const productIds = articleIds
+  const handleConfirmAddOrders = async (orderIds: string[]) => {
+    if (!resolvedRouteId || orderIds.length === 0) return;
+    const parsedOrderIds = orderIds
       .map((id) => Number.parseInt(id, 10))
       .filter((n) => Number.isFinite(n));
-    await addProductsMutation.mutateAsync({
+    await addOrdersMutation.mutateAsync({
       routeId: resolvedRouteId,
-      productIds,
+      orderIds: parsedOrderIds,
     });
   };
 
@@ -599,7 +605,7 @@ export default function RutaPage() {
         variant="outlined"
         color="primary"
         startIcon={<PlusCircle size={16} />}
-        onClick={() => setAddArticlesModalOpen(true)}
+        onClick={() => setAddOrdersModalOpen(true)}
       >
         Agregar
       </Button>
@@ -841,7 +847,7 @@ export default function RutaPage() {
                                 variant="outlined"
                                 color="primary"
                                 startIcon={<PlusCircle size={16} />}
-                                onClick={() => setAddArticlesModalOpen(true)}>
+                                onClick={() => setAddOrdersModalOpen(true)}>
                                 Agregar
                               </Button>
                             }
@@ -851,7 +857,7 @@ export default function RutaPage() {
                           </Stack>
 
                           {
-                            activeTab === TAB_ARTICLES && <ArticlesTab articles={routeDetail.articles} />
+                            activeTab === TAB_ARTICLES && <ArticlesTab orders={routeDetail.orders} />
                           }
 
                           {
@@ -896,12 +902,12 @@ export default function RutaPage() {
 
                           {
                             resolvedRouteId &&
-                            <AddArticlesToRouteModal
-                              open={addArticlesModalOpen}
-                              onClose={() => setAddArticlesModalOpen(false)}
+                            <AddOrdersToRouteModal
+                              open={addOrdersModalOpen}
+                              onClose={() => setAddOrdersModalOpen(false)}
                               routeId={resolvedRouteId}
-                              fetchAvailableArticles={fetchArticlesForModal}
-                              onConfirm={handleConfirmAddArticles}
+                              fetchAvailableOrders={fetchOrdersForModal}
+                              onConfirm={handleConfirmAddOrders}
                             />
                           }
 

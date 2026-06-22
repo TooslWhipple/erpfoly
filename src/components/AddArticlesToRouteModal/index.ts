@@ -1,2 +1,5 @@
-export { AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
-export type { AddArticlesToRouteModalProps } from "./AddArticlesToRouteModal";
+export { AddOrdersToRouteModal, AddArticlesToRouteModal } from "./AddArticlesToRouteModal";
+export type {
+  AddOrdersToRouteModalProps,
+  AddArticlesToRouteModalProps,
+} from "./AddArticlesToRouteModal";

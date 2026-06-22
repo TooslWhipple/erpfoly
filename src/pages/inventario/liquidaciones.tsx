@@ -125,7 +125,7 @@ export default function LiquidacionesPage() {
   return (
     <MainLayout>
       <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
-        <Stack direction="column" spacing={3} flex="0 1 768px">
+        <Stack direction="column" spacing={3} flex="1 1 768px">
           <Title title="Estrategia de baja rotación" />
           <StatsCardGroup cards={statsCards} loading={state === "loading"} columns={3} />
           <Stack spacing={1}>

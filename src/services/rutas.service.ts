@@ -58,24 +58,6 @@ export async function addOrdersToRoute(routeId: number, orderIds: number[]) {
   });
 }
 
-/** @deprecated Use fetchAvailableOrders */
-export async function fetchAvailableProducts(routeId: number, page = 1) {
-  const searchParams = new URLSearchParams({
-    page: String(page),
-    limit: "100",
-  });
-  return get<PaginatedRowsApi<OrderToAddApi>>(
-    `/routes/${routeId}/available-products?${searchParams.toString()}`,
-  );
-}
-
-/** @deprecated Use addOrdersToRoute */
-export async function addProductsToRoute(routeId: number, productIds: number[]) {
-  return post<RouteDetailApi>(`/routes/${routeId}/products`, {
-    product_ids: productIds,
-  });
-}
-
 export async function uploadCartaPorte(
   routeId: number,
   file: File,

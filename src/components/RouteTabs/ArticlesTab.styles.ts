@@ -19,6 +19,10 @@ export const OrderHeader = styled('div')({
   alignItems: "flex-start",
   gap: "16px",
   borderBottom: `1px solid ${theme.palette.app.border}`,
+  [theme.breakpoints.down('sm')]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
 });
 
 export const OrderItemRow = styled('div')({
@@ -31,6 +35,9 @@ export const OrderItemRow = styled('div')({
   borderBottom: `1px solid ${theme.palette.app.border}`,
   "&:last-child": {
     borderBottom: "none",
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: "8px 0px",
   },
 });
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { styled } from "@mui/material/styles";
+import { darken, styled } from "@mui/material/styles";
 import { Typography, Button, IconButton, TextField, TableCell, TableRow, TableContainer, Switch } from "@mui/material";
 import { theme } from "@/styles/theme";
 
@@ -158,7 +158,6 @@ export const GalleryItem = styled('div')(({ theme }) => ({
     justifyContent: "center",
     gap: "12px",
     position: "relative",
-    aspectRatio: "1",
     borderRadius: "8px",
     overflow: "hidden",
     border: `1px solid ${theme.palette.app.border}`,
@@ -178,7 +177,8 @@ export const GalleryItem = styled('div')(({ theme }) => ({
 
 export const GalleryImage = styled("img")({
     width: "100%",
-    height: "100%",
+    height: "240px",
+    maxHeight: "240px",
     objectFit: "cover",
     borderRadius: "8px",
 });
@@ -191,6 +191,7 @@ export const GalleryAddButton = styled('div')({
     gap: "12px",
     width: "100%",
     height: "240px",
+    maxHeight: "240px",
     backgroundColor: "#F1F5F9",
     border: `1px dashed #BFDBFE`,
     borderRadius: "8px",
@@ -230,8 +231,8 @@ export const GalleryIconButton = styled('div')(({ theme }) => ({
         color: theme.palette.text.primary,
     },
     "&:hover": {
-        backgroundColor: theme.palette.action.hover,
-        borderColor: theme.palette.app.sidebar.textSelected,
+        backgroundColor: darken(theme.palette.background.paper, 0.15),
+        borderColor: darken(theme.palette.app.sidebar.textSelected, 0.15),
     },
 }));
 

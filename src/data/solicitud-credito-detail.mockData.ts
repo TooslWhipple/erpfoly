@@ -84,7 +84,7 @@ export const MOCK_CREDIT_APPLICATION_DETAIL: CreditApplicationDetail = {
       phone: "667 123 4567",
       clientPosition: "Dirección",
       tenureYears: 12,
-      contactNameAndPosition: "Mauricio Estrada - Director",
+      contactNameAndPosition: "Mauricio Estrada",
     },
     family: [
       {

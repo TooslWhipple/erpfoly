@@ -332,17 +332,25 @@ function splitReferenceName(value: string): { firstName: string; lastName: strin
 }
 
 function mapFamilyReferences(references: FamilyReference[]) {
-  return references.map((reference) => {
-    const { firstName, lastName } = splitReferenceName(reference.name);
-    const relationshipId = Number.parseInt(reference.relationshipId, 10);
-    return {
-      firstName,
-      lastName,
-      relationshipId: Number.isFinite(relationshipId) ? relationshipId : null,
-      address: reference.address.trim(),
-      phone: reference.phone.trim(),
-    };
-  });
+  return references
+    .filter(
+      (reference) =>
+        reference.name.trim().length > 0 &&
+        reference.relationshipId.trim().length > 0 &&
+        reference.address.trim().length > 0 &&
+        reference.phone.trim().length > 0
+    )
+    .map((reference) => {
+      const { firstName, lastName } = splitReferenceName(reference.name);
+      const relationshipId = Number.parseInt(reference.relationshipId, 10);
+      return {
+        firstName,
+        lastName,
+        relationshipId: Number.isFinite(relationshipId) ? relationshipId : null,
+        address: reference.address.trim(),
+        phone: reference.phone.trim(),
+      };
+    });
 }
 
 function buildSectionPayload(
@@ -397,43 +405,53 @@ function buildSectionPayload(
     }
     case "employment": {
       const applicantAddress = parseStreetAddress(payload.employment.streetAndNumber);
-      const spouseAddress = parseStreetAddress(payload.employment.spouseStreetAndNumber);
-      return {
-        employment: {
-          applicant: {
-            company: payload.employment.company.trim(),
-            postalCode: payload.employment.postalCode.trim(),
-            neighborhoodFullCode: payload.employment.neighborhoodFullCode.trim(),
-            state: payload.employment.state.trim(),
-            city: payload.employment.city.trim(),
-            street: applicantAddress.street,
-            externalNumber: applicantAddress.externalNumber,
-            internalNumber: applicantAddress.internalNumber,
-            seniorityYears: payload.employment.seniorityYears.trim(),
-            position: payload.employment.position.trim(),
-            department: payload.employment.department.trim(),
-            monthlyIncome: payload.employment.monthlyIncome.trim(),
-            companyPhone: payload.employment.companyPhone.trim(),
-            hasOtherIncome: payload.employment.hasOtherIncome,
-            otherIncomeAmount: payload.employment.otherIncomeAmount.trim(),
-            otherIncomeSource: payload.employment.otherIncomeSource.trim(),
-          },
-          spouse: {
-            company: payload.employment.spouseCompany.trim(),
-            postalCode: payload.employment.spousePostalCode.trim(),
-            neighborhoodFullCode: payload.employment.spouseNeighborhoodFullCode.trim(),
-            state: payload.employment.spouseState.trim(),
-            city: payload.employment.spouseCity.trim(),
-            street: spouseAddress.street,
-            externalNumber: spouseAddress.externalNumber,
-            internalNumber: spouseAddress.internalNumber,
-            seniorityYears: payload.employment.spouseSeniorityYears.trim(),
-            position: payload.employment.spousePosition.trim(),
-            department: payload.employment.spouseDepartment.trim(),
-            monthlyIncome: payload.employment.spouseMonthlyIncome.trim(),
-            companyPhone: payload.employment.spouseCompanyPhone.trim(),
-          },
+      const employmentSection: {
+        spouseHasEmployment: boolean;
+        applicant: Record<string, unknown>;
+        spouse?: Record<string, unknown>;
+      } = {
+        spouseHasEmployment: payload.employment.spouseHasEmployment,
+        applicant: {
+          company: payload.employment.company.trim(),
+          postalCode: payload.employment.postalCode.trim(),
+          neighborhoodFullCode: payload.employment.neighborhoodFullCode.trim(),
+          state: payload.employment.state.trim(),
+          city: payload.employment.city.trim(),
+          street: applicantAddress.street,
+          externalNumber: applicantAddress.externalNumber,
+          internalNumber: applicantAddress.internalNumber,
+          seniorityYears: payload.employment.seniorityYears.trim(),
+          position: payload.employment.position.trim(),
+          department: payload.employment.department.trim(),
+          monthlyIncome: payload.employment.monthlyIncome.trim(),
+          companyPhone: payload.employment.companyPhone.trim(),
+          hasOtherIncome: payload.employment.hasOtherIncome,
+          otherIncomeAmount: payload.employment.otherIncomeAmount.trim(),
+          otherIncomeSource: payload.employment.otherIncomeSource.trim(),
         },
+      };
+
+      if (payload.employment.spouseHasEmployment) {
+        const spouseAddress = parseStreetAddress(payload.employment.spouseStreetAndNumber);
+        employmentSection.spouse = {
+          company: payload.employment.spouseCompany.trim(),
+          postalCode: payload.employment.spousePostalCode.trim(),
+          neighborhoodFullCode: payload.employment.spouseNeighborhoodFullCode.trim(),
+          state: payload.employment.spouseState.trim(),
+          city: payload.employment.spouseCity.trim(),
+          street: spouseAddress.street,
+          externalNumber: spouseAddress.externalNumber,
+          internalNumber: spouseAddress.internalNumber,
+          seniorityYears: payload.employment.spouseSeniorityYears.trim(),
+          position: payload.employment.spousePosition.trim(),
+          department: payload.employment.spouseDepartment.trim(),
+          monthlyIncome: payload.employment.spouseMonthlyIncome.trim(),
+          companyPhone: payload.employment.spouseCompanyPhone.trim(),
+        };
+      }
+
+      return {
+        employment: employmentSection,
       };
     }
     case "references":

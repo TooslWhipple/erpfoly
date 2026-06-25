@@ -106,7 +106,9 @@ export function useReferencesTab(initialValues: ReferencesTabValues) {
         nextErrors.seniorityYears = "La antigüedad debe ser un número entero positivo";
       }
     }
-    if (!values.respondentNameAndPosition.trim()) nextErrors.respondentNameAndPosition = "Este campo es requerido";
+    if (!values.respondentNameAndPosition.trim()) {
+      nextErrors.respondentNameAndPosition = "Nombre de la persona laboral es requerido";
+    }
 
     const hasCompleteFamilyReference = values.familyReferences.some(
       (reference) =>

@@ -7,11 +7,103 @@ function parseNumericValue(value: string): number {
   return Number.parseFloat(value.replace(/,/g, "").trim());
 }
 
+const EMPTY_SPOUSE_EMPLOYMENT_FIELDS: Pick<
+  EmploymentTabValues,
+  | "spouseCompany"
+  | "spousePostalCode"
+  | "spouseNeighborhoodFullCode"
+  | "spouseState"
+  | "spouseCity"
+  | "spouseStreetAndNumber"
+  | "spouseSeniorityYears"
+  | "spousePosition"
+  | "spouseDepartment"
+  | "spouseMonthlyIncome"
+  | "spouseCompanyPhone"
+> = {
+  spouseCompany: "",
+  spousePostalCode: "",
+  spouseNeighborhoodFullCode: "",
+  spouseState: "",
+  spouseCity: "",
+  spouseStreetAndNumber: "",
+  spouseSeniorityYears: "",
+  spousePosition: "",
+  spouseDepartment: "",
+  spouseMonthlyIncome: "",
+  spouseCompanyPhone: "",
+};
+
+function validateSpouseEmploymentFields(
+  values: EmploymentTabValues,
+  nextErrors: EmploymentTabErrors,
+): void {
+  if (!values.spouseCompany.trim()) nextErrors.spouseCompany = "Empresa es requerida";
+  if (!values.spousePostalCode.trim()) nextErrors.spousePostalCode = "Código postal es requerido";
+  else if (!isValidMxPostalCode(values.spousePostalCode)) {
+    nextErrors.spousePostalCode = "El código postal debe tener 5 dígitos";
+  }
+  if (!values.spouseNeighborhoodFullCode.trim() || values.spouseNeighborhoodFullCode === "-1") {
+    nextErrors.spouseNeighborhoodFullCode = "Selecciona una colonia";
+  }
+  if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";
+  if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
+  if (!values.spouseStreetAndNumber.trim()) {
+    nextErrors.spouseStreetAndNumber = "Calle y número es requerido";
+  }
+  if (!values.spouseSeniorityYears.trim()) nextErrors.spouseSeniorityYears = "Antigüedad es requerida";
+  else {
+    const spouseSeniorityYears = parseNumericValue(values.spouseSeniorityYears);
+    if (
+      !Number.isFinite(spouseSeniorityYears) ||
+      spouseSeniorityYears <= 0 ||
+      !Number.isInteger(spouseSeniorityYears)
+    ) {
+      nextErrors.spouseSeniorityYears = "La antigüedad debe ser un número entero positivo";
+    }
+  }
+  if (!values.spousePosition.trim()) nextErrors.spousePosition = "Puesto es requerido";
+  if (!values.spouseDepartment.trim()) nextErrors.spouseDepartment = "Departamento es requerido";
+  if (!values.spouseMonthlyIncome.trim()) nextErrors.spouseMonthlyIncome = "Ingreso mensual es requerido";
+  else {
+    const spouseMonthlyIncome = parseNumericValue(values.spouseMonthlyIncome);
+    if (
+      !Number.isFinite(spouseMonthlyIncome) ||
+      spouseMonthlyIncome <= 0 ||
+      !Number.isInteger(spouseMonthlyIncome)
+    ) {
+      nextErrors.spouseMonthlyIncome = "El ingreso mensual debe ser un número entero positivo";
+    }
+  }
+  if (!values.spouseCompanyPhone.trim()) {
+    nextErrors.spouseCompanyPhone = "Teléfono de la empresa es requerido";
+  } else if (!isValidMxPhone(values.spouseCompanyPhone)) {
+    nextErrors.spouseCompanyPhone = "El teléfono de la empresa del cónyuge debe tener 10 dígitos";
+  }
+}
+
 export function useEmploymentTab(initialValues: EmploymentTabValues) {
   const [values, setValues] = useState<EmploymentTabValues>(initialValues);
   const [errors, setErrors] = useState<EmploymentTabErrors>({});
 
   const setFieldValue = useCallback((field: keyof EmploymentTabValues, value: EmploymentTabValues[keyof EmploymentTabValues]) => {
+    if (field === "spouseHasEmployment" && value === false) {
+      const nextValues = {
+        ...values,
+        spouseHasEmployment: false,
+        ...EMPTY_SPOUSE_EMPLOYMENT_FIELDS,
+      };
+      setValues(nextValues);
+      setErrors((prev) => {
+        const next = { ...prev };
+        (Object.keys(EMPTY_SPOUSE_EMPLOYMENT_FIELDS) as Array<keyof EmploymentTabErrors>).forEach((key) => {
+          delete next[key];
+        });
+        return next;
+      });
+      return nextValues;
+    }
+
     let nextValue = value;
     
     if (field === "companyPhone" || field === "spouseCompanyPhone") {
@@ -87,33 +179,27 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     else if (!isValidMxPhone(values.companyPhone)) {
       nextErrors.companyPhone = "El teléfono de la empresa debe tener 10 dígitos";
     }
-    if (values.spouseCompanyPhone.trim() && !isValidMxPhone(values.spouseCompanyPhone)) {
-      nextErrors.spouseCompanyPhone = "El teléfono de la empresa del cónyuge debe tener 10 dígitos";
+
+    if (values.hasOtherIncome) {
+      if (!values.otherIncomeAmount.trim()) {
+        nextErrors.otherIncomeAmount = "Monto es requerido";
+      } else {
+        const otherIncomeAmount = parseNumericValue(values.otherIncomeAmount);
+        if (
+          !Number.isFinite(otherIncomeAmount) ||
+          otherIncomeAmount <= 0 ||
+          !Number.isInteger(otherIncomeAmount)
+        ) {
+          nextErrors.otherIncomeAmount = "El monto debe ser un número entero positivo";
+        }
+      }
+      if (!values.otherIncomeSource.trim()) {
+        nextErrors.otherIncomeSource = "Especifique el origen del ingreso";
+      }
     }
 
-    if (isValidMxPostalCode(values.spousePostalCode)) {
-      if (
-        !values.spouseNeighborhoodFullCode.trim() ||
-        values.spouseNeighborhoodFullCode === "-1"
-      ) {
-        nextErrors.spouseNeighborhoodFullCode = "Selecciona una colonia";
-      }
-      if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";
-      if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
-      
-      if (values.spouseSeniorityYears.trim()) {
-        const spouseSeniorityYears = parseNumericValue(values.spouseSeniorityYears);
-        if (!Number.isFinite(spouseSeniorityYears) || spouseSeniorityYears <= 0 || !Number.isInteger(spouseSeniorityYears)) {
-          nextErrors.spouseSeniorityYears = "La antigüedad debe ser un número entero positivo";
-        }
-      }
-      
-      if (values.spouseMonthlyIncome.trim()) {
-        const spouseMonthlyIncome = parseNumericValue(values.spouseMonthlyIncome);
-        if (!Number.isFinite(spouseMonthlyIncome) || spouseMonthlyIncome <= 0 || !Number.isInteger(spouseMonthlyIncome)) {
-          nextErrors.spouseMonthlyIncome = "El ingreso mensual debe ser un número entero positivo";
-        }
-      }
+    if (values.spouseHasEmployment) {
+      validateSpouseEmploymentFields(values, nextErrors);
     }
 
     if (!silent) {

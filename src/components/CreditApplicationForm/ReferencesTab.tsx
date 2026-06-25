@@ -42,6 +42,20 @@ export function ReferencesTab({
           <FormTextField
             fullWidth
             required
+            label="Nombre de la persona laboral"
+            placeholder="Ingresa"
+            value={values.respondentNameAndPosition}
+            onChange={(event) => onFieldChange("respondentNameAndPosition", event.target.value)}
+            error={Boolean(errors.respondentNameAndPosition)}
+            helperText={errors.respondentNameAndPosition}
+            disabled={saving}
+            inputProps={{ maxLength: 128 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <FormTextField
+            fullWidth
+            required
             label="Empresa"
             placeholder="Ingresa"
             value={values.company}
@@ -92,20 +106,6 @@ export function ReferencesTab({
             helperText={errors.seniorityYears}
             disabled={saving}
             inputProps={{ maxLength: 4, inputMode: 'numeric', pattern: '[0-9]*' }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Persona que contestó y puesto"
-            placeholder="Ingresa"
-            value={values.respondentNameAndPosition}
-            onChange={(event) => onFieldChange("respondentNameAndPosition", event.target.value)}
-            error={Boolean(errors.respondentNameAndPosition)}
-            helperText={errors.respondentNameAndPosition}
-            disabled={saving}
-            inputProps={{ maxLength: 128 }}
           />
         </Grid>
       </Grid>

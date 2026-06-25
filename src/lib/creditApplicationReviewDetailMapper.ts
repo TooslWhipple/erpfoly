@@ -223,9 +223,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         phone: references.work.companyPhone ?? "",
         clientPosition: references.work.applicantPosition ?? "",
         tenureYears: references.work.seniorityYears ?? 0,
-        contactNameAndPosition: [references.work.answeredBy, references.work.answeredByPosition]
-          .filter((value) => value.trim().length > 0)
-          .join(" - "),
+        contactNameAndPosition: references.work.answeredBy ?? "",
       },
       family: references.family.map((reference) => ({
         name: [reference.firstName, reference.lastName].filter((value) => value.trim().length > 0).join(" "),

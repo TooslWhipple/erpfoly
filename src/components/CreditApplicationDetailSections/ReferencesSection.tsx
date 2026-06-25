@@ -22,6 +22,14 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
       <Typography variant="subtitle1">Referencia laboral</Typography>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12 }}>
+          <FormTextField
+            label="Nombre de la persona laboral"
+            value={references.work.contactNameAndPosition}
+            readOnly
+            fullWidth
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
           <FormTextField label="Empresa" value={references.work.company} readOnly fullWidth />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -32,14 +40,6 @@ export function ReferencesSection({ detail }: ReferencesSectionProps) {
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Antigüedad (años)" value={String(references.work.tenureYears)} readOnly fullWidth />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            label="Persona que contestó y puesto"
-            value={references.work.contactNameAndPosition}
-            readOnly
-            fullWidth
-          />
         </Grid>
       </Grid>
       <Typography variant="subtitle1">Referencias familiares</Typography>

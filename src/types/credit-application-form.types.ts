@@ -98,6 +98,7 @@ export interface EmploymentTabValues {
   hasOtherIncome: boolean;
   otherIncomeAmount: string;
   otherIncomeSource: string;
+  spouseHasEmployment: boolean;
   spouseCompany: string;
   spousePostalCode: string;
   spouseNeighborhoodFullCode: string;
@@ -123,12 +124,18 @@ export interface EmploymentTabErrors {
   department?: string;
   monthlyIncome?: string;
   companyPhone?: string;
+  otherIncomeAmount?: string;
+  otherIncomeSource?: string;
+  spouseCompany?: string;
   spouseCompanyPhone?: string;
   spousePostalCode?: string;
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;
   spouseCity?: string;
+  spouseStreetAndNumber?: string;
   spouseSeniorityYears?: string;
+  spousePosition?: string;
+  spouseDepartment?: string;
   spouseMonthlyIncome?: string;
 }
 

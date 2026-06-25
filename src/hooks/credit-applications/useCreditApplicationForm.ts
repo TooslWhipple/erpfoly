@@ -99,6 +99,7 @@ const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   hasOtherIncome: false,
   otherIncomeAmount: "",
   otherIncomeSource: "",
+  spouseHasEmployment: false,
   spouseCompany: "",
   spousePostalCode: "",
   spouseNeighborhoodFullCode: "",
@@ -256,6 +257,16 @@ function mapCreditApplicationToFormValues(
       .join(" ")
       .trim();
 
+  const spouseEmployment = creditApplication.employment.spouse;
+  const spouseHasEmployment = Boolean(
+    spouseEmployment.companyName?.trim() ||
+    spouseEmployment.postalCode?.trim() ||
+    spouseEmployment.neighborhoodFullCode?.trim() ||
+    spouseEmployment.companyPhone?.trim() ||
+    buildEmploymentStreet(spouseEmployment).trim() ||
+    (spouseEmployment.monthlyIncome ?? 0) > 0
+  );
+
   const employment: EmploymentTabValues = {
     company: creditApplication.employment.applicant.companyName ?? "",
     postalCode: creditApplication.employment.applicant.postalCode ?? "",
@@ -271,6 +282,7 @@ function mapCreditApplicationToFormValues(
     hasOtherIncome: Boolean(creditApplication.employment.applicant.hasOtherIncome),
     otherIncomeAmount: String(creditApplication.employment.applicant.otherIncomeAmount ?? ""),
     otherIncomeSource: creditApplication.employment.applicant.otherIncomeDescription ?? "",
+    spouseHasEmployment,
     spouseCompany: creditApplication.employment.spouse.companyName ?? "",
     spousePostalCode: creditApplication.employment.spouse.postalCode ?? "",
     spouseNeighborhoodFullCode: creditApplication.employment.spouse.neighborhoodFullCode ?? "",
@@ -289,12 +301,7 @@ function mapCreditApplicationToFormValues(
     phone: creditApplication.references.work.companyPhone ?? "",
     clientPosition: creditApplication.references.work.applicantPosition ?? "",
     seniorityYears: String(creditApplication.references.work.seniorityYears ?? ""),
-    respondentNameAndPosition: [
-      creditApplication.references.work.answeredBy,
-      creditApplication.references.work.answeredByPosition,
-    ]
-      .filter((value) => value.trim().length > 0)
-      .join(" - "),
+    respondentNameAndPosition: creditApplication.references.work.answeredBy ?? "",
     familyReferences:
       creditApplication.references.family.length > 0
         ? creditApplication.references.family.map((reference, index) => ({

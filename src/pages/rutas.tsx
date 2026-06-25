@@ -6,7 +6,6 @@ import {
   Skeleton,
   Divider,
   Button,
-  TextField,
 } from "@mui/material";
 import {
   ChevronLeft,
@@ -16,10 +15,7 @@ import {
   Route,
   Truck,
   PlusCircle,
-  Save,
-  Pencil,
-  Check,
-  X as XIcon,
+  Save
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +24,7 @@ import {
   MainLayout,
   StatusChip,
   TabFilters,
-  AddArticlesToRouteModal,
+  AddOrdersToRouteModal,
   AddDriverToRouteModal,
   AddAssistantToRouteModal,
   ConfirmModal,
@@ -53,12 +49,12 @@ import {
 
 import {
   addAssistantToRoute,
-  addProductsToRoute,
+  addOrdersToRoute,
   assignDriverToRoute,
   deleteCartaPorteDocument,
   fetchAvailableAssistants,
   fetchAvailableDrivers,
-  fetchAvailableProducts,
+  fetchAvailableOrders,
   fetchRouteDetail,
   fetchRoutesForDate,
   removeAssistantFromRoute,
@@ -177,14 +173,12 @@ export default function RutaPage() {
 
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
-  const [addArticlesModalOpen, setAddArticlesModalOpen] = useState(false);
+  const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
   const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
   const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
   const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<File | undefined>(undefined);
   const [cartaPanelKey, setCartaPanelKey] = useState(0);
-  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
-  const [vehicleDraft, setVehicleDraft] = useState("");
 
   const routesQuery = useQuery({
     queryKey: ["routes", routeDateStr],
@@ -229,21 +223,32 @@ export default function RutaPage() {
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
 
-  const addProductsMutation = useMutation({
+  const addOrdersMutation = useMutation({
     mutationFn: async ({
       routeId,
-      productIds,
+      orderIds,
     }: {
       routeId: number;
-      productIds: number[];
+      orderIds: number[];
     }) => {
-      const res = await addProductsToRoute(routeId, productIds);
+      const res = await addOrdersToRoute(routeId, orderIds);
       return unwrapOrThrow(res);
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
-      queryClient.invalidateQueries({ queryKey: ["route-detail", vars.routeId] });
-      showSuccess("Artículos agregados a la ruta.");
+      showSuccess("Pedidos agregados a la ruta.");
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudieron agregar los pedidos: ${detail}`
+          : "No se pudieron agregar los pedidos.",
+      );
     },
   });
 
@@ -331,8 +336,6 @@ export default function RutaPage() {
     },
   });
 
-  // ----- Driver / assistants mutations -----
-
   const assignDriverMutation = useMutation({
     mutationFn: async ({
       routeId,
@@ -411,32 +414,16 @@ export default function RutaPage() {
     },
   });
 
-  const updateVehicleMutation = useMutation({
-    mutationFn: async ({
-      routeId,
-      vehicleInfo,
-    }: {
-      routeId: number;
-      vehicleInfo: string;
-    }) => {
-      const res = await updateRouteVehicleInfo(routeId, vehicleInfo);
-      return unwrapOrThrow(res);
-    },
-    onSuccess: (data, vars) => {
-      queryClient.setQueryData<RouteDetailApi>(
-        ["route-detail", vars.routeId],
-        data,
-      );
-      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
-      showSuccess("Información del vehículo actualizada.");
-      setIsEditingVehicle(false);
-    },
-  });
-
-  const fetchArticlesForModal = useCallback(async (routeId: number) => {
-    const res = await fetchAvailableProducts(routeId);
+  const fetchOrdersForModal = useCallback(async (routeId: number) => {
+    const res = await fetchAvailableOrders(routeId);
     const data = unwrapOrThrow(res);
-    return data.rows;
+    return data.rows.map((row) => ({
+      id: row.id,
+      orderNumber: row.order_number,
+      address: row.address,
+      zone: row.zone,
+      articleCount: row.article_count,
+    }));
   }, []);
 
   const fetchDriversForModal = useCallback(async (routeId: number) => {
@@ -480,14 +467,14 @@ export default function RutaPage() {
     }
   };
 
-  const handleConfirmAddArticles = async (articleIds: string[]) => {
-    if (!resolvedRouteId || articleIds.length === 0) return;
-    const productIds = articleIds
+  const handleConfirmAddOrders = async (orderIds: string[]) => {
+    if (!resolvedRouteId || orderIds.length === 0) return;
+    const parsedOrderIds = orderIds
       .map((id) => Number.parseInt(id, 10))
       .filter((n) => Number.isFinite(n));
-    await addProductsMutation.mutateAsync({
+    await addOrdersMutation.mutateAsync({
       routeId: resolvedRouteId,
-      productIds,
+      orderIds: parsedOrderIds,
     });
   };
 
@@ -550,27 +537,7 @@ export default function RutaPage() {
     setPendingRemoval(null);
   };
 
-  const handleStartEditVehicle = () => {
-    setVehicleDraft(routeDetail?.vehicleInfo && routeDetail.vehicleInfo !== "—" ? routeDetail.vehicleInfo : "");
-    setIsEditingVehicle(true);
-  };
-
-  const handleCancelEditVehicle = () => {
-    setIsEditingVehicle(false);
-    setVehicleDraft("");
-  };
-
-  const handleSaveVehicle = async () => {
-    if (!resolvedRouteId) return;
-    await updateVehicleMutation.mutateAsync({
-      routeId: resolvedRouteId,
-      vehicleInfo: vehicleDraft,
-    });
-    setVehicleDraft("");
-  };
-
   const routesLoading = routesQuery.isLoading;
-
   const detailLoading = detailQuery.isFetching;
 
   const renderTabActionButton = () => {
@@ -596,10 +563,10 @@ export default function RutaPage() {
     }
     return (
       <Button
-        variant="outlined"
+        variant="option"
         color="primary"
         startIcon={<PlusCircle size={16} />}
-        onClick={() => setAddArticlesModalOpen(true)}
+        onClick={() => setAddOrdersModalOpen(true)}
       >
         Agregar
       </Button>
@@ -608,87 +575,65 @@ export default function RutaPage() {
 
   return (
     <MainLayout>
-      <Stack
-        spacing={1.5}
-        direction="row"
-        height="100%"
-        divider={<Divider orientation="vertical" flexItem />}
-      >
-        <Stack spacing={1}>
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" minWidth="260px">
+      <Stack direction={{ xs: "column", md: "row" }} height="100%" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
+        <Stack spacing={1} flex="0 1 272px">
+          <Stack direction="row" alignItems="center" spacing={1} flexWrap="nowrap" minWidth="260px">
             <IconButton size="small" onClick={handlePrevDay}>
               <ChevronLeft size={20} />
             </IconButton>
             <IconButton size="small" onClick={handleNextDay}>
               <ChevronRight size={20} />
             </IconButton>
-            <Typography variant="body1" fontWeight={500}>{formatDateLabel(selectedDate)}</Typography>
+            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{formatDateLabel(selectedDate)}</Typography>
             <Button
               size="small"
               variant="text"
               onClick={handleToday}>Hoy</Button>
           </Stack>
-          {routesLoading ? (
-            [1, 2, 3].map((i) => (
-              <Skeleton
-                key={i}
-                variant="rectangular"
-                height={100}
-                sx={{ borderRadius: 1 }}
-              />
-            ))
-          ) : (
-            routes.map((route) => (
-              <RouteCard
-                key={route.id}
-                selected={resolvedRouteId === route.id}
-                onClick={() => {
-                  setSelectedRouteId(route.id);
-                  setActiveTab(TAB_ARTICLES);
-                  setIsEditingVehicle(false);
-                }}
-              >
-                {route.miniMapUrl ? (
-                  <RouteMiniMapThumb
-                    src={route.miniMapUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <MapPlaceholder />
-                )}
-                <Stack flex={1} spacing={0.5} alignItems="flex-start">
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight={700}
-                    color="primary.main"
-                  >
-                    {route.name}
-                  </Typography>
-                  <StatusChip
-                    size="small"
-                    label={STATUS_LABEL[route.status] ?? route.status}
-                  />
-                  <Typography variant="body1" fontWeight={600}>
-                    {route.location}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Box size={16} />
-                    <Typography variant="body1">
-                      {route.articleCount} artículos
-                    </Typography>
+          {
+            routesLoading ?
+              [1, 2, 3].map((i) => (
+                <Skeleton
+                  key={i}
+                  variant="rectangular"
+                  height={100}
+                  sx={{ borderRadius: 1 }}
+                />
+              ))
+              :
+              routes.map((route) => (
+                <RouteCard
+                  key={route.id}
+                  selected={resolvedRouteId === route.id}
+                  onClick={() => {
+                    setSelectedRouteId(route.id);
+                    setActiveTab(TAB_ARTICLES);
+                  }}>
+                  {
+                    (route.miniMapUrl) ?
+                      <RouteMiniMapThumb src={route.miniMapUrl} alt="" loading="lazy" decoding="async" />
+                      :
+                      <MapPlaceholder />
+                  }
+                  <Stack flex={1} spacing={0.5} alignItems="flex-start">
+                    <Typography variant="subtitle2" color="primary.main" fontWeight={700}>{route.name}</Typography>
+                    <StatusChip
+                      size="small"
+                      label={STATUS_LABEL[route.status] ?? route.status}
+                    />
+                    <Typography variant="body1" fontWeight={600}>{route.location}</Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Box size={16} />
+                      <Typography variant="body1">{route.articleCount} artículos</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Route size={16} />
+                      <Typography variant="body1">{route.pointCount} puntos</Typography>
+                    </Stack>
                   </Stack>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Route size={16} />
-                    <Typography variant="body1">
-                      {route.pointCount} puntos
-                    </Typography>
-                  </Stack>
-                </Stack>
-              </RouteCard>
-            ))
-          )}
+                </RouteCard>
+              ))
+          }
         </Stack>
 
         <Stack flex={1}>
@@ -758,55 +703,6 @@ export default function RutaPage() {
                                     flexWrap="wrap"
                                   >
                                     <Truck size={16} color={theme.palette.text.secondary} />
-                                    {
-                                      (isEditingVehicle) ?
-                                        <Stack
-                                          direction="row"
-                                          alignItems="center"
-                                          spacing={0.5}
-                                          flexWrap="wrap">
-                                          <TextField
-                                            size="small"
-                                            variant="outlined"
-                                            value={vehicleDraft}
-                                            onChange={(e) => setVehicleDraft(e.target.value)}
-                                            placeholder="Marca, modelo, placa..."
-                                            disabled={updateVehicleMutation.isPending}
-                                            sx={{ minWidth: 220 }}
-                                            inputProps={{ maxLength: 128 }}
-                                          />
-                                          <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={() => void handleSaveVehicle()}
-                                            disabled={updateVehicleMutation.isPending}
-                                          >
-                                            <Check size={16} />
-                                          </IconButton>
-                                          <IconButton
-                                            size="small"
-                                            onClick={handleCancelEditVehicle}
-                                            disabled={updateVehicleMutation.isPending}
-                                          >
-                                            <XIcon size={16} />
-                                          </IconButton>
-                                        </Stack>
-                                        :
-                                        <Stack
-                                          direction="row"
-                                          alignItems="center"
-                                          spacing={0.5}>
-                                          <Typography variant="body2">{routeDetail.vehicleInfo || "—"}</Typography>
-                                          {
-                                            canManageRoute &&
-                                            <IconButton
-                                              size="small"
-                                              onClick={handleStartEditVehicle}>
-                                              <Pencil size={14} />
-                                            </IconButton>
-                                          }
-                                        </Stack>
-                                    }
                                   </Stack>
                                 </Stack>
                               </Stack>
@@ -841,7 +737,7 @@ export default function RutaPage() {
                                 variant="outlined"
                                 color="primary"
                                 startIcon={<PlusCircle size={16} />}
-                                onClick={() => setAddArticlesModalOpen(true)}>
+                                onClick={() => setAddOrdersModalOpen(true)}>
                                 Agregar
                               </Button>
                             }
@@ -851,7 +747,7 @@ export default function RutaPage() {
                           </Stack>
 
                           {
-                            activeTab === TAB_ARTICLES && <ArticlesTab articles={routeDetail.articles} />
+                            activeTab === TAB_ARTICLES && <ArticlesTab orders={routeDetail.orders} />
                           }
 
                           {
@@ -896,12 +792,12 @@ export default function RutaPage() {
 
                           {
                             resolvedRouteId &&
-                            <AddArticlesToRouteModal
-                              open={addArticlesModalOpen}
-                              onClose={() => setAddArticlesModalOpen(false)}
+                            <AddOrdersToRouteModal
+                              open={addOrdersModalOpen}
+                              onClose={() => setAddOrdersModalOpen(false)}
                               routeId={resolvedRouteId}
-                              fetchAvailableArticles={fetchArticlesForModal}
-                              onConfirm={handleConfirmAddArticles}
+                              fetchAvailableOrders={fetchOrdersForModal}
+                              onConfirm={handleConfirmAddOrders}
                             />
                           }
 

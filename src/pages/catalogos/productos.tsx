@@ -173,7 +173,7 @@ export default function Productos() {
     return (
         <MainLayout>
             <Stack direction="column" spacing={3}>
-                <Title title="Catálogo de productos" />
+                <Title title="Catálogo de artículos" />
                 <TabFilters
                     tabs={tabs}
                     activeTab={activeTab}
@@ -205,7 +205,7 @@ export default function Productos() {
                     onPageChange={handlePageChange}
                     onRowsPerPageChange={handleRowsPerPageChange}
                     onRowClick={handleEditProduct}
-                    emptyMessage="No hay productos registrados"
+                    emptyMessage="No hay artículos registrados"
                 />
             </Stack>
         </MainLayout>

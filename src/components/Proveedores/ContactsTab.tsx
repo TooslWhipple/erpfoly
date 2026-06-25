@@ -6,6 +6,7 @@ import {
     DeleteButton,
     DeleteButtonWrapper
 } from "@/styles/catalogos/proveedores.styles";
+import { SUPPLIER_TEXT_MAX_LENGTH } from "@/hooks/proveedores/supplierForm.constants";
 import type { SupplierContact } from "@/types/proveedores.types";
 import { Trash } from "lucide-react";
 
@@ -17,10 +18,12 @@ export interface ContactOption {
 export interface ContactsTabProps {
     contacts: SupplierContact[];
     jobTitleOptions: ContactOption[];
+    errors: Record<string, string>;
     onAddContact: () => void;
     onRemoveContact: (contactId: string) => void;
     onContactChange: (
         contactId: string,
+        contactIndex: number,
         field: keyof SupplierContact,
         value: string | number | null
     ) => void;
@@ -29,24 +32,29 @@ export interface ContactsTabProps {
 export function ContactsTab({
     contacts,
     jobTitleOptions,
+    errors,
     onAddContact,
     onRemoveContact,
     onContactChange,
 }: ContactsTabProps) {
-    const selectOptions = [
-        { value: "", label: "Selecciona..." },
-        ...jobTitleOptions,
-    ];
+    const jobTitleSelectOptions = jobTitleOptions.map((o) => ({
+        value: String(o.value),
+        label: o.label,
+    }));
 
     return (
         <FormCard>
             <Stack spacing={3} width="100%">
                 {contacts.map((contact, index) => {
-                    const isRequired = index <= 1;
+                    const isRequired = index === 0;
+                    const fieldPrefix = `contacts.${index}`;
+                    const jobTitleError = errors[`${fieldPrefix}.jobTitleId`];
+                    const nameError = errors[`${fieldPrefix}.name`];
+                    const phoneError = errors[`${fieldPrefix}.phone`];
                     return (
                         <Stack key={contact.id} spacing={3} width="100%">
-                            <Grid container spacing={1} alignItems="center">
-                                <Grid size={{ xs: 12, md: 2 }}>
+                            <Grid container spacing={2} alignItems="flex-start">
+                                <Grid size={{ xs: 12, md: 3 }}>
                                     <FormSelect
                                         label="Cargo"
                                         placeholder="Selecciona..."
@@ -59,13 +67,17 @@ export function ContactsTab({
                                             const v = e.target.value;
                                             onContactChange(
                                                 contact.id,
+                                                index,
                                                 "jobTitleId",
                                                 v === ""
                                                     ? null
                                                     : Number(v)
                                             );
                                         }}
-                                        options={selectOptions}
+                                        options={jobTitleSelectOptions}
+                                        required={isRequired}
+                                        error={Boolean(jobTitleError)}
+                                        helperText={jobTitleError}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: "grow" }}>
@@ -76,10 +88,15 @@ export function ContactsTab({
                                         onChange={(e) =>
                                             onContactChange(
                                                 contact.id,
+                                                index,
                                                 "name",
                                                 e.target.value
                                             )
                                         }
+                                        required={isRequired}
+                                        error={Boolean(nameError)}
+                                        helperText={nameError}
+                                        inputProps={{ maxLength: SUPPLIER_TEXT_MAX_LENGTH }}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: "grow" }}>
@@ -91,10 +108,15 @@ export function ContactsTab({
                                         onChange={(e) =>
                                             onContactChange(
                                                 contact.id,
+                                                index,
                                                 "phone",
                                                 e.target.value
                                             )
                                         }
+                                        required={isRequired}
+                                        error={Boolean(phoneError)}
+                                        helperText={phoneError}
+                                        inputProps={{ maxLength: 10 }}
                                     />
                                 </Grid>
                                 {!isRequired && (

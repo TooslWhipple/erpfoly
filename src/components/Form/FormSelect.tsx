@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import {
+    FormControl,
     MenuItem,
     SelectProps,
     Typography,
@@ -25,6 +26,7 @@ export interface FormSelectProps extends Omit<SelectProps, "variant" | "label" |
 }
 export const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
     ({ label, options, required, error, helperText, placeholder, ...props }, ref) => {
+        const hasError = Boolean(error);
         return (
             <FieldWrapper ref={ref}>
                 {
@@ -41,31 +43,33 @@ export const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
                             )}
                         </FieldLabel>
                     )}
-                <StyledSelect
-                    variant="outlined"
-                    fullWidth
-                    error={error}
-                    displayEmpty
-                    {...props}
-                >
-                    {placeholder && (
-                        <MenuItem value="" disabled>
-                            <Typography sx={{ color: "text.disabled" }}>
-                                {placeholder}
-                            </Typography>
-                        </MenuItem>
-                    )}
-                    {options.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                        </MenuItem>
-                    ))}
-                </StyledSelect>
-                {helperText && (
-                    <StyledFormHelperText error={error}>
-                        {helperText}
-                    </StyledFormHelperText>
-                )}
+                <FormControl fullWidth error={hasError}>
+                    <StyledSelect
+                        variant="outlined"
+                        fullWidth
+                        error={hasError}
+                        displayEmpty
+                        {...props}
+                    >
+                        {placeholder && (
+                            <MenuItem value="" disabled>
+                                <Typography sx={{ color: "text.disabled" }}>
+                                    {placeholder}
+                                </Typography>
+                            </MenuItem>
+                        )}
+                        {options.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                    </StyledSelect>
+                    {helperText ? (
+                        <StyledFormHelperText error={hasError}>
+                            {helperText}
+                        </StyledFormHelperText>
+                    ) : null}
+                </FormControl>
             </FieldWrapper>
         );
     }

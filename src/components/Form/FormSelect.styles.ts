@@ -18,23 +18,29 @@ export const StyledSelect = styled(Select)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   borderRadius: theme.shape.borderRadius,
   height: 36,
-  "& .MuiOutlinedInput-notchedOutline": {
+  "& fieldset": {
     borderColor: theme.palette.divider,
     borderWidth: 1,
   },
-  "&:hover .MuiOutlinedInput-notchedOutline": {
+  "&:hover:not(.Mui-error) fieldset": {
     borderColor: theme.palette.text.disabled,
   },
-  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+  "&.Mui-focused:not(.Mui-error) fieldset": {
     borderColor: theme.palette.primary.main,
     borderWidth: 1,
   },
-  "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+  "&.Mui-error fieldset": {
+    borderColor: theme.palette.error.main,
+  },
+  "&.Mui-error:hover fieldset": {
+    borderColor: theme.palette.error.main,
+  },
+  "&.Mui-error.Mui-focused fieldset": {
     borderColor: theme.palette.error.main,
   },
   "&.Mui-disabled": {
     backgroundColor: theme.palette.action.disabledBackground,
-    "& .MuiOutlinedInput-notchedOutline": {
+    "& fieldset": {
       borderColor: theme.palette.divider,
     },
   },

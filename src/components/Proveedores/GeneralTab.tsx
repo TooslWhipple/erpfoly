@@ -7,6 +7,7 @@ import {
     StyledRadioGroup,
     StyledFormControlLabel,
 } from "@/styles/catalogos/proveedores.styles";
+import { SUPPLIER_TEXT_MAX_LENGTH } from "@/hooks/proveedores/supplierForm.constants";
 import type { GeneralFormValues } from "@/types/proveedores.types";
 
 export interface GeneralTabProps {
@@ -33,6 +34,7 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
                         helperText={errors.name}
                         required
                         autoFocus
+                        inputProps={{ maxLength: SUPPLIER_TEXT_MAX_LENGTH }}
                     />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -44,6 +46,7 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
                         error={Boolean(errors.businessName)}
                         helperText={errors.businessName}
                         required
+                        inputProps={{ maxLength: SUPPLIER_TEXT_MAX_LENGTH }}
                     />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -51,16 +54,17 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
                         label="RFC"
                         placeholder="Ingresa..."
                         value={values.rfc}
-                        onChange={(e) => handleChange("rfc")(e.target.value.toUpperCase())}
+                        onChange={(e) => handleChange("rfc")(e.target.value)}
                         error={Boolean(errors.rfc)}
                         helperText={errors.rfc}
                         required
+                        inputProps={{ maxLength: 13 }}
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
                     <FormTextField
                         label="Página web"
-                        placeholder="Ingresa..."
+                        placeholder="https://..."
                         value={values.website}
                         onChange={(e) => handleChange("website")(e.target.value)}
                         error={Boolean(errors.website)}

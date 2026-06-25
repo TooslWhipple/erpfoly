@@ -46,15 +46,10 @@ export function formFreightToApi(freight: "pagado" | "cobrar"): "prepaid" | "col
 
 const DEFAULT_CONTACTS: Supplier["contacts"] = [
     { id: "default-1", jobTitleId: null, name: "", phone: "" },
-    { id: "default-2", jobTitleId: null, name: "", phone: "" },
 ];
 
 const DEFAULT_BANK_ACCOUNT: Supplier["bankAccounts"] = [
     { id: "default-1", bank: "", city: "", branch: "", account: "" },
-];
-
-const DEFAULT_PROMOTION: Supplier["promotions"] = [
-    { id: "default-1", description: "", percentage: "", startDate: "", endDate: "" },
 ];
 
 export function getDefaultFormState(): SupplierFormState {
@@ -73,7 +68,7 @@ export function getDefaultFormState(): SupplierFormState {
         creditJobTitleId: null,
         creditPhone: "",
         bankAccounts: [...DEFAULT_BANK_ACCOUNT],
-        promotions: [...DEFAULT_PROMOTION],
+        promotions: [],
     };
 }
 
@@ -119,7 +114,7 @@ export function supplierDetailToFormState(d: SupplierDetail): SupplierFormState 
                       startDate: p.startDate,
                       endDate: p.endDate ?? "",
                   }))
-                : [...DEFAULT_PROMOTION],
+                : [],
     };
 }
 
@@ -236,14 +231,21 @@ export function formStateToPayload(
     initialPromotions: PromotionSnapshot = {},
 ): CreateSupplierPayload {
     const contactsPayload = state.contacts
-        .filter((c) => c.name.trim() !== "")
+        .filter((c, index) => {
+            if (index === 0) return true;
+            return (
+                c.jobTitleId != null ||
+                c.name.trim() !== "" ||
+                c.phone.trim() !== ""
+            );
+        })
         .map((c) => {
             const existing = isExistingId(String(c.id));
             return {
                 ...(existing ? { id: Number(c.id) } : {}),
-                jobTitleId: c.jobTitleId ?? undefined,
+                jobTitleId: c.jobTitleId as number,
                 name: c.name.trim(),
-                phone: c.phone.trim() || undefined,
+                phone: c.phone.trim(),
             };
         });
 
@@ -275,8 +277,8 @@ export function formStateToPayload(
         contacts: contactsPayload,
         creditData: {
             attention: state.creditAttention.trim(),
-            jobTitleId: state.creditJobTitleId ?? undefined,
-            phone: state.creditPhone.trim() || undefined,
+            jobTitleId: state.creditJobTitleId as number,
+            phone: state.creditPhone.trim(),
         },
         bankAccounts: bankAccountsPayload,
         promotionIds:

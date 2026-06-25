@@ -69,7 +69,7 @@ export function supplierFormReducer(
             };
         case "remove_contact": {
             const index = state.contacts.findIndex((contact) => contact.id === action.contactId);
-            if (index <= 1) return state;
+            if (index === 0) return state;
             return {
                 ...state,
                 contacts: removeItemById(state.contacts, action.contactId),

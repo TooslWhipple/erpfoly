@@ -25,14 +25,30 @@ export interface UserDetail {
     username: string;
     cellphone: string;
     roleId: number;
-    roleName: string;
-    branches: BranchItem[];
+    roleCode?: string;
+    roleName?: string;
+    branches?: BranchItem[];
     branchIds: number[];
+    driverDetails?: UserDriverDetails;
+}
+
+export interface UserAddressDetails {
+    postalCode: string | null;
+    neighborhoodFullCode: string;
+    street: string;
+    externalNumber: string | null;
+    internalNumber: string | null;
+}
+
+export interface UserDriverDetails {
+    licenseNumber: string | null;
+    address?: UserAddressDetails;
 }
 
 export interface RoleItem {
     id: number;
     name: string;
+    code: string;
 }
 
 export interface BranchItem {
@@ -54,6 +70,17 @@ export interface GetUsersResponse {
     totalPages: number;
 }
 
+export interface UserDriverDetailsPayload {
+    licenseNumber: string;
+    address?: {
+        postalCode: string;
+        neighborhoodFullCode: string;
+        street: string;
+        externalNumber: string;
+        internalNumber?: string;
+    };
+}
+
 export interface CreateUserPayload {
     firstName: string;
     lastName: string;
@@ -63,6 +90,7 @@ export interface CreateUserPayload {
     password: string;
     roleId: number;
     branchIds: number[];
+    driverDetails?: UserDriverDetailsPayload;
 }
 
 export interface UpdateUserPayload {
@@ -74,6 +102,7 @@ export interface UpdateUserPayload {
     password?: string;
     roleId?: number;
     branchIds?: number[];
+    driverDetails?: UserDriverDetailsPayload;
 }
 
 // ============================================================================
@@ -113,6 +142,7 @@ export async function createUser(
         password: payload.password,
         roleId: payload.roleId,
         branchIds: payload.branchIds,
+        ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
     };
     return post<ApiSuccessPayload>(BASE, body);
 }
@@ -130,6 +160,7 @@ export async function updateUser(
     if (payload.password !== undefined) body.password = payload.password;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
+    if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
 }
 

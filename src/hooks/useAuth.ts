@@ -30,9 +30,9 @@ export function useAuth() {
 		if (typeof router.query.redirect === "string") query.redirect = router.query.redirect;
 		
 		const search = new URLSearchParams(query).toString();
-		
+
 		router.push(search ? `/login/validate-otp?${search}` : "/login/validate-otp");
-		
+
 		setIsLoading(false);
 		setLoading(false);
 	};

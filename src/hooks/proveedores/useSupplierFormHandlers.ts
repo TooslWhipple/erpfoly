@@ -1,9 +1,13 @@
 import { useCallback } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import {
+    sanitizeRfc,
+    sanitizePhone,
+    SUPPLIER_TEXT_MAX_LENGTH,
+} from "@/forms/validation/schemas";
 import type {
     BankAccount,
     GeneralFormValues,
-    Promotion,
     SupplierContact,
 } from "@/types/proveedores.types";
 import type { SupplierFormAction } from "./supplierForm.reducer";
@@ -15,6 +19,16 @@ interface UseSupplierFormHandlersParams {
     createTempId: () => string;
 }
 
+const GENERAL_TEXT_MAX_FIELDS = new Set<keyof GeneralFormValues>(["name", "businessName"]);
+
+function clampSupplierText(value: string): string {
+    return value.slice(0, SUPPLIER_TEXT_MAX_LENGTH);
+}
+
+function contactErrorKey(contactIndex: number, field: keyof SupplierContact): string {
+    return `contacts.${contactIndex}.${field}`;
+}
+
 export function useSupplierFormHandlers({
     dispatchForm,
     errors,
@@ -23,7 +37,13 @@ export function useSupplierFormHandlers({
 }: UseSupplierFormHandlersParams) {
     const handleGeneralFieldChange = useCallback(
         (field: keyof GeneralFormValues, value: string) => {
-            dispatchForm({ type: "update_general_field", field, value });
+            const nextValue =
+                field === "rfc"
+                    ? sanitizeRfc(value)
+                    : GENERAL_TEXT_MAX_FIELDS.has(field)
+                      ? clampSupplierText(value)
+                      : value;
+            dispatchForm({ type: "update_general_field", field, value: nextValue });
             if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
         },
         [dispatchForm, errors, setErrors],
@@ -43,19 +63,40 @@ export function useSupplierFormHandlers({
     const handleContactChange = useCallback(
         (
             contactId: string,
+            contactIndex: number,
             field: keyof SupplierContact,
             value: string | number | null,
         ) => {
-            dispatchForm({ type: "update_contact", contactId, field, value });
+            const nextValue =
+                field === "phone" && typeof value === "string"
+                    ? sanitizePhone(value)
+                    : field === "name" && typeof value === "string"
+                      ? clampSupplierText(value)
+                      : value;
+            dispatchForm({ type: "update_contact", contactId, field, value: nextValue });
+            const errorKey = contactErrorKey(contactIndex, field);
+            if (errors[errorKey]) {
+                setErrors((prev) => ({ ...prev, [errorKey]: "" }));
+            }
         },
-        [dispatchForm],
+        [dispatchForm, errors, setErrors],
     );
 
     const handleCreditDataChange = useCallback(
         (field: "attention" | "jobTitleId" | "phone", value: string | number | null) => {
-            dispatchForm({ type: "update_credit_data", field, value });
+            const nextValue =
+                field === "phone" && typeof value === "string"
+                    ? sanitizePhone(value)
+                    : field === "attention" && typeof value === "string"
+                      ? clampSupplierText(value)
+                      : value;
+            dispatchForm({ type: "update_credit_data", field, value: nextValue });
+            const errorKey = `creditData.${field}`;
+            if (errors[errorKey]) {
+                setErrors((prev) => ({ ...prev, [errorKey]: "" }));
+            }
         },
-        [dispatchForm],
+        [dispatchForm, errors, setErrors],
     );
 
     const handleAddBankAccount = useCallback(() => {
@@ -76,24 +117,6 @@ export function useSupplierFormHandlers({
         [dispatchForm],
     );
 
-    const handleAddPromotion = useCallback(() => {
-        dispatchForm({ type: "add_promotion", id: createTempId() });
-    }, [dispatchForm, createTempId]);
-
-    const handleRemovePromotion = useCallback(
-        (promotionId: string) => {
-            dispatchForm({ type: "remove_promotion", promotionId });
-        },
-        [dispatchForm],
-    );
-
-    const handlePromotionChange = useCallback(
-        (promotionId: string, field: keyof Promotion, value: string) => {
-            dispatchForm({ type: "update_promotion", promotionId, field, value });
-        },
-        [dispatchForm],
-    );
-
     return {
         handleGeneralFieldChange,
         handleAddContact,
@@ -103,8 +126,5 @@ export function useSupplierFormHandlers({
         handleAddBankAccount,
         handleRemoveBankAccount,
         handleBankAccountChange,
-        handleAddPromotion,
-        handleRemovePromotion,
-        handlePromotionChange,
     };
 }

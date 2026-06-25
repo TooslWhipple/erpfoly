@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { TextField, Typography, Button, LinearProgress } from "@mui/material";
+import { TextField, Button, LinearProgress, TableCell as MuiTableCell, TableContainer } from "@mui/material";
 
 export type CashRegisterStatus = "open" | "closed";
 
@@ -110,6 +110,27 @@ export const BalanceInfoItem = styled('div')(({ theme }) => ({
     gap: theme.spacing(0.5),
 }));
 
+export const DashboardHistoryTableContainer = styled(TableContainer, {
+    shouldForwardProp: (prop) => prop !== "hasFade",
+})<{ hasFade?: boolean }>(({ hasFade }) => ({
+    overflowX: "auto",
+    ...(hasFade
+        ? {
+            maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+        }
+        : {}),
+}));
+
+export const HistoryTableCard = styled('div')(({ theme }) => ({
+    display: 'block',
+    width: '100%',
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: "16px",
+    border: `1px solid ${theme.palette.app.border}`,
+    padding: "24px",
+}));
+
 export const ViewAllLink = styled(Button)(({ theme }) => ({
     textTransform: "none",
     color: theme.palette.text.primary,
@@ -119,24 +140,19 @@ export const ViewAllLink = styled(Button)(({ theme }) => ({
     },
 }));
 
-export const HistoryTable = styled('div')(({ theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-}));
-
-export const HistoryTableHeader = styled('div')(({ theme }) => ({
-    display: "grid",
-    gridTemplateColumns: "80px 1fr 1fr 1fr 1fr",
-    gap: theme.spacing(2),
-    paddingBottom: theme.spacing(1),
-    borderBottom: `1px solid ${theme.palette.app.border}`,
-    marginBottom: theme.spacing(1.5),
-}));
-
-export const HistoryTableHeaderCell = styled(Typography)(({ theme }) => ({
-    fontSize: "14px",
+export const TableHeaderCell = styled(MuiTableCell)(({ theme }) => ({
+    fontSize: 14,
     fontWeight: 500,
-    color: theme.palette.text.secondary
+    color: theme.palette.text.secondary,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
+    padding: "10px 8px",
+}));
+
+export const TableCell = styled(MuiTableCell)(({ theme }) => ({
+    fontSize: 14,
+    color: theme.palette.text.primary,
+    borderBottom: `1px solid ${theme.palette.app.border}`,
+    padding: "10px 8px",
 }));
 
 export const BreakdownItem = styled('div')(({ theme }) => ({

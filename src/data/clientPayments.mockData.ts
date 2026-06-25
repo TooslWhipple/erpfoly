@@ -105,35 +105,112 @@ export async function getClientPaymentContext(
   };
 }
 
-export async function searchClientForPayment(
+export interface ClientSearchResultMock {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string;
+  paymentStatus: "overdue" | "current";
+  address: string;
+  searchTerms: string[];
+}
+
+type ClientSearchResultItem = Omit<ClientSearchResultMock, "searchTerms">;
+
+const MOCK_CLIENT_SEARCH_CATALOG: ClientSearchResultMock[] = [
+  {
+    id: 5001,
+    fullName: "Jose Antonio Montes Molina",
+    phone: "667 123 4567",
+    email: "jose.montes@gmail.com",
+    paymentStatus: "overdue",
+    address: "Circuito Universitario 2322. Colonia Universitaria. Culiacán, Sinaloa. Mexico",
+    searchTerms: ["jose", "antonio", "montes", "momj", "5001"],
+  },
+  {
+    id: 138,
+    fullName: "Jose Antonio Garcia Espino",
+    phone: "667 123 4567",
+    email: "jose.montes@gmail.com",
+    paymentStatus: "current",
+    address: "Av. Alvaro Obregon 1450. Colonia Centro. Culiacán, Sinaloa. Mexico",
+    searchTerms: ["jose", "antonio", "garcia", "0138", "138"],
+  },
+  {
+    id: 2241,
+    fullName: "Jose Antonio Del Castillo",
+    phone: "667 123 4567",
+    email: "jose.montes@gmail.com",
+    paymentStatus: "overdue",
+    address: "Blvd. Pedro Infante 890. Colonia Guadalupe. Culiacán, Sinaloa. Mexico",
+    searchTerms: ["jose", "antonio", "castillo", "2241"],
+  },
+  {
+    id: 5522,
+    fullName: "Jose Antonio Ramirez Vega",
+    phone: "667 123 4567",
+    email: "jose.montes@gmail.com",
+    paymentStatus: "current",
+    address: "Calle Rio Fuerte 456. Colonia Jardines. Culiacán, Sinaloa. Mexico",
+    searchTerms: ["jose", "antonio", "ramirez", "5522"],
+  },
+  {
+    id: 2,
+    fullName: "María García López",
+    phone: "55 1234 5678",
+    email: "maria.garcia@gmail.com",
+    paymentStatus: "current",
+    address: "Calle Reforma 120. Colonia Centro. Ciudad de México. Mexico",
+    searchTerms: ["maria", "garcia", "lopez", "2"],
+  },
+  {
+    id: 3,
+    fullName: "Carlos Hernández Ruiz",
+    phone: "55 9876 5432",
+    email: "carlos.hernandez@gmail.com",
+    paymentStatus: "overdue",
+    address: "Av. Insurgentes 340. Colonia Roma. Ciudad de México. Mexico",
+    searchTerms: ["carlos", "hernandez", "ruiz", "3"],
+  },
+];
+
+function matchesClientSearch(client: ClientSearchResultMock, normalizedQuery: string): boolean {
+  const compactId = String(client.id);
+  const paddedId = compactId.padStart(4, "0");
+
+  return (
+    client.fullName.toLowerCase().includes(normalizedQuery)
+    || client.searchTerms.some((term) => term.includes(normalizedQuery) || normalizedQuery.includes(term))
+    || compactId.includes(normalizedQuery)
+    || paddedId.includes(normalizedQuery)
+  );
+}
+
+export async function searchClientsForPayment(
   query: string,
-): Promise<{ id: string; fullName: string; clientCode: string } | null> {
+): Promise<ClientSearchResultItem[]> {
   await delay(300);
 
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return null;
+  if (!normalized) return [];
 
-  const match = Object.entries(CLIENT_NAMES).find(([, client]) =>
-    client.fullName.toLowerCase().includes(normalized),
-  );
+  return MOCK_CLIENT_SEARCH_CATALOG
+    .filter((client) => matchesClientSearch(client, normalized))
+    .map(({ searchTerms: _searchTerms, ...client }) => client);
+}
 
-  if (match) {
-    return {
-      id: match[0],
-      fullName: match[1].fullName,
-      clientCode: "MOMJ113003TY5",
-    };
-  }
+export async function searchClientForPayment(
+  query: string,
+): Promise<{ id: string; fullName: string; clientCode: string } | null> {
+  const results = await searchClientsForPayment(query);
+  if (results.length === 0) return null;
 
-  if (normalized.includes("momj") || normalized.includes("jose")) {
-    return {
-      id: "1",
-      fullName: CLIENT_NAMES["1"].fullName,
-      clientCode: "MOMJ113003TY5",
-    };
-  }
-
-  return null;
+  const client = results[0];
+  return {
+    id: String(client.id),
+    fullName: client.fullName,
+    clientCode: "MOMJ113003TY5",
+  };
 }
 
 function distributePayment(

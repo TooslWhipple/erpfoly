@@ -169,7 +169,7 @@ const navItems: NavItem[] = [
     path: "/catalogos",
     icon: <LayoutList size={ICON_SIZE} />,
     subItems: [
-      { label: "Productos", path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
+      { label: "Artículos", path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
       { label: "Departamentos", path: "/catalogos/departamentos", requirement: { permission: CATALOG_DEPARTMENTS_READ } },
       { label: "Promociones", path: "/catalogos/promociones", requirement: { permission: CATALOG_PROMOTIONS_READ } },
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },
@@ -327,15 +327,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <NotificationInbox />
         </Stack>
 
-        {canCreateCreditApplication && (
-          <Button
-            variant="outlined"
-            startIcon={<Plus size={18} />}
-            onClick={handleOpenNewCreditApplicationIntake}
-          >
-            Nueva solicitud
-          </Button>
-        )}
+        {
+          canCreateCreditApplication && (
+            <Button
+              variant="outlined"
+              startIcon={<Plus size={18} />}
+              onClick={handleOpenNewCreditApplicationIntake}>
+              Nueva solicitud
+            </Button>
+          )
+        }
 
         <List component="nav" disablePadding>
           {visibleNavItems.map((item) => {
@@ -427,8 +428,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         variant={isMobile ? "temporary" : "permanent"}
         open={isMobile ? open : true}
         onClose={onClose}
-        isMobile={isMobile}
-      >
+        isMobile={isMobile}>
         {drawerContent}
       </StyledDrawer>
 

@@ -12,8 +12,8 @@ import type {
   RouteDetailApi,
   RouteDriverCandidateApi,
   RouteListRowApi,
+  OrderToAddApi,
 } from "@/types/rutas-api.types";
-import type { ArticleToAdd } from "@/types/rutas.types";
 
 export async function fetchRoutesForDate(params: {
   routeDate: string;
@@ -35,19 +35,26 @@ export async function fetchRouteDetail(routeId: number) {
   return get<RouteDetailApi>(`/routes/${routeId}`);
 }
 
-export async function fetchAvailableProducts(routeId: number, page = 1) {
+export async function fetchAvailableOrders(
+  routeId: number,
+  page = 1,
+  search?: string,
+) {
   const searchParams = new URLSearchParams({
     page: String(page),
     limit: "100",
   });
-  return get<PaginatedRowsApi<ArticleToAdd>>(
-    `/routes/${routeId}/available-products?${searchParams.toString()}`,
+  if (search?.trim()) {
+    searchParams.set("search", search.trim());
+  }
+  return get<PaginatedRowsApi<OrderToAddApi>>(
+    `/routes/${routeId}/available-orders?${searchParams.toString()}`,
   );
 }
 
-export async function addProductsToRoute(routeId: number, productIds: number[]) {
-  return post<RouteDetailApi>(`/routes/${routeId}/products`, {
-    product_ids: productIds,
+export async function addOrdersToRoute(routeId: number, orderIds: number[]) {
+  return post<RouteDetailApi>(`/routes/${routeId}/orders`, {
+    order_ids: orderIds,
   });
 }
 

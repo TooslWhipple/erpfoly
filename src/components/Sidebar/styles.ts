@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { Avatar, Box, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
+import { Avatar, Drawer, ListItemButton, ListItemIcon, Typography } from "@mui/material";
 import { ChevronDown, ChevronUp } from "@/components/Icons";
 import { SIDEBAR_WIDTH, theme } from "@/styles/theme";
 interface StyledDrawerProps {
@@ -8,24 +8,31 @@ interface StyledDrawerProps {
 
 export const StyledDrawer = styled(Drawer, {
   shouldForwardProp: (prop) => prop !== "isMobile",
-})<StyledDrawerProps>(({ isMobile }) => ({
-  width: isMobile ? 0 : SIDEBAR_WIDTH,
+})<StyledDrawerProps>(({ theme, isMobile }) => ({
+  width: (isMobile) ? 0 : SIDEBAR_WIDTH,
   flexShrink: 0,
   "& .MuiDrawer-paper": {
     width: SIDEBAR_WIDTH,
     boxSizing: "border-box",
-    backgroundColor: theme.palette.background.paper,
-    borderRight: `1px solid ${theme.palette.app.border}`,
-    overflow: "visible",
+    display: "flex",
+    flexDirection: "column",
+    height: (isMobile) ? "100vh" : `calc(100vh - 48px)`,
+    marginTop: (isMobile) ? 0 : "16px",
+    marginLeft: (isMobile) ? 0 : "16px",
+    padding: theme.spacing(1),
+    overflow: "hidden",
+    backgroundColor: (isMobile) ? theme.palette.background.paper : "transparent",
+    borderRadius: (isMobile) ? 0 : "8px",
+    border: (isMobile) ? "none" : `1px solid ${theme.palette.app.border}`,
   },
 }));
 
-export const NavigationContainer = styled(Box)(() => ({
+export const NavigationContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   flex: 1,
-  padding: `${theme.spacing(2)} ${theme.spacing(1)} 0px`,
-  gap: theme.spacing(3),
+  minHeight: 0,
+  gap: theme.spacing(2),
   overflowY: "auto",
 }));
 
@@ -89,12 +96,11 @@ export const CollapseIcon = styled(ChevronUp)({
   flexShrink: 0,
 });
 
-export const UserProfileContainer = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(1.5),
-  borderTop: `1px solid ${theme.palette.app.border}`,
+export const UserProfileContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1),
+  flexShrink: 0,
 }));
 
 export const UserAvatar = styled(Avatar)({
@@ -103,7 +109,7 @@ export const UserAvatar = styled(Avatar)({
   flexShrink: 0,
 });
 
-export const UserInfoContainer = styled(Box)({
+export const UserInfoContainer = styled('div')({
   flex: 1,
   minWidth: 0,
   overflow: "hidden",

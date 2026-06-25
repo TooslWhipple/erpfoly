@@ -17,7 +17,6 @@ import {
 	FormWrapper,
 	LogoContainer,
 	Form,
-	LoginTitle,
 	StyledTextField,
 	RecoveryRow,
 	RecoveryLink,
@@ -62,7 +61,7 @@ export default function LoginPage() {
 					/>
 				</LogoContainer>
 				<FormWrapper>
-					<LoginTitle>Ingresa a tu cuenta</LoginTitle>
+					<Typography variant="h1" textAlign="center">Ingresa a tu cuenta</Typography>
 
 					<Form id="login-form" method="post" action="/login" onSubmit={handleLogin}>
 						<StyledTextField

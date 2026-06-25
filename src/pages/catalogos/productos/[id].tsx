@@ -780,6 +780,7 @@ export default function ProductFormPage() {
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
                             variant="option"
+                            color="inherit"
                             onClick={handleDiscard}
                             disabled={saving}>
                             Descartar cambios

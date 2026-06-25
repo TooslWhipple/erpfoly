@@ -182,6 +182,7 @@ export default function CreditApplicationReviewPage() {
                     <Button
                       fullWidth
                       variant="option"
+                      color="inherit"
                       style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                       onClick={() => setRequestAdditionalInfoOpen(true)}
                       disabled={detail.status === 'CANCELLED'}>

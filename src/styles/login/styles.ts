@@ -69,23 +69,6 @@ export const LogoContainer = styled(Box)({
 	flexShrink: 0,
 });
 
-export const LoginTitle = styled(Typography)(({ theme }) => ({
-	...theme.typography.h1,
-	textAlign: "center",
-	width: "100%",
-	[theme.breakpoints.down("sm")]: {
-		fontSize: 26,
-		lineHeight: 1.25,
-	},
-}));
-
-export const LoginDescription = styled(Typography)(({ theme }) => ({
-	textAlign: "center",
-	color: theme.palette.text.secondary,
-	width: "100%",
-	paddingInline: theme.spacing(0.5),
-}));
-
 export const Form = styled("form")(({ theme }) => ({
 	display: "flex",
 	flexDirection: "column",

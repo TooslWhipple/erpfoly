@@ -111,13 +111,13 @@
     },
     {
       "code": "catalogos-productos",
-      "name": "Catálogo de productos",
+      "name": "Catálogo de artículos",
       "path": "/catalogos/productos",
       "actions": ["view", "create", "edit", "delete"]
     },
     {
       "code": "catalogos-productos-detalle",
-      "name": "Detalle de producto",
+      "name": "Detalle de artículo",
       "path": "/catalogos/productos/[id]",
       "actions": ["view", "edit"]
     },

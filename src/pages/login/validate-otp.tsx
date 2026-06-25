@@ -19,7 +19,6 @@ import {
 	LogoContainer,
 	FormWrapper,
 	Form,
-	LoginTitle,
 	StyledTextField,
 	BackLink,
 	RecoveryRow,
@@ -135,7 +134,7 @@ export default function ValidateOtpPage() {
 				</LogoContainer>
 
 				<FormWrapper>
-					<LoginTitle>Verifica tu cuenta</LoginTitle>
+					<Typography variant="h1" textAlign="center">Verifica tu cuenta</Typography>
 
 					<BackLink href="/login" onClick={handleBackToLogin}>
 						<ArrowLeft size={16} color={theme.palette.text.secondary} />

@@ -5,6 +5,7 @@ import {
 	Button,
 	CircularProgress,
 	InputAdornment,
+	Typography,
 	useTheme,
 } from "@mui/material";
 import { ArrowLeft, IdCard } from "lucide-react";
@@ -22,8 +23,6 @@ import {
 	LogoContainer,
 	FormWrapper,
 	Form,
-	LoginTitle,
-	LoginDescription,
 	StyledTextField,
 	BackLink,
 } from "@/styles/login/styles";
@@ -65,17 +64,14 @@ export default function RecoverPasswordPage() {
 				</LogoContainer>
 
 				<FormWrapper>
-					<LoginTitle>Recupera tu contraseña</LoginTitle>
+					<Typography variant="h1" textAlign="center">Recupera tu contraseña</Typography>
 
 					<BackLink href="/login" onClick={handleBackToLogin}>
 						<ArrowLeft size={16} color={theme.palette.text.secondary} />
 						Volver al inicio de sesión
 					</BackLink>
 
-					<LoginDescription variant="body2">
-						Ingresa tu número de empleado o celular. Te enviaremos un enlace por WhatsApp para que
-						crees una nueva contraseña.
-					</LoginDescription>
+					<Typography variant="body2" color="text.secondary" textAlign="center">Ingresa tu número de celular. Te enviaremos un enlace por WhatsApp para que crees una nueva contraseña.</Typography>
 
 					<Form onSubmit={handleSubmit}>
 						<StyledTextField

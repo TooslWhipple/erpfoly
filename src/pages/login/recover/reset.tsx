@@ -24,8 +24,6 @@ import {
 	LogoContainer,
 	FormWrapper,
 	Form,
-	LoginTitle,
-	LoginDescription,
 	StyledTextField,
 	RecoveryLink,
 } from "@/styles/login/styles";
@@ -124,104 +122,102 @@ export default function ResetPasswordPage() {
 				</LogoContainer>
 
 				<FormWrapper>
-					<LoginTitle>Crea una nueva contraseña</LoginTitle>
+					<Typography variant="h1" textAlign="center">Crea una nueva contraseña</Typography>
+					<Typography variant="body2" color="text.secondary" textAlign="center">Ingresa y confirma tu nueva contraseña para recuperar el acceso a tu cuenta.</Typography>
 
-					<LoginDescription variant="body2">
-						Ingresa y confirma tu nueva contraseña para recuperar el acceso a tu cuenta.
-					</LoginDescription>
+					{
+						isValidatingToken ?
+							<CircularProgress />
+							:
+							<Form onSubmit={handleSubmit}>
+								<StyledTextField
+									label="Nueva contraseña *"
+									placeholder="Ingresa tu nueva contraseña"
+									type={showNewPassword ? "text" : "password"}
+									value={newPassword}
+									onChange={(event) => {
+										clearError();
+										setNewPassword(sanitizePasswordInput(event.target.value));
+									}}
+									error={!!passwordError}
+									helperText={passwordError}
+									fullWidth
+									autoFocus
+									disabled={formDisabled}
+									InputProps={{
+										startAdornment: (
+											<InputAdornment position="start">
+												<Lock size={20} color={theme.palette.text.secondary} />
+											</InputAdornment>
+										),
+										endAdornment: (
+											<PasswordFieldAdornment
+												length={newPassword.length}
+												showPassword={showNewPassword}
+												onToggleVisibility={() => setShowNewPassword((value) => !value)}
+												iconColor={theme.palette.text.secondary}
+												disabled={formDisabled}
+											/>
+										),
+									}}
+								/>
 
-					{isValidatingToken ? (
-						<CircularProgress />
-					) : (
-						<Form onSubmit={handleSubmit}>
-							<StyledTextField
-								label="Nueva contraseña *"
-								placeholder="Ingresa tu nueva contraseña"
-								type={showNewPassword ? "text" : "password"}
-								value={newPassword}
-								onChange={(event) => {
-									clearError();
-									setNewPassword(sanitizePasswordInput(event.target.value));
-								}}
-								error={!!passwordError}
-								helperText={passwordError}
-								fullWidth
-								autoFocus
-								disabled={formDisabled}
-								InputProps={{
-									startAdornment: (
-										<InputAdornment position="start">
-											<Lock size={20} color={theme.palette.text.secondary} />
-										</InputAdornment>
-									),
-									endAdornment: (
-										<PasswordFieldAdornment
-											length={newPassword.length}
-											showPassword={showNewPassword}
-											onToggleVisibility={() => setShowNewPassword((value) => !value)}
-											iconColor={theme.palette.text.secondary}
-											disabled={formDisabled}
-										/>
-									),
-								}}
-							/>
+								<StyledTextField
+									label="Confirma tu nueva contraseña *"
+									placeholder="Confirma tu nueva contraseña"
+									type={showConfirmPassword ? "text" : "password"}
+									value={confirmPassword}
+									onChange={(event) => {
+										clearError();
+										setConfirmPassword(sanitizePasswordInput(event.target.value));
+									}}
+									error={!!confirmFieldError}
+									helperText={confirmFieldError}
+									fullWidth
+									disabled={formDisabled}
+									InputProps={{
+										startAdornment: (
+											<InputAdornment position="start">
+												<Lock size={20} color={theme.palette.text.secondary} />
+											</InputAdornment>
+										),
+										endAdornment: (
+											<PasswordFieldAdornment
+												length={confirmPassword.length}
+												showPassword={showConfirmPassword}
+												onToggleVisibility={() => setShowConfirmPassword((value) => !value)}
+												iconColor={theme.palette.text.secondary}
+												disabled={formDisabled}
+											/>
+										),
+									}}
+								/>
 
-							<StyledTextField
-								label="Confirma tu nueva contraseña *"
-								placeholder="Confirma tu nueva contraseña"
-								type={showConfirmPassword ? "text" : "password"}
-								value={confirmPassword}
-								onChange={(event) => {
-									clearError();
-									setConfirmPassword(sanitizePasswordInput(event.target.value));
-								}}
-								error={!!confirmFieldError}
-								helperText={confirmFieldError}
-								fullWidth
-								disabled={formDisabled}
-								InputProps={{
-									startAdornment: (
-										<InputAdornment position="start">
-											<Lock size={20} color={theme.palette.text.secondary} />
-										</InputAdornment>
-									),
-									endAdornment: (
-										<PasswordFieldAdornment
-											length={confirmPassword.length}
-											showPassword={showConfirmPassword}
-											onToggleVisibility={() => setShowConfirmPassword((value) => !value)}
-											iconColor={theme.palette.text.secondary}
-											disabled={formDisabled}
-										/>
-									),
-								}}
-							/>
+								<Button
+									fullWidth
+									type="submit"
+									variant="contained"
+									color="primary"
+									disabled={!canSubmit}
+								>
+									{(isLoading) ? <CircularProgress size={24} color="inherit" /> : "Crear nueva contraseña"}
+								</Button>
 
-							<Button
-								fullWidth
-								type="submit"
-								variant="contained"
-								color="primary"
-								disabled={!canSubmit}
-							>
-								{isLoading ? <CircularProgress size={24} color="inherit" /> : "Crear nueva contraseña"}
-							</Button>
-
-							{tokenError && (
-								<Typography variant="body2" color="text.secondary" textAlign="center">
-									<RecoveryLink
-										href="/login/recover"
-										onClick={(event: React.MouseEvent) => {
-											event.preventDefault();
-											router.push("/login/recover");
-										}}
-									>
-										Solicitar un nuevo enlace
-									</RecoveryLink>
-								</Typography>
-							)}
-						</Form>
-					)}
+								{
+									tokenError &&
+									<Typography variant="body2" color="text.secondary" textAlign="center">
+										<RecoveryLink
+											href="/login/recover"
+											onClick={(event: React.MouseEvent) => {
+												event.preventDefault();
+												router.push("/login/recover");
+											}}>
+											Solicitar un nuevo enlace
+										</RecoveryLink>
+									</Typography>
+								}
+							</Form>
+					}
 				</FormWrapper>
 			</RightPanel>
 		</PageContainer>

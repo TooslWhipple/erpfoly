@@ -137,7 +137,7 @@ export function GalleryTab({
         <FormCard>
             <Stack spacing={0.5}>
                 <Typography variant="h6">Galería</Typography>
-                <Typography variant="body2" color="text.secondary">Agrega imágenes del producto. Puedes arrastrar archivos aquí o usar el botón de agregar.</Typography>
+                <Typography variant="body2" color="text.secondary">Agrega imágenes del artículo. Puedes arrastrar archivos aquí o usar el botón de agregar.</Typography>
             </Stack>
             <Divider />
             <Box

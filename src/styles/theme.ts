@@ -1,6 +1,20 @@
-import { createTheme, darken } from "@mui/material/styles";
+import { createTheme, darken, type Theme } from "@mui/material/styles";
 
-export const SIDEBAR_WIDTH = 240;
+const optionButtonBase = (theme: Theme) => ({
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+  "&:hover": {
+    backgroundColor: darken(theme.palette.background.paper, 0.05),
+    borderColor: darken(theme.palette.app.border, 0.05),
+  },
+  "&.Mui-disabled": {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.action.disabled,
+    borderColor: theme.palette.action.disabledBackground,
+  },
+});
+
+export const SIDEBAR_WIDTH = 256;
 export const CONTENT_PADDING = 32;
 
 /** Tokens de aplicación (sidebar, chips, bordes). Expuesto en theme.palette.app */
@@ -262,18 +276,26 @@ export const theme = createTheme({
         {
           props: { variant: "option" },
           style: ({ theme }) => ({
-            backgroundColor: theme.palette.background.paper,
+            ...optionButtonBase(theme),
             color: theme.palette.text.primary,
-            border: `1px solid ${theme.palette.app.border}`,
-            "&:hover": {
-              backgroundColor: darken(theme.palette.background.paper, 0.05),
-              borderColor: darken(theme.palette.app.border, 0.05),
-            },
-            "&.Mui-disabled": {
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.action.disabled,
-              borderColor: theme.palette.action.disabledBackground,
-            },
+          }),
+        },
+        {
+          props: { variant: "option", color: "primary" },
+          style: ({ theme }) => ({
+            color: theme.palette.primary.main,
+          }),
+        },
+        {
+          props: { variant: "option", color: "error" },
+          style: ({ theme }) => ({
+            color: theme.palette.error.main,
+          }),
+        },
+        {
+          props: { variant: "option", color: "inherit" },
+          style: ({ theme }) => ({
+            color: theme.palette.text.primary,
           }),
         },
         {

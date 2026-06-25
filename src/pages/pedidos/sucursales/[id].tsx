@@ -175,6 +175,7 @@ export default function PedidoSucursalDetalle() {
                             {canEdit && (
                                 <Button
                                     variant="option"
+                                    color="inherit"
                                     startIcon={<Pencil size={16} color={theme.palette.text.secondary} />}
                                     onClick={handleEdit}>
                                     Editar

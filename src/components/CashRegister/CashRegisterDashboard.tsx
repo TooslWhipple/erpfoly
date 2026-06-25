@@ -58,6 +58,7 @@ export function CashRegisterDashboard({
                             canCut &&
                             <Button
                                 variant="option"
+                                color="inherit"
                                 onClick={onCut}
                                 sx={{ minWidth: { xs: "100%", sm: "144px" } }}>
                                 Realizar corte
@@ -67,6 +68,7 @@ export function CashRegisterDashboard({
                             canWithdraw &&
                             <Button
                                 variant="option"
+                                color="inherit"
                                 onClick={onWithdrawal}
                                 sx={{ minWidth: { xs: "100%", sm: "144px" } }}>
                                 Realizar retiro

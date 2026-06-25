@@ -330,8 +330,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {
           canCreateCreditApplication && (
             <Button
-              variant="outlined"
-              startIcon={<Plus size={18} />}
+              variant="option"
+              color="primary"
+              fullWidth
+              startIcon={<Plus size={16} color={theme.palette.primary.light} strokeWidth={3} />}
               onClick={handleOpenNewCreditApplicationIntake}>
               Nueva solicitud
             </Button>
@@ -356,8 +358,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                     } else {
                       handleNavigation(item.path);
                     }
-                  }}
-                >
+                  }}>
                   <NavItemIcon active={active}>{item.icon}</NavItemIcon>
                   <ListItemText
                     primary={item.label}
@@ -366,33 +367,38 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       noWrap: true,
                     }}
                   />
-                  {hasSubItems && (isOpen ? <CollapseIcon /> : <ExpandIcon />)}
+                  {
+                    hasSubItems && (isOpen ? <CollapseIcon /> : <ExpandIcon />)
+                  }
                 </NavItemButton>
 
-                {hasSubItems && (
-                  <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                    <List component="div" disablePadding>
-                      {item.subItems!.map((subItem) => {
-                        const subActive = isPathActive(subItem.path, router.pathname, subPaths);
-                        return (
-                          <SubItemButton
-                            key={subItem.path}
-                            active={subActive}
-                            onClick={() => handleNavigation(subItem.path)}
-                          >
-                            <ListItemText
-                              primary={subItem.label}
-                              primaryTypographyProps={{
-                                variant: "body1",
-                                noWrap: true,
-                              }}
-                            />
-                          </SubItemButton>
-                        );
-                      })}
-                    </List>
-                  </Collapse>
-                )}
+                {
+                  hasSubItems && (
+                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {
+                          item.subItems!.map((subItem) => {
+                            const subActive = isPathActive(subItem.path, router.pathname, subPaths);
+                            return (
+                              <SubItemButton
+                                key={subItem.path}
+                                active={subActive}
+                                onClick={() => handleNavigation(subItem.path)}>
+                                <ListItemText
+                                  primary={subItem.label}
+                                  primaryTypographyProps={{
+                                    variant: "body1",
+                                    noWrap: true,
+                                  }}
+                                />
+                              </SubItemButton>
+                            );
+                          })
+                        }
+                      </List>
+                    </Collapse>
+                  )
+                }
               </Box>
             );
           })}
@@ -429,7 +435,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         open={isMobile ? open : true}
         onClose={onClose}
         isMobile={isMobile}>
-        {drawerContent}
+        {
+          drawerContent
+        }
       </StyledDrawer>
 
       <CreditApplicationIntakeModal

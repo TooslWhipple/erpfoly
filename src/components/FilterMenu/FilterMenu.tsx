@@ -154,6 +154,7 @@ export function FilterMenu({
       <Button
         ref={buttonRef}
         variant="option"
+        color="inherit"
         startIcon={<ListFilter size={16} color={theme.palette.text.secondary} />}
         disabled={disabled}
         style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}

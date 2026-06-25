@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { Button, useMediaQuery, useTheme } from "@mui/material";
+import { Button, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { CheckCircle } from "lucide-react";
 import {
 	PageContainer,
@@ -8,8 +8,6 @@ import {
 	RightPanel,
 	LogoContainer,
 	FormWrapper,
-	LoginTitle,
-	LoginDescription,
 } from "@/styles/login/styles";
 
 export default function RecoverPasswordSentPage() {
@@ -32,18 +30,15 @@ export default function RecoverPasswordSentPage() {
 						strokeWidth={1.5}
 					/>
 
-					<LoginTitle>Revisa tu WhatsApp</LoginTitle>
+					<Typography variant="h1" textAlign="center">Revisa tu WhatsApp</Typography>
 
-					<LoginDescription variant="body2">
-						Hemos enviado un enlace de recuperación de contraseña a tu WhatsApp.
-					</LoginDescription>
+					<Typography variant="body2" color="text.secondary" textAlign="center">Hemos enviado un enlace de recuperación de contraseña a tu WhatsApp.</Typography>
 
 					<Button
 						fullWidth
 						variant="contained"
 						color="primary"
-						onClick={() => router.push("/login")}
-					>
+						onClick={() => router.push("/login")}>
 						Volver al inicio de sesión
 					</Button>
 				</FormWrapper>

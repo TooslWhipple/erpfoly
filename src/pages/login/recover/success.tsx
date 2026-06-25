@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { Button, useMediaQuery, useTheme } from "@mui/material";
+import { Button, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { CheckCircle } from "lucide-react";
 import {
 	PageContainer,
@@ -8,8 +8,6 @@ import {
 	RightPanel,
 	LogoContainer,
 	FormWrapper,
-	LoginTitle,
-	LoginDescription,
 } from "@/styles/login/styles";
 
 export default function RecoverPasswordSuccessPage() {
@@ -38,19 +36,18 @@ export default function RecoverPasswordSuccessPage() {
 						strokeWidth={1.5}
 					/>
 
-					<LoginTitle>Nueva contraseña establecida</LoginTitle>
+					<Typography variant="h1" textAlign="center">Nueva contraseña establecida</Typography>
 
-					<LoginDescription variant="body2">
+					<Typography variant="body2" color="text.secondary" textAlign="center">
 						Hemos guardado tu nueva contraseña. Ve a Inicio de sesión para ingresar con tus
 						nuevas credenciales.
-					</LoginDescription>
+					</Typography>
 
 					<Button
 						fullWidth
 						variant="contained"
 						color="primary"
-						onClick={() => router.push("/login")}
-					>
+						onClick={() => router.push("/login")}>
 						Volver al inicio de sesión
 					</Button>
 				</FormWrapper>

@@ -208,6 +208,7 @@ export default function ResumenPedido() {
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button
                             variant="option"
+                            color="inherit"
                             startIcon={<Pencil size={16} color={theme.palette.text.secondary} />}
                             onClick={handleEdit}>
                             Editar

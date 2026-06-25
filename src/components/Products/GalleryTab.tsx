@@ -137,9 +137,7 @@ export function GalleryTab({
         <FormCard>
             <Stack spacing={0.5}>
                 <Typography variant="h6">Galería</Typography>
-                <Typography variant="body2" color="text.secondary">
-                    Agrega imágenes del artículo. Puedes arrastrar archivos aquí o usar el botón de agregar.
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Agrega imágenes del artículo. Puedes arrastrar archivos aquí o usar el botón de agregar.</Typography>
             </Stack>
             <Divider />
             <Box
@@ -148,9 +146,8 @@ export function GalleryTab({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 sx={{
-                    marginTop: 2,
                     padding: dropHighlight && canAddMore ? 1.5 : 0,
-                    borderRadius: 1,
+                    borderRadius: "8px",
                     border:
                         dropHighlight && canAddMore
                             ? `2px dashed ${theme.palette.primary.main}`
@@ -172,14 +169,14 @@ export function GalleryTab({
                                     src={galleryImageDisplaySrc(image)}
                                     alt={`Product image ${index + 1}`}
                                 />
-                                <Typography variant="body1" textAlign="center">
-                                    {index === 0 ? "Principal" : "Adicional"}
-                                </Typography>
+                                <Typography variant="body1" textAlign="center">{index === 0 ? "Principal" : "Adicional"}</Typography>
                                 <GalleryOverlay data-gallery-overlay>
-                                    <GalleryIconButton onClick={(e) => handleEditClick(e, index)}>
+                                    <GalleryIconButton
+                                        onClick={(e) => handleEditClick(e, index)}>
                                         <EditIcon />
                                     </GalleryIconButton>
-                                    <GalleryIconButton onClick={(e) => handleRemoveClick(e, index)}>
+                                    <GalleryIconButton
+                                        onClick={(e) => handleRemoveClick(e, index)}>
                                         <CloseIcon />
                                     </GalleryIconButton>
                                 </GalleryOverlay>
@@ -193,26 +190,23 @@ export function GalleryTab({
                         ))
                     }
                     {
-                        canAddMore && (
-                            <GalleryItem onClick={handleAddClick}>
-                                <GalleryAddButton>
-                                    <ImagePlus size={24} strokeWidth={2} />
-                                    <Typography variant="body1" textAlign="center">
-                                        Agregar imagen
-                                    </Typography>
-                                </GalleryAddButton>
+                        canAddMore &&
+                        <GalleryItem onClick={handleAddClick}>
+                            <GalleryAddButton>
+                                <ImagePlus size={24} strokeWidth={2} />
                                 <Typography variant="body1" textAlign="center">
-                                    {images.length === 0 ? "Principal" : "Adicional"}
+                                    Agregar imagen
                                 </Typography>
-                                <HiddenFileInput
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleFileChange}
-                                />
-                            </GalleryItem>
-                        )
+                            </GalleryAddButton>
+                            <Typography variant="body1" textAlign="center">{images.length === 0 ? "Principal" : "Adicional"}</Typography>
+                            <HiddenFileInput
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleFileChange}
+                            />
+                        </GalleryItem>
                     }
                 </GalleryGrid>
             </Box>

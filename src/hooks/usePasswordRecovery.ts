@@ -22,7 +22,7 @@ export function usePasswordRecovery() {
 		const trimmed = identifier.trim();
 		const identifierError = getIdentifierValidationError(trimmed);
 		if (!trimmed || identifierError) {
-			setError(identifierError ?? "Ingresa tu número de empleado o celular");
+			setError(identifierError ?? "Ingresa tu número de celular");
 			return;
 		}
 

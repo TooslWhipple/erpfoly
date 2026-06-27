@@ -11,6 +11,7 @@ import type {
 } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
 import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
+import { StreetAddressFields } from "./StreetAddressFields";
 
 interface GuarantorTabProps {
   values: GuarantorTabValues;
@@ -111,20 +112,19 @@ export function GuarantorTab({
           />
         </Grid>
 
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Calle y número"
-            placeholder="Ingresa"
-            value={values.streetAndNumber}
-            onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
-            error={Boolean(errors.streetAndNumber)}
-            helperText={errors.streetAndNumber}
-            disabled={saving}
-            inputProps={{ maxLength: 128 }}
-          />
-        </Grid>
+        <StreetAddressFields
+          street={values.street}
+          externalNumber={values.externalNumber}
+          internalNumber={values.internalNumber}
+          fieldKeys={{
+            street: "street",
+            externalNumber: "externalNumber",
+            internalNumber: "internalNumber",
+          }}
+          errors={errors}
+          onFieldChange={onFieldChange}
+          disabled={saving}
+        />
 
         <Grid size={{ xs: 12 }}>
           <FormTextField

@@ -14,7 +14,9 @@ const EMPTY_SPOUSE_EMPLOYMENT_FIELDS: Pick<
   | "spouseNeighborhoodFullCode"
   | "spouseState"
   | "spouseCity"
-  | "spouseStreetAndNumber"
+  | "spouseStreet"
+  | "spouseExternalNumber"
+  | "spouseInternalNumber"
   | "spouseSeniorityYears"
   | "spousePosition"
   | "spouseDepartment"
@@ -26,7 +28,9 @@ const EMPTY_SPOUSE_EMPLOYMENT_FIELDS: Pick<
   spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
-  spouseStreetAndNumber: "",
+  spouseStreet: "",
+  spouseExternalNumber: "",
+  spouseInternalNumber: "",
   spouseSeniorityYears: "",
   spousePosition: "",
   spouseDepartment: "",
@@ -48,8 +52,11 @@ function validateSpouseEmploymentFields(
   }
   if (!values.spouseState.trim()) nextErrors.spouseState = "Estado es requerido";
   if (!values.spouseCity.trim()) nextErrors.spouseCity = "Ciudad es requerida";
-  if (!values.spouseStreetAndNumber.trim()) {
-    nextErrors.spouseStreetAndNumber = "Calle y número es requerido";
+  if (!values.spouseStreet.trim()) {
+    nextErrors.spouseStreet = "Calle es requerida";
+  }
+  if (!values.spouseExternalNumber.trim()) {
+    nextErrors.spouseExternalNumber = "Número exterior es requerido";
   }
   if (!values.spouseSeniorityYears.trim()) nextErrors.spouseSeniorityYears = "Antigüedad es requerida";
   else {
@@ -158,7 +165,8 @@ export function useEmploymentTab(initialValues: EmploymentTabValues) {
     }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
-    if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+    if (!values.street.trim()) nextErrors.street = "Calle es requerida";
+    if (!values.externalNumber.trim()) nextErrors.externalNumber = "Número exterior es requerido";
     if (!values.seniorityYears.trim()) nextErrors.seniorityYears = "Antigüedad es requerida";
     else {
       const seniorityYears = parseNumericValue(values.seniorityYears);

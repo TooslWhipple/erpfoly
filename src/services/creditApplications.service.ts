@@ -277,43 +277,6 @@ type CreditApplicationDocumentTypeCode =
   | "GUARANTOR_INE_FRONT"
   | "GUARANTOR_INE_BACK";
 
-function parseStreetAddress(value: string): {
-  street: string;
-  externalNumber: string;
-  internalNumber: string;
-} {
-  const normalized = value.trim().replace(/\s+/g, " ");
-  if (!normalized) {
-    return { street: "", externalNumber: "", internalNumber: "" };
-  }
-
-  const tokens = normalized.split(" ");
-  const lastToken = tokens[tokens.length - 1] ?? "";
-  const hasNumericLastToken = /\d/.test(lastToken);
-  if (!hasNumericLastToken) {
-    return { street: normalized, externalNumber: "", internalNumber: "" };
-  }
-
-  const street = tokens.slice(0, -1).join(" ").trim();
-
-  // If the input is a single numeric token (e.g. "2323"), don't leave street empty.
-  // Use the full value as the street so the backend doesn't reject it.
-  if (!street) {
-    return { street: normalized, externalNumber: "", internalNumber: "" };
-  }
-
-  const internalMatch = lastToken.match(/^(.+?)[-/](.+)$/);
-  if (!internalMatch) {
-    return { street, externalNumber: lastToken, internalNumber: "" };
-  }
-
-  return {
-    street,
-    externalNumber: internalMatch[1] ?? "",
-    internalNumber: internalMatch[2] ?? "",
-  };
-}
-
 function splitReferenceName(value: string): { firstName: string; lastName: string } {
   const normalized = value.trim().replace(/\s+/g, " ");
   if (!normalized) {
@@ -384,7 +347,6 @@ function buildSectionPayload(
         },
       };
     case "address": {
-      const parsed = parseStreetAddress(payload.address.streetAndNumber);
       const housingTypeId = Number.parseInt(payload.address.housingType, 10);
       return {
         address: {
@@ -392,9 +354,9 @@ function buildSectionPayload(
           neighborhoodFullCode: payload.address.neighborhoodFullCode.trim(),
           state: payload.address.state.trim(),
           city: payload.address.city.trim(),
-          street: parsed.street,
-          externalNumber: parsed.externalNumber,
-          internalNumber: parsed.internalNumber,
+          street: payload.address.street.trim(),
+          externalNumber: payload.address.externalNumber.trim(),
+          internalNumber: payload.address.internalNumber.trim(),
           betweenStreets: payload.address.betweenStreets.trim(),
           housingTypeId: Number.isFinite(housingTypeId) ? housingTypeId : null,
           residenceTime: payload.address.residenceTime.trim(),
@@ -404,7 +366,6 @@ function buildSectionPayload(
       };
     }
     case "employment": {
-      const applicantAddress = parseStreetAddress(payload.employment.streetAndNumber);
       const employmentSection: {
         spouseHasEmployment: boolean;
         applicant: Record<string, unknown>;
@@ -417,9 +378,9 @@ function buildSectionPayload(
           neighborhoodFullCode: payload.employment.neighborhoodFullCode.trim(),
           state: payload.employment.state.trim(),
           city: payload.employment.city.trim(),
-          street: applicantAddress.street,
-          externalNumber: applicantAddress.externalNumber,
-          internalNumber: applicantAddress.internalNumber,
+          street: payload.employment.street.trim(),
+          externalNumber: payload.employment.externalNumber.trim(),
+          internalNumber: payload.employment.internalNumber.trim(),
           seniorityYears: payload.employment.seniorityYears.trim(),
           position: payload.employment.position.trim(),
           department: payload.employment.department.trim(),
@@ -432,16 +393,15 @@ function buildSectionPayload(
       };
 
       if (payload.employment.spouseHasEmployment) {
-        const spouseAddress = parseStreetAddress(payload.employment.spouseStreetAndNumber);
         employmentSection.spouse = {
           company: payload.employment.spouseCompany.trim(),
           postalCode: payload.employment.spousePostalCode.trim(),
           neighborhoodFullCode: payload.employment.spouseNeighborhoodFullCode.trim(),
           state: payload.employment.spouseState.trim(),
           city: payload.employment.spouseCity.trim(),
-          street: spouseAddress.street,
-          externalNumber: spouseAddress.externalNumber,
-          internalNumber: spouseAddress.internalNumber,
+          street: payload.employment.spouseStreet.trim(),
+          externalNumber: payload.employment.spouseExternalNumber.trim(),
+          internalNumber: payload.employment.spouseInternalNumber.trim(),
           seniorityYears: payload.employment.spouseSeniorityYears.trim(),
           position: payload.employment.spousePosition.trim(),
           department: payload.employment.spouseDepartment.trim(),
@@ -477,7 +437,6 @@ function buildSectionPayload(
         },
       };
     case "guarantor": {
-      const parsed = parseStreetAddress(payload.guarantor.streetAndNumber);
       const maritalStatusId = Number.parseInt(payload.guarantor.maritalStatus, 10);
       return {
         guarantor: {
@@ -486,9 +445,9 @@ function buildSectionPayload(
           neighborhoodFullCode: payload.guarantor.neighborhoodFullCode.trim(),
           state: payload.guarantor.state.trim(),
           city: payload.guarantor.city.trim(),
-          street: parsed.street,
-          externalNumber: parsed.externalNumber,
-          internalNumber: parsed.internalNumber,
+          street: payload.guarantor.street.trim(),
+          externalNumber: payload.guarantor.externalNumber.trim(),
+          internalNumber: payload.guarantor.internalNumber.trim(),
           betweenStreets: payload.guarantor.betweenStreets.trim(),
           birthDate: payload.guarantor.birthDate.trim(),
           maritalStatusId: Number.isFinite(maritalStatusId) ? maritalStatusId : null,
@@ -599,10 +558,6 @@ export async function createCreditApplicationFromIntake(
   );
   if (result.error) return null;
   return result.data;
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function getCreditApplicationById(
@@ -742,11 +697,6 @@ export async function verifyCreditApplicationOtp(
   return result.data;
 }
 
-export async function validateSecurityCode(code: string): Promise<boolean> {
-  await wait(450);
-  return code.trim().length >= 6;
-}
-
 export async function saveCreditApplication(
   payload: CreditApplicationFormPayload,
   options?: {
@@ -756,8 +706,7 @@ export async function saveCreditApplication(
 ): Promise<{ id: string } | null> {
   const applicationId = payload.id?.trim();
   if (!applicationId) {
-    await wait(800);
-    return { id: `new-${Date.now()}` };
+    return null;
   }
 
   const includeGuarantorSection = options?.includeGuarantorSection ?? true;

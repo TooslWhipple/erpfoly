@@ -1,10 +1,12 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Props as GoogleMapReactProps } from "google-map-react";
-import { Divider, Grid, Stack, Typography, Radio, RadioGroup } from "@mui/material";
+import { Divider, Grid, Stack, Typography } from "@mui/material";
 import { FormTextField, RadioButton } from "@/components";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { theme } from "@/styles/theme";
+import { formatStreetAddressLine } from "@/utils/address";
+import { StreetAddressFields } from "@/components/CreditApplicationForm/StreetAddressFields";
 
 const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
 
@@ -77,11 +79,12 @@ export function AddressSection({ detail }: AddressSectionProps) {
   const [geocodeErrorMessage, setGeocodeErrorMessage] = useState<string>("");
 
   const fullAddress = useMemo(() => {
-    return [address.streetAndNumber, neighborhoodCity, neighborhoodState, address.postalCode, "México"]
+    const streetLine = formatStreetAddressLine(address);
+    return [streetLine, neighborhoodCity, neighborhoodState, address.postalCode, "México"]
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
       .join(", ");
-  }, [address.postalCode, address.streetAndNumber, neighborhoodCity, neighborhoodState]);
+  }, [address, neighborhoodCity, neighborhoodState]);
 
   const handleGoogleApiLoaded = useCallback(({ maps }: { maps: GoogleMapsApi }) => {
     setGoogleMapsApi(maps);
@@ -119,7 +122,12 @@ export function AddressSection({ detail }: AddressSectionProps) {
       <Divider />
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField label="Código Postal" value={address.postalCode} readOnly fullWidth />
+          <FormTextField
+            label="Código Postal"
+            value={address.postalCode}
+            readOnly
+            fullWidth
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Colonia" value={neighborhoodName} readOnly fullWidth />
@@ -130,9 +138,19 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField label="Ciudad" value={neighborhoodCity} readOnly fullWidth />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField label="Calle y número" value={address.streetAndNumber} readOnly fullWidth />
-        </Grid>
+        <StreetAddressFields
+          street={address.street}
+          externalNumber={address.externalNumber}
+          internalNumber={address.internalNumber}
+          fieldKeys={{
+            street: "street",
+            externalNumber: "externalNumber",
+            internalNumber: "internalNumber",
+          }}
+          onFieldChange={() => undefined}
+          readOnly
+          required={false}
+        />
         <Grid size={{ xs: 12 }}>
           <div
             style={{
@@ -193,7 +211,9 @@ export function AddressSection({ detail }: AddressSectionProps) {
                       backgroundColor: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
-                    {!fullAddress ? "No hay dirección suficiente para ubicar el mapa." : geocodeErrorMessage}
+                    {!fullAddress
+                      ? "No hay dirección suficiente para ubicar el mapa."
+                      : geocodeErrorMessage}
                   </Typography>
                 ) : null}
               </>
@@ -207,33 +227,66 @@ export function AddressSection({ detail }: AddressSectionProps) {
           </div>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Entre calles" value={address.betweenStreets} readOnly fullWidth />
+          <FormTextField
+            label="Entre calles"
+            value={address.betweenStreets}
+            readOnly
+            fullWidth
+          />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1">Propiedad de la Vivienda</Typography>
-          {
-            address.housingOwnership 
-          }
+          {address.housingOwnership}
           <Grid container spacing={1} mt={3}>
-            <Grid size={{ xs: 6, sm: 'auto' }}>
-              <RadioButton value="own" label="Casa propia" checked={address.housingOwnership === "own"} readOnly />
+            <Grid size={{ xs: 6, sm: "auto" }}>
+              <RadioButton
+                value="own"
+                label="Casa propia"
+                checked={address.housingOwnership === "own"}
+                readOnly
+              />
             </Grid>
-            <Grid size={{ xs: 6, sm: 'auto' }}>
-              <RadioButton value="rented" label="Alquilada" checked={address.housingOwnership === "rented"} readOnly />
+            <Grid size={{ xs: 6, sm: "auto" }}>
+              <RadioButton
+                value="rented"
+                label="Alquilada"
+                checked={address.housingOwnership === "rented"}
+                readOnly
+              />
             </Grid>
-            <Grid size={{ xs: 6, sm: 'auto' }}>
-              <RadioButton value="paying" label="Pagandola" checked={address.housingOwnership === "paying"} readOnly />
+            <Grid size={{ xs: 6, sm: "auto" }}>
+              <RadioButton
+                value="paying"
+                label="Pagandola"
+                checked={address.housingOwnership === "paying"}
+                readOnly
+              />
             </Grid>
-            <Grid size={{ xs: 6, sm: 'auto' }}>
-              <RadioButton value="relatives" label="Familiares" checked={address.housingOwnership === "relatives"} readOnly />
+            <Grid size={{ xs: 6, sm: "auto" }}>
+              <RadioButton
+                value="relatives"
+                label="Familiares"
+                checked={address.housingOwnership === "relatives"}
+                readOnly
+              />
             </Grid>
           </Grid>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <FormTextField label="Tiempo en el domicilio" value={address.timeAtAddress} readOnly fullWidth />
+          <FormTextField
+            label="Tiempo en el domicilio"
+            value={address.timeAtAddress}
+            readOnly
+            fullWidth
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 8 }}>
-          <FormTextField label="Domicilio anterior" value={address.previousAddress} readOnly fullWidth />
+          <FormTextField
+            label="Domicilio anterior"
+            value={address.previousAddress}
+            readOnly
+            fullWidth
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField label="Tiempo" value={address.previousTime} readOnly fullWidth />

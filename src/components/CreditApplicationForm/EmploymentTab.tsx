@@ -4,6 +4,7 @@ import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNei
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
 import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
+import { StreetAddressFields } from "./StreetAddressFields";
 
 interface EmploymentTabProps {
   values: EmploymentTabValues;
@@ -84,20 +85,19 @@ export function EmploymentTab({
             helperText={errors.city}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Calle y número"
-            placeholder="Ingresa"
-            value={values.streetAndNumber}
-            onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
-            error={Boolean(errors.streetAndNumber)}
-            helperText={errors.streetAndNumber}
-            disabled={saving}
-            inputProps={{ maxLength: 128 }}
-          />
-        </Grid>
+        <StreetAddressFields
+          street={values.street}
+          externalNumber={values.externalNumber}
+          internalNumber={values.internalNumber}
+          fieldKeys={{
+            street: "street",
+            externalNumber: "externalNumber",
+            internalNumber: "internalNumber",
+          }}
+          errors={errors}
+          onFieldChange={onFieldChange}
+          disabled={saving}
+        />
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
@@ -287,20 +287,24 @@ export function EmploymentTab({
             helperText={errors.spouseCity}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            required={spouseEmploymentEnabled}
-            label="Calle y número"
-            placeholder="Ingresa"
-            value={values.spouseStreetAndNumber}
-            onChange={(event) => onFieldChange("spouseStreetAndNumber", event.target.value)}
-            error={Boolean(errors.spouseStreetAndNumber)}
-            helperText={errors.spouseStreetAndNumber}
-            disabled={!spouseEmploymentEnabled || saving}
-            inputProps={{ maxLength: 128 }}
-          />
-        </Grid>
+        <StreetAddressFields
+          street={values.spouseStreet}
+          externalNumber={values.spouseExternalNumber}
+          internalNumber={values.spouseInternalNumber}
+          fieldKeys={{
+            street: "spouseStreet",
+            externalNumber: "spouseExternalNumber",
+            internalNumber: "spouseInternalNumber",
+          }}
+          errors={{
+            street: errors.spouseStreet,
+            externalNumber: errors.spouseExternalNumber,
+            internalNumber: errors.spouseInternalNumber,
+          }}
+          onFieldChange={onFieldChange}
+          disabled={!spouseEmploymentEnabled || saving}
+          required={spouseEmploymentEnabled}
+        />
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth

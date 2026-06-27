@@ -54,9 +54,3 @@ export function isImageDocument(
 
   return options?.imageOnlySlot ?? false;
 }
-
-export function getDocumentFileNameFromPath(filePath: string): string {
-  const pathWithoutQuery = filePath.split("?")[0]?.split("#")[0] ?? filePath;
-  const segments = pathWithoutQuery.split("/");
-  return segments[segments.length - 1] ?? filePath;
-}

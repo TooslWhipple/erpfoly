@@ -64,8 +64,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     useFamilyRelationships();
   const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
 
-  // const pageTitle = isCreateMode ? "Nueva solicitud de crédito" : "Editar solicitud de crédito";
-
   const additionalInformationAlertMessage = useMemo(() => {
     if (missingAdditionalInformationLabels.length === 0) {
       return "";
@@ -192,7 +190,9 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
         employmentTab.setFieldValue("spouseNeighborhoodFullCode", "");
         employmentTab.setFieldValue("spouseState", "");
         employmentTab.setFieldValue("spouseCity", "");
-        employmentTab.setFieldValue("spouseStreetAndNumber", "");
+        employmentTab.setFieldValue("spouseStreet", "");
+        employmentTab.setFieldValue("spouseExternalNumber", "");
+        employmentTab.setFieldValue("spouseInternalNumber", "");
         employmentTab.setFieldValue("spouseSeniorityYears", "");
         employmentTab.setFieldValue("spousePosition", "");
         employmentTab.setFieldValue("spouseDepartment", "");

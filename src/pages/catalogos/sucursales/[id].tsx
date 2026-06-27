@@ -84,7 +84,7 @@ export default function BranchDetailPage() {
           />
         );
       case TAB_CONFIGURACIONES:
-        return <SettingsTab branchId={branchId} />;
+        return <SettingsTab branchId={branchId} onSaved={loadBranch} />;
       default:
         return null;
     }

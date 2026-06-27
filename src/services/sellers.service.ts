@@ -1,38 +1,13 @@
+import { get } from "@/lib/axios";
+import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   SellerDetail,
   SellerListItem,
-  SellerListResponse,
   SellerMonthlyBreakdownRow,
   SellerMonthlyChartPoint,
   SellerSaleHistoryRow,
 } from "@/types/sellers.types";
-
-const MOCK_SELLERS: SellerListItem[] = [
-  {
-    id: 1,
-    fullName: "Julio Armando López Inzunza",
-    email: "julio.lopez@foly.com",
-    branchName: "Matamoros-Plaza Patio",
-  },
-  {
-    id: 2,
-    fullName: "Mariana Gonzalez Carrasco",
-    email: "mariana.gonzalez@foly.com",
-    branchName: "Sucursal Campestre",
-  },
-  {
-    id: 3,
-    fullName: "Ricardo Montes Delgado",
-    email: "ricardo.montes@foly.com",
-    branchName: "Cumbres-Mty",
-  },
-  {
-    id: 4,
-    fullName: "Ana Patricia Ruiz Vega",
-    email: "ana.ruiz@foly.com",
-    branchName: "Matamoros-Plaza Patio",
-  },
-];
 
 const MONTH_LABELS_ES = [
   "Enero",
@@ -113,8 +88,7 @@ function buildSalesHistory(sellerId: number): SellerSaleHistoryRow[] {
   return base;
 }
 
-function buildSellerDetail(id: number): SellerDetail {
-  const listItem = MOCK_SELLERS.find((s) => s.id === id);
+function buildSellerDetail(id: number, fullName: string, cellphone: string, branchName: string | null): SellerDetail {
   const seed = id * 7;
   const monthlyBreakdown = buildMonthlyBreakdown(seed);
   const monthlyChart = buildMonthlyChart(monthlyBreakdown);
@@ -132,9 +106,9 @@ function buildSellerDetail(id: number): SellerDetail {
 
   return {
     id,
-    fullName: listItem?.fullName ?? `Seller ${id}`,
-    email: listItem?.email ?? `seller${id}@foly.com`,
-    branchName: listItem?.branchName ?? "Sucursal central",
+    fullName,
+    cellphone,
+    branchName: branchName ?? "Sucursal central",
     status: "ACTIVE",
     currentMonthLabel: "Diciembre",
     currentMonthSales,
@@ -155,41 +129,30 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-export interface FetchSellersParams {
+export interface GetSellersParams {
   page: number;
   limit: number;
   search?: string;
 }
 
+export type GetSellersResponse = PaginatedRowsResponse<SellerListItem>;
+
 export type ServiceResult<T> =
   | { data: T; error: null }
   | { data: null; error: { message: string } };
 
-export async function fetchSellersMock(
-  params: FetchSellersParams
-): Promise<ServiceResult<SellerListResponse>> {
-  await delay(450);
-  const rawSearch = params.search?.trim();
-  if (rawSearch === "__mock_error__") {
-    return { data: null, error: { message: "Could not load sellers (simulated error)." } };
-  }
-  const q = rawSearch?.toLowerCase();
-  let rows = [...MOCK_SELLERS];
-  if (q) {
-    rows = rows.filter(
-      (r) =>
-        r.fullName.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        r.branchName.toLowerCase().includes(q) ||
-        String(r.id).includes(q)
-    );
-  }
-  const start = (params.page - 1) * params.limit;
-  const pageRows = rows.slice(start, start + params.limit);
-  return { data: { rows: pageRows, total: rows.length }, error: null };
+const SELLERS_BASE = "/users/sellers";
+
+export async function getSellers(
+  params: GetSellersParams
+): Promise<ApiResult<GetSellersResponse>> {
+  return get<GetSellersResponse>(buildListUrl(SELLERS_BASE, params));
 }
 
-export async function fetchSellerDetailMock(id: number): Promise<ServiceResult<SellerDetail>> {
+export async function fetchSellerDetailMock(
+  id: number,
+  fallback?: { fullName?: string; cellphone?: string; branchName?: string | null }
+): Promise<ServiceResult<SellerDetail>> {
   await delay(500);
   if (!Number.isFinite(id) || id <= 0) {
     return { data: null, error: { message: "Invalid seller id" } };
@@ -197,9 +160,13 @@ export async function fetchSellerDetailMock(id: number): Promise<ServiceResult<S
   if (id === 404) {
     return { data: null, error: { message: "Seller not found" } };
   }
-  const exists = MOCK_SELLERS.some((s) => s.id === id);
-  if (!exists) {
-    return { data: null, error: { message: "Seller not found" } };
-  }
-  return { data: buildSellerDetail(id), error: null };
+  return {
+    data: buildSellerDetail(
+      id,
+      fallback?.fullName ?? `Seller ${id}`,
+      fallback?.cellphone ?? "",
+      fallback?.branchName ?? null
+    ),
+    error: null,
+  };
 }

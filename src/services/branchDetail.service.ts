@@ -7,18 +7,32 @@ import type {
   SellerGoalRow,
   BranchPromotion,
   BranchSettings,
+  BranchStatus,
 } from "@/types/sucursales.types";
+import {
+  getBranch as getBranchFromApi,
+  updateBranch as updateBranchFromApi,
+  type Branch as ApiBranch,
+} from "@/services/branches.service";
 
 const MONTH_NAMES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-const DUMMY_BRANCHES: Record<number, Branch> = {
-  1: { id: 1, name: "Sucursal Tampico", city: "Tampico", status: "active" },
-  2: { id: 2, name: "Foly Muebles Tampico Centro", city: "Tampico", status: "active" },
-  3: { id: 3, name: "Foly Muebles San Luis", city: "San Luis Potosí", status: "active" },
-};
+function toBranchStatus(status: ApiBranch["status"]): BranchStatus {
+  if (typeof status === "string" && status.toLowerCase() === "inactive") return "inactive";
+  return "active";
+}
+
+function mapApiBranch(data: ApiBranch): Branch {
+  return {
+    id: data.id,
+    name: data.name,
+    city: "",
+    status: toBranchStatus(data.status),
+  };
+}
 
 const DUMMY_PROMOTIONS: BranchPromotion[] = [
   { id: 1, name: "Crédito permanente", margin: 5, type: "credit", startDate: "2025-09-01", endDate: null, departments: "Todos", lines: "Todos", branches: "Todas" },
@@ -39,8 +53,9 @@ const DUMMY_SELLERS = [
 ];
 
 export async function getBranch(id: number): Promise<Branch | null> {
-  await new Promise((r) => setTimeout(r, 200));
-  return DUMMY_BRANCHES[id] ?? null;
+  const result = await getBranchFromApi(id);
+  if (result.error || !result.data) return null;
+  return mapApiBranch(result.data);
 }
 
 export async function getSalesDashboard(_branchId: number): Promise<SalesDashboardKpis> {
@@ -119,20 +134,20 @@ export async function getPromotions(branchId: number): Promise<BranchPromotion[]
 }
 
 export async function getBranchSettings(branchId: number): Promise<BranchSettings> {
-  await new Promise((r) => setTimeout(r, 150));
-  const branch = DUMMY_BRANCHES[branchId];
-  return { name: branch?.name ?? "" };
+  const result = await getBranchFromApi(branchId);
+  if (result.error || !result.data) return { name: "" };
+  return { name: result.data.name };
 }
 
 export async function saveBranchSettings(
   branchId: number,
   data: BranchSettings
 ): Promise<BranchSettings> {
-  await new Promise((r) => setTimeout(r, 400));
-  if (DUMMY_BRANCHES[branchId]) {
-    DUMMY_BRANCHES[branchId].name = data.name;
+  const result = await updateBranchFromApi(branchId, { name: data.name });
+  if (result.error) {
+    throw new Error(result.error.message);
   }
-  return data;
+  return { name: result.data?.name ?? data.name };
 }
 
 export async function deletePromotion(_branchId: number, id: number): Promise<{ success: boolean }> {

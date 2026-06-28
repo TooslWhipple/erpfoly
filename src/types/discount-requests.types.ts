@@ -1,27 +1,31 @@
 /**
  * Discount request status for list filtering and display.
  */
-export type DiscountRequestStatus = "pending" | "accepted" | "rejected";
+export type DiscountRequestStatus = "pending" | "approved" | "rejected";
 
 /**
  * Payment/sale type for the discount request (displayed as chip).
  */
-export type DiscountRequestType = "contado" | "credito";
+export type DiscountRequestType = "contado" | "credito" | "apartado";
 
 export interface DiscountRequest {
   id: number;
+  saleId: number;
+  saleFolio: string;
   /** ISO date string for date-time column */
   createdAt: string;
   type: DiscountRequestType;
   /** Customer full name (may be truncated in UI) */
-  customerName: string;
+  customerName: string | null;
   /** Number of articles in the request */
   articleCount: number;
-  /** Discount amount in currency */
+  /** Total amount in currency */
   amount: number;
-  /** Reason for the discount (e.g. "Última pieza", "Cierre de venta") */
+  /** Reason label for display */
   reason: string;
+  reasonCode?: string;
   status: DiscountRequestStatus;
+  requestedDiscountPct?: number;
 }
 
 export interface GetDiscountRequestsParams {
@@ -30,17 +34,6 @@ export interface GetDiscountRequestsParams {
   status?: DiscountRequestStatus;
   search?: string;
 }
-
-export interface GetDiscountRequestsResponse {
-  data: DiscountRequest[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ============================================================================
-// NEW DISCOUNT REQUEST FORM
-// ============================================================================
 
 export type SaleTypeForm = "contado" | "credito" | "apartado";
 
@@ -67,11 +60,46 @@ export interface DiscountRequestLineItem {
 
 export type DeliveryOption = "a_domicilio" | "recoger_sucursal";
 
-export interface NewDiscountRequestForm {
-  discountReason: string;
+export interface DiscountRequestDelivery {
+  type: DeliveryOption;
+  address: string | null;
+  receiverPhone: string | null;
+  receiverEmail: string | null;
+  latitude: string | null;
+  longitude: string | null;
+}
+
+export interface DiscountRequestDetail {
+  id: number;
+  saleId: number;
+  saleFolio: string;
+  status: DiscountRequestStatus;
+  reason: string;
+  reasonLabel: string;
+  notes: string | null;
+  rejectionReason: string | null;
+  requestedDiscountPct: number;
+  approvedDiscountPct: number | null;
+  resolvedAt: string | null;
+  createdAt: string;
   saleType: SaleTypeForm;
-  client: ClientSummary | null;
+  subtotal: number;
+  shipping: number;
+  totalBeforeSpecialDiscount: number;
+  specialDiscountAmount: number;
+  totalAfterSpecialDiscount: number;
+  downPaymentPct: number;
+  downPaymentAmount: number;
   lineItems: DiscountRequestLineItem[];
-  deliveryType: DeliveryOption;
-  deliveryAddress?: string;
+  client: ClientSummary | null;
+  delivery: DiscountRequestDelivery | null;
+}
+
+export interface ApproveDiscountRequestPayload {
+  approvedDiscountPct: number;
+  notes?: string;
+}
+
+export interface RejectDiscountRequestPayload {
+  rejectionReason: string;
 }

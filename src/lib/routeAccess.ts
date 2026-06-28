@@ -113,7 +113,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes\/sucursales(\/.*)?$/, permission: BRANCH_REQUESTS_READ },
 
   { pattern: /^\/solicitudes-descuento\/nuevo$/, permission: DISCOUNT_REQUESTS_CREATE },
-  { pattern: /^\/solicitudes-descuento(\/.*)?$/, permission: DISCOUNT_REQUESTS_READ },
+  { pattern: /^\/solicitudes-descuento\/[^/]+$/, permission: DISCOUNT_REQUESTS_READ },
+  { pattern: /^\/solicitudes-descuento$/, permission: DISCOUNT_REQUESTS_READ },
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },

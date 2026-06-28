@@ -38,7 +38,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     loading,
     saving,
     isFormLocked,
-    isFormComplete,
     formAction,
     activeTab,
     tabs,
@@ -64,8 +63,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   const { data: familyRelationships = [], isPending: familyRelationshipsLoading } =
     useFamilyRelationships();
   const { data: housingTypes = [], isPending: housingTypesLoading } = useHousingTypes();
-
-  // const pageTitle = isCreateMode ? "Nueva solicitud de crédito" : "Editar solicitud de crédito";
 
   const additionalInformationAlertMessage = useMemo(() => {
     if (missingAdditionalInformationLabels.length === 0) {
@@ -109,6 +106,24 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     router.push("/solicitudes-credito");
   };
 
+  const handleSaveActiveTabOnly = async () => {
+    const wasSaved = await handleSaveActiveTab();
+    if (!wasSaved) {
+      if (error) {
+        showError("Hay errores en los campos. Revisa y corrige antes de continuar.");
+      } else {
+        showError("Completa los campos requeridos para guardar.");
+      }
+      return false;
+    }
+
+    setTabsWithSubmissionValidationErrors((previousTabs) =>
+      previousTabs.filter((tabId) => tabId !== activeTab),
+    );
+    showSuccess("Información guardada correctamente.");
+    return true;
+  };
+
   const handleSubmitApplicationClick = async () => {
     const submitResult = await handleSubmitApplication();
     if (!submitResult.success) {
@@ -125,8 +140,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
 
         showError(
           uniqueInvalidTabLabels.length > 0
-            ? `Hay errores en: ${uniqueInvalidTabLabels.join(", ")}.`
-            : "Hay errores en los campos. Revisa y corrige antes de continuar."
+            ? `Falta información en: ${uniqueInvalidTabLabels.join(", ")}.`
+            : "Hay errores en los campos. Revisa y corrige antes de continuar.",
         );
       } else {
         showError(error || "No fue posible enviar la solicitud a revisión. Verifica la información e intenta nuevamente.");
@@ -135,40 +150,14 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
     }
 
     setTabsWithSubmissionValidationErrors([]);
-    showSuccess(submitResult.message || "Solicitud enviada a revisión correctamente.");
+    showSuccess(
+      submitResult.message || "Solicitud enviada a revisión y marcada como pendiente.",
+    );
     router.push("/solicitudes-credito");
     return true;
   };
 
-  const handleContinueToNextTab = async () => {
-    const wasSaved = await handleSaveActiveTab();
-    if (!wasSaved) {
-      if (error) {
-        showError("Hay errores en los campos. Revisa y corrige antes de continuar.");
-      } else {
-        showError("Completa los campos requeridos para continuar.");
-      }
-      return false;
-    }
-
-    setTabsWithSubmissionValidationErrors((previousTabs) =>
-      previousTabs.filter((tabId) => tabId !== activeTab)
-    );
-
-    const currentTabIndex = tabs.findIndex((tab) => tab.value === activeTab);
-    const nextTab = tabs[currentTabIndex + 1];
-    if (nextTab) {
-      setActiveTab(nextTab.value);
-    }
-    return true;
-  };
-
-  const handleGuarantorSave = async () => {
-    if (!requiresGuarantorInformation) {
-      return handleSubmitApplicationClick();
-    }
-    return handleContinueToNextTab();
-  };
+  const handleContinueToNextTab = handleSaveActiveTabOnly;
 
   const isSubmitButtonLoading = formAction === "saving" || formAction === "submitting";
 
@@ -195,12 +184,15 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
         familyTab.setFieldValue("spouseName", "");
         familyTab.setFieldValue("spousePhone", "");
 
+        employmentTab.setFieldValue("spouseHasEmployment", false);
         employmentTab.setFieldValue("spouseCompany", "");
         employmentTab.setFieldValue("spousePostalCode", "");
         employmentTab.setFieldValue("spouseNeighborhoodFullCode", "");
         employmentTab.setFieldValue("spouseState", "");
         employmentTab.setFieldValue("spouseCity", "");
-        employmentTab.setFieldValue("spouseStreetAndNumber", "");
+        employmentTab.setFieldValue("spouseStreet", "");
+        employmentTab.setFieldValue("spouseExternalNumber", "");
+        employmentTab.setFieldValue("spouseInternalNumber", "");
         employmentTab.setFieldValue("spouseSeniorityYears", "");
         employmentTab.setFieldValue("spousePosition", "");
         employmentTab.setFieldValue("spouseDepartment", "");
@@ -213,46 +205,52 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   return (
     <MainLayout>
       <Stack spacing={3}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+        >
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}><X size={18} /></IconButton>
-            <Typography variant="h6" fontWeight={700}>Nueva solicitud de crédito</Typography>
+            <IconButton size="small" onClick={handleGoBack} disabled={isFormLocked}>
+              <X size={18} />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700}>
+              Nueva solicitud de crédito
+            </Typography>
           </Stack>
           <Button
             variant="contained"
             style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
-            disabled={isFormLocked || loading || !isFormComplete}
+            disabled={isFormLocked || loading}
             onClick={handleSubmitApplicationClick}
             sx={{ minWidth: 160 }}
           >
-            {
-              (isSubmitButtonLoading) ?
-                <CircularProgress size={20} color="inherit" />
-                :
-                "Enviar solicitud"
-            }
+            {isSubmitButtonLoading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Enviar solicitud"
+            )}
           </Button>
         </Stack>
 
-        {
-          error &&
+        {error && (
           <StatusAlertCard
             variant="error"
             title="Error al guardar"
             message={error}
             icon={<CircleAlert size={18} />}
           />
-        }
+        )}
 
-        {
-          missingAdditionalInformationLabels.length > 0 &&
+        {missingAdditionalInformationLabels.length > 0 && (
           <StatusAlertCard
             variant="error"
             title="Documentación adicional requerida"
             message={additionalInformationAlertMessage}
             icon={<CircleAlert size={18} />}
           />
-        }
+        )}
 
         <TabFilters
           showSearch={false}
@@ -265,8 +263,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           }}
         />
 
-        {
-          activeTab === "basic-information" &&
+        {activeTab === "basic-information" && (
           <BasicInformationTab
             values={basicInformationTab.values}
             errors={basicInformationTab.errors}
@@ -282,9 +279,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onContinue={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "family" &&
+        )}
+        {activeTab === "family" && (
           <FamilyTab
             values={familyTab.values}
             errors={familyTab.errors}
@@ -295,9 +291,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onContinue={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "address" &&
+        )}
+        {activeTab === "address" && (
           <AddressTab
             values={addressTab.values}
             errors={addressTab.errors}
@@ -310,9 +305,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onSave={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "employment" &&
+        )}
+        {activeTab === "employment" && (
           <EmploymentTab
             values={employmentTab.values}
             errors={employmentTab.errors}
@@ -324,9 +318,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onSave={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "references" &&
+        )}
+        {activeTab === "references" && (
           <ReferencesTab
             values={referencesTab.values}
             errors={referencesTab.errors}
@@ -347,9 +340,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onSave={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "documentation" &&
+        )}
+        {activeTab === "documentation" && (
           <DocumentationTab
             values={documentationTab.values}
             showIncomeProof
@@ -371,9 +363,8 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onSave={handleContinueToNextTab}
             saving={saving}
           />
-        }
-        {
-          activeTab === "guarantor" &&
+        )}
+        {activeTab === "guarantor" && (
           <GuarantorTab
             values={guarantorTab.values}
             errors={guarantorTab.errors}
@@ -383,11 +374,10 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
             onFieldChange={(field, value) => {
               guarantorTab.setFieldValue(field, value);
             }}
-            onSave={handleGuarantorSave}
+            onSave={handleSaveActiveTabOnly}
             saving={saving}
           />
-        }
-
+        )}
       </Stack>
     </MainLayout>
   );

@@ -45,7 +45,8 @@ export function useAddressTab(initialValues: AddressTabValues) {
     }
     if (!values.state.trim()) nextErrors.state = "Estado es requerido";
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
-    if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+    if (!values.street.trim()) nextErrors.street = "Calle es requerida";
+    if (!values.externalNumber.trim()) nextErrors.externalNumber = "Número exterior es requerido";
     if (!values.residenceTime.trim()) nextErrors.residenceTime = "Tiempo en el domicilio es requerido";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";

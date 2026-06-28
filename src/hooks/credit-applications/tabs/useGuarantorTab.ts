@@ -22,7 +22,8 @@ function buildGuarantorValidationErrors(values: GuarantorTabValues): GuarantorTa
   }
   if (!values.state.trim()) nextErrors.state = "Estado es requerido";
   if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
-  if (!values.streetAndNumber.trim()) nextErrors.streetAndNumber = "Calle y número es requerido";
+  if (!values.street.trim()) nextErrors.street = "Calle es requerida";
+  if (!values.externalNumber.trim()) nextErrors.externalNumber = "Número exterior es requerido";
   if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
   if (!values.birthDate.trim()) nextErrors.birthDate = "Fecha de nacimiento es requerida";
   else if (!isAdultBirthDate(values.birthDate)) {

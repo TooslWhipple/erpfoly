@@ -61,7 +61,9 @@ export interface AddressTabValues {
   neighborhoodFullCode: string;
   state: string;
   city: string;
-  streetAndNumber: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   betweenStreets: string;
   /** Housing type catalog id as string (empty until selected). */
   housingType: string;
@@ -75,7 +77,9 @@ export interface AddressTabErrors {
   neighborhoodFullCode?: string;
   state?: string;
   city?: string;
-  streetAndNumber?: string;
+  street?: string;
+  externalNumber?: string;
+  internalNumber?: string;
   residenceTime?: string;
   previousAddress?: string;
   previousResidenceTime?: string;
@@ -89,7 +93,9 @@ export interface EmploymentTabValues {
   neighborhoodFullCode: string;
   state: string;
   city: string;
-  streetAndNumber: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   seniorityYears: string;
   position: string;
   department: string;
@@ -98,12 +104,15 @@ export interface EmploymentTabValues {
   hasOtherIncome: boolean;
   otherIncomeAmount: string;
   otherIncomeSource: string;
+  spouseHasEmployment: boolean;
   spouseCompany: string;
   spousePostalCode: string;
   spouseNeighborhoodFullCode: string;
   spouseState: string;
   spouseCity: string;
-  spouseStreetAndNumber: string;
+  spouseStreet: string;
+  spouseExternalNumber: string;
+  spouseInternalNumber: string;
   spouseSeniorityYears: string;
   spousePosition: string;
   spouseDepartment: string;
@@ -117,18 +126,28 @@ export interface EmploymentTabErrors {
   neighborhoodFullCode?: string;
   state?: string;
   city?: string;
-  streetAndNumber?: string;
+  street?: string;
+  externalNumber?: string;
+  internalNumber?: string;
   seniorityYears?: string;
   position?: string;
   department?: string;
   monthlyIncome?: string;
   companyPhone?: string;
+  otherIncomeAmount?: string;
+  otherIncomeSource?: string;
+  spouseCompany?: string;
   spouseCompanyPhone?: string;
   spousePostalCode?: string;
   spouseNeighborhoodFullCode?: string;
   spouseState?: string;
   spouseCity?: string;
+  spouseStreet?: string;
+  spouseExternalNumber?: string;
+  spouseInternalNumber?: string;
   spouseSeniorityYears?: string;
+  spousePosition?: string;
+  spouseDepartment?: string;
   spouseMonthlyIncome?: string;
 }
 
@@ -191,7 +210,9 @@ export interface GuarantorTabValues {
   neighborhoodFullCode: string;
   state: string;
   city: string;
-  streetAndNumber: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   betweenStreets: string;
   birthDate: string;
   maritalStatus: string;
@@ -209,7 +230,9 @@ export interface GuarantorTabErrors {
   neighborhoodFullCode?: string;
   state?: string;
   city?: string;
-  streetAndNumber?: string;
+  street?: string;
+  externalNumber?: string;
+  internalNumber?: string;
   betweenStreets?: string;
   birthDate?: string;
   maritalStatus?: string;

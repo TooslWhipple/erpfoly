@@ -21,7 +21,9 @@ export interface CreditApplicationNeighborhood {
 export interface CreditApplicationAddress {
   postalCode: string;
   neighborhood: CreditApplicationNeighborhood;
-  streetAndNumber: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   betweenStreets: string;
   housingOwnership: "own" | "rented" | "paying" | "relatives" | null;
   timeAtAddress: string;
@@ -41,7 +43,9 @@ export interface EmploymentInfo {
   postalCode: string;
   state: string;
   city: string;
-  streetAndNumber: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
   tenureYears: number;
   position: string;
   department: string;
@@ -153,14 +157,6 @@ export type CreditApplicationDetailSection =
   | "credit-bureau"
   | "biometrics"
   | "purchase-intention";
-
-export interface RejectCreditApplicationParams {
-  applicationId: string;
-}
-
-export interface RejectCreditApplicationRequest {
-  reason: string;
-}
 
 export interface RejectCreditApplicationResponse {
   success: boolean;

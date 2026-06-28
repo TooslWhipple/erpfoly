@@ -4,6 +4,7 @@ import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNei
 import type { EmploymentTabErrors, EmploymentTabValues } from "@/types/credit-application-form.types";
 import { Card } from "./styles";
 import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
+import { StreetAddressFields } from "./StreetAddressFields";
 
 interface EmploymentTabProps {
   values: EmploymentTabValues;
@@ -26,6 +27,7 @@ export function EmploymentTab({
 }: EmploymentTabProps) {
   const mainNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const spouseNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.spousePostalCode);
+  const spouseEmploymentEnabled = spouseSectionEnabled && values.spouseHasEmployment;
   return (
     <Card>
       <Typography variant="h5">Empleo</Typography>
@@ -83,20 +85,19 @@ export function EmploymentTab({
             helperText={errors.city}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="Calle y número"
-            placeholder="Ingresa"
-            value={values.streetAndNumber}
-            onChange={(event) => onFieldChange("streetAndNumber", event.target.value)}
-            error={Boolean(errors.streetAndNumber)}
-            helperText={errors.streetAndNumber}
-            disabled={saving}
-            inputProps={{ maxLength: 128 }}
-          />
-        </Grid>
+        <StreetAddressFields
+          street={values.street}
+          externalNumber={values.externalNumber}
+          internalNumber={values.internalNumber}
+          fieldKeys={{
+            street: "street",
+            externalNumber: "externalNumber",
+            internalNumber: "internalNumber",
+          }}
+          errors={errors}
+          onFieldChange={onFieldChange}
+          disabled={saving}
+        />
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
@@ -196,6 +197,8 @@ export function EmploymentTab({
               onFieldChange("otherIncomeAmount", sanitized.slice(0, 16));
             }}
             disabled={!values.hasOtherIncome || saving}
+            error={Boolean(errors.otherIncomeAmount)}
+            helperText={errors.otherIncomeAmount}
             inputProps={{ maxLength: 16, inputMode: 'decimal' }}
           />
         </Grid>
@@ -207,21 +210,40 @@ export function EmploymentTab({
             value={values.otherIncomeSource}
             onChange={(event) => onFieldChange("otherIncomeSource", event.target.value)}
             disabled={!values.hasOtherIncome || saving}
+            error={Boolean(errors.otherIncomeSource)}
+            helperText={errors.otherIncomeSource}
             inputProps={{ maxLength: 64 }}
           />
         </Grid>
       </Grid>
 
       <Typography variant="h5">Empleo del cónyuge</Typography>
+      {spouseSectionEnabled ? (
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Switch
+                checked={values.spouseHasEmployment}
+                onChange={(event) => onFieldChange("spouseHasEmployment", event.target.checked)}
+                disabled={saving}
+              />
+              <Typography variant="body1">¿El cónyuge cuenta con empleo?</Typography>
+            </Stack>
+          </Grid>
+        </Grid>
+      ) : null}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Empresa"
             placeholder="Ingresa"
             value={values.spouseCompany}
             onChange={(event) => onFieldChange("spouseCompany", event.target.value)}
-            disabled={!spouseSectionEnabled || saving}
+            error={Boolean(errors.spouseCompany)}
+            helperText={errors.spouseCompany}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 128 }}
           />
         </Grid>
@@ -232,7 +254,7 @@ export function EmploymentTab({
           neighborhoodError={errors.spouseNeighborhoodFullCode}
           neighborhoods={spouseNeighborhoodsQuery.data ?? []}
           neighborhoodsLoading={spouseNeighborhoodsQuery.isFetching}
-          disabled={!spouseSectionEnabled || saving}
+          disabled={!spouseEmploymentEnabled || saving}
           fieldKeys={{
             postalCode: "spousePostalCode",
             neighborhoodFullCode: "spouseNeighborhoodFullCode",
@@ -265,53 +287,70 @@ export function EmploymentTab({
             helperText={errors.spouseCity}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <FormTextField
-            fullWidth
-            label="Calle y número"
-            placeholder="Ingresa"
-            value={values.spouseStreetAndNumber}
-            onChange={(event) => onFieldChange("spouseStreetAndNumber", event.target.value)}
-            disabled={!spouseSectionEnabled || saving}
-            inputProps={{ maxLength: 128 }}
-          />
-        </Grid>
+        <StreetAddressFields
+          street={values.spouseStreet}
+          externalNumber={values.spouseExternalNumber}
+          internalNumber={values.spouseInternalNumber}
+          fieldKeys={{
+            street: "spouseStreet",
+            externalNumber: "spouseExternalNumber",
+            internalNumber: "spouseInternalNumber",
+          }}
+          errors={{
+            street: errors.spouseStreet,
+            externalNumber: errors.spouseExternalNumber,
+            internalNumber: errors.spouseInternalNumber,
+          }}
+          onFieldChange={onFieldChange}
+          disabled={!spouseEmploymentEnabled || saving}
+          required={spouseEmploymentEnabled}
+        />
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Antiguedad (años)"
             placeholder="Ingresa"
             value={values.spouseSeniorityYears}
             onChange={(event) => onFieldChange("spouseSeniorityYears", event.target.value.replace(/\D/g, '').slice(0, 4))}
-            disabled={!spouseSectionEnabled || saving}
+            error={Boolean(errors.spouseSeniorityYears)}
+            helperText={errors.spouseSeniorityYears}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 4, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Puesto"
             placeholder="Ingresa"
             value={values.spousePosition}
             onChange={(event) => onFieldChange("spousePosition", event.target.value)}
-            disabled={!spouseSectionEnabled || saving}
+            error={Boolean(errors.spousePosition)}
+            helperText={errors.spousePosition}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Departamento"
             placeholder="Ingresa"
             value={values.spouseDepartment}
             onChange={(event) => onFieldChange("spouseDepartment", event.target.value)}
-            disabled={!spouseSectionEnabled || saving}
+            error={Boolean(errors.spouseDepartment)}
+            helperText={errors.spouseDepartment}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 64 }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Ingreso mensual"
             placeholder="Ingresa"
             value={values.spouseMonthlyIncome}
@@ -321,20 +360,23 @@ export function EmploymentTab({
               const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val;
               onFieldChange("spouseMonthlyIncome", sanitized.slice(0, 16));
             }}
-            disabled={!spouseSectionEnabled || saving}
+            error={Boolean(errors.spouseMonthlyIncome)}
+            helperText={errors.spouseMonthlyIncome}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 16, inputMode: 'decimal' }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
+            required={spouseEmploymentEnabled}
             label="Teléfono de la empresa"
             placeholder="Ingresa"
             value={values.spouseCompanyPhone}
             onChange={(event) => onFieldChange("spouseCompanyPhone", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.spouseCompanyPhone)}
             helperText={errors.spouseCompanyPhone}
-            disabled={!spouseSectionEnabled || saving}
+            disabled={!spouseEmploymentEnabled || saving}
             inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>

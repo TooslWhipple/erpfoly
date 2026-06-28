@@ -38,15 +38,24 @@ function toDocumentItems(
   }));
 }
 
-function buildStreetAndNumber(address: CreditApplicationDetailResponse["address"]): string {
-  return [
-    address.street,
-    address.externalNumber,
-    address.internalNumber ? `Int. ${address.internalNumber}` : "",
-  ]
-    .filter((value) => value.trim().length > 0)
-    .join(" ")
-    .trim();
+function mapEmploymentInfo(
+  employmentPerson: CreditApplicationDetailResponse["employment"]["applicant"],
+  monthlyIncome: string,
+): CreditApplicationDetail["employment"]["applicant"] {
+  return {
+    company: employmentPerson.companyName ?? "",
+    postalCode: employmentPerson.postalCode ?? "",
+    state: employmentPerson.state ?? "",
+    city: employmentPerson.city ?? "",
+    street: employmentPerson.street ?? "",
+    externalNumber: employmentPerson.externalNumber ?? "",
+    internalNumber: employmentPerson.internalNumber ?? "",
+    tenureYears: employmentPerson.seniorityYears ?? 0,
+    position: employmentPerson.position ?? "",
+    department: employmentPerson.department ?? "",
+    monthlyIncome,
+    companyPhone: employmentPerson.companyPhone ?? "",
+  };
 }
 
 function mapHousingTypeToOwnership(
@@ -181,7 +190,9 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     address: {
       postalCode: address.postalCode ?? "",
       neighborhood,
-      streetAndNumber: buildStreetAndNumber(address),
+      street: address.street ?? "",
+      externalNumber: address.externalNumber ?? "",
+      internalNumber: address.internalNumber ?? "",
       betweenStreets: address.betweenStreets ?? "",
       housingOwnership: mapHousingTypeToOwnership(address.housingType?.name),
       timeAtAddress: address.residenceTime ?? "",
@@ -197,25 +208,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     employment: {
       totalMonthlyIncome: `$${formatMxCurrency(totalIncome)}/mes`,
       hasOtherIncome: Boolean(employment.applicant.hasOtherIncome),
-      applicant: {
-        company: employment.applicant.companyName ?? "",
-        postalCode: employment.applicant.postalCode ?? "",
-        state: employment.applicant.state ?? "",
-        city: employment.applicant.city ?? "",
-        streetAndNumber: [
-          employment.applicant.street,
-          employment.applicant.externalNumber,
-          employment.applicant.internalNumber ? `Int. ${employment.applicant.internalNumber}` : "",
-        ]
-          .filter((value) => value.trim().length > 0)
-          .join(" ")
-          .trim(),
-        tenureYears: employment.applicant.seniorityYears ?? 0,
-        position: employment.applicant.position ?? "",
-        department: employment.applicant.department ?? "",
-        monthlyIncome: formatMxCurrency(baseIncome),
-        companyPhone: employment.applicant.companyPhone ?? "",
-      },
+      applicant: mapEmploymentInfo(employment.applicant, formatMxCurrency(baseIncome)),
     },
     references: {
       work: {
@@ -223,9 +216,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         phone: references.work.companyPhone ?? "",
         clientPosition: references.work.applicantPosition ?? "",
         tenureYears: references.work.seniorityYears ?? 0,
-        contactNameAndPosition: [references.work.answeredBy, references.work.answeredByPosition]
-          .filter((value) => value.trim().length > 0)
-          .join(" - "),
+        contactNameAndPosition: references.work.answeredBy ?? "",
       },
       family: references.family.map((reference) => ({
         name: [reference.firstName, reference.lastName].filter((value) => value.trim().length > 0).join(" "),

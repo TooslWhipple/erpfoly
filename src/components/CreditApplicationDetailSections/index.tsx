@@ -11,17 +11,6 @@ import { CreditBureauSection } from "./CreditBureauSection";
 import { BiometricsSection } from "./BiometricsSection";
 import { PurchaseIntentionSection } from "./PurchaseIntentionSection";
 
-export { BasicInfoSection } from "./BasicInfoSection";
-export { AddressSection } from "./AddressSection";
-export { FamilySection } from "./FamilySection";
-export { EmploymentSection } from "./EmploymentSection";
-export { ReferencesSection } from "./ReferencesSection";
-export { DocumentationSection } from "./DocumentationSection";
-export type { DocumentationSectionProps } from "./DocumentationSection";
-export { CreditBureauSection } from "./CreditBureauSection";
-export { BiometricsSection } from "./BiometricsSection";
-export { PurchaseIntentionSection } from "./PurchaseIntentionSection";
-
 export interface SectionContentProps {
   detail: CreditApplicationDetail;
   activeSection: CreditApplicationDetailSection;

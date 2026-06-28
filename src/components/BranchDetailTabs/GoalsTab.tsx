@@ -87,10 +87,17 @@ export function GoalsTab({ branchId }: GoalsTabProps) {
         getSalesHistory(branchId),
         getSellerGoals(branchId, currentMonth.month, currentMonth.year),
       ]);
-      setSalesHistory(historyRes);
-      setMonthLabel(goalsRes.monthLabel);
-      setTotalGoal(goalsRes.totalGoal);
-      setSellers(goalsRes.sellers);
+      const firstError = [historyRes, goalsRes].find((r) => r.error);
+      if (firstError?.error) {
+        setError(firstError.error.message);
+        return;
+      }
+      setSalesHistory(historyRes.data ?? []);
+      if (goalsRes.data) {
+        setMonthLabel(goalsRes.data.monthLabel);
+        setTotalGoal(goalsRes.data.totalGoal);
+        setSellers(goalsRes.data.sellers);
+      }
     } catch (err) {
       console.error("[GoalsTab] Error:", err);
       setError("Error al cargar metas");

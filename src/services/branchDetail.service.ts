@@ -1,24 +1,22 @@
+import { get, type ApiResult } from "@/lib/axios";
 import type {
   Branch,
-  SalesDashboardKpis,
-  MonthlySalesPoint,
-  SellerSalesRow,
-  SalesHistoryPoint,
-  SellerGoalRow,
   BranchPromotion,
   BranchSettings,
   BranchStatus,
+  MonthlySalesPoint,
+  SalesDashboardKpis,
+  SalesHistoryPoint,
+  SellerGoalRow,
+  SellerSalesRow,
 } from "@/types/sucursales.types";
 import {
   getBranch as getBranchFromApi,
   updateBranch as updateBranchFromApi,
   type Branch as ApiBranch,
 } from "@/services/branches.service";
-
-const MONTH_NAMES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
+import { unwrapSuccessEnvelope } from "@/services/promociones.service";
+import type { PromotionListItem } from "@/types/promociones.types";
 
 function toBranchStatus(status: ApiBranch["status"]): BranchStatus {
   if (typeof status === "string" && status.toLowerCase() === "inactive") return "inactive";
@@ -34,23 +32,7 @@ function mapApiBranch(data: ApiBranch): Branch {
   };
 }
 
-const DUMMY_PROMOTIONS: BranchPromotion[] = [
-  { id: 1, name: "Crédito permanente", margin: 5, type: "credit", startDate: "2025-09-01", endDate: null, departments: "Todos", lines: "Todos", branches: "Todas" },
-  { id: 2, name: "Mes de línea blanca", margin: 32, type: "credit", startDate: "2025-09-01", endDate: "2025-09-30", departments: "Línea blanca", lines: "7 Líneas", branches: "Todas" },
-  { id: 3, name: "Buen fin 2024", margin: 25, type: "credit", startDate: "2025-11-13", endDate: "2025-11-17", departments: "Todos", lines: "Todos", branches: "Todas" },
-  { id: 4, name: "Black Friday 2024", margin: 20, type: "credit", startDate: "2025-11-28", endDate: "2025-11-28", departments: "Todos", lines: "Todos", branches: "Todas" },
-  { id: 5, name: "Día de las madres", margin: 29, type: "cash", startDate: "2025-09-01", endDate: "2025-09-30", departments: "3 dptos", lines: "7 Líneas", branches: "Todas" },
-  { id: 6, name: "Aniversario Foly", margin: 29, type: "cash", startDate: "2025-09-01", endDate: "2025-09-30", departments: "Todos", lines: "7 Líneas", branches: "Todas" },
-  { id: 7, name: "Día del padre", margin: 29, type: "cash", startDate: "2025-09-01", endDate: "2025-09-30", departments: "Todos", lines: "7 Líneas", branches: "Todas" },
-  { id: 8, name: "Temporada de calor", margin: 29, type: "layaway", startDate: "2025-09-01", endDate: "2025-09-30", departments: "Aire acondicio...", lines: "Minisplits", branches: "Todas" },
-];
-
-const DUMMY_SELLERS = [
-  { id: "1", name: "José Carlos Montes Ávila", previousMonth: 185200, thisMonth: 98200 },
-  { id: "2", name: "Luz Maria Ponce Díaz", previousMonth: 124500, thisMonth: 156800 },
-  { id: "3", name: "Ramón López", previousMonth: 98700, thisMonth: 112400 },
-  { id: "4", name: "Esteban Sánchez Blanco", previousMonth: 142300, thisMonth: 118900 },
-];
+const BRANCH_BASE = (branchId: number) => `/branches/${branchId}`;
 
 export async function getBranch(id: number): Promise<Branch | null> {
   const result = await getBranchFromApi(id);
@@ -58,79 +40,42 @@ export async function getBranch(id: number): Promise<Branch | null> {
   return mapApiBranch(result.data);
 }
 
-export async function getSalesDashboard(_branchId: number): Promise<SalesDashboardKpis> {
-  await new Promise((r) => setTimeout(r, 300));
-  return {
-    thisMonth: 239540,
-    goal: 200000,
-    performancePercent: 83,
-    closeRatePercent: 23,
-    avgTicket: 15540,
-  };
+export async function getSalesDashboard(
+  branchId: number,
+): Promise<ApiResult<SalesDashboardKpis>> {
+  return get<SalesDashboardKpis>(`${BRANCH_BASE(branchId)}/sales-dashboard`);
 }
 
-export async function getMonthlySales(_branchId: number): Promise<MonthlySalesPoint[]> {
-  await new Promise((r) => setTimeout(r, 200));
-  const baseGoal = 112450.5;
-  return MONTH_NAMES.map((month, i) => ({
-    month,
-    sales: Math.round(baseGoal * (0.75 + Math.random() * 0.4) * 100) / 100,
-    goal: Math.round(baseGoal * 100) / 100,
-  }));
+export async function getMonthlySales(
+  branchId: number,
+): Promise<ApiResult<MonthlySalesPoint[]>> {
+  return get<MonthlySalesPoint[]>(`${BRANCH_BASE(branchId)}/monthly-sales`);
 }
 
-export async function getSalesBySeller(_branchId: number): Promise<SellerSalesRow[]> {
-  await new Promise((r) => setTimeout(r, 200));
-  return DUMMY_SELLERS.map((s) => ({
-    ...s,
-    trend: s.thisMonth >= s.previousMonth ? ("up" as const) : ("down" as const),
-  }));
+export async function getSalesBySeller(
+  branchId: number,
+): Promise<ApiResult<SellerSalesRow[]>> {
+  return get<SellerSalesRow[]>(`${BRANCH_BASE(branchId)}/sales-by-seller`);
 }
 
-export async function getSalesHistory(_branchId: number): Promise<SalesHistoryPoint[]> {
-  await new Promise((r) => setTimeout(r, 200));
-  const baseGoal = 112450.5;
-  const labels: string[] = [];
-  const points: SalesHistoryPoint[] = [];
-  for (let y = 2025; y <= 2026; y++) {
-    const start = y === 2025 ? 1 : 1;
-    const end = y === 2025 ? 12 : 1;
-    for (let m = start; m <= end; m++) {
-      labels.push(`${MONTH_NAMES[m - 1].slice(0, 3)}, ${String(y).slice(-2)}`);
-      const isFuture = y === 2026 && m === 1;
-      points.push({
-        label: `${MONTH_NAMES[m - 1].slice(0, 3)}, ${String(y).slice(-2)}`,
-        sales: isFuture ? 0 : Math.round(baseGoal * (0.7 + Math.random() * 0.5) * 100) / 100,
-        goal: isFuture ? 0 : Math.round(baseGoal * 100) / 100,
-      });
-    }
-  }
-  return points;
+export async function getSalesHistory(
+  branchId: number,
+): Promise<ApiResult<SalesHistoryPoint[]>> {
+  return get<SalesHistoryPoint[]>(`${BRANCH_BASE(branchId)}/sales-history`);
 }
 
 export async function getSellerGoals(
-  _branchId: number,
+  branchId: number,
   month: number,
-  year: number
-): Promise<{ monthLabel: string; totalGoal: number; sellers: SellerGoalRow[] }> {
-  await new Promise((r) => setTimeout(r, 300));
-  const monthLabel = `${MONTH_NAMES[month - 1]} ${year}`;
-  const totalGoal = 480000;
-  const perSeller = totalGoal / DUMMY_SELLERS.length;
-  const sellers: SellerGoalRow[] = DUMMY_SELLERS.map((s, i) => ({
-    id: s.id,
-    name: s.name,
-    numCredits: 12,
-    newCredits: 50000,
-    quoteGoal: 600000,
-    monthlyGoal: i === 0 ? 120000 : Math.round(perSeller * 100) / 100,
-  }));
-  return { monthLabel, totalGoal, sellers };
-}
-
-export async function getPromotions(branchId: number): Promise<BranchPromotion[]> {
-  await new Promise((r) => setTimeout(r, 400));
-  return [...DUMMY_PROMOTIONS];
+  year: number,
+): Promise<
+  ApiResult<{ monthLabel: string; totalGoal: number; sellers: SellerGoalRow[] }>
+> {
+  return get<{
+    monthLabel: string;
+    totalGoal: number;
+    sellers: SellerGoalRow[];
+  }>(`${BRANCH_BASE(branchId)}/seller-goals?month=${month}&year=${year}`);
 }
 
 export async function getBranchSettings(branchId: number): Promise<BranchSettings> {
@@ -141,7 +86,7 @@ export async function getBranchSettings(branchId: number): Promise<BranchSetting
 
 export async function saveBranchSettings(
   branchId: number,
-  data: BranchSettings
+  data: BranchSettings,
 ): Promise<BranchSettings> {
   const result = await updateBranchFromApi(branchId, { name: data.name });
   if (result.error) {
@@ -150,25 +95,49 @@ export async function saveBranchSettings(
   return { name: result.data?.name ?? data.name };
 }
 
-export async function deletePromotion(_branchId: number, id: number): Promise<{ success: boolean }> {
-  await new Promise((r) => setTimeout(r, 300));
-  return { success: true };
+function mapPromotionType(code: string): BranchPromotion["type"] {
+  const u = code.toUpperCase();
+  if (u.includes("CREDITO") || u.includes("CRÉD") || u.includes("CREDIT")) {
+    return "credit";
+  }
+  if (u.includes("APART") || u.includes("LAYAWAY")) {
+    return "layaway";
+  }
+  return "cash";
 }
 
-export async function createPromotion(
-  _branchId: number,
-  data: Partial<BranchPromotion>
-): Promise<BranchPromotion> {
-  await new Promise((r) => setTimeout(r, 300));
+function toBranchPromotion(item: PromotionListItem, branchId: number): BranchPromotion {
   return {
-    id: Date.now(),
-    name: data.name ?? "",
-    margin: data.margin ?? 0,
-    type: data.type ?? "credit",
-    startDate: data.startDate ?? new Date().toISOString().split("T")[0],
-    endDate: data.endDate ?? null,
-    departments: data.departments ?? "Todos",
-    lines: data.lines ?? "Todos",
-    branches: data.branches ?? "Todas",
+    id: item.id,
+    name: item.name,
+    margin: item.discount_rate,
+    type: mapPromotionType(item.purchase_type_code),
+    startDate: item.start_date,
+    endDate: item.end_date,
+    departments: item.department_summary || "Todos",
+    lines: "Todos",
+    branches: item.branch_summary || `Sucursal ${branchId}`,
   };
+}
+
+interface PaginatedPromotionsResponse {
+  rows: PromotionListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function getPromotions(
+  branchId: number,
+): Promise<ApiResult<BranchPromotion[]>> {
+  const result = await get<PaginatedPromotionsResponse>(
+    `/promotions?branchIds=${branchId}&limit=100&page=1`,
+  );
+  if (result.error || !result.data) {
+    return { data: null, error: result.error };
+  }
+  const payload = unwrapSuccessEnvelope(result.data) as PaginatedPromotionsResponse;
+  const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+  return { data: rows.map((row) => toBranchPromotion(row, branchId)), error: null };
 }

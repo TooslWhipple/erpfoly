@@ -5,8 +5,8 @@ export type SellerSaleType = "cash" | "credit";
 export interface SellerListItem {
   id: number;
   fullName: string;
-  email: string;
-  branchName: string;
+  cellphone: string;
+  branchName: string | null;
 }
 
 export interface SellerMonthlyBreakdownRow {
@@ -39,7 +39,7 @@ export interface SellerSaleHistoryRow {
 export interface SellerDetail {
   id: number;
   fullName: string;
-  email: string;
+  cellphone: string;
   branchName: string;
   status: SellerStatus;
   currentMonthLabel: string;
@@ -52,9 +52,4 @@ export interface SellerDetail {
   monthlyChart: SellerMonthlyChartPoint[];
   monthlyBreakdown: SellerMonthlyBreakdownRow[];
   salesHistory: SellerSaleHistoryRow[];
-}
-
-export interface SellerListResponse {
-  rows: SellerListItem[];
-  total: number;
 }

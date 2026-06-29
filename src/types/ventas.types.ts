@@ -1,8 +1,14 @@
-export type SaleStatus = "DRAFT" | "PENDING_PAYMENT" | "PAID" | "CANCELLED";
+export type SaleStatus =
+  | "DRAFT"
+  | "PENDING_PAYMENT"
+  | "PAID"
+  | "PARTIALLY_DELIVERED"
+  | "DELIVERED"
+  | "CANCELLED";
 
 export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
 
-export type SaleStatusTab = "all" | "completed" | "pending";
+export type SaleStatusTab = "all" | "completed" | "pending" | "finalized";
 
 export interface SaleListItem {
   id: number;

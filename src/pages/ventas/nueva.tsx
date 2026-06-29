@@ -20,7 +20,7 @@ import {
   Dialog,
   DialogContent,
 } from "@mui/material";
-import { Trash2, ScanLine, Pencil, RefreshCw, Fingerprint } from "lucide-react";
+import { Trash2, ScanLine, Pencil, RefreshCw, Fingerprint, DollarSign, CreditCard, PlusCircle } from "lucide-react";
 import {
   X,
   Search,
@@ -117,8 +117,9 @@ export default function NuevaVenta() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
   const [wantsInvoice, setWantsInvoice] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [cashAmount, setCashAmount] = useState("");
+  const [cardAmount, setCardAmount] = useState("");
+  const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(12);
@@ -240,17 +241,17 @@ export default function NuevaVenta() {
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
-          payment_method: paymentMethod === "cash" ? "CASH" : "CARD",
+          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
         return creditRes.data!;
       }
 
       const paymentRes = await registerSalePayment(saleId, {
-        payment_method: paymentMethod === "cash" ? "CASH" : "CARD",
+        payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
         amount: totalFinal,
-        received_amount: paymentMethod === "cash" ? payAmtNum : undefined,
-        change_amount: paymentMethod === "cash" ? change : undefined,
+        received_amount: cashAmtNum > 0 ? cashAmtNum : undefined,
+        change_amount: cashAmtNum > 0 ? change : undefined,
       });
       if (paymentRes.error) throw new Error(paymentRes.error.message);
 
@@ -358,11 +359,13 @@ export default function NuevaVenta() {
   const subtotalOriginal = cart.reduce((s, item) => s + item.originalPrice * item.quantity, 0);
   const totalDiscounts = cart.reduce((s, item) => s + item.discountAmount * item.quantity, 0);
   const totalFinal = subtotalOriginal - totalDiscounts;
-  const payAmtNum = parseFloat(paymentAmount.replace(/[^0-9.]/g, "")) || 0;
+  const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
+  const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
+  const totalPaid = cashAmtNum + cardAmtNum;
   const ENGANCHE_PCT = 0.1;
   const enganche = subtotal * ENGANCHE_PCT;
   const amountToPay = paymentType === "CREDIT" ? enganche : totalFinal;
-  const change = Math.max(0, payAmtNum - amountToPay);
+  const change = Math.max(0, cashAmtNum - amountToPay);
 
   const PAYMENT_OPTIONS: { value: "CREDIT" | "CASH" | "LAYAWAY"; label: string }[] = [
     { value: "CREDIT", label: "Crédito" },
@@ -392,7 +395,7 @@ export default function NuevaVenta() {
             autoFocus
             fullWidth
             size="small"
-            placeholder="Sala esquinera"
+            placeholder="Búsqueda de artículos..."
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
             startAdornment={
@@ -406,7 +409,7 @@ export default function NuevaVenta() {
             variant="outlined"
             size="small"
             startIcon={<ScanLine size={16} />}
-            sx={{ whiteSpace: "nowrap" }}
+            sx={{ whiteSpace: "nowrap", px: 3 }}
           >
             Escanear artículos
           </Button>
@@ -432,7 +435,7 @@ export default function NuevaVenta() {
               { id: "name", label: "Nombre", type: "text", size: "lg", truncate: true },
               { id: "averageCost", label: "Costo Prom.", type: "currency", size: "md" },
               { id: "lastCost", label: "Últ. Costo", type: "currency", size: "md" },
-              { id: "costWithoutDiscount", label: "Costo sin Desc.", type: "currency", size: "md" },
+              { id: "costWithoutDiscount", label: "Costo sin Descuentos", type: "currency", size: "md" },
               { id: "discountPct", label: "% Desc.1", type: "percentage", size: "sm" },
               { id: "supplier1Name", label: "Proveedor 1", type: "text", size: "md" },
               { id: "supplier2Name", label: "Proveedor 2", type: "text", size: "md" },
@@ -779,7 +782,7 @@ export default function NuevaVenta() {
   if (view === "checkout") {
     const canRegister =
       !cobrarMutation.isPending &&
-      (paymentMethod === "card" || payAmtNum >= amountToPay);
+      totalPaid >= amountToPay;
 
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
@@ -949,9 +952,15 @@ export default function NuevaVenta() {
                   <Typography variant="body2" color="text.secondary" mb={0.25}>
                     {billingData.rfc}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" mb={0.25}>
-                    {billingData.address}&nbsp;&nbsp;CP. {billingData.postalCode}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1} mb={0.25}>
+                    <Typography variant="body2" color="text.secondary">
+                      {billingData.address}
+                    </Typography>
+                    <Box sx={{ width: "1px", height: 14, bgcolor: "divider" }} />
+                    <Typography variant="body2" color="text.secondary">
+                      CP. {billingData.postalCode}
+                    </Typography>
+                  </Stack>
                   <Typography variant="body2" sx={{ color: "primary.main" }}>
                     {billingData.email}
                   </Typography>
@@ -1011,67 +1020,432 @@ export default function NuevaVenta() {
             </Paper>
 
             <Box sx={{ bgcolor: "rgba(25, 118, 210, 0.06)", borderRadius: 2, p: 2.5 }}>
-              <Typography variant="body2" fontWeight={600} textAlign="center" mb={1.5}>
+              <Typography variant="body2" fontWeight={600} mb={3}>
                 Ingresa el cobro realizado a el cliente:
               </Typography>
 
-              <Stack direction="row" alignItems="center" justifyContent="center" mb={2}>
-                <Typography variant="h4" color="text.secondary" fontWeight={400}>
-                  $
-                </Typography>
-                <OutlinedInput
-                  value={formatNumberInput(paymentAmount)}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, "");
-                    const parts = val.split(".");
-                    const sanitized = parts.length > 2
-                      ? parts[0] + "." + parts.slice(1).join("")
-                      : val;
-                    setPaymentAmount(sanitized);
+              <Stack spacing={1.5} mb={3}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    pb: 1.5,
                   }}
-                  placeholder="0.00"
-                  inputProps={{ style: { fontSize: "2rem", fontWeight: 400, textAlign: "center", padding: "4px 0", width: 140 } }}
-                  sx={{ "& .MuiOutlinedInput-notchedOutline": { border: "none" }, fontSize: "2rem" }}
-                />
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        bgcolor: "rgba(0,0,0,0.08)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <DollarSign size={16} color="#666" />
+                    </Box>
+                    <Typography variant="body1" fontWeight={400}>
+                      Efectivo
+                    </Typography>
+                  </Stack>
+                  <OutlinedInput
+                    value={cashAmount ? formatNumberInput(cashAmount) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, "");
+                      const parts = val.split(".");
+                      const sanitized = parts.length > 2
+                        ? parts[0] + "." + parts.slice(1).join("")
+                        : val;
+                      setCashAmount(sanitized);
+                    }}
+                    placeholder="0.00"
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Typography variant="h6" color="text.primary" sx={{ fontWeight: 400 }}>
+                          $
+                        </Typography>
+                      </InputAdornment>
+                    }
+                    sx={{
+                      width: 180,
+                      bgcolor: "transparent",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0,0,0,0.15)",
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0,0,0,0.25)",
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0,0,0,0.3)",
+                      },
+                      "& input": {
+                        textAlign: "right",
+                        fontSize: "1.15rem",
+                        fontWeight: 400,
+                        py: 1.25,
+                      },
+                    }}
+                  />
+                </Stack>
+
+                <Stack
+                  spacing={1.5}
+                  sx={{
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    pb: 1.5,
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                      <Box
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          bgcolor: "rgba(0,0,0,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CreditCard size={16} color="#666" />
+                      </Box>
+                      <Typography variant="body1" fontWeight={400}>
+                        Tarjeta
+                      </Typography>
+                    </Stack>
+                    <OutlinedInput
+                      value={cardAmount ? formatNumberInput(cardAmount) : ""}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, "");
+                        const parts = val.split(".");
+                        const sanitized = parts.length > 2
+                          ? parts[0] + "." + parts.slice(1).join("")
+                          : val;
+                        setCardAmount(sanitized);
+                      }}
+                      placeholder="0.0"
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <Typography variant="h6" color="text.primary" sx={{ fontWeight: 400 }}>
+                            $
+                          </Typography>
+                        </InputAdornment>
+                      }
+                      sx={{
+                        width: 180,
+                        bgcolor: "transparent",
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "rgba(0,0,0,0.15)",
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "rgba(0,0,0,0.25)",
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "rgba(0,0,0,0.3)",
+                        },
+                        "& input": {
+                          textAlign: "right",
+                          fontSize: "1.15rem",
+                          fontWeight: 400,
+                          py: 1.25,
+                        },
+                      }}
+                    />
+                  </Stack>
+                  {cardAmount && parseFloat(cardAmount) > 0 && (
+                    <Box sx={{ pl: 5.5 }}>
+                      <Select
+                        value={selectedTerminal || ""}
+                        onChange={(e) => setSelectedTerminal(e.target.value)}
+                        displayEmpty
+                        fullWidth
+                        renderValue={(value) => {
+                          if (!value) {
+                            return (
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Box
+                                  sx={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: "50%",
+                                    bgcolor: "rgba(0,0,0,0.06)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 6,
+                                      height: 6,
+                                      borderRadius: "50%",
+                                      bgcolor: "rgba(0,0,0,0.2)",
+                                    }}
+                                  />
+                                </Box>
+                                <Typography
+                                  sx={{
+                                    fontSize: "0.875rem",
+                                    color: "text.disabled",
+                                    fontWeight: 400,
+                                  }}
+                                >
+                                  Selecciona una terminal
+                                </Typography>
+                              </Stack>
+                            );
+                          }
+                          return (
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Box
+                                sx={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: "50%",
+                                  bgcolor: "rgba(22, 163, 74, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: "50%",
+                                    bgcolor: "#16a34a",
+                                  }}
+                                />
+                              </Box>
+                              <Typography
+                                sx={{
+                                  fontSize: "0.875rem",
+                                  color: "text.primary",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {value}
+                              </Typography>
+                            </Stack>
+                          );
+                        }}
+                        sx={{
+                          fontSize: "0.875rem",
+                          bgcolor: "rgba(0,0,0,0.02)",
+                          borderRadius: 1.5,
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "rgba(0,0,0,0.08)",
+                          },
+                          "&:hover .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "rgba(0,0,0,0.15)",
+                          },
+                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "primary.main",
+                            borderWidth: 1,
+                          },
+                          "& .MuiSelect-select": {
+                            py: 1.25,
+                            px: 1.5,
+                          },
+                        }}
+                        MenuProps={{
+                          PaperProps: {
+                            elevation: 8,
+                            sx: {
+                              borderRadius: 2,
+                              mt: 0.5,
+                              minWidth: 300,
+                              "& .MuiList-root": {
+                                py: 1,
+                              },
+                            },
+                          },
+                        }}
+                      >
+                        <MenuItem disabled sx={{ px: 2.5, py: 1.25, fontSize: "0.6875rem", color: "text.secondary", fontWeight: 600, letterSpacing: "0.5px" }}>
+                          TERMINAL DE COBRO
+                        </MenuItem>
+                        <MenuItem
+                          value="BBVA 1234"
+                          sx={{
+                            px: 2.5,
+                            py: 1.75,
+                            mx: 1,
+                            my: 0.25,
+                            borderRadius: 1.5,
+                            "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                            "&.Mui-selected": {
+                              bgcolor: "rgba(25, 118, 210, 0.08)",
+                              "&:hover": { bgcolor: "rgba(25, 118, 210, 0.12)" },
+                            },
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: "50%",
+                                  bgcolor: "rgba(22, 163, 74, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#16a34a" }} />
+                              </Box>
+                              <Typography sx={{ fontSize: "0.9375rem", fontWeight: 500 }}>BBVA 1234</Typography>
+                            </Stack>
+                            <Chip
+                              label="Conectada"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: "0.6875rem",
+                                fontWeight: 600,
+                                bgcolor: "rgba(22, 163, 74, 0.1)",
+                                color: "#16a34a",
+                                "& .MuiChip-label": { px: 1 },
+                              }}
+                            />
+                          </Stack>
+                        </MenuItem>
+                        <MenuItem
+                          value="BBVA 3522"
+                          sx={{
+                            px: 2.5,
+                            py: 1.75,
+                            mx: 1,
+                            my: 0.25,
+                            borderRadius: 1.5,
+                            "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                            "&.Mui-selected": {
+                              bgcolor: "rgba(25, 118, 210, 0.08)",
+                              "&:hover": { bgcolor: "rgba(25, 118, 210, 0.12)" },
+                            },
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: "50%",
+                                  bgcolor: "rgba(22, 163, 74, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#16a34a" }} />
+                              </Box>
+                              <Typography sx={{ fontSize: "0.9375rem", fontWeight: 500 }}>BBVA 3522</Typography>
+                            </Stack>
+                            <Chip
+                              label="Conectada"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: "0.6875rem",
+                                fontWeight: 600,
+                                bgcolor: "rgba(22, 163, 74, 0.1)",
+                                color: "#16a34a",
+                                "& .MuiChip-label": { px: 1 },
+                              }}
+                            />
+                          </Stack>
+                        </MenuItem>
+                        <MenuItem
+                          disabled
+                          sx={{
+                            px: 2.5,
+                            py: 1.75,
+                            mx: 1,
+                            my: 0.25,
+                            borderRadius: 1.5,
+                            opacity: 0.5,
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: "50%",
+                                  bgcolor: "rgba(148, 163, 184, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#94a3b8" }} />
+                              </Box>
+                              <Typography sx={{ fontSize: "0.9375rem", fontWeight: 500 }}>Santander 3522</Typography>
+                            </Stack>
+                            <Chip
+                              label="Sin conexión"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: "0.6875rem",
+                                fontWeight: 600,
+                                bgcolor: "rgba(148, 163, 184, 0.1)",
+                                color: "#94a3b8",
+                                "& .MuiChip-label": { px: 1 },
+                              }}
+                            />
+                          </Stack>
+                        </MenuItem>
+                      </Select>
+                    </Box>
+                  )}
+                </Stack>
               </Stack>
 
-              <Stack direction="row" spacing={1} mb={2}>
-                <Button
-                  fullWidth
-                  variant={paymentMethod === "cash" ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => setPaymentMethod("cash")}
-                  sx={{ textTransform: "none", borderRadius: 5 }}
-                >
-                  Efectivo
-                </Button>
-                <Button
-                  fullWidth
-                  variant={paymentMethod === "card" ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => setPaymentMethod("card")}
-                  sx={{ textTransform: "none", borderRadius: 5 }}
-                >
-                  Tarjeta
-                </Button>
-              </Stack>
+              <Button
+                variant="text"
+                size="small"
+                startIcon={<PlusCircle size={16} />}
+                sx={{
+                  textTransform: "none",
+                  color: "primary.main",
+                  mb: 3,
+                  px: 0,
+                }}
+              >
+                Agregar otra tarjeta
+              </Button>
 
               <Box
                 sx={{
                   bgcolor: "rgba(0,0,0,0.06)",
-                  borderRadius: 1,
+                  borderRadius: 1.5,
                   px: 2,
-                  py: 1.25,
+                  py: 1.5,
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  mb: 1.5,
+                  mb: 2,
                 }}
               >
                 <Typography variant="body2" color="text.secondary">
                   Cambio:
                 </Typography>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="h6" fontWeight={600}>
                   {formatCurrency(change)}
                 </Typography>
               </Box>
@@ -1082,9 +1456,11 @@ export default function NuevaVenta() {
                 size="large"
                 disabled={!canRegister}
                 onClick={() => cobrarMutation.mutate()}
-                sx={{ borderRadius: 1.5, textTransform: "none" }}
+                sx={{ borderRadius: 1.5, textTransform: "none", py: 1.5 }}
               >
-                {cobrarMutation.isPending ? "Registrando..." : "Registrar cobro"}
+                {cobrarMutation.isPending
+                  ? "Registrando..."
+                  : `Registrar cobro  ${formatCurrency(totalFinal)}`}
               </Button>
             </Box>
           </Stack>
@@ -1728,7 +2104,7 @@ export default function NuevaVenta() {
                   onClick={() => {
                     if (fingerprintConfirmed) {
                       setFingerprintModalOpen(false);
-                      setPaymentAmount(enganche.toFixed(2));
+                      setCashAmount(enganche.toFixed(2));
                       setView("checkout");
                     } else {
                       setFingerprintConfirmed(true);

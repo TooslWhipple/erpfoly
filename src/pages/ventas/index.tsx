@@ -14,6 +14,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const STATUS_TABS: TabOption[] = [
   { label: "Todas", value: "all" },
+  { label: "Finalizadas", value: "finalized" },
   { label: "Realizadas", value: "completed" },
   { label: "Pendientes", value: "pending" },
 ];
@@ -22,6 +23,8 @@ const STATUS_CHIP_LABELS: Record<SaleStatus, string> = {
   DRAFT: "Borrador",
   PENDING_PAYMENT: "Pago pendiente",
   PAID: "Pagada",
+  PARTIALLY_DELIVERED: "Parcialmente entregada",
+  DELIVERED: "Entregada",
   CANCELLED: "Cancelada",
 };
 
@@ -29,6 +32,8 @@ const STATUS_CHIP_VARIANTS: Record<SaleStatus, StatusChipVariant> = {
   DRAFT: "default",
   PENDING_PAYMENT: "warning",
   PAID: "success",
+  PARTIALLY_DELIVERED: "info",
+  DELIVERED: "success",
   CANCELLED: "error",
 };
 

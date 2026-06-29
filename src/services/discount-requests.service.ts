@@ -1,134 +1,57 @@
+import { get, post, type ApiResult } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
+import type { PaginatedRowsResponse } from "@/lib/axios";
 import type {
+  ApproveDiscountRequestPayload,
   DiscountRequest,
+  DiscountRequestDetail,
+  DiscountRequestStatus,
   GetDiscountRequestsParams,
-  GetDiscountRequestsResponse,
+  RejectDiscountRequestPayload,
 } from "@/types/discount-requests.types";
 
-// ============================================================================
-// MOCK DATA - Realistic discount requests for development
-// ============================================================================
+const BASE = "/pos/discount-requests";
 
-const MOCK_REQUESTS: DiscountRequest[] = [
-  {
-    id: 123456,
-    createdAt: "2025-12-01T09:48:00",
-    type: "contado",
-    customerName: "María Carmen Fuentes López",
-    articleCount: 1,
-    amount: 12560.4,
-    reason: "Última pieza",
-    status: "pending",
-  },
-  {
-    id: 123457,
-    createdAt: "2025-12-01T09:48:00",
-    type: "credito",
-    customerName: "José López Vázquez",
-    articleCount: 2,
-    amount: 28450.0,
-    reason: "Cierre de venta",
-    status: "pending",
-  },
-  {
-    id: 123458,
-    createdAt: "2025-12-01T10:15:00",
-    type: "contado",
-    customerName: "Diego Hernández García",
-    articleCount: 1,
-    amount: 5600.0,
-    reason: "Pieza dañada o con desperfecto",
-    status: "pending",
-  },
-  {
-    id: 123459,
-    createdAt: "2025-12-01T11:22:00",
-    type: "credito",
-    customerName: "Lucía Pérez Morales",
-    articleCount: 3,
-    amount: 42100.5,
-    reason: "Cierre de venta",
-    status: "pending",
-  },
-  {
-    id: 123460,
-    createdAt: "2025-11-30T14:30:00",
-    type: "contado",
-    customerName: "Ana Martínez Ruiz",
-    articleCount: 1,
-    amount: 8900.0,
-    reason: "Última pieza",
-    status: "accepted",
-  },
-  {
-    id: 123461,
-    createdAt: "2025-11-30T16:45:00",
-    type: "credito",
-    customerName: "Carlos Sánchez Mendoza",
-    articleCount: 2,
-    amount: 15600.0,
-    reason: "Pieza dañada o con desperfecto",
-    status: "accepted",
-  },
-  {
-    id: 123462,
-    createdAt: "2025-11-29T09:10:00",
-    type: "contado",
-    customerName: "Roberto González Castro",
-    articleCount: 1,
-    amount: 3200.0,
-    reason: "Cierre de venta",
-    status: "rejected",
-  },
-  {
-    id: 123463,
-    createdAt: "2025-11-28T17:00:00",
-    type: "credito",
-    customerName: "Patricia Ramírez Soto",
-    articleCount: 4,
-    amount: 67800.0,
-    reason: "Última pieza",
-    status: "rejected",
-  },
-];
+const STATUS_TO_API: Record<DiscountRequestStatus, string> = {
+  pending: "PENDING",
+  approved: "APPROVED",
+  rejected: "REJECTED",
+};
 
-// ============================================================================
-// MOCK API
-// ============================================================================
+export type GetDiscountRequestsResponse = PaginatedRowsResponse<DiscountRequest>;
 
-/**
- * Fetches discount requests with optional status filter and search.
- * In production, this would call the actual API.
- */
 export async function getDiscountRequests(
   params: GetDiscountRequestsParams
-): Promise<GetDiscountRequestsResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  let filtered = [...MOCK_REQUESTS];
-
-  if (params.status) {
-    filtered = filtered.filter((r) => r.status === params.status);
-  }
-
-  if (params.search?.trim()) {
-    const q = params.search.toLowerCase().trim();
-    filtered = filtered.filter(
-      (r) =>
-        r.customerName.toLowerCase().includes(q) ||
-        String(r.id).includes(q) ||
-        r.reason.toLowerCase().includes(q)
-    );
-  }
-
-  const total = filtered.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const data = filtered.slice(start, end);
-
-  return {
-    data,
-    total,
+): Promise<ApiResult<GetDiscountRequestsResponse>> {
+  const queryParams: Record<string, unknown> = {
     page: params.page,
     limit: params.limit,
+    search: params.search,
   };
+
+  if (params.status) {
+    queryParams.status = STATUS_TO_API[params.status];
+  }
+
+  return get<GetDiscountRequestsResponse>(buildListUrl(BASE, queryParams));
+}
+
+export async function getDiscountRequestDetail(
+  id: number
+): Promise<ApiResult<DiscountRequestDetail>> {
+  return get<DiscountRequestDetail>(`${BASE}/${id}`);
+}
+
+export async function approveDiscountRequest(
+  id: number,
+  payload: ApproveDiscountRequestPayload
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/${id}/approve`, payload);
+}
+
+export async function rejectDiscountRequest(
+  id: number,
+  payload: RejectDiscountRequestPayload
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/${id}/reject`, payload);
 }

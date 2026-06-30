@@ -150,4 +150,6 @@ export { AutomatedCollectionActivityModal } from "./AutomatedCollectionActivityM
 export type { AutomatedCollectionActivityModalProps } from "./AutomatedCollectionActivityModal";
 export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
+export { MapMarker } from "./MapMarker";
+export type { MapMarkerProps } from "./MapMarker";
 

@@ -5,12 +5,36 @@ import { buildListUrl } from "@/lib/apiHelpers";
 // TYPES
 // ============================================================================
 
+export interface BranchAddress {
+  postalCode?: string | null;
+  neighborhoodFullCode?: string | null;
+  neighborhoodName?: string | null;
+  state?: string | null;
+  municipality?: string | null;
+  street?: string | null;
+  externalNumber?: string | null;
+  internalNumber?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 export interface Branch {
   id: number;
   name: string;
   status?: "ACTIVE" | "INACTIVE";
   createdAt?: string;
   updatedAt?: string;
+  postalCode?: string | null;
+  neighborhoodFullCode?: string | null;
+  neighborhoodName?: string | null;
+  state?: string | null;
+  municipality?: string | null;
+  street?: string | null;
+  externalNumber?: string | null;
+  internalNumber?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geocodedAt?: string | null;
 }
 
 export interface GetBranchesParams {
@@ -29,11 +53,46 @@ export interface GetBranchesResponse {
 
 export interface CreateBranchPayload {
   name: string;
+  postalCode?: string;
+  neighborhoodFullCode?: string;
+  neighborhoodName?: string;
+  state?: string;
+  municipality?: string;
+  street?: string;
+  externalNumber?: string;
+  internalNumber?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpdateBranchPayload {
   name?: string;
   status?: "ACTIVE" | "INACTIVE";
+  postalCode?: string;
+  neighborhoodFullCode?: string;
+  neighborhoodName?: string;
+  state?: string;
+  municipality?: string;
+  street?: string;
+  externalNumber?: string;
+  internalNumber?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface GeocodeBranchPayload {
+  street: string;
+  externalNumber?: string;
+  internalNumber?: string;
+  neighborhoodName?: string;
+  municipality?: string;
+  state?: string;
+  postalCode?: string;
+}
+
+export interface GeocodeBranchResult {
+  lat: number;
+  lng: number;
 }
 
 // ============================================================================
@@ -84,4 +143,10 @@ export async function getBranchesCatalog(): Promise<BranchCatalogItem[]> {
 export async function getMainWarehouse(): Promise<BranchCatalogItem | null> {
   const result = await getBranchesCatalog();
   return result.find((b) => b.is_main_warehouse) ?? null;
+}
+
+export async function geocodeBranchAddress(
+  payload: GeocodeBranchPayload
+): Promise<ApiResult<GeocodeBranchResult | null>> {
+  return post<GeocodeBranchResult | null>(`${BASE}/geocode`, payload);
 }

@@ -14,6 +14,7 @@ import {
   Box,
   Route,
   Truck,
+  Plus,
   PlusCircle,
   Save
 } from "lucide-react";
@@ -27,8 +28,10 @@ import {
   AddOrdersToRouteModal,
   AddDriverToRouteModal,
   AddAssistantToRouteModal,
+  NewRouteModal,
   ConfirmModal,
 } from "@/components";
+import type { NewRouteFormValues } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
 import {
@@ -51,6 +54,7 @@ import {
   addAssistantToRoute,
   addOrdersToRoute,
   assignDriverToRoute,
+  createRoute,
   deleteCartaPorteDocument,
   fetchAvailableAssistants,
   fetchAvailableDrivers,
@@ -62,6 +66,8 @@ import {
   updateRouteVehicleInfo,
   uploadCartaPorte,
 } from "@/services/rutas.service";
+import { getMunicipalityCatalog } from "@/services/municipalities.service";
+import { getBranchesCatalog } from "@/services/branches.service";
 import type { RouteDetailApi } from "@/types/rutas-api.types";
 import {
   mapRouteDetailApiToView,
@@ -176,6 +182,7 @@ export default function RutaPage() {
   const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
   const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
   const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
+  const [newRouteModalOpen, setNewRouteModalOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
   const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<File | undefined>(undefined);
   const [cartaPanelKey, setCartaPanelKey] = useState(0);
@@ -222,6 +229,29 @@ export default function RutaPage() {
     if (!raw) return null;
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
+
+  const createRouteMutation = useMutation({
+    mutationFn: async (payload: NewRouteFormValues) => {
+      const res = await createRoute(payload);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      queryClient.setQueryData<RouteDetailApi>(["route-detail", data.id], data);
+      setSelectedRouteId(data.id);
+      setActiveTab(TAB_ARTICLES);
+      showSuccess("Ruta creada correctamente.");
+      setNewRouteModalOpen(false);
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo crear la ruta: ${detail}`
+          : "No se pudo crear la ruta.",
+      );
+    },
+  });
 
   const addOrdersMutation = useMutation({
     mutationFn: async ({
@@ -590,6 +620,15 @@ export default function RutaPage() {
               variant="text"
               onClick={handleToday}>Hoy</Button>
           </Stack>
+          <Button
+            fullWidth
+            variant="option"
+            color="primary"
+            startIcon={<Plus size={16} strokeWidth={2} />}
+            onClick={() => setNewRouteModalOpen(true)}
+          >
+            Nueva ruta
+          </Button>
           {
             routesLoading ?
               [1, 2, 3].map((i) => (
@@ -845,6 +884,17 @@ export default function RutaPage() {
           }
         </Stack>
       </Stack>
+
+      <NewRouteModal
+        open={newRouteModalOpen}
+        onClose={() => setNewRouteModalOpen(false)}
+        onConfirm={async (values) => {
+          await createRouteMutation.mutateAsync(values);
+        }}
+        loading={createRouteMutation.isPending}
+        fetchCities={getMunicipalityCatalog}
+        fetchBranches={getBranchesCatalog}
+      />
     </MainLayout>
   );
 }

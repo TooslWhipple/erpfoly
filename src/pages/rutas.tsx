@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Stack,
   Typography,
@@ -14,10 +14,12 @@ import {
   Box,
   Route,
   Truck,
+  Plus,
   PlusCircle,
   Save
 } from "lucide-react";
 import dayjs from "dayjs";
+import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -27,8 +29,10 @@ import {
   AddOrdersToRouteModal,
   AddDriverToRouteModal,
   AddAssistantToRouteModal,
+  NewRouteModal,
   ConfirmModal,
 } from "@/components";
+import type { NewRouteFormValues } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
 import {
@@ -51,6 +55,7 @@ import {
   addAssistantToRoute,
   addOrdersToRoute,
   assignDriverToRoute,
+  createRoute,
   deleteCartaPorteDocument,
   fetchAvailableAssistants,
   fetchAvailableDrivers,
@@ -62,6 +67,8 @@ import {
   updateRouteVehicleInfo,
   uploadCartaPorte,
 } from "@/services/rutas.service";
+import { getMunicipalityCatalog } from "@/services/municipalities.service";
+import { getBranchesCatalog } from "@/services/branches.service";
 import type { RouteDetailApi } from "@/types/rutas-api.types";
 import {
   mapRouteDetailApiToView,
@@ -70,6 +77,7 @@ import {
 } from "@/utils/rutas-api.mapper";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { parseDateParam } from "@/utils/query";
 
 interface RouteCartaUploadSectionProps {
   serverFiles: UploadedFileItem[];
@@ -161,11 +169,52 @@ export default function RutaPage() {
   const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
   const canManageRoute = hasPermission(ROUTES_UPDATE);
 
+  const router = useRouter();
   const queryClient = useQueryClient();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+
+  const setRouteDate = useCallback(
+    (date: Date) => {
+      setSelectedDate(date);
+      const dateStr = dayjs(date).format("YYYY-MM-DD");
+      router.replace(
+        {
+          pathname: "/rutas",
+          query: { ...router.query, fecha: dateStr },
+        },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const fromUrl = parseDateParam(router.query.fecha);
+
+    if (fromUrl) {
+      if (!dayjs(fromUrl).isSame(selectedDate, "day")) {
+        setSelectedDate(fromUrl);
+      }
+    } else {
+      const todayStr = dayjs().format("YYYY-MM-DD");
+      router.replace(
+        {
+          pathname: "/rutas",
+          query: { ...router.query, fecha: todayStr },
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.fecha]);
+
   const routeDateStr = useMemo(
     () => dayjs(selectedDate).format("YYYY-MM-DD"),
     [selectedDate],
@@ -176,6 +225,7 @@ export default function RutaPage() {
   const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
   const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
   const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
+  const [newRouteModalOpen, setNewRouteModalOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
   const [pendingCartaLocalFile, setPendingCartaLocalFile] = useState<File | undefined>(undefined);
   const [cartaPanelKey, setCartaPanelKey] = useState(0);
@@ -222,6 +272,29 @@ export default function RutaPage() {
     if (!raw) return null;
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
+
+  const createRouteMutation = useMutation({
+    mutationFn: async (payload: NewRouteFormValues) => {
+      const res = await createRoute(payload);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      queryClient.setQueryData<RouteDetailApi>(["route-detail", data.id], data);
+      setSelectedRouteId(data.id);
+      setActiveTab(TAB_ARTICLES);
+      showSuccess("Ruta creada correctamente.");
+      setNewRouteModalOpen(false);
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo crear la ruta: ${detail}`
+          : "No se pudo crear la ruta.",
+      );
+    },
+  });
 
   const addOrdersMutation = useMutation({
     mutationFn: async ({
@@ -445,7 +518,7 @@ export default function RutaPage() {
   const handlePrevDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
-    setSelectedDate(d);
+    setRouteDate(d);
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }
@@ -454,14 +527,14 @@ export default function RutaPage() {
   const handleNextDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + 1);
-    setSelectedDate(d);
+    setRouteDate(d);
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date());
+    setRouteDate(new Date());
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }
@@ -590,6 +663,15 @@ export default function RutaPage() {
               variant="text"
               onClick={handleToday}>Hoy</Button>
           </Stack>
+          <Button
+            fullWidth
+            variant="option"
+            color="primary"
+            startIcon={<Plus size={16} strokeWidth={2} />}
+            onClick={() => setNewRouteModalOpen(true)}
+          >
+            Nueva ruta
+          </Button>
           {
             routesLoading ?
               [1, 2, 3].map((i) => (
@@ -845,6 +927,17 @@ export default function RutaPage() {
           }
         </Stack>
       </Stack>
+
+      <NewRouteModal
+        open={newRouteModalOpen}
+        onClose={() => setNewRouteModalOpen(false)}
+        onConfirm={async (values) => {
+          await createRouteMutation.mutateAsync(values);
+        }}
+        loading={createRouteMutation.isPending}
+        fetchCities={getMunicipalityCatalog}
+        fetchBranches={getBranchesCatalog}
+      />
     </MainLayout>
   );
 }

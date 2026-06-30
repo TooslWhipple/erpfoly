@@ -54,7 +54,7 @@ function mapOrder(order: RouteOrderApi): RouteOrder {
 export function mapRouteListRowToSummary(row: RouteListRowApi): RouteSummary {
   return {
     id: row.id,
-    name: row.code,
+    name: formatRouteName(row.id, row.code),
     status: row.status as RouteStatus,
     location: row.location,
     articleCount: row.article_count,
@@ -98,7 +98,7 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
 
   return {
     id: data.id,
-    name: data.code,
+    name: formatRouteName(data.id, data.code),
     status: data.status as RouteStatus,
     location: data.location,
     articleCount: data.article_count,
@@ -114,6 +114,11 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     map: data.map,
     cartaPorteRemoteFiles,
   };
+}
+
+function formatRouteName(id: number, code?: string | null): string {
+  if (code && code.trim().length > 0) return code;
+  return String(id);
 }
 
 export function mapDriverCandidateToView(

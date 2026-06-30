@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { InputAdornment, Stack } from "@mui/material";
-import { MainLayout, Title, TableCrud, ModalForm, TabFilters } from "@/components";
+import { Stack, Typography } from "@mui/material";
+import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import type { FormFieldConfig } from "@/components/Form";
+import { BranchCreateModal } from "@/components/BranchCreateModal/BranchCreateModal";
 
 import {
   getBranches as fetchBranchesApi,
-  createBranch,
-  updateBranch,
   deleteBranch,
   type Branch,
 } from "@/services/branches.service";
+import { formatStreetAddressLine } from "@/utils/address";
 import {
   CATALOG_BRANCHES_CREATE,
   CATALOG_BRANCHES_DELETE,
@@ -28,6 +27,30 @@ const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   INACTIVE: "error",
 };
 
+function formatBranchAddress(branch: Branch) {
+  const streetLine = formatStreetAddressLine({
+    street: branch.street,
+    externalNumber: branch.externalNumber,
+    internalNumber: branch.internalNumber,
+  });
+  const localityLine = [branch.neighborhoodName, branch.municipality]
+    .map((value) => value?.trim() ?? "")
+    .filter((value) => value.length > 0)
+    .join(", ");
+  const regionLine = [branch.state, branch.postalCode]
+    .map((value) => value?.trim() ?? "")
+    .filter((value) => value.length > 0)
+    .join(", ");
+
+  const lines = [streetLine, localityLine, regionLine].filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    return <Typography variant="body2" color="text.secondary">Sin domicilio</Typography>
+  }
+
+  return <Typography variant="body1">{lines.join(", ")}</Typography>
+}
+
 export default function Sucursales() {
   const router = useRouter();
 
@@ -38,9 +61,9 @@ export default function Sucursales() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [modalState, setModalState] = useState<
+    { open: false } | { open: true; branch?: Branch }
+  >({ open: false });
 
   const fetchBranches = useCallback(async () => {
     setLoading(true);
@@ -73,60 +96,23 @@ export default function Sucursales() {
     setPage(0);
   }, [searchValue]);
 
-  const branchFormFields: FormFieldConfig[] = [
-    {
-      name: "name",
-      label: "Nombre de la sucursal",
-      type: "text",
-      placeholder: "Ej. Foly Muebles Centro",
-      validation: {
-        required: true,
-        minLength: 3,
-        maxLength: 64,
-      },
-      autoFocus: true,
-    },
-  ];
-
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
   };
 
   const handleOpenCreateModal = () => {
-    setEditingBranch(null);
-    setModalOpen(true);
+    setModalState({ open: true });
   };
 
   const handleOpenEditModal = (branch: Branch) => {
-    setEditingBranch(branch);
-    setModalOpen(true);
+    setModalState({ open: true, branch });
   };
 
   const handleCloseModal = () => {
-    setModalOpen(false);
-    setEditingBranch(null);
+    setModalState({ open: false });
   };
 
-  const handleSaveBranch = async (data: Record<string, unknown>) => {
-    setSaving(true);
-    if (editingBranch) {
-      const result = await updateBranch(editingBranch.id, {
-        name: data.name as string,
-      });
-      setSaving(false);
-      if (result.error) {
-        console.error("[Sucursales] Error updating:", result.error.message);
-        return;
-      }
-    } else {
-      const result = await createBranch({ name: data.name as string });
-      setSaving(false);
-      if (result.error) {
-        console.error("[Sucursales] Error creating:", result.error.message);
-        return;
-      }
-    }
-    handleCloseModal();
+  const handleModalSuccess = () => {
     fetchBranches();
   };
 
@@ -165,7 +151,13 @@ export default function Sucursales() {
     {
       id: "name",
       label: "Nombre",
+      size: "md",
+    },
+    {
+      id: "address",
+      label: "Domicilio",
       size: "xl",
+      format: (_value, row) => formatBranchAddress(row),
     },
     {
       id: "status",
@@ -189,15 +181,15 @@ export default function Sucursales() {
     },
   ];
 
-  const handleViewDiscounts = (branch: Branch) => {
+  const handleViewDetail = (branch: Branch) => {
     router.push(`/catalogos/sucursales/${branch.id}`);
   };
 
   const actions: RowAction<Branch>[] = [
     {
-      id: "discounts",
-      label: "Ver descuentos",
-      onClick: handleViewDiscounts,
+      id: "view",
+      label: "Ver detalle",
+      onClick: handleViewDetail,
       permission: CATALOG_BRANCHES_READ,
     },
     {
@@ -235,7 +227,7 @@ export default function Sucursales() {
             }
           ]}
         />
-       
+
         <TableCrud
           columns={columns}
           rows={branches}
@@ -247,22 +239,23 @@ export default function Sucursales() {
           totalRows={totalRows}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
-          onRowClick={handleViewDiscounts}
+          onRowClick={handleViewDetail}
           emptyMessage="No hay sucursales registradas"
         />
       </Stack>
 
-      <ModalForm
-        open={modalOpen}
+      <BranchCreateModal
+        key={
+          modalState.open
+            ? modalState.branch
+              ? `edit-${modalState.branch.id}`
+              : "new"
+            : "closed"
+        }
+        open={modalState.open}
         onClose={handleCloseModal}
-        title={editingBranch ? "Editar sucursal" : "Nueva sucursal"}
-        fields={branchFormFields}
-        onConfirm={handleSaveBranch}
-        loading={saving}
-        initialValues={editingBranch ? { name: editingBranch.name } : undefined}
-        confirmLabel="Guardar"
-        cancelLabel="Cancelar"
-        maxWidth="xs"
+        onSuccess={handleModalSuccess}
+        branch={modalState.open ? modalState.branch : undefined}
       />
     </MainLayout>
   );

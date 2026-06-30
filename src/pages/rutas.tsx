@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Stack,
   Typography,
@@ -19,6 +19,7 @@ import {
   Save
 } from "lucide-react";
 import dayjs from "dayjs";
+import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -76,6 +77,7 @@ import {
 } from "@/utils/rutas-api.mapper";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { parseDateParam } from "@/utils/query";
 
 interface RouteCartaUploadSectionProps {
   serverFiles: UploadedFileItem[];
@@ -167,11 +169,52 @@ export default function RutaPage() {
   const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
   const canManageRoute = hasPermission(ROUTES_UPDATE);
 
+  const router = useRouter();
   const queryClient = useQueryClient();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+
+  const setRouteDate = useCallback(
+    (date: Date) => {
+      setSelectedDate(date);
+      const dateStr = dayjs(date).format("YYYY-MM-DD");
+      router.replace(
+        {
+          pathname: "/rutas",
+          query: { ...router.query, fecha: dateStr },
+        },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const fromUrl = parseDateParam(router.query.fecha);
+
+    if (fromUrl) {
+      if (!dayjs(fromUrl).isSame(selectedDate, "day")) {
+        setSelectedDate(fromUrl);
+      }
+    } else {
+      const todayStr = dayjs().format("YYYY-MM-DD");
+      router.replace(
+        {
+          pathname: "/rutas",
+          query: { ...router.query, fecha: todayStr },
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.fecha]);
+
   const routeDateStr = useMemo(
     () => dayjs(selectedDate).format("YYYY-MM-DD"),
     [selectedDate],
@@ -475,7 +518,7 @@ export default function RutaPage() {
   const handlePrevDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
-    setSelectedDate(d);
+    setRouteDate(d);
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }
@@ -484,14 +527,14 @@ export default function RutaPage() {
   const handleNextDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + 1);
-    setSelectedDate(d);
+    setRouteDate(d);
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date());
+    setRouteDate(new Date());
     if (activeTab === TAB_ROUTE) {
       setActiveTab(TAB_ARTICLES);
     }

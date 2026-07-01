@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Button, Stack } from "@mui/material";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { Box, InputAdornment, Stack } from "@mui/material";
+import { Search } from "lucide-react";
+import { MainLayout, Title, TableCrud, FormTextField } from "@/components";
+import { theme } from "@/styles/theme";
 import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -161,25 +163,25 @@ export default function CotizacionesGuardadas() {
   return (
     <MainLayout>
       <Stack direction="column" spacing={3}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Title title="Cotizaciones guardadas" />
-          <Button
-            variant="contained"
-            onClick={() => void router.push("/ventas/nueva")}
-            sx={{ borderRadius: 2 }}
-          >
-            Nueva
-          </Button>
+          <Box sx={{ width: { xs: "100%", sm: 320 }, flexShrink: 0 }}>
+            <FormTextField
+              placeholder="Buscar"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              fullWidth
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} color={theme.palette.text.secondary} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
         </Stack>
-
-        <TabFilters
-          tabs={[]}
-          activeTab=""
-          onTabChange={() => undefined}
-          showSearch
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-        />
 
         <TableCrud
           columns={columns}

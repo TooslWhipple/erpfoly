@@ -2,6 +2,7 @@ import { get, patch, post, type ApiResult } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type { PaginatedRowsResponse } from "@/lib/axios";
 import type {
+  DiscountRequestReasonCatalogItem,
   GetQuotationsParams,
   QuotationDetail,
   QuotationListItem,
@@ -37,6 +38,14 @@ export async function updateQuotation(
   payload: UpdateQuotationPayload
 ): Promise<ApiResult<QuotationDetail>> {
   return patch<QuotationDetail>(`${BASE}/${id}`, payload);
+}
+
+const REASONS_CATALOG_BASE = "/discount-request-reasons-catalog";
+
+export async function getDiscountRequestReasonsCatalog(): Promise<
+  ApiResult<DiscountRequestReasonCatalogItem[]>
+> {
+  return get<DiscountRequestReasonCatalogItem[]>(`${REASONS_CATALOG_BASE}/catalog`);
 }
 
 export async function requestQuotationDiscount(

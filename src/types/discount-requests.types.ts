@@ -10,8 +10,8 @@ export type DiscountRequestType = "contado" | "credito" | "apartado";
 
 export interface DiscountRequest {
   id: number;
-  saleId: number;
-  saleFolio: string;
+  quotationId: number;
+  quotationFolio: string;
   /** ISO date string for date-time column */
   createdAt: string;
   type: DiscountRequestType;
@@ -24,6 +24,7 @@ export interface DiscountRequest {
   /** Reason label for display */
   reason: string;
   reasonCode?: string;
+  notes?: string | null;
   status: DiscountRequestStatus;
   requestedDiscountPct?: number;
 }
@@ -71,8 +72,8 @@ export interface DiscountRequestDelivery {
 
 export interface DiscountRequestDetail {
   id: number;
-  saleId: number;
-  saleFolio: string;
+  quotationId: number;
+  quotationFolio: string;
   status: DiscountRequestStatus;
   reason: string;
   reasonLabel: string;

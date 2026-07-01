@@ -50,6 +50,7 @@ import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { TableCrud } from "@/components/TableCrud";
+import { CreateCashClientModal } from "@/components/CreateCashClientModal";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -122,6 +123,7 @@ export default function NuevaVenta() {
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
+  const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(12);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingData, setBillingData] = useState<{
@@ -191,6 +193,7 @@ export default function NuevaVenta() {
 
   const debouncedClientModalSearch = useDebouncedValue(clientModalSearch, SEARCH_DEBOUNCE_MS);
   const snackbar = useSnackbarStore();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
   const { data: purchaseTypesRes } = useQuery({
     queryKey: ["purchase-types"],
@@ -1930,15 +1933,18 @@ export default function NuevaVenta() {
                   sx={{ mb: 1.5, cursor: "pointer" }}
                 />
 
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Plus size={16} />}
-                  sx={{ textTransform: "none", justifyContent: "flex-start" }}
-                >
-                  Registrar nuevo cliente
-                </Button>
+                {paymentType === "CASH" && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Plus size={16} />}
+                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                    onClick={() => setCreateClientModalOpen(true)}
+                  >
+                    Registrar nuevo cliente
+                  </Button>
+                )}
               </>
             )}
           </Paper>
@@ -2129,6 +2135,10 @@ export default function NuevaVenta() {
                 size="small"
                 startIcon={<Plus size={16} />}
                 sx={{ whiteSpace: "nowrap", px: 2 }}
+                onClick={() => {
+                  setClientModalOpen(false);
+                  setCreateClientModalOpen(true);
+                }}
               >
                 Registrar nuevo
               </Button>
@@ -2195,6 +2205,30 @@ export default function NuevaVenta() {
               }}
             />
           </SideModal>
+
+          <CreateCashClientModal
+            open={createClientModalOpen}
+            onClose={() => setCreateClientModalOpen(false)}
+            onSuccess={(client) => {
+              setSelectedClient(client);
+              setClientSearch(client.fullName);
+              showSuccess(`Cliente ${client.fullName} creado exitosamente`);
+
+              // Si el cliente fue creado con datos de facturación, prellenarlos
+              if (client.rfc && client.businessName) {
+                setWantsInvoice(true);
+                const billingInfo = {
+                  rfc: client.rfc,
+                  businessName: client.businessName,
+                  address: client.billingStreet ?? "",
+                  postalCode: client.billingPostalCode ?? "",
+                  email: client.invoiceEmail ?? "",
+                };
+                setBillingData(billingInfo);
+                setBillingForm(billingInfo);
+              }
+            }}
+          />
         </Stack>
       </Box>
     </Box>

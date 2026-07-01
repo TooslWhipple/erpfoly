@@ -14,7 +14,7 @@ import type { PromotionListItem } from "@/types/promociones.types";
 const BASE = "/promotions";
 
 /** Quita capas `{ success: true, data }` si la respuesta llegó aún envuelta. */
-function unwrapSuccessEnvelope(raw: unknown): unknown {
+export function unwrapSuccessEnvelope(raw: unknown): unknown {
 	let current: unknown = raw;
 	while (
 		current !== null &&

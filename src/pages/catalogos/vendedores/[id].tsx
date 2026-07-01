@@ -10,7 +10,7 @@ import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
 import { MonthlySalesGoalsModal } from "@/components/Sellers";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
-import { fetchSellerDetailMock } from "@/services/sellers.service";
+import { getSellerDetail } from "@/services/sellers.service";
 import type { SellerDetail, SellerSaleHistoryRow } from "@/types/sellers.types";
 import { ChartCard, MetricCard, SectionCard, SectionCardHeader } from "@/styles/catalogos/vendedores.styles";
 import { theme } from "@/styles/theme";
@@ -62,12 +62,12 @@ export default function VendedorDetailPage() {
       }
       setLoading(true);
       setError(null);
-      const result = await fetchSellerDetailMock(validId);
+      const result = await getSellerDetail(validId);
       if (isCancelled()) return;
       if (result.error) {
         setDetail(null);
         setError(result.error.message);
-      } else {
+      } else if (result.data) {
         setDetail(result.data);
       }
       if (!isCancelled()) {

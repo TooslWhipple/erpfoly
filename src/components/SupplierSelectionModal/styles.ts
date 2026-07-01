@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Box } from "@mui/material";
+import { TextField, Button, Box, Table, TableCell } from "@mui/material";
 import { theme } from "@/styles/theme";
 
 export const SupplierModalContainer = styled(Box)(({ theme }) => ({
@@ -78,3 +78,24 @@ export const SelectButton = styled(Button)(({ theme }) => ({
         textDecoration: "underline",
     },
 }));
+
+export const SupplierTable = styled(Table)({
+    tableLayout: "fixed",
+    width: "100%",
+});
+
+export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
+    padding: "12px 8px",
+}));
+
+export const SupplierTableHeaderCell = styled(SupplierTableCell)(({ theme }) => ({
+    color: theme.palette.text.secondary,
+    padding: "12px 8px"
+}));
+
+export const SupplierNameTableCell = styled(TableCell)({
+    padding: "12px 8px",
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+});

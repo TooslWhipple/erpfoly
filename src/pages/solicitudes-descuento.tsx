@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getDiscountRequests } from "@/services/discount-requests.service";
 import type {
   DiscountRequest,
@@ -10,24 +12,27 @@ import type {
   DiscountRequestType,
 } from "@/types/discount-requests.types";
 import { formatDateTimeShort } from "@/utils/date";
-import { Stack } from "@mui/material";
 import { DISCOUNT_REQUESTS_CREATE } from "@/lib/permissions";
+import { Stack } from "@mui/material";
 
+const SEARCH_DEBOUNCE_MS = 300;
 
 const TABS: TabOption[] = [
   { label: "Pendientes", value: "pending" },
-  { label: "Aceptadas", value: "accepted" },
+  { label: "Aceptadas", value: "approved" },
   { label: "Rechazadas", value: "rejected" },
 ];
 
 const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {
   contado: "Contado",
   credito: "Crédito",
+  apartado: "Apartado",
 };
 
 const TYPE_CHIP_VARIANTS: Record<DiscountRequestType, StatusChipVariant> = {
   contado: "info",
   credito: "infoAlt",
+  apartado: "default",
 };
 
 function formatArticleCount(count: number): string {
@@ -37,48 +42,46 @@ function formatArticleCount(count: number): string {
 export default function SolicitudesDescuentoPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("pending");
-  const [searchValue, setSearchValue] = useState("");
-  const [requests, setRequests] = useState<DiscountRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getDiscountRequests({
-        page,
-        limit: rowsPerPage,
-        status: activeTab as DiscountRequestStatus,
-        search: searchValue || undefined,
-      });
-      
-      setRequests(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error("[SolicitudesDescuento] Error fetching:", err);
-      setRequests([]);
-      setTotalRows(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, activeTab, searchValue]);
+  const statusExtra: { status?: DiscountRequestStatus } = {
+    status: activeTab as DiscountRequestStatus,
+  };
 
-  useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+  const {
+    data: requests,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage,
+    setSearch,
+    isLoading: loading,
+  } = usePaginatedList<DiscountRequest>({
+    queryKey: ["discount-requests", activeTab],
+    queryFn: getDiscountRequests,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: statusExtra,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS
+  );
 
   useEffect(() => {
-    setPage(0);
-  }, [activeTab, searchValue]);
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
-  const handleTabChange = (value: string) => setActiveTab(value);
-  const handleSearchChange = (value: string) => setSearchValue(value);
-  const handlePageChange = (newPage: number) => setPage(newPage);
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
     setPage(0);
+  };
+
+  const handleRowClick = (row: DiscountRequest) => {
+    void router.push(`/solicitudes-descuento/${row.id}`);
   };
 
   const columns: Column<DiscountRequest>[] = [
@@ -108,6 +111,7 @@ export default function SolicitudesDescuentoPage() {
       label: "CLIENTE",
       size: "lg",
       truncate: true,
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
     },
     {
       id: "articleCount",
@@ -139,17 +143,17 @@ export default function SolicitudesDescuentoPage() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
           showSearch
-          searchValue={searchValue}
-          onSearchChange={handleSearchChange}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
           actions={[
             {
               label: "Nuevo",
               variant: "contained",
               color: "primary",
               showIcon: false,
-              onClick: () => router.push("/solicitudes-descuento/nuevo"),
+              onClick: () => {},
               permission: DISCOUNT_REQUESTS_CREATE,
-            }
+            },
           ]}
         />
         <TableCrud<DiscountRequest>
@@ -160,9 +164,10 @@ export default function SolicitudesDescuentoPage() {
           page={page}
           rowsPerPage={rowsPerPage}
           totalRows={totalRows}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
           emptyMessage="No hay solicitudes de descuento"
+          onRowClick={handleRowClick}
         />
       </Stack>
     </MainLayout>

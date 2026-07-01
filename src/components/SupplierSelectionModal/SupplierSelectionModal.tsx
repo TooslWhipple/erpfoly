@@ -7,10 +7,8 @@ import {
     CircularProgress,
     Typography,
     useTheme,
-    Table,
     TableHead,
     TableRow,
-    TableCell,
     TableBody,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +22,11 @@ import {
 } from "@/services/suppliers.service";
 import {
     SearchInput,
-    Card
+    Card,
+    SupplierTable,
+    SupplierTableCell,
+    SupplierTableHeaderCell,
+    SupplierNameTableCell,
 } from "./styles";
 import { Search } from "lucide-react";
 
@@ -137,38 +139,39 @@ export function SupplierSelectionModal({
                 }}
             />
             <Card>
-                {showInitialLoading ? (
-                    <CircularProgress size={24} />
-                ) : filteredSuppliers.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                        No se encontraron proveedores
-                    </Typography>
-                ) : (
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
-                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Proveedor</TableCell>
-                                <TableCell style={{ padding: "12px 8px" }}></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {
-                                filteredSuppliers.map((supplier) => (
-                                    <TableRow key={supplier.id}>
-                                        <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{supplier.id}</TableCell>
-                                        <TableCell style={{ padding: "12px 8px" }}>{supplier.name}</TableCell>
-                                        <TableCell style={{ padding: "12px 8px" }}>
-                                            <Button color="primary" onClick={() => handleSelect(supplier)}>
-                                                Seleccionar
-                                            </Button>
-                                        </TableCell>
+                {
+                    showInitialLoading ?
+                        <CircularProgress size={24} />
+                        : filteredSuppliers.length === 0 ?
+                            <Typography variant="body2" color="text.secondary">
+                                No se encontraron proveedores
+                            </Typography>
+                            :
+                            <SupplierTable>
+                                <TableHead>
+                                    <TableRow>
+                                        <SupplierTableHeaderCell sx={{ width: "10%" }}>ID</SupplierTableHeaderCell>
+                                        <SupplierTableHeaderCell sx={{ width: "70%" }}>Proveedor</SupplierTableHeaderCell>
+                                        <SupplierTableHeaderCell sx={{ width: "20%" }} />
                                     </TableRow>
-                                ))
-                            }
-                        </TableBody>
-                    </Table>
-                )}
+                                </TableHead>
+                                <TableBody>
+                                    {
+                                        filteredSuppliers.map((supplier) => (
+                                            <TableRow key={supplier.id}>
+                                                <SupplierTableHeaderCell>{supplier.id}</SupplierTableHeaderCell>
+                                                <SupplierNameTableCell>{supplier.name}</SupplierNameTableCell>
+                                                <SupplierTableCell>
+                                                    <Button color="primary" onClick={() => handleSelect(supplier)}>
+                                                        Seleccionar
+                                                    </Button>
+                                                </SupplierTableCell>
+                                            </TableRow>
+                                        ))
+                                    }
+                                </TableBody>
+                            </SupplierTable>
+                }
             </Card>
         </SideModal>
     );

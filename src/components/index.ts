@@ -140,8 +140,16 @@ export { AddDriverToRouteModal } from "./AddDriverToRouteModal";
 export type { AddDriverToRouteModalProps } from "./AddDriverToRouteModal";
 export { AddAssistantToRouteModal } from "./AddAssistantToRouteModal";
 export type { AddAssistantToRouteModalProps } from "./AddAssistantToRouteModal";
+export { NewRouteModal } from "./NewRouteModal";
+export type {
+  NewRouteModalProps,
+  NewRouteFormValues,
+  NewRouteFormErrors,
+} from "./NewRouteModal";
 export { AutomatedCollectionActivityModal } from "./AutomatedCollectionActivityModal";
 export type { AutomatedCollectionActivityModalProps } from "./AutomatedCollectionActivityModal";
 export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
+export { MapMarker } from "./MapMarker";
+export type { MapMarkerProps } from "./MapMarker";
 

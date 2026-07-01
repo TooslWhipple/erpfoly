@@ -31,6 +31,33 @@ export async function fetchRoutesForDate(params: {
   return result;
 }
 
+// ============================================================================
+// CREATE ROUTE
+// ============================================================================
+
+export type RouteType = "deliveries" | "scheduled";
+export type ScheduleType = "unique" | "weekly" | "monthly";
+
+export interface CreateRoutePayload {
+  route_type: RouteType;
+  city_id: number;
+  origin_branch_id?: number;
+  destination_branch_id?: number;
+  delivery_date?: string;
+  origin_city_id?: number;
+  main_branch_id?: number;
+  destination_city_id?: number;
+  branch_ids_to_visit: number[];
+  schedule?: ScheduleType;
+  scheduled_date?: string;
+  weekdays?: number[];
+  month_days?: number[];
+}
+
+export async function createRoute(payload: CreateRoutePayload) {
+  return post<RouteDetailApi>("/routes", payload);
+}
+
 export async function fetchRouteDetail(routeId: number) {
   return get<RouteDetailApi>(`/routes/${routeId}`);
 }

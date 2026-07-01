@@ -4,7 +4,7 @@ import { Alert, Stack } from "@mui/material";
 import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
 import type { Column } from "@/components/TableCrud";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
-import { fetchSellersMock } from "@/services/sellers.service";
+import { getSellers } from "@/services/sellers.service";
 import type { SellerListItem } from "@/types/sellers.types";
 import { CATALOG_SELLERS_CREATE } from "@/lib/permissions";
 
@@ -25,7 +25,7 @@ export default function VendedoresPage() {
       if (isCancelled()) return;
       setLoading(true);
       setError(null);
-      const result = await fetchSellersMock({
+      const result = await getSellers({
         page: page + 1,
         limit: rowsPerPage,
         search: searchValue || undefined,
@@ -78,8 +78,8 @@ export default function VendedoresPage() {
       size: "xl",
     },
     {
-      id: "email",
-      label: "Correo electrónico",
+      id: "cellphone",
+      label: "Celular",
       size: "xl",
     },
     {

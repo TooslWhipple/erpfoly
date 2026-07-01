@@ -2,6 +2,7 @@ import { Divider, Grid, Stack, Typography, FormControlLabel, Switch } from "@mui
 import { FormTextField } from "@/components";
 import type { CreditApplicationDetail, EmploymentInfo } from "@/types/solicitud-credito-detail.types";
 import { formControlLabelSpacingSx } from "./formControlLabelSpacing";
+import { StreetAddressFields } from "@/components/CreditApplicationForm/StreetAddressFields";
 
 interface EmploymentSectionProps {
   detail: CreditApplicationDetail;
@@ -22,9 +23,19 @@ function EmploymentFields({ data }: { data: EmploymentInfo }) {
       <Grid size={{ xs: 6, sm: 4 }}>
         <FormTextField label="Ciudad" value={data.city} readOnly fullWidth />
       </Grid>
-      <Grid size={{ xs: 12 }}>
-        <FormTextField label="Calle y número" value={data.streetAndNumber} readOnly fullWidth />
-      </Grid>
+      <StreetAddressFields
+        street={data.street}
+        externalNumber={data.externalNumber}
+        internalNumber={data.internalNumber}
+        fieldKeys={{
+          street: "street",
+          externalNumber: "externalNumber",
+          internalNumber: "internalNumber",
+        }}
+        onFieldChange={() => undefined}
+        readOnly
+        required={false}
+      />
       <Grid size={{ xs: 12, sm: 4 }}>
         <FormTextField label="Antigüedad (años)" value={String(data.tenureYears)} readOnly fullWidth />
       </Grid>

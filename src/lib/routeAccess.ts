@@ -28,7 +28,6 @@ import {
   CATALOG_USERS_CREATE,
   CATALOG_USERS_READ,
   CATALOG_USERS_UPDATE,
-  CREDIT_APPLICATIONS_CREATE,
   CREDIT_APPLICATIONS_READ,
   CREDIT_APPLICATIONS_UPDATE,
   CUSTOMER_COLLECTION_READ,
@@ -88,7 +87,6 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/$/, ...AUTHENTICATED_ONLY },
   { pattern: /^\/403$/, ...AUTHENTICATED_ONLY },
 
-  { pattern: /^\/solicitudes-credito\/(nuevo|nueva)$/, permission: CREDIT_APPLICATIONS_CREATE },
   { pattern: /^\/solicitudes-credito\/[^/]+\/revision$/, permission: CREDIT_APPLICATIONS_UPDATE },
   { pattern: /^\/solicitudes-credito(\/.*)?$/, permission: CREDIT_APPLICATIONS_READ },
 
@@ -115,7 +113,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes\/sucursales(\/.*)?$/, permission: BRANCH_REQUESTS_READ },
 
   { pattern: /^\/solicitudes-descuento\/nuevo$/, permission: DISCOUNT_REQUESTS_CREATE },
-  { pattern: /^\/solicitudes-descuento(\/.*)?$/, permission: DISCOUNT_REQUESTS_READ },
+  { pattern: /^\/solicitudes-descuento\/[^/]+$/, permission: DISCOUNT_REQUESTS_READ },
+  { pattern: /^\/solicitudes-descuento$/, permission: DISCOUNT_REQUESTS_READ },
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },

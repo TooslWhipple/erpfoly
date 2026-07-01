@@ -69,9 +69,14 @@ export function SalesTab({ branchId }: SalesTabProps) {
         getMonthlySales(branchId),
         getSalesBySeller(branchId),
       ]);
-      setKpis(kpisRes);
-      setMonthlyData(monthlyRes);
-      setSellers(sellersRes);
+      const firstError = [kpisRes, monthlyRes, sellersRes].find((r) => r.error);
+      if (firstError?.error) {
+        setError(firstError.error.message);
+        return;
+      }
+      setKpis(kpisRes.data);
+      setMonthlyData(monthlyRes.data ?? []);
+      setSellers(sellersRes.data ?? []);
     } catch (err) {
       console.error("[SalesTab] Error:", err);
       setError("Error al cargar datos de ventas");

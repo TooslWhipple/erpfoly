@@ -14,7 +14,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { CheckCircle, Truck } from "lucide-react";
+import { CheckCircle, Truck, Store } from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
 import type { Props as GoogleMapReactProps } from "google-map-react";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
@@ -309,30 +309,58 @@ export default function VentaDetalle() {
             }}
           >
             <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
-                <Box
-                  sx={{
-                    bgcolor: "#EFF6FF",
-                    borderRadius: 2,
-                    p: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Truck size={20} color="#1976d2" />
-                </Box>
-                <Box>
-                  <Typography variant="body1" fontWeight={600}>
-                    Ingresa la fecha deseada de entrega para los artículos
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Confirma con el cliente cuál será la fecha en la que desea
-                    recibir los artículos
-                  </Typography>
-                </Box>
-              </Stack>
+              {!sale.deliveryDate ? (
+                <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
+                  <Box
+                    sx={{
+                      bgcolor: "#EFF6FF",
+                      borderRadius: 2,
+                      p: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Truck size={20} color="#1976d2" />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600}>
+                      Ingresa la fecha deseada de entrega para los artículos
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Confirma con el cliente cuál será la fecha en la que desea
+                      recibir los artículos
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : (
+                <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+                  <Box
+                    sx={{
+                      bgcolor: "#EFF6FF",
+                      borderRadius: 2,
+                      p: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Store size={20} color="#1976d2" />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600}>
+                      Entrega en sucursal
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {sale.deliveryType === 'BRANCH' 
+                        ? `Sucursal: ${sale.client?.primaryAddress?.formatted || 'Matamoros-Plaza Patio'}`
+                        : sale.client?.primaryAddress?.formatted || 'Dirección del cliente'}
+                    </Typography>
+                  </Box>
+                </Stack>
+              )}
 
               <Stack spacing={1.5}>
                 {sale.items.map((item) => {
@@ -953,13 +981,16 @@ function getSelectionBoxColors(availability: DeliveryAvailability | undefined) {
 }
 
 function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<string, DeliveryAvailability> }) {
-  const { day, outsideCurrentMonth, availabilityMap, ...other } = props;
+  const { day, outsideCurrentMonth, availabilityMap, selected, today, ...other } = props;
 
   const dateStr = day.format('YYYY-MM-DD');
   const availability = availabilityMap?.[dateStr];
+  const isPastDay = day.startOf('day').isBefore(dayjs().startOf('day'));
 
   const color = outsideCurrentMonth
     ? null
+    : isPastDay
+    ? '#E5E7EB'
     : availability === 'available'
     ? '#16A34A'
     : availability === 'low'
@@ -970,7 +1001,72 @@ function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<
 
   return (
     <Box sx={{ position: "relative" }}>
-      <PickersDay {...other} day={day} outsideCurrentMonth={outsideCurrentMonth} />
+      <PickersDay
+        {...other}
+        day={day}
+        outsideCurrentMonth={outsideCurrentMonth}
+        selected={selected}
+        today={today}
+        disabled={isPastDay}
+        sx={{
+          // Días deshabilitados (pasados)
+          "&.Mui-disabled": {
+            color: "#9CA3AF",
+            opacity: 0.6,
+            pointerEvents: "none",
+            "&:hover": {
+              bgcolor: "transparent",
+            },
+          },
+          // Días fuera del mes (debe ir primero para que otros estilos lo sobrescriban)
+          "&.MuiPickersDay-dayOutsideMonth": {
+            color: "rgba(0, 0, 0, 0.26)",
+            opacity: 0.5,
+            "&:hover": {
+              bgcolor: "rgba(0, 0, 0, 0.04)",
+            },
+          },
+          // Día seleccionado
+          "&.Mui-selected": {
+            bgcolor: "primary.main",
+            color: "#fff",
+            fontWeight: 600,
+            opacity: 1,
+            "&:hover": {
+              bgcolor: "primary.dark",
+            },
+            "&:focus": {
+              bgcolor: "primary.main",
+            },
+          },
+          // Día actual (no seleccionado)
+          "&.MuiPickersDay-today:not(.Mui-selected)": {
+            border: "2px solid",
+            borderColor: "primary.main",
+            color: "primary.main",
+            fontWeight: 600,
+            bgcolor: "transparent",
+            opacity: 1,
+          },
+          // Día actual Y seleccionado
+          "&.MuiPickersDay-today.Mui-selected": {
+            bgcolor: "primary.main",
+            color: "#fff",
+            fontWeight: 600,
+            border: "2px solid",
+            borderColor: "primary.dark",
+            opacity: 1,
+          },
+          // Días normales del mes actual
+          "&:not(.Mui-selected):not(.MuiPickersDay-today):not(.MuiPickersDay-dayOutsideMonth)": {
+            color: "text.primary",
+            opacity: 1,
+            "&:hover": {
+              bgcolor: "action.hover",
+            },
+          },
+        }}
+      />
       {color && (
         <Box
           sx={{
@@ -982,6 +1078,7 @@ function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<
             bottom: 2,
             left: "50%",
             transform: "translateX(-50%)",
+            pointerEvents: "none",
           }}
         />
       )}

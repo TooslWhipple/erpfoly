@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/router";
 import {
   getCreditApplicationById,
   saveCreditApplication,
@@ -76,7 +75,9 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   neighborhoodFullCode: "",
   state: "",
   city: "",
-  streetAndNumber: "",
+  street: "",
+  externalNumber: "",
+  internalNumber: "",
   betweenStreets: "",
   housingType: "",
   residenceTime: "",
@@ -90,7 +91,9 @@ const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   neighborhoodFullCode: "",
   state: "",
   city: "",
-  streetAndNumber: "",
+  street: "",
+  externalNumber: "",
+  internalNumber: "",
   seniorityYears: "",
   position: "",
   department: "",
@@ -99,12 +102,15 @@ const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
   hasOtherIncome: false,
   otherIncomeAmount: "",
   otherIncomeSource: "",
+  spouseHasEmployment: false,
   spouseCompany: "",
   spousePostalCode: "",
   spouseNeighborhoodFullCode: "",
   spouseState: "",
   spouseCity: "",
-  spouseStreetAndNumber: "",
+  spouseStreet: "",
+  spouseExternalNumber: "",
+  spouseInternalNumber: "",
   spouseSeniorityYears: "",
   spousePosition: "",
   spouseDepartment: "",
@@ -139,7 +145,9 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   neighborhoodFullCode: "",
   state: "",
   city: "",
-  streetAndNumber: "",
+  street: "",
+  externalNumber: "",
+  internalNumber: "",
   betweenStreets: "",
   birthDate: "",
   maritalStatus: "",
@@ -192,17 +200,6 @@ function mapCreditApplicationToFormValues(
   documentation: DocumentationTabValues;
   guarantor: GuarantorTabValues;
 } {
-  const fullStreet = [
-    creditApplication.address.street,
-    creditApplication.address.externalNumber,
-    creditApplication.address.internalNumber
-      ? `Int. ${creditApplication.address.internalNumber}`
-      : "",
-  ]
-    .filter((value) => value.trim().length > 0)
-    .join(" ")
-    .trim();
-
   const basicInformation: BasicInformationFormValues = {
     firstName: creditApplication.basicInformation.name ?? "",
     lastName: creditApplication.basicInformation.lastName ?? "",
@@ -233,7 +230,9 @@ function mapCreditApplicationToFormValues(
     neighborhoodFullCode: creditApplication.address.neighborhood.fullCode ?? "",
     state: creditApplication.address.neighborhood.state ?? "",
     city: creditApplication.address.neighborhood.municipality ?? "",
-    streetAndNumber: fullStreet,
+    street: creditApplication.address.street ?? "",
+    externalNumber: creditApplication.address.externalNumber ?? "",
+    internalNumber: creditApplication.address.internalNumber ?? "",
     betweenStreets: creditApplication.address.betweenStreets ?? "",
     housingType:
       creditApplication.address.housingType.id != null
@@ -244,17 +243,17 @@ function mapCreditApplicationToFormValues(
     previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",
   };
 
-  const buildEmploymentStreet = (employmentPerson: CreditApplicationDetailResponse["employment"]["applicant"]) =>
-    [
-      employmentPerson.street,
-      employmentPerson.externalNumber,
-      employmentPerson.internalNumber
-        ? `Int. ${employmentPerson.internalNumber}`
-        : "",
-    ]
-      .filter((value) => value.trim().length > 0)
-      .join(" ")
-      .trim();
+  const spouseEmployment = creditApplication.employment.spouse;
+  const spouseHasEmployment = Boolean(
+    spouseEmployment.companyName?.trim() ||
+    spouseEmployment.postalCode?.trim() ||
+    spouseEmployment.neighborhoodFullCode?.trim() ||
+    spouseEmployment.companyPhone?.trim() ||
+    spouseEmployment.street?.trim() ||
+    spouseEmployment.externalNumber?.trim() ||
+    spouseEmployment.internalNumber?.trim() ||
+    (spouseEmployment.monthlyIncome ?? 0) > 0
+  );
 
   const employment: EmploymentTabValues = {
     company: creditApplication.employment.applicant.companyName ?? "",
@@ -262,7 +261,9 @@ function mapCreditApplicationToFormValues(
     neighborhoodFullCode: creditApplication.employment.applicant.neighborhoodFullCode ?? "",
     state: creditApplication.employment.applicant.state ?? "",
     city: creditApplication.employment.applicant.city ?? "",
-    streetAndNumber: buildEmploymentStreet(creditApplication.employment.applicant),
+    street: creditApplication.employment.applicant.street ?? "",
+    externalNumber: creditApplication.employment.applicant.externalNumber ?? "",
+    internalNumber: creditApplication.employment.applicant.internalNumber ?? "",
     seniorityYears: String(creditApplication.employment.applicant.seniorityYears ?? ""),
     position: creditApplication.employment.applicant.position ?? "",
     department: creditApplication.employment.applicant.department ?? "",
@@ -271,12 +272,15 @@ function mapCreditApplicationToFormValues(
     hasOtherIncome: Boolean(creditApplication.employment.applicant.hasOtherIncome),
     otherIncomeAmount: String(creditApplication.employment.applicant.otherIncomeAmount ?? ""),
     otherIncomeSource: creditApplication.employment.applicant.otherIncomeDescription ?? "",
+    spouseHasEmployment,
     spouseCompany: creditApplication.employment.spouse.companyName ?? "",
     spousePostalCode: creditApplication.employment.spouse.postalCode ?? "",
     spouseNeighborhoodFullCode: creditApplication.employment.spouse.neighborhoodFullCode ?? "",
     spouseState: creditApplication.employment.spouse.state ?? "",
     spouseCity: creditApplication.employment.spouse.city ?? "",
-    spouseStreetAndNumber: buildEmploymentStreet(creditApplication.employment.spouse),
+    spouseStreet: creditApplication.employment.spouse.street ?? "",
+    spouseExternalNumber: creditApplication.employment.spouse.externalNumber ?? "",
+    spouseInternalNumber: creditApplication.employment.spouse.internalNumber ?? "",
     spouseSeniorityYears: String(creditApplication.employment.spouse.seniorityYears ?? ""),
     spousePosition: creditApplication.employment.spouse.position ?? "",
     spouseDepartment: creditApplication.employment.spouse.department ?? "",
@@ -289,12 +293,7 @@ function mapCreditApplicationToFormValues(
     phone: creditApplication.references.work.companyPhone ?? "",
     clientPosition: creditApplication.references.work.applicantPosition ?? "",
     seniorityYears: String(creditApplication.references.work.seniorityYears ?? ""),
-    respondentNameAndPosition: [
-      creditApplication.references.work.answeredBy,
-      creditApplication.references.work.answeredByPosition,
-    ]
-      .filter((value) => value.trim().length > 0)
-      .join(" - "),
+    respondentNameAndPosition: creditApplication.references.work.answeredBy ?? "",
     familyReferences:
       creditApplication.references.family.length > 0
         ? creditApplication.references.family.map((reference, index) => ({
@@ -345,24 +344,15 @@ function mapCreditApplicationToFormValues(
     ineBackFiles: mapDocumentItems(creditApplication.documentation?.ineBackFiles),
   };
 
-  const guarantorStreet = [
-    creditApplication.guarantor?.address.street ?? "",
-    creditApplication.guarantor?.address.externalNumber ?? "",
-    creditApplication.guarantor?.address.internalNumber
-      ? `Int. ${creditApplication.guarantor.address.internalNumber}`
-      : "",
-  ]
-    .filter((value) => value.trim().length > 0)
-    .join(" ")
-    .trim();
-
   const guarantor: GuarantorTabValues = {
     fullName: creditApplication.guarantor?.fullName ?? "",
     postalCode: creditApplication.guarantor?.address.postalCode ?? "",
     neighborhoodFullCode: creditApplication.guarantor?.address.neighborhoodFullCode ?? "",
     state: creditApplication.guarantor?.address.state ?? "",
     city: creditApplication.guarantor?.address.city ?? "",
-    streetAndNumber: guarantorStreet,
+    street: creditApplication.guarantor?.address.street ?? "",
+    externalNumber: creditApplication.guarantor?.address.externalNumber ?? "",
+    internalNumber: creditApplication.guarantor?.address.internalNumber ?? "",
     betweenStreets: creditApplication.guarantor?.address.betweenStreets ?? "",
     birthDate: creditApplication.guarantor?.birthDate ?? "",
     maritalStatus:
@@ -407,8 +397,6 @@ export interface SubmitCreditApplicationResult {
 }
 
 export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCreditApplicationFormParams) {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(!isCreateMode);
   const [loadingApplicationDetail, setLoadingApplicationDetail] = useState(false);
   const [formAction, setFormAction] = useState<FormActionPhase>("idle");
@@ -793,69 +781,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     shouldShowGuarantorTab,
   ]);
 
-  const handleSave = useCallback(
-    async (options?: { skipValidation?: boolean }): Promise<boolean> => {
-      if (!beginFormAction("validating")) {
-        return false;
-      }
-
-      try {
-        if (!options?.skipValidation) {
-          const invalidTabs = await validateSubmissionTabs();
-          if (invalidTabs.length > 0) {
-            return false;
-          }
-        }
-
-        setFormActionPhase("saving");
-        setSaveSuccess(false);
-        setError(null);
-
-        const formPayload = getCurrentFormPayload();
-
-        if (isCreateMode) {
-          const result = await saveCreditApplication(formPayload, {
-            includeGuarantorSection: requiresGuarantorInformation,
-          });
-          if (result?.id) {
-            router.replace(`/solicitudes-credito/${result.id}`);
-          }
-        } else if (applicationId) {
-          const saveResult = await saveCreditApplication(formPayload, {
-            includeGuarantorSection: requiresGuarantorInformation,
-          });
-          if (!saveResult) return false;
-          if (applicationId) {
-            const refreshedDoc = await fetchDocumentationValuesFromServer(applicationId);
-            if (refreshedDoc) formPayload.documentation = refreshedDoc;
-            setDocumentationValuesFromExternal(refreshedDoc ?? formPayload.documentation);
-          }
-        }
-
-        setSaveSuccess(true);
-        return true;
-      } catch (saveError) {
-        console.error("[CreditApplicationForm] Unable to save credit application", saveError);
-        setError(getApiErrorMessage(saveError));
-        return false;
-      } finally {
-        endFormAction();
-      }
-    },
-    [
-      applicationId,
-      beginFormAction,
-      endFormAction,
-      getCurrentFormPayload,
-      isCreateMode,
-      requiresGuarantorInformation,
-      router,
-      setDocumentationValuesFromExternal,
-      setFormActionPhase,
-      validateSubmissionTabs,
-    ]
-  );
-
   const handleSaveActiveTab = useCallback(async (): Promise<boolean> => {
     if (!beginFormAction("validating")) {
       return false;
@@ -1005,7 +930,6 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     documentationTab,
     guarantorTab,
     validateSubmissionTabs,
-    handleSave,
     handleSaveActiveTab,
     handleSubmitForReview,
     handleSubmitApplication,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import { Button, Stack, Typography, Table, TableBody, TableHead, TableRow } from "@mui/material";
 import {
     EmptyStateContainer,
@@ -50,8 +51,17 @@ export function SuppliersTab({
     onRemoveSupplier,
     onNewSupplier,
 }: SuppliersTabProps) {
+    const router = useRouter();
     const [modalOpen, setModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    const handleNewSupplier = () => {
+        if (onNewSupplier) {
+            onNewSupplier();
+            return;
+        }
+        router.push("/catalogos/proveedores/nuevo");
+    };
 
     const handleOpenModal = () => {
         setModalOpen(true);
@@ -161,7 +171,7 @@ export function SuppliersTab({
                 open={modalOpen}
                 onClose={handleCloseModal}
                 onAddSupplier={handleAddSupplier}
-                onNewSupplier={onNewSupplier}
+                onNewSupplier={handleNewSupplier}
                 loading={saving}
                 availableSuppliers={availableSuppliers}
                 existingSupplierIds={existingSupplierIds}

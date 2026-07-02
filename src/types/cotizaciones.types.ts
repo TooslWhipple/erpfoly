@@ -4,11 +4,12 @@ export type QuotationStatus = "DRAFT" | "ACTIVE" | "CONVERTED" | "EXPIRED" | "CA
 
 export type DiscountRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type DiscountRequestReason =
-  | "LAST_PIECE"
-  | "DAMAGED_PIECE"
-  | "SALE_CLOSE"
-  | "OTHER";
+export interface DiscountRequestReasonCatalogItem {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+}
 
 export interface QuotationListItem {
   id: number;
@@ -60,7 +61,8 @@ export interface QuotationDetail {
   delivery: QuotationDelivery | null;
   discountRequest: {
     status: DiscountRequestStatus;
-    reason: DiscountRequestReason;
+    reasonId: number;
+    reasonCode: string;
     reasonLabel: string;
     notes: string | null;
   } | null;
@@ -72,8 +74,8 @@ export interface QuotationDetail {
 }
 
 export interface RequestDiscountPayload {
-  reason: DiscountRequestReason;
-  notes: string;
+  reasonId: number;
+  notes?: string;
 }
 
 export interface LayawayPlanOption {

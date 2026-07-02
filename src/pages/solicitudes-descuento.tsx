@@ -12,7 +12,7 @@ import type {
   DiscountRequestType,
 } from "@/types/discount-requests.types";
 import { formatDateTimeShort } from "@/utils/date";
-import { DISCOUNT_REQUESTS_CREATE } from "@/lib/permissions";
+import { formatDiscountRequestReasonList } from "@/utils/discountRequest";
 import { Stack } from "@mui/material";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -131,6 +131,8 @@ export default function SolicitudesDescuentoPage() {
       label: "MOTIVO",
       size: "xl",
       truncate: true,
+      format: (_, row) =>
+        formatDiscountRequestReasonList(row.reason, row.reasonCode, row.notes),
     },
   ];
 
@@ -145,16 +147,6 @@ export default function SolicitudesDescuentoPage() {
           showSearch
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          actions={[
-            {
-              label: "Nuevo",
-              variant: "contained",
-              color: "primary",
-              showIcon: false,
-              onClick: () => {},
-              permission: DISCOUNT_REQUESTS_CREATE,
-            },
-          ]}
         />
         <TableCrud<DiscountRequest>
           columns={columns}

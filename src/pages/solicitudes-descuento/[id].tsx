@@ -185,7 +185,7 @@ export default function DiscountRequestDetailPage() {
   const isPending = detail.status === "pending";
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Solicitudes de descuentos", href: "/solicitudes-descuento" },
-    { label: `Cotización ${detail.saleFolio}` },
+    { label: `Cotización ${detail.quotationFolio}` },
   ];
 
   return (
@@ -243,7 +243,7 @@ export default function DiscountRequestDetailPage() {
         </Stack>
 
         <Typography variant="h4" fontWeight={600}>
-          Cotización {detail.saleFolio}
+          Cotización {detail.quotationFolio}
         </Typography>
         <Divider />
 
@@ -257,6 +257,11 @@ export default function DiscountRequestDetailPage() {
                     <Typography variant="body2" color="text.secondary">
                       Motivo: {detail.reasonLabel}
                     </Typography>
+                    {detail.reason === "OTHER" && detail.notes && (
+                      <Typography variant="body2" color="text.secondary">
+                        Nota: {detail.notes}
+                      </Typography>
+                    )}
                   </Stack>
                   {getStatusBadge(detail)}
                 </DiscountCard>

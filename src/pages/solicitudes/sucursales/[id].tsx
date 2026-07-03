@@ -7,13 +7,12 @@ import {
     Stack,
     Typography,
 } from "@mui/material";
-import { MainLayout, Breadcrumbs, BranchOrderItemRow } from "@/components";
+import { MainLayout, Breadcrumbs, BranchOrderItemRow, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
     BranchRequestFullDetail,
     BranchOrderDetail,
     BranchOrderLineItem,
-    BranchOrderStatus,
     ScheduleBranchRequestPayload,
     UpdateBranchRequestPayload,
 } from "@/types/solicitudes.types";
@@ -23,27 +22,34 @@ import {
     scheduleBranchRequest,
 } from "@/services/requests.service";
 import {
+    mapBranchOrderStatus,
+    getBranchOrderStatusLabel,
+    getBranchOrderStatusVariant,
+    isBranchOrderEditable,
+} from "@/utils/branchRequest";
+import {
     PageContainer,
     OriginDestinationCard,
     ProductsSection,
     ProductHeaderSection,
-    StatusValue
 } from "@/styles/solicitudes/detalle.styles";
 import { theme } from "@/styles/theme";
 import { ArrowRight } from "lucide-react";
 
-function mapBackendToBranchOrderDetail(detail: BranchRequestFullDetail): BranchOrderDetail {
-    const totalRequested = detail.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
-    const totalDelivered = detail.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
+const DELIVERY_DATE_REQUIRED_MESSAGE = "Selecciona la fecha de entrega.";
 
+function formatScheduledDate(value: string | null | undefined): string {
+    if (!value) return "";
+    return new Date(value).toISOString().split("T")[0];
+}
+
+function mapBackendToBranchOrderDetail(detail: BranchRequestFullDetail): BranchOrderDetail {
     const items: BranchOrderLineItem[] = detail.order_items.map((item) => ({
         articleId: String(item.id),
         articleName: item.product?.short_name ?? "Sin nombre",
-        deliveryDate: item.scheduled_delivery_date
-            ? new Date(item.scheduled_delivery_date).toISOString().split("T")[0]
-            : detail.order_date.split("T")[0],
+        deliveryDate: formatScheduledDate(item.scheduled_delivery_date),
         scheduledDeliveryDate: item.scheduled_delivery_date
-            ? new Date(item.scheduled_delivery_date).toISOString().split("T")[0]
+            ? formatScheduledDate(item.scheduled_delivery_date)
             : null,
         quantity: item.requested_quantity,
         orderItemId: item.id,
@@ -56,7 +62,7 @@ function mapBackendToBranchOrderDetail(detail: BranchRequestFullDetail): BranchO
         id: detail.id,
         folio: detail.folio,
         createdAt: detail.created_at,
-        status: totalDelivered > 0 && totalDelivered >= totalRequested ? "delivered" : "pending",
+        status: mapBranchOrderStatus(detail.status),
         originId: String(detail.origin_branch?.id ?? ""),
         originLabel: detail.origin_branch?.name ?? "Sin sucursal",
         destinationId: String(detail.branch?.id ?? ""),
@@ -85,22 +91,6 @@ function formatCreatedDate(isoDate: string): string {
     });
 }
 
-function getStatusLabel(status: BranchOrderStatus): string {
-    const labels: Record<BranchOrderStatus, string> = {
-        pending: "Pendiente",
-        delivered: "Entregado",
-    };
-    return labels[status];
-}
-
-function getStatusChipBackgroundColor(status: BranchOrderStatus): string {
-    return status === "pending" ? "#FFEDD5" : "#F3E8FF";
-}
-
-function getStatusChipColor(status: BranchOrderStatus): string {
-    return status === "pending" ? "#EA580C" : "#7E22CE";
-}
-
 type PageStatus = "loading" | "success" | "empty" | "error" | "submitting";
 
 export default function SolicitudSucursalDetallePage() {
@@ -110,6 +100,7 @@ export default function SolicitudSucursalDetallePage() {
     const [status, setStatus] = useState<PageStatus>("loading");
     const [order, setOrder] = useState<BranchOrderDetail | null>(null);
     const [originalOrder, setOriginalOrder] = useState<BranchOrderDetail | null>(null);
+    const [deliveryDateErrors, setDeliveryDateErrors] = useState<Record<string, string>>({});
 
     const fetchOrder = useCallback(async () => {
         if (!id) return;
@@ -119,6 +110,7 @@ export default function SolicitudSucursalDetallePage() {
             if (data) {
                 setOrder(data);
                 setOriginalOrder(JSON.parse(JSON.stringify(data)));
+                setDeliveryDateErrors({});
                 setStatus("success");
             } else {
                 setOrder(null);
@@ -141,23 +133,27 @@ export default function SolicitudSucursalDetallePage() {
     const handleDiscard = () => {
         if (originalOrder) {
             setOrder(JSON.parse(JSON.stringify(originalOrder)));
+            setDeliveryDateErrors({});
         }
     };
 
-    const hasChanges = useCallback(() => {
-        if (!order || !originalOrder) return false;
-        if (order.items.length !== originalOrder.items.length) return true;
-        return order.items.some((item, index) => {
-            const orig = originalOrder.items[index];
-            return (
-                item.quantity !== orig.requestedQuantity ||
-                item.deliveryDate !== (orig.scheduledDeliveryDate ?? orig.deliveryDate)
-            );
-        });
-    }, [order, originalOrder]);
+    const validateDeliveryDates = (items: BranchOrderLineItem[]): Record<string, string> => {
+        const errors: Record<string, string> = {};
+        for (const item of items) {
+            if (!item.deliveryDate.trim()) {
+                errors[item.articleId] = DELIVERY_DATE_REQUIRED_MESSAGE;
+            }
+        }
+        return errors;
+    };
 
     const handleUpdate = async () => {
         if (!id || !order || !originalOrder) return;
+
+        const errors = validateDeliveryDates(order.items);
+        setDeliveryDateErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+
         setStatus("submitting");
         try {
             const quantityChanges = order.items.filter(
@@ -182,7 +178,7 @@ export default function SolicitudSucursalDetallePage() {
 
             if (scheduleChanges.length > 0 && quantityChanges.length === 0) {
                 const payload: ScheduleBranchRequestPayload = {
-                    items: scheduleChanges.map((item) => ({
+                    items: order.items.map((item) => ({
                         order_item_id: item.orderItemId,
                         scheduled_delivery_date: item.deliveryDate,
                     })),
@@ -207,6 +203,12 @@ export default function SolicitudSucursalDetallePage() {
                     item.articleId === articleId ? { ...item, deliveryDate: date } : item
                 ),
             };
+        });
+        setDeliveryDateErrors((prev) => {
+            if (!prev[articleId]) return prev;
+            const next = { ...prev };
+            delete next[articleId];
+            return next;
         });
     };
 
@@ -272,28 +274,33 @@ export default function SolicitudSucursalDetallePage() {
 
     if (!order) return null;
 
+    const isEditable = isBranchOrderEditable(order.status);
+    const isSubmitting = status === "submitting";
+
     return (
         <MainLayout>
             <Stack direction="row" justifyContent="space-between">
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-                <Stack direction="row" spacing={2}>
-                    <Button
-                        variant="outlined"
-                        onClick={handleDiscard}
-                        disabled={status === "submitting" || !hasChanges()}
-                    >
-                        Descartar cambios
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleUpdate}
-                        disabled={status === "submitting" || !hasChanges()}
-                    >
-                        {status === "submitting"
-                            ? <CircularProgress size={24} color="inherit" />
-                            : "Actualizar pedido"}
-                    </Button>
-                </Stack>
+                {isEditable && (
+                    <Stack direction="row" spacing={2}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleDiscard}
+                            disabled={isSubmitting}
+                        >
+                            Descartar cambios
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleUpdate}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? <CircularProgress size={24} color="inherit" />
+                                : "Actualizar pedido"}
+                        </Button>
+                    </Stack>
+                )}
             </Stack>
 
             <PageContainer>
@@ -305,12 +312,11 @@ export default function SolicitudSucursalDetallePage() {
                     </Stack>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Typography variant="body1">Pedido:</Typography>
-                        <StatusValue
-                            color={getStatusChipColor(order.status)}
-                            backgroundColor={getStatusChipBackgroundColor(order.status)}
-                        >
-                            <Typography variant="body1">{getStatusLabel(order.status)}</Typography>
-                        </StatusValue>
+                        <StatusChip
+                            size="small"
+                            label={getBranchOrderStatusLabel(order.status)}
+                            variant={getBranchOrderStatusVariant(order.status)}
+                        />
                     </Stack>
                 </Stack>
 
@@ -324,7 +330,7 @@ export default function SolicitudSucursalDetallePage() {
                     <ArrowRight size={16} color={theme.palette.text.secondary} />
                     <Stack>
                         <Typography variant="subtitle1">{order.destinationLabel}</Typography>
-                        <Typography variant="body2" color="text.secondary">Destino</Typography>
+                        <Typography variant="body2" color="text.secondary">Por recibir</Typography>
                     </Stack>
                 </OriginDestinationCard>
 
@@ -335,11 +341,13 @@ export default function SolicitudSucursalDetallePage() {
                         <Typography variant="subtitle2" color="text.secondary" flex={2}>Pedido</Typography>
                     </ProductHeaderSection>
                     <Divider />
-                    <Stack>
+                    <Stack divider={<Divider />}>
                         {order.items.map((item) => (
                             <BranchOrderItemRow
                                 key={item.articleId}
                                 item={item}
+                                dateError={deliveryDateErrors[item.articleId]}
+                                disabled={!isEditable || isSubmitting}
                                 onDeliveryDateChange={handleDeliveryDateChange}
                                 onQuantityChange={handleQuantityChange}
                             />

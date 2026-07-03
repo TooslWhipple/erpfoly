@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { TextField } from "@mui/material";
 
-export const SearchInput = styled(TextField)(({ theme }) => ({
+export const BranchAutocompleteField = styled(TextField)(({ theme }) => ({
     "& .MuiOutlinedInput-root": {
         borderRadius: 8,
         backgroundColor: theme.palette.background.paper,
@@ -17,17 +17,67 @@ export const SearchInput = styled(TextField)(({ theme }) => ({
     },
 }));
 
-export const Card = styled("div")(({ theme }) => ({
+export const RoutePreviewCard = styled("div")(({ theme }) => ({
     display: "flex",
-    flexDirection: "column",
-    backgroundColor: theme.palette.background.paper,
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(2),
+    borderRadius: 12,
     border: `1px solid ${theme.palette.app.border}`,
-    borderRadius: "16px",
-    padding: "24px",
+    backgroundColor: theme.palette.background.paper,
     [theme.breakpoints.down("sm")]: {
-        padding: "0px",
-        backgroundColor: "transparent",
-        border: "none",
-        borderRadius: "0px",
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        gridTemplateRows: "1fr auto 1fr",
+        alignItems: "stretch",
+        width: "100%",
+    },
+}));
+
+export const BranchPreviewCard = styled("div")<{ $variant: "origin" | "destination" }>(
+    ({ theme, $variant }) => ({
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        gap: theme.spacing(0.5),
+        padding: theme.spacing(1.5),
+        borderRadius: 10,
+        minWidth: 0,
+        backgroundColor:
+            $variant === "origin"
+                ? theme.palette.mode === "dark"
+                    ? "rgba(59, 130, 246, 0.12)"
+                    : "#EFF6FF"
+                : theme.palette.mode === "dark"
+                  ? "rgba(34, 197, 94, 0.12)"
+                  : "#F0FDF4",
+        border: `1px solid ${
+            $variant === "origin"
+                ? theme.palette.mode === "dark"
+                    ? "rgba(59, 130, 246, 0.35)"
+                    : "#BFDBFE"
+                : theme.palette.mode === "dark"
+                  ? "rgba(34, 197, 94, 0.35)"
+                  : "#BBF7D0"
+        }`,
+        [theme.breakpoints.down("sm")]: {
+            width: "100%",
+            minHeight: 88,
+        },
+    }),
+);
+
+export const RouteArrow = styled("div")(({ theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: theme.palette.text.secondary,
+    flexShrink: 0,
+    [theme.breakpoints.down("sm")]: {
+        transform: "rotate(90deg)",
+        justifySelf: "center",
+        padding: theme.spacing(0.5, 0),
     },
 }));

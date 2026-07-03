@@ -57,12 +57,10 @@ function mapBackendToBranchOrderDetail(detail: BranchRequestFullDetail): BranchO
         folio: detail.folio,
         createdAt: detail.created_at,
         status: totalDelivered > 0 && totalDelivered >= totalRequested ? "delivered" : "pending",
-        originId: String(detail.branch?.id ?? ""),
-        originLabel: detail.branch?.name ?? "Sin sucursal",
-        destinationId: String(detail.requested_by_user?.id ?? ""),
-        destinationLabel: detail.requested_by_user
-            ? `${detail.requested_by_user.first_name} ${detail.requested_by_user.last_name}`
-            : "—",
+        originId: String(detail.origin_branch?.id ?? ""),
+        originLabel: detail.origin_branch?.name ?? "Sin sucursal",
+        destinationId: String(detail.branch?.id ?? ""),
+        destinationLabel: detail.branch?.name ?? "Sin sucursal",
         items,
     };
 }
@@ -326,7 +324,7 @@ export default function SolicitudSucursalDetallePage() {
                     <ArrowRight size={16} color={theme.palette.text.secondary} />
                     <Stack>
                         <Typography variant="subtitle1">{order.destinationLabel}</Typography>
-                        <Typography variant="body2" color="text.secondary">Por recibir</Typography>
+                        <Typography variant="body2" color="text.secondary">Destino</Typography>
                     </Stack>
                 </OriginDestinationCard>
 

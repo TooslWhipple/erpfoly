@@ -15,6 +15,7 @@ interface BranchOrder {
     id: number;
     folio: string;
     date: string;
+    originBranch: string;
     branch: string;
     requestedBy: string;
     requestedItems: number;
@@ -51,6 +52,7 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
         id: order.id,
         folio: order.folio,
         date: formattedDate,
+        originBranch: order.origin_branch?.name ?? "—",
         branch: order.branch?.name ?? "Sin sucursal",
         requestedBy: order.requested_by_user
             ? `${order.requested_by_user.first_name} ${order.requested_by_user.last_name}`
@@ -183,8 +185,14 @@ export default function SolicitudesSucursales() {
             size: "lg",
         },
         {
+            id: "originBranch",
+            label: "Origen",
+            size: "lg",
+            truncate: true,
+        },
+        {
             id: "branch",
-            label: "Sucursal",
+            label: "Destino",
             size: "xl",
             truncate: true,
         },

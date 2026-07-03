@@ -49,6 +49,7 @@ export interface UpdateOrderItemInput {
 export interface CreateOrderPayload {
   order_type: "external" | "internal";
   branch_id: number;
+  origin_branch_id?: number;
   folio: string;
   order_date: string;
   notes?: string;
@@ -131,6 +132,7 @@ export interface OrderListItem {
   order_date: string;
   notes: string | null;
   branch: { id: number; name: string } | null;
+  origin_branch: { id: number; name: string } | null;
   supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string } | null;
   requested_by_user: { id: number; first_name: string; last_name: string } | null;
@@ -152,6 +154,7 @@ export interface OrderFullDetail {
   notes: string | null;
   created_at: string;
   branch: { id: number; name: string } | null;
+  origin_branch: { id: number; name: string } | null;
   supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string; phone_number: string | null } | null;
   requested_by_user: { id: number; first_name: string; last_name: string; username: string } | null;

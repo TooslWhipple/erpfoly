@@ -62,7 +62,7 @@ export function useProductFormCatalogs(
 
     const branchesQuery = useQuery({
         queryKey: ["catalog", "branches", "products-form"],
-        queryFn: getBranchesCatalog,
+        queryFn: () => getBranchesCatalog(),
         staleTime: 5 * 60 * 1000,
     });
 

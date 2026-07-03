@@ -25,7 +25,6 @@ export type PermissionModule =
   | "inventario"
   | "inventario.mercancia_danada"
   | "inventario.liquidaciones"
-  | "inventario.traspasos"
   | "recepcion_mercancias"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
@@ -147,12 +146,6 @@ export const INVENTORY_LIQUIDATIONS_CREATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.
 export const INVENTORY_LIQUIDATIONS_READ = INVENTORY_LIQUIDATIONS_PERMISSIONS.read;
 export const INVENTORY_LIQUIDATIONS_UPDATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.update;
 export const INVENTORY_LIQUIDATIONS_DELETE = INVENTORY_LIQUIDATIONS_PERMISSIONS.delete;
-
-export const INVENTORY_TRANSFERS_PERMISSIONS = createCrudPermissions("inventario.traspasos");
-export const INVENTORY_TRANSFERS_CREATE = INVENTORY_TRANSFERS_PERMISSIONS.create;
-export const INVENTORY_TRANSFERS_READ = INVENTORY_TRANSFERS_PERMISSIONS.read;
-export const INVENTORY_TRANSFERS_UPDATE = INVENTORY_TRANSFERS_PERMISSIONS.update;
-export const INVENTORY_TRANSFERS_DELETE = INVENTORY_TRANSFERS_PERMISSIONS.delete;
 
 // Merchandise reception
 export const MERCHANDISE_RECEPTION_PERMISSIONS = createCrudPermissions("recepcion_mercancias");
@@ -323,7 +316,6 @@ export const PERMISSIONS_BY_MODULE = {
     inventory: Object.values(INVENTORY_PERMISSIONS),
     damagedInventory: Object.values(DAMAGED_INVENTORY_PERMISSIONS),
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
-    transfers: Object.values(INVENTORY_TRANSFERS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),
   customerSupport: {

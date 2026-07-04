@@ -1,6 +1,11 @@
 import type { OrderListItem, OrderFullDetail, QueryOrdersParams, UpdateOrderPayload } from "@/types/orders.types";
 
-export type BranchOrderStatus = "pending" | "delivered";
+export type BranchOrderStatus =
+    | "pending"
+    | "scheduled"
+    | "partially_delivered"
+    | "delivered"
+    | "cancelled";
 
 export interface BranchOrderLineItem {
     articleId: string;

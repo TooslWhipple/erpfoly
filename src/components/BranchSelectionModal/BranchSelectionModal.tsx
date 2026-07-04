@@ -1,28 +1,228 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-    InputAdornment,
+    Autocomplete,
     Button,
     CircularProgress,
+    Stack,
     Typography,
-    useTheme,
-    Table,
-    TableHead,
-    TableRow,
-    TableCell,
-    TableBody,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ArrowRight, Building2 } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { getBranchesCatalog, type BranchCatalogItem } from "@/services/branches.service";
-import { SearchInput, Card } from "./styles";
-import { Search } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import {
+    BranchAutocompleteField,
+    BranchPreviewCard,
+    RouteArrow,
+    RoutePreviewCard,
+} from "./styles";
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+export interface BranchSelectionResult {
+    origin: BranchCatalogItem;
+    destination: BranchCatalogItem;
+}
 
 export interface BranchSelectionModalProps {
     open: boolean;
     onClose: () => void;
-    onSelect: (branch: BranchCatalogItem) => void;
+    onSelect: (selection: BranchSelectionResult) => void;
+}
+
+function getBranchLabel(branch: BranchCatalogItem): string {
+    return branch.name;
+}
+
+function withSelectedBranch(
+    branches: BranchCatalogItem[],
+    selected: BranchCatalogItem | null,
+): BranchCatalogItem[] {
+    if (!selected || branches.some((b) => b.id === selected.id)) {
+        return branches;
+    }
+    return [selected, ...branches];
+}
+
+function excludeBranch(
+    branches: BranchCatalogItem[],
+    excludeId?: number,
+): BranchCatalogItem[] {
+    if (excludeId == null) return branches;
+    return branches.filter((b) => b.id !== excludeId);
+}
+
+interface BranchCatalogAutocompleteProps {
+    label: string;
+    placeholder: string;
+    value: BranchCatalogItem | null;
+    onChange: (branch: BranchCatalogItem | null) => void;
+    excludeBranchId?: number;
+    disabled?: boolean;
+    enabled: boolean;
+    error?: boolean;
+    helperText?: string;
+}
+
+function BranchCatalogAutocomplete({
+    label,
+    placeholder,
+    value,
+    onChange,
+    excludeBranchId,
+    disabled = false,
+    enabled,
+    disableClearable = false,
+    error = false,
+    helperText,
+}: BranchCatalogAutocompleteProps & { disableClearable?: boolean }) {
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [searchInput, setSearchInput] = useState("");
+
+    const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
+
+    const { data: branches, isFetching } = useQuery({
+        queryKey: ["branches-catalog", debouncedSearch.trim()],
+        queryFn: async () => getBranchesCatalog(debouncedSearch.trim() || undefined),
+        enabled: enabled && dropdownOpen,
+        staleTime: 60_000,
+        placeholderData: keepPreviousData,
+    });
+
+    const options = useMemo(() => {
+        const filtered = excludeBranch(branches ?? [], excludeBranchId);
+        return withSelectedBranch(filtered, value);
+    }, [branches, excludeBranchId, value]);
+
+    return (
+        <Autocomplete<BranchCatalogItem, false, boolean, false>
+            fullWidth
+            disableClearable={disableClearable}
+            open={dropdownOpen}
+            onOpen={() => setDropdownOpen(true)}
+            onClose={() => {
+                setDropdownOpen(false);
+                setSearchInput("");
+            }}
+            disabled={disabled}
+            options={options}
+            value={value}
+            loading={isFetching}
+            loadingText="Buscando sucursales..."
+            noOptionsText="Sin resultados"
+            filterOptions={(list) => list}
+            getOptionLabel={getBranchLabel}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            onInputChange={(_, nextInput, reason) => {
+                if (reason === "input") {
+                    setSearchInput(nextInput);
+                }
+                if (reason === "clear") {
+                    setSearchInput("");
+                    onChange(null);
+                }
+            }}
+            onChange={(_, option) => {
+                onChange(option);
+                setSearchInput("");
+            }}
+            renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                    <Stack spacing={0.25}>
+                        <Typography variant="body2">{option.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            ID {option.id}
+                            {option.is_main_warehouse ? " · Matriz" : ""}
+                        </Typography>
+                    </Stack>
+                </li>
+            )}
+            renderInput={(params) => (
+                <BranchAutocompleteField
+                    {...params}
+                    label={label}
+                    placeholder={placeholder}
+                    size="small"
+                    error={error}
+                    helperText={helperText}
+                    InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                            <>
+                                {isFetching ? <CircularProgress color="inherit" size={18} /> : null}
+                                {params.InputProps.endAdornment}
+                            </>
+                        ),
+                    }}
+                />
+            )}
+        />
+    );
+}
+
+interface BranchRoutePreviewProps {
+    origin: BranchCatalogItem | null;
+    destination: BranchCatalogItem | null;
+}
+
+function BranchRoutePreview({ origin, destination }: BranchRoutePreviewProps) {
+    return (
+        <RoutePreviewCard>
+            <BranchPreviewCard $variant="origin">
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Origen
+                </Typography>
+                {origin ? (
+                    <>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Building2 size={16} />
+                            <Typography variant="subtitle2" fontWeight={600} noWrap title={origin.name}>
+                                {origin.name}
+                            </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                            ID {origin.id}
+                            {origin.is_main_warehouse ? " · Matriz" : ""}
+                        </Typography>
+                    </>
+                ) : (
+                    <Typography variant="body2" color="text.secondary">
+                        Sin seleccionar
+                    </Typography>
+                )}
+            </BranchPreviewCard>
+
+            <RouteArrow>
+                <ArrowRight size={20} />
+            </RouteArrow>
+
+            <BranchPreviewCard $variant="destination">
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Destino
+                </Typography>
+                {destination ? (
+                    <>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Building2 size={16} />
+                            <Typography variant="subtitle2" fontWeight={600} noWrap title={destination.name}>
+                                {destination.name}
+                            </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                            ID {destination.id}
+                        </Typography>
+                    </>
+                ) : (
+                    <Typography variant="body2" color="text.secondary">
+                        Sin seleccionar
+                    </Typography>
+                )}
+            </BranchPreviewCard>
+        </RoutePreviewCard>
+    );
 }
 
 export function BranchSelectionModal({
@@ -30,114 +230,117 @@ export function BranchSelectionModal({
     onClose,
     onSelect,
 }: BranchSelectionModalProps) {
-    const theme = useTheme();
-    const [searchQuery, setSearchQuery] = useState("");
+    const [originBranch, setOriginBranch] = useState<BranchCatalogItem | null>(null);
+    const [destinationBranch, setDestinationBranch] = useState<BranchCatalogItem | null>(null);
+    const [destinationError, setDestinationError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!open) {
-            setSearchQuery("");
-        }
-    }, [open]);
+    const resetForm = () => {
+        setOriginBranch(null);
+        setDestinationBranch(null);
+        setDestinationError(null);
+    };
 
-    const {
-        data: branches,
-        isFetching,
-        isPending,
-        isError,
-    } = useQuery({
-        queryKey: ["branches-catalog"],
-        queryFn: async () => await getBranchesCatalog(),
+    const { data: initialBranches } = useQuery({
+        queryKey: ["branches-catalog", ""],
+        queryFn: async () => getBranchesCatalog(),
         enabled: open,
         staleTime: 60_000,
     });
 
-    const filteredBranches = useMemo(() => {
-        const trimmed = searchQuery.trim();
-        const available = (branches ?? []).filter((b) => !b.is_main_warehouse);
-        if (!trimmed) {
-            return available;
-        }
-        const q = trimmed.toLowerCase();
-        return available.filter(
-            (branch) =>
-                branch.name.toLowerCase().includes(q) || String(branch.id).includes(q),
-        );
-    }, [branches, searchQuery]);
+    const defaultOriginBranch = useMemo(
+        () => initialBranches?.find((b) => b.is_main_warehouse) ?? null,
+        [initialBranches],
+    );
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(event.target.value);
-    };
+    const resolvedOriginBranch = originBranch ?? defaultOriginBranch;
 
-    const handleSelect = (branch: BranchCatalogItem) => {
-        onSelect(branch);
+    const handleClose = () => {
+        resetForm();
         onClose();
     };
 
-    const handleClose = () => {
-        if (!isFetching) {
-            onClose();
+    const handleOriginChange = (branch: BranchCatalogItem | null) => {
+        setOriginBranch(branch);
+        if (branch && destinationBranch?.id === branch.id) {
+            setDestinationBranch(null);
+            setDestinationError(null);
         }
     };
 
-    const showInitialLoading = open && (isPending || (isFetching && branches === undefined));
+    const handleDestinationChange = (branch: BranchCatalogItem | null) => {
+        setDestinationBranch(branch);
+        if (branch) {
+            setDestinationError(null);
+        }
+    };
+
+    const handleContinue = () => {
+        if (!destinationBranch) {
+            setDestinationError("La sucursal de destino es requerida.");
+            return;
+        }
+        if (!resolvedOriginBranch) return;
+        if (resolvedOriginBranch.id === destinationBranch.id) {
+            setDestinationError("La sucursal de origen y destino deben ser distintas.");
+            return;
+        }
+        onSelect({ origin: resolvedOriginBranch, destination: destinationBranch });
+        resetForm();
+        onClose();
+    };
+
+    const destinationDisabled = !resolvedOriginBranch;
 
     return (
         <SideModal
             open={open}
             onClose={handleClose}
             title="Sucursales"
-            description="Selecciona una sucursal para continuar con el pedido"
+            description="Selecciona la sucursal de origen y la de destino para continuar"
             maxWidth="md"
-            disableClose={isFetching && branches === undefined}
             contentSx={{ flex: 1, minHeight: 0 }}
+            headerActions={
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleContinue}
+                    sx={{ minWidth: 112, textTransform: "none", fontWeight: 600 }}
+                >
+                    Continuar
+                </Button>
+            }
         >
-            <SearchInput
-                placeholder="Buscar"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                size="small"
-                fullWidth
-                disabled={showInitialLoading || isError}
-                InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                            <Search size={18} color={theme.palette.text.secondary} />
-                        </InputAdornment>
-                    ),
-                }}
-            />
-            <Card>
-                {showInitialLoading ? (
-                    <CircularProgress size={24} />
-                ) : filteredBranches.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                        No se encontraron sucursales
-                    </Typography>
-                ) : (
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>ID</TableCell>
-                                <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>Sucursal</TableCell>
-                                <TableCell style={{ padding: "12px 8px" }}></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredBranches.map((branch) => (
-                                <TableRow key={branch.id}>
-                                    <TableCell style={{ padding: "12px 8px", color: theme.palette.text.secondary }}>{branch.id}</TableCell>
-                                    <TableCell style={{ padding: "12px 8px" }}>{branch.name}</TableCell>
-                                    <TableCell style={{ padding: "12px 8px" }}>
-                                        <Button color="primary" onClick={() => handleSelect(branch)}>
-                                            Seleccionar
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
-            </Card>
+            <Stack spacing={2.5} sx={{ flex: 1 }}>
+                <BranchCatalogAutocomplete
+                    label="Sucursal de origen"
+                    placeholder="Buscar sucursal de origen..."
+                    value={resolvedOriginBranch}
+                    onChange={handleOriginChange}
+                    enabled={open}
+                    disableClearable
+                />
+
+                <BranchCatalogAutocomplete
+                    label="Sucursal de destino"
+                    placeholder={
+                        destinationDisabled
+                            ? "Selecciona primero el origen"
+                            : "Buscar sucursal de destino..."
+                    }
+                    value={destinationBranch}
+                    onChange={handleDestinationChange}
+                    excludeBranchId={resolvedOriginBranch?.id}
+                    disabled={destinationDisabled}
+                    enabled={open && !destinationDisabled}
+                    error={Boolean(destinationError)}
+                    helperText={destinationError ?? undefined}
+                />
+
+                <BranchRoutePreview
+                    origin={resolvedOriginBranch}
+                    destination={destinationBranch}
+                />
+            </Stack>
         </SideModal>
     );
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -31,9 +31,10 @@ import {
   getQuotationDetail,
   requestQuotationDiscount,
 } from "@/services/cotizaciones.service";
-import type { DiscountRequestReason, QuotationDetail } from "@/types/cotizaciones.types";
+import type { QuotationDetail } from "@/types/cotizaciones.types";
 import type { CartItem, NewSaleView, ProductSearchResult } from "@/types/ventas.types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useDiscountRequestReasonsCatalog } from "@/hooks/useDiscountRequestReasonsCatalog";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -47,30 +48,6 @@ const PAYMENT_OPTIONS: { value: "CREDIT" | "CASH" | "LAYAWAY"; label: string }[]
   { value: "CREDIT", label: "Crédito" },
   { value: "CASH", label: "Contado" },
   { value: "LAYAWAY", label: "Apartado" },
-];
-
-const DISCOUNT_REASONS: { value: DiscountRequestReason; label: string; description: string }[] = [
-  {
-    value: "LAST_PIECE",
-    label: "Última pieza",
-    description:
-      "Puedes solicitar un descuento si es la ultima pieza en existencia y no se volverá a surtir el producto",
-  },
-  {
-    value: "DAMAGED_PIECE",
-    label: "Pieza dañada o con desperfecto",
-    description: "El producto tiene algún daño, raspón o avería y el cliente desea comprarlo en esta condición.",
-  },
-  {
-    value: "SALE_CLOSE",
-    label: "Cierre de venta",
-    description: "Se pretende usar esta venta para alcanzar objetivos de venta del mes.",
-  },
-  {
-    value: "OTHER",
-    label: "Otro motivo",
-    description: "",
-  },
 ];
 
 export default function CotizacionDetalle() {
@@ -93,8 +70,30 @@ export default function CotizacionDetalle() {
   const [quantityMap, setQuantityMap] = useState<Record<string, number>>({});
 
   const [discountModalOpen, setDiscountModalOpen] = useState(false);
-  const [discountReason, setDiscountReason] = useState<DiscountRequestReason>("LAST_PIECE");
+  const [discountReasonId, setDiscountReasonId] = useState<number | null>(null);
   const [discountNotes, setDiscountNotes] = useState("");
+
+  const { data: reasonCatalog = [], isLoading: reasonsLoading } =
+    useDiscountRequestReasonsCatalog();
+
+  useEffect(() => {
+    if (reasonCatalog.length > 0 && discountReasonId === null) {
+      setDiscountReasonId(reasonCatalog[0].id);
+    }
+  }, [reasonCatalog, discountReasonId]);
+
+  const selectedReason = useMemo(
+    () => reasonCatalog.find((r) => r.id === discountReasonId) ?? null,
+    [reasonCatalog, discountReasonId]
+  );
+
+  const canSubmitDiscount = useMemo(() => {
+    if (!discountReasonId) return false;
+    if (selectedReason?.code === "OTHER") {
+      return discountNotes.trim().length >= 3;
+    }
+    return true;
+  }, [discountReasonId, selectedReason, discountNotes]);
 
   const { data: quotation, isLoading: quotationLoading } = useQuery<QuotationDetail | null>({
     queryKey: ["quotation", quotationId],
@@ -145,8 +144,8 @@ export default function CotizacionDetalle() {
     mutationFn: async () => {
       if (!quotationId) throw new Error("Sin ID");
       const result = await requestQuotationDiscount(quotationId, {
-        reason: discountReason,
-        notes: discountNotes,
+        reasonId: discountReasonId!,
+        ...(selectedReason?.code === "OTHER" ? { notes: discountNotes.trim() } : {}),
       });
       if (result.error) throw new Error(result.error.message);
       return result.data;
@@ -441,9 +440,14 @@ export default function CotizacionDetalle() {
                 <Typography variant="body2" fontWeight={700}>
                   Descuento solicitado
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" display="block">
                   Motivo: {discountRequest.reasonLabel}
                 </Typography>
+                {discountRequest.reasonCode === "OTHER" && discountRequest.notes && (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Nota: {discountRequest.notes}
+                  </Typography>
+                )}
               </Box>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <AlertCircle size={14} color="#EA580C" />
@@ -739,36 +743,39 @@ export default function CotizacionDetalle() {
             Selecciona una opción:
           </Typography>
           <Stack spacing={1.5}>
-            {DISCOUNT_REASONS.map((opt) => {
-              const selected = discountReason === opt.value;
-              return (
-                <Box
-                  key={opt.value}
-                  onClick={() => setDiscountReason(opt.value)}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: selected ? "primary.main" : "divider",
-                    borderRadius: 2,
-                    p: 2,
-                    cursor: "pointer",
-                    bgcolor: selected ? "primary.50" : "background.paper",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 1,
-                    "&:hover": { borderColor: "primary.light" },
-                  }}
-                >
-                  <Box flex={1}>
+            {reasonsLoading ? (
+              <Typography variant="body2" color="text.secondary">
+                Cargando motivos...
+              </Typography>
+            ) : (
+              reasonCatalog.map((opt) => {
+                const selected = discountReasonId === opt.id;
+                const isOther = opt.code === "OTHER";
+                return (
+                  <Box
+                    key={opt.id}
+                    onClick={() => setDiscountReasonId(opt.id)}
+                    sx={{
+                      position: "relative",
+                      border: "1px solid",
+                      borderColor: selected ? "primary.main" : "divider",
+                      borderRadius: 2,
+                      p: 2,
+                      pr: 5,
+                      cursor: "pointer",
+                      bgcolor: selected ? "primary.50" : "background.paper",
+                      "&:hover": { borderColor: "primary.light" },
+                    }}
+                  >
                     <Typography variant="body2" fontWeight={600} mb={opt.description ? 0.5 : 0}>
-                      {opt.label}
+                      {opt.name}
                     </Typography>
                     {opt.description && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" display="block">
                         {opt.description}
                       </Typography>
                     )}
-                    {opt.value === "OTHER" && (
+                    {isOther && (
                       <TextField
                         multiline
                         rows={2}
@@ -776,27 +783,45 @@ export default function CotizacionDetalle() {
                         size="small"
                         placeholder="Ingresa otro motivo"
                         value={discountNotes}
+                        disabled={!selected}
                         onChange={(e) => setDiscountNotes(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         sx={{ mt: 1 }}
                       />
                     )}
-                  </Box>
-                  {selected && (
-                    <Box sx={{ width: 22, height: 22, borderRadius: "50%", bgcolor: "primary.main", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Typography sx={{ color: "white", fontSize: 13, lineHeight: 1 }}>✓</Typography>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 16,
+                        right: 16,
+                        width: 22,
+                        height: 22,
+                        borderRadius: "50%",
+                        bgcolor: selected ? "primary.main" : "transparent",
+                        border: selected ? "none" : "1px solid",
+                        borderColor: "divider",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {selected && (
+                        <Typography sx={{ color: "white", fontSize: 13, lineHeight: 1 }}>
+                          ✓
+                        </Typography>
+                      )}
                     </Box>
-                  )}
-                </Box>
-              );
-            })}
+                  </Box>
+                );
+              })
+            )}
           </Stack>
         </DialogContent>
         <Box sx={{ display: "flex", gap: 1.5, px: 3, py: 2.5 }}>
           <Button
             variant="contained"
             onClick={() => discountMutation.mutate()}
-            disabled={discountMutation.isPending}
+            disabled={discountMutation.isPending || !canSubmitDiscount}
           >
             Solicitar descuento especial
           </Button>

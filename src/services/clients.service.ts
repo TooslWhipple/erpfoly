@@ -34,6 +34,15 @@ export interface Client {
   status: string | null;
   addresses: ClientAddressItem[];
   primaryAddressFormatted: string | null;
+  rfc?: string | null;
+  businessName?: string | null;
+  taxRegimeId?: number | null;
+  cfdiUseId?: number | null;
+  billingPostalCode?: string | null;
+  billingStreet?: string | null;
+  sendInvoiceByEmail?: boolean;
+  invoiceEmail?: string | null;
+  invoiceWhatsappNumber?: string | null;
 }
 
 export interface GetClientsParams {

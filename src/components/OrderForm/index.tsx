@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal, BranchSelectionModal } from "@/components";
+import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
 import SelectedItemsPanel from "@/components/SelectedItemsPanel";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
@@ -20,11 +20,11 @@ import {
     getSuggestionsBySupplier,
     getProductCostHistory,
     getOrderFull,
-    createOrderWithItems,
     updateOrderWithItems,
     getSuggestions,
 } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
     SuggestionsList,
     StockCell,
@@ -70,6 +70,8 @@ interface OrderFormProps {
     supplierName?: string;
     branchId?: string;
     branchName?: string;
+    originBranchId?: string;
+    originBranchName?: string;
 }
 
 export default function OrderForm({
@@ -80,16 +82,18 @@ export default function OrderForm({
     supplierName: propSupplierName,
     branchId: propBranchId,
     branchName: propBranchName,
+    originBranchId: propOriginBranchId,
+    originBranchName: propOriginBranchName,
 }: OrderFormProps) {
     const router = useRouter();
     const theme = useTheme();
+    const { showError } = useSnackbarStore();
 
     const orderType = propOrderType ?? (router.query.orderType as "external" | "internal" | undefined) ?? "external";
 
     const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(null);
     const [branch, setBranch] = useState<{ id: string; name: string } | null>(null);
-    const [mainWarehouse, setMainWarehouse] = useState<BranchCatalogItem | null>(null);
-    const [branchModalOpen, setBranchModalOpen] = useState(false);
+    const [originBranch, setOriginBranch] = useState<BranchCatalogItem | null>(null);
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -114,6 +118,8 @@ export default function OrderForm({
     const resolvedSupplierName = propSupplierName ?? (router.query.supplierName as string | undefined);
     const resolvedBranchId = propBranchId ?? (router.query.branchId as string | undefined);
     const resolvedBranchName = propBranchName ?? (router.query.branchName as string | undefined);
+    const resolvedOriginBranchId = propOriginBranchId ?? (router.query.originBranchId as string | undefined);
+    const resolvedOriginBranchName = propOriginBranchName ?? (router.query.originBranchName as string | undefined);
 
     useEffect(() => {
         if (mode === "create") {
@@ -121,12 +127,29 @@ export default function OrderForm({
                 setSupplier({ id: resolvedSupplierId, name: resolvedSupplierName });
             } else if (orderType === "internal" && resolvedBranchId && resolvedBranchName) {
                 setBranch({ id: resolvedBranchId, name: resolvedBranchName });
-                getMainWarehouse().then((mw) => {
-                    if (mw) setMainWarehouse(mw);
-                });
+                if (resolvedOriginBranchId && resolvedOriginBranchName) {
+                    setOriginBranch({
+                        id: Number(resolvedOriginBranchId),
+                        name: resolvedOriginBranchName,
+                        is_main_warehouse: false,
+                    });
+                } else {
+                    getMainWarehouse().then((mw) => {
+                        if (mw) setOriginBranch(mw);
+                    });
+                }
             }
         }
-    }, [mode, orderType, resolvedSupplierId, resolvedSupplierName, resolvedBranchId, resolvedBranchName]);
+    }, [
+        mode,
+        orderType,
+        resolvedSupplierId,
+        resolvedSupplierName,
+        resolvedBranchId,
+        resolvedBranchName,
+        resolvedOriginBranchId,
+        resolvedOriginBranchName,
+    ]);
 
     useEffect(() => {
         if (mode === "edit" && orderId) {
@@ -147,9 +170,17 @@ export default function OrderForm({
                         id: String(orderData.branch?.id ?? ""),
                         name: orderData.branch?.name ?? "",
                     });
-                    getMainWarehouse().then((mw) => {
-                        if (mw) setMainWarehouse(mw);
-                    });
+                    if (orderData.origin_branch) {
+                        setOriginBranch({
+                            id: orderData.origin_branch.id,
+                            name: orderData.origin_branch.name,
+                            is_main_warehouse: false,
+                        });
+                    } else {
+                        getMainWarehouse().then((mw) => {
+                            if (mw) setOriginBranch(mw);
+                        });
+                    }
                 } else {
                     setSupplier({
                         id: String(orderData.supplier?.id ?? ""),
@@ -187,12 +218,12 @@ export default function OrderForm({
             return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
         }
         if (effectiveOrderType === "internal") {
-            if (!mainWarehouse) return 0;
-            const parsed = Number(mainWarehouse.id);
+            if (!originBranch) return 0;
+            const parsed = Number(originBranch.id);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
         }
         return 0;
-    }, [effectiveOrderType, supplier, mainWarehouse]);
+    }, [effectiveOrderType, supplier, originBranch]);
 
     useEffect(() => {
         if (!sourceEntityId) return;
@@ -385,10 +416,17 @@ export default function OrderForm({
                 sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
                 router.push("/pedidos/sucursales/nuevo/confirmar");
             } else {
+                if (originBranch && branch && originBranch.id === Number(branch.id)) {
+                    showError("La sucursal de origen y destino deben ser distintas.");
+                    return;
+                }
+
                 const orderData = {
                     orderType: "internal" as const,
                     branchId: branch?.id,
                     branchName: branch?.name,
+                    originBranchId: originBranch ? String(originBranch.id) : undefined,
+                    originBranchName: originBranch?.name,
                     items: selectedItems.map((item) => ({
                         productId: item.productId,
                         productCode: item.productCode,
@@ -437,12 +475,16 @@ export default function OrderForm({
             .join(' ') + '...';
     }
 
-    const displayName = effectiveOrderType === "external" ? supplier?.name : branch?.name;
+    const displayName = effectiveOrderType === "external"
+        ? supplier?.name
+        : (originBranch && branch
+            ? `${originBranch.name} → ${branch.name}`
+            : branch?.name);
 
     const breadcrumbs: BreadcrumbItem[] = mode === "create"
         ? [
             { label: "Pedidos", href: effectiveOrderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
-            { label: truncatedName(displayName), href: displayName ? (effectiveOrderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
+            { label: truncatedName(displayName), href: displayName && branch ? (effectiveOrderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
             { label: effectiveOrderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido" },
         ]
         : [
@@ -593,7 +635,7 @@ export default function OrderForm({
         );
     }
 
-    if (effectiveOrderType === "internal" && (!branch || !mainWarehouse)) {
+    if (effectiveOrderType === "internal" && (!branch || !originBranch)) {
         return (
             <MainLayout>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
@@ -680,14 +722,6 @@ export default function OrderForm({
                     costHistory={costHistory}
                 />
             )}
-
-            <BranchSelectionModal
-                open={branchModalOpen}
-                onClose={() => setBranchModalOpen(false)}
-                onSelect={(b: BranchCatalogItem) => {
-                    setBranch({ id: String(b.id), name: b.name });
-                }}
-            />
         </MainLayout>
     );
 }

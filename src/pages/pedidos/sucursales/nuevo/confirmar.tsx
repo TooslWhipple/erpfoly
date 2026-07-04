@@ -17,6 +17,8 @@ interface ConfirmOrderData {
     supplierName?: string;
     branchId?: string;
     branchName?: string;
+    originBranchId?: string;
+    originBranchName?: string;
     items: ConfirmOrderItem[];
     total: number;
 }
@@ -87,6 +89,8 @@ export default function ConfirmarArticulosPage() {
                 pathname: "/pedidos/sucursales/nuevo",
                 query: {
                     orderType: "internal",
+                    originBranchId: orderData.originBranchId,
+                    originBranchName: orderData.originBranchName,
                     branchId: orderData.branchId,
                     branchName: orderData.branchName,
                 },
@@ -128,12 +132,28 @@ export default function ConfirmarArticulosPage() {
                 }
                 branchId = mainWarehouse.id;
             } else if (orderData.orderType === "internal" && orderData.branchId) {
+                if (
+                    orderData.originBranchId
+                    && Number(orderData.originBranchId) === Number(orderData.branchId)
+                ) {
+                    showError("La sucursal de origen y destino deben ser distintas.");
+                    setStatus("error");
+                    return;
+                }
+                if (!orderData.originBranchId) {
+                    showError("Falta la sucursal de origen. Vuelve al formulario e intenta de nuevo.");
+                    setStatus("error");
+                    return;
+                }
                 branchId = Number(orderData.branchId);
             }
 
             const payload = {
                 order_type: orderData.orderType,
                 branch_id: branchId,
+                origin_branch_id: orderData.orderType === "internal" && orderData.originBranchId
+                    ? Number(orderData.originBranchId)
+                    : undefined,
                 folio: `PED-${Date.now()}`,
                 order_date: new Date().toISOString().split("T")[0],
                 supplier_id: orderData.orderType === "external" && orderData.supplierId

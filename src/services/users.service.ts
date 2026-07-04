@@ -7,12 +7,14 @@ import { buildListUrl } from "@/lib/apiHelpers";
 
 export interface UserListItem {
     id: number;
+    fullName?: string;
     firstName: string;
     lastName: string;
     username: string;
     cellphone: string;
     roleId: number;
     roleName: string;
+    status?: string;
     breanches: number[];
     createdAt: string;
     updatedAt: string;
@@ -87,7 +89,6 @@ export interface CreateUserPayload {
     username: string;
     cellphone?: string;
     email?: string;
-    password: string;
     roleId: number;
     branchIds: number[];
     driverDetails?: UserDriverDetailsPayload;
@@ -99,7 +100,6 @@ export interface UpdateUserPayload {
     username?: string;
     cellphone?: string;
     email?: string;
-    password?: string;
     roleId?: number;
     branchIds?: number[];
     driverDetails?: UserDriverDetailsPayload;
@@ -139,7 +139,6 @@ export async function createUser(
         username: payload.username,
         cellphone: payload.cellphone || undefined,
         email: payload.email || undefined,
-        password: payload.password,
         roleId: payload.roleId,
         branchIds: payload.branchIds,
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
@@ -157,7 +156,6 @@ export async function updateUser(
     if (payload.username !== undefined) body.username = payload.username;
     if (payload.cellphone !== undefined) body.cellphone = payload.cellphone;
     if (payload.email !== undefined) body.email = payload.email;
-    if (payload.password !== undefined) body.password = payload.password;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
@@ -166,4 +164,15 @@ export async function updateUser(
 
 export async function deleteUser(id: number): Promise<ApiResult<{ id: number; message: string }>> {
     return del<{ id: number; message: string }>(`${BASE}/${id}`);
+}
+
+export async function resetUserAccess(id: number): Promise<ApiResult<ApiSuccessPayload>> {
+    return post<ApiSuccessPayload>(`${BASE}/${id}/reset-access`);
+}
+
+export async function updateUserStatus(
+    id: number,
+    status: "ACTIVE" | "INACTIVE"
+): Promise<ApiResult<ApiSuccessPayload>> {
+    return patch<ApiSuccessPayload>(`${BASE}/${id}/status`, { status });
 }

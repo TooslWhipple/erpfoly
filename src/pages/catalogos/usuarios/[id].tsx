@@ -56,7 +56,6 @@ type UserFormState = {
     lastName: string;
     username: string;
     cellphone: string;
-    password: string;
     roleId: number | "";
     branchIds: number[];
 };
@@ -68,7 +67,6 @@ const initialUser: UserFormState = {
     lastName: "",
     username: "",
     cellphone: "",
-    password: "",
     roleId: "",
     branchIds: [],
 };
@@ -120,7 +118,6 @@ export default function UserFormPage() {
                 lastName: data.lastName ?? "",
                 username: data.username ?? "",
                 cellphone: data.cellphone ?? "",
-                password: "",
                 roleId: data.roleId,
                 branchIds: data.branchIds,
             });
@@ -249,14 +246,6 @@ export default function UserFormPage() {
             next.branchIds = "Selecciona al menos una sucursal";
         }
 
-        if (isNew) {
-            if (!user.password.trim()) {
-                next.password = "La contraseña es requerida";
-            } else if (user.password.trim().length < 10) {
-                next.password = "Mínimo 10 caracteres";
-            }
-        }
-
         setErrors(next);
         const driverValid = validateDriverForm();
         return Object.keys(next).length === 0 && driverValid;
@@ -274,7 +263,6 @@ export default function UserFormPage() {
                 lastName: user.lastName.trim(),
                 username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
                 cellphone: user.cellphone.trim(),
-                password: user.password.trim(),
                 roleId: user.roleId as number,
                 branchIds: user.branchIds,
                 driverDetails,
@@ -336,8 +324,7 @@ export default function UserFormPage() {
         user.cellphone.trim().length >= 10 &&
         user.roleId !== "" &&
         user.branchIds.length > 0 &&
-        driverFieldsValid &&
-        (isNew ? user.password.trim().length >= 10 : true);
+        driverFieldsValid;
 
     if (loading) {
         return (
@@ -377,6 +364,11 @@ export default function UserFormPage() {
                 <Divider />
                 <FormCard>
                     <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
+                    {isNew && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Se generará una contraseña temporal y se enviará por WhatsApp al crear el usuario.
+                        </Typography>
+                    )}
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <FormTextField
@@ -412,20 +404,6 @@ export default function UserFormPage() {
                                 inputProps={{ maxLength: USERNAME_MAX_LENGTH, inputMode: "numeric" }}
                             />
                         </Grid>
-                        {
-                            isNew &&
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <FormTextField
-                                    label="Contraseña"
-                                    placeholder="Mínimo 10 caracteres"
-                                    type="password"
-                                    value={user.password}
-                                    onChange={(e) => setUserField("password", e.target.value)}
-                                    error={Boolean(errors.password)}
-                                    helperText={errors.password || undefined}
-                                />
-                            </Grid>
-                        }
                     </Grid>
                     <Divider />
                     <Typography variant="subtitle2" fontWeight={600}>Rol y contacto</Typography>

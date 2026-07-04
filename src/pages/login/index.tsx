@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { CircularProgress, InputAdornment, IconButton, Typography, Button, useTheme } from "@mui/material";
+import { Alert, CircularProgress, InputAdornment, IconButton, Typography, Button, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
 import { Eye, EyeOff, IdCard, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,9 +30,20 @@ export default function LoginPage() {
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
+	const [passwordChangedMessage, setPasswordChangedMessage] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!router.isReady) return;
+		if (router.query.passwordChanged === "1") {
+			setPasswordChangedMessage("Contraseña actualizada. Inicia sesión con tu nueva contraseña.");
+			const { passwordChanged: _removed, ...rest } = router.query;
+			void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+		}
+	}, [router]);
 
 	const trimmedId = identifier.trim();
 	const hasLoginError = !!error;
+	const showExpiredPasswordHint = error?.includes("temporal expiró") ?? false;
 
 	const canSubmitLogin = trimmedId.length > 0 && password.length > 0 && !isLoading;
 
@@ -134,6 +145,12 @@ export default function LoginPage() {
 							}}
 						/>
 
+						{passwordChangedMessage && (
+							<Alert severity="success" onClose={() => setPasswordChangedMessage(null)}>
+								{passwordChangedMessage}
+							</Alert>
+						)}
+
 						<Button
 							fullWidth
 							type="submit"
@@ -157,6 +174,25 @@ export default function LoginPage() {
 							Recuperar
 						</RecoveryLink>
 					</RecoveryRow>
+
+					{showExpiredPasswordHint && (
+						<RecoveryRow>
+							<Typography variant="body2" color="text.secondary">
+								Puedes solicitar una nueva contraseña temporal en{" "}
+								<RecoveryLink
+									href="/login/recover"
+									onClick={(e: React.MouseEvent) => {
+										e.preventDefault();
+										clearError();
+										router.push("/login/recover");
+									}}
+								>
+									recuperar contraseña
+								</RecoveryLink>
+								.
+							</Typography>
+						</RecoveryRow>
+					)}
 				</FormWrapper>
 			</RightPanel>
 		</PageContainer >

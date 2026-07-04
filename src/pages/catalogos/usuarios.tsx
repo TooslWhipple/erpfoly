@@ -2,11 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { KeyRound, UserCheck, UserX } from "lucide-react";
+import { MainLayout, Title, TableCrud, TabFilters, ItemNameHighlight } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import { getUsers as getUsersApi, type UserListItem } from "@/services/users.service";
+import {
+    getUsers as getUsersApi,
+    resetUserAccess,
+    updateUserStatus,
+    type UserListItem,
+} from "@/services/users.service";
 import { formatListDateTime } from "@/utils/date";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { useConfirmationModal } from "@/hooks/useConfirmationModal";
 
 type User = UserListItem;
 
@@ -21,6 +29,8 @@ const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
 
 export default function Usuarios() {
     const router = useRouter();
+    const { showSuccess, showError } = useSnackbarStore();
+    const { requestConfirmation, confirmationModal } = useConfirmationModal();
 
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,6 +38,7 @@ export default function Usuarios() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -66,6 +77,72 @@ export default function Usuarios() {
 
     const handleEditUser = (user: User) => {
         router.push(`/catalogos/usuarios/${user.id}`);
+    };
+
+    const handleResetAccess = (user: User) => {
+        const displayName = user.fullName ?? user.username;
+
+        requestConfirmation({
+            title: "Reiniciar acceso",
+            type: "warning",
+            confirmLabel: "Reiniciar acceso",
+            cancelLabel: "Cancelar",
+            description: (
+                <>
+                    Se enviará una contraseña temporal por WhatsApp a{" "}
+                    <ItemNameHighlight>{displayName}</ItemNameHighlight>. La contraseña actual
+                    dejará de funcionar.
+                </>
+            ),
+            onConfirm: async () => {
+                setActionLoadingId(user.id);
+                const result = await resetUserAccess(user.id);
+                setActionLoadingId(null);
+
+                if (result.error) {
+                    showError(result.error.message);
+                    throw result.error;
+                }
+
+                showSuccess(result.data?.message ?? "Acceso reiniciado correctamente.");
+            },
+        });
+    };
+
+    const handleToggleStatus = (user: User) => {
+        const isActive = user.status === "ACTIVE";
+        const displayName = user.fullName ?? user.username;
+
+        requestConfirmation({
+            title: isActive ? "Desactivar usuario" : "Activar usuario",
+            type: isActive ? "error" : "success",
+            confirmLabel: isActive ? "Desactivar" : "Activar",
+            cancelLabel: "Cancelar",
+            description: isActive ? (
+                <>
+                    <ItemNameHighlight>{displayName}</ItemNameHighlight> no podrá acceder al
+                    sistema hasta que lo reactives.
+                </>
+            ) : (
+                <>
+                    ¿Activar a <ItemNameHighlight>{displayName}</ItemNameHighlight>? Podrá volver
+                    a acceder al sistema.
+                </>
+            ),
+            onConfirm: async () => {
+                setActionLoadingId(user.id);
+                const result = await updateUserStatus(user.id, isActive ? "INACTIVE" : "ACTIVE");
+                setActionLoadingId(null);
+
+                if (result.error) {
+                    showError(result.error.message);
+                    throw result.error;
+                }
+
+                showSuccess(result.data?.message ?? "Estatus actualizado correctamente.");
+                fetchUsers();
+            },
+        });
     };
 
     const handlePageChange = (newPage: number) => {
@@ -139,6 +216,31 @@ export default function Usuarios() {
             onClick: handleEditUser,
             permission: CATALOG_USERS_UPDATE,
         },
+        {
+            id: "reset-access",
+            label: "Reiniciar acceso",
+            icon: <KeyRound size={16} />,
+            onClick: handleResetAccess,
+            permission: CATALOG_USERS_UPDATE,
+            disabled: (row) => actionLoadingId === row.id || row.status !== "ACTIVE",
+        },
+        {
+            id: "deactivate",
+            label: "Desactivar",
+            icon: <UserX size={16} />,
+            onClick: handleToggleStatus,
+            permission: CATALOG_USERS_UPDATE,
+            disabled: (row) => actionLoadingId === row.id || row.status !== "ACTIVE",
+            color: "error",
+        },
+        {
+            id: "activate",
+            label: "Activar",
+            icon: <UserCheck size={16} />,
+            onClick: handleToggleStatus,
+            permission: CATALOG_USERS_UPDATE,
+            disabled: (row) => actionLoadingId === row.id || row.status === "ACTIVE",
+        },
     ];
 
     return (
@@ -175,6 +277,7 @@ export default function Usuarios() {
                     emptyMessage="No hay usuarios registrados"
                 />
             </Stack>
+            {confirmationModal}
         </MainLayout>
     );
 }

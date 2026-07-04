@@ -10,6 +10,7 @@ export interface User {
 	roleId?: number;
 	roleName?: string;
 	permissions: string[];
+	temporaryPassword?: boolean;
 }
 
 interface AuthState {

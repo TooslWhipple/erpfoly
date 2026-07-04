@@ -156,7 +156,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>;
   }
 
-  if (!token || !user || validatedToken !== token || publicRoute || currentPath === "/") {
+  if (
+    !token ||
+    !user ||
+    validatedToken !== token ||
+    publicRoute ||
+    currentPath === "/"
+  ) {
     return (
       <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
         <CircularProgress />

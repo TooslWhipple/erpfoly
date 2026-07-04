@@ -192,7 +192,12 @@ export function useSupplierForm() {
             if (isNew) {
                 const result = await createSupplierMutation.mutateAsync(payload);
                 if (result.error) {
-                    showError(result.error.message);
+                    const message = result.error.message;
+                    if (/RFC/i.test(message)) {
+                        setErrors((prev) => ({ ...prev, rfc: message }));
+                        setActiveTab("general");
+                    }
+                    showError(message);
                     return;
                 }
                 showSuccess(result.data?.message ?? "Proveedor creado correctamente.");
@@ -202,7 +207,12 @@ export function useSupplierForm() {
                     payload,
                 });
                 if (result.error) {
-                    showError(result.error.message);
+                    const message = result.error.message;
+                    if (/RFC/i.test(message)) {
+                        setErrors((prev) => ({ ...prev, rfc: message }));
+                        setActiveTab("general");
+                    }
+                    showError(message);
                     return;
                 }
                 showSuccess(result.data?.message ?? "Proveedor actualizado correctamente.");
@@ -211,7 +221,12 @@ export function useSupplierForm() {
             router.push("/catalogos/proveedores");
         } catch (err) {
             console.error("[SupplierForm] Error saving:", err);
-            showError(getApiErrorMessage(err));
+            const message = getApiErrorMessage(err);
+            if (/RFC/i.test(message)) {
+                setErrors((prev) => ({ ...prev, rfc: message }));
+                setActiveTab("general");
+            }
+            showError(message);
         }
     }, [
         formState,

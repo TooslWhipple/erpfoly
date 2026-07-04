@@ -16,6 +16,7 @@ interface BranchOrder {
     id: number;
     folio: string;
     date: string;
+    originBranch: string;
     branch: string;
     requestedBy: string;
     requestedItems: number;
@@ -65,6 +66,7 @@ function mapBackendOrderToBranchOrder(order: OrderListItem): BranchOrder {
         id: order.id,
         folio: order.folio,
         date: formattedDate,
+        originBranch: order.origin_branch?.name ?? "—",
         branch: order.branch?.name ?? "Sin sucursal",
         requestedBy: order.requested_by_user
             ? `${order.requested_by_user.first_name} ${order.requested_by_user.last_name}`
@@ -164,13 +166,15 @@ export default function PedidosSucursales() {
         setBranchModalOpen(true);
     };
 
-    const handleBranchSelect = (branch: { id: number; name: string }) => {
+    const handleBranchSelect = (selection: { origin: { id: number; name: string }; destination: { id: number; name: string } }) => {
         router.push({
             pathname: "/pedidos/sucursales/nuevo",
             query: {
                 orderType: "internal",
-                branchId: String(branch.id),
-                branchName: branch.name,
+                originBranchId: String(selection.origin.id),
+                originBranchName: selection.origin.name,
+                branchId: String(selection.destination.id),
+                branchName: selection.destination.name,
             },
         });
     };
@@ -208,8 +212,14 @@ export default function PedidosSucursales() {
             size: "lg",
         },
         {
+            id: "originBranch",
+            label: "Origen",
+            size: "lg",
+            truncate: true,
+        },
+        {
             id: "branch",
-            label: "Sucursal",
+            label: "Destino",
             size: "xl",
             truncate: true,
         },

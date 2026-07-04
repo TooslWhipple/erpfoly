@@ -41,7 +41,6 @@ import {
   DISCOUNT_REQUESTS_READ,
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
-  INVENTORY_TRANSFERS_CREATE,
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   ORDERS_CREATE,
@@ -118,7 +117,6 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },
-  { pattern: /^\/inventario\/transpasos(\/.*)?$/, permission: INVENTORY_TRANSFERS_CREATE },
   { pattern: /^\/inventario(\/.*)?$/, permission: INVENTORY_READ },
 
   { pattern: /^\/recepcion-mercancias\/nuevo$/, permission: MERCHANDISE_RECEPTION_CREATE },

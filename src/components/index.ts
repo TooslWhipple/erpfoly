@@ -56,7 +56,7 @@ export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";
 export type { SupplierSelectionModalProps } from "./SupplierSelectionModal";
 export { BranchSelectionModal } from "./BranchSelectionModal";
-export type { BranchSelectionModalProps } from "./BranchSelectionModal";
+export type { BranchSelectionModalProps, BranchSelectionResult } from "./BranchSelectionModal";
 export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";

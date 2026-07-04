@@ -60,7 +60,6 @@ import {
   DISCOUNT_REQUESTS_READ,
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
-  INVENTORY_TRANSFERS_CREATE,
   MERCHANDISE_RECEPTION_READ,
   ORDERS_READ,
   ROUTES_READ,
@@ -148,7 +147,6 @@ const navItems: NavItem[] = [
       { label: "Inventario", path: "/inventario", requirement: { permission: INVENTORY_READ } },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada", requirement: { permission: DAMAGED_INVENTORY_READ } },
       { label: "Liquidaciones", path: "/inventario/liquidaciones", requirement: { permission: INVENTORY_LIQUIDATIONS_READ } },
-      { label: "Traspasos", path: "/inventario/transpasos", requirement: { permission: INVENTORY_TRANSFERS_CREATE } },
     ],
   },
   {

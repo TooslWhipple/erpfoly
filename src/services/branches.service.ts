@@ -136,8 +136,15 @@ export interface BranchCatalogItem {
   is_main_warehouse: boolean;
 }
 
-export async function getBranchesCatalog(): Promise<BranchCatalogItem[]> {
-  return unwrapOrThrow(await get<BranchCatalogItem[]>(`${BASE}/catalog`));
+export async function getBranchesCatalog(
+  search?: string,
+): Promise<BranchCatalogItem[]> {
+  const trimmed = search?.trim();
+  return unwrapOrThrow(
+    await get<BranchCatalogItem[]>(`${BASE}/catalog`, {
+      params: trimmed ? { search: trimmed } : undefined,
+    }),
+  );
 }
 
 export async function getMainWarehouse(): Promise<BranchCatalogItem | null> {

@@ -5,7 +5,6 @@ import {
     Card,
     ProductIconPlaceholder,
     DeliveryDateField,
-    QuantityControls,
     QuantityButton,
     QuantityValue,
 } from "./styles";
@@ -13,27 +12,30 @@ import { theme } from "@/styles/theme";
 
 export interface BranchOrderItemRowProps {
     item: BranchOrderLineItem;
+    dateError?: string;
+    disabled?: boolean;
     onDeliveryDateChange?: (articleId: string, date: string) => void;
     onQuantityChange?: (articleId: string, quantity: number) => void;
 }
 
 function formatDateForInput(isoDate: string): string {
     if (!isoDate) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate;
     const d = new Date(isoDate);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().split("T")[0];
 }
 
 export function BranchOrderItemRow({
     item,
+    dateError,
+    disabled = false,
     onDeliveryDateChange,
     onQuantityChange,
 }: BranchOrderItemRowProps) {
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        if (value && onDeliveryDateChange) {
+        if (onDeliveryDateChange) {
             onDeliveryDateChange(item.articleId, value);
         }
     };
@@ -65,12 +67,15 @@ export function BranchOrderItemRow({
                 size="small"
                 value={formatDateForInput(item.deliveryDate)}
                 onChange={handleDateChange}
+                error={Boolean(dateError)}
+                helperText={dateError}
+                disabled={disabled}
             />
             <Stack direction="row" spacing={1} alignItems="center" flex={2}>
                 <QuantityButton
                     size="small"
                     onClick={handleDecrement}
-                    disabled={item.quantity <= 1}
+                    disabled={disabled || item.quantity <= 1}
                 >
                     <Minus size={16} style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }} />
                 </QuantityButton>
@@ -78,6 +83,7 @@ export function BranchOrderItemRow({
                 <QuantityButton
                     size="small"
                     onClick={handleIncrement}
+                    disabled={disabled}
                 >
                     <Plus size={16} style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }} />
                 </QuantityButton>

@@ -22,7 +22,6 @@ import type { SalesBranchConfig } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
 import { Stack, Typography } from "@mui/material";
 import { InventoryTab, ActivityTab, TechnicalTab, ConfigurationsTab } from "./sku-tabs";
-import TranspasosPage from "./transpasos";
 
 async function getInventoryDetail(sku: string) {
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -77,10 +76,6 @@ export default function InventoryDetail() {
     const router = useRouter();
     const { sku } = router.query;
     const skuStr = typeof sku === "string" ? sku : Array.isArray(sku) ? sku[0] : undefined;
-
-    if (skuStr === "transpasos") {
-        return <TranspasosPage />;
-    }
 
     return <InventoryDetailContent sku={skuStr} />;
 }

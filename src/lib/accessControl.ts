@@ -47,7 +47,6 @@ export const DEV_MOCK_USER: User = {
     "inventory:read",
     "damaged_inventory:read",
     "inventory_liquidations:read",
-    "inventory_transfers:create",
     "merchandise_reception:read",
     "merchandise_reception:create",
     "routes:read",

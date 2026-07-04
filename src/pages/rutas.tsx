@@ -43,7 +43,7 @@ import {
   DetailMiniMap,
 } from "@/styles/rutas.styles";
 import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/components/RouteTabs";
-import type { RouteSummary } from "@/types/rutas.types";
+import type { RouteSummary, AddRoutePointPayload, AvailableOrdersResponse } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -69,7 +69,7 @@ import {
 } from "@/services/rutas.service";
 import { getMunicipalityCatalog } from "@/services/municipalities.service";
 import { getBranchesCatalog } from "@/services/branches.service";
-import type { RouteDetailApi } from "@/types/rutas-api.types";
+import type { RouteDetailApi, AvailableOrdersApi } from "@/types/rutas-api.types";
 import {
   mapRouteDetailApiToView,
   mapRouteListRowToSummary,
@@ -299,12 +299,12 @@ export default function RutaPage() {
   const addOrdersMutation = useMutation({
     mutationFn: async ({
       routeId,
-      orderIds,
+      points,
     }: {
       routeId: number;
-      orderIds: number[];
+      points: AddRoutePointPayload[];
     }) => {
-      const res = await addOrdersToRoute(routeId, orderIds);
+      const res = await addOrdersToRoute(routeId, points);
       return unwrapOrThrow(res);
     },
     onSuccess: (data, vars) => {
@@ -487,17 +487,39 @@ export default function RutaPage() {
     },
   });
 
-  const fetchOrdersForModal = useCallback(async (routeId: number) => {
-    const res = await fetchAvailableOrders(routeId);
-    const data = unwrapOrThrow(res);
-    return data.rows.map((row) => ({
-      id: row.id,
-      orderNumber: row.order_number,
-      address: row.address,
-      zone: row.zone,
-      articleCount: row.article_count,
-    }));
-  }, []);
+  const fetchOrdersForModal = useCallback(
+    async (routeId: number, search?: string): Promise<AvailableOrdersResponse> => {
+      const res = await fetchAvailableOrders(routeId, search);
+      const data = unwrapOrThrow(res) as AvailableOrdersApi;
+      return {
+        suggested: data.suggested.map((row) => ({
+          id: row.id,
+          sourceType: row.source_type,
+          originId: row.origin_id,
+          itemId: row.item_id,
+          sku: row.sku,
+          orderNumber: row.order_number,
+          articleName: row.article_name,
+          zone: row.zone,
+          scheduledDate: row.scheduled_date,
+        })),
+        orders: data.orders.map((row) => ({
+          id: row.id,
+          sourceType: row.source_type,
+          originId: row.origin_id,
+          orderNumber: row.order_number,
+          address: row.address,
+          zone: row.zone,
+          articleCount: row.article_count,
+          itemIds: row.item_ids,
+        })),
+        suggestedCount: data.suggested_count,
+        ordersCount: data.orders_count,
+        recoveriesCount: data.recoveries_count,
+      };
+    },
+    [],
+  );
 
   const fetchDriversForModal = useCallback(async (routeId: number) => {
     const res = await fetchAvailableDrivers(routeId, {
@@ -540,14 +562,13 @@ export default function RutaPage() {
     }
   };
 
-  const handleConfirmAddOrders = async (orderIds: string[]) => {
-    if (!resolvedRouteId || orderIds.length === 0) return;
-    const parsedOrderIds = orderIds
-      .map((id) => Number.parseInt(id, 10))
-      .filter((n) => Number.isFinite(n));
+  const handleConfirmAddOrders = async (payload: {
+    points: AddRoutePointPayload[];
+  }) => {
+    if (!resolvedRouteId || payload.points.length === 0) return;
     await addOrdersMutation.mutateAsync({
       routeId: resolvedRouteId,
-      orderIds: parsedOrderIds,
+      points: payload.points,
     });
   };
 
@@ -878,6 +899,7 @@ export default function RutaPage() {
                               open={addOrdersModalOpen}
                               onClose={() => setAddOrdersModalOpen(false)}
                               routeId={resolvedRouteId}
+                              routeType={routeDetail.routeType ?? "deliveries"}
                               fetchAvailableOrders={fetchOrdersForModal}
                               onConfirm={handleConfirmAddOrders}
                             />
@@ -935,7 +957,7 @@ export default function RutaPage() {
           await createRouteMutation.mutateAsync(values);
         }}
         loading={createRouteMutation.isPending}
-        fetchCities={getMunicipalityCatalog}
+        fetchCities={() => getMunicipalityCatalog({ has_branches: true, limit: 100 })}
         fetchBranches={getBranchesCatalog}
       />
     </MainLayout>

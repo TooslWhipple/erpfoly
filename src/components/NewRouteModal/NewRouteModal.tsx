@@ -14,7 +14,8 @@ import { RadioButton, RadioButtonGroup } from "@/components/RadioButton";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
 import dayjs from "@/lib/dayjs";
 import type { CreateRoutePayload } from "@/services/rutas.service";
-import type { MunicipalityCatalogItem } from "@/services/municipalities.service";
+import type { MunicipalityCatalogItem, MunicipalityZoneCatalogItem } from "@/services/municipalities.service";
+import { getMunicipalityZonesCatalog } from "@/services/municipalities.service";
 import type { BranchCatalogItem } from "@/services/branches.service";
 import {
   CheckboxCellButton,
@@ -29,7 +30,7 @@ export interface NewRouteFormErrors {
   routeType?: string;
   cityId?: string;
   originBranchId?: string;
-  destinationBranchId?: string;
+  destinationZoneId?: string;
   deliveryDate?: string;
   originCityId?: string;
   mainBranchId?: string;
@@ -61,24 +62,26 @@ function isAfterTomorrow(dateStr: string): boolean {
   return parsed.isAfter(dayjs().endOf("day"));
 }
 
-function buildPayload(values: NewRouteFormValues): CreateRoutePayload {
-  const base: CreateRoutePayload = {
-    route_type: values.route_type,
-    city_id: values.city_id,
-    branch_ids_to_visit: values.branch_ids_to_visit ?? [],
-  };
+function branchMatchesMunicipality(
+  branch: BranchCatalogItem,
+  municipalityName: string,
+): boolean {
+  return branch.municipality?.trim() === municipalityName.trim();
+}
 
+function buildPayload(values: NewRouteFormValues): CreateRoutePayload {
   if (values.route_type === "deliveries") {
     return {
-      ...base,
+      route_type: "deliveries",
+      city_id: values.city_id!,
       origin_branch_id: values.origin_branch_id,
-      destination_branch_id: values.destination_branch_id,
+      destination_zone_id: values.destination_zone_id,
       delivery_date: values.delivery_date,
     };
   }
 
   return {
-    ...base,
+    route_type: "scheduled",
     origin_city_id: values.origin_city_id,
     main_branch_id: values.main_branch_id,
     destination_city_id: values.destination_city_id,
@@ -106,7 +109,9 @@ export function NewRouteModal({
   const [routeType, setRouteType] = useState<RouteType>("deliveries");
   const [cityId, setCityId] = useState<number | "">("");
   const [originBranchId, setOriginBranchId] = useState<number | "">("");
-  const [destinationBranchId, setDestinationBranchId] = useState<number | "">("");
+  const [destinationZoneId, setDestinationZoneId] = useState<number | "">("");
+  const [zones, setZones] = useState<MunicipalityZoneCatalogItem[]>([]);
+  const [zonesLoading, setZonesLoading] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState<string>("");
 
   const [originCityId, setOriginCityId] = useState<number | "">("");
@@ -125,7 +130,8 @@ export function NewRouteModal({
       setRouteType("deliveries");
       setCityId("");
       setOriginBranchId("");
-      setDestinationBranchId("");
+      setDestinationZoneId("");
+      setZones([]);
       setDeliveryDate("");
       setOriginCityId("");
       setMainBranchId("");
@@ -161,6 +167,42 @@ export function NewRouteModal({
     };
   }, [open, fetchCities, fetchBranches]);
 
+  useEffect(() => {
+    if (!open || routeType !== "deliveries" || cityId === "") {
+      setZones([]);
+      setDestinationZoneId("");
+      return;
+    }
+
+    let cancelled = false;
+    setZonesLoading(true);
+    getMunicipalityZonesCatalog(cityId as number)
+      .then((rows) => {
+        if (cancelled) return;
+        setZones(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setZones([]);
+      })
+      .finally(() => {
+        if (!cancelled) setZonesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, routeType, cityId]);
+
+  const zoneOptions = useMemo(
+    () =>
+      zones.map((zone) => ({
+        value: zone.id,
+        label: zone.name,
+      })),
+    [zones],
+  );
+
   const cityOptions = useMemo(
     () =>
       cities.map((c) => ({
@@ -179,10 +221,14 @@ export function NewRouteModal({
     [branches],
   );
 
-  const branchChipsItems = useMemo(
-    () => branches.map((b) => ({ id: b.id, label: b.name })),
-    [branches],
-  );
+  const branchChipsItems = useMemo(() => {
+    if (destinationCityId === "") return [];
+    const destinationCity = cities.find((city) => city.id === destinationCityId);
+    if (!destinationCity) return [];
+    return branches
+      .filter((branch) => branchMatchesMunicipality(branch, destinationCity.name))
+      .map((branch) => ({ id: branch.id, label: branch.name }));
+  }, [branches, cities, destinationCityId]);
 
   const validate = (): NewRouteFormErrors => {
     const next: NewRouteFormErrors = {};
@@ -192,8 +238,8 @@ export function NewRouteModal({
       if (cityId === "") next.cityId = "Selecciona una ciudad.";
       if (originBranchId === "")
         next.originBranchId = "Selecciona la sucursal de origen.";
-      if (destinationBranchId === "")
-        next.destinationBranchId = "Selecciona la sucursal de destino.";
+      if (destinationZoneId === "")
+        next.destinationZoneId = "Selecciona la zona de destino.";
       if (!deliveryDate)
         next.deliveryDate = "Selecciona la fecha a realizar.";
       else if (!isAfterTomorrow(deliveryDate))
@@ -236,12 +282,14 @@ export function NewRouteModal({
 
     const values: NewRouteFormValues = {
       route_type: routeType,
-      city_id: cityId as number,
+      ...(routeType === "deliveries"
+        ? { city_id: cityId as number }
+        : {}),
       origin_branch_id:
         routeType === "deliveries" ? (originBranchId as number) : undefined,
-      destination_branch_id:
+      destination_zone_id:
         routeType === "deliveries"
-          ? (destinationBranchId as number)
+          ? (destinationZoneId as number)
           : undefined,
       delivery_date:
         routeType === "deliveries" ? deliveryDate : undefined,
@@ -374,6 +422,7 @@ export function NewRouteModal({
                 onChange={(e) => {
                   const v = e.target.value;
                   setCityId(v === "" ? "" : Number(v));
+                  setDestinationZoneId("");
                 }}
                 options={cityOptions}
                 placeholder="Selecciona una ciudad"
@@ -405,19 +454,25 @@ export function NewRouteModal({
                   required
                   fullWidth
                   value={
-                    destinationBranchId === ""
+                    destinationZoneId === ""
                       ? ""
-                      : String(destinationBranchId)
+                      : String(destinationZoneId)
                   }
                   onChange={(e) => {
                     const v = e.target.value;
-                    setDestinationBranchId(v === "" ? "" : Number(v));
+                    setDestinationZoneId(v === "" ? "" : Number(v));
                   }}
-                  options={branchOptions}
-                  placeholder="Selecciona el destino"
-                  disabled={fieldsDisabled}
-                  error={Boolean(errors.destinationBranchId)}
-                  helperText={errors.destinationBranchId}
+                  options={zoneOptions}
+                  placeholder={
+                    zonesLoading
+                      ? "Cargando zonas..."
+                      : cityId === ""
+                        ? "Selecciona una ciudad primero"
+                        : "Selecciona la zona de destino"
+                  }
+                  disabled={fieldsDisabled || zonesLoading || cityId === ""}
+                  error={Boolean(errors.destinationZoneId)}
+                  helperText={errors.destinationZoneId}
                 />
               </Stack>
 
@@ -477,6 +532,7 @@ export function NewRouteModal({
                 onChange={(e) => {
                   const v = e.target.value;
                   setDestinationCityId(v === "" ? "" : Number(v));
+                  setBranchesToVisit([]);
                 }}
                 options={cityOptions}
                 placeholder="Selecciona la ciudad destino"
@@ -492,10 +548,19 @@ export function NewRouteModal({
                 onChange={(ids) =>
                   setBranchesToVisit(ids.map((id) => Number(id)))
                 }
-                disabled={fieldsDisabled}
+                disabled={fieldsDisabled || destinationCityId === ""}
                 error={Boolean(errors.branchesToVisit)}
-                helperText={errors.branchesToVisit}
-                emptyText="No hay opciones"
+                helperText={
+                  errors.branchesToVisit ??
+                  (destinationCityId === ""
+                    ? "Selecciona la ciudad destino primero"
+                    : undefined)
+                }
+                emptyText={
+                  destinationCityId === ""
+                    ? "Selecciona la ciudad destino primero"
+                    : "No hay sucursales en esta ciudad"
+                }
               />
 
               <Stack spacing={1}>

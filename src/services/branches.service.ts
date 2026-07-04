@@ -134,6 +134,7 @@ export interface BranchCatalogItem {
   id: number;
   name: string;
   is_main_warehouse: boolean;
+  municipality?: string | null;
 }
 
 export async function getBranchesCatalog(): Promise<BranchCatalogItem[]> {

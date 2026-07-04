@@ -99,6 +99,7 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
   return {
     id: data.id,
     name: formatRouteName(data.id, data.code),
+    routeType: data.route_type,
     status: data.status as RouteStatus,
     location: data.location,
     articleCount: data.article_count,

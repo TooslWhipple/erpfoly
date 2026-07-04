@@ -35,12 +35,35 @@ export interface RouteOrderApi {
   items: RouteOrderItemApi[];
 }
 
+export interface SuggestedItemToAddApi {
+  id: string;
+  source_type: "sale" | "order";
+  origin_id: number;
+  item_id: number;
+  sku: string;
+  order_number: string;
+  article_name: string;
+  zone: string;
+  scheduled_date: string;
+}
+
 export interface OrderToAddApi {
   id: string;
+  source_type: "sale" | "order";
+  origin_id: number;
   order_number: string;
   address: string;
   zone: string;
   article_count: number;
+  item_ids: number[];
+}
+
+export interface AvailableOrdersApi {
+  suggested: SuggestedItemToAddApi[];
+  orders: OrderToAddApi[];
+  suggested_count: number;
+  orders_count: number;
+  recoveries_count: number;
 }
 
 export interface RoutePersonApi {
@@ -60,6 +83,9 @@ export interface CartaPorteFileApi {
 export interface RouteDetailApi {
   id: number;
   code: string;
+  route_type?: "deliveries" | "scheduled";
+  city_id?: number | null;
+  destination_zone_id?: number | null;
   status: string;
   location: string;
   article_count: number;

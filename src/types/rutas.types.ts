@@ -1,4 +1,5 @@
 export type RouteStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
+export type RouteType = "deliveries" | "scheduled";
 
 export interface RouteSummary {
   id: number;
@@ -32,13 +33,42 @@ export interface RouteOrder {
   items: RouteOrderItem[];
 }
 
-/** Order eligible to be added to a route */
+export interface SuggestedItemToAdd {
+  id: string;
+  sourceType: "sale" | "order";
+  originId: number;
+  itemId: number;
+  sku: string;
+  orderNumber: string;
+  articleName: string;
+  zone: string;
+  scheduledDate: string;
+}
+
+/** Order or sale eligible to be added to a route (general list) */
 export interface OrderToAdd {
   id: string;
+  sourceType: "sale" | "order";
+  originId: number;
   orderNumber: string;
   address: string;
   zone: string;
   articleCount: number;
+  itemIds: number[];
+}
+
+export interface AvailableOrdersResponse {
+  suggested: SuggestedItemToAdd[];
+  orders: OrderToAdd[];
+  suggestedCount: number;
+  ordersCount: number;
+  recoveriesCount: number;
+}
+
+export interface AddRoutePointPayload {
+  origin: "sale" | "order";
+  origin_id: number;
+  item_ids: number[];
 }
 
 export interface RoutePerson {
@@ -48,6 +78,7 @@ export interface RoutePerson {
 }
 
 export interface RouteDetail extends RouteSummary {
+  routeType?: RouteType;
   driverName: string;
   vehicleInfo: string;
   orders: RouteOrder[];

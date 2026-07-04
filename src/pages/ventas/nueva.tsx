@@ -356,7 +356,9 @@ export default function NuevaVenta() {
   };
 
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
-  const canProceed = totalCartQty > 0;
+  const isClientMoroso =
+    paymentType === "CREDIT" && selectedClient?.creditStatus === "MOROSO";
+  const canProceed = totalCartQty > 0 && !isClientMoroso;
 
   const subtotal = cart.reduce((s, item) => s + item.unitPrice * item.quantity, 0);
   const subtotalOriginal = cart.reduce((s, item) => s + item.originalPrice * item.quantity, 0);
@@ -1863,24 +1865,45 @@ export default function NuevaVenta() {
                   <Typography variant="body2" fontWeight={600}>
                     {selectedClient.fullName}
                   </Typography>
-                  <Chip
-                    label={
-                      selectedClient.status === "active"
-                        ? "Activo"
-                        : selectedClient.status === "blocked"
-                        ? "Bloqueado"
-                        : "Inactivo"
-                    }
-                    size="small"
-                    color={
-                      selectedClient.status === "active"
-                        ? "success"
-                        : selectedClient.status === "blocked"
-                        ? "error"
-                        : "default"
-                    }
-                    sx={{ fontWeight: 600, fontSize: "0.7rem" }}
-                  />
+                  {paymentType === "CREDIT" ? (
+                    <Chip
+                      label={
+                        selectedClient.creditStatus === "MOROSO"
+                          ? "Moroso"
+                          : selectedClient.creditStatus === "ACTIVE"
+                          ? "Activo"
+                          : "Sin crédito"
+                      }
+                      size="small"
+                      color={
+                        selectedClient.creditStatus === "MOROSO"
+                          ? "error"
+                          : selectedClient.creditStatus === "ACTIVE"
+                          ? "success"
+                          : "default"
+                      }
+                      sx={{ fontWeight: 600, fontSize: "0.7rem" }}
+                    />
+                  ) : (
+                    <Chip
+                      label={
+                        selectedClient.status === "active"
+                          ? "Activo"
+                          : selectedClient.status === "blocked"
+                          ? "Bloqueado"
+                          : "Inactivo"
+                      }
+                      size="small"
+                      color={
+                        selectedClient.status === "active"
+                          ? "success"
+                          : selectedClient.status === "blocked"
+                          ? "error"
+                          : "default"
+                      }
+                      sx={{ fontWeight: 600, fontSize: "0.7rem" }}
+                    />
+                  )}
                 </Stack>
 
                 {selectedClient.phoneNumber && (
@@ -1894,18 +1917,38 @@ export default function NuevaVenta() {
                   </Typography>
                 )}
 
-                <Box
-                  sx={{
-                    bgcolor: "rgba(25, 118, 210, 0.06)",
-                    borderRadius: 1,
-                    px: 1.5,
-                    py: 1,
-                  }}
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    Este cliente no cuenta con crédito activo.
-                  </Typography>
-                </Box>
+                {paymentType === "CREDIT" && isClientMoroso ? (
+                  <Box
+                    sx={{
+                      bgcolor: "rgba(211, 47, 47, 0.08)",
+                      border: "1px solid",
+                      borderColor: "error.main",
+                      borderRadius: 1,
+                      px: 1.5,
+                      py: 1,
+                    }}
+                  >
+                    <Typography variant="caption" color="error.main" fontWeight={600}>
+                      Este cliente no puede realizar una compra a crédito por estar en mora.
+                    </Typography>
+                  </Box>
+                ) : (
+                  paymentType === "CREDIT" &&
+                  selectedClient.creditStatus !== "ACTIVE" && (
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(25, 118, 210, 0.06)",
+                        borderRadius: 1,
+                        px: 1.5,
+                        py: 1,
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        Este cliente no cuenta con crédito activo.
+                      </Typography>
+                    </Box>
+                  )
+                )}
               </>
             ) : (
               <>

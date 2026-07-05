@@ -121,6 +121,28 @@ export interface SaleDetailCredit {
   installmentAmount: number;
 }
 
+export interface SaleDetailLayawayPayment {
+  id: number;
+  amount: number;
+  paymentMethod: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface SaleDetailLayaway {
+  id: number;
+  status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "CANCELLED";
+  termName: string;
+  termDays: number;
+  totalAmount: number;
+  depositAmount: number;
+  paidAmount: number;
+  expiresAt: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  payments: SaleDetailLayawayPayment[];
+}
+
 export interface SaleDetail {
   id: number;
   folio: string;
@@ -142,6 +164,7 @@ export interface SaleDetail {
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];
   credit: SaleDetailCredit | null;
+  layaway: SaleDetailLayaway | null;
 }
 
 export type DeliveryAvailability = 'available' | 'low' | 'none';

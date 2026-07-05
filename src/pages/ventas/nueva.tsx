@@ -1,12 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import type { Props as GoogleMapReactProps } from "google-map-react";
 import {
   Box,
   Button,
   Chip,
   CircularProgress,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -14,7 +13,6 @@ import {
   Select,
   Stack,
   Switch,
-  TextField,
   Typography,
   Paper,
   Dialog,
@@ -24,7 +22,7 @@ import {
   ListItemButton,
   ListItemText,
 } from "@mui/material";
-import { Trash2, ScanLine, Pencil, RefreshCw, Fingerprint, DollarSign, CreditCard, PlusCircle } from "lucide-react";
+import { Trash2, ScanLine, Pencil, Fingerprint, DollarSign, CreditCard, PlusCircle } from "lucide-react";
 import {
   X,
   Search,
@@ -41,11 +39,13 @@ import {
   getProductDetail,
   searchProducts,
   getPurchaseTypes,
+  getLayawayTerms,
   createSaleDraft,
   addSaleItem,
   registerSalePayment,
   confirmSalePayment,
   confirmCreditSale,
+  createLayaway,
   setDeliveryDate,
   getEstimatedDeliveryDate,
 } from "@/services/ventas.service";
@@ -64,35 +64,15 @@ import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { FormDatePicker } from "@/components/Form";
+import { BillingFieldsForm } from "@/components/BillingFieldsForm";
+import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
+import { formatStreetAddressLine } from "@/utils/address";
+import { StaticLocationMap } from "@/components/StaticLocationMap";
+import dayjs from "@/lib/dayjs";
 
 const SEARCH_DEBOUNCE_MS = 350;
 
-const GoogleMapReact = dynamic<GoogleMapReactProps>(() => import("google-map-react"), { ssr: false });
-
 const GOOGLE_MAPS_API_KEY = googleMapsBrowserApiKey;
-
-interface MapMarkerProps {
-  lat: number;
-  lng: number;
-}
-
-function MapMarker({ lat, lng }: MapMarkerProps) {
-  return (
-    <div
-      data-lat={lat}
-      data-lng={lng}
-      style={{
-        width: "18px",
-        height: "18px",
-        borderRadius: "50%",
-        border: "2px solid #FFFFFF",
-        backgroundColor: "#ef4444",
-        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
-        transform: "translate(-50%, -50%)",
-      }}
-    />
-  );
-}
 
 // TODO: Obtener branch real de la sesion de caja activa
 const CURRENT_BRANCH_ID = 2;
@@ -144,20 +124,9 @@ export default function NuevaVenta() {
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(12);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
-  const [billingData, setBillingData] = useState<{
-    rfc: string;
-    businessName: string;
-    address: string;
-    postalCode: string;
-    email: string;
-  } | null>(null);
-  const [billingForm, setBillingForm] = useState({
-    rfc: "",
-    businessName: "",
-    address: "",
-    postalCode: "",
-    email: "",
-  });
+  const [billingConfirmed, setBillingConfirmed] = useState(false);
+  const [useClientBillingData, setUseClientBillingData] = useState(false);
+  const billing = useBillingFieldsForm();
 
   const primaryCoords = useMemo(() => {
     if (!selectedClient?.addresses?.length) return null;
@@ -243,6 +212,20 @@ export default function NuevaVenta() {
   });
   const purchaseTypes = purchaseTypesRes ?? [];
 
+  const { data: layawayTermsRes } = useQuery({
+    queryKey: ["layaway-terms"],
+    queryFn: async () => {
+      const res = await getLayawayTerms();
+      if (res.error) throw new Error(res.error.message);
+      return res.data ?? [];
+    },
+    staleTime: Infinity,
+  });
+  const layawayTerms = layawayTermsRes ?? [];
+  const [selectedLayawayTermId, setSelectedLayawayTermId] = useState<number | null>(null);
+  const activeLayawayTerm =
+    layawayTerms.find((t) => t.id === selectedLayawayTermId) ?? layawayTerms[0] ?? null;
+
   const PT_MAP: Record<string, string[]> = {
     CASH: ["CONTADO", "CASH", "EFECTIVO"],
     CREDIT: ["CREDITO", "CREDIT", "CRÉDITO"],
@@ -309,6 +292,18 @@ export default function NuevaVenta() {
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
         return creditRes.data!;
+      }
+
+      if (paymentType === "LAYAWAY") {
+        if (!activeLayawayTerm) throw new Error("Selecciona un plazo de apartado");
+        const depositAmount = cashAmtNum + cardAmtNum;
+        const layawayRes = await createLayaway(saleId, {
+          layaway_term_id: activeLayawayTerm.id,
+          deposit_amount: depositAmount,
+          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+        });
+        if (layawayRes.error) throw new Error(layawayRes.error.message);
+        return { id: saleId, folio: draftRes.data!.folio, status: "ACTIVE" };
       }
 
       const paymentRes = await registerSalePayment(saleId, {
@@ -429,6 +424,27 @@ export default function NuevaVenta() {
   // con fecha automática es el pickup inmediato en la sucursal actual.
   const effectivePickupDate = isSameDayPickup ? todayIsoDate : "";
   const estimatedDate = estimatedDateOverride || estimatedDateResult?.estimatedDeliveryDate || "";
+
+  const handleUseClientBillingDataToggle = (checked: boolean) => {
+    setUseClientBillingData(checked);
+    if (checked && selectedClient) {
+      const primaryAddress =
+        selectedClient.addresses?.find((a) => a.isPrimary) ?? selectedClient.addresses?.[0];
+      billing.setValues((prev) => ({
+        ...prev,
+        businessName: selectedClient.businessName || selectedClient.fullName,
+        rfc: selectedClient.rfc || prev.rfc,
+        fiscalPostalCode:
+          selectedClient.billingPostalCode || primaryAddress?.postalCode || prev.fiscalPostalCode,
+        fiscalNeighborhoodFullCode: "-1",
+        fiscalState: "",
+        fiscalCity: "",
+        fiscalStreet: selectedClient.billingStreet || primaryAddress?.street || prev.fiscalStreet,
+        fiscalExternalNumber: primaryAddress?.externalNumber || prev.fiscalExternalNumber,
+        invoiceEmail: selectedClient.invoiceEmail || selectedClient.email || prev.invoiceEmail,
+      }));
+    }
+  };
 
   const handleSelectDeliveryBranch = (branch: { id: number; label: string }) => {
     setDeliveryBranch(branch);
@@ -560,7 +576,8 @@ export default function NuevaVenta() {
   const totalPaid = cashAmtNum + cardAmtNum;
   const ENGANCHE_PCT = 0.1;
   const enganche = subtotal * ENGANCHE_PCT;
-  const amountToPay = paymentType === "CREDIT" ? enganche : totalFinal;
+  const amountToPay =
+    paymentType === "CREDIT" ? enganche : paymentType === "LAYAWAY" ? 0 : totalFinal;
   const change = Math.max(0, cashAmtNum - amountToPay);
 
   const PAYMENT_OPTIONS: { value: "CREDIT" | "CASH" | "LAYAWAY"; label: string }[] = [
@@ -1153,8 +1170,9 @@ export default function NuevaVenta() {
                   checked={wantsInvoice}
                   onChange={(e) => {
                     setWantsInvoice(e.target.checked);
-                    if (e.target.checked && !billingData) {
-                      setBillingForm({ rfc: "", businessName: "", address: "", postalCode: "", email: "" });
+                    if (e.target.checked && !billingConfirmed) {
+                      billing.reset();
+                      setUseClientBillingData(false);
                       setBillingModalOpen(true);
                     }
                   }}
@@ -1164,7 +1182,7 @@ export default function NuevaVenta() {
                   {wantsInvoice ? "Si desea facturar" : "No desea facturar"}
                 </Typography>
               </Stack>
-              {wantsInvoice && billingData && (
+              {wantsInvoice && billingConfirmed && (
                 <Box
                   sx={{
                     border: "1px solid",
@@ -1182,23 +1200,28 @@ export default function NuevaVenta() {
                     <Pencil size={14} />
                   </IconButton>
                   <Typography variant="body2" fontWeight={600} mb={0.25}>
-                    {billingData.businessName}
+                    {billing.values.businessName}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" mb={0.25}>
-                    {billingData.rfc}
+                    {billing.values.rfc}
                   </Typography>
                   <Stack direction="row" alignItems="center" spacing={1} mb={0.25}>
                     <Typography variant="body2" color="text.secondary">
-                      {billingData.address}
+                      {formatStreetAddressLine({
+                        street: billing.values.fiscalStreet,
+                        externalNumber: billing.values.fiscalExternalNumber,
+                      })}
                     </Typography>
                     <Box sx={{ width: "1px", height: 14, bgcolor: "divider" }} />
                     <Typography variant="body2" color="text.secondary">
-                      CP. {billingData.postalCode}
+                      CP. {billing.values.fiscalPostalCode}
                     </Typography>
                   </Stack>
-                  <Typography variant="body2" sx={{ color: "primary.main" }}>
-                    {billingData.email}
-                  </Typography>
+                  {billing.values.sendInvoiceByEmail && billing.values.invoiceEmail && (
+                    <Typography variant="body2" sx={{ color: "primary.main" }}>
+                      {billing.values.invoiceEmail}
+                    </Typography>
+                  )}
                 </Box>
               )}
             </Paper>
@@ -1249,6 +1272,30 @@ export default function NuevaVenta() {
                         {formatCurrency((totalFinal - enganche) / selectedTermMonths)}
                       </Typography>
                     </Stack>
+                  </>
+                )}
+                {paymentType === "LAYAWAY" && activeLayawayTerm && (
+                  <>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
+                      <Typography variant="h6" fontWeight={700}>
+                        Fecha límite:
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {dayjs().add(activeLayawayTerm.days, "day").format("D [de] MMMM")}
+                      </Typography>
+                    </Stack>
+                    <Select
+                      size="small"
+                      value={activeLayawayTerm.id}
+                      onChange={(e) => setSelectedLayawayTermId(Number(e.target.value))}
+                      sx={{ minWidth: 140 }}
+                    >
+                      {layawayTerms.map((term) => (
+                        <MenuItem key={term.id} value={term.id}>
+                          {term.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   </>
                 )}
               </Stack>
@@ -1665,25 +1712,27 @@ export default function NuevaVenta() {
                 Agregar otra tarjeta
               </Button>
 
-              <Box
-                sx={{
-                  bgcolor: "rgba(0,0,0,0.06)",
-                  borderRadius: 1.5,
-                  px: 2,
-                  py: 1.5,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Cambio:
-                </Typography>
-                <Typography variant="h6" fontWeight={600}>
-                  {formatCurrency(change)}
-                </Typography>
-              </Box>
+              {paymentType !== "LAYAWAY" && (
+                <Box
+                  sx={{
+                    bgcolor: "rgba(0,0,0,0.06)",
+                    borderRadius: 1.5,
+                    px: 2,
+                    py: 1.5,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    Cambio:
+                  </Typography>
+                  <Typography variant="h6" fontWeight={600}>
+                    {formatCurrency(change)}
+                  </Typography>
+                </Box>
+              )}
 
               <Button
                 fullWidth
@@ -1705,65 +1754,43 @@ export default function NuevaVenta() {
           open={billingModalOpen}
           onClose={() => setBillingModalOpen(false)}
           title="Agregar datos de facturación"
-          maxWidth="xl"
+          maxWidth="lg"
         >
-          <Stack spacing={0}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<RefreshCw size={14} />}
-              sx={{ textTransform: "none", mb: 3, alignSelf: "flex-start" }}
-            >
-              Escanear QR de Constancia de Situación Fiscal
-            </Button>
-
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mb: 2 }}>
-              <TextField
-                label="RFC"
-                size="small"
-                fullWidth
-                value={billingForm.rfc}
-                onChange={(e) => setBillingForm((f) => ({ ...f, rfc: e.target.value }))}
-              />
-              <TextField
-                label="Nombre o Razón Social"
-                size="small"
-                fullWidth
-                value={billingForm.businessName}
-                onChange={(e) => setBillingForm((f) => ({ ...f, businessName: e.target.value }))}
-              />
-              <TextField
-                label="Domicilio Fiscal"
-                size="small"
-                fullWidth
-                value={billingForm.address}
-                onChange={(e) => setBillingForm((f) => ({ ...f, address: e.target.value }))}
-              />
-              <TextField
-                label="CP"
-                size="small"
-                fullWidth
-                value={billingForm.postalCode}
-                onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
-              />
-            </Box>
-
-            <Typography variant="body2" mb={1}>
-              Enviar factura a:
-            </Typography>
-            <TextField
-              size="small"
-              fullWidth
-              value={billingForm.email}
-              onChange={(e) => setBillingForm((f) => ({ ...f, email: e.target.value }))}
-              sx={{ mb: 3 }}
+          <Stack spacing={3}>
+            <BillingFieldsForm
+              values={billing.values}
+              onChange={billing.setValue}
+              whatsappFallbackNumber={selectedClient?.phoneNumber ?? undefined}
+              lockedFields={
+                useClientBillingData
+                  ? {
+                      businessName: true,
+                      rfc: true,
+                      fiscalStreet: true,
+                      fiscalExternalNumber: true,
+                    }
+                  : undefined
+              }
+              beforeFields={
+                selectedClient ? (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={useClientBillingData}
+                        onChange={(e) => handleUseClientBillingDataToggle(e.target.checked)}
+                      />
+                    }
+                    label="Usar los mismos datos del cliente"
+                  />
+                ) : undefined
+              }
             />
 
             <Button
               variant="contained"
               sx={{ textTransform: "none", alignSelf: "flex-start" }}
               onClick={() => {
-                setBillingData({ ...billingForm });
+                setBillingConfirmed(true);
                 setBillingModalOpen(false);
               }}
             >
@@ -2026,11 +2053,61 @@ export default function NuevaVenta() {
                     <Typography variant="body2" fontWeight={500}>{formatCurrency(enganche)}</Typography>
                   </Stack>
                 )}
+
                 {paymentType === "LAYAWAY" && (
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" py={1.25}>
-                    <Typography variant="body2" color="text.secondary">Monto inicial de apartado (10%)</Typography>
-                    <Typography variant="body2" fontWeight={500}>{formatCurrency(enganche)}</Typography>
-                  </Stack>
+                  <>
+                    <Box
+                      sx={{
+                        bgcolor: "grey.100",
+                        borderRadius: 1,
+                        px: 1.5,
+                        py: 1.5,
+                        mt: 1,
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Total a liquidar
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700}>
+                          {formatCurrency(subtotal)}
+                        </Typography>
+                      </Stack>
+
+                      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                        Plazo disponible:
+                      </Typography>
+
+                      <Stack direction="row" spacing={1}>
+                        {layawayTerms.map((term) => (
+                          <Button
+                            key={term.id}
+                            size="small"
+                            variant={selectedLayawayTermId === term.id ? "contained" : "outlined"}
+                            onClick={() => setSelectedLayawayTermId(term.id)}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: "none",
+                              px: 2,
+                              py: 0.75,
+                              minWidth: 80,
+                              fontSize: "0.875rem",
+                              fontWeight: selectedLayawayTermId === term.id ? 600 : 400,
+                              ...(selectedLayawayTermId === term.id && {
+                                bgcolor: "primary.main",
+                                color: "white",
+                                "&:hover": {
+                                  bgcolor: "primary.dark",
+                                },
+                              }),
+                            }}
+                          >
+                            {term.name}
+                          </Button>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </>
                 )}
               </Box>
             </>
@@ -2062,28 +2139,6 @@ export default function NuevaVenta() {
               ))}
             </Stack>
           </Paper>
-
-          {paymentType === "LAYAWAY" && (
-            <Paper variant="outlined" sx={{ borderRadius: 2, p: 0, overflow: "hidden" }}>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{
-                  px: 2,
-                  py: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { bgcolor: "grey.50" },
-                }}
-              >
-                <Typography variant="body2" fontWeight={500}>30 días</Typography>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography variant="body2" color="text.secondary">A liquidar: 29 de Julio</Typography>
-                  <Typography variant="caption" color="text.secondary">∨</Typography>
-                </Stack>
-              </Stack>
-            </Paper>
-          )}
 
           <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
             {selectedClient ? (
@@ -2233,7 +2288,7 @@ export default function NuevaVenta() {
                   sx={{ mb: 1.5, cursor: "pointer" }}
                 />
 
-                {paymentType === "CASH" && (
+                {(paymentType === "CASH" || paymentType === "LAYAWAY") && (
                   <Button
                     fullWidth
                     variant="outlined"
@@ -2275,29 +2330,8 @@ export default function NuevaVenta() {
               {deliveryType === "delivery" && (
                 <>
                   {primaryCoords && GOOGLE_MAPS_API_KEY ? (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 130,
-                        borderRadius: 1,
-                        mb: 1.5,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <GoogleMapReact
-                        bootstrapURLKeys={{ key: GOOGLE_MAPS_API_KEY }}
-                        center={primaryCoords}
-                        defaultCenter={primaryCoords}
-                        defaultZoom={16}
-                        zoom={16}
-                        options={{
-                          fullscreenControl: false,
-                          mapTypeControl: false,
-                          streetViewControl: false,
-                        }}
-                      >
-                        <MapMarker lat={primaryCoords.lat} lng={primaryCoords.lng} />
-                      </GoogleMapReact>
+                    <Box sx={{ mb: 1.5 }}>
+                      <StaticLocationMap coords={primaryCoords} apiKey={GOOGLE_MAPS_API_KEY} height={130} />
                     </Box>
                   ) : (
                     <Box
@@ -2599,15 +2633,21 @@ export default function NuevaVenta() {
               // Si el cliente fue creado con datos de facturación, prellenarlos
               if (client.rfc && client.businessName) {
                 setWantsInvoice(true);
-                const billingInfo = {
-                  rfc: client.rfc,
-                  businessName: client.businessName,
-                  address: client.billingStreet ?? "",
-                  postalCode: client.billingPostalCode ?? "",
-                  email: client.invoiceEmail ?? "",
-                };
-                setBillingData(billingInfo);
-                setBillingForm(billingInfo);
+                setUseClientBillingData(false);
+                billing.setValues((prev) => ({
+                  ...prev,
+                  requiresInvoice: true,
+                  rfc: client.rfc ?? "",
+                  businessName: client.businessName ?? "",
+                  taxRegimeId: client.taxRegimeId != null ? String(client.taxRegimeId) : "",
+                  cfdiUseId: client.cfdiUseId != null ? String(client.cfdiUseId) : "",
+                  fiscalPostalCode: client.billingPostalCode ?? "",
+                  fiscalStreet: client.billingStreet ?? "",
+                  sendInvoiceByEmail: client.sendInvoiceByEmail ?? false,
+                  invoiceEmail: client.invoiceEmail ?? "",
+                  invoiceWhatsappNumber: client.invoiceWhatsappNumber ?? "",
+                }));
+                setBillingConfirmed(true);
               }
             }}
           />

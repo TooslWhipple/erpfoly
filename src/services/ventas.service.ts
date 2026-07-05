@@ -68,6 +68,62 @@ export async function getPurchaseTypes(): Promise<ApiResult<PurchaseType[]>> {
   return get<PurchaseType[]>(`${BASE}/purchase-types`);
 }
 
+export interface LayawayTerm {
+  id: number;
+  code: string;
+  name: string;
+  days: number;
+}
+
+export async function getLayawayTerms(): Promise<ApiResult<LayawayTerm[]>> {
+  return get<LayawayTerm[]>(`${BASE}/layaway-terms`);
+}
+
+export interface CreateLayawayPayload {
+  layaway_term_id: number;
+  deposit_amount: number;
+  payment_method: "CASH" | "CARD";
+}
+
+export async function createLayaway(
+  saleId: number,
+  payload: CreateLayawayPayload
+): Promise<ApiResult<{ id: number; sale_id: number }>> {
+  return post<{ id: number; sale_id: number }>(
+    `${BASE}/sales/${saleId}/layaways`,
+    payload
+  );
+}
+
+export interface RegisterLayawayPaymentPayload {
+  payment_method: "CASH" | "CARD" | "TRANSFER";
+  amount: number;
+  notes?: string;
+}
+
+export async function registerLayawayPayment(
+  layawayId: number,
+  payload: RegisterLayawayPaymentPayload
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/layaways/${layawayId}/payments`, payload);
+}
+
+export async function completeLayaway(
+  layawayId: number
+): Promise<ApiResult<{ success: boolean; message: string }>> {
+  return post<{ success: boolean; message: string }>(
+    `${BASE}/layaways/${layawayId}/complete`
+  );
+}
+
+export async function cancelLayaway(
+  layawayId: number
+): Promise<ApiResult<{ success: boolean; message: string }>> {
+  return post<{ success: boolean; message: string }>(
+    `${BASE}/layaways/${layawayId}/cancel`
+  );
+}
+
 export interface CreateSaleDraftPayload {
   branch_id: number;
   purchase_type_id: number;

@@ -51,6 +51,9 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { TableCrud } from "@/components/TableCrud";
 import { CreateCashClientModal } from "@/components/CreateCashClientModal";
+import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
+import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
+import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -124,6 +127,7 @@ export default function NuevaVenta() {
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
+  const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(12);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingData, setBillingData] = useState<{
@@ -194,6 +198,19 @@ export default function NuevaVenta() {
   const debouncedClientModalSearch = useDebouncedValue(clientModalSearch, SEARCH_DEBOUNCE_MS);
   const snackbar = useSnackbarStore();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
+
+  const handleCreditIntakeFinalize = async (payload: CreditApplicationBiometricsData) => {
+    if (!selectedClient) return;
+
+    const result = await createCreditApplicationFromIntake(payload, selectedClient.id);
+    if (!result?.id) {
+      snackbar.showError("No se pudo crear la solicitud de crédito, intenta nuevamente.");
+      throw new Error("No se pudo crear la solicitud de crédito.");
+    }
+
+    showSuccess(`Solicitud de crédito ${result.folio} creada para ${selectedClient.fullName}.`);
+    await router.push(`/solicitudes-credito/${result.id}`);
+  };
 
   const { data: purchaseTypesRes } = useQuery({
     queryKey: ["purchase-types"],
@@ -293,6 +310,32 @@ export default function NuevaVenta() {
     [productDetail, quantityMap]
   );
 
+  // Sucursal a la que ya está comprometido el ticket, tomada de los artículos
+  // que ya están en el carrito. `warehouse`/`incoming` no cuentan como sucursal
+  // porque son bodega central compartida, no una sucursal física.
+  const cartBranch = useMemo(() => {
+    const branchSrc = cart
+      .flatMap((item) => item.sources)
+      .find((s) => s.sourceType === "branch" && s.quantity > 0);
+    return branchSrc ? { id: branchSrc.branchId, label: branchSrc.label } : null;
+  }, [cart]);
+
+  // Sucursal que el usuario está seleccionando en el producto que está armando
+  // ahora mismo (antes de darle "Continuar" y que entre al carrito).
+  const selectionBranch = useMemo(() => {
+    const branchSrc = productSources.find(
+      (s) => s.sourceType === "branch" && s.quantity > 0
+    );
+    return branchSrc ? { id: branchSrc.branchId, label: branchSrc.label } : null;
+  }, [productSources]);
+
+  const lockedBranch = cartBranch ?? selectionBranch;
+
+  const isBranchSourceLocked = (src: { sourceType: string; branchId?: number }) =>
+    src.sourceType === "branch" &&
+    lockedBranch !== null &&
+    src.branchId !== lockedBranch.id;
+
   const handleSelectProduct = (product: ProductSearchResult) => {
     setSelectedProductId(product.id);
     setQuantityMap({});
@@ -304,6 +347,28 @@ export default function NuevaVenta() {
     if (!productDetail) return;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
     if (totalQty === 0) return;
+
+    const branchSourcesWithQty = productSources.filter(
+      (src) => src.sourceType === "branch" && src.quantity > 0
+    );
+    const distinctBranchIds = new Set(branchSourcesWithQty.map((s) => s.branchId));
+    if (distinctBranchIds.size > 1) {
+      snackbar.showError(
+        "No puedes combinar existencia de distintas sucursales en el mismo artículo."
+      );
+      return;
+    }
+    const pickedBranchId = branchSourcesWithQty[0]?.branchId;
+    if (
+      lockedBranch &&
+      pickedBranchId !== undefined &&
+      pickedBranchId !== lockedBranch.id
+    ) {
+      snackbar.showError(
+        `Ya tienes artículos de "${lockedBranch.label}" en este ticket. Quita esos artículos para poder agregar de otra sucursal.`
+      );
+      return;
+    }
 
     setCart((prev) => {
       const existing = prev.findIndex((c) => c.productId === productDetail.id);
@@ -330,7 +395,7 @@ export default function NuevaVenta() {
     setSelectedProductId(null);
     setShowOtherBranches(false);
     setProductSearch("");
-  }, [productDetail, productSources]);
+  }, [productDetail, productSources, lockedBranch, snackbar]);
 
   const handleCartQtyChange = (productId: number, delta: number) => {
     setCart((prev) =>
@@ -358,7 +423,9 @@ export default function NuevaVenta() {
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
   const isClientMoroso =
     paymentType === "CREDIT" && selectedClient?.creditStatus === "MOROSO";
-  const canProceed = totalCartQty > 0 && !isClientMoroso;
+  const isClientWithoutActiveCredit =
+    paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
+  const canProceed = totalCartQty > 0 && !isClientWithoutActiveCredit;
 
   const subtotal = cart.reduce((s, item) => s + item.unitPrice * item.quantity, 0);
   const subtotalOriginal = cart.reduce((s, item) => s + item.originalPrice * item.quantity, 0);
@@ -591,6 +658,26 @@ export default function NuevaVenta() {
                 Selecciona el origen del artículo a entregar al cliente
               </Typography>
 
+              {lockedBranch && lockedBranch.id !== CURRENT_BRANCH_ID && (
+                <Box
+                  sx={{
+                    bgcolor: "warning.50",
+                    border: "1px solid",
+                    borderColor: "warning.light",
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1.25,
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="caption" color="warning.dark">
+                    Este ticket ya tiene artículos de &quot;{lockedBranch.label}&quot;. Solo puedes
+                    seguir agregando artículos de esa sucursal. Para agregar de otra, primero
+                    quita los artículos actuales del carrito.
+                  </Typography>
+                </Box>
+              )}
+
               {/* Orígenes principales: sucursal actual + bodega + por surtir */}
               <Stack spacing={1.5}>
                 {productSources
@@ -616,6 +703,8 @@ export default function NuevaVenta() {
                     const SourceIcon =
                       isCurrentBranch ? Store : isWarehouse ? Warehouse : Package;
 
+                    const branchLocked = isBranchSourceLocked(src);
+
                     return (
                       <Box
                         key={src.sourceKey}
@@ -625,6 +714,7 @@ export default function NuevaVenta() {
                           borderRadius: 2,
                           px: 2,
                           py: 1.75,
+                          opacity: branchLocked ? 0.6 : 1,
                         }}
                       >
                         <Stack
@@ -694,11 +784,17 @@ export default function NuevaVenta() {
                                   ? undefined
                                   : src.available
                               }
+                              disabled={branchLocked}
                               size="small"
                               iconSize={13}
                             />
                           </Stack>
                         </Stack>
+                        {branchLocked && lockedBranch && (
+                          <Typography variant="caption" color="text.disabled" display="block" mt={0.75}>
+                            No disponible: ya tienes artículos de &quot;{lockedBranch.label}&quot; en este ticket.
+                          </Typography>
+                        )}
                       </Box>
                     );
                   })}
@@ -727,53 +823,63 @@ export default function NuevaVenta() {
                           src.sourceType === "branch" &&
                           src.branchId !== CURRENT_BRANCH_ID
                       )
-                      .map((src) => (
-                        <Box
-                          key={src.sourceKey}
-                          sx={{
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 2,
-                            px: 2,
-                            py: 1.75,
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            justifyContent="space-between"
+                      .map((src) => {
+                        const branchLocked = isBranchSourceLocked(src);
+                        return (
+                          <Box
+                            key={src.sourceKey}
+                            sx={{
+                              border: "1px solid",
+                              borderColor: "divider",
+                              borderRadius: 2,
+                              px: 2,
+                              py: 1.75,
+                              opacity: branchLocked ? 0.6 : 1,
+                            }}
                           >
-                            <Stack direction="row" alignItems="center" spacing={1.5}>
-                              <Box sx={{ color: "text.secondary", display: "flex" }}>
-                                <Store size={16} />
-                              </Box>
-                              <Typography variant="body2">{src.label}</Typography>
-                            </Stack>
-
-                            <Stack direction="row" alignItems="center" spacing={2.5}>
-                              <Stack direction="row" alignItems="center" spacing={0.75}>
-                                <Box sx={{ color: "text.disabled", display: "flex" }}>
-                                  <Package size={13} />
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              justifyContent="space-between"
+                            >
+                              <Stack direction="row" alignItems="center" spacing={1.5}>
+                                <Box sx={{ color: "text.secondary", display: "flex" }}>
+                                  <Store size={16} />
                                 </Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  Existencia: {src.available}
-                                </Typography>
+                                <Typography variant="body2">{src.label}</Typography>
                               </Stack>
 
-                              <NumberSpinner
-                                value={src.quantity}
-                                onChange={(val: number) =>
-                                  handleQtyChange(src.sourceKey, val - src.quantity)
-                                }
-                                min={0}
-                                max={src.available}
-                                size="small"
-                                iconSize={13}
-                              />
+                              <Stack direction="row" alignItems="center" spacing={2.5}>
+                                <Stack direction="row" alignItems="center" spacing={0.75}>
+                                  <Box sx={{ color: "text.disabled", display: "flex" }}>
+                                    <Package size={13} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Existencia: {src.available}
+                                  </Typography>
+                                </Stack>
+
+                                <NumberSpinner
+                                  value={src.quantity}
+                                  onChange={(val: number) =>
+                                    handleQtyChange(src.sourceKey, val - src.quantity)
+                                  }
+                                  min={0}
+                                  max={src.available}
+                                  disabled={branchLocked}
+                                  size="small"
+                                  iconSize={13}
+                                />
+                              </Stack>
                             </Stack>
-                          </Stack>
-                        </Box>
-                      ))}
+                            {branchLocked && lockedBranch && (
+                              <Typography variant="caption" color="text.disabled" display="block" mt={0.75}>
+                                No disponible: ya tienes artículos de &quot;{lockedBranch.label}&quot; en este ticket.
+                              </Typography>
+                            )}
+                          </Box>
+                        );
+                      })}
                   </Stack>
                 </>
               )}
@@ -1689,6 +1795,20 @@ export default function NuevaVenta() {
                             {item.brandName}
                           </Typography>
                         )}
+                        {(() => {
+                          const branchSrc = item.sources.find(
+                            (s) => s.sourceType === "branch" && s.quantity > 0
+                          );
+                          if (!branchSrc || branchSrc.branchId === CURRENT_BRANCH_ID) return null;
+                          return (
+                            <Chip
+                              label={branchSrc.label}
+                              size="small"
+                              variant="outlined"
+                              sx={{ mt: 0.5, height: 20, fontSize: "0.6875rem" }}
+                            />
+                          );
+                        })()}
                       </Box>
                       <IconButton
                         size="small"
@@ -1948,6 +2068,19 @@ export default function NuevaVenta() {
                       </Typography>
                     </Box>
                   )
+                )}
+
+                {paymentType === "CASH" && selectedClient.creditStatus !== "ACTIVE" && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<CreditCard size={16} />}
+                    sx={{ textTransform: "none", justifyContent: "flex-start", mt: 1.5 }}
+                    onClick={() => setCreditIntakeModalOpen(true)}
+                  >
+                    Solicitar crédito para este cliente
+                  </Button>
                 )}
               </>
             ) : (
@@ -2271,6 +2404,12 @@ export default function NuevaVenta() {
                 setBillingForm(billingInfo);
               }
             }}
+          />
+
+          <CreditApplicationIntakeModal
+            open={creditIntakeModalOpen}
+            onClose={() => setCreditIntakeModalOpen(false)}
+            onFinalize={handleCreditIntakeFinalize}
           />
         </Stack>
       </Box>

@@ -221,7 +221,7 @@ export default function NuevaVenta() {
       if (!pt) throw new Error("No se encontró el tipo de compra");
 
       const draftRes = await createSaleDraft({
-        branch_id: CURRENT_BRANCH_ID,
+        branch_id: lockedBranch?.id ?? CURRENT_BRANCH_ID,
         purchase_type_id: pt.id,
         client_id: selectedClient?.id,
         origin: "STORE",

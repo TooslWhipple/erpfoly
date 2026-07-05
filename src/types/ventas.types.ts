@@ -100,6 +100,7 @@ export interface SaleDetailClient {
   phoneNumber: string | null;
   email: string | null;
   primaryAddress: {
+    id: number;
     formatted: string;
     latitude: string | null;
     longitude: string | null;
@@ -132,8 +133,11 @@ export interface SaleDetail {
   createdAt: string;
   branchId?: number | null;
   deliveryDate?: string | null;
+  estimatedDeliveryDate?: string | null;
   deliveryStatus?: string | null;
   deliveryType?: string | null;
+  deliveryBranchName?: string | null;
+  deliveryAddressFormatted?: string | null;
   client: SaleDetailClient | null;
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];
@@ -149,6 +153,9 @@ export interface DeliveryAvailabilityItem {
 }
 
 export interface SetDeliveryDatePayload {
-  delivery_date: string;
+  delivery_date?: string;
   delivery_type?: 'ADDRESS' | 'BRANCH';
+  branch_id?: number;
+  address_id?: number;
+  estimated_delivery_date?: string;
 }

@@ -176,3 +176,13 @@ export async function removeDeliveryDate(
     await del<void>(`${BASE}/sales/${saleId}/delivery-date`)
   );
 }
+
+export async function getEstimatedDeliveryDate(
+  branchId: number
+): Promise<{ estimatedDeliveryDate: string | null }> {
+  return unwrapOrThrow(
+    await get<{ estimatedDeliveryDate: string | null }>(
+      `${BASE}/branches/${branchId}/estimated-delivery-date`
+    )
+  );
+}

@@ -32,6 +32,7 @@ import type { DeliveryAvailability } from "@/types/ventas.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 
 const GoogleMapReact = dynamic<GoogleMapReactProps>(
   () => import("google-map-react"),
@@ -77,6 +78,7 @@ export default function VentaDetalle() {
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [modalDate, setModalDate] = useState<Dayjs | null>(null);
   const [calendarMonth, setCalendarMonth] = useState<Dayjs>(dayjs());
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
@@ -124,8 +126,12 @@ export default function VentaDetalle() {
   }, [availabilityData]);
 
   const setDateMutation = useMutation({
-    mutationFn: (payload: { delivery_date: string; delivery_type?: 'ADDRESS' | 'BRANCH' }) =>
-      setDeliveryDate(saleId!, payload),
+    mutationFn: (payload: {
+      delivery_date: string;
+      delivery_type?: 'ADDRESS' | 'BRANCH';
+      address_id?: number;
+      branch_id?: number;
+    }) => setDeliveryDate(saleId!, payload),
     onSuccess: (_data: unknown, payload) => {
       const confirmed = dayjs(payload.delivery_date);
       const confirmedMonth = confirmed.month() + 1;
@@ -190,6 +196,25 @@ export default function VentaDetalle() {
         });
       }
       snackbar.showSuccess("Fecha de entrega eliminada");
+    },
+    onError: () => {
+      // Interceptor in lib/axios already showed the error snackbar.
+    },
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: (address: { id: number }) =>
+      setDeliveryDate(saleId!, {
+        delivery_type: "ADDRESS",
+        address_id: address.id,
+        // Solo se está cambiando la dirección; se conserva la fecha ya
+        // comprometida, o se propone mañana si aún no había ninguna.
+        delivery_date: sale?.deliveryDate ?? dayjs().add(1, "day").format("YYYY-MM-DD"),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Dirección de entrega actualizada");
+      setAddressModalOpen(false);
     },
     onError: () => {
       // Interceptor in lib/axios already showed the error snackbar.
@@ -347,17 +372,28 @@ export default function VentaDetalle() {
                       flexShrink: 0,
                     }}
                   >
-                    <Store size={20} color="#1976d2" />
+                    {sale.deliveryType === 'BRANCH' ? (
+                      <Store size={20} color="#1976d2" />
+                    ) : (
+                      <Truck size={20} color="#1976d2" />
+                    )}
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
-                      Entrega en sucursal
+                      {sale.deliveryType === 'BRANCH' ? 'Entrega en sucursal' : 'Entrega a domicilio'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {sale.deliveryType === 'BRANCH' 
-                        ? `Sucursal: ${sale.client?.primaryAddress?.formatted || 'Matamoros-Plaza Patio'}`
-                        : sale.client?.primaryAddress?.formatted || 'Dirección del cliente'}
+                      {sale.deliveryType === 'BRANCH'
+                        ? sale.deliveryBranchName ?? 'Sucursal no especificada'
+                        : sale.deliveryAddressFormatted ??
+                          sale.client?.primaryAddress?.formatted ??
+                          'Dirección del cliente'}
                     </Typography>
+                    {sale.estimatedDeliveryDate && sale.deliveryStatus !== 'DELIVERED' && (
+                      <Typography variant="body2" color="text.secondary">
+                        Fecha estimada: {dayjs(sale.estimatedDeliveryDate).format('DD/MM/YYYY')}
+                      </Typography>
+                    )}
                   </Box>
                 </Stack>
               )}
@@ -687,12 +723,13 @@ export default function VentaDetalle() {
                         <Button
                           size="small"
                           sx={{ textTransform: "none", minWidth: 0, p: 0, fontWeight: 500 }}
+                          onClick={() => setAddressModalOpen(true)}
                         >
                           Cambiar
                         </Button>
                       </Stack>
                       <Typography variant="body2" mt={0.5}>
-                        {sale.client.primaryAddress.formatted}
+                        {sale.deliveryAddressFormatted ?? sale.client.primaryAddress.formatted}
                       </Typography>
                       {sale.client.email && (
                         <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
@@ -912,6 +949,11 @@ export default function VentaDetalle() {
                       if (modalDate) {
                         setDateMutation.mutate({
                           delivery_date: modalDate.format('YYYY-MM-DD'),
+                          // Sin tipo/sucursal/dirección propios ya guardados en la
+                          // venta (sale.deliveryType === null), este flujo asume
+                          // domicilio a la dirección principal del cliente, igual
+                          // que el comportamiento previo de esta pantalla.
+                          address_id: sale?.client?.primaryAddress?.id,
                         });
                       }
                     }}
@@ -935,6 +977,12 @@ export default function VentaDetalle() {
           </Grid>
         </Grid>
       </SideModal>
+
+      <DeliveryAddressModal
+        open={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        onSaved={(address) => updateAddressMutation.mutate(address)}
+      />
     </Box>
   );
 }

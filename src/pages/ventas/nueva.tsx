@@ -19,6 +19,10 @@ import {
   Paper,
   Dialog,
   DialogContent,
+  Alert,
+  List,
+  ListItemButton,
+  ListItemText,
 } from "@mui/material";
 import { Trash2, ScanLine, Pencil, RefreshCw, Fingerprint, DollarSign, CreditCard, PlusCircle } from "lucide-react";
 import {
@@ -42,6 +46,8 @@ import {
   registerSalePayment,
   confirmSalePayment,
   confirmCreditSale,
+  setDeliveryDate,
+  getEstimatedDeliveryDate,
 } from "@/services/ventas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
@@ -55,6 +61,9 @@ import { CreditApplicationIntakeModal } from "@/components/CreditApplicationInta
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
+import { getBranchesCatalog } from "@/services/branches.service";
+import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import { FormDatePicker } from "@/components/Form";
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -87,8 +96,6 @@ function MapMarker({ lat, lng }: MapMarkerProps) {
 
 // TODO: Obtener branch real de la sesion de caja activa
 const CURRENT_BRANCH_ID = 2;
-const CURRENT_BRANCH_NAME = "Matriz Culiacán Centro";
-const CURRENT_BRANCH_ADDRESS = "";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -119,7 +126,14 @@ export default function NuevaVenta() {
   const [clientModalPage, setClientModalPage] = useState(0);
   const [clientModalLimit, setClientModalLimit] = useState(10);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
+  const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup" | null>(null);
+  const [deliveryBranch, setDeliveryBranch] = useState<{ id: number; label: string } | null>(null);
+  const [deliveryBranchOverridden, setDeliveryBranchOverridden] = useState(false);
+  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+  const [estimatedDateOverride, setEstimatedDateOverride] = useState<string>("");
+  const [useCustomDeliveryAddress, setUseCustomDeliveryAddress] = useState(false);
+  const [customDeliveryAddress, setCustomDeliveryAddress] = useState<{ id: number; formatted: string } | null>(null);
+  const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] = useState(false);
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
@@ -156,6 +170,12 @@ export default function NuevaVenta() {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
   }, [selectedClient]);
+
+  const todayIsoDate = useMemo(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }, []);
 
   const [productSearch, setProductSearch] = useState("");
   const [productPage, setProductPage] = useState(0);
@@ -256,6 +276,30 @@ export default function NuevaVenta() {
         if (itemRes.error) throw new Error(itemRes.error.message);
       }
 
+      if (deliveryType === "delivery") {
+        const clientPrimaryAddress =
+          selectedClient?.addresses?.find((a) => a.isPrimary) ??
+          selectedClient?.addresses?.[0];
+        const addressId = useCustomDeliveryAddress
+          ? customDeliveryAddress?.id
+          : clientPrimaryAddress?.id;
+        if (!addressId) {
+          throw new Error("Falta la dirección de entrega");
+        }
+        await setDeliveryDate(saleId, {
+          delivery_type: "ADDRESS",
+          address_id: addressId,
+        });
+      } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
+        const branchDeliveryDate = effectivePickupDate || estimatedDate || undefined;
+        await setDeliveryDate(saleId, {
+          delivery_type: "BRANCH",
+          branch_id: effectiveDeliveryBranch.id,
+          delivery_date: branchDeliveryDate || undefined,
+          estimated_delivery_date: needsEstimatedDate ? estimatedDate || undefined : undefined,
+        });
+      }
+
       if (paymentType === "CREDIT") {
         if (!selectedClient) throw new Error("Se requiere un cliente para venta a crédito");
         const creditRes = await confirmCreditSale(saleId, {
@@ -335,6 +379,63 @@ export default function NuevaVenta() {
     src.sourceType === "branch" &&
     lockedBranch !== null &&
     src.branchId !== lockedBranch.id;
+
+  // Sucursal de entrega/recolección: por default es la misma de donde sale
+  // el stock (lockedBranch); el vendedor puede cambiarla con "Cambiar".
+  const effectiveDeliveryBranch = deliveryBranchOverridden ? deliveryBranch : lockedBranch;
+
+  const { data: branchesCatalog = [] } = useQuery({
+    queryKey: ["branches-catalog-pickup"],
+    queryFn: async () => {
+      const branches = await getBranchesCatalog();
+      return branches.filter((b) => !b.is_main_warehouse);
+    },
+    enabled: branchPickerOpen,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const cartProductIds = useMemo(() => cart.map((i) => i.productId).join(","), [cart]);
+
+  const { data: hasStockAtDeliveryBranch } = useQuery({
+    queryKey: ["delivery-branch-stock", effectiveDeliveryBranch?.id, cartProductIds],
+    enabled: deliveryType === "pickup" && !!effectiveDeliveryBranch && cart.length > 0,
+    queryFn: async () => {
+      const checks = await Promise.all(
+        cart.map(async (item) => {
+          const res = await getProductDetail(item.productId, effectiveDeliveryBranch!.id, true);
+          const available =
+            res.data?.inventorySources.find((s) => s.branchId === effectiveDeliveryBranch!.id)
+              ?.available ?? 0;
+          return available >= item.quantity;
+        })
+      );
+      return checks.every(Boolean);
+    },
+  });
+
+  const isDeliveryBranchCurrent = effectiveDeliveryBranch?.id === CURRENT_BRANCH_ID;
+  const isSameDayPickup =
+    deliveryType === "pickup" && isDeliveryBranchCurrent && hasStockAtDeliveryBranch === true;
+  const needsEstimatedDate = deliveryType === "pickup" && hasStockAtDeliveryBranch === false;
+
+  const { data: estimatedDateResult } = useQuery({
+    queryKey: ["estimated-delivery-date", effectiveDeliveryBranch?.id],
+    enabled: needsEstimatedDate && !!effectiveDeliveryBranch,
+    queryFn: () => getEstimatedDeliveryDate(effectiveDeliveryBranch!.id as number),
+  });
+
+  // La fecha de recolección en otra sucursal con stock (escenario 3) y la
+  // fecha de domicilio quedan diferidas para después del pago; el único caso
+  // con fecha automática es el pickup inmediato en la sucursal actual.
+  const effectivePickupDate = isSameDayPickup ? todayIsoDate : "";
+  const estimatedDate = estimatedDateOverride || estimatedDateResult?.estimatedDeliveryDate || "";
+
+  const handleSelectDeliveryBranch = (branch: { id: number; label: string }) => {
+    setDeliveryBranch(branch);
+    setDeliveryBranchOverridden(true);
+    setEstimatedDateOverride("");
+    setBranchPickerOpen(false);
+  };
 
   const handleSelectProduct = (product: ProductSearchResult) => {
     setSelectedProductId(product.id);
@@ -425,7 +526,30 @@ export default function NuevaVenta() {
     paymentType === "CREDIT" && selectedClient?.creditStatus === "MOROSO";
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
-  const canProceed = totalCartQty > 0 && !isClientWithoutActiveCredit;
+
+  const isDeliveryAddressReady =
+    deliveryType === "delivery" &&
+    (useCustomDeliveryAddress
+      ? !!customDeliveryAddress
+      : !!selectedClient?.primaryAddressFormatted);
+
+  const isPickupReady =
+    deliveryType === "pickup" &&
+    !!effectiveDeliveryBranch &&
+    (hasStockAtDeliveryBranch === true || needsEstimatedDate);
+
+  const isDeliveryInfoReady =
+    deliveryType === "delivery"
+      ? isDeliveryAddressReady
+      : deliveryType === "pickup"
+      ? isPickupReady
+      : false;
+
+  const canProceed =
+    totalCartQty > 0 &&
+    !isClientWithoutActiveCredit &&
+    deliveryType !== null &&
+    isDeliveryInfoReady;
 
   const subtotal = cart.reduce((s, item) => s + item.unitPrice * item.quantity, 0);
   const subtotalOriginal = cart.reduce((s, item) => s + item.originalPrice * item.quantity, 0);
@@ -2134,10 +2258,16 @@ export default function NuevaVenta() {
               <Select
                 fullWidth
                 size="small"
-                value={deliveryType}
-                onChange={(e) => setDeliveryType(e.target.value as "delivery" | "pickup")}
+                displayEmpty
+                value={deliveryType ?? ""}
+                onChange={(e) =>
+                  setDeliveryType((e.target.value || null) as "delivery" | "pickup" | null)
+                }
                 sx={{ mb: 1.5 }}
               >
+                <MenuItem value="">
+                  <em>Selecciona un tipo de entrega</em>
+                </MenuItem>
                 <MenuItem value="delivery">A domicilio</MenuItem>
                 <MenuItem value="pickup">En tienda o bodega</MenuItem>
               </Select>
@@ -2197,33 +2327,42 @@ export default function NuevaVenta() {
                       size="small"
                       variant="text"
                       sx={{ textTransform: "none", fontWeight: 600, p: 0, minWidth: 0, fontSize: "0.75rem" }}
+                      onClick={() => setDeliveryAddressModalOpen(true)}
                     >
                       Cambiar
                     </Button>
                   </Stack>
                   <Typography variant="body2" mb={0.5}>
-                    {selectedClient.primaryAddressFormatted ?? "Sin dirección registrada"}
+                    {useCustomDeliveryAddress
+                      ? customDeliveryAddress?.formatted ?? "Sin dirección capturada"
+                      : selectedClient.primaryAddressFormatted ?? "Sin dirección registrada"}
                   </Typography>
+                  {useCustomDeliveryAddress && (
+                    <Button
+                      size="small"
+                      variant="text"
+                      sx={{ textTransform: "none", p: 0, minWidth: 0, fontSize: "0.75rem", mb: 1 }}
+                      onClick={() => {
+                        setUseCustomDeliveryAddress(false);
+                        setCustomDeliveryAddress(null);
+                      }}
+                    >
+                      Usar dirección del cliente
+                    </Button>
+                  )}
                   {selectedClient.email && (
                     <Typography variant="body2" color="text.secondary" mb={1.5}>
                       {selectedClient.email}
                     </Typography>
                   )}
 
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
                     <Typography variant="caption" color="text.secondary">
                       Teléfono de quién recibe
                     </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      sx={{ textTransform: "none", fontWeight: 600, p: 0, minWidth: 0, fontSize: "0.75rem" }}
-                    >
-                      Cambiar
-                    </Button>
                   </Stack>
                   {selectedClient.phoneNumber && (
-                    <Typography variant="body2" color="text.secondary" mt={0.5}>
+                    <Typography variant="body2" color="text.secondary">
                       {selectedClient.phoneNumber}
                     </Typography>
                   )}
@@ -2234,28 +2373,95 @@ export default function NuevaVenta() {
                 <>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.5}>
                     <Typography variant="caption" color="text.secondary">
-                      Tienda de entrega
+                      Sucursal de entrega
                     </Typography>
                     <Button
                       size="small"
                       variant="text"
                       sx={{ textTransform: "none", fontWeight: 600, p: 0, minWidth: 0, fontSize: "0.75rem" }}
+                      onClick={() => setBranchPickerOpen(true)}
                     >
                       Cambiar
                     </Button>
                   </Stack>
-                  <Typography variant="body2" fontWeight={600} mb={0.5}>
-                    {CURRENT_BRANCH_NAME} [Actual]
+                  <Typography variant="body2" fontWeight={600} mb={1.5}>
+                    {effectiveDeliveryBranch
+                      ? `${effectiveDeliveryBranch.label}${
+                          effectiveDeliveryBranch.id === CURRENT_BRANCH_ID ? " [Actual]" : ""
+                        }`
+                      : "Agrega artículos al carrito primero"}
                   </Typography>
-                  {CURRENT_BRANCH_ADDRESS && (
-                    <Typography variant="body2" color="text.secondary">
-                      {CURRENT_BRANCH_ADDRESS}
+
+                  {effectiveDeliveryBranch && hasStockAtDeliveryBranch === undefined && (
+                    <Typography variant="caption" color="text.secondary">
+                      Verificando existencia en esta sucursal...
                     </Typography>
+                  )}
+
+                  {isSameDayPickup && (
+                    <Alert severity="success" sx={{ mb: 1 }}>
+                      Entrega hoy mismo en tienda.
+                    </Alert>
+                  )}
+
+                  {needsEstimatedDate && (
+                    <>
+                      {estimatedDateResult?.estimatedDeliveryDate ? (
+                        <Alert severity="info" sx={{ mb: 1 }}>
+                          Esta sucursal no tiene existencia; se calculó una fecha estimada
+                          según la ruta de reparto. Puedes ajustarla.
+                        </Alert>
+                      ) : (
+                        <Alert severity="warning" sx={{ mb: 1 }}>
+                          No se pudo calcular una fecha estimada para esta sucursal (sin ruta
+                          programada). Puedes definirla manualmente o dejarla en blanco.
+                        </Alert>
+                      )}
+                      <FormDatePicker
+                        label="Fecha estimada de entrega"
+                        value={estimatedDate}
+                        onChange={setEstimatedDateOverride}
+                        minDate={todayIsoDate}
+                        fullWidth
+                      />
+                    </>
                   )}
                 </>
               )}
             </Paper>
           )}
+
+          <Dialog open={branchPickerOpen} onClose={() => setBranchPickerOpen(false)} maxWidth="xs" fullWidth>
+            <DialogContent sx={{ p: 0 }}>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ p: 2, pb: 1 }}>
+                Selecciona la sucursal de entrega
+              </Typography>
+              <List sx={{ maxHeight: 360, overflowY: "auto" }}>
+                {branchesCatalog.map((b) => (
+                  <ListItemButton
+                    key={b.id}
+                    selected={effectiveDeliveryBranch?.id === b.id}
+                    onClick={() => handleSelectDeliveryBranch({ id: b.id, label: b.name })}
+                  >
+                    <ListItemText
+                      primary={b.name}
+                      secondary={b.id === CURRENT_BRANCH_ID ? "Sucursal actual" : undefined}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </DialogContent>
+          </Dialog>
+
+          <DeliveryAddressModal
+            open={deliveryAddressModalOpen}
+            onClose={() => setDeliveryAddressModalOpen(false)}
+            onSaved={(address) => {
+              setCustomDeliveryAddress(address);
+              setUseCustomDeliveryAddress(true);
+              setDeliveryAddressModalOpen(false);
+            }}
+          />
 
           <Dialog
             open={fingerprintModalOpen}

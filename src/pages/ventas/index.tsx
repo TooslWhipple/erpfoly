@@ -3,12 +3,13 @@ import { useRouter } from "next/router";
 import { Box, Stack } from "@mui/material";
 import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import type { Column } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales } from "@/services/ventas.service";
-import type { SaleListItem, SaleStatus, SalePaymentType, SaleStatusTab } from "@/types/ventas.types";
+import type { SaleListItem, SalePaymentType, SaleStatusTab } from "@/types/ventas.types";
 import { SALES_CREATE } from "@/lib/permissions";
+import { SALE_STATUS_CHIP_LABELS, SALE_STATUS_CHIP_VARIANTS } from "@/utils/saleStatus";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -18,24 +19,6 @@ const STATUS_TABS: TabOption[] = [
   { label: "Realizadas", value: "completed" },
   { label: "Pendientes", value: "pending" },
 ];
-
-const STATUS_CHIP_LABELS: Record<SaleStatus, string> = {
-  DRAFT: "Borrador",
-  PENDING_PAYMENT: "Pago pendiente",
-  PAID: "Pagada",
-  PARTIALLY_DELIVERED: "Parcialmente entregada",
-  DELIVERED: "Entregada",
-  CANCELLED: "Cancelada",
-};
-
-const STATUS_CHIP_VARIANTS: Record<SaleStatus, StatusChipVariant> = {
-  DRAFT: "default",
-  PENDING_PAYMENT: "warning",
-  PAID: "success",
-  PARTIALLY_DELIVERED: "info",
-  DELIVERED: "success",
-  CANCELLED: "error",
-};
 
 const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
   CREDIT: "#a855f7",
@@ -118,8 +101,8 @@ export default function Ventas() {
       label: "Estatus",
       size: "sm",
       type: "chip",
-      chipLabelMap: STATUS_CHIP_LABELS,
-      chipVariantMap: STATUS_CHIP_VARIANTS,
+      chipLabelMap: SALE_STATUS_CHIP_LABELS,
+      chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
       id: "productName",

@@ -1,4 +1,3 @@
-import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import {
@@ -7,16 +6,18 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Divider,
   Grid,
   IconButton,
+  MenuItem,
   Skeleton,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
-import { CheckCircle, Truck, Store } from "lucide-react";
+import { CheckCircle, Truck, Store, Clock, XCircle } from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
-import type { Props as GoogleMapReactProps } from "google-map-react";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { PickersDay, type PickersDayProps } from "@mui/x-date-pickers/PickersDay";
 import type { Dayjs } from "dayjs";
@@ -27,45 +28,55 @@ import {
   getDeliveryAvailability,
   setDeliveryDate,
   removeDeliveryDate,
+  registerLayawayPayment,
+  completeLayaway,
+  cancelLayaway,
 } from "@/services/ventas.service";
 import type { DeliveryAvailability } from "@/types/ventas.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { SideModal } from "@/components/SideModal/SideModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import { StaticLocationMap } from "@/components/StaticLocationMap";
 
-const GoogleMapReact = dynamic<GoogleMapReactProps>(
-  () => import("google-map-react"),
-  { ssr: false }
-);
+function layawayStatusMeta(status: string) {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Activo", color: "#2563EB", bg: "#EFF6FF" };
+    case "COMPLETED":
+      return { label: "Completado", color: "#16A34A", bg: "#DCFCE7" };
+    case "EXPIRED":
+      return { label: "Vencido", color: "#DC2626", bg: "#FEE2E2" };
+    case "CANCELLED":
+      return { label: "Cancelado", color: "#6B7280", bg: "#F4F4F5" };
+    default:
+      return { label: status, color: "#6B7280", bg: "#F4F4F5" };
+  }
+}
+
+function paymentMethodLabel(method: string) {
+  switch (method) {
+    case "CASH":
+      return "Efectivo";
+    case "CARD":
+      return "Tarjeta";
+    case "TRANSFER":
+      return "Transferencia";
+    case "LOYALTY_POINTS":
+      return "Foly Puntos";
+    case "MIXED":
+      return "Mixto";
+    default:
+      return method;
+  }
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
   }).format(value);
-}
-
-interface MapMarkerProps {
-  lat: number;
-  lng: number;
-}
-
-function MapMarker({ lat, lng }: MapMarkerProps) {
-  return (
-    <div
-      data-lat={lat}
-      data-lng={lng}
-      style={{
-        width: "16px",
-        height: "16px",
-        borderRadius: "50%",
-        border: "2px solid #fff",
-        backgroundColor: "#ef4444",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-        transform: "translate(-50%,-50%)",
-      }}
-    />
-  );
 }
 
 export default function VentaDetalle() {
@@ -77,6 +88,7 @@ export default function VentaDetalle() {
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [modalDate, setModalDate] = useState<Dayjs | null>(null);
   const [calendarMonth, setCalendarMonth] = useState<Dayjs>(dayjs());
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
@@ -124,8 +136,12 @@ export default function VentaDetalle() {
   }, [availabilityData]);
 
   const setDateMutation = useMutation({
-    mutationFn: (payload: { delivery_date: string; delivery_type?: 'ADDRESS' | 'BRANCH' }) =>
-      setDeliveryDate(saleId!, payload),
+    mutationFn: (payload: {
+      delivery_date: string;
+      delivery_type?: 'ADDRESS' | 'BRANCH';
+      address_id?: number;
+      branch_id?: number;
+    }) => setDeliveryDate(saleId!, payload),
     onSuccess: (_data: unknown, payload) => {
       const confirmed = dayjs(payload.delivery_date);
       const confirmedMonth = confirmed.month() + 1;
@@ -196,6 +212,73 @@ export default function VentaDetalle() {
     },
   });
 
+  const updateAddressMutation = useMutation({
+    mutationFn: (address: { id: number }) =>
+      setDeliveryDate(saleId!, {
+        delivery_type: "ADDRESS",
+        address_id: address.id,
+        // Solo se está cambiando la dirección; se conserva la fecha ya
+        // comprometida, o se propone mañana si aún no había ninguna.
+        delivery_date: sale?.deliveryDate ?? dayjs().add(1, "day").format("YYYY-MM-DD"),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Dirección de entrega actualizada");
+      setAddressModalOpen(false);
+    },
+    onError: () => {
+      // Interceptor in lib/axios already showed the error snackbar.
+    },
+  });
+
+  const [layawayAmount, setLayawayAmount] = useState("");
+  const [layawayMethod, setLayawayMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
+  const [cancelLayawayModalOpen, setCancelLayawayModalOpen] = useState(false);
+
+  const registerLayawayPaymentMutation = useMutation({
+    mutationFn: async (payload: { amount: number; payment_method: "CASH" | "CARD" | "TRANSFER" }) => {
+      if (!sale?.layaway) throw new Error("Este apartado no existe");
+      const res = await registerLayawayPayment(sale.layaway.id, payload);
+      if (res.error) throw new Error(res.error.message);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Abono registrado");
+      setLayawayAmount("");
+    },
+    onError: (err: Error) => snackbar.showError(err.message),
+  });
+
+  const completeLayawayMutation = useMutation({
+    mutationFn: async () => {
+      if (!sale?.layaway) throw new Error("Este apartado no existe");
+      const res = await completeLayaway(sale.layaway.id);
+      if (res.error) throw new Error(res.error.message);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Apartado completado");
+    },
+    onError: (err: Error) => snackbar.showError(err.message),
+  });
+
+  const cancelLayawayMutation = useMutation({
+    mutationFn: async () => {
+      if (!sale?.layaway) throw new Error("Este apartado no existe");
+      const res = await cancelLayaway(sale.layaway.id);
+      if (res.error) throw new Error(res.error.message);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Apartado cancelado");
+      setCancelLayawayModalOpen(false);
+    },
+    onError: (err: Error) => snackbar.showError(err.message),
+  });
+
   // Debounce month changes to avoid rapid refetch on << >> clicks
   const monthChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleMonthChange = (newMonth: Dayjs) => {
@@ -251,6 +334,14 @@ export default function VentaDetalle() {
     );
   }
 
+  const layawayRemaining = sale.layaway
+    ? Math.max(0, sale.layaway.totalAmount - sale.layaway.paidAmount)
+    : 0;
+  const layawayAmountNum =
+    parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
+  const isPendingLayaway = sale.layaway?.status === "ACTIVE";
+  const isSaleCancelled = sale.status === "CANCELLED";
+
   return (
     <Box sx={{ p: 3, bgcolor: "#fafafa", minHeight: "100vh" }}>
       <Stack
@@ -275,6 +366,17 @@ export default function VentaDetalle() {
           <Typography variant="h5" fontWeight={700}>
             Detalle de la venta
           </Typography>
+          {isSaleCancelled && (
+            <Chip
+              label="Cancelada"
+              size="small"
+              sx={{
+                bgcolor: "#FEF2F2",
+                color: "#DC2626",
+                fontWeight: 600,
+              }}
+            />
+          )}
         </Stack>
       </Stack>
 
@@ -309,7 +411,55 @@ export default function VentaDetalle() {
             }}
           >
             <CardContent sx={{ p: 3 }}>
-              {!sale.deliveryDate ? (
+              {isSaleCancelled ? (
+                <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
+                  <Box
+                    sx={{
+                      bgcolor: "#FEF2F2",
+                      borderRadius: 2,
+                      p: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <XCircle size={20} color="#DC2626" />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600}>
+                      Venta cancelada
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Esta venta fue cancelada y ya no puede modificarse.
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : isPendingLayaway ? (
+                <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
+                  <Box
+                    sx={{
+                      bgcolor: "#FFFBEB",
+                      borderRadius: 2,
+                      p: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Clock size={20} color="#D97706" />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600}>
+                      Venta de tipo apartado
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Podrás definir una fecha de entrega una vez liquidada la compra.
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : !sale.deliveryDate ? (
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
                   <Box
                     sx={{
@@ -347,17 +497,28 @@ export default function VentaDetalle() {
                       flexShrink: 0,
                     }}
                   >
-                    <Store size={20} color="#1976d2" />
+                    {sale.deliveryType === 'BRANCH' ? (
+                      <Store size={20} color="#1976d2" />
+                    ) : (
+                      <Truck size={20} color="#1976d2" />
+                    )}
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
-                      Entrega en sucursal
+                      {sale.deliveryType === 'BRANCH' ? 'Entrega en sucursal' : 'Entrega a domicilio'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {sale.deliveryType === 'BRANCH' 
-                        ? `Sucursal: ${sale.client?.primaryAddress?.formatted || 'Matamoros-Plaza Patio'}`
-                        : sale.client?.primaryAddress?.formatted || 'Dirección del cliente'}
+                      {sale.deliveryType === 'BRANCH'
+                        ? sale.deliveryBranchName ?? 'Sucursal no especificada'
+                        : sale.deliveryAddressFormatted ??
+                          sale.client?.primaryAddress?.formatted ??
+                          'Dirección del cliente'}
                     </Typography>
+                    {sale.estimatedDeliveryDate && sale.deliveryStatus !== 'DELIVERED' && (
+                      <Typography variant="body2" color="text.secondary">
+                        Fecha estimada: {dayjs(sale.estimatedDeliveryDate).format('DD/MM/YYYY')}
+                      </Typography>
+                    )}
                   </Box>
                 </Stack>
               )}
@@ -417,34 +578,36 @@ export default function VentaDetalle() {
                           {item.product.name}
                         </Typography>
                       </Box>
-                      <Box
-                        sx={{ flexShrink: 0 }}
-                        onClick={() => {
-                          setModalDate(selectedDate ?? dayjs());
-                          setDeliveryModalOpen(true);
-                        }}
-                      >
+                      {!isPendingLayaway && !isSaleCancelled && (
                         <Box
-                          sx={{
-                            border: "1px solid",
-                            borderColor: "primary.main",
-                            borderRadius: 1.5,
-                            px: 1.5,
-                            py: 0.75,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            cursor: "pointer",
-                            color: "primary.main",
-                            fontWeight: 500,
-                            fontSize: "0.85rem",
-                            minWidth: formattedDate ? 200 : 130,
+                          sx={{ flexShrink: 0 }}
+                          onClick={() => {
+                            setModalDate(selectedDate ?? dayjs());
+                            setDeliveryModalOpen(true);
                           }}
                         >
-                          {formattedDate ?? "Seleccionar fecha"}
-                          <Calendar size={16} />
+                          <Box
+                            sx={{
+                              border: "1px solid",
+                              borderColor: "primary.main",
+                              borderRadius: 1.5,
+                              px: 1.5,
+                              py: 0.75,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              cursor: "pointer",
+                              color: "primary.main",
+                              fontWeight: 500,
+                              fontSize: "0.85rem",
+                              minWidth: formattedDate ? 200 : 130,
+                            }}
+                          >
+                            {formattedDate ?? "Seleccionar fecha"}
+                            <Calendar size={16} />
+                          </Box>
                         </Box>
-                      </Box>
+                      )}
                     </Stack>
                   );
                 })}
@@ -597,6 +760,180 @@ export default function VentaDetalle() {
               </CardContent>
             </Card>
 
+            {sale.layaway && (
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 4,
+                  bgcolor: "#F4F4F5",
+                }}
+              >
+                <CardContent sx={{ p: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Apartado
+                    </Typography>
+                    {(() => {
+                      const meta = layawayStatusMeta(sale.layaway.status);
+                      return (
+                        <Box
+                          sx={{
+                            bgcolor: meta.bg,
+                            color: meta.color,
+                            borderRadius: 1,
+                            px: 1,
+                            py: 0.25,
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {meta.label}
+                        </Box>
+                      );
+                    })()}
+                  </Stack>
+
+                  <Stack spacing={1} mb={2}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Plazo
+                      </Typography>
+                      <Typography variant="body2">
+                        {sale.layaway.termName} ({sale.layaway.termDays} días)
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Fecha límite
+                      </Typography>
+                      <Typography variant="body2">
+                        {dayjs(sale.layaway.expiresAt).format("D [de] MMMM, YYYY")}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Total
+                      </Typography>
+                      <Typography variant="body2">
+                        {formatCurrency(sale.layaway.totalAmount)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Pagado
+                      </Typography>
+                      <Typography variant="body2" color="success.main">
+                        {formatCurrency(sale.layaway.paidAmount)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="h6" fontWeight={700}>
+                        Restante
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(layawayRemaining)}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+
+                  {sale.layaway.payments.length > 0 && (
+                    <Box mb={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                        Historial de abonos
+                      </Typography>
+                      <Stack spacing={0.75}>
+                        {sale.layaway.payments.map((p) => (
+                          <Stack key={p.id} direction="row" justifyContent="space-between">
+                            <Typography variant="caption" color="text.secondary">
+                              {dayjs(p.createdAt).format("DD/MM/YYYY HH:mm")} · {paymentMethodLabel(p.paymentMethod)}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={600}>
+                              {formatCurrency(p.amount)}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {sale.layaway.status === "ACTIVE" && (
+                    <>
+                      <Divider sx={{ mb: 2 }} />
+                      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                        Registrar abono
+                      </Typography>
+                      <Stack direction="row" spacing={1} mb={1.5}>
+                        <TextField
+                          size="small"
+                          placeholder="0.00"
+                          value={layawayAmount}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9.]/g, "");
+                            const parts = val.split(".");
+                            setLayawayAmount(
+                              parts.length > 2
+                                ? parts[0] + "." + parts.slice(1).join("")
+                                : val
+                            );
+                          }}
+                          sx={{ flex: 1 }}
+                        />
+                        <TextField
+                          select
+                          size="small"
+                          value={layawayMethod}
+                          onChange={(e) =>
+                            setLayawayMethod(e.target.value as "CASH" | "CARD" | "TRANSFER")
+                          }
+                          sx={{ width: 150 }}
+                        >
+                          <MenuItem value="CASH">Efectivo</MenuItem>
+                          <MenuItem value="CARD">Tarjeta</MenuItem>
+                          <MenuItem value="TRANSFER">Transferencia</MenuItem>
+                        </TextField>
+                      </Stack>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        disabled={
+                          layawayAmountNum <= 0 ||
+                          layawayAmountNum > layawayRemaining ||
+                          registerLayawayPaymentMutation.isPending
+                        }
+                        onClick={() =>
+                          registerLayawayPaymentMutation.mutate({
+                            amount: layawayAmountNum,
+                            payment_method: layawayMethod,
+                          })
+                        }
+                        sx={{ textTransform: "none", mb: 1 }}
+                      >
+                        {registerLayawayPaymentMutation.isPending ? "Registrando..." : "Registrar abono"}
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        disabled={layawayRemaining > 0 || completeLayawayMutation.isPending}
+                        onClick={() => completeLayawayMutation.mutate()}
+                        sx={{ textTransform: "none", mb: 1 }}
+                      >
+                        {completeLayawayMutation.isPending ? "Completando..." : "Completar apartado"}
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="text"
+                        color="error"
+                        onClick={() => setCancelLayawayModalOpen(true)}
+                        sx={{ textTransform: "none" }}
+                      >
+                        Cancelar apartado
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {sale.client && (
               <Card
                 elevation={0}
@@ -626,34 +963,13 @@ export default function VentaDetalle() {
                   {sale.client.primaryAddress && (
                     <Box mt={2}>
                       {primaryCoords && googleMapsBrowserApiKey ? (
-                        <Box
-                          sx={{
-                            width: "100%",
-                            height: 160,
-                            borderRadius: 2,
-                            overflow: "hidden",
-                            mb: 1.5,
-                          }}
-                        >
-                          <GoogleMapReact
-                            bootstrapURLKeys={{
-                              key: googleMapsBrowserApiKey,
-                            }}
-                            center={primaryCoords}
-                            defaultCenter={primaryCoords}
-                            defaultZoom={16}
-                            zoom={16}
-                            options={{
-                              fullscreenControl: false,
-                              mapTypeControl: false,
-                              streetViewControl: false,
-                            }}
-                          >
-                            <MapMarker
-                              lat={primaryCoords.lat}
-                              lng={primaryCoords.lng}
-                            />
-                          </GoogleMapReact>
+                        <Box sx={{ mb: 1.5 }}>
+                          <StaticLocationMap
+                            coords={primaryCoords}
+                            apiKey={googleMapsBrowserApiKey}
+                            height={160}
+                            borderRadius={2}
+                          />
                         </Box>
                       ) : (
                         <Box
@@ -687,12 +1003,13 @@ export default function VentaDetalle() {
                         <Button
                           size="small"
                           sx={{ textTransform: "none", minWidth: 0, p: 0, fontWeight: 500 }}
+                          onClick={() => setAddressModalOpen(true)}
                         >
                           Cambiar
                         </Button>
                       </Stack>
                       <Typography variant="body2" mt={0.5}>
-                        {sale.client.primaryAddress.formatted}
+                        {sale.deliveryAddressFormatted ?? sale.client.primaryAddress.formatted}
                       </Typography>
                       {sale.client.email && (
                         <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
@@ -912,6 +1229,11 @@ export default function VentaDetalle() {
                       if (modalDate) {
                         setDateMutation.mutate({
                           delivery_date: modalDate.format('YYYY-MM-DD'),
+                          // Sin tipo/sucursal/dirección propios ya guardados en la
+                          // venta (sale.deliveryType === null), este flujo asume
+                          // domicilio a la dirección principal del cliente, igual
+                          // que el comportamiento previo de esta pantalla.
+                          address_id: sale?.client?.primaryAddress?.id,
                         });
                       }
                     }}
@@ -935,6 +1257,26 @@ export default function VentaDetalle() {
           </Grid>
         </Grid>
       </SideModal>
+
+      <DeliveryAddressModal
+        open={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        onSaved={(address) => updateAddressMutation.mutate(address)}
+      />
+
+      <ConfirmModal
+        open={cancelLayawayModalOpen}
+        onClose={() => setCancelLayawayModalOpen(false)}
+        onConfirm={async () => {
+          await cancelLayawayMutation.mutateAsync();
+        }}
+        loading={cancelLayawayMutation.isPending}
+        title="Cancelar apartado"
+        description="Esta acción cancelará el apartado y liberará el inventario reservado. ¿Deseas continuar?"
+        confirmLabel="Cancelar apartado"
+        cancelLabel="Volver"
+        confirmColor="error"
+      />
     </Box>
   );
 }

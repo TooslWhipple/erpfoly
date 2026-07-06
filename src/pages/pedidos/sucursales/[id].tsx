@@ -9,9 +9,11 @@ import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
+import { OriginDestinationCard } from "@/styles/solicitudes/detalle.styles";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
 import { BRANCH_ORDERS_UPDATE } from "@/lib/permissions";
+import { ArrowRight } from "lucide-react";
 
 type DisplayStatus = "pending" | "in_progress" | "received" | "cancelled";
 
@@ -191,6 +193,20 @@ export default function PedidoSucursalDetalle() {
                 </Stack>
 
                 <Divider />
+
+                {(order.origin_branch || order.branch) && (
+                    <OriginDestinationCard>
+                        <Stack>
+                            <Typography variant="subtitle1">{order.origin_branch?.name ?? "—"}</Typography>
+                            <Typography variant="body2" color="text.secondary">Origen</Typography>
+                        </Stack>
+                        <ArrowRight size={16} color={theme.palette.text.secondary} />
+                        <Stack>
+                            <Typography variant="subtitle1">{order.branch?.name ?? "—"}</Typography>
+                            <Typography variant="body2" color="text.secondary">Destino</Typography>
+                        </Stack>
+                    </OriginDestinationCard>
+                )}
 
                 <Grid container spacing={4}>
                     <Grid size={{ xs: 12, md: 8, xl: 9 }}>

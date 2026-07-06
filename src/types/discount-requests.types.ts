@@ -24,8 +24,9 @@ export interface DiscountRequest {
   /** Reason label for display */
   reason: string;
   reasonCode?: string;
+  notes?: string | null;
   status: DiscountRequestStatus;
-  requestedDiscountPct?: number;
+  requestedDiscountPct?: number | null;
 }
 
 export interface GetDiscountRequestsParams {
@@ -78,7 +79,7 @@ export interface DiscountRequestDetail {
   reasonLabel: string;
   notes: string | null;
   rejectionReason: string | null;
-  requestedDiscountPct: number;
+  requestedDiscountPct: number | null;
   approvedDiscountPct: number | null;
   resolvedAt: string | null;
   createdAt: string;

@@ -516,7 +516,8 @@ async function ensureDocumentFilesUploaded(
 }
 
 export async function createCreditApplicationFromIntake(
-  payload: CreditApplicationBiometricsData
+  payload: CreditApplicationBiometricsData,
+  clientId?: number
 ): Promise<CreateCreditApplicationFromIntakeResult | null> {
   const ineFront = payload.ineFrontImage?.trim();
   const ineBack = payload.ineBackImage?.trim();
@@ -531,6 +532,9 @@ export async function createCreditApplicationFromIntake(
   const ineExecutionId = payload.ineExecutionId?.trim();
   if (ineExecutionId) {
     formData.append("ineExecutionId", ineExecutionId);
+  }
+  if (clientId) {
+    formData.append("clientId", String(clientId));
   }
   formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
   formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));

@@ -1,32 +1,36 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { MainLayout, Title, TabFilters, TableCrud, StatusChip } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-import type { BranchRequestListItem } from "@/types/solicitudes.types";
+import type { BranchOrderStatus, BranchRequestListItem } from "@/types/solicitudes.types";
 import { getBranchRequests } from "@/services/requests.service";
+import {
+    mapBranchOrderStatus,
+    getBranchOrderStatusLabel,
+    getBranchOrderStatusVariant,
+} from "@/utils/branchRequest";
 import { Stack } from "@mui/material";
 import { BRANCH_REQUESTS_READ } from "@/lib/permissions";
-
-type OrderStatus = "pending" | "delivered";
 
 interface BranchOrder {
     id: number;
     folio: string;
     date: string;
+    originBranch: string;
     branch: string;
     requestedBy: string;
     requestedItems: number;
     deliveredItems: number | null;
-    status: OrderStatus;
+    status: BranchOrderStatus;
 }
 
 interface GetBranchOrdersParams {
     page: number;
     limit: number;
     search?: string;
-    status?: "all" | OrderStatus;
+    status?: "all" | BranchOrderStatus;
 }
 
 interface GetBranchOrdersResponse {
@@ -51,13 +55,14 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
         id: order.id,
         folio: order.folio,
         date: formattedDate,
+        originBranch: order.origin_branch?.name ?? "—",
         branch: order.branch?.name ?? "Sin sucursal",
         requestedBy: order.requested_by_user
             ? `${order.requested_by_user.first_name} ${order.requested_by_user.last_name}`
             : "—",
         requestedItems: totalRequested,
         deliveredItems: totalDelivered > 0 ? totalDelivered : null,
-        status: totalDelivered > 0 && totalDelivered >= totalRequested ? "delivered" : "pending",
+        status: mapBranchOrderStatus(order.status),
     };
 }
 
@@ -87,22 +92,6 @@ async function getBranchOrders(
     return { data: [], total: 0, page: params.page, limit: params.limit };
 }
 
-function getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-        pending: "Pendiente",
-        delivered: "Entregado",
-    };
-    return labels[status];
-}
-
-function getStatusColor(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
-        pending: "#ea580c",
-        delivered: "#16a34a",
-    };
-    return colors[status];
-}
-
 export default function SolicitudesSucursales() {
     const router = useRouter();
 
@@ -117,11 +106,12 @@ export default function SolicitudesSucursales() {
     const tabs: TabOption[] = [
         { label: "Todos", value: "all" },
         { label: "Pendientes", value: "pending" },
+        { label: "Agendados", value: "scheduled" },
         { label: "Entregados", value: "delivered" },
     ];
 
-    const getStatusFilter = useCallback((): "all" | OrderStatus => {
-        return activeTab as "all" | OrderStatus;
+    const getStatusFilter = useCallback((): "all" | BranchOrderStatus => {
+        return activeTab as "all" | BranchOrderStatus;
     }, [activeTab]);
 
     const fetchOrders = useCallback(async () => {
@@ -183,8 +173,14 @@ export default function SolicitudesSucursales() {
             size: "lg",
         },
         {
+            id: "originBranch",
+            label: "Origen",
+            size: "lg",
+            truncate: true,
+        },
+        {
             id: "branch",
-            label: "Sucursal",
+            label: "Destino",
             size: "xl",
             truncate: true,
         },
@@ -212,11 +208,16 @@ export default function SolicitudesSucursales() {
             id: "status",
             label: "Estatus",
             size: "md",
-            format: (value) => (
-                <span style={{ color: getStatusColor(value as OrderStatus), fontWeight: 500 }}>
-                    {getStatusLabel(value as OrderStatus)}
-                </span>
-            ),
+            format: (value) => {
+                const status = value as BranchOrderStatus;
+                return (
+                    <StatusChip
+                        size="small"
+                        label={getBranchOrderStatusLabel(status)}
+                        variant={getBranchOrderStatusVariant(status)}
+                    />
+                );
+            },
         },
     ];
 

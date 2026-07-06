@@ -1,4 +1,4 @@
-import { get, unwrapOrThrow } from "@/lib/axios";
+import { get, post, unwrapOrThrow } from "@/lib/axios";
 
 export interface NeighborhoodPostalLookupItem {
   full_code: string;
@@ -25,5 +25,22 @@ export interface HousingTypeCatalogItem {
 
 export async function getHousingTypes(): Promise<HousingTypeCatalogItem[]> {
   const result = await get<HousingTypeCatalogItem[]>("/addresses/housing-types");
+  return unwrapOrThrow(result);
+}
+
+export interface CreateAddressPayload {
+  neighborhoodFullCode: string;
+  street: string;
+  externalNumber?: string;
+  internalNumber?: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export async function createAddress(
+  payload: CreateAddressPayload
+): Promise<{ id: number }> {
+  const result = await post<{ id: number }>("/addresses", payload);
   return unwrapOrThrow(result);
 }

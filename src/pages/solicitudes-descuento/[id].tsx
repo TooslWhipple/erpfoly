@@ -185,7 +185,7 @@ export default function DiscountRequestDetailPage() {
   const isPending = detail.status === "pending";
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Solicitudes de descuentos", href: "/solicitudes-descuento" },
-    { label: `Cotización ${detail.quotationFolio}` },
+    { label: `Cotización ${detail.saleFolio}` },
   ];
 
   return (
@@ -199,7 +199,7 @@ export default function DiscountRequestDetailPage() {
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
         saleTotal={detail.totalBeforeSpecialDiscount}
-        suggestedDiscountPercent={detail.requestedDiscountPct}
+        suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />
       <Stack spacing={2}>
@@ -243,7 +243,7 @@ export default function DiscountRequestDetailPage() {
         </Stack>
 
         <Typography variant="h4" fontWeight={600}>
-          Cotización {detail.quotationFolio}
+          Cotización {detail.saleFolio}
         </Typography>
         <Divider />
 

@@ -7,10 +7,11 @@ import { theme } from "@/styles/theme";
 import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { getQuotations } from "@/services/cotizaciones.service";
-import type { QuotationListItem } from "@/types/cotizaciones.types";
-import type { SalePaymentType } from "@/types/ventas.types";
+import { getSales } from "@/services/ventas.service";
+import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
 import { QUOTATIONS_READ } from "@/lib/permissions";
+import { useAuthStore } from "@/store/useAuthStore";
+import { SALE_STATUS_CHIP_LABELS, SALE_STATUS_CHIP_VARIANTS } from "@/utils/saleStatus";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -28,6 +29,8 @@ const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
 
 export default function CotizacionesGuardadas() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const currentUserId = user ? Number(user.id) : null;
 
   const {
     data: cotizaciones,
@@ -39,12 +42,14 @@ export default function CotizacionesGuardadas() {
     setRowsPerPage,
     setSearch,
     isLoading: loading,
-  } = usePaginatedList<QuotationListItem>({
-    queryKey: ["quotations"],
-    queryFn: getQuotations,
+  } = usePaginatedList<SaleListItem>({
+    queryKey: ["sale-drafts", String(currentUserId)],
+    queryFn: getSales,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
+    extraParams: { statusTab: "pending", created_by: currentUserId ?? undefined },
+    enabled: currentUserId !== null,
   });
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
@@ -56,7 +61,7 @@ export default function CotizacionesGuardadas() {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
 
-  const columns: Column<QuotationListItem>[] = [
+  const columns: Column<SaleListItem>[] = [
     {
       id: "id",
       label: "ID",
@@ -66,22 +71,9 @@ export default function CotizacionesGuardadas() {
       id: "status",
       label: "Estatus",
       size: "sm",
-      format: () => (
-        <Box
-          component="span"
-          sx={{
-            display: "inline-block",
-            px: 1,
-            py: 0.25,
-            borderRadius: 1,
-            bgcolor: "grey.100",
-            fontSize: "0.78rem",
-            color: "text.secondary",
-          }}
-        >
-          Cotización
-        </Box>
-      ),
+      type: "chip",
+      chipLabelMap: SALE_STATUS_CHIP_LABELS,
+      chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
       id: "productName",
@@ -151,7 +143,7 @@ export default function CotizacionesGuardadas() {
     },
   ];
 
-  const actions: RowAction<QuotationListItem>[] = [
+  const actions: RowAction<SaleListItem>[] = [
     {
       id: "ver",
       label: "Ver cotización",

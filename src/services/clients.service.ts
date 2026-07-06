@@ -10,6 +10,8 @@ import type {
 
 export type ClientStatus = "active" | "inactive" | "blocked";
 
+export type ClientCreditStatus = "ACTIVE" | "MOROSO";
+
 export interface ClientAddressItem {
   id: number;
   addressType: string;
@@ -32,6 +34,7 @@ export interface Client {
   phoneNumber: string | null;
   email: string | null;
   status: string | null;
+  creditStatus: ClientCreditStatus | null;
   addresses: ClientAddressItem[];
   primaryAddressFormatted: string | null;
   rfc?: string | null;
@@ -50,6 +53,7 @@ export interface GetClientsParams {
   limit: number;
   search?: string;
   status?: ClientStatus;
+  client_id?: number;
 }
 
 export type GetClientsResponse = PaginatedRowsResponse<Client>;

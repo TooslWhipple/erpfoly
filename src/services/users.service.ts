@@ -14,6 +14,7 @@ export interface UserListItem {
     cellphone: string;
     roleId: number;
     roleName: string;
+    rolePlatform?: 'ERP' | 'APP' | 'INTERNAL';
     status?: string;
     breanches: number[];
     createdAt: string;
@@ -51,6 +52,7 @@ export interface RoleItem {
     id: number;
     name: string;
     code: string;
+    platform: 'ERP' | 'APP' | 'INTERNAL';
 }
 
 export interface BranchItem {
@@ -168,6 +170,17 @@ export async function deleteUser(id: number): Promise<ApiResult<{ id: number; me
 
 export async function resetUserAccess(id: number): Promise<ApiResult<ApiSuccessPayload>> {
     return post<ApiSuccessPayload>(`${BASE}/${id}/reset-access`);
+}
+
+export async function checkUsernameAvailability(
+    username: string,
+    excludeUserId?: number,
+): Promise<ApiResult<{ exists: boolean }>> {
+    const params = new URLSearchParams({ username });
+    if (excludeUserId != null) {
+        params.set("excludeUserId", String(excludeUserId));
+    }
+    return get<{ exists: boolean }>(`${BASE}/check-username?${params.toString()}`);
 }
 
 export async function updateUserStatus(

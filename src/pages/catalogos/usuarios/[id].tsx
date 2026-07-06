@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Box, Button, CircularProgress, Divider, Grid, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Grid, InputAdornment, Stack, Typography } from "@mui/material";
 import {
     MainLayout,
     Breadcrumbs,
@@ -36,6 +36,15 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
+import {
+    filters,
+    isValidPersonName,
+    NAME_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+} from "@/forms/validation/filters";
+import { useUsernameAvailability } from "@/hooks/users/useUsernameAvailability";
+
+const personNameFilter = filters.personName();
 
 async function loadCatalogs() {
     const [rolesResult, branchesResult] = await Promise.all([
@@ -48,8 +57,6 @@ async function loadCatalogs() {
 async function loadUser(id: number) {
     return getUserApi(id);
 }
-
-const USERNAME_MAX_LENGTH = 6;
 
 type UserFormState = {
     firstName: string;
@@ -91,8 +98,21 @@ export default function UserFormPage() {
     const [errors, setErrors] = useState<UserFormErrors>({});
     const [driverForm, setDriverForm] = useState<DriverFormState>(initialDriverForm);
     const [driverErrors, setDriverErrors] = useState<DriverFormErrors>({});
+    const [savedUsername, setSavedUsername] = useState<string | null>(null);
 
-    const selectedRoleCode = roles.find((role) => role.id === user.roleId)?.code;
+    const selectedRole = roles.find((role) => role.id === user.roleId);
+    const selectedRoleCode = selectedRole?.code;
+
+    const usernameChanged =
+        isNew ||
+        (savedUsername !== null &&
+            user.username.trim() !== savedUsername.trim());
+
+    const { exists: usernameExists, isChecking: isCheckingUsername } =
+        useUsernameAvailability(user.username, {
+            excludeUserId: userId,
+            enabled: !loading && usernameChanged,
+        });
 
     useAsyncEffect(async (isCancelled) => {
         const { rolesResult, branchesResult } = await loadCatalogs();
@@ -113,10 +133,12 @@ export default function UserFormPage() {
         if (isCancelled()) return;
         if (!result.error && result.data) {
             const data = result.data;
+            const loadedUsername = data.username ?? "";
+            setSavedUsername(loadedUsername);
             setUser({
                 firstName: data.firstName ?? "",
                 lastName: data.lastName ?? "",
-                username: data.username ?? "",
+                username: loadedUsername,
                 cellphone: data.cellphone ?? "",
                 roleId: data.roleId,
                 branchIds: data.branchIds,
@@ -217,18 +239,30 @@ export default function UserFormPage() {
     const validateForm = (): boolean => {
         const next: UserFormErrors = {};
 
-        if (!user.firstName.trim()) {
+        const trimmedFirstName = user.firstName.trim();
+        if (!trimmedFirstName) {
             next.firstName = "El nombre es requerido";
+        } else if (trimmedFirstName.length > NAME_MAX_LENGTH) {
+            next.firstName = `Máximo ${NAME_MAX_LENGTH} caracteres`;
+        } else if (!isValidPersonName(trimmedFirstName)) {
+            next.firstName = "Solo letras y un espacio entre palabras";
         }
 
-        if (!user.lastName.trim()) {
+        const trimmedLastName = user.lastName.trim();
+        if (!trimmedLastName) {
             next.lastName = "El apellido es requerido";
+        } else if (trimmedLastName.length > NAME_MAX_LENGTH) {
+            next.lastName = `Máximo ${NAME_MAX_LENGTH} caracteres`;
+        } else if (!isValidPersonName(trimmedLastName)) {
+            next.lastName = "Solo letras y un espacio entre palabras";
         }
 
         if (!user.username.trim()) {
-            next.username = "El número de usuario es requerido";
+            next.username = "El número de empleado es requerido";
         } else if (user.username.trim().length > USERNAME_MAX_LENGTH) {
             next.username = `Máximo ${USERNAME_MAX_LENGTH} caracteres`;
+        } else if (usernameChanged && usernameExists) {
+            next.username = "Este número de empleado ya existe";
         }
 
         const trimmedPhone = user.cellphone.trim();
@@ -248,7 +282,7 @@ export default function UserFormPage() {
 
         setErrors(next);
         const driverValid = validateDriverForm();
-        return Object.keys(next).length === 0 && driverValid;
+        return Object.keys(next).length === 0 && driverValid && !(usernameChanged && usernameExists);
     };
 
     const handleConfirm = async () => {
@@ -307,24 +341,23 @@ export default function UserFormPage() {
         { label: isNew ? "Nuevo" : "Editar" },
     ];
 
-    const driverFieldsValid = !isDriverRoleCode(selectedRoleCode) || (
-        /^[A-Z0-9]{10}$/.test(driverForm.licenseNumber.trim().toUpperCase()) &&
-        (selectedRoleCode !== ROLE_CODES.CHOFER ||
-            (driverForm.postalCode.trim().length === 5 &&
-                driverForm.neighborhoodFullCode !== "-1" &&
-                driverForm.street.trim().length > 0 &&
-                driverForm.externalNumber.trim().length > 0))
-    );
+    const inviteInfoMessage = (() => {
+        if (!isNew) return null;
+        switch (selectedRole?.platform) {
+            case "APP":
+                return "Se generará una contraseña temporal y se enviará por WhatsApp para acceder a la aplicación móvil.";
+            case "INTERNAL":
+                return "Este rol es de uso interno; el usuario no tendrá acceso al portal ni a la aplicación.";
+            default:
+                return "Se generará una contraseña temporal y se enviará por WhatsApp al crear el usuario.";
+        }
+    })();
 
-    const canSendInvite =
-        user.firstName.trim().length > 0 &&
-        user.lastName.trim().length > 0 &&
-        user.username.trim().length > 0 &&
-        user.username.trim().length <= USERNAME_MAX_LENGTH &&
-        user.cellphone.trim().length >= 10 &&
-        user.roleId !== "" &&
-        user.branchIds.length > 0 &&
-        driverFieldsValid;
+    const usernameHelperText =
+        errors.username ||
+        (usernameChanged && usernameExists
+            ? "Este número de empleado ya existe"
+            : undefined);
 
     if (loading) {
         return (
@@ -352,7 +385,7 @@ export default function UserFormPage() {
                     <Button
                         variant="contained"
                         onClick={handleConfirm}
-                        disabled={!canSendInvite || sendingInvite || !canSaveUser}>
+                        disabled={sendingInvite || !canSaveUser}>
                         {
                             (sendingInvite) ?
                                 <CircularProgress size={20} color="inherit" />
@@ -364,9 +397,9 @@ export default function UserFormPage() {
                 <Divider />
                 <FormCard>
                     <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
-                    {isNew && (
+                    {inviteInfoMessage && (
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Se generará una contraseña temporal y se enviará por WhatsApp al crear el usuario.
+                            {inviteInfoMessage}
                         </Typography>
                     )}
                     <Grid container spacing={2}>
@@ -375,9 +408,12 @@ export default function UserFormPage() {
                                 label="Nombre(s)"
                                 placeholder="Ej. Juan"
                                 value={user.firstName}
-                                onChange={(e) => setUserField("firstName", e.target.value)}
+                                onChange={(e) =>
+                                    setUserField("firstName", personNameFilter(e.target.value).slice(0, NAME_MAX_LENGTH))
+                                }
                                 error={Boolean(errors.firstName)}
                                 helperText={errors.firstName || undefined}
+                                inputProps={{ maxLength: NAME_MAX_LENGTH }}
                                 autoFocus
                             />
                         </Grid>
@@ -386,21 +422,31 @@ export default function UserFormPage() {
                                 label="Apellido(s)"
                                 placeholder="Ej. Pérez García"
                                 value={user.lastName}
-                                onChange={(e) => setUserField("lastName", e.target.value)}
+                                onChange={(e) =>
+                                    setUserField("lastName", personNameFilter(e.target.value).slice(0, NAME_MAX_LENGTH))
+                                }
                                 error={Boolean(errors.lastName)}
                                 helperText={errors.lastName || undefined}
+                                inputProps={{ maxLength: NAME_MAX_LENGTH }}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <FormTextField
                                 label="Número de empleado"
-                                placeholder="Máx. 6 caracteres"
+                                placeholder={`Máx. ${USERNAME_MAX_LENGTH} caracteres`}
                                 value={user.username}
                                 onChange={(e) =>
                                     setUserField("username", e.target.value.replace(/\D/g, "").slice(0, USERNAME_MAX_LENGTH))
                                 }
-                                error={Boolean(errors.username)}
-                                helperText={errors.username || undefined}
+                                error={Boolean(errors.username) || (usernameChanged && usernameExists)}
+                                helperText={usernameHelperText}
+                                InputProps={{
+                                    endAdornment: usernameChanged && isCheckingUsername ? (
+                                        <InputAdornment position="end">
+                                            <CircularProgress size={18} />
+                                        </InputAdornment>
+                                    ) : undefined,
+                                }}
                                 inputProps={{ maxLength: USERNAME_MAX_LENGTH, inputMode: "numeric" }}
                             />
                         </Grid>

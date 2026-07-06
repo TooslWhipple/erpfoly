@@ -222,6 +222,7 @@ export default function Usuarios() {
             icon: <KeyRound size={16} />,
             onClick: handleResetAccess,
             permission: CATALOG_USERS_UPDATE,
+            hidden: (row) => row.rolePlatform === "INTERNAL",
             disabled: (row) => actionLoadingId === row.id || row.status !== "ACTIVE",
         },
         {

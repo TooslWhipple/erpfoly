@@ -20,7 +20,7 @@ const BASE = "/pos";
 export type GetSalesResponse = PaginatedRowsResponse<SaleListItem>;
 
 export async function getSales(
-  params: GetSalesParams
+  params: GetSalesParams,
 ): Promise<ApiResult<GetSalesResponse>> {
   return get<GetSalesResponse>(buildListUrl(`${BASE}/sales`, params));
 }
@@ -34,10 +34,10 @@ export interface SearchProductsParams {
 export type SearchProductsResponse = PaginatedRowsResponse<ProductSearchResult>;
 
 export async function searchProducts(
-  params: SearchProductsParams
+  params: SearchProductsParams,
 ): Promise<ApiResult<SearchProductsResponse>> {
   return get<SearchProductsResponse>(
-    buildListUrl(`${BASE}/products/search`, params)
+    buildListUrl(`${BASE}/products/search`, params),
   );
 }
 
@@ -55,7 +55,7 @@ export async function getProductDetail(
   }
   const query = params.toString();
   return get<ProductDetail>(
-    `${BASE}/products/${productId}/detail${query ? `?${query}` : ""}`
+    `${BASE}/products/${productId}/detail${query ? `?${query}` : ""}`,
   );
 }
 
@@ -88,11 +88,11 @@ export interface CreateLayawayPayload {
 
 export async function createLayaway(
   saleId: number,
-  payload: CreateLayawayPayload
+  payload: CreateLayawayPayload,
 ): Promise<ApiResult<{ id: number; sale_id: number }>> {
   return post<{ id: number; sale_id: number }>(
     `${BASE}/sales/${saleId}/layaways`,
-    payload
+    payload,
   );
 }
 
@@ -104,24 +104,24 @@ export interface RegisterLayawayPaymentPayload {
 
 export async function registerLayawayPayment(
   layawayId: number,
-  payload: RegisterLayawayPaymentPayload
+  payload: RegisterLayawayPaymentPayload,
 ): Promise<ApiResult<unknown>> {
   return post<unknown>(`${BASE}/layaways/${layawayId}/payments`, payload);
 }
 
 export async function completeLayaway(
-  layawayId: number
+  layawayId: number,
 ): Promise<ApiResult<{ success: boolean; message: string }>> {
   return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/complete`
+    `${BASE}/layaways/${layawayId}/complete`,
   );
 }
 
 export async function cancelLayaway(
-  layawayId: number
+  layawayId: number,
 ): Promise<ApiResult<{ success: boolean; message: string }>> {
   return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/cancel`
+    `${BASE}/layaways/${layawayId}/cancel`,
   );
 }
 
@@ -134,9 +134,27 @@ export interface CreateSaleDraftPayload {
 }
 
 export async function createSaleDraft(
-  payload: CreateSaleDraftPayload
+  payload: CreateSaleDraftPayload,
 ): Promise<ApiResult<{ id: number; folio: string }>> {
   return post<{ id: number; folio: string }>(`${BASE}/sales`, payload);
+}
+
+export async function updateSaleClient(
+  saleId: number,
+  clientId: number,
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/client`, {
+    client_id: clientId,
+  });
+}
+
+export async function updateSaleLayawayTerm(
+  saleId: number,
+  layawayTermId: number,
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/layaway-term`, {
+    layaway_term_id: layawayTermId,
+  });
 }
 
 export interface AddSaleItemPayload {
@@ -148,7 +166,7 @@ export interface AddSaleItemPayload {
 
 export async function addSaleItem(
   saleId: number,
-  payload: AddSaleItemPayload
+  payload: AddSaleItemPayload,
 ): Promise<ApiResult<unknown>> {
   return post<unknown>(`${BASE}/sales/${saleId}/items`, payload);
 }
@@ -162,14 +180,14 @@ export interface UpdateSaleItemPayload {
 export async function updateSaleItem(
   saleId: number,
   itemId: number,
-  payload: UpdateSaleItemPayload
+  payload: UpdateSaleItemPayload,
 ): Promise<ApiResult<unknown>> {
   return patch<unknown>(`${BASE}/sales/${saleId}/items/${itemId}`, payload);
 }
 
 export async function removeSaleItem(
   saleId: number,
-  itemId: number
+  itemId: number,
 ): Promise<ApiResult<unknown>> {
   return del<unknown>(`${BASE}/sales/${saleId}/items/${itemId}`);
 }
@@ -181,7 +199,7 @@ export interface RequestSaleDiscountPayload {
 
 export async function requestSaleDiscount(
   saleId: number,
-  payload: RequestSaleDiscountPayload
+  payload: RequestSaleDiscountPayload,
 ): Promise<ApiResult<unknown>> {
   return post<unknown>(`${BASE}/sales/${saleId}/discounts`, payload);
 }
@@ -195,16 +213,16 @@ export interface RegisterPaymentPayload {
 
 export async function registerSalePayment(
   saleId: number,
-  payload: RegisterPaymentPayload
+  payload: RegisterPaymentPayload,
 ): Promise<ApiResult<unknown>> {
   return post<unknown>(`${BASE}/sales/${saleId}/payments`, payload);
 }
 
 export async function confirmSalePayment(
-  saleId: number
+  saleId: number,
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return post<{ id: number; folio: string; status: string }>(
-    `${BASE}/sales/${saleId}/confirm`
+    `${BASE}/sales/${saleId}/confirm`,
   );
 }
 
@@ -216,16 +234,16 @@ export interface ConfirmCreditSalePayload {
 
 export async function confirmCreditSale(
   saleId: number,
-  payload: ConfirmCreditSalePayload
+  payload: ConfirmCreditSalePayload,
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return post<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm-credit`,
-    payload
+    payload,
   );
 }
 
 export async function getSaleDetail(
-  saleId: number
+  saleId: number,
 ): Promise<ApiResult<SaleDetail>> {
   return get<SaleDetail>(`${BASE}/sales/${saleId}`);
 }
@@ -233,7 +251,7 @@ export async function getSaleDetail(
 export async function getDeliveryAvailability(
   month: number,
   year: number,
-  branchId?: number
+  branchId?: number,
 ): Promise<DeliveryAvailabilityItem[]> {
   const params = new URLSearchParams({
     month: String(month),
@@ -242,37 +260,25 @@ export async function getDeliveryAvailability(
   if (branchId) params.append("branch_id", String(branchId));
   return unwrapOrThrow(
     await get<DeliveryAvailabilityItem[]>(
-      `${BASE}/delivery-availability?${params.toString()}`
-    )
+      `${BASE}/delivery-availability?${params.toString()}`,
+    ),
   );
 }
 
 export async function setDeliveryDate(
   saleId: number,
-  payload: SetDeliveryDatePayload
+  payload: SetDeliveryDatePayload,
 ): Promise<{ id: number; delivery_date: string }> {
   return unwrapOrThrow(
     await post<{ id: number; delivery_date: string }>(
       `${BASE}/sales/${saleId}/delivery-date`,
-      payload
-    )
+      payload,
+    ),
   );
 }
 
-export async function removeDeliveryDate(
-  saleId: number
-): Promise<void> {
+export async function removeDeliveryDate(saleId: number): Promise<void> {
   return unwrapOrThrow(
-    await del<void>(`${BASE}/sales/${saleId}/delivery-date`)
-  );
-}
-
-export async function getEstimatedDeliveryDate(
-  branchId: number
-): Promise<{ estimatedDeliveryDate: string | null }> {
-  return unwrapOrThrow(
-    await get<{ estimatedDeliveryDate: string | null }>(
-      `${BASE}/branches/${branchId}/estimated-delivery-date`
-    )
+    await del<void>(`${BASE}/sales/${saleId}/delivery-date`),
   );
 }

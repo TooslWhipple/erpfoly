@@ -49,6 +49,8 @@ import {
   getPurchaseTypes,
   getLayawayTerms,
   createSaleDraft,
+  updateSaleClient,
+  updateSaleLayawayTerm,
   addSaleItem,
   updateSaleItem,
   removeSaleItem,
@@ -57,7 +59,6 @@ import {
   confirmCreditSale,
   createLayaway,
   setDeliveryDate,
-  getEstimatedDeliveryDate,
   getSaleDetail,
 } from "@/services/ventas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -78,7 +79,6 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
-import { FormDatePicker } from "@/components/Form";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
@@ -157,8 +157,6 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   const [deliveryBranchOverridden, setDeliveryBranchOverridden] =
     useState(false);
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
-  const [estimatedDateOverride, setEstimatedDateOverride] =
-    useState<string>("");
   const [useCustomDeliveryAddress, setUseCustomDeliveryAddress] =
     useState(false);
   const [customDeliveryAddress, setCustomDeliveryAddress] = useState<{
@@ -373,6 +371,10 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       if (matched) setPaymentType(matched[0] as "CREDIT" | "CASH" | "LAYAWAY");
     }
 
+    if (resumeSaleData.layawayTermId != null) {
+      setSelectedLayawayTermId(resumeSaleData.layawayTermId);
+    }
+
     if (resumeSaleData.deliveryType === "ADDRESS") {
       setDeliveryType("delivery");
     } else if (resumeSaleData.deliveryType === "BRANCH") {
@@ -383,9 +385,6 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           label: resumeSaleData.deliveryBranchName ?? "",
         });
         setDeliveryBranchOverridden(true);
-      }
-      if (resumeSaleData.estimatedDeliveryDate) {
-        setEstimatedDateOverride(resumeSaleData.estimatedDeliveryDate);
       }
     }
   }
@@ -469,6 +468,12 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     } else {
       saleId = activeSaleId;
       folio = activeSaleFolio ?? "";
+
+      if (selectedClient) {
+        const clientRes = await updateSaleClient(saleId, selectedClient.id);
+        if (clientRes.error) throw new Error(clientRes.error.message);
+      }
+
       const currentIds = new Set(
         cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
       );
@@ -502,6 +507,11 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       }
 
       setOriginalItemIds(currentIds);
+    }
+
+    if (paymentType === "LAYAWAY" && activeLayawayTerm) {
+      const termRes = await updateSaleLayawayTerm(saleId, activeLayawayTerm.id);
+      if (termRes.error) throw new Error(termRes.error.message);
     }
 
     await syncDeliverySelection(saleId);
@@ -549,15 +559,10 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           address_id: addressId,
         });
       } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-        const branchDeliveryDate =
-          effectivePickupDate || estimatedDate || undefined;
         await setDeliveryDate(saleId, {
           delivery_type: "BRANCH",
           branch_id: effectiveDeliveryBranch.id,
-          delivery_date: branchDeliveryDate || undefined,
-          estimated_delivery_date: needsEstimatedDate
-            ? estimatedDate || undefined
-            : undefined,
+          delivery_date: effectivePickupDate || undefined,
         });
       }
 
@@ -728,22 +733,11 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     deliveryType === "pickup" &&
     isDeliveryBranchCurrent &&
     hasStockAtDeliveryBranch === true;
-  const needsEstimatedDate =
-    deliveryType === "pickup" && hasStockAtDeliveryBranch === false;
-
-  const { data: estimatedDateResult } = useQuery({
-    queryKey: ["estimated-delivery-date", effectiveDeliveryBranch?.id],
-    enabled: needsEstimatedDate && !!effectiveDeliveryBranch,
-    queryFn: () =>
-      getEstimatedDeliveryDate(effectiveDeliveryBranch!.id as number),
-  });
 
   // La fecha de recolección en otra sucursal con stock (escenario 3) y la
   // fecha de domicilio quedan diferidas para después del pago; el único caso
   // con fecha automática es el pickup inmediato en la sucursal actual.
   const effectivePickupDate = isSameDayPickup ? todayIsoDate : "";
-  const estimatedDate =
-    estimatedDateOverride || estimatedDateResult?.estimatedDeliveryDate || "";
 
   const handleUseClientBillingDataToggle = (checked: boolean) => {
     setUseClientBillingData(checked);
@@ -782,7 +776,6 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   }) => {
     setDeliveryBranch(branch);
     setDeliveryBranchOverridden(true);
-    setEstimatedDateOverride("");
     setBranchPickerOpen(false);
   };
 
@@ -888,10 +881,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       ? !!customDeliveryAddress
       : !!selectedClient?.primaryAddressFormatted);
 
-  const isPickupReady =
-    deliveryType === "pickup" &&
-    !!effectiveDeliveryBranch &&
-    (hasStockAtDeliveryBranch === true || needsEstimatedDate);
+  const isPickupReady = deliveryType === "pickup" && !!effectiveDeliveryBranch;
 
   const isDeliveryInfoReady =
     deliveryType === "delivery"
@@ -3321,31 +3311,6 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     <Alert severity="success" sx={{ mb: 1 }}>
                       Entrega hoy mismo en tienda.
                     </Alert>
-                  )}
-
-                  {needsEstimatedDate && (
-                    <>
-                      {estimatedDateResult?.estimatedDeliveryDate ? (
-                        <Alert severity="info" sx={{ mb: 1 }}>
-                          Esta sucursal no tiene existencia; se calculó una
-                          fecha estimada según la ruta de reparto. Puedes
-                          ajustarla.
-                        </Alert>
-                      ) : (
-                        <Alert severity="warning" sx={{ mb: 1 }}>
-                          No se pudo calcular una fecha estimada para esta
-                          sucursal (sin ruta programada). Puedes definirla
-                          manualmente o dejarla en blanco.
-                        </Alert>
-                      )}
-                      <FormDatePicker
-                        label="Fecha estimada de entrega"
-                        value={estimatedDate}
-                        onChange={setEstimatedDateOverride}
-                        minDate={todayIsoDate}
-                        fullWidth
-                      />
-                    </>
                   )}
                 </>
               )}

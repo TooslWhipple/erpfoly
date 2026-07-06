@@ -1,5 +1,6 @@
 export type SaleStatus =
   | "DRAFT"
+  | "PENDING_DISCOUNT"
   | "PENDING_PAYMENT"
   | "PAID"
   | "PARTIALLY_DELIVERED"
@@ -146,7 +147,8 @@ export interface SaleDetailLayaway {
   payments: SaleDetailLayawayPayment[];
 }
 
-export type DiscountRequestReason = "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
+export type DiscountRequestReason =
+  "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
 
 export type DiscountRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -169,6 +171,7 @@ export interface SaleDetail {
   totalAmount: number;
   loyaltyPointsValue: number;
   purchaseType: string | null;
+  layawayTermId?: number | null;
   createdAt: string;
   branchId?: number | null;
   deliveryDate?: string | null;
@@ -186,7 +189,7 @@ export interface SaleDetail {
   discountRequest: SaleDiscountRequest | null;
 }
 
-export type DeliveryAvailability = 'available' | 'low' | 'none';
+export type DeliveryAvailability = "available" | "low" | "none";
 
 export interface DeliveryAvailabilityItem {
   date: string;
@@ -196,7 +199,7 @@ export interface DeliveryAvailabilityItem {
 
 export interface SetDeliveryDatePayload {
   delivery_date?: string;
-  delivery_type?: 'ADDRESS' | 'BRANCH';
+  delivery_type?: "ADDRESS" | "BRANCH";
   branch_id?: number;
   address_id?: number;
   estimated_delivery_date?: string;

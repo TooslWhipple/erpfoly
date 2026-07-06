@@ -26,6 +26,7 @@ export interface GetSalesParams {
   limit: number;
   search?: string;
   statusTab?: SaleStatusTab;
+  created_by?: number;
 }
 
 export interface ProductSearchResult {
@@ -76,6 +77,8 @@ export interface CartItem {
   unitPrice: number;
   quantity: number;
   sources: InventorySource[];
+  /** Set when this line was hydrated from an existing DRAFT sale being resumed. */
+  saleItemId?: number;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -143,6 +146,20 @@ export interface SaleDetailLayaway {
   payments: SaleDetailLayawayPayment[];
 }
 
+export type DiscountRequestReason = "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
+
+export type DiscountRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface SaleDiscountRequest {
+  id: number;
+  status: DiscountRequestStatus;
+  reason: DiscountRequestReason;
+  discountPct: number | null;
+  approvedDiscountPct: number | null;
+  notes: string | null;
+  rejectionReason: string | null;
+}
+
 export interface SaleDetail {
   id: number;
   folio: string;
@@ -158,6 +175,7 @@ export interface SaleDetail {
   estimatedDeliveryDate?: string | null;
   deliveryStatus?: string | null;
   deliveryType?: string | null;
+  deliveryBranchId?: number | null;
   deliveryBranchName?: string | null;
   deliveryAddressFormatted?: string | null;
   client: SaleDetailClient | null;
@@ -165,6 +183,7 @@ export interface SaleDetail {
   payments: SaleDetailPayment[];
   credit: SaleDetailCredit | null;
   layaway: SaleDetailLayaway | null;
+  discountRequest: SaleDiscountRequest | null;
 }
 
 export type DeliveryAvailability = 'available' | 'low' | 'none';

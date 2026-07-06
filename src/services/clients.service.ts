@@ -53,6 +53,7 @@ export interface GetClientsParams {
   limit: number;
   search?: string;
   status?: ClientStatus;
+  client_id?: number;
 }
 
 export type GetClientsResponse = PaginatedRowsResponse<Client>;

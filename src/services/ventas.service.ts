@@ -1,4 +1,4 @@
-import { get, post, del } from "@/lib/axios";
+import { get, post, patch, del } from "@/lib/axios";
 import { unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
@@ -10,6 +10,7 @@ import type {
   SaleDetail,
   DeliveryAvailabilityItem,
   SetDeliveryDatePayload,
+  DiscountRequestReason,
 } from "@/types/ventas.types";
 
 export type { SaleListItem, GetSalesParams };
@@ -150,6 +151,39 @@ export async function addSaleItem(
   payload: AddSaleItemPayload
 ): Promise<ApiResult<unknown>> {
   return post<unknown>(`${BASE}/sales/${saleId}/items`, payload);
+}
+
+export interface UpdateSaleItemPayload {
+  quantity?: number;
+  unit_price?: number;
+  discount_amount?: number;
+}
+
+export async function updateSaleItem(
+  saleId: number,
+  itemId: number,
+  payload: UpdateSaleItemPayload
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/items/${itemId}`, payload);
+}
+
+export async function removeSaleItem(
+  saleId: number,
+  itemId: number
+): Promise<ApiResult<unknown>> {
+  return del<unknown>(`${BASE}/sales/${saleId}/items/${itemId}`);
+}
+
+export interface RequestSaleDiscountPayload {
+  reason: DiscountRequestReason;
+  notes?: string;
+}
+
+export async function requestSaleDiscount(
+  saleId: number,
+  payload: RequestSaleDiscountPayload
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/sales/${saleId}/discounts`, payload);
 }
 
 export interface RegisterPaymentPayload {

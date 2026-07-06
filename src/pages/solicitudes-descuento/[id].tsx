@@ -199,7 +199,7 @@ export default function DiscountRequestDetailPage() {
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
         saleTotal={detail.totalBeforeSpecialDiscount}
-        suggestedDiscountPercent={detail.requestedDiscountPct}
+        suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />
       <Stack spacing={2}>

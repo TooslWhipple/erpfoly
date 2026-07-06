@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Divider,
   Grid,
   IconButton,
@@ -15,7 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { CheckCircle, Truck, Store, Clock } from "lucide-react";
+import { CheckCircle, Truck, Store, Clock, XCircle } from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { PickersDay, type PickersDayProps } from "@mui/x-date-pickers/PickersDay";
@@ -339,6 +340,7 @@ export default function VentaDetalle() {
   const layawayAmountNum =
     parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
+  const isSaleCancelled = sale.status === "CANCELLED";
 
   return (
     <Box sx={{ p: 3, bgcolor: "#fafafa", minHeight: "100vh" }}>
@@ -364,6 +366,17 @@ export default function VentaDetalle() {
           <Typography variant="h5" fontWeight={700}>
             Detalle de la venta
           </Typography>
+          {isSaleCancelled && (
+            <Chip
+              label="Cancelada"
+              size="small"
+              sx={{
+                bgcolor: "#FEF2F2",
+                color: "#DC2626",
+                fontWeight: 600,
+              }}
+            />
+          )}
         </Stack>
       </Stack>
 
@@ -398,7 +411,31 @@ export default function VentaDetalle() {
             }}
           >
             <CardContent sx={{ p: 3 }}>
-              {isPendingLayaway ? (
+              {isSaleCancelled ? (
+                <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
+                  <Box
+                    sx={{
+                      bgcolor: "#FEF2F2",
+                      borderRadius: 2,
+                      p: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <XCircle size={20} color="#DC2626" />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600}>
+                      Venta cancelada
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Esta venta fue cancelada y ya no puede modificarse.
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : isPendingLayaway ? (
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
                   <Box
                     sx={{
@@ -541,7 +578,7 @@ export default function VentaDetalle() {
                           {item.product.name}
                         </Typography>
                       </Box>
-                      {!isPendingLayaway && (
+                      {!isPendingLayaway && !isSaleCancelled && (
                         <Box
                           sx={{ flexShrink: 0 }}
                           onClick={() => {

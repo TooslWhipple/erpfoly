@@ -1,5 +1,10 @@
 import { useState, useCallback } from "react";
+import {
+  INITIAL_BILLING_FORM_VALUES,
+  type BillingFormValues,
+} from "@/hooks/useBillingFieldsForm";
 
+export type { BillingFormValues };
 export type CreateCashClientTab = "basic" | "address" | "billing";
 
 export interface BasicInfoFormValues {
@@ -23,23 +28,6 @@ export interface AddressFormValues {
   receiverPhone: string;
   receiverName: string;
   useClientPhone: boolean;
-}
-
-export interface BillingFormValues {
-  requiresInvoice: boolean;
-  rfc: string;
-  businessName: string;
-  taxRegimeId: string;
-  cfdiUseId: string;
-  fiscalPostalCode: string;
-  fiscalNeighborhoodFullCode: string;
-  fiscalState: string;
-  fiscalCity: string;
-  fiscalStreet: string;
-  fiscalExternalNumber: string;
-  sendInvoiceByEmail: boolean;
-  invoiceEmail: string;
-  invoiceWhatsappNumber: string;
 }
 
 export interface CreateCashClientFormValues {
@@ -71,22 +59,7 @@ const initialAddress: AddressFormValues = {
   useClientPhone: false,
 };
 
-const initialBilling: BillingFormValues = {
-  requiresInvoice: false,
-  rfc: "",
-  businessName: "",
-  taxRegimeId: "",
-  cfdiUseId: "",
-  fiscalPostalCode: "",
-  fiscalNeighborhoodFullCode: "",
-  fiscalState: "",
-  fiscalCity: "",
-  fiscalStreet: "",
-  fiscalExternalNumber: "",
-  sendInvoiceByEmail: false,
-  invoiceEmail: "",
-  invoiceWhatsappNumber: "",
-};
+const initialBilling: BillingFormValues = INITIAL_BILLING_FORM_VALUES;
 
 export function useCreateCashClientForm() {
   const [activeTab, setActiveTab] = useState<CreateCashClientTab>("basic");

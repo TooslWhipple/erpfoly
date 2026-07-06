@@ -25,7 +25,7 @@ export default function NumberSpinner({
   const displayValue = draftValue !== null ? draftValue : String(value);
 
   const canDecrement = value > min && !disabled;
-  const canIncrement = max === undefined || value < max;
+  const canIncrement = (max === undefined || value < max) && !disabled;
 
   const handleDecrement = () => {
     if (canDecrement) onChange(value - 1);

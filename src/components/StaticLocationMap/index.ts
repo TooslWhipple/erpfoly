@@ -1,0 +1,1 @@
+export { StaticLocationMap } from "./StaticLocationMap";

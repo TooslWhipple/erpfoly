@@ -4,19 +4,10 @@ import { TableCrud } from "@/components";
 import type { Column } from "@/components/TableCrud";
 import { getPromotions } from "@/services/branchDetail.service";
 import type { BranchPromotion } from "@/types/sucursales.types";
+import { formatDate } from "@/utils/date";
 
 interface PromotionsTabProps {
   branchId: number;
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "Sin fecha fin";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("es-MX", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function getTypeLabel(type: BranchPromotion["type"]): string {
@@ -26,6 +17,11 @@ function getTypeLabel(type: BranchPromotion["type"]): string {
     layaway: "Apartados",
   };
   return labels[type];
+}
+
+function formatEndDate(value: unknown): string {
+  if (value == null) return "Sin fecha fin";
+  return formatDate(value, "dateLong");
 }
 
 export function PromotionsTab({ branchId }: PromotionsTabProps) {
@@ -82,13 +78,13 @@ export function PromotionsTab({ branchId }: PromotionsTabProps) {
       id: "startDate",
       label: "Inicio",
       size: "md",
-      format: (value) => formatDate(value as string),
+      format: (value) => formatDate(value, "dateLong"),
     },
     {
       id: "endDate",
       label: "Fin",
       size: "md",
-      format: (value) => formatDate(value as string | null),
+      format: formatEndDate,
     },
     { id: "departments", label: "Departamentos", size: "md", truncate: true },
     { id: "lines", label: "Líneas", size: "sm" },

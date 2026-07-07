@@ -1,5 +1,6 @@
 import { Button, InputAdornment, Typography, CircularProgress } from "@mui/material";
 import { FormTextField } from "@/components/Form";
+import { formatDate } from "@/utils/date";
 import {
   Card,
   FormFieldsContainer,
@@ -16,19 +17,11 @@ export function OpenCashRegisterForm({
   onExchangeRateChange,
   onOpen,
 }: OpenCashRegisterFormProps) {
-  const formatDate = () => {
-    const date = new Date();
-    const options: Intl.DateTimeFormatOptions = {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    };
-    return date.toLocaleDateString("es-MX", options);
-  };
-
   return (
     <Card>
-      <Typography variant="body1" fontWeight={500} textAlign="center">{formatDate()}</Typography>
+      <Typography variant="body1" fontWeight={500} textAlign="center">
+        {formatDate(new Date(), "dateLong")}
+      </Typography>
 
       <FormFieldsContainer>
         <FormTextField

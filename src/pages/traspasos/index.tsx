@@ -13,11 +13,13 @@ import {
 } from "@/utils/branchRequest";
 import { Stack } from "@mui/material";
 import { TRASPASOS_CREATE, TRASPASOS_READ, TRASPASOS_UPDATE } from "@/lib/permissions";
+import dayjs from "@/lib/dayjs";
+import { formatDate } from "@/utils/date";
 
 interface BranchOrder {
     id: number;
     folio: string;
-    date: string;
+    date: string | Date;
     originBranch: string;
     branch: string;
     requestedBy: string;
@@ -50,17 +52,10 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
     const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
     const totalDelivered = order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
 
-    const orderDate = new Date(order.order_date);
-    const formattedDate = orderDate.toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
-
     return {
         id: order.id,
         folio: order.folio,
-        date: formattedDate,
+        date: dayjs(order.order_date).toDate(),
         originBranch: order.origin_branch?.name ?? "—",
         branch: order.branch?.name ?? "Sin sucursal",
         requestedBy: order.requested_by_user
@@ -212,6 +207,7 @@ export default function TraspasosPage() {
             id: "date",
             label: "Fecha",
             size: "lg",
+            format: (value) => formatDate(value, "dateLong"),
         },
         {
             id: "originBranch",

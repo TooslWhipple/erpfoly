@@ -1,5 +1,6 @@
 import { Box, Grid, Stack, Typography } from "@mui/material";
 import { ArrowForward as ArrowForwardIcon } from "@mui/icons-material";
+import { formatDate } from "@/utils/date";
 import {
     Card,
     ProgressBarContainer,
@@ -14,9 +15,9 @@ export type { OrderStatus } from "./styles";
 export interface OrderCardData {
     id: number;
     supplier: string;
-    supplierDate: string;
+    supplierDate: string | Date;
     destination: string;
-    deliveryDate: string;
+    deliveryDate: string | Date;
     itemCount: number;
     status: OrderStatus;
     progress: number;
@@ -80,12 +81,12 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
                         <Stack direction="row" alignItems="center" width="100%" spacing={2} flex={5}>
                             <Stack spacing={0.5} width="100%" flex={3}>
                                 <Typography variant="body1" fontWeight={500}>{order.supplier}</Typography>
-                                <Typography variant="body2" color="text.secondary">{order.supplierDate}</Typography>
+                                <Typography variant="body2" color="text.secondary">{formatDate(order.supplierDate, "dateLong")}</Typography>
                             </Stack>
                             <ArrowForwardIcon sx={{ fontSize: 20 }} />
                             <Stack spacing={0.5} width="100%" flex={3}>
                                 <Typography variant="body1" fontWeight={500}>{order.destination}</Typography>
-                                <Typography variant="body2" color="text.secondary">Entrega: {order.deliveryDate}</Typography>
+                                <Typography variant="body2" color="text.secondary">Entrega: {formatDate(order.deliveryDate, "dateLong")}</Typography>
                             </Stack>
                         </Stack>
                         <Stack direction="row" alignItems="center" justifyContent={{ xs: "flex-start", md: "flex-end" }} spacing={2} flex={2}>

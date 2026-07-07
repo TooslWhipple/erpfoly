@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjs";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
 import { MainLayout, Breadcrumbs, Pencil, StatusChip } from "@/components";
@@ -203,7 +203,7 @@ export default function ResumenPedido() {
                     <Stack spacing={1}>
                         <Breadcrumbs items={breadcrumbs} />
                         <Typography variant="h1">Pedido {order.folio}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>Fecha de alta: {dayjs(order.created_at).format("DD [de] MMMM, YYYY")}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>Fecha de alta: {dayjs(order.created_at).format("D [de] MMMM, YYYY")}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={2} alignItems="center">
                         <Button

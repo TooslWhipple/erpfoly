@@ -528,7 +528,6 @@ export default function VentaDetalle() {
                   const selectedDate = sale?.deliveryDate ? dayjs(sale.deliveryDate) : null;
                   const formattedDate = selectedDate
                     ? selectedDate
-                        .locale("es-mx")
                         .format("dddd D [de] MMMM[,] YYYY")
                         .replace(/^\w/, (c: string) => c.toUpperCase())
                     : null;
@@ -1187,7 +1186,6 @@ export default function VentaDetalle() {
                     <Stack spacing={0.25}>
                       <Typography variant="body2" fontWeight={600}>
                         {modalDate
-                          .locale("es-mx")
                           .format("dddd D [de] MMMM")
                           .replace(/^\w/, (c) => c.toUpperCase())}
                       </Typography>

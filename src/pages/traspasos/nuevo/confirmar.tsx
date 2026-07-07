@@ -10,6 +10,7 @@ import { createOrderWithItems } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
+import dayjs from "@/lib/dayjs";
 
 interface ConfirmOrderData {
     orderType: "external" | "internal";
@@ -155,7 +156,7 @@ export default function ConfirmarTraspasoPage() {
                     ? Number(orderData.originBranchId)
                     : undefined,
                 folio: `PED-${Date.now()}`,
-                order_date: new Date().toISOString().split("T")[0],
+                order_date: dayjs().format("YYYY-MM-DD"),
                 supplier_id: orderData.orderType === "external" && orderData.supplierId
                     ? Number(orderData.supplierId)
                     : undefined,

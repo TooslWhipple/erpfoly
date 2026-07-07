@@ -193,11 +193,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     return { lat, lng };
   }, [selectedClient]);
 
-  const todayIsoDate = useMemo(() => {
-    const d = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }, []);
+  const todayIsoDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
   const [productSearch, setProductSearch] = useState("");
   const [productPage, setProductPage] = useState(0);

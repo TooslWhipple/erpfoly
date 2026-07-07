@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjs";
 import { useRouter } from "next/router";
 import {
     Button,
@@ -37,13 +37,14 @@ import {
 import { theme } from "@/styles/theme";
 import { ArrowRight } from "lucide-react";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { formatDate } from "@/utils/date";
 
 const DELIVERY_DATE_REQUIRED_MESSAGE = "Selecciona la fecha de entrega.";
 const DELIVERY_DATE_PAST_MESSAGE = "La fecha de entrega no puede ser anterior a mañana.";
 
 function formatScheduledDate(value: string | null | undefined): string {
     if (!value) return "";
-    return new Date(value).toISOString().split("T")[0];
+    return dayjs(value).format("YYYY-MM-DD");
 }
 
 function getMinDeliveryDate(): string {
@@ -90,12 +91,7 @@ async function getBranchOrderDetail(orderId: string): Promise<BranchOrderDetail 
 }
 
 function formatCreatedDate(isoDate: string): string {
-    const d = new Date(isoDate);
-    return d.toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
+    return formatDate(isoDate, "dateLong");
 }
 
 type PageStatus = "loading" | "success" | "empty" | "error" | "submitting";

@@ -11,6 +11,7 @@ import type { OrderListItem } from "@/types/orders.types";
 import { getOrders, getSuggestions } from "@/services/orders.service";
 import { SidebarPanel } from "@/styles/pedidos.styles";
 import { ORDERS_CREATE } from "@/lib/permissions";
+import dayjs from "@/lib/dayjs";
 
 type OrderStatus = "pending" | "in_progress" | "received";
 
@@ -28,27 +29,15 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
         status = "pending";
     }
 
-    const orderDate = new Date(order.order_date);
-    const formattedDate = orderDate.toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
-
-    const estimatedDelivery = new Date(orderDate);
-    estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
-    const formattedDelivery = estimatedDelivery.toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
+    const orderDate = dayjs(order.order_date);
+    const estimatedDelivery = orderDate.add(7, "day");
 
     return {
         id: order.id,
         supplier: order.supplier?.name ?? "Sin proveedor",
-        supplierDate: formattedDate,
+        supplierDate: orderDate.toDate(),
         destination: order.branch?.name ?? "Bodega",
-        deliveryDate: formattedDelivery,
+        deliveryDate: estimatedDelivery.toDate(),
         itemCount: order.order_items.length,
         status,
         progress,

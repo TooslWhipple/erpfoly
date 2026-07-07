@@ -19,7 +19,8 @@ import {
   Check,
   Repeat2
 } from "lucide-react";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjs";
+import { formatDateOnly } from "@/utils/date";
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -176,9 +177,9 @@ type PendingRemoval =
 
 
 function formatDateLabel(date: Date): string {
-  const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  return `${days[date.getDay()]} ${date.getDate()} de ${months[date.getMonth()]}`;
+  const d = dayjs(date);
+  if (!d.isValid()) return "—";
+  return d.format("dddd D [de] MMM");
 }
 
 export default function RutaPage() {
@@ -846,7 +847,7 @@ export default function RutaPage() {
             <IconButton size="small" onClick={handleNextDay}>
               <ChevronRight size={20} />
             </IconButton>
-            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{formatDateLabel(selectedDate)}</Typography>
+            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{dayjs(selectedDate).format("dddd DD [de] MMMM")}</Typography>
             <Button
               size="small"
               variant="text"
@@ -978,7 +979,7 @@ export default function RutaPage() {
                                   <Repeat2 size={14} color={theme.palette.text.secondary} />
                                   <Typography variant="body2" color="text.secondary">
                                     {routeDetail.scheduledDate
-                                      ? dayjs(routeDetail.scheduledDate).format("D [de] MMMM, YYYY")
+                                      ? formatDateOnly(routeDetail.scheduledDate, "D [de] MMMM, YYYY")
                                       : "—"}
                                   </Typography>
                                   <Button

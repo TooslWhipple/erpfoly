@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
+import { formatDate } from "@/utils/date";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   TableWrapper,
@@ -222,13 +223,7 @@ export function TableCrud<T>({
         return typeof rawValue === "number" ? numeral(rawValue).format("0.00") + "%" : String(rawValue ?? "");
 
       case "date":
-        if (rawValue instanceof Date) {
-          return rawValue.toLocaleDateString();
-        }
-        if (typeof rawValue === "string") {
-          return new Date(rawValue).toLocaleDateString();
-        }
-        return String(rawValue ?? "");
+        return formatDate(rawValue, "dateNumeric");
 
       case "boolean":
         return rawValue ? "Sí" : "No";

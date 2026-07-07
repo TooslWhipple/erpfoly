@@ -14,7 +14,8 @@ export interface SupplierDashboardSummary {
 
 export interface SupplierAccountStatementRow {
   id: number;
-  periodLabel: string;
+  periodMonth: number;
+  periodYear: number;
   amount: number;
   payments: number;
   balance: number;
@@ -29,7 +30,7 @@ export interface SupplierDeliveryItem {
 
 export interface SupplierDeliveryGroup {
   id: number;
-  dateLabel: string;
+  date: string | Date;
   itemCount: number;
   items: SupplierDeliveryItem[];
 }
@@ -40,7 +41,8 @@ export interface SupplierChargeRow {
   id: number;
   description: string;
   category: string;
-  chargedInLabel: string;
+  periodMonth: number;
+  periodYear: number;
   amount: number;
   status: SupplierChargeStatus;
 }
@@ -70,7 +72,8 @@ export type SupplierPaymentStatus = "pending" | "paid";
 export interface SupplierPaymentRow {
   id: number;
   description: string;
-  chargedInLabel: string;
+  periodMonth: number;
+  periodYear: number;
   amount: number;
   status: SupplierPaymentStatus;
 }
@@ -83,11 +86,10 @@ export interface SupplierDamagedGoodsRow {
   id: number;
   sku: string;
   warehouse: string;
-  entryDate: string;
+  entryDate: string | Date;
   articleName: string;
   damageDescription: string;
   status: SupplierDamagedGoodsStatus;
-  elapsedLabel: string;
   urgency: SupplierDamagedGoodsUrgency;
 }
 

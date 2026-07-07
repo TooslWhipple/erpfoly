@@ -8,9 +8,10 @@ import type {
   SupplierAccountStatementRow,
   SupplierDamagedGoodsRow,
 } from "@/types/supplierDashboard.types";
+import dayjs from "@/lib/dayjs";
 
-function formatAccountStatementLabel(periodLabel: string, isNext: boolean): string {
-  const formatted = periodLabel.replace(/\s+(\d{4})$/, ", $1");
+function formatAccountStatementLabel(month: number, year: number, isNext: boolean): string {
+  const formatted = dayjs(`${year}-${String(month).padStart(2, "0")}-01`).format("MMMM YYYY");
   return isNext ? `${formatted} (Siguiente)` : formatted;
 }
 
@@ -34,7 +35,7 @@ export function useSupplierDamagedGoods(
     () =>
       accountStatements.map((statement, index) => ({
         value: statement.id,
-        label: formatAccountStatementLabel(statement.periodLabel, index === 0),
+        label: formatAccountStatementLabel(statement.periodMonth, statement.periodYear, index === 0),
       })),
     [accountStatements]
   );
@@ -114,7 +115,7 @@ export function useSupplierDamagedGoods(
         chargedInLabel,
         categoryId: "damaged_goods",
         damagedGoodsIds: selectedIds,
-      });
+      } as RegisterSupplierChargePayload & { damagedGoodsIds: number[] });
       setSaving(false);
 
       if (result.error) {

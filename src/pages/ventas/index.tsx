@@ -8,6 +8,8 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales } from "@/services/ventas.service";
 import type { SaleListItem, SalePaymentType, SaleStatusTab } from "@/types/ventas.types";
+import { formatDate } from "@/utils/date";
+import dayjs from "@/lib/dayjs";
 import { SALES_CREATE } from "@/lib/permissions";
 import { SALE_STATUS_CHIP_LABELS, SALE_STATUS_CHIP_VARIANTS } from "@/utils/saleStatus";
 
@@ -32,18 +34,18 @@ const PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
   LAYAWAY: "Apartado",
 };
 
-function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+function formatRelativeDate(value: unknown): string {
+  const d = value == null ? dayjs() : dayjs(value as string | number | Date);
+  if (!d.isValid()) return "—";
+  const now = dayjs();
+  const diffMin = now.diff(d, "minute");
+  const diffHours = now.diff(d, "hour");
+  const diffDays = now.diff(d, "day");
 
   if (diffMin < 60) return `Hace ${diffMin} min`;
   if (diffHours < 24) return `Hace ${diffHours} h`;
   if (diffDays === 1) return "Ayer";
-  return date.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  return formatDate(d, "D MMM");
 }
 
 export default function Ventas() {
@@ -137,7 +139,7 @@ export default function Ventas() {
       id: "createdAt",
       label: "Fecha",
       size: "md",
-      format: (value) => formatRelativeDate(String(value ?? "")),
+      format: (value) => formatRelativeDate(value),
     },
     {
       id: "paymentType",

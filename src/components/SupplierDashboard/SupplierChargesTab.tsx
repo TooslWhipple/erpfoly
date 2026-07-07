@@ -13,6 +13,7 @@ import type {
 import { TabActionsRow } from "@/styles/catalogos/proveedores-charges.styles";
 import { RegisterSupplierChargeModal } from "./RegisterSupplierChargeModal";
 import type { RegisterSupplierChargeFormValues } from "./RegisterSupplierChargeModal";
+import dayjs from "@/lib/dayjs";
 
 const CHARGE_STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
@@ -32,6 +33,11 @@ function truncateDescription(value: unknown): string {
   return `${text.slice(0, 42)}...`;
 }
 
+function formatPeriodLabel(month: unknown, year: unknown): string {
+  if (month == null || year == null) return "—";
+  return dayjs(`${year}-${String(month).padStart(2, "0")}-01`).format("MMMM YYYY");
+}
+
 const chargeColumns: DataTableColumn<SupplierChargeRow>[] = [
   {
     id: "description",
@@ -39,7 +45,11 @@ const chargeColumns: DataTableColumn<SupplierChargeRow>[] = [
     format: (value) => truncateDescription(value),
   },
   { id: "category", label: "Categoría" },
-  { id: "chargedInLabel", label: "Cargado en" },
+  {
+    id: "periodMonth",
+    label: "Cargado en",
+    format: (_value, row) => formatPeriodLabel(row.periodMonth, row.periodYear),
+  },
   { id: "amount", label: "Monto", type: "currency", align: "right" },
   {
     id: "status",

@@ -13,7 +13,8 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import { SideModal } from "@/components";
+import { SideModal, StatusChip } from "@/components";
+import type { StatusChipVariant } from "@/components/StatusChip";
 import { theme } from "@/styles/theme";
 import {
   mapDriverCandidateToView,
@@ -29,6 +30,20 @@ import {
   StyledTableCell,
   EmptyStateContainer,
 } from "./styles";
+
+const DRIVER_STATUS_LABEL: Record<string, string> = {
+  AVAILABLE: "Disponible",
+  ASSIGNED: "Asignado",
+  ON_ROUTE: "En ruta",
+  INACTIVE: "Inactivo",
+};
+
+const DRIVER_STATUS_VARIANT: Record<string, StatusChipVariant> = {
+  AVAILABLE: "success",
+  ASSIGNED: "info",
+  ON_ROUTE: "pending",
+  INACTIVE: "disabled",
+};
 
 export interface AddDriverToRouteModalProps {
   open: boolean;
@@ -154,13 +169,22 @@ export function AddDriverToRouteModal({
                 filteredDrivers.map((driver) => {
                   const fullName = `${driver.firstName} ${driver.lastName}`.trim();
                   const isPending = pendingId === driver.id;
+                  const statusKey = driver.status ?? "";
+                  const statusLabel = DRIVER_STATUS_LABEL[statusKey] ?? statusKey ?? "—";
+                  const statusVariant = DRIVER_STATUS_VARIANT[statusKey] ?? "default";
 
                   return (
                     <StyledTableRow key={driver.id} hover>
                       <StyledTableCell>{fullName}</StyledTableCell>
                       <StyledTableCell>{driver.licenseNumber}</StyledTableCell>
                       <StyledTableCell>{driver.phone}</StyledTableCell>
-                      <StyledTableCell>{driver.status}</StyledTableCell>
+                      <StyledTableCell>
+                        <StatusChip
+                          size="small"
+                          variant={statusVariant}
+                          label={statusLabel}
+                        />
+                      </StyledTableCell>
                       <StyledTableCell align="right">
                         <Button
                           variant="option"

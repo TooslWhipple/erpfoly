@@ -14,12 +14,18 @@ import { getSellerDetail } from "@/services/sellers.service";
 import type { SellerDetail, SellerSaleHistoryRow } from "@/types/sellers.types";
 import { ChartCard, MetricCard, SectionCard, SectionCardHeader } from "@/styles/catalogos/vendedores.styles";
 import { theme } from "@/styles/theme";
+import { formatDate } from "@/utils/date";
 
 const CHART_PRIMARY = "#2663EB";
 
 const historyColumns: Column<SellerSaleHistoryRow>[] = [
   { id: "code", label: "Código", size: "sm" },
-  { id: "dateLabel", label: "Fecha y hora", size: "md" },
+  {
+    id: "createdAt",
+    label: "Fecha y hora",
+    size: "md",
+    format: (value) => formatDate(value, "dateMonthTime12h"),
+  },
   {
     id: "type",
     label: "Tipo",

@@ -1,6 +1,7 @@
 import { Package } from "lucide-react";
 import { Divider, Stack, Typography } from "@mui/material";
 import type { BranchOrderLineItem } from "@/types/solicitudes.types";
+import dayjs from "@/lib/dayjs";
 import {
     Card,
     ProductIconPlaceholder,
@@ -20,9 +21,9 @@ export interface BranchOrderItemRowProps {
 function formatDateForInput(isoDate: string): string {
     if (!isoDate) return "";
     if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate;
-    const d = new Date(isoDate);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().split("T")[0];
+    const d = dayjs(isoDate);
+    if (!d.isValid()) return "";
+    return d.format("YYYY-MM-DD");
 }
 
 export function BranchOrderItemRow({

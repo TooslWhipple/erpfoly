@@ -8,6 +8,8 @@ import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales } from "@/services/ventas.service";
+import { formatDate } from "@/utils/date";
+import dayjs from "@/lib/dayjs";
 import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
 import { QUOTATIONS_READ } from "@/lib/permissions";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -116,18 +118,13 @@ export default function CotizacionesGuardadas() {
       label: "Fecha",
       size: "md",
       format: (value) => {
-        if (!value) return "—";
-        try {
-          const date = new Date(String(value));
-          const diffMs = Date.now() - date.getTime();
-          const diffMin = Math.floor(diffMs / 60000);
-          if (diffMin < 60) return `Hace ${diffMin} min`;
-          const diffH = Math.floor(diffMin / 60);
-          if (diffH < 24) return `Hace ${diffH} h`;
-          return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
-        } catch {
-          return "—";
-        }
+        const d = dayjs(value);
+        if (!d.isValid()) return "—";
+        const diffMin = dayjs().diff(d, "minute");
+        if (diffMin < 60) return `Hace ${diffMin} min`;
+        const diffH = dayjs().diff(d, "hour");
+        if (diffH < 24) return `Hace ${diffH} h`;
+        return formatDate(d, "D MMM");
       },
     },
     {

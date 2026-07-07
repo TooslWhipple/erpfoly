@@ -36,7 +36,14 @@ const ACCOUNT_STATUS_VARIANTS: Record<string, StatusChipVariant> = {
 };
 
 const accountStatementColumns: DataTableColumn<SupplierAccountStatementRow>[] = [
-  { id: "periodLabel", label: "Estado de cuenta" },
+  {
+    id: "periodMonth",
+    label: "Estado de cuenta",
+    format: (_value, row) => {
+      const d = new Date(row.periodYear, row.periodMonth - 1, 1);
+      return d.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+    },
+  },
   { id: "amount", label: "Monto", type: "currency" },
   { id: "payments", label: "Pagos", type: "currency" },
   { id: "balance", label: "Saldo", type: "currency" },

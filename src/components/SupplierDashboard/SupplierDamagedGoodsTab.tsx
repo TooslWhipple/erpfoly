@@ -14,6 +14,8 @@ import type {
 import { TabActionsRow, TabSelectionToolbar } from "@/styles/catalogos/proveedores-charges.styles";
 import { RegisterSupplierChargeModal } from "./RegisterSupplierChargeModal";
 import type { RegisterSupplierChargeFormValues } from "./RegisterSupplierChargeModal";
+import { formatDate } from "@/utils/date";
+import dayjs from "@/lib/dayjs";
 
 const DAMAGED_STATUS_LABELS: Record<string, string> = {
   scheduled: "Programado",
@@ -33,7 +35,20 @@ function truncateText(value: unknown, maxLength = 36): string {
   return `${text.slice(0, maxLength)}...`;
 }
 
-function renderElapsedLabel(_value: unknown, row: SupplierDamagedGoodsRow) {
+function formatElapsedLabel(detectedDate: string | Date): string {
+  const d = dayjs(detectedDate);
+  if (!d.isValid()) return "—";
+  const now = dayjs();
+  const diffDays = now.diff(d, "day");
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `${weeks} sem`;
+  }
+  const months = Math.floor(diffDays / 30);
+  return `${months} mes`;
+}
+
+function renderElapsedLabel(value: unknown, row: SupplierDamagedGoodsRow) {
   const showWarning = row.urgency === "high" || row.urgency === "medium";
   const iconColor =
     row.urgency === "high"
@@ -43,7 +58,7 @@ function renderElapsedLabel(_value: unknown, row: SupplierDamagedGoodsRow) {
   return (
     <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="flex-end">
       {showWarning && <AlertTriangle size={14} color={iconColor} />}
-      <Typography variant="body2">{row.elapsedLabel}</Typography>
+      <Typography variant="body2">{formatElapsedLabel(value as string | Date)}</Typography>
     </Stack>
   );
 }
@@ -117,7 +132,11 @@ export function SupplierDamagedGoodsTab({
       },
       { id: "sku", label: "SKU" },
       { id: "warehouse", label: "Almacén" },
-      { id: "entryDate", label: "Ingreso" },
+      {
+        id: "entryDate",
+        label: "Ingreso",
+        format: (value) => formatDate(value, "D MMM YYYY"),
+      },
       {
         id: "articleName",
         label: "Artículo",
@@ -136,7 +155,7 @@ export function SupplierDamagedGoodsTab({
         chipVariantMap: DAMAGED_STATUS_VARIANTS,
       },
       {
-        id: "elapsedLabel",
+        id: "entryDate",
         label: "Tiempo",
         align: "right",
         format: renderElapsedLabel,

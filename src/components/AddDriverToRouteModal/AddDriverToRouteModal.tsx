@@ -13,7 +13,8 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import { SideModal } from "@/components";
+import { SideModal, StatusChip } from "@/components";
+import type { StatusChipVariant } from "@/components/StatusChip";
 import { theme } from "@/styles/theme";
 import {
   mapDriverCandidateToView,
@@ -29,6 +30,20 @@ import {
   StyledTableCell,
   EmptyStateContainer,
 } from "./styles";
+
+const DRIVER_STATUS_LABEL: Record<string, string> = {
+  AVAILABLE: "Disponible",
+  ASSIGNED: "Asignado",
+  ON_ROUTE: "En ruta",
+  INACTIVE: "Inactivo",
+};
+
+const DRIVER_STATUS_VARIANT: Record<string, StatusChipVariant> = {
+  AVAILABLE: "success",
+  ASSIGNED: "info",
+  ON_ROUTE: "pending",
+  INACTIVE: "disabled",
+};
 
 export interface AddDriverToRouteModalProps {
   open: boolean;
@@ -142,46 +157,48 @@ export function AddDriverToRouteModal({
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
-                <StyledTableCell>Nombre</StyledTableCell>
-                <StyledTableCell>Licencia</StyledTableCell>
-                <StyledTableCell>Teléfono</StyledTableCell>
-                <StyledTableCell>Estado</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "160px" }}>Nombre</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "144px" }}>Licencia</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "112px" }}>Teléfono</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "112px" }}>Estado</StyledTableCell>
                 <StyledTableCell align="right">Acción</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredDrivers.map((driver) => {
-                const fullName = `${driver.firstName} ${driver.lastName}`.trim();
-                const isPending = pendingId === driver.id;
-                return (
-                  <StyledTableRow key={driver.id} hover>
-                    <StyledTableCell>{fullName}</StyledTableCell>
-                    <StyledTableCell>
-                      {driver.licenseNumber || "—"}
-                    </StyledTableCell>
-                    <StyledTableCell>{driver.phone || "—"}</StyledTableCell>
-                    <StyledTableCell>
-                      {driver.status || "—"}
-                    </StyledTableCell>
-                    <StyledTableCell align="right">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={() => void handleConfirm(driver.id)}
-                        disabled={submitting}
-                        startIcon={
-                          isPending ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : undefined
-                        }
-                      >
-                        Agregar
-                      </Button>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                );
-              })}
+              {
+                filteredDrivers.map((driver) => {
+                  const fullName = `${driver.firstName} ${driver.lastName}`.trim();
+                  const isPending = pendingId === driver.id;
+                  const statusKey = driver.status ?? "";
+                  const statusLabel = DRIVER_STATUS_LABEL[statusKey] ?? statusKey ?? "—";
+                  const statusVariant = DRIVER_STATUS_VARIANT[statusKey] ?? "default";
+
+                  return (
+                    <StyledTableRow key={driver.id} hover>
+                      <StyledTableCell>{fullName}</StyledTableCell>
+                      <StyledTableCell>{driver.licenseNumber}</StyledTableCell>
+                      <StyledTableCell>{driver.phone}</StyledTableCell>
+                      <StyledTableCell>
+                        <StatusChip
+                          size="small"
+                          variant={statusVariant}
+                          label={statusLabel}
+                        />
+                      </StyledTableCell>
+                      <StyledTableCell align="right">
+                        <Button
+                          variant="option"
+                          color="primary"
+                          size="small"
+                          onClick={() => void handleConfirm(driver.id)}
+                          disabled={submitting}>
+                          {(isPending) ? <CircularProgress size={14} color="inherit" /> : "Agregar"}
+                        </Button>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  );
+                })
+              }
             </TableBody>
           </Table>
         )}

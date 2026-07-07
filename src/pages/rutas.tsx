@@ -10,15 +10,17 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  User,
   Box,
   Route,
   Truck,
   Plus,
   PlusCircle,
-  Save
+  Save,
+  Check,
+  Repeat2
 } from "lucide-react";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjs";
+import { formatDateOnly } from "@/utils/date";
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -43,13 +45,10 @@ import {
   DetailMiniMap,
 } from "@/styles/rutas.styles";
 import { ArticlesTab, RouteTab, CartaPorteTab, DriverTab } from "@/components/RouteTabs";
-import type { RouteSummary } from "@/types/rutas.types";
+import type { RouteSummary, AddRoutePointPayload, AvailableOrdersResponse } from "@/types/rutas.types";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
-import {
-  ROUTE_ARTICLES_UPDATE,
-  ROUTES_UPDATE,
-} from "@/lib/permissions";
+import { ROUTES_UPDATE } from "@/lib/permissions";
 
 import {
   addAssistantToRoute,
@@ -64,12 +63,13 @@ import {
   fetchRoutesForDate,
   removeAssistantFromRoute,
   removeDriverFromRoute,
+  removeRoutePoint,
+  removeRoutePointItem,
   updateRouteVehicleInfo,
   uploadCartaPorte,
 } from "@/services/rutas.service";
-import { getMunicipalityCatalog } from "@/services/municipalities.service";
 import { getBranchesCatalog } from "@/services/branches.service";
-import type { RouteDetailApi } from "@/types/rutas-api.types";
+import type { RouteDetailApi, AvailableOrdersApi } from "@/types/rutas-api.types";
 import {
   mapRouteDetailApiToView,
   mapRouteListRowToSummary,
@@ -152,22 +152,39 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelada",
 };
 
+const ROUTE_TYPE_LABEL: Record<string, string> = {
+  deliveries: "Entrega",
+  scheduled: "Distribución programada",
+};
+
 type PendingRemoval =
   | { kind: "driver"; name: string }
   | { kind: "assistant"; id: number; name: string }
+  | {
+    kind: "routeOrder";
+    pointId: number;
+    orderNumber: string;
+    itemCount: number;
+  }
+  | {
+    kind: "routeItem";
+    pointId: number;
+    itemId: number;
+    orderNumber: string;
+    articleName: string;
+  }
   | null;
 
 
 function formatDateLabel(date: Date): string {
-  const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  return `${days[date.getDay()]} ${date.getDate()} de ${months[date.getMonth()]}`;
+  const d = dayjs(date);
+  if (!d.isValid()) return "—";
+  return d.format("dddd D [de] MMM");
 }
 
 export default function RutaPage() {
   const { hasPermission } = usePermissions();
-  const canUpdateRouteArticles = hasPermission(ROUTE_ARTICLES_UPDATE);
-  const canManageRoute = hasPermission(ROUTES_UPDATE);
+  const canUpdateRoute = hasPermission(ROUTES_UPDATE);
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -299,12 +316,12 @@ export default function RutaPage() {
   const addOrdersMutation = useMutation({
     mutationFn: async ({
       routeId,
-      orderIds,
+      points,
     }: {
       routeId: number;
-      orderIds: number[];
+      points: AddRoutePointPayload[];
     }) => {
-      const res = await addOrdersToRoute(routeId, orderIds);
+      const res = await addOrdersToRoute(routeId, points);
       return unwrapOrThrow(res);
     },
     onSuccess: (data, vars) => {
@@ -487,17 +504,150 @@ export default function RutaPage() {
     },
   });
 
-  const fetchOrdersForModal = useCallback(async (routeId: number) => {
-    const res = await fetchAvailableOrders(routeId);
-    const data = unwrapOrThrow(res);
-    return data.rows.map((row) => ({
-      id: row.id,
-      orderNumber: row.order_number,
-      address: row.address,
-      zone: row.zone,
-      articleCount: row.article_count,
-    }));
-  }, []);
+  const removeRoutePointMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      pointId,
+    }: {
+      routeId: number;
+      pointId: number;
+    }) => {
+      const res = await removeRoutePoint(routeId, pointId);
+      return unwrapOrThrow(res);
+    },
+    onMutate: async ({ routeId, pointId }) => {
+      await queryClient.cancelQueries({ queryKey: ["route-detail", routeId] });
+      const previous = queryClient.getQueryData<RouteDetailApi>([
+        "route-detail",
+        routeId,
+      ]);
+      if (previous) {
+        queryClient.setQueryData<RouteDetailApi>(["route-detail", routeId], {
+          ...previous,
+          orders: previous.orders.filter(
+            (o) => String(o.id) !== String(pointId),
+          ),
+          article_count: previous.orders
+            .filter((o) => String(o.id) !== String(pointId))
+            .reduce((sum, o) => sum + o.items.length, 0),
+          point_count: Math.max(0, previous.point_count - 1),
+        });
+      }
+      return { previous };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["route-detail", vars.routeId], ctx.previous);
+      }
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo remover el pedido: ${detail}`
+          : "No se pudo remover el pedido.",
+      );
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Pedido removido de la ruta.");
+    },
+  });
+
+  const removeRoutePointItemMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      pointId,
+      itemId,
+    }: {
+      routeId: number;
+      pointId: number;
+      itemId: number;
+    }) => {
+      const res = await removeRoutePointItem(routeId, pointId, itemId);
+      return unwrapOrThrow(res);
+    },
+    onMutate: async ({ routeId, pointId, itemId }) => {
+      await queryClient.cancelQueries({ queryKey: ["route-detail", routeId] });
+      const previous = queryClient.getQueryData<RouteDetailApi>([
+        "route-detail",
+        routeId,
+      ]);
+      if (previous) {
+        const nextOrders = previous.orders
+          .map((o) =>
+            String(o.id) === String(pointId)
+              ? {
+                ...o,
+                items: o.items.filter(
+                  (it) => String(it.id) !== String(itemId),
+                ),
+              }
+              : o,
+          )
+          .filter((o) => o.items.length > 0);
+        const articleCount = nextOrders.reduce(
+          (sum, o) => sum + o.items.length,
+          0,
+        );
+        queryClient.setQueryData<RouteDetailApi>(["route-detail", routeId], {
+          ...previous,
+          orders: nextOrders,
+          article_count: articleCount,
+          point_count: nextOrders.length,
+        });
+      }
+      return { previous };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["route-detail", vars.routeId], ctx.previous);
+      }
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo remover el artículo: ${detail}`
+          : "No se pudo remover el artículo.",
+      );
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Artículo removido de la ruta.");
+    },
+  });
+
+  const fetchOrdersForModal = useCallback(
+    async (routeId: number, search?: string): Promise<AvailableOrdersResponse> => {
+      const res = await fetchAvailableOrders(routeId, search);
+      const data = unwrapOrThrow(res) as AvailableOrdersApi;
+      const mapRow = (row: AvailableOrdersApi["suggested"][number]) => ({
+        id: row.id,
+        sourceType: row.source_type,
+        originId: row.origin_id,
+        itemId: row.item_id,
+        sku: row.sku,
+        orderNumber: row.order_number,
+        articleName: row.article_name,
+        zone: row.zone,
+        scheduledDate: row.scheduled_date,
+        destinationBranch: row.destination_branch,
+      });
+      return {
+        suggested: data.suggested.map(mapRow),
+        orders: data.orders.map(mapRow),
+        suggestedCount: data.suggested_count,
+        ordersCount: data.orders_count,
+        recoveriesCount: data.recoveries_count,
+      };
+    },
+    [],
+  );
 
   const fetchDriversForModal = useCallback(async (routeId: number) => {
     const res = await fetchAvailableDrivers(routeId, {
@@ -540,14 +690,13 @@ export default function RutaPage() {
     }
   };
 
-  const handleConfirmAddOrders = async (orderIds: string[]) => {
-    if (!resolvedRouteId || orderIds.length === 0) return;
-    const parsedOrderIds = orderIds
-      .map((id) => Number.parseInt(id, 10))
-      .filter((n) => Number.isFinite(n));
+  const handleConfirmAddOrders = async (payload: {
+    points: AddRoutePointPayload[];
+  }) => {
+    if (!resolvedRouteId || payload.points.length === 0) return;
     await addOrdersMutation.mutateAsync({
       routeId: resolvedRouteId,
-      orderIds: parsedOrderIds,
+      points: payload.points,
     });
   };
 
@@ -606,9 +755,50 @@ export default function RutaPage() {
       });
     } else if (pendingRemoval.kind === "driver") {
       await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
+    } else if (pendingRemoval.kind === "routeOrder") {
+      await removeRoutePointMutation.mutateAsync({
+        routeId: resolvedRouteId,
+        pointId: pendingRemoval.pointId,
+      });
+    } else if (pendingRemoval.kind === "routeItem") {
+      await removeRoutePointItemMutation.mutateAsync({
+        routeId: resolvedRouteId,
+        pointId: pendingRemoval.pointId,
+        itemId: pendingRemoval.itemId,
+      });
     }
     setPendingRemoval(null);
   };
+
+  const handleRequestRemoveRouteOrder = (
+    pointId: number,
+    orderNumber: string,
+    itemCount: number,
+  ) => {
+    setPendingRemoval({
+      kind: "routeOrder",
+      pointId,
+      orderNumber,
+      itemCount,
+    });
+  };
+
+  const handleRequestRemoveRouteItem = (
+    pointId: number,
+    itemId: number,
+    orderNumber: string,
+    articleName: string,
+  ) => {
+    setPendingRemoval({
+      kind: "routeItem",
+      pointId,
+      itemId,
+      orderNumber,
+      articleName,
+    });
+  };
+
+  const canEditArticles = canUpdateRoute && routeDetail?.status === "scheduled";
 
   const routesLoading = routesQuery.isLoading;
   const detailLoading = detailQuery.isFetching;
@@ -649,7 +839,7 @@ export default function RutaPage() {
   return (
     <MainLayout>
       <Stack direction={{ xs: "column", md: "row" }} height="100%" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
-        <Stack spacing={1} flex="0 1 272px">
+        <Stack spacing={1} flex="0 1 272px" maxWidth="272px">
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="nowrap" minWidth="260px">
             <IconButton size="small" onClick={handlePrevDay}>
               <ChevronLeft size={20} />
@@ -657,7 +847,7 @@ export default function RutaPage() {
             <IconButton size="small" onClick={handleNextDay}>
               <ChevronRight size={20} />
             </IconButton>
-            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{formatDateLabel(selectedDate)}</Typography>
+            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{dayjs(selectedDate).format("dddd DD [de] MMMM")}</Typography>
             <Button
               size="small"
               variant="text"
@@ -668,8 +858,7 @@ export default function RutaPage() {
             variant="option"
             color="primary"
             startIcon={<Plus size={16} strokeWidth={2} />}
-            onClick={() => setNewRouteModalOpen(true)}
-          >
+            onClick={() => setNewRouteModalOpen(true)}>
             Nueva ruta
           </Button>
           {
@@ -697,13 +886,21 @@ export default function RutaPage() {
                       :
                       <MapPlaceholder />
                   }
-                  <Stack flex={1} spacing={0.5} alignItems="flex-start">
-                    <Typography variant="subtitle2" color="primary.main" fontWeight={700}>{route.name}</Typography>
+                  <Stack flex={1} spacing={0.5} alignItems="flex-start" minWidth={0}>
+                    <Typography variant="subtitle2" color="primary.main" fontWeight={700}>Ruta {route.name}</Typography>
                     <StatusChip
                       size="small"
                       label={STATUS_LABEL[route.status] ?? route.status}
                     />
-                    <Typography variant="body1" fontWeight={600}>{route.location}</Typography>
+                    {
+                      route.routeType && (
+                        <StatusChip
+                          size="small"
+                          variant="info"
+                          label={ROUTE_TYPE_LABEL[route.routeType] ?? route.routeType}
+                        />
+                      )
+                    }
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Box size={16} />
                       <Typography variant="body1">{route.articleCount} artículos</Typography>
@@ -748,44 +945,46 @@ export default function RutaPage() {
                               direction={{ xs: "column", sm: "row" }}
                               justifyContent="space-between"
                               alignItems={{ xs: "flex-start", sm: "flex-start" }}
-                              gap={2}
-                            >
+                              spacing={2}>
                               <Stack spacing={1} flex={1} minWidth={0}>
                                 <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                                  <Typography variant="h6" color="primary.main">{routeDetail.name}</Typography>
+                                  <Typography variant="h6" color="primary.main">Ruta {routeDetail.name}</Typography>
+                                  {
+                                    routeDetail.routeType &&
+                                    <StatusChip
+                                      size="small"
+                                      startIcon={<Truck size={16} />}
+                                      label={ROUTE_TYPE_LABEL[routeDetail.routeType] ?? routeDetail.routeType} />
+                                  }
                                   <StatusChip
-                                    variant="pending"
+                                    variant={routeDetail.status === "scheduled" ? "pending" : "success"}
+                                    startIcon={routeDetail.status === "scheduled" ? <Truck size={16} /> : <Check size={16} />}
                                     size="small"
-                                    label={STATUS_LABEL[routeDetail.status] ?? routeDetail.status}
-                                  />
+                                    label={STATUS_LABEL[routeDetail.status] ?? routeDetail.status} />
                                 </Stack>
-
-                                <Typography variant="h5">{routeDetail.location}</Typography>
-
+                                <Typography variant="h3">
+                                  {routeDetail.originBranch?.name ?? "Sin sucursal de origen"}
+                                </Typography>
                                 <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                                  <Stack direction="row" alignItems="center" gap={0.5}>
+                                  <Stack direction="row" alignItems="center" spacing={0.5}>
                                     <Box size={16} color={theme.palette.text.secondary} />
                                     <Typography variant="body2">{routeDetail.articleCount} artículos</Typography>
                                   </Stack>
-                                  <Stack direction="row" alignItems="center" gap={0.5}>
+                                  <Stack direction="row" alignItems="center" spacing={0.5}>
                                     <Route size={16} color={theme.palette.text.secondary} />
                                     <Typography variant="body2">{routeDetail.pointCount} puntos</Typography>
                                   </Stack>
                                 </Stack>
-
-                                <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                                  <Stack direction="row" alignItems="center" gap={0.5}>
-                                    <User size={16} color={theme.palette.text.secondary} />
-                                    <Typography variant="body2">{routeDetail.driverName}</Typography>
-                                  </Stack>
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    gap={0.5}
-                                    flexWrap="wrap"
-                                  >
-                                    <Truck size={16} color={theme.palette.text.secondary} />
-                                  </Stack>
+                                <Stack direction="row" alignItems="center" spacing={0.5}>
+                                  <Repeat2 size={14} color={theme.palette.text.secondary} />
+                                  <Typography variant="body2" color="text.secondary">
+                                    {routeDetail.scheduledDate
+                                      ? formatDateOnly(routeDetail.scheduledDate, "D [de] MMMM, YYYY")
+                                      : "—"}
+                                  </Typography>
+                                  <Button
+                                    variant="text"
+                                    size="small">Editar</Button>
                                 </Stack>
                               </Stack>
 
@@ -814,22 +1013,19 @@ export default function RutaPage() {
                             />
 
                             {
-                              canUpdateRouteArticles &&
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<PlusCircle size={16} />}
-                                onClick={() => setAddOrdersModalOpen(true)}>
-                                Agregar
-                              </Button>
-                            }
-                            {
                               renderTabActionButton()
                             }
                           </Stack>
 
                           {
-                            activeTab === TAB_ARTICLES && <ArticlesTab orders={routeDetail.orders} />
+                            activeTab === TAB_ARTICLES && (
+                              <ArticlesTab
+                                orders={routeDetail.orders}
+                                canEdit={canEditArticles}
+                                onRequestRemoveOrder={handleRequestRemoveRouteOrder}
+                                onRequestRemoveItem={handleRequestRemoveRouteItem}
+                              />
+                            )
                           }
 
                           {
@@ -851,7 +1047,7 @@ export default function RutaPage() {
                             activeTab === TAB_DRIVER &&
                             <DriverTab
                               routeDetail={routeDetail}
-                              canManage={canManageRoute}
+                              canManage={canUpdateRoute}
                               loadingDriver={
                                 assignDriverMutation.isPending ||
                                 removeDriverMutation.isPending
@@ -878,6 +1074,7 @@ export default function RutaPage() {
                               open={addOrdersModalOpen}
                               onClose={() => setAddOrdersModalOpen(false)}
                               routeId={resolvedRouteId}
+                              routeType={routeDetail.routeType ?? "deliveries"}
                               fetchAvailableOrders={fetchOrdersForModal}
                               onConfirm={handleConfirmAddOrders}
                             />
@@ -910,15 +1107,54 @@ export default function RutaPage() {
                             onClose={() => setPendingRemoval(null)}
                             onConfirm={() => void handleConfirmRemove()}
                             title={
-                              pendingRemoval?.kind === "driver"
-                                ? "Quitar chofer"
-                                : "Quitar ayudante"
+                              pendingRemoval?.kind === "routeOrder"
+                                ? "Remover pedido"
+                                : pendingRemoval?.kind === "routeItem"
+                                  ? "Remover artículo"
+                                  : pendingRemoval?.kind === "driver"
+                                    ? "Quitar chofer"
+                                    : "Quitar ayudante"
                             }
-                            itemName={pendingRemoval?.name}
-                            confirmLabel="Quitar"
+                            description={
+                              pendingRemoval?.kind === "routeOrder" ? (
+                                <>
+                                  Se removerán los {pendingRemoval.itemCount}{" "}
+                                  {pendingRemoval.itemCount === 1
+                                    ? "artículo"
+                                    : "artículos"}{" "}
+                                  del pedido{" "}
+                                  <strong>{pendingRemoval.orderNumber}</strong>{" "}
+                                  de esta ruta. Esta acción no se puede
+                                  deshacer.
+                                </>
+                              ) : pendingRemoval?.kind === "routeItem" ? (
+                                <>
+                                  Se removerá el artículo{" "}
+                                  <strong>{pendingRemoval.articleName}</strong>{" "}
+                                  del pedido{" "}
+                                  <strong>{pendingRemoval.orderNumber}</strong>{" "}
+                                  de esta ruta. Esta acción no se puede
+                                  deshacer.
+                                </>
+                              ) : undefined
+                            }
+                            itemName={
+                              pendingRemoval?.kind === "driver" ||
+                                pendingRemoval?.kind === "assistant"
+                                ? pendingRemoval.name
+                                : undefined
+                            }
+                            confirmLabel={
+                              pendingRemoval?.kind === "routeOrder" ||
+                                pendingRemoval?.kind === "routeItem"
+                                ? "Remover"
+                                : "Quitar"
+                            }
                             loading={
                               removeAssistantMutation.isPending ||
-                              removeDriverMutation.isPending
+                              removeDriverMutation.isPending ||
+                              removeRoutePointMutation.isPending ||
+                              removeRoutePointItemMutation.isPending
                             }
                           />
                         </Stack>
@@ -935,7 +1171,6 @@ export default function RutaPage() {
           await createRouteMutation.mutateAsync(values);
         }}
         loading={createRouteMutation.isPending}
-        fetchCities={getMunicipalityCatalog}
         fetchBranches={getBranchesCatalog}
       />
     </MainLayout>

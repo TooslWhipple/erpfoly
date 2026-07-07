@@ -28,7 +28,7 @@ export interface SellerMonthlyChartPoint {
 export interface SellerSaleHistoryRow {
   id: string;
   code: string;
-  dateLabel: string;
+  createdAt: string | Date;
   type: SellerSaleType;
   articleName: string;
   department: string;

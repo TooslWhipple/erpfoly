@@ -2,6 +2,7 @@ import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
 import type { ClientMovementItem } from "@/services/client-movements.service";
+import { formatDate } from "@/utils/date";
 
 const MOVEMENT_TYPE_CHIP_LABELS: Record<string, string> = {
   payment: "Abono",
@@ -11,18 +12,6 @@ const MOVEMENT_TYPE_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   payment: "success",
   purchase: "default",
 };
-
-const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
-function formatDate(value: unknown): string {
-  if (!value) return "";
-  try {
-    const date = new Date(value as string);
-    return `${date.getDate()} de ${MONTHS[date.getMonth()]}, ${date.getFullYear()}`;
-  } catch {
-    return String(value);
-  }
-}
 
 const COLUMNS: DataTableColumn<ClientMovementItem>[] = [
   {
@@ -38,7 +27,7 @@ const COLUMNS: DataTableColumn<ClientMovementItem>[] = [
   {
     id: "date",
     label: "Fecha",
-    format: (value) => formatDate(value),
+    format: (value) => formatDate(value, "D [de] MMM, YYYY"),
   },
   { id: "amount", label: "Monto", type: "currency", align: "right" },
 ];

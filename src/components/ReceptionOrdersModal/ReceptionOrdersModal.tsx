@@ -16,6 +16,7 @@ import {
 import { Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { OrderToReceive } from "@/types/recepcion-mercancias.types";
+import { formatDate } from "@/utils/date";
 import {
     DialogContent,
     ModalHeader,
@@ -85,15 +86,6 @@ const DUMMY_ORDERS_TO_RECEIVE: OrderToReceive[] = [
 async function getOrdersToReceive(): Promise<OrderToReceive[]> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return DUMMY_ORDERS_TO_RECEIVE;
-}
-
-function formatDeliveryDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-MX", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
 }
 
 export function ReceptionOrdersModal({
@@ -273,7 +265,7 @@ export function ReceptionOrdersModal({
                                             <StyledTableCell>{order.sku}</StyledTableCell>
                                             <StyledTableCell>{order.supplier}</StyledTableCell>
                                             <StyledTableCell>
-                                                {formatDeliveryDate(order.deliveryDate)}
+                                                {formatDate(order.deliveryDate, "dateLong")}
                                             </StyledTableCell>
                                             <StyledTableCell>
                                                 {numeral(order.total).format("$0,0.00")}

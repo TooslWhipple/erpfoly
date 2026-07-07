@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import dayjs from "@/lib/dayjs";
 
-export type DateInput = string | number | Date | Dayjs | null | undefined;
+export type DateInput = string | number | Date | Dayjs | null | undefined | unknown;
 
 const DEFAULT_FALLBACK = "—";
 
@@ -85,8 +85,11 @@ function toDayjs(value: DateInput): Dayjs | null {
       return dateOnly.isValid() ? dateOnly : null;
     }
   }
-  const d = dayjs(value as string | number | Date);
-  return d.isValid() ? d : null;
+  if (value instanceof Date || typeof value === "number" || typeof value === "string") {
+    const d = dayjs(value as string | number | Date);
+    return d.isValid() ? d : null;
+  }
+  return null;
 }
 
 function capitalizeWord(s: string): string {
@@ -145,6 +148,28 @@ export function formatDate(
 export function formatRequestedAt(iso: string): string {
   const d = toDayjs(iso);
   return d ? d.format(dateFormatPresets.localized) : iso;
+}
+
+/**
+ * Formatea un valor de fecha que representa **solo día** (sin hora) recibido del
+ * backend como `Date` ISO. La fecha se interpreta en UTC para evitar el
+ * desplazamiento de un día en husos horarios negativos (p. ej. México UTC-6).
+ *
+ * Usar con campos como `route_date`, `scheduled_date`, `order_date`,
+ * `delivery_date`, `birthDate`, `expires_at`, etc.
+ *
+ * @example
+ * ```ts
+ * // El backend envía "2026-07-06T00:00:00.000Z" (medianoche UTC).
+ * formatDateOnly("2026-07-06T00:00:00.000Z", "D [de] MMM");
+ * // → "6 de jul" (no "5 de jul") en México
+ * ```
+ */
+export function formatDateOnly(value: DateInput, format: DateFormatArg): string {
+  if (value == null || value === "") return DEFAULT_FALLBACK;
+  const d = dayjs.utc(value as string | number | Date);
+  if (!d.isValid()) return DEFAULT_FALLBACK;
+  return d.format(resolvePattern(format));
 }
 
 /**

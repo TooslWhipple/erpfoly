@@ -19,8 +19,7 @@ export type PermissionModule =
   | "clientes.morosidad"
   | "clientes.cobranza"
   | "pedidos"
-  | "pedidos_sucursales"
-  | "solicitudes_sucursales"
+  | "traspasos"
   | "solicitudes_descuento"
   | "inventario"
   | "inventario.mercancia_danada"
@@ -30,9 +29,6 @@ export type PermissionModule =
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
   | "rutas"
-  | "rutas.articulos"
-  | "rutas.carta_porte"
-  | "rutas.conductores"
   | "catalogos.productos"
   | "catalogos.departamentos"
   | "catalogos.promociones"
@@ -110,17 +106,11 @@ export const ORDERS_READ = ORDERS_PERMISSIONS.read;
 export const ORDERS_UPDATE = ORDERS_PERMISSIONS.update;
 export const ORDERS_DELETE = ORDERS_PERMISSIONS.delete;
 
-export const BRANCH_ORDERS_PERMISSIONS = createCrudPermissions("pedidos_sucursales");
-export const BRANCH_ORDERS_CREATE = BRANCH_ORDERS_PERMISSIONS.create;
-export const BRANCH_ORDERS_READ = BRANCH_ORDERS_PERMISSIONS.read;
-export const BRANCH_ORDERS_UPDATE = BRANCH_ORDERS_PERMISSIONS.update;
-export const BRANCH_ORDERS_DELETE = BRANCH_ORDERS_PERMISSIONS.delete;
-
-export const BRANCH_REQUESTS_PERMISSIONS = createCrudPermissions("solicitudes_sucursales");
-export const BRANCH_REQUESTS_CREATE = BRANCH_REQUESTS_PERMISSIONS.create;
-export const BRANCH_REQUESTS_READ = BRANCH_REQUESTS_PERMISSIONS.read;
-export const BRANCH_REQUESTS_UPDATE = BRANCH_REQUESTS_PERMISSIONS.update;
-export const BRANCH_REQUESTS_DELETE = BRANCH_REQUESTS_PERMISSIONS.delete;
+export const TRASPASOS_PERMISSIONS = createCrudPermissions("traspasos");
+export const TRASPASOS_CREATE = TRASPASOS_PERMISSIONS.create;
+export const TRASPASOS_READ = TRASPASOS_PERMISSIONS.read;
+export const TRASPASOS_UPDATE = TRASPASOS_PERMISSIONS.update;
+export const TRASPASOS_DELETE = TRASPASOS_PERMISSIONS.delete;
 
 export const DISCOUNT_REQUESTS_PERMISSIONS = createCrudPermissions("solicitudes_descuento");
 export const DISCOUNT_REQUESTS_CREATE = DISCOUNT_REQUESTS_PERMISSIONS.create;
@@ -179,24 +169,6 @@ export const ROUTES_CREATE = ROUTES_PERMISSIONS.create;
 export const ROUTES_READ = ROUTES_PERMISSIONS.read;
 export const ROUTES_UPDATE = ROUTES_PERMISSIONS.update;
 export const ROUTES_DELETE = ROUTES_PERMISSIONS.delete;
-
-export const ROUTE_ARTICLES_PERMISSIONS = createCrudPermissions("rutas.articulos");
-export const ROUTE_ARTICLES_CREATE = ROUTE_ARTICLES_PERMISSIONS.create;
-export const ROUTE_ARTICLES_READ = ROUTE_ARTICLES_PERMISSIONS.read;
-export const ROUTE_ARTICLES_UPDATE = ROUTE_ARTICLES_PERMISSIONS.update;
-export const ROUTE_ARTICLES_DELETE = ROUTE_ARTICLES_PERMISSIONS.delete;
-
-export const ROUTE_BILL_OF_LADING_PERMISSIONS = createCrudPermissions("rutas.carta_porte");
-export const ROUTE_BILL_OF_LADING_CREATE = ROUTE_BILL_OF_LADING_PERMISSIONS.create;
-export const ROUTE_BILL_OF_LADING_READ = ROUTE_BILL_OF_LADING_PERMISSIONS.read;
-export const ROUTE_BILL_OF_LADING_UPDATE = ROUTE_BILL_OF_LADING_PERMISSIONS.update;
-export const ROUTE_BILL_OF_LADING_DELETE = ROUTE_BILL_OF_LADING_PERMISSIONS.delete;
-
-export const ROUTE_DRIVERS_PERMISSIONS = createCrudPermissions("rutas.conductores");
-export const ROUTE_DRIVERS_CREATE = ROUTE_DRIVERS_PERMISSIONS.create;
-export const ROUTE_DRIVERS_READ = ROUTE_DRIVERS_PERMISSIONS.read;
-export const ROUTE_DRIVERS_UPDATE = ROUTE_DRIVERS_PERMISSIONS.update;
-export const ROUTE_DRIVERS_DELETE = ROUTE_DRIVERS_PERMISSIONS.delete;
 
 // Catalogs
 export const CATALOG_PRODUCTS_PERMISSIONS = createCrudPermissions("catalogos.productos");
@@ -308,8 +280,7 @@ export const PERMISSIONS_BY_MODULE = {
   },
   orders: {
     orders: Object.values(ORDERS_PERMISSIONS),
-    branchOrders: Object.values(BRANCH_ORDERS_PERMISSIONS),
-    branchRequests: Object.values(BRANCH_REQUESTS_PERMISSIONS),
+    traspasos: Object.values(TRASPASOS_PERMISSIONS),
     discountRequests: Object.values(DISCOUNT_REQUESTS_PERMISSIONS),
   },
   inventory: {
@@ -323,12 +294,7 @@ export const PERMISSIONS_BY_MODULE = {
     invoices: Object.values(CUSTOMER_SUPPORT_INVOICES_PERMISSIONS),
     repairs: Object.values(CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS),
   },
-  routes: {
-    routes: Object.values(ROUTES_PERMISSIONS),
-    articles: Object.values(ROUTE_ARTICLES_PERMISSIONS),
-    billOfLading: Object.values(ROUTE_BILL_OF_LADING_PERMISSIONS),
-    drivers: Object.values(ROUTE_DRIVERS_PERMISSIONS),
-  },
+  routes: Object.values(ROUTES_PERMISSIONS),
   catalogs: {
     products: Object.values(CATALOG_PRODUCTS_PERMISSIONS),
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),

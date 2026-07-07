@@ -3,6 +3,7 @@ import { Stack, Typography, Button, TextField, InputAdornment, Box } from "@mui/
 import { ArrowUpward as ArrowUpIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
+import { formatDate } from "@/utils/date";
 import { SideModal } from "@/components/SideModal";
 import {
     AddArticleModalContainer,
@@ -34,15 +35,6 @@ export interface AddArticleToOrderModalProps {
 
 function formatCurrency(amount: number): string {
     return numeral(amount).format("$0,0.00");
-}
-
-function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-MX", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
 }
 
 export function AddArticleToOrderModal({
@@ -163,7 +155,7 @@ export function AddArticleToOrderModal({
                                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ width: "100%" }}>
                                         <Stack direction="column" spacing={0.5} sx={{ flex: 1 }}>
                                             <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-                                                <Typography variant="body2" color="text.secondary">{formatDate(entry.date)}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{formatDate(entry.date, "dateLong")}</Typography>
                                                 {
                                                     entry.orderId && <Typography variant="body2" color="text.secondary">Pedido {entry.orderId}</Typography>
                                                 }

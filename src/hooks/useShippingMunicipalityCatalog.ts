@@ -17,21 +17,23 @@ export function useShippingMunicipalityCatalog({
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
 
   const preloadQuery = useQuery({
-    queryKey: ["municipalities", "preload", 20],
+    queryKey: ["municipalities", "preload", "has-branches", 20],
     queryFn: () =>
       getMunicipalityCatalog({
         limit: 20,
+        has_branches: true,
       }),
     staleTime: SEARCH_STALE_TIME_MS,
     gcTime: SEARCH_GC_TIME_MS,
   });
 
   const searchQuery = useQuery({
-    queryKey: ["municipalities", "search", debouncedSearch],
+    queryKey: ["municipalities", "search", "has-branches", debouncedSearch],
     queryFn: () =>
       getMunicipalityCatalog({
         search: debouncedSearch,
         limit: 25,
+        has_branches: true,
       }),
     enabled: open && debouncedSearch.length >= 2,
     staleTime: SEARCH_STALE_TIME_MS,

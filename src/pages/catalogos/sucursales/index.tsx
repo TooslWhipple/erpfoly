@@ -1,22 +1,26 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { MainLayout, Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { BranchCreateModal } from "@/components/BranchCreateModal/BranchCreateModal";
 
 import {
   getBranches as fetchBranchesApi,
-  deleteBranch,
+  updateBranch,
   type Branch,
 } from "@/services/branches.service";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { formatStreetAddressLine } from "@/utils/address";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   CATALOG_BRANCHES_CREATE,
-  CATALOG_BRANCHES_DELETE,
   CATALOG_BRANCHES_READ,
   CATALOG_BRANCHES_UPDATE,
 } from "@/lib/permissions";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const ESTATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
@@ -26,6 +30,14 @@ const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   ACTIVE: "success",
   INACTIVE: "error",
 };
+
+type BranchStatusTab = "all" | "active" | "inactive";
+
+const STATUS_TABS: { value: BranchStatusTab; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "active", label: "Activas" },
+  { value: "inactive", label: "Inactivas" },
+];
 
 function formatBranchAddress(branch: Branch) {
   const streetLine = formatStreetAddressLine({
@@ -53,52 +65,61 @@ function formatBranchAddress(branch: Branch) {
 
 export default function Sucursales() {
   const router = useRouter();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
 
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const [activeTab, setActiveTab] = useState<BranchStatusTab>("all");
+
+  const listExtraParams = useMemo(() => {
+    if (activeTab === "active") return { status: "ACTIVE" as const };
+    if (activeTab === "inactive") return { status: "INACTIVE" as const };
+    return {};
+  }, [activeTab]);
+
+  const {
+    data: branches,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage: handlePageChange,
+    setRowsPerPage: handleRowsPerPageChange,
+    setSearch,
+    isLoading: loading,
+    refetch,
+  } = usePaginatedList<Branch>({
+    queryKey: ["branches"],
+    queryFn: fetchBranchesApi,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: listExtraParams,
+  });
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
+  useEffect(() => {
+    handlePageChange(0);
+  }, [activeTab, handlePageChange]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as BranchStatusTab);
+  };
 
   const [modalState, setModalState] = useState<
     { open: false } | { open: true; branch?: Branch }
   >({ open: false });
-
-  const fetchBranches = useCallback(async () => {
-    setLoading(true);
-
-    const result = await fetchBranchesApi({
-      page: page + 1,
-      limit: rowsPerPage,
-      search: searchValue || undefined,
-    });
-
-    setLoading(false);
-
-    if (result.error) {
-      setBranches([]);
-      setTotalRows(0);
-      return;
-    }
-
-    if (result.data) {
-      setBranches(result.data.rows);
-      setTotalRows(result.data.total);
-    }
-  }, [page, rowsPerPage, searchValue]);
-
-  useEffect(() => {
-    fetchBranches();
-  }, [fetchBranches]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [searchValue]);
-
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-  };
 
   const handleOpenCreateModal = () => {
     setModalState({ open: true });
@@ -113,30 +134,50 @@ export default function Sucursales() {
   };
 
   const handleModalSuccess = () => {
-    fetchBranches();
+    refetch();
   };
 
-  const handleDeleteBranch = async (branch: Branch) => {
-    const confirmed = window.confirm(
-      `¿Estás seguro de eliminar la sucursal "${branch.name}"?`
-    );
-    if (!confirmed) return;
+  const [confirmState, setConfirmState] = useState<
+    | { open: false }
+    | { open: true; branch: Branch; target: "ACTIVE" | "INACTIVE" }
+  >({ open: false });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
-    const result = await deleteBranch(branch.id);
+  const openConfirm = (branch: Branch) => {
+    const isActive = branch.status === "ACTIVE";
+    setConfirmState({
+      open: true,
+      branch,
+      target: isActive ? "INACTIVE" : "ACTIVE",
+    });
+  };
+
+  const closeConfirm = () => {
+    if (confirmLoading) return;
+    setConfirmState({ open: false });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmState.open) return;
+    const { branch, target } = confirmState;
+    setConfirmLoading(true);
+    const result = await updateBranch(branch.id, { status: target });
+    setConfirmLoading(false);
     if (result.error) {
-      console.error("[Sucursales] Error deleting:", result.error.message);
+      showError(result.error.message);
       return;
     }
-    fetchBranches();
+    setConfirmState({ open: false });
+    showSuccess(
+      target === "ACTIVE"
+        ? "Sucursal activada correctamente"
+        : "Sucursal desactivada correctamente",
+    );
+    refetch();
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
+  const handleViewDetail = (branch: Branch) => {
+    router.push(`/catalogos/sucursales/${branch.id}`);
   };
 
   const columns: Column<Branch>[] = [
@@ -181,10 +222,6 @@ export default function Sucursales() {
     },
   ];
 
-  const handleViewDetail = (branch: Branch) => {
-    router.push(`/catalogos/sucursales/${branch.id}`);
-  };
-
   const actions: RowAction<Branch>[] = [
     {
       id: "view",
@@ -199,11 +236,11 @@ export default function Sucursales() {
       permission: CATALOG_BRANCHES_UPDATE,
     },
     {
-      id: "delete",
-      label: "Eliminar",
-      onClick: handleDeleteBranch,
-      color: "error",
-      permission: CATALOG_BRANCHES_DELETE,
+      id: "toggle-status",
+      label: (row) => (row.status === "ACTIVE" ? "Desactivar" : "Activar"),
+      onClick: openConfirm,
+      color: (row) => (row.status === "ACTIVE" ? "error" : "primary"),
+      permission: CATALOG_BRANCHES_UPDATE,
     },
   ];
 
@@ -212,11 +249,11 @@ export default function Sucursales() {
       <Stack direction="column" spacing={3}>
         <Title title="Sucursales" />
         <TabFilters
-          tabs={[]}
-          activeTab=""
-          onTabChange={() => { }}
+          tabs={STATUS_TABS}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
           showSearch
-          searchValue={searchValue}
+          searchValue={searchInput}
           onSearchChange={handleSearchChange}
           actions={[
             {
@@ -240,7 +277,13 @@ export default function Sucursales() {
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
           onRowClick={handleViewDetail}
-          emptyMessage="No hay sucursales registradas"
+          emptyMessage={
+            activeTab === "inactive"
+              ? "No hay sucursales inactivas"
+              : activeTab === "active"
+                ? "No hay sucursales activas"
+                : "No hay sucursales registradas"
+          }
         />
       </Stack>
 
@@ -256,6 +299,35 @@ export default function Sucursales() {
         onClose={handleCloseModal}
         onSuccess={handleModalSuccess}
         branch={modalState.open ? modalState.branch : undefined}
+      />
+
+      <ConfirmModal
+        open={confirmState.open}
+        onClose={closeConfirm}
+        onConfirm={handleConfirmAction}
+        title={
+          confirmState.open && confirmState.target === "ACTIVE"
+            ? "Activar sucursal"
+            : "Desactivar sucursal"
+        }
+        description={
+          confirmState.open ? (
+            <>
+              ¿Estás seguro de {confirmState.target === "ACTIVE" ? "activar" : "desactivar"} la
+              sucursal{" "}
+              <strong>{confirmState.branch.name}</strong>?
+            </>
+          ) : null
+        }
+        confirmLabel={
+          confirmState.open && confirmState.target === "ACTIVE"
+            ? "Activar"
+            : "Desactivar"
+        }
+        confirmColor={
+          confirmState.open && confirmState.target === "ACTIVE" ? "success" : "error"
+        }
+        loading={confirmLoading}
       />
     </MainLayout>
   );

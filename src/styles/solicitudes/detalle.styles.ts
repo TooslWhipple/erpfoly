@@ -24,7 +24,8 @@ export const ProductsSection = styled("div")(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     borderRadius: "12px",
     padding: "0px",
-    border: `1px solid ${theme.palette.app.border}`
+    border: `1px solid ${theme.palette.app.border}`,
+    overflow: 'auto'
 }));
 
 export const ProductHeaderSection = styled("div")(({ theme }) => ({

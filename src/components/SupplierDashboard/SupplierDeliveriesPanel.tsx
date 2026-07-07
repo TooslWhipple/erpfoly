@@ -1,6 +1,7 @@
 import { Stack, Typography } from "@mui/material";
 import { WashingMachine } from "lucide-react";
 import type { SupplierDeliveryGroup } from "@/types/supplierDashboard.types";
+import { formatDate } from "@/utils/date";
 import {
   DeliveriesPanel,
   DeliveryGroupHeader,
@@ -28,7 +29,7 @@ function DeliveryGroupList({ groups }: { groups: SupplierDeliveryGroup[] }) {
         <Stack key={group.id} spacing={0.5}>
           <DeliveryGroupHeader>
             <Typography variant="body2" fontWeight={600} color="primary.main">
-              {group.dateLabel}
+              {formatDate(group.date, "D [de] MMM")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {group.itemCount} artículos

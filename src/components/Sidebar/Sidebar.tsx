@@ -34,8 +34,7 @@ import { CreditApplicationIntakeModal } from "@/components/CreditApplicationInta
 import {
   QUOTATIONS_READ,
   SALES_READ,
-  BRANCH_ORDERS_READ,
-  BRANCH_REQUESTS_READ,
+  TRASPASOS_READ,
   CASH_REGISTERS_READ,
   CATALOG_BRANCHES_READ,
   CATALOG_DEPARTMENTS_READ,
@@ -121,16 +120,10 @@ const navItems: NavItem[] = [
   },
   { label: "Pedidos", path: "/pedidos", icon: <Van size={ICON_SIZE} />, requirement: { permission: ORDERS_READ } },
   {
-    label: "Pedidos (Sucursales)",
-    path: "/pedidos/sucursales",
-    icon: <Van size={ICON_SIZE} />,
-    requirement: { permission: BRANCH_ORDERS_READ },
-  },
-  {
-    label: "Solicitudes (Sucursales)",
-    path: "/solicitudes/sucursales",
+    label: "Traspasos",
+    path: "/traspasos",
     icon: <ClipboardList size={ICON_SIZE} />,
-    requirement: { permission: BRANCH_REQUESTS_READ },
+    requirement: { permission: TRASPASOS_READ },
   },
   {
     label: "Solicitudes de descuento",

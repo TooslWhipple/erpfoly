@@ -9,6 +9,7 @@ import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getRolesList } from "@/services/roles.service";
 import { formatListDateTime } from "@/utils/date";
 import type { RoleListItem } from "@/types/roles.types";
+import { rolePlatformLabel } from "@/constants/role-platform";
 import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -58,6 +59,12 @@ export default function Roles() {
       id: "name",
       label: "Nombre",
       size: "xl",
+    },
+    {
+      id: "platform",
+      label: "Plataforma",
+      size: "md",
+      format: (value) => rolePlatformLabel(value as RoleListItem["platform"]),
     },
     {
       id: "updatedAt",

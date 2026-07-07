@@ -11,7 +11,11 @@ import {
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, type ResendOtpRequest } from "@/services/auth.service";
-import { canAccessPath, getFirstAllowedRoute, normalizePathname } from "@/lib/routeAccess";
+import {
+  canAccessPath,
+  getFirstAllowedRoute,
+  normalizePathname,
+} from "@/lib/routeAccess";
 import {
 	PageContainer,
 	LeftPanel,

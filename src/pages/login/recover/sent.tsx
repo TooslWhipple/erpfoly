@@ -32,7 +32,9 @@ export default function RecoverPasswordSentPage() {
 
 					<Typography variant="h1" textAlign="center">Revisa tu WhatsApp</Typography>
 
-					<Typography variant="body2" color="text.secondary" textAlign="center">Hemos enviado un enlace de recuperación de contraseña a tu WhatsApp.</Typography>
+					<Typography variant="body2" color="text.secondary" textAlign="center">
+						Te enviamos una contraseña temporal por WhatsApp. Válida por 1 hora. Inicia sesión con ella y crea una nueva contraseña.
+					</Typography>
 
 					<Button
 						fullWidth

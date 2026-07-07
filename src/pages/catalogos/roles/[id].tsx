@@ -9,7 +9,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { MainLayout, Breadcrumbs, FormTextField, PermissionsTable } from "@/components";
+import { MainLayout, Breadcrumbs, FormTextField, FormSelect, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
 import { FormCard } from "@/styles/catalogos/roles.styles";
@@ -28,6 +28,10 @@ import {
 import type { PermissionsTemplateResponse } from "@/types/roles.types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
+import {
+  ROLE_PLATFORM_OPTIONS,
+  type RolePlatform,
+} from "@/constants/role-platform";
 
 export default function RoleFormPage() {
   const router = useRouter();
@@ -42,6 +46,7 @@ export default function RoleFormPage() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [platform, setPlatform] = useState<RolePlatform>("ERP");
   const [nameError, setNameError] = useState<string | undefined>();
   const [apiModules, setApiModules] = useState<PermissionsTemplateResponse>([]);
   const [tableModules, setTableModules] = useState<ModulePermission[]>([]);
@@ -49,6 +54,7 @@ export default function RoleFormPage() {
   const initialDataRef = useRef<{
     name: string;
     description: string;
+    platform: RolePlatform;
     tableModules: ModulePermission[];
   } | null>(null);
 
@@ -82,14 +88,17 @@ export default function RoleFormPage() {
         const res = result.data;
         const roleName = res.role.name;
         const roleDescription = res.role.description ?? "";
+        const rolePlatform = res.role.platform ?? "ERP";
         const modules = apiModulesToTableModules(res.modules);
         setName(roleName);
         setDescription(roleDescription);
+        setPlatform(rolePlatform);
         setApiModules(res.modules);
         setTableModules(modules);
         initialDataRef.current = {
           name: roleName,
           description: roleDescription,
+          platform: rolePlatform,
           tableModules: modules,
         };
       })
@@ -180,8 +189,9 @@ export default function RoleFormPage() {
       const initial = initialDataRef.current;
       const nameUnchanged = trimmedName === initial.name;
       const descriptionUnchanged = trimmedDescription === initial.description;
+      const platformUnchanged = platform === initial.platform;
       const permissionsUnchanged = areModulesEqual(tableModules, initial.tableModules);
-      if (nameUnchanged && descriptionUnchanged && permissionsUnchanged) {
+      if (nameUnchanged && descriptionUnchanged && platformUnchanged && permissionsUnchanged) {
         router.push("/catalogos/roles");
         return;
       }
@@ -192,6 +202,7 @@ export default function RoleFormPage() {
       const created = await createRole({
         name: trimmedName,
         description: trimmedDescription || undefined,
+        platform,
       });
       if (created.error || !created.data) {
         setSaving(false);
@@ -210,6 +221,7 @@ export default function RoleFormPage() {
       const updateResult = await updateRole(roleId, {
         name: trimmedName,
         description: trimmedDescription || undefined,
+        platform,
       });
       if (updateResult.error) {
         setSaving(false);
@@ -286,6 +298,19 @@ export default function RoleFormPage() {
                 placeholder="Opcional"
                 value={description}
                 onChange={handleDescriptionChange}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormSelect
+                label="Plataforma"
+                placeholder="Selecciona una plataforma"
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value as RolePlatform)}
+                options={ROLE_PLATFORM_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+                disabled={saving}
               />
             </Grid>
           </Grid>

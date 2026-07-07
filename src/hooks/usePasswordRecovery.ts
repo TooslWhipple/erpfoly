@@ -3,13 +3,9 @@ import { useRouter } from "next/router";
 import {
 	authService,
 	type RequestPasswordRecoveryRequest,
-	type ResetPasswordRequest,
 } from "@/services/auth.service";
 import { parseLoginIdentifier } from "@/utils/login-identifier";
-import {
-	getIdentifierValidationError,
-	getPasswordValidationError,
-} from "@/utils/auth-credentials";
+import { getIdentifierValidationError } from "@/utils/auth-credentials";
 
 export function usePasswordRecovery() {
 	const router = useRouter();
@@ -46,40 +42,10 @@ export function usePasswordRecovery() {
 		setIsLoading(false);
 	};
 
-	const resetPassword = async (data: ResetPasswordRequest) => {
-		setIsLoading(true);
-		setError(null);
-
-		const passwordError = getPasswordValidationError(data.newPassword);
-		if (passwordError) {
-			setError(passwordError);
-			setIsLoading(false);
-			return;
-		}
-
-		if (data.newPassword !== data.confirmPassword) {
-			setError("Las contraseñas no coinciden");
-			setIsLoading(false);
-			return;
-		}
-
-		const result = await authService.resetPassword(data);
-
-		if (result.error) {
-			setError(result.error.message);
-			setIsLoading(false);
-			return;
-		}
-
-		await router.push("/login/recover/success");
-		setIsLoading(false);
-	};
-
 	return {
 		isLoading,
 		error,
 		clearError,
 		requestRecovery,
-		resetPassword,
 	};
 }

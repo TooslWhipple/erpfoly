@@ -30,4 +30,21 @@ export const filters = {
             return rest.length > 0 ? `${first ?? ""}.${frac}` : first ?? "";
         };
     },
+
+    personName(): InputFilter {
+        return (value: string) =>
+            filters.onlyLetters(true)(value).replace(/\s{2,}/g, " ");
+    },
 } as const;
+
+export const NAME_MAX_LENGTH = 64;
+export const USERNAME_MAX_LENGTH = 8;
+
+const PERSON_NAME_PATTERN =
+    /^[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ]+( [a-zA-ZáéíóúñÁÉÍÓÚÑüÜ]+)*$/;
+
+export function isValidPersonName(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    return PERSON_NAME_PATTERN.test(trimmed);
+}

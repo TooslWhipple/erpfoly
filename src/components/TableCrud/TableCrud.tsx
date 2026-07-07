@@ -89,6 +89,7 @@ export interface RowAction<T> {
   color?: "inherit" | "error" | "primary" | "secondary";
   permission?: string;
   disabled?: boolean | ((row: T) => boolean);
+  hidden?: boolean | ((row: T) => boolean);
 }
 
 interface TableCrudProps<T> {
@@ -456,6 +457,12 @@ export function TableCrud<T>({
         }}
       >
         {visibleActions?.map((action) => {
+          const isHidden =
+            typeof action.hidden === "function" && selectedRow
+              ? action.hidden(selectedRow)
+              : Boolean(action.hidden);
+          if (isHidden) return null;
+
           const isDisabled =
             typeof action.disabled === "function" && selectedRow
               ? action.disabled(selectedRow)

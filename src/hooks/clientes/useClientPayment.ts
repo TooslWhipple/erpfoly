@@ -17,6 +17,8 @@ import type {
   BackendSaleCreditPaymentPayload,
   BackendSaleCreditPaymentResult,
 } from "@/types/clientPayment.types";
+import { formatDate } from "@/utils/date";
+import dayjs from "@/lib/dayjs";
 
 interface UseClientPaymentResult {
   routerReady: boolean;
@@ -47,29 +49,11 @@ interface UseClientPaymentResult {
 }
 
 function formatDueDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    const months = [
-      "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-      "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-    ];
-    return `${date.getDate()} de ${months[date.getMonth()]}`;
-  } catch {
-    return dateStr;
-  }
+  return formatDate(dateStr, "D [de] MMM");
 }
 
 function formatPurchaseDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    const months = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-    ];
-    return `${date.getDate()} de ${months[date.getMonth()]}, ${date.getFullYear()}`;
-  } catch {
-    return dateStr;
-  }
+  return formatDate(dateStr, "D [de] MMMM, YYYY");
 }
 
 function mapBackendInstallments(
@@ -360,11 +344,7 @@ export function useClientPayment(): UseClientPaymentResult {
       }
 
       const now = new Date();
-      const months = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-      ];
-      const dateLabel = `${now.getDate()} de ${months[now.getMonth()]}, ${now.getFullYear()}`;
+      const dateLabel = dayjs(now).format("D [de] MMMM, YYYY");
 
       setPaymentResult({
         id: String(backendResult.payment.id),

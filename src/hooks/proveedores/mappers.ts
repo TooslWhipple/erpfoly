@@ -1,5 +1,6 @@
 import type { SupplierDetail, CreateSupplierPayload } from "@/services/suppliers.service";
 import type { Supplier } from "@/types/proveedores.types";
+import dayjs from "@/lib/dayjs";
 
 export type SupplierFormState = Pick<
     Supplier,
@@ -143,7 +144,7 @@ function toNewPromotionPayload(promotion: PromotionSnapshotItem) {
     return {
         description: promotion.description || "Promoción",
         discountRate: Number(promotion.percentage) || 0,
-        startDate: promotion.startDate || new Date().toISOString().slice(0, 10),
+        startDate: promotion.startDate || dayjs().format("YYYY-MM-DD"),
         endDate: promotion.endDate || undefined,
     };
 }

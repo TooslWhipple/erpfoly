@@ -1,4 +1,4 @@
-import { get, post, patch, del, unwrapOrThrow, type ApiResult, type ApiSuccessPayload } from "@/lib/axios";
+import { get, post, patch, del, unwrapOrThrow, type ApiResult, type ApiSuccessPayload, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 
 // ============================================================================
@@ -41,15 +41,10 @@ export interface GetBranchesParams {
   page?: number;
   limit?: number;
   search?: string;
+  status?: "ACTIVE" | "INACTIVE";
 }
 
-export interface GetBranchesResponse {
-  rows: Branch[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages?: number;
-}
+export type GetBranchesResponse = PaginatedRowsResponse<Branch>;
 
 export interface CreateBranchPayload {
   name: string;
@@ -134,6 +129,7 @@ export interface BranchCatalogItem {
   id: number;
   name: string;
   is_main_warehouse: boolean;
+  municipality?: string | null;
 }
 
 export async function getBranchesCatalog(

@@ -12,7 +12,7 @@ import type {
   RouteDetailApi,
   RouteDriverCandidateApi,
   RouteListRowApi,
-  OrderToAddApi,
+  AvailableOrdersApi,
 } from "@/types/rutas-api.types";
 
 export async function fetchRoutesForDate(params: {
@@ -40,14 +40,9 @@ export type ScheduleType = "unique" | "weekly" | "monthly";
 
 export interface CreateRoutePayload {
   route_type: RouteType;
-  city_id: number;
   origin_branch_id?: number;
-  destination_branch_id?: number;
   delivery_date?: string;
-  origin_city_id?: number;
-  main_branch_id?: number;
-  destination_city_id?: number;
-  branch_ids_to_visit: number[];
+  branch_ids_to_visit?: number[];
   schedule?: ScheduleType;
   scheduled_date?: string;
   weekdays?: number[];
@@ -64,25 +59,43 @@ export async function fetchRouteDetail(routeId: number) {
 
 export async function fetchAvailableOrders(
   routeId: number,
-  page = 1,
   search?: string,
 ) {
-  const searchParams = new URLSearchParams({
-    page: String(page),
-    limit: "100",
-  });
+  const searchParams = new URLSearchParams();
   if (search?.trim()) {
     searchParams.set("search", search.trim());
   }
-  return get<PaginatedRowsApi<OrderToAddApi>>(
-    `/routes/${routeId}/available-orders?${searchParams.toString()}`,
+  const query = searchParams.toString();
+  return get<AvailableOrdersApi>(
+    `/routes/${routeId}/available-orders${query ? `?${query}` : ""}`,
   );
 }
 
-export async function addOrdersToRoute(routeId: number, orderIds: number[]) {
-  return post<RouteDetailApi>(`/routes/${routeId}/orders`, {
-    order_ids: orderIds,
-  });
+export interface AddRoutePointPayload {
+  origin: "sale" | "order";
+  origin_id: number;
+  item_ids: number[];
+}
+
+export async function addOrdersToRoute(
+  routeId: number,
+  points: AddRoutePointPayload[],
+) {
+  return post<RouteDetailApi>(`/routes/${routeId}/orders`, { points });
+}
+
+export async function removeRoutePoint(routeId: number, pointId: number) {
+  return del<RouteDetailApi>(`/routes/${routeId}/route-points/${pointId}`);
+}
+
+export async function removeRoutePointItem(
+  routeId: number,
+  pointId: number,
+  itemId: number,
+) {
+  return del<RouteDetailApi>(
+    `/routes/${routeId}/route-points/${pointId}/items/${itemId}`,
+  );
 }
 
 export async function uploadCartaPorte(

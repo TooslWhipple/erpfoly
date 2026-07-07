@@ -46,6 +46,7 @@ function mapOrder(order: RouteOrderApi): RouteOrder {
     sequence: order.sequence,
     address: order.address,
     zone: order.zone,
+    destinationBranch: order.destination_branch,
     stopType: mapStopType(order.stop_type),
     items: order.items.map(mapOrderItem),
   };
@@ -56,6 +57,7 @@ export function mapRouteListRowToSummary(row: RouteListRowApi): RouteSummary {
     id: row.id,
     name: formatRouteName(row.id, row.code),
     status: row.status as RouteStatus,
+    routeType: row.route_type,
     location: row.location,
     articleCount: row.article_count,
     pointCount: row.point_count,
@@ -99,8 +101,11 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
   return {
     id: data.id,
     name: formatRouteName(data.id, data.code),
+    routeType: data.route_type,
     status: data.status as RouteStatus,
     location: data.location,
+    scheduledDate: data.scheduled_date ?? null,
+    originBranch: data.origin_branch ?? null,
     articleCount: data.article_count,
     pointCount: data.point_count,
     driverName: data.driver_name,

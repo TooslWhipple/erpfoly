@@ -14,9 +14,10 @@ export interface LoginCredentials {
 	password: string;
 }
 
-/** Response from POST /auth/login when OTP is sent (no tokens yet). */
+/** Response from POST /auth/login when OTP is sent or password change is required. */
 export interface LoginOtpSentResponse {
 	message: string;
+	requiresPasswordChange?: boolean;
 }
 
 export interface LoginResponse {
@@ -91,8 +92,9 @@ const BACKEND_ACTION_TO_CRUD_ACTION: Record<string, "create" | "read" | "update"
 const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"solicitudes-credito": "solicitudes_credito",
 	"solicitudes-descuento": "solicitudes_descuento",
-	"solicitudes-sucursales": "solicitudes_sucursales",
-	"pedidos-sucursales": "pedidos_sucursales",
+	"solicitudes-sucursales": "traspasos",
+	"pedidos-sucursales": "traspasos",
+	"traspasos": "traspasos",
 	"clientes-morosidad": "clientes.morosidad",
 	"clientes-cobranza": "clientes.cobranza",
 	"inventario-mercancia-danada": "inventario.mercancia_danada",
@@ -101,9 +103,9 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"atencion-cliente": "atencion_cliente",
 	"atencion-cliente-facturas": "atencion_cliente.facturas",
 	"atencion-cliente-reparaciones": "atencion_cliente.reparaciones",
-	"rutas-articulos": "rutas.articulos",
-	"rutas-carta-porte": "rutas.carta_porte",
-	"rutas-conductores": "rutas.conductores",
+	"rutas-articulos": "rutas",
+	"rutas-carta-porte": "rutas",
+	"rutas-conductores": "rutas",
 	"catalogos-productos": "catalogos.productos",
 	"catalogos-departamentos": "catalogos.departamentos",
 	"catalogos-promociones": "catalogos.promociones",
@@ -133,6 +135,8 @@ interface BackendUser {
 	roleName?: string;
 	permissions?: BackendPermission[];
 	avatar?: string;
+	temporaryPassword?: boolean;
+	temporary_password?: boolean;
 }
 
 function asNonEmptyString(value: unknown): string | null {
@@ -225,6 +229,7 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 		avatar: u.avatar,
 		...role,
 		permissions: normalizeBackendPermissions(u.permissions),
+		temporaryPassword: u.temporaryPassword ?? u.temporary_password ?? false,
 	};
 }
 
@@ -265,6 +270,28 @@ export interface ResendOtpRequest {
 export interface RefreshTokenResponse {
 	accessToken: string;
 	refreshToken?: string;
+}
+
+export interface ChangeRequiredPasswordRequest {
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export interface ReplaceTemporaryPasswordRequest {
+	username?: string;
+	cellphone?: string;
+	currentPassword: string;
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export interface ReplaceTemporaryPasswordResponse {
+	message: string;
+}
+
+export interface ChangeRequiredPasswordResponse {
+	message: string;
+	user: User;
 }
 
 export const authService = {
@@ -334,16 +361,34 @@ export const authService = {
 		return post<ApiSuccessPayload>("/auth/password/recovery", data);
 	},
 
-	async validateRecoveryToken(
-		token: string
-	): Promise<ApiResult<ValidateRecoveryTokenResponse>> {
-		return get<ValidateRecoveryTokenResponse>(
-			`/auth/password/recovery/validate?token=${encodeURIComponent(token)}`
+	async replaceTemporaryPassword(
+		data: ReplaceTemporaryPasswordRequest,
+	): Promise<ApiResult<ReplaceTemporaryPasswordResponse>> {
+		return post<ReplaceTemporaryPasswordResponse>(
+			"/auth/password/replace-temporary",
+			data,
 		);
 	},
 
-	async resetPassword(data: ResetPasswordRequest): Promise<ApiResult<ApiSuccessPayload>> {
-		return post<ApiSuccessPayload>("/auth/password/recovery/reset", data);
+	async changeRequiredPassword(
+		data: ChangeRequiredPasswordRequest
+	): Promise<ApiResult<ChangeRequiredPasswordResponse>> {
+		const result = await post<{
+			message: string;
+			user: BackendUser;
+		}>("/auth/password/change-required", data);
+
+		if (result.error || !result.data) {
+			return { data: null, error: result.error };
+		}
+
+		return {
+			data: {
+				message: result.data.message,
+				user: mapBackendUserToFrontend(result.data.user),
+			},
+			error: null,
+		};
 	},
 };
 

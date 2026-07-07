@@ -1,5 +1,4 @@
 import { styled } from "@mui/material/styles";
-import { Box } from "@mui/material";
 import { theme } from "@/styles/theme";
 
 export type StatusChipVariant = "default" | "success" | "pending" | "error" | "warning" | "info" | "infoAlt" | "disabled" | "nuevo" | "aumento";
@@ -45,24 +44,54 @@ const sizeStyles: Record<
   },
 };
 
+function getGridTemplateColumns(hasStartIcon: boolean, hasEndIcon: boolean): string {
+  const labelColumn = "minmax(0, 1fr)";
+
+  if (hasStartIcon && hasEndIcon) {
+    return `max-content ${labelColumn} max-content`;
+  }
+  if (hasStartIcon) {
+    return `max-content ${labelColumn}`;
+  }
+  if (hasEndIcon) {
+    return `${labelColumn} max-content`;
+  }
+  return labelColumn;
+}
+
 export interface StyledStatusChipProps {
   variant: StatusChipVariant;
   size?: StatusChipSize;
   backgroundColor?: string;
   color?: string;
+  hasStartIcon?: boolean;
+  hasEndIcon?: boolean;
 }
 
-export const StyledStatusChip = styled(Box, {
+export const StyledStatusChip = styled("div", {
   shouldForwardProp: (prop) =>
-    prop !== "variant" && prop !== "size" && prop !== "backgroundColor" && prop !== "color",
-})<StyledStatusChipProps>(({ variant, size = "default", backgroundColor: bgOverride, color: colorOverride }) => {
+    prop !== "variant" &&
+    prop !== "size" &&
+    prop !== "backgroundColor" &&
+    prop !== "color" &&
+    prop !== "hasStartIcon" &&
+    prop !== "hasEndIcon",
+})<StyledStatusChipProps>(({
+  variant,
+  size = "default",
+  backgroundColor: bgOverride,
+  color: colorOverride,
+  hasStartIcon = false,
+  hasEndIcon = false,
+}) => {
   const { background, color } = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
+
   return {
-    display: "inline-flex",
+    display: "inline-grid",
+    gridTemplateColumns: getGridTemplateColumns(hasStartIcon, hasEndIcon),
     alignItems: "center",
-    justifyContent: "center",
-    gap: sizeStyle.gap,
+    columnGap: sizeStyle.gap,
     borderRadius: "8px",
     height: sizeStyle.height,
     padding: sizeStyle.padding,
@@ -72,11 +101,25 @@ export const StyledStatusChip = styled(Box, {
     fontWeight: 500,
     lineHeight: sizeStyle.lineHeight,
     boxSizing: "border-box",
-    "& svg": {
-      fontSize: sizeStyle.iconFontSize,
+    maxWidth: "100%",
+    minWidth: 0,
+    width: "auto",
+    overflow: "hidden",
+    flexShrink: 1,
+    verticalAlign: "middle",
+    "& .status-chip-icon": {
+      display: "inline-flex",
+      alignItems: "center",
       flexShrink: 0,
+      "& svg": {
+        fontSize: sizeStyle.iconFontSize,
+      },
     },
-    "& span": {
+    "& .status-chip-label": {
+      minWidth: 0,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
       fontSize: sizeStyle.spanFontSize,
       fontWeight: 600,
       lineHeight: sizeStyle.spanLineHeight,

@@ -6,6 +6,7 @@ import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import dayjs from "@/lib/dayjs";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -202,8 +203,8 @@ async function getDelinquentCustomers(
   // Sort by due date if requested
   if (params.sortField === "dueDate") {
     filteredData.sort((a, b) => {
-      const dateA = new Date(a.dueDate).getTime();
-      const dateB = new Date(b.dueDate).getTime();
+      const dateA = dayjs(a.dueDate, "D [de] MMMM, YYYY", "es-mx", true).valueOf();
+      const dateB = dayjs(b.dueDate, "D [de] MMMM, YYYY", "es-mx", true).valueOf();
       return params.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
   }

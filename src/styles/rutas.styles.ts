@@ -20,6 +20,7 @@ export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selecte
   gap: "12px",
   padding: "12px",
   cursor: "pointer",
+  overflow: "hidden",
   transition: "border-color 0.2s, background-color 0.2s",
   "&:hover": {
     borderColor: selected ? theme.palette.primary.main : theme.palette.text.secondary,

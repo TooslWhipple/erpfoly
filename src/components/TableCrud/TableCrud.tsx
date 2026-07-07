@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
+import { formatDate } from "@/utils/date";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   TableWrapper,
@@ -83,12 +84,13 @@ export interface Column<T> {
 
 export interface RowAction<T> {
   id: string;
-  label: string;
+  label: string | ((row: T) => string);
   icon?: React.ReactNode;
   onClick: (row: T) => void;
-  color?: "inherit" | "error" | "primary" | "secondary";
+  color?: "inherit" | "error" | "primary" | "secondary" | ((row: T) => "inherit" | "error" | "primary" | "secondary");
   permission?: string;
   disabled?: boolean | ((row: T) => boolean);
+  hidden?: boolean | ((row: T) => boolean);
 }
 
 interface TableCrudProps<T> {
@@ -222,13 +224,7 @@ export function TableCrud<T>({
         return typeof rawValue === "number" ? numeral(rawValue).format("0.00") + "%" : String(rawValue ?? "");
 
       case "date":
-        if (rawValue instanceof Date) {
-          return rawValue.toLocaleDateString();
-        }
-        if (typeof rawValue === "string") {
-          return new Date(rawValue).toLocaleDateString();
-        }
-        return String(rawValue ?? "");
+        return formatDate(rawValue, "dateNumeric");
 
       case "boolean":
         return rawValue ? "Sí" : "No";
@@ -456,19 +452,35 @@ export function TableCrud<T>({
         }}
       >
         {visibleActions?.map((action) => {
+          const isHidden =
+            typeof action.hidden === "function" && selectedRow
+              ? action.hidden(selectedRow)
+              : Boolean(action.hidden);
+          if (isHidden) return null;
+
           const isDisabled =
             typeof action.disabled === "function" && selectedRow
               ? action.disabled(selectedRow)
               : Boolean(action.disabled);
+          const resolvedLabel =
+            typeof action.label === "function"
+              ? selectedRow
+                ? action.label(selectedRow)
+                : ""
+              : action.label;
+          const resolvedColor =
+            typeof action.color === "function" && selectedRow
+              ? action.color(selectedRow)
+              : action.color;
           return (
             <StyledMenuItem
               key={action.id}
               onClick={() => !isDisabled && handleActionClick(action)}
               disabled={isDisabled}
-              sx={{ color: action.color === "error" ? "error.main" : "inherit" }}
+              sx={{ color: resolvedColor === "error" ? "error.main" : "inherit" }}
             >
               {action.icon}
-              {action.label}
+              {resolvedLabel}
             </StyledMenuItem>
           );
         })}

@@ -10,6 +10,7 @@ import { createOrderWithItems } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
+import dayjs from "@/lib/dayjs";
 
 interface ConfirmOrderData {
     orderType: "external" | "internal";
@@ -42,7 +43,7 @@ function formatCurrency(value: number): string {
     }).format(value);
 }
 
-export default function ConfirmarArticulosPage() {
+export default function ConfirmarTraspasoPage() {
     const router = useRouter();
     const [orderData, setOrderData] = useState<ConfirmOrderData | null>(null);
     const [items, setItems] = useState<ConfirmOrderItem[]>([]);
@@ -86,7 +87,7 @@ export default function ConfirmarArticulosPage() {
     const handleBack = () => {
         if (orderData?.orderType === "internal") {
             router.push({
-                pathname: "/pedidos/sucursales/nuevo",
+                pathname: "/traspasos/nuevo",
                 query: {
                     orderType: "internal",
                     originBranchId: orderData.originBranchId,
@@ -155,7 +156,7 @@ export default function ConfirmarArticulosPage() {
                     ? Number(orderData.originBranchId)
                     : undefined,
                 folio: `PED-${Date.now()}`,
-                order_date: new Date().toISOString().split("T")[0],
+                order_date: dayjs().format("YYYY-MM-DD"),
                 supplier_id: orderData.orderType === "external" && orderData.supplierId
                     ? Number(orderData.supplierId)
                     : undefined,
@@ -178,11 +179,11 @@ export default function ConfirmarArticulosPage() {
             sessionStorage.removeItem("newOrderData");
             showSuccess(result.data?.message ?? "El pedido fue confirmado correctamente.");
             const returnUrl = orderData.orderType === "internal"
-                ? "/pedidos/sucursales"
+                ? "/traspasos"
                 : `/pedidos/nuevo/resumen/${result.data.id}`;
             router.push(returnUrl);
         } catch (err) {
-            const msg = err instanceof Error && err.message ? err.message : "Error al solicitar el pedido. Intenta de nuevo.";
+            const msg = err instanceof Error && err.message ? "Error al solicitar el pedido. Intenta de nuevo." : "Error al solicitar el pedido. Intenta de nuevo.";
             showError(msg);
             setStatus("error");
         } finally {
@@ -192,18 +193,18 @@ export default function ConfirmarArticulosPage() {
 
     const breadcrumbs: BreadcrumbItem[] = orderData
         ? [
-            { label: "Pedidos", href: orderData.orderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
+            { label: "Traspasos", href: orderData.orderType === "internal" ? "/traspasos" : "/pedidos" },
             {
                 label: orderData.orderType === "internal"
                     ? (orderData.branchName ? `Sucursal ${orderData.branchName}` : "Sucursales")
                     : (orderData.supplierName ? `Proveedor ${orderData.supplierName}` : "Proveedores"),
                 href: orderData.orderType === "internal"
-                    ? (orderData.branchId ? `/pedidos/sucursales?branch=${orderData.branchId}` : "/pedidos/sucursales")
+                    ? (orderData.branchId ? `/traspasos?branch=${orderData.branchId}` : "/traspasos")
                     : (orderData.supplierId ? `/pedidos?supplier=${orderData.supplierId}` : "/pedidos"),
             },
-            { label: "Nuevo pedido" },
+            { label: "Nuevo traspaso" },
         ]
-        : [{ label: "Pedidos", href: "/pedidos" }, { label: "Nuevo pedido" }];
+        : [{ label: "Traspasos", href: "/traspasos" }, { label: "Nuevo traspaso" }];
 
     if (status === "loading") {
         return (
@@ -221,10 +222,10 @@ export default function ConfirmarArticulosPage() {
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                 <Box sx={{ marginTop: 3, textAlign: "center" }}>
                     <Typography variant="body1" color="text.secondary">
-                        No hay artículos para confirmar. Agrega artículos en el nuevo pedido.
+                        No hay artículos para confirmar. Agrega artículos en el nuevo traspaso.
                     </Typography>
                     <Button variant="contained" onClick={handleBack} sx={{ marginTop: 2 }}>
-                        Volver a nuevo pedido
+                        Volver a nuevo traspaso
                     </Button>
                 </Box>
             </MainLayout>
@@ -239,7 +240,7 @@ export default function ConfirmarArticulosPage() {
                 <Typography variant="h1">Confirmar artículos</Typography>
 
                 <Grid container spacing={4}>
-                    <Grid size={{ xs: 12, md: 8, xl: 9 }}>
+                    <Grid size={{ xs: 12, md: 7, lg: 8, xl: 9 }}>
                         <Stack spacing={2}>
                             {
                                 items.map((item) => (
@@ -255,7 +256,7 @@ export default function ConfirmarArticulosPage() {
                         </Stack>
                     </Grid>
 
-                    <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+                    <Grid size={{ xs: 12, md: 5, lg: 4, xl: 3 }}>
                         <SummaryCard>
                             <Stack spacing={2}>
                                 {isInternalOrder ? (
@@ -286,13 +287,13 @@ export default function ConfirmarArticulosPage() {
                                     size="large"
                                     disabled={status === "submitting" || items.length === 0}
                                     onClick={handleSolicitarPedido}
-                                    sx={{ textTransform: "none", fontWeight: 600 }}
-                                >
-                                    {status === "submitting" ? (
-                                        <CircularProgress size={24} color="inherit" />
-                                    ) : (
-                                        isInternalOrder ? "Solicitar pedido" : "Guardar pedido"
-                                    )}
+                                    sx={{ textTransform: "none", fontWeight: 600 }}>
+                                    {
+                                        (status === "submitting") ?
+                                            <CircularProgress size={24} color="inherit" />
+                                            :
+                                            isInternalOrder ? "Solicitar traspaso" : "Guardar pedido"
+                                    }
                                 </Button>
                             </Stack>
                         </SummaryCard>

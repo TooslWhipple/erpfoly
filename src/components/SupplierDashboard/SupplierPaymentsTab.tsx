@@ -3,6 +3,7 @@ import { DataTable } from "@/components";
 import type { DataTableColumn, StatusChipVariant } from "@/components/TableCrud";
 import { useSupplierPayments } from "@/hooks/proveedores/useSupplierPayments";
 import type { SupplierPaymentRow } from "@/types/supplierDashboard.types";
+import dayjs from "@/lib/dayjs";
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
@@ -15,6 +16,11 @@ const PAYMENT_STATUS_VARIANTS: Record<string, StatusChipVariant> = {
 };
 
 const PAYMENTS_TABLE_SKELETON_ROWS = 3;
+
+function formatPeriodLabel(month: unknown, year: unknown): string {
+  if (month == null || year == null) return "—";
+  return dayjs(`${year}-${String(month).padStart(2, "0")}-01`).format("MMMM YYYY");
+}
 
 const paymentColumns: DataTableColumn<SupplierPaymentRow>[] = [
   {
@@ -32,7 +38,11 @@ const paymentColumns: DataTableColumn<SupplierPaymentRow>[] = [
       </Link>
     ),
   },
-  { id: "chargedInLabel", label: "Cargado en" },
+  {
+    id: "periodMonth",
+    label: "Cargado en",
+    format: (_value, row) => formatPeriodLabel(row.periodMonth, row.periodYear),
+  },
   { id: "amount", label: "Monto", type: "currency", align: "right" },
   {
     id: "status",

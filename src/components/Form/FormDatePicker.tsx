@@ -27,81 +27,77 @@ function OpenPickerIcon() {
   return <Calendar size={16} />;
 }
 
-export const FormDatePicker = forwardRef<HTMLDivElement, FormDatePickerProps>(
-  (
-    {
-      label,
-      required,
-      value,
-      onChange,
-      openTo,
-      views,
-      error,
-      helperText,
-      disabled,
-      placeholder = "Selecciona",
-      minDate,
-      maxDate,
-      fullWidth = true,
-    },
-    ref,
-  ) => {
-    const parsedValue = useMemo(() => {
-      if (!value) {
-        return null;
-      }
+export const FormDatePicker = forwardRef<HTMLDivElement, FormDatePickerProps>(({
+  label,
+  required,
+  value,
+  onChange,
+  openTo,
+  views,
+  error,
+  helperText,
+  disabled,
+  placeholder = "Selecciona",
+  minDate,
+  maxDate,
+  fullWidth = true,
+}, ref) => {
+  const parsedValue = useMemo(() => {
+    if (!value) {
+      return null;
+    }
 
-      const parsed = dayjs(value, "YYYY-MM-DD", true);
-      return parsed.isValid() ? parsed : null;
-    }, [value]);
+    const parsed = dayjs(value, "YYYY-MM-DD", true);
+    return parsed.isValid() ? parsed : null;
+  }, [value]);
 
-    const handleChange = (newValue: Dayjs | null) => {
-      if (!newValue || !newValue.isValid()) {
-        onChange("");
-        return;
-      }
+  const handleChange = (newValue: Dayjs | null) => {
+    if (!newValue || !newValue.isValid()) {
+      onChange("");
+      return;
+    }
 
-      onChange(newValue.format("YYYY-MM-DD"));
-    };
+    onChange(newValue.format("YYYY-MM-DD"));
+  };
 
-    return (
-      <FieldWrapper ref={ref}>
-        {label && (
-          <FieldLabel>
-            {label}
-            {required && (
-              <Typography component="span" sx={{ color: "error.main", ml: 0.5 }}>
-                *
-              </Typography>
-            )}
-          </FieldLabel>
-        )}
-        <DatePicker
-          value={parsedValue}
-          onChange={handleChange}
-          disabled={disabled}
-          format="DD/MM/YYYY"
-          openTo={openTo}
-          views={views}
-          minDate={minDate ? dayjs(minDate, "YYYY-MM-DD", true) : undefined}
-          maxDate={maxDate ? dayjs(maxDate, "YYYY-MM-DD", true) : undefined}
-          slots={{
-            textField: StyledTextField,
-            openPickerIcon: OpenPickerIcon,
-            openPickerButton: StyledOpenPickerButton,
-          }}
-          slotProps={{
-            textField: {
-              fullWidth,
-              error,
-              helperText,
-              placeholder,
-            },
-          }}
-        />
-      </FieldWrapper>
-    );
-  },
+  return (
+    <FieldWrapper ref={ref}>
+      {label && (
+        <FieldLabel>
+          {label}
+          {required && (
+            <Typography component="span" sx={{ color: "error.main", ml: 0.5 }}>
+              *
+            </Typography>
+          )}
+        </FieldLabel>
+      )}
+      <DatePicker
+        value={parsedValue}
+        onChange={handleChange}
+        disabled={disabled}
+        format="DD/MM/YYYY"
+        openTo={openTo}
+        views={views}
+        minDate={minDate ? dayjs(minDate, "YYYY-MM-DD", true) : undefined}
+        maxDate={maxDate ? dayjs(maxDate, "YYYY-MM-DD", true) : undefined}
+        slots={{
+          textField: StyledTextField,
+          openPickerIcon: OpenPickerIcon,
+          openPickerButton: StyledOpenPickerButton,
+        }}
+        slotProps={{
+          textField: {
+            fullWidth,
+            error,
+            helperText,
+            placeholder,
+          },
+        }}
+      />
+    </FieldWrapper>
+  );
+},
 );
 
 FormDatePicker.displayName = "FormDatePicker";

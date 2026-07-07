@@ -56,34 +56,34 @@
       "actions": ["view", "edit"]
     },
     {
-      "code": "pedidos-sucursales",
-      "name": "Pedidos por sucursal",
-      "path": "/pedidos/sucursales",
+      "code": "traspasos",
+      "name": "Traspasos",
+      "path": "/traspasos",
       "actions": ["view", "create", "edit"]
     },
     {
-      "code": "pedidos-sucursales-detalle",
-      "name": "Detalle de pedido sucursal",
-      "path": "/pedidos/sucursales/[id]",
+      "code": "traspasos-detalle",
+      "name": "Detalle de traspaso",
+      "path": "/traspasos/[id]",
       "actions": ["view", "edit"]
     },
     {
-      "code": "pedidos-sucursales-editar",
-      "name": "Editar pedido sucursal",
-      "path": "/pedidos/sucursales/[id]/editar",
+      "code": "traspasos-editar",
+      "name": "Editar traspaso",
+      "path": "/traspasos/[id]/editar",
       "actions": ["view", "edit"]
     },
     {
-      "code": "pedidos-sucursales-nuevo",
-      "name": "Nuevo pedido sucursal",
-      "path": "/pedidos/sucursales/nuevo",
+      "code": "traspasos-nuevo",
+      "name": "Nuevo traspaso",
+      "path": "/traspasos/nuevo",
       "actions": ["view", "create"]
     },
     {
-      "code": "solicitudes-sucursales",
-      "name": "Pedidos (solicitudes sucursales)",
-      "path": "/solicitudes/sucursales",
-      "actions": ["view"]
+      "code": "traspasos-nuevo-confirmar",
+      "name": "Confirmar traspaso",
+      "path": "/traspasos/nuevo/confirmar",
+      "actions": ["view", "edit"]
     },
     {
       "code": "inventario",

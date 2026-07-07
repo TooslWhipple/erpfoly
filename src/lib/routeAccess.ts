@@ -45,10 +45,9 @@ import {
   MERCHANDISE_RECEPTION_READ,
   ORDERS_CREATE,
   ORDERS_READ,
-  BRANCH_ORDERS_CREATE,
-  BRANCH_ORDERS_READ,
-  BRANCH_ORDERS_UPDATE,
-  BRANCH_REQUESTS_READ,
+  TRASPASOS_CREATE,
+  TRASPASOS_READ,
+  TRASPASOS_UPDATE,
   ROUTES_READ,
   SALES_READ,
   SALES_CREATE,
@@ -59,11 +58,11 @@ import {
 export const PUBLIC_ROUTES = [
 	"/login",
 	"/login/validate-otp",
+	"/login/change-password",
 	"/login/recover",
 	"/login/recover/sent",
-	"/login/recover/reset",
-	"/login/recover/success",
 ] as const;
+export const CHANGE_PASSWORD_ROUTE = "/login/change-password";
 export const FORBIDDEN_ROUTE = "/403";
 export const DEFAULT_AUTHENTICATED_ROUTE = "/solicitudes-credito";
 
@@ -102,14 +101,12 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/clientes\/[^/]+\/editar$/, permission: CUSTOMERS_UPDATE },
   { pattern: /^\/clientes(\/.*)?$/, permission: CUSTOMERS_READ },
 
-  { pattern: /^\/pedidos\/sucursales\/nuevo\/confirmar$/, permission: BRANCH_ORDERS_UPDATE },
-  { pattern: /^\/pedidos\/sucursales\/nuevo$/, permission: BRANCH_ORDERS_CREATE },
-  { pattern: /^\/pedidos\/sucursales\/[^/]+\/editar$/, permission: BRANCH_ORDERS_UPDATE },
-  { pattern: /^\/pedidos\/sucursales(\/.*)?$/, permission: BRANCH_ORDERS_READ },
+  { pattern: /^\/traspasos\/nuevo\/confirmar$/, permission: TRASPASOS_UPDATE },
+  { pattern: /^\/traspasos\/nuevo$/, permission: TRASPASOS_CREATE },
+  { pattern: /^\/traspasos\/[^/]+\/editar$/, permission: TRASPASOS_UPDATE },
+  { pattern: /^\/traspasos(\/.*)?$/, permission: TRASPASOS_READ },
   { pattern: /^\/pedidos\/nuevo$/, permission: ORDERS_CREATE },
   { pattern: /^\/pedidos(\/.*)?$/, permission: ORDERS_READ },
-
-  { pattern: /^\/solicitudes\/sucursales(\/.*)?$/, permission: BRANCH_REQUESTS_READ },
 
   { pattern: /^\/solicitudes-descuento\/nuevo$/, permission: DISCOUNT_REQUESTS_CREATE },
   { pattern: /^\/solicitudes-descuento\/[^/]+$/, permission: DISCOUNT_REQUESTS_READ },
@@ -160,8 +157,7 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/cajas", requirement: { permission: CASH_REGISTERS_READ } },
   { path: "/clientes", requirement: { permission: CUSTOMERS_READ } },
   { path: "/pedidos", requirement: { permission: ORDERS_READ } },
-  { path: "/pedidos/sucursales", requirement: { permission: BRANCH_ORDERS_READ } },
-  { path: "/solicitudes/sucursales", requirement: { permission: BRANCH_REQUESTS_READ } },
+  { path: "/traspasos", requirement: { permission: TRASPASOS_READ } },
   { path: "/solicitudes-descuento", requirement: { permission: DISCOUNT_REQUESTS_READ } },
   { path: "/inventario", requirement: { permission: INVENTORY_READ } },
   { path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
@@ -180,6 +176,10 @@ export function normalizePathname(pathname: string): string {
 export function isPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
+}
+
+export function isChangePasswordRoute(pathname: string): boolean {
+  return normalizePathname(pathname) === CHANGE_PASSWORD_ROUTE;
 }
 
 export function isSuperAdmin(user: User | null): boolean {

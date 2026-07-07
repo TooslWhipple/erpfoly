@@ -1,5 +1,6 @@
 import { Skeleton, Table, TableBody, Typography } from "@mui/material";
 import numeral from "numeral";
+import { formatDate } from "@/utils/date";
 import {
   TableWrapper,
   StyledTableContainer,
@@ -90,13 +91,7 @@ function formatCellValue<T>(
         : String(rawValue ?? "");
 
     case "date":
-      if (rawValue instanceof Date) {
-        return rawValue.toLocaleDateString();
-      }
-      if (typeof rawValue === "string") {
-        return new Date(rawValue).toLocaleDateString();
-      }
-      return String(rawValue ?? "");
+      return formatDate(rawValue, "dateNumeric");
 
     case "boolean":
       return rawValue ? "Sí" : "No";

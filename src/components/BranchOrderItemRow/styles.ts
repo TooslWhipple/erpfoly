@@ -6,7 +6,8 @@ export const Card = styled("div")({
     display: "flex",
     alignItems: "center",
     gap: "16px",
-    padding: "16px"
+    padding: "16px",
+    borderTop: `1px solid ${theme.palette.app.border}`
 });
 
 export const ProductIconPlaceholder = styled("div")({
@@ -46,25 +47,3 @@ export const QuantityControls = styled("div")(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
 }));
 
-export const QuantityButton = styled(IconButton)(({ theme }) => ({
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "50px",
-    minWidth: "24px",
-    height: "24px",
-    border: `1px solid ${theme.palette.app.border}`,
-    "&:hover": {
-        backgroundColor: theme.palette.app.chip.background,
-    },
-}));
-
-export const QuantityValue = styled("div")({
-    minWidth: "24px",
-    height: "20px",
-    lineHeight: "20px",
-    textAlign: "center",
-    fontSize: "14px",
-    fontWeight: "700",
-});

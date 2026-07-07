@@ -5,6 +5,7 @@ import { MainLayout, Breadcrumbs } from "@/components";
 import { NumberInput } from "@/components/Folypuntos";
 import type { ReceptionArticle } from "@/types/recepcion-mercancias.types";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
+import { formatDate } from "@/utils/date";
 import {
     PageContainer,
     HeaderSection,
@@ -103,15 +104,6 @@ const DUMMY_ARTICLES: ReceptionArticle[] = [
 // HELPERS
 // ============================================================================
 
-function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-MX", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
-}
-
 function calculateProgress(articles: ReceptionArticle[]): number {
     if (articles.length === 0) return 0;
     const totalQuantity = articles.reduce((sum, article) => sum + article.quantity, 0);
@@ -198,12 +190,12 @@ export default function NuevaRecepcion() {
                 <HeaderSection>
                     <SupplierInfo>
                         <SupplierName>{supplierName}</SupplierName>
-                        <SupplierDate>{formatDate(orderDate)}</SupplierDate>
+                        <SupplierDate>{formatDate(orderDate, "dateLong")}</SupplierDate>
                     </SupplierInfo>
 
                     <BranchInfo>
                         <BranchName>{branch}</BranchName>
-                        <DeliveryDate>Entrega: {formatDate(deliveryDate)}</DeliveryDate>
+                        <DeliveryDate>Entrega: {formatDate(deliveryDate, "dateLong")}</DeliveryDate>
                     </BranchInfo>
 
                     <ActionButton

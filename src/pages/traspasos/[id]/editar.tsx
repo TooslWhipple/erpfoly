@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import OrderForm from "@/components/OrderForm";
 
-export default function EditarPedidoSucursal() {
+export default function EditarTraspaso() {
     const router = useRouter();
     const { id } = router.query;
 

@@ -34,7 +34,7 @@ export function useFormWithZod<
         validators: {
             onChange: validateOn === "change" ? validator : undefined,
             onBlur: validateOn === "blur" ? validator : undefined,
-            onSubmit: validateOn === "submit" ? validator : undefined,
+            onSubmit: validator,
         },
         onSubmit: async ({ value, formApi }) => {
             const parsed = schema.safeParse(value);

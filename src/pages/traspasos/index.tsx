@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud, StatusChip } from "@/components";
+import { Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
+import { MainLayout, Title, TabFilters, TableCrud, StatusChip, BranchSelectionModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import type { BranchOrderStatus, BranchRequestListItem } from "@/types/solicitudes.types";
@@ -12,7 +12,7 @@ import {
     getBranchOrderStatusVariant,
 } from "@/utils/branchRequest";
 import { Stack } from "@mui/material";
-import { BRANCH_REQUESTS_READ } from "@/lib/permissions";
+import { TRASPASOS_CREATE, TRASPASOS_READ, TRASPASOS_UPDATE } from "@/lib/permissions";
 
 interface BranchOrder {
     id: number;
@@ -39,6 +39,12 @@ interface GetBranchOrdersResponse {
     page: number;
     limit: number;
 }
+
+const ALL_TAB = "all";
+const PENDING_TAB = "pending";
+const SCHEDULED_TAB = "scheduled";
+const IN_PROGRESS_TAB = "partially_delivered";
+const DELIVERED_TAB = "delivered";
 
 function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder {
     const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
@@ -92,25 +98,28 @@ async function getBranchOrders(
     return { data: [], total: 0, page: params.page, limit: params.limit };
 }
 
-export default function SolicitudesSucursales() {
+export default function TraspasosPage() {
     const router = useRouter();
 
     const [orders, setOrders] = useState<BranchOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
-    const [activeTab, setActiveTab] = useState("all");
+    const [activeTab, setActiveTab] = useState(ALL_TAB);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
+    const [branchModalOpen, setBranchModalOpen] = useState(false);
 
     const tabs: TabOption[] = [
-        { label: "Todos", value: "all" },
-        { label: "Pendientes", value: "pending" },
-        { label: "Agendados", value: "scheduled" },
-        { label: "Entregados", value: "delivered" },
+        { label: "Todos", value: ALL_TAB },
+        { label: "Pendientes", value: PENDING_TAB },
+        { label: "Agendados", value: SCHEDULED_TAB },
+        { label: "En curso", value: IN_PROGRESS_TAB },
+        { label: "Entregados", value: DELIVERED_TAB },
     ];
 
     const getStatusFilter = useCallback((): "all" | BranchOrderStatus => {
+        if (activeTab === SCHEDULED_TAB) return PENDING_TAB as BranchOrderStatus;
         return activeTab as "all" | BranchOrderStatus;
     }, [activeTab]);
 
@@ -126,7 +135,7 @@ export default function SolicitudesSucursales() {
             setOrders(response.data);
             setTotalRows(response.total);
         } catch (err) {
-            console.error("[SolicitudesSucursales] Error fetching:", err);
+            console.error("[Traspasos] Error fetching:", err);
         } finally {
             setLoading(false);
         }
@@ -148,8 +157,33 @@ export default function SolicitudesSucursales() {
         setSearchValue(value);
     };
 
+    const handleCreate = () => {
+        setBranchModalOpen(true);
+    };
+
+    const handleBranchSelect = (selection: { origin: { id: number; name: string }; destination: { id: number; name: string } }) => {
+        router.push({
+            pathname: "/traspasos/nuevo",
+            query: {
+                orderType: "internal",
+                originBranchId: String(selection.origin.id),
+                originBranchName: selection.origin.name,
+                branchId: String(selection.destination.id),
+                branchName: selection.destination.name,
+            },
+        });
+    };
+
+    const handleCloseBranchModal = () => {
+        setBranchModalOpen(false);
+    };
+
     const handleViewOrder = (order: BranchOrder) => {
-        router.push(`/solicitudes/sucursales/${order.id}`);
+        router.push(`/traspasos/${order.id}`);
+    };
+
+    const handleEditOrder = (order: BranchOrder) => {
+        router.push(`/traspasos/${order.id}/editar`);
     };
 
     const handlePageChange = (newPage: number) => {
@@ -160,6 +194,13 @@ export default function SolicitudesSucursales() {
         setRowsPerPage(newRowsPerPage);
         setPage(0);
     };
+
+    const filteredOrders =
+        activeTab === SCHEDULED_TAB
+            ? orders.filter((order) => order.status === "scheduled")
+            : activeTab === PENDING_TAB
+                ? orders.filter((order) => order.status === "pending")
+                : orders;
 
     const columns: Column<BranchOrder>[] = [
         {
@@ -225,16 +266,23 @@ export default function SolicitudesSucursales() {
         {
             id: "view",
             label: "Ver detalle",
-            icon: <EditIcon fontSize="small" />,
+            icon: <VisibilityIcon fontSize="small" />,
             onClick: handleViewOrder,
-            permission: BRANCH_REQUESTS_READ,
+            permission: TRASPASOS_READ,
+        },
+        {
+            id: "edit",
+            label: "Editar",
+            icon: <EditIcon fontSize="small" />,
+            onClick: handleEditOrder,
+            permission: TRASPASOS_UPDATE,
         },
     ];
 
     return (
         <MainLayout>
             <Stack direction="column" spacing={3}>
-                <Title title="Pedidos" />
+                <Title title="Traspasos" />
 
                 <TabFilters
                     tabs={tabs}
@@ -243,11 +291,21 @@ export default function SolicitudesSucursales() {
                     showSearch
                     searchValue={searchValue}
                     onSearchChange={handleSearchChange}
+                    actions={[
+                        {
+                            label: "Nuevo",
+                            onClick: handleCreate,
+                            variant: "contained",
+                            color: "primary",
+                            showIcon: true,
+                            permission: TRASPASOS_CREATE,
+                        },
+                    ]}
                 />
 
                 <TableCrud
                     columns={columns}
-                    rows={orders}
+                    rows={filteredOrders}
                     actions={actions}
                     loading={loading}
                     rowKey="id"
@@ -257,9 +315,15 @@ export default function SolicitudesSucursales() {
                     onPageChange={handlePageChange}
                     onRowsPerPageChange={handleRowsPerPageChange}
                     onRowClick={handleViewOrder}
-                    emptyMessage="No hay pedidos de sucursales"
+                    emptyMessage="No hay traspasos"
                 />
             </Stack>
+
+            <BranchSelectionModal
+                open={branchModalOpen}
+                onClose={handleCloseBranchModal}
+                onSelect={handleBranchSelect}
+            />
         </MainLayout>
     );
 }

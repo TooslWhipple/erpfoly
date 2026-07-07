@@ -9,7 +9,7 @@ import {
     Typography,
 } from "@mui/material";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { getBranchesCatalog, type BranchCatalogItem } from "@/services/branches.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -171,55 +171,18 @@ interface BranchRoutePreviewProps {
 function BranchRoutePreview({ origin, destination }: BranchRoutePreviewProps) {
     return (
         <RoutePreviewCard>
-            <BranchPreviewCard $variant="origin">
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    Origen
-                </Typography>
-                {origin ? (
-                    <>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Building2 size={16} />
-                            <Typography variant="subtitle2" fontWeight={600} noWrap title={origin.name}>
-                                {origin.name}
-                            </Typography>
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                            ID {origin.id}
-                            {origin.is_main_warehouse ? " · Matriz" : ""}
-                        </Typography>
-                    </>
-                ) : (
-                    <Typography variant="body2" color="text.secondary">
-                        Sin seleccionar
-                    </Typography>
-                )}
+            <BranchPreviewCard>
+                <Typography variant="body2" color="text.secondary">Origen</Typography>
+                <Typography variant="body1" fontWeight={600}>{(origin) ? origin.name : "Sin seleccionar"}</Typography>
             </BranchPreviewCard>
 
             <RouteArrow>
                 <ArrowRight size={20} />
             </RouteArrow>
 
-            <BranchPreviewCard $variant="destination">
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    Destino
-                </Typography>
-                {destination ? (
-                    <>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Building2 size={16} />
-                            <Typography variant="subtitle2" fontWeight={600} noWrap title={destination.name}>
-                                {destination.name}
-                            </Typography>
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                            ID {destination.id}
-                        </Typography>
-                    </>
-                ) : (
-                    <Typography variant="body2" color="text.secondary">
-                        Sin seleccionar
-                    </Typography>
-                )}
+            <BranchPreviewCard>
+                <Typography variant="body2" color="text.secondary">Destino</Typography>
+                <Typography variant="body1" fontWeight={600}>{(destination) ? destination.name : "Sin seleccionar"}</Typography>
             </BranchPreviewCard>
         </RoutePreviewCard>
     );
@@ -304,13 +267,11 @@ export function BranchSelectionModal({
                     variant="contained"
                     color="primary"
                     onClick={handleContinue}
-                    sx={{ minWidth: 112, textTransform: "none", fontWeight: 600 }}
-                >
+                    sx={{ minWidth: 112 }}>
                     Continuar
                 </Button>
-            }
-        >
-            <Stack spacing={2.5} sx={{ flex: 1 }}>
+            }>
+            <Stack spacing={2} sx={{ flex: 1 }}>
                 <BranchCatalogAutocomplete
                     label="Sucursal de origen"
                     placeholder="Buscar sucursal de origen..."

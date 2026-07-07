@@ -14,12 +14,7 @@ import { RadioButton, RadioButtonGroup } from "@/components/RadioButton";
 import { MultiSelectChips } from "@/components/MultiSelectChips";
 import dayjs from "@/lib/dayjs";
 import type { CreateRoutePayload } from "@/services/rutas.service";
-import type { MunicipalityCatalogItem, MunicipalityZoneCatalogItem } from "@/services/municipalities.service";
-import { getMunicipalityZonesCatalog } from "@/services/municipalities.service";
 import type { BranchCatalogItem } from "@/services/branches.service";
-import {
-  CheckboxCellButton,
-} from "./NewRouteModal.styles";
 
 export type RouteType = "deliveries" | "scheduled";
 export type ScheduleType = "unique" | "weekly" | "monthly";
@@ -28,13 +23,8 @@ export type NewRouteFormValues = CreateRoutePayload;
 
 export interface NewRouteFormErrors {
   routeType?: string;
-  cityId?: string;
   originBranchId?: string;
-  destinationZoneId?: string;
   deliveryDate?: string;
-  originCityId?: string;
-  mainBranchId?: string;
-  destinationCityId?: string;
   branchesToVisit?: string;
   schedule?: string;
   scheduledDate?: string;
@@ -46,7 +36,6 @@ export interface NewRouteModalProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (values: NewRouteFormValues) => void | Promise<void>;
-  fetchCities: () => Promise<MunicipalityCatalogItem[]>;
   fetchBranches: () => Promise<BranchCatalogItem[]>;
   loading?: boolean;
 }
@@ -62,29 +51,19 @@ function isAfterTomorrow(dateStr: string): boolean {
   return parsed.isAfter(dayjs().endOf("day"));
 }
 
-function branchMatchesMunicipality(
-  branch: BranchCatalogItem,
-  municipalityName: string,
-): boolean {
-  return branch.municipality?.trim() === municipalityName.trim();
-}
-
 function buildPayload(values: NewRouteFormValues): CreateRoutePayload {
+  const base = { origin_branch_id: values.origin_branch_id };
   if (values.route_type === "deliveries") {
     return {
+      ...base,
       route_type: "deliveries",
-      city_id: values.city_id!,
-      origin_branch_id: values.origin_branch_id,
-      destination_zone_id: values.destination_zone_id,
       delivery_date: values.delivery_date,
     };
   }
 
   return {
+    ...base,
     route_type: "scheduled",
-    origin_city_id: values.origin_city_id,
-    main_branch_id: values.main_branch_id,
-    destination_city_id: values.destination_city_id,
     branch_ids_to_visit: values.branch_ids_to_visit ?? [],
     schedule: values.schedule,
     scheduled_date: values.schedule === "unique" ? values.scheduled_date : undefined,
@@ -97,26 +76,17 @@ export function NewRouteModal({
   open,
   onClose,
   onConfirm,
-  fetchCities,
   fetchBranches,
   loading = false,
 }: NewRouteModalProps) {
-  const [cities, setCities] = useState<MunicipalityCatalogItem[]>([]);
   const [branches, setBranches] = useState<BranchCatalogItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [routeType, setRouteType] = useState<RouteType>("deliveries");
-  const [cityId, setCityId] = useState<number | "">("");
   const [originBranchId, setOriginBranchId] = useState<number | "">("");
-  const [destinationZoneId, setDestinationZoneId] = useState<number | "">("");
-  const [zones, setZones] = useState<MunicipalityZoneCatalogItem[]>([]);
-  const [zonesLoading, setZonesLoading] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState<string>("");
 
-  const [originCityId, setOriginCityId] = useState<number | "">("");
-  const [mainBranchId, setMainBranchId] = useState<number | "">("");
-  const [destinationCityId, setDestinationCityId] = useState<number | "">("");
   const [branchesToVisit, setBranchesToVisit] = useState<number[]>([]);
   const [schedule, setSchedule] = useState<ScheduleType>("unique");
   const [scheduledDate, setScheduledDate] = useState<string>("");
@@ -128,14 +98,8 @@ export function NewRouteModal({
   useEffect(() => {
     if (!open) {
       setRouteType("deliveries");
-      setCityId("");
       setOriginBranchId("");
-      setDestinationZoneId("");
-      setZones([]);
       setDeliveryDate("");
-      setOriginCityId("");
-      setMainBranchId("");
-      setDestinationCityId("");
       setBranchesToVisit([]);
       setSchedule("unique");
       setScheduledDate("");
@@ -147,15 +111,13 @@ export function NewRouteModal({
 
     let cancelled = false;
     setCatalogLoading(true);
-    Promise.all([fetchCities(), fetchBranches()])
-      .then(([citiesRes, branchesRes]) => {
+    fetchBranches()
+      .then((branchesRes) => {
         if (cancelled) return;
-        setCities(citiesRes);
         setBranches(branchesRes);
       })
       .catch(() => {
         if (cancelled) return;
-        setCities([]);
         setBranches([]);
       })
       .finally(() => {
@@ -165,52 +127,7 @@ export function NewRouteModal({
     return () => {
       cancelled = true;
     };
-  }, [open, fetchCities, fetchBranches]);
-
-  useEffect(() => {
-    if (!open || routeType !== "deliveries" || cityId === "") {
-      setZones([]);
-      setDestinationZoneId("");
-      return;
-    }
-
-    let cancelled = false;
-    setZonesLoading(true);
-    getMunicipalityZonesCatalog(cityId as number)
-      .then((rows) => {
-        if (cancelled) return;
-        setZones(rows);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setZones([]);
-      })
-      .finally(() => {
-        if (!cancelled) setZonesLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, routeType, cityId]);
-
-  const zoneOptions = useMemo(
-    () =>
-      zones.map((zone) => ({
-        value: zone.id,
-        label: zone.name,
-      })),
-    [zones],
-  );
-
-  const cityOptions = useMemo(
-    () =>
-      cities.map((c) => ({
-        value: c.id,
-        label: `${c.name}${c.stateName ? `, ${c.stateName}` : ""}`,
-      })),
-    [cities],
-  );
+  }, [open, fetchBranches]);
 
   const branchOptions = useMemo(
     () =>
@@ -221,37 +138,26 @@ export function NewRouteModal({
     [branches],
   );
 
-  const branchChipsItems = useMemo(() => {
-    if (destinationCityId === "") return [];
-    const destinationCity = cities.find((city) => city.id === destinationCityId);
-    if (!destinationCity) return [];
-    return branches
-      .filter((branch) => branchMatchesMunicipality(branch, destinationCity.name))
-      .map((branch) => ({ id: branch.id, label: branch.name }));
-  }, [branches, cities, destinationCityId]);
+  const branchChipsItems = useMemo(
+    () => branches.map((branch) => ({ id: branch.id, label: branch.name })),
+    [branches],
+  );
 
   const validate = (): NewRouteFormErrors => {
     const next: NewRouteFormErrors = {};
     if (!routeType) next.routeType = "Selecciona el tipo de ruta.";
 
     if (routeType === "deliveries") {
-      if (cityId === "") next.cityId = "Selecciona una ciudad.";
       if (originBranchId === "")
         next.originBranchId = "Selecciona la sucursal de origen.";
-      if (destinationZoneId === "")
-        next.destinationZoneId = "Selecciona la zona de destino.";
       if (!deliveryDate)
         next.deliveryDate = "Selecciona la fecha a realizar.";
       else if (!isAfterTomorrow(deliveryDate))
         next.deliveryDate =
           "La fecha debe ser posterior al día de hoy.";
     } else {
-      if (originCityId === "")
-        next.originCityId = "Selecciona la ciudad de origen.";
-      if (mainBranchId === "")
-        next.mainBranchId = "Selecciona la sucursal.";
-      if (destinationCityId === "")
-        next.destinationCityId = "Selecciona la ciudad destino.";
+      if (originBranchId === "")
+        next.originBranchId = "Selecciona la sucursal de origen.";
       if (branchesToVisit.length === 0)
         next.branchesToVisit = "Selecciona al menos una sucursal a visitar.";
       if (!schedule) next.schedule = "Selecciona la programación.";
@@ -282,25 +188,10 @@ export function NewRouteModal({
 
     const values: NewRouteFormValues = {
       route_type: routeType,
-      ...(routeType === "deliveries"
-        ? { city_id: cityId as number }
-        : {}),
       origin_branch_id:
-        routeType === "deliveries" ? (originBranchId as number) : undefined,
-      destination_zone_id:
-        routeType === "deliveries"
-          ? (destinationZoneId as number)
-          : undefined,
+        originBranchId === "" ? undefined : (originBranchId as number),
       delivery_date:
         routeType === "deliveries" ? deliveryDate : undefined,
-      origin_city_id:
-        routeType === "scheduled" ? (originCityId as number) : undefined,
-      main_branch_id:
-        routeType === "scheduled" ? (mainBranchId as number) : undefined,
-      destination_city_id:
-        routeType === "scheduled"
-          ? (destinationCityId as number)
-          : undefined,
       branch_ids_to_visit: routeType === "scheduled" ? branchesToVisit : [],
       schedule: routeType === "scheduled" ? schedule : undefined,
       scheduled_date:
@@ -411,71 +302,25 @@ export function NewRouteModal({
           </Stack>
         </Stack>
 
+        <FormSelect
+          label="Sucursal"
+          required
+          fullWidth
+          value={originBranchId === "" ? "" : String(originBranchId)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setOriginBranchId(v === "" ? "" : Number(v));
+          }}
+          options={branchOptions}
+          placeholder="Selecciona el origen"
+          disabled={fieldsDisabled}
+          error={Boolean(errors.originBranchId)}
+          helperText={errors.originBranchId}
+        />
+
         {
           (routeType === "deliveries") ?
             <>
-              <FormSelect
-                required
-                fullWidth
-                label="Ciudad"
-                value={cityId === "" ? "" : String(cityId)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCityId(v === "" ? "" : Number(v));
-                  setDestinationZoneId("");
-                }}
-                options={cityOptions}
-                placeholder="Selecciona una ciudad"
-                disabled={fieldsDisabled}
-                error={Boolean(errors.cityId)}
-                helperText={errors.cityId}
-              />
-
-              <Stack direction="row" spacing={1} alignItems="center">
-                <FormSelect
-                  label="Origen"
-                  required
-                  fullWidth
-                  value={
-                    originBranchId === "" ? "" : String(originBranchId)
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setOriginBranchId(v === "" ? "" : Number(v));
-                  }}
-                  options={branchOptions}
-                  placeholder="Selecciona el origen"
-                  disabled={fieldsDisabled}
-                  error={Boolean(errors.originBranchId)}
-                  helperText={errors.originBranchId}
-                />
-                <FormSelect
-                  label="Destino"
-                  required
-                  fullWidth
-                  value={
-                    destinationZoneId === ""
-                      ? ""
-                      : String(destinationZoneId)
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDestinationZoneId(v === "" ? "" : Number(v));
-                  }}
-                  options={zoneOptions}
-                  placeholder={
-                    zonesLoading
-                      ? "Cargando zonas..."
-                      : cityId === ""
-                        ? "Selecciona una ciudad primero"
-                        : "Selecciona la zona de destino"
-                  }
-                  disabled={fieldsDisabled || zonesLoading || cityId === ""}
-                  error={Boolean(errors.destinationZoneId)}
-                  helperText={errors.destinationZoneId}
-                />
-              </Stack>
-
               <FormDatePicker
                 label="Fecha a realizar"
                 required
@@ -490,57 +335,6 @@ export function NewRouteModal({
             </>
             :
             <>
-              <FormSelect
-                required
-                fullWidth
-                label="Ciudad de origen"
-                value={originCityId === "" ? "" : String(originCityId)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setOriginCityId(v === "" ? "" : Number(v));
-                }}
-                options={cityOptions}
-                placeholder="Selecciona la ciudad de origen"
-                disabled={fieldsDisabled}
-                error={Boolean(errors.originCityId)}
-                helperText={errors.originCityId}
-              />
-
-              <FormSelect
-                required
-                fullWidth
-                label="Sucursal"
-                value={mainBranchId === "" ? "" : String(mainBranchId)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setMainBranchId(v === "" ? "" : Number(v));
-                }}
-                options={branchOptions}
-                placeholder="Selecciona la sucursal"
-                disabled={fieldsDisabled}
-                error={Boolean(errors.mainBranchId)}
-                helperText={errors.mainBranchId}
-              />
-
-              <FormSelect
-                required
-                fullWidth
-                label="Ciudad destino"
-                value={
-                  destinationCityId === "" ? "" : String(destinationCityId)
-                }
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setDestinationCityId(v === "" ? "" : Number(v));
-                  setBranchesToVisit([]);
-                }}
-                options={cityOptions}
-                placeholder="Selecciona la ciudad destino"
-                disabled={fieldsDisabled}
-                error={Boolean(errors.destinationCityId)}
-                helperText={errors.destinationCityId}
-              />
-
               <MultiSelectChips
                 label="Sucursales a visitar"
                 items={branchChipsItems}
@@ -548,19 +342,10 @@ export function NewRouteModal({
                 onChange={(ids) =>
                   setBranchesToVisit(ids.map((id) => Number(id)))
                 }
-                disabled={fieldsDisabled || destinationCityId === ""}
+                disabled={fieldsDisabled}
                 error={Boolean(errors.branchesToVisit)}
-                helperText={
-                  errors.branchesToVisit ??
-                  (destinationCityId === ""
-                    ? "Selecciona la ciudad destino primero"
-                    : undefined)
-                }
-                emptyText={
-                  destinationCityId === ""
-                    ? "Selecciona la ciudad destino primero"
-                    : "No hay sucursales en esta ciudad"
-                }
+                helperText={errors.branchesToVisit}
+                emptyText="No hay sucursales disponibles"
               />
 
               <Stack spacing={1}>

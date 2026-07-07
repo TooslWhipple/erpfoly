@@ -142,46 +142,39 @@ export function AddDriverToRouteModal({
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
-                <StyledTableCell>Nombre</StyledTableCell>
-                <StyledTableCell>Licencia</StyledTableCell>
-                <StyledTableCell>Teléfono</StyledTableCell>
-                <StyledTableCell>Estado</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "160px" }}>Nombre</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "144px" }}>Licencia</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "112px" }}>Teléfono</StyledTableCell>
+                <StyledTableCell sx={{ minWidth: "112px" }}>Estado</StyledTableCell>
                 <StyledTableCell align="right">Acción</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredDrivers.map((driver) => {
-                const fullName = `${driver.firstName} ${driver.lastName}`.trim();
-                const isPending = pendingId === driver.id;
-                return (
-                  <StyledTableRow key={driver.id} hover>
-                    <StyledTableCell>{fullName}</StyledTableCell>
-                    <StyledTableCell>
-                      {driver.licenseNumber || "—"}
-                    </StyledTableCell>
-                    <StyledTableCell>{driver.phone || "—"}</StyledTableCell>
-                    <StyledTableCell>
-                      {driver.status || "—"}
-                    </StyledTableCell>
-                    <StyledTableCell align="right">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={() => void handleConfirm(driver.id)}
-                        disabled={submitting}
-                        startIcon={
-                          isPending ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : undefined
-                        }
-                      >
-                        Agregar
-                      </Button>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                );
-              })}
+              {
+                filteredDrivers.map((driver) => {
+                  const fullName = `${driver.firstName} ${driver.lastName}`.trim();
+                  const isPending = pendingId === driver.id;
+
+                  return (
+                    <StyledTableRow key={driver.id} hover>
+                      <StyledTableCell>{fullName}</StyledTableCell>
+                      <StyledTableCell>{driver.licenseNumber}</StyledTableCell>
+                      <StyledTableCell>{driver.phone}</StyledTableCell>
+                      <StyledTableCell>{driver.status}</StyledTableCell>
+                      <StyledTableCell align="right">
+                        <Button
+                          variant="option"
+                          color="primary"
+                          size="small"
+                          onClick={() => void handleConfirm(driver.id)}
+                          disabled={submitting}>
+                          {(isPending) ? <CircularProgress size={14} color="inherit" /> : "Agregar"}
+                        </Button>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  );
+                })
+              }
             </TableBody>
           </Table>
         )}

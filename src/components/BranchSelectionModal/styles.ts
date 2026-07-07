@@ -35,38 +35,22 @@ export const RoutePreviewCard = styled("div")(({ theme }) => ({
     },
 }));
 
-export const BranchPreviewCard = styled("div")<{ $variant: "origin" | "destination" }>(
-    ({ theme, $variant }) => ({
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        gap: theme.spacing(0.5),
-        padding: theme.spacing(1.5),
-        borderRadius: 10,
-        minWidth: 0,
-        backgroundColor:
-            $variant === "origin"
-                ? theme.palette.mode === "dark"
-                    ? "rgba(59, 130, 246, 0.12)"
-                    : "#EFF6FF"
-                : theme.palette.mode === "dark"
-                  ? "rgba(34, 197, 94, 0.12)"
-                  : "#F0FDF4",
-        border: `1px solid ${
-            $variant === "origin"
-                ? theme.palette.mode === "dark"
-                    ? "rgba(59, 130, 246, 0.35)"
-                    : "#BFDBFE"
-                : theme.palette.mode === "dark"
-                  ? "rgba(34, 197, 94, 0.35)"
-                  : "#BBF7D0"
-        }`,
-        [theme.breakpoints.down("sm")]: {
-            width: "100%",
-            minHeight: 88,
-        },
-    }),
+export const BranchPreviewCard = styled("div")(({ theme }) => ({
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(1.5),
+    borderRadius: 10,
+    minWidth: 0,
+    backgroundColor: theme.palette.background.lowerGray,
+    border: `1px solid ${theme.palette.app.border}`,
+    [theme.breakpoints.down("sm")]: {
+        width: "100%",
+        minHeight: 88,
+    },
+}),
 );
 
 export const RouteArrow = styled("div")(({ theme }) => ({

@@ -80,11 +80,16 @@ function buildPointsPayload(
   for (const order of orders) {
     if (!selectedOrderIds.has(order.id)) continue;
     const key = `${order.sourceType}-${order.originId}`;
-    pointsMap.set(key, {
-      origin: order.sourceType,
-      origin_id: order.originId,
-      item_ids: [...order.itemIds],
-    });
+    const existing = pointsMap.get(key);
+    if (existing) {
+      existing.item_ids.push(order.itemId);
+    } else {
+      pointsMap.set(key, {
+        origin: order.sourceType,
+        origin_id: order.originId,
+        item_ids: [order.itemId],
+      });
+    }
   }
 
   return Array.from(pointsMap.values());
@@ -107,33 +112,29 @@ export function AddOrdersToRouteModal({
   });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("orders");
-  const [selectedSuggestedIds, setSelectedSuggestedIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selectedSuggestedIds, setSelectedSuggestedIds] = useState<Set<string>>(new Set());
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const loadOrders = useCallback(
-    async (search?: string) => {
-      setLoading(true);
-      try {
-        const result = await fetchAvailableOrders(routeId, search);
-        setData(result);
-      } catch {
-        setData({
-          suggested: [],
-          orders: [],
-          suggestedCount: 0,
-          ordersCount: 0,
-          recoveriesCount: 0,
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [fetchAvailableOrders, routeId],
-  );
+  const loadOrders = useCallback(async (search?: string) => {
+    setLoading(true);
+
+    try {
+      const result = await fetchAvailableOrders(routeId, search);
+      setData(result);
+    } catch {
+      setData({
+        suggested: [],
+        orders: [],
+        suggestedCount: 0,
+        ordersCount: 0,
+        recoveriesCount: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAvailableOrders, routeId]);
 
   useEffect(() => {
     if (!open) return;
@@ -146,6 +147,7 @@ export function AddOrdersToRouteModal({
 
   useEffect(() => {
     if (!open) return;
+
     const timeout = setTimeout(() => {
       void loadOrders(searchQuery.trim() || undefined);
     }, 300);
@@ -166,8 +168,11 @@ export function AddOrdersToRouteModal({
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return data.orders;
     const query = searchQuery.toLowerCase();
-    return data.orders.filter((order) =>
-      order.orderNumber.toLowerCase().includes(query),
+    return data.orders.filter(
+      (item) =>
+        item.orderNumber.toLowerCase().includes(query) ||
+        item.sku.toLowerCase().includes(query) ||
+        item.articleName.toLowerCase().includes(query),
     );
   }, [data.orders, searchQuery]);
 
@@ -232,22 +237,29 @@ export function AddOrdersToRouteModal({
       );
     }
 
+    const isScheduled = routeType === "scheduled";
+    const fourthHeader = isScheduled ? "Sucursal destino" : "Zona";
+    const fifthHeader = isScheduled ? "Fecha programada" : "Fecha de entrega";
+
     return (
       <TableContainer>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell>SKU</StyledTableCell>
-              <StyledTableCell>Pedido</StyledTableCell>
-              <StyledTableCell>Artículo</StyledTableCell>
-              <StyledTableCell>Zona</StyledTableCell>
-              <StyledTableCell>Fecha programada</StyledTableCell>
+              <StyledTableCell padding="checkbox" sx={{ minWidth: "48px" }} />
+              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>{fourthHeader}</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>{fifthHeader}</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredSuggested.map((row) => {
               const isSelected = selectedSuggestedIds.has(row.id);
+              const fourthValue = isScheduled
+                ? (row.destinationBranch ?? "—")
+                : row.zone;
               return (
                 <StyledTableRow key={row.id} selected={isSelected} hover>
                   <StyledTableCell padding="checkbox">
@@ -257,19 +269,10 @@ export function AddOrdersToRouteModal({
                       disabled={submitting}
                     />
                   </StyledTableCell>
-                  <StyledTableCell>{row.sku}</StyledTableCell>
                   <StyledTableCell>{row.orderNumber}</StyledTableCell>
-                  <StyledTableCell
-                    sx={{
-                      maxWidth: 220,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {row.articleName}
-                  </StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
+                  <StyledTableCell>{row.sku}</StyledTableCell>
+                  <StyledTableCell>{row.articleName}</StyledTableCell>
+                  <StyledTableCell>{fourthValue}</StyledTableCell>
                   <StyledTableCell>{row.scheduledDate}</StyledTableCell>
                 </StyledTableRow>
               );
@@ -293,15 +296,21 @@ export function AddOrdersToRouteModal({
       return (
         <EmptyStateContainer>
           <Typography variant="body2" color="text.secondary">
-            {searchQuery
-              ? "No se encontraron pedidos"
-              : routeType === "deliveries"
-                ? "No hay ventas disponibles para agregar"
-                : "No hay pedidos internos disponibles para agregar"}
+            {
+              (searchQuery)
+                ? "No se encontraron pedidos"
+                : (routeType === "deliveries")
+                  ? "No hay ventas disponibles para agregar"
+                  : "No hay pedidos internos disponibles para agregar"
+            }
           </Typography>
         </EmptyStateContainer>
       );
     }
+
+    const isScheduled = routeType === "scheduled";
+    const fourthHeader = isScheduled ? "Sucursal destino" : "Zona";
+    const fifthHeader = isScheduled ? "Fecha programada" : "Fecha de entrega";
 
     return (
       <GeneralTableContainer>
@@ -309,16 +318,19 @@ export function AddOrdersToRouteModal({
           <TableHead>
             <TableRow>
               <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell>Número</StyledTableCell>
-              <StyledTableCell>Pedido</StyledTableCell>
-              <StyledTableCell>Dirección</StyledTableCell>
-              <StyledTableCell>Zona</StyledTableCell>
-              <StyledTableCell>Artículos</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>{fourthHeader}</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>{fifthHeader}</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredOrders.map((row) => {
               const isSelected = selectedOrderIds.has(row.id);
+              const fourthValue = isScheduled
+                ? (row.destinationBranch ?? "—")
+                : row.zone;
               return (
                 <StyledTableRow key={row.id} selected={isSelected} hover>
                   <StyledTableCell padding="checkbox">
@@ -328,8 +340,8 @@ export function AddOrdersToRouteModal({
                       disabled={submitting}
                     />
                   </StyledTableCell>
-                  <StyledTableCell>{row.originId}</StyledTableCell>
                   <StyledTableCell>{row.orderNumber}</StyledTableCell>
+                  <StyledTableCell>{row.sku}</StyledTableCell>
                   <StyledTableCell
                     sx={{
                       maxWidth: 280,
@@ -338,10 +350,10 @@ export function AddOrdersToRouteModal({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {row.address}
+                    {row.articleName}
                   </StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
-                  <StyledTableCell>{row.articleCount}</StyledTableCell>
+                  <StyledTableCell>{fourthValue}</StyledTableCell>
+                  <StyledTableCell>{row.scheduledDate}</StyledTableCell>
                 </StyledTableRow>
               );
             })}
@@ -355,29 +367,24 @@ export function AddOrdersToRouteModal({
     <SideModal
       open={open}
       onClose={onClose}
-      title="Agregar pedidos a esta ruta"
-      description="Selecciona los pedidos que deseas agregar a esta ruta"
+      title="Agregar artículos a esta ruta"
+      description="Selecciona los artículos que deseas agregar a esta ruta"
       maxWidth="md"
       headerActions={
         <Button
           variant="contained"
           color="primary"
           onClick={handleConfirm}
-          disabled={selectionCount === 0 || submitting}
-          startIcon={
-            submitting ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : undefined
-          }
-        >
-          {addButtonLabel}
+          sx={{ minWidth: "128px" }}
+          disabled={selectionCount === 0 || submitting}>
+          {(submitting) ? <CircularProgress size={18} color="inherit" /> : addButtonLabel}
         </Button>
       }
       contentSx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
     >
       <ModalContent>
         <SearchInput
-          placeholder="Buscar por número de pedido"
+          placeholder="Buscar por pedido, SKU o artículo"
           value={searchQuery}
           onChange={handleSearchChange}
           size="small"
@@ -398,15 +405,17 @@ export function AddOrdersToRouteModal({
             active={activeTab === "orders"}
             onClick={() => setActiveTab("orders")}
           >
-            {`Pedidos [${data.ordersCount + data.suggestedCount}]`}
+            {`Artículos [${data.ordersCount + data.suggestedCount}]`}
           </TabButton>
-          <TabButton
-            type="button"
-            active={activeTab === "recoveries"}
-            onClick={() => setActiveTab("recoveries")}
-          >
-            {`Recuperaciones [${data.recoveriesCount}]`}
-          </TabButton>
+          {routeType === "deliveries" && (
+            <TabButton
+              type="button"
+              active={activeTab === "recoveries"}
+              onClick={() => setActiveTab("recoveries")}
+            >
+              {`Recuperaciones [${data.recoveriesCount}]`}
+            </TabButton>
+          )}
         </TabsRow>
 
         {activeTab === "orders" ? (

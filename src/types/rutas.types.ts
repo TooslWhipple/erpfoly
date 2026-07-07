@@ -5,6 +5,7 @@ export interface RouteSummary {
   id: number;
   name: string;
   status: RouteStatus;
+  routeType?: RouteType;
   location: string;
   articleCount: number;
   pointCount: number;
@@ -29,6 +30,7 @@ export interface RouteOrder {
   sequence: number;
   address: string;
   zone: string;
+  destinationBranch: string | null;
   stopType: RouteStopType;
   items: RouteOrderItem[];
 }
@@ -43,18 +45,21 @@ export interface SuggestedItemToAdd {
   articleName: string;
   zone: string;
   scheduledDate: string;
+  destinationBranch: string | null;
 }
 
-/** Order or sale eligible to be added to a route (general list) */
+/** Item eligible to be added to a route (general list, per-item) */
 export interface OrderToAdd {
   id: string;
   sourceType: "sale" | "order";
   originId: number;
+  itemId: number;
+  sku: string;
   orderNumber: string;
-  address: string;
+  articleName: string;
   zone: string;
-  articleCount: number;
-  itemIds: number[];
+  scheduledDate: string;
+  destinationBranch: string | null;
 }
 
 export interface AvailableOrdersResponse {
@@ -79,6 +84,8 @@ export interface RoutePerson {
 
 export interface RouteDetail extends RouteSummary {
   routeType?: RouteType;
+  scheduledDate: string | null;
+  originBranch: { id: number; name: string } | null;
   driverName: string;
   vehicleInfo: string;
   orders: RouteOrder[];

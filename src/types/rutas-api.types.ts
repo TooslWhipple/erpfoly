@@ -3,6 +3,7 @@ export interface RouteListRowApi {
   id: number;
   code: string;
   status: string;
+  route_type?: "deliveries" | "scheduled";
   location: string;
   article_count: number;
   point_count: number;
@@ -31,6 +32,7 @@ export interface RouteOrderApi {
   sequence: number;
   address: string;
   zone: string;
+  destination_branch: string | null;
   stop_type: string;
   items: RouteOrderItemApi[];
 }
@@ -45,17 +47,20 @@ export interface SuggestedItemToAddApi {
   article_name: string;
   zone: string;
   scheduled_date: string;
+  destination_branch: string | null;
 }
 
 export interface OrderToAddApi {
   id: string;
   source_type: "sale" | "order";
   origin_id: number;
+  item_id: number;
+  sku: string;
   order_number: string;
-  address: string;
+  article_name: string;
   zone: string;
-  article_count: number;
-  item_ids: number[];
+  scheduled_date: string;
+  destination_branch: string | null;
 }
 
 export interface AvailableOrdersApi {
@@ -84,10 +89,10 @@ export interface RouteDetailApi {
   id: number;
   code: string;
   route_type?: "deliveries" | "scheduled";
-  city_id?: number | null;
-  destination_zone_id?: number | null;
   status: string;
   location: string;
+  scheduled_date: string | null;
+  origin_branch: { id: number; name: string } | null;
   article_count: number;
   point_count: number;
   driver_name: string;

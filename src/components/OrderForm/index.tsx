@@ -414,7 +414,7 @@ export default function OrderForm({
                 };
 
                 sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
-                router.push("/pedidos/sucursales/nuevo/confirmar");
+                router.push("/traspasos/nuevo/confirmar");
             } else {
                 if (originBranch && branch && originBranch.id === Number(branch.id)) {
                     showError("La sucursal de origen y destino deben ser distintas.");
@@ -439,7 +439,7 @@ export default function OrderForm({
                 };
 
                 sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
-                router.push("/pedidos/sucursales/nuevo/confirmar");
+                router.push("/traspasos/nuevo/confirmar");
             }
         } else if (mode === "edit" && orderId) {
             const payload = {
@@ -454,7 +454,7 @@ export default function OrderForm({
                 const result = await updateOrderWithItems(orderId, payload);
                 if (result.data) {
                     const returnUrl = originalOrder?.order_type === "internal"
-                        ? `/pedidos/sucursales/${orderId}`
+                        ? `/traspasos/${orderId}`
                         : `/pedidos/${orderId}`;
                     router.push(returnUrl);
                 }
@@ -483,18 +483,18 @@ export default function OrderForm({
 
     const breadcrumbs: BreadcrumbItem[] = mode === "create"
         ? [
-            { label: "Pedidos", href: effectiveOrderType === "internal" ? "/pedidos/sucursales" : "/pedidos" },
-            { label: truncatedName(displayName), href: displayName && branch ? (effectiveOrderType === "internal" ? `/pedidos/sucursales?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
-            { label: effectiveOrderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido" },
+            { label: "Traspasos", href: effectiveOrderType === "internal" ? "/traspasos" : "/pedidos" },
+            { label: truncatedName(displayName), href: displayName && branch ? (effectiveOrderType === "internal" ? `/traspasos?branch=${branch?.id}` : `/pedidos?supplier=${supplier?.id}`) : undefined },
+            { label: effectiveOrderType === "internal" ? "Nuevo traspaso" : "Nuevo pedido" },
         ]
         : [
-            { label: "Pedidos", href: originalOrder?.order_type === "internal" ? "/pedidos/sucursales" : "/pedidos" },
-            { label: originalOrder?.folio ? `Pedido ${originalOrder.folio}` : "...", href: originalOrder ? (originalOrder.order_type === "internal" ? `/pedidos/sucursales/${originalOrder.id}` : `/pedidos/${originalOrder.id}`) : undefined },
+            { label: "Traspasos", href: originalOrder?.order_type === "internal" ? "/traspasos" : "/pedidos" },
+            { label: originalOrder?.folio ? `Pedido ${originalOrder.folio}` : "...", href: originalOrder ? (originalOrder.order_type === "internal" ? `/traspasos/${originalOrder.id}` : `/pedidos/${originalOrder.id}`) : undefined },
             { label: "Editar pedido" },
         ];
 
     const pageTitle = mode === "create"
-        ? (effectiveOrderType === "internal" ? "Nuevo pedido sucursal" : "Nuevo pedido")
+        ? (effectiveOrderType === "internal" ? "Nuevo traspaso" : "Nuevo pedido")
         : `Editar pedido ${originalOrder?.folio ?? ""}`;
 
     const columns: Column<ArticleRow>[] = [

@@ -24,18 +24,22 @@ export function StatusChip({
   className,
   id,
 }: StatusChipProps) {
+  const hasStartIcon = startIcon != null;
+  const hasEndIcon = endIcon != null;
+
   return (
     <StyledStatusChip
       variant={variant}
       size={size}
+      hasStartIcon={hasStartIcon}
+      hasEndIcon={hasEndIcon}
       backgroundColor={backgroundColor}
       color={color}
       className={className}
-      id={id}
-    >
-      {startIcon}
-      <span>{label}</span>
-      {endIcon}
+      id={id}>
+      {hasStartIcon && <span className="status-chip-icon">{startIcon}</span>}
+      <span className="status-chip-label">{label}</span>
+      {hasEndIcon && <span className="status-chip-icon">{endIcon}</span>}
     </StyledStatusChip>
   );
 }

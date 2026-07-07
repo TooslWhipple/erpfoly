@@ -40,13 +40,8 @@ export type ScheduleType = "unique" | "weekly" | "monthly";
 
 export interface CreateRoutePayload {
   route_type: RouteType;
-  city_id?: number;
   origin_branch_id?: number;
-  destination_zone_id?: number;
   delivery_date?: string;
-  origin_city_id?: number;
-  main_branch_id?: number;
-  destination_city_id?: number;
   branch_ids_to_visit?: number[];
   schedule?: ScheduleType;
   scheduled_date?: string;
@@ -87,6 +82,20 @@ export async function addOrdersToRoute(
   points: AddRoutePointPayload[],
 ) {
   return post<RouteDetailApi>(`/routes/${routeId}/orders`, { points });
+}
+
+export async function removeRoutePoint(routeId: number, pointId: number) {
+  return del<RouteDetailApi>(`/routes/${routeId}/route-points/${pointId}`);
+}
+
+export async function removeRoutePointItem(
+  routeId: number,
+  pointId: number,
+  itemId: number,
+) {
+  return del<RouteDetailApi>(
+    `/routes/${routeId}/route-points/${pointId}/items/${itemId}`,
+  );
 }
 
 export async function uploadCartaPorte(

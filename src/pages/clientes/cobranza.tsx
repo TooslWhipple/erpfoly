@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CircularProgress, Box, Stack } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
-import {
-  MainLayout,
-  Title,
-  RulesList,
-  AutomatedCollectionActivityModal,
-  ConfirmModal,
-} from "@/components";
+import { Title, RulesList, AutomatedCollectionActivityModal, ConfirmModal } from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -302,7 +296,7 @@ export default function CobranzaAutomatica() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3} sx={{ width: "100%", minWidth: 0 }}>
         <Title
           title="Cobranza automática"
@@ -357,6 +351,6 @@ export default function CobranzaAutomatica() {
         onConfirm={handleConfirmDeleteRule}
         loading={deleteLoading}
       />
-    </MainLayout>
+    </>
   );
 }

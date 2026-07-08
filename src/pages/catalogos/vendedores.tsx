@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { Alert, Stack } from "@mui/material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column } from "@/components/TableCrud";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { getSellers } from "@/services/sellers.service";
@@ -90,7 +90,7 @@ export default function VendedoresPage() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Equipo de ventas" />
         {error && <Alert severity="error">{error}</Alert>}
@@ -123,6 +123,6 @@ export default function VendedoresPage() {
           emptyMessage="No hay vendedores registrados"
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

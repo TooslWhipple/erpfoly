@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Divider, Stack, Typography } from "@mui/material";
-import { MainLayout } from "@/components";
 import { CashRegisterHistory } from "@/components/CashRegister";
 import type { CashRegisterStatus } from "@/styles/cajas.styles";
 import { useCashRegisterSession } from "@/hooks/useCashRegisterSession";
@@ -33,23 +32,23 @@ export default function CajasHistorialPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="body1">Cargando...</Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (!cashRegister) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="h6" color="text.secondary">
             No tienes una caja asignada
           </Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -58,7 +57,7 @@ export default function CajasHistorialPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3} justifyContent="center" alignItems="stretch">
         <CashRegisterHistory
           cashRegisterName={cashRegister.name}
@@ -68,6 +67,6 @@ export default function CajasHistorialPage() {
           onBack={handleBack}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

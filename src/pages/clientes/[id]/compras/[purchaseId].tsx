@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Button, Divider, Skeleton, Stack, Typography } from "@mui/material";
-import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
+import { Breadcrumbs, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useClientPurchaseDetail } from "@/hooks/clientes/useClientPurchaseDetail";
 import {
@@ -52,20 +52,20 @@ export default function ClientPurchaseDetailPage() {
 
   if (!routerReady || loading) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Skeleton variant="text" width="60%" height={32} />
           <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
           <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 2 }} />
           <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 2 }} />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (error || !purchase) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <ErrorState>
@@ -80,12 +80,12 @@ export default function ClientPurchaseDetailPage() {
             </Stack>
           </ErrorState>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack
           direction={{ xs: "column", lg: "row" }}
@@ -122,6 +122,6 @@ export default function ClientPurchaseDetailPage() {
           <PurchaseDataTab purchaseInfo={purchase.purchaseInfo} />
         }
       </Stack>
-    </MainLayout>
+    </>
   );
 }

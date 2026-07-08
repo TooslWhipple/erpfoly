@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import {
-  MainLayout,
-  Title,
-  Breadcrumbs,
-  Tabs,
-  PriceSuggestionCard,
-  LiquidationRuleCard,
-  LiquidationRuleActivityModal,
-  ConfirmPriceChangeModal,
-  TabFilters,
-} from "@/components";
+import { Title, Breadcrumbs, Tabs, PriceSuggestionCard, LiquidationRuleCard, LiquidationRuleActivityModal, ConfirmPriceChangeModal, TabFilters } from "@/components";
 import { useLiquidationRuleActivity } from "@/hooks/useLiquidationRuleActivity";
 import type { TabItem } from "@/components/Tabs";
 import type {
@@ -132,7 +122,7 @@ export default function DepartamentoLiquidacionesPage() {
 
   if (state === "not_found") {
     return (
-      <MainLayout>
+      <>
         <Box sx={{ py: 3 }}>
           <Typography color="text.secondary">Departamento no encontrado.</Typography>
           <Typography
@@ -143,12 +133,12 @@ export default function DepartamentoLiquidacionesPage() {
             Volver a Estrategia de baja rotación
           </Typography>
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs
           items={breadcrumbItems}
@@ -233,9 +223,6 @@ export default function DepartamentoLiquidacionesPage() {
         )}
       </Stack>
 
-
-
-
       <LiquidationRuleActivityModal
         open={activityRuleId !== null}
         onClose={() => setActivityRuleId(null)}
@@ -261,6 +248,6 @@ export default function DepartamentoLiquidacionesPage() {
         onConfirm={handleConfirmPriceChange}
         loading={applyLoading}
       />
-    </MainLayout>
+    </>
   );
 }

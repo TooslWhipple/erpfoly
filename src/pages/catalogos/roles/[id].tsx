@@ -9,7 +9,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { MainLayout, Breadcrumbs, FormTextField, FormSelect, PermissionsTable } from "@/components";
+import { Breadcrumbs, FormTextField, FormSelect, PermissionsTable } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ModulePermission, Permission } from "@/components/PermissionsTable";
 import { FormCard } from "@/styles/catalogos/roles.styles";
@@ -248,7 +248,7 @@ export default function RoleFormPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <Box
           sx={{
             display: "flex",
@@ -259,12 +259,12 @@ export default function RoleFormPage() {
         >
           <CircularProgress />
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbItems} />
         <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
@@ -341,6 +341,6 @@ export default function RoleFormPage() {
           />
         </FormCard>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

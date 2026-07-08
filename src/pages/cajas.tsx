@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
-import { MainLayout, StatusChip } from "@/components";
+import { StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCashRegisterSession } from "@/hooks/useCashRegisterSession";
@@ -238,28 +238,28 @@ export default function Cajas() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="body1">Cargando...</Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (!cashRegister) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="h6" color="text.secondary">
             No tienes una caja asignada
           </Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3} justifyContent="center" alignItems="center" style={{ marginTop: "112px", width: "100%" }}>
         <Stack
           direction="row"
@@ -331,6 +331,6 @@ export default function Cajas() {
         banks={banks}
         isLoading={isWithdrawing}
       />
-    </MainLayout>
+    </>
   );
 }

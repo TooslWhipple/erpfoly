@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
-import { MainLayout } from "@/components";
 import {
   ClientSearchResults,
   type ClientSearchResult,
@@ -99,23 +98,23 @@ export default function CajasBusquedaPage() {
 
   if (isLoading || !router.isReady) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="body1">Cargando...</Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (!cashRegister) {
     return (
-      <MainLayout>
+      <>
         <Stack justifyContent="center" alignItems="center" style={{ marginTop: "112px", minHeight: "200px" }}>
           <Typography variant="h6" color="text.secondary">
             No tienes una caja asignada
           </Typography>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -124,7 +123,7 @@ export default function CajasBusquedaPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack
         spacing={3}
         justifyContent="center"
@@ -143,6 +142,6 @@ export default function CajasBusquedaPage() {
           onRowClick={handleRowClick}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

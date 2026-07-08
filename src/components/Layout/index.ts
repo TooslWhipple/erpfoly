@@ -1,2 +1,3 @@
-export { MainLayout } from "./MainLayout";
+export { AppLayoutGate } from "./AppLayoutGate";
+export { AppLayoutShell } from "./AppLayoutShell";
 

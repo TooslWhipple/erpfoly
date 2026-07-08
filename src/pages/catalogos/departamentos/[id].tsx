@@ -2,14 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, CircularProgress, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import {
-  MainLayout,
-  Breadcrumbs,
-  ModalFormZod,
-  TableCrud,
-  Title,
-  TabFilters,
-} from "@/components";
+import { Breadcrumbs, ModalFormZod, TableCrud, Title, TabFilters } from "@/components";
 import type { Column, RowAction, BreadcrumbItem } from "@/components";
 import {
   DepartmentSettingsTab,
@@ -325,7 +318,7 @@ export default function DepartmentDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <Box
           sx={{
             display: "flex",
@@ -336,23 +329,23 @@ export default function DepartmentDetailPage() {
         >
           <CircularProgress />
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   if (!department) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={2}>
           <Breadcrumbs items={breadcrumbItems} />
           <Box sx={{ py: 2 }}>Departamento no encontrado.</Box>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={2}>
         <Breadcrumbs items={breadcrumbItems} />
         <Title title={department.name} />
@@ -436,6 +429,6 @@ export default function DepartmentDetailPage() {
         fullWidth
         validateOn="change"
       />
-    </MainLayout>
+    </>
   );
 }

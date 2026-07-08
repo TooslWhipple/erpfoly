@@ -1,14 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Box, Button, CircularProgress, Divider, Grid, Stack } from "@mui/material";
-import {
-    MainLayout,
-    Breadcrumbs,
-    Title,
-    VerticalSidebarTabs,
-    TabFilters,
-    ConfirmModal,
-} from "@/components";
+import { Breadcrumbs, Title, VerticalSidebarTabs, TabFilters, ConfirmModal } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
     GeneralDataFormState,
@@ -757,7 +750,7 @@ export default function ProductFormPage() {
 
     if (pageLoading) {
         return (
-            <MainLayout>
+            <>
                 <Box
                     sx={{
                         display: "flex",
@@ -768,12 +761,12 @@ export default function ProductFormPage() {
                 >
                     <CircularProgress />
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={3}>
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={2}>
                     <Breadcrumbs items={breadcrumbItems} />
@@ -931,6 +924,6 @@ export default function ProductFormPage() {
                 confirmLabel="Salir sin guardar"
                 type="warning"
             />
-        </MainLayout>
+        </>
     );
 }

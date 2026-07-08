@@ -4,7 +4,7 @@ import {
     TrendingUp as TrendingUpIcon,
     Edit as EditIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
+import { Title, TableCrud, StatsCardGroup, TabFilters, AddDamagedGoodsModal } from "@/components";
 import { Grid, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
@@ -272,7 +272,7 @@ export default function MercanciaDanada() {
     );
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Mercancía dañada" />
 
@@ -333,6 +333,6 @@ export default function MercanciaDanada() {
                     onSuccess={() => refetch()}
                 />
             </Stack>
-        </MainLayout>
+        </>
     );
 }

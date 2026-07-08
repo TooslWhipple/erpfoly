@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import dayjs from "@/lib/dayjs";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
-import { MainLayout, Breadcrumbs, Pencil, StatusChip } from "@/components";
+import { Breadcrumbs, Pencil, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { OnlinePriceBar } from "@/components/ConfirmOrderItemCard";
@@ -95,7 +95,7 @@ export default function ResumenPedido() {
 
     if (loading) {
         return (
-            <MainLayout>
+            <>
                 <Stack spacing={3}>
                     <Stack
                         direction={{ xs: "column", sm: "row" }}
@@ -176,13 +176,13 @@ export default function ResumenPedido() {
                         </Grid>
                     </Grid>
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (!order) {
         return (
-            <MainLayout>
+            <>
                 <Breadcrumbs items={breadcrumbs} />
                 <Box sx={{ marginTop: 4, textAlign: "center" }}>
                     <Typography variant="h5" color="text.secondary">
@@ -192,12 +192,12 @@ export default function ResumenPedido() {
                         Volver a pedidos
                     </Button>
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={3}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }}>
                     <Stack spacing={1}>
@@ -317,6 +317,6 @@ export default function ResumenPedido() {
                     </Grid>
                 </Grid>
             </Stack>
-        </MainLayout>
+        </>
     );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Skeleton, Typography, Button, Stack, Divider } from "@mui/material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs, CreditLimitBar, TabFilters } from "@/components";
+import { Breadcrumbs, CreditLimitBar, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { ClientDetail } from "@/types/clientes.types";
 import { getClientDetail as getClientDetailMock } from "@/data/clientes.mockData";
@@ -158,7 +158,7 @@ export default function ClientDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
           <Stack spacing={3}>
@@ -166,13 +166,13 @@ export default function ClientDetailPage() {
             <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 2 }} />
           </Stack>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (error || !client) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
           <ErrorState>
@@ -182,7 +182,7 @@ export default function ClientDetailPage() {
             </Button>
           </ErrorState>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -229,7 +229,7 @@ export default function ClientDetailPage() {
   };
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/clientes")} />
         <Stack
@@ -299,6 +299,6 @@ export default function ClientDetailPage() {
         }
       </Stack>
 
-    </MainLayout>
+    </>
   );
 }

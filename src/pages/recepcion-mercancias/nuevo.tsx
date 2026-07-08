@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Stack, Typography, Button, LinearProgress, Table, TableBody, TableHead, TableRow, TableCell } from "@mui/material";
-import { MainLayout, Breadcrumbs } from "@/components";
+import { Breadcrumbs } from "@/components";
 import { NumberInput } from "@/components/Folypuntos";
 import type { ReceptionArticle } from "@/types/recepcion-mercancias.types";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
@@ -177,7 +177,7 @@ export default function NuevaRecepcion() {
     const branch = "Sucursal Matriz";
 
     return (
-        <MainLayout>
+        <>
             <PageContainer>
                 <Breadcrumbs
                     items={[
@@ -270,6 +270,6 @@ export default function NuevaRecepcion() {
                     loading={loading}
                 />
             </PageContainer>
-        </MainLayout>
+        </>
     );
 }

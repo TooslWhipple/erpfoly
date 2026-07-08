@@ -7,7 +7,7 @@ import {
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout, Title, TableCrud, FilterMenu, TabFilters } from "@/components";
+import { Title, TableCrud, FilterMenu, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { PromotionListItem } from "@/types/promociones.types";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -236,7 +236,7 @@ export default function Promociones() {
   );
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Promociones" />
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignContent="center" justifyContent="space-between">
@@ -292,6 +292,6 @@ export default function Promociones() {
           onRowClick={handleViewDetails}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

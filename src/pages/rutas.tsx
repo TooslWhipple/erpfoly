@@ -24,16 +24,7 @@ import { formatDateOnly } from "@/utils/date";
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  MainLayout,
-  StatusChip,
-  TabFilters,
-  AddOrdersToRouteModal,
-  AddDriverToRouteModal,
-  AddAssistantToRouteModal,
-  NewRouteModal,
-  ConfirmModal,
-} from "@/components";
+import { StatusChip, TabFilters, AddOrdersToRouteModal, AddDriverToRouteModal, AddAssistantToRouteModal, NewRouteModal, ConfirmModal } from "@/components";
 import type { NewRouteFormValues } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -174,7 +165,6 @@ type PendingRemoval =
     articleName: string;
   }
   | null;
-
 
 function formatDateLabel(date: Date): string {
   const d = dayjs(date);
@@ -837,7 +827,7 @@ export default function RutaPage() {
   };
 
   return (
-    <MainLayout>
+    <>
       <Stack direction={{ xs: "column", md: "row" }} height="100%" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
         <Stack spacing={1} flex="0 1 272px" maxWidth="272px">
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="nowrap" minWidth="260px">
@@ -1173,6 +1163,6 @@ export default function RutaPage() {
         loading={createRouteMutation.isPending}
         fetchBranches={getBranchesCatalog}
       />
-    </MainLayout>
+    </>
   );
 }

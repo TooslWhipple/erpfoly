@@ -1,5 +1,5 @@
 import { CircularProgress, Stack } from "@mui/material";
-import { MainLayout, Breadcrumbs, Title, TabFilters } from "@/components";
+import { Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
 import { CATALOG_SUPPLIERS_CREATE, CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
@@ -37,16 +37,16 @@ export default function SupplierEditPage() {
 
     if (showLoader) {
         return (
-            <MainLayout>
+            <>
                 <Stack alignItems="center" justifyContent="center" minHeight={400}>
                     <CircularProgress />
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={2}>
                 <Breadcrumbs items={breadcrumbItems} />
                 <Title
@@ -117,6 +117,6 @@ export default function SupplierEditPage() {
                     />
                 )}
             </Stack>
-        </MainLayout>
+        </>
     );
 }

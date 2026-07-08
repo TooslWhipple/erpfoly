@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
 import { CircleAlert } from "lucide-react";
 import { X } from "@/components/Icons";
-import { MainLayout, TabFilters } from "@/components";
+import { TabFilters } from "@/components";
 import { AddressTab } from "./AddressTab";
 import { BasicInformationTab } from "./BasicInformationTab";
 import { DocumentationTab } from "./DocumentationTab";
@@ -203,7 +203,7 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
   };
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -379,6 +379,6 @@ export function CreditApplicationFormPage({ isCreateMode, applicationId }: Credi
           />
         )}
       </Stack>
-    </MainLayout>
+    </>
   );
 }

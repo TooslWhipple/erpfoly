@@ -7,7 +7,7 @@ import {
     Build as BuildIcon,
     Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
+import { Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
 import { Box, Grid, Skeleton, Stack } from "@mui/material";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
@@ -399,7 +399,7 @@ export default function Inventario() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Inventario" />
 
@@ -444,6 +444,6 @@ export default function Inventario() {
                     emptyMessage="No hay artículos en inventario"
                 />
             </Stack>
-        </MainLayout>
+        </>
     );
 }

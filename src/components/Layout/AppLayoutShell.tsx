@@ -9,30 +9,26 @@ import {
   MobileMenuIcon,
 } from "./styles";
 
-interface MainLayoutProps {
+interface AppLayoutShellProps {
   children: React.ReactNode;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+/**
+ * Persistent app chrome (sidebar + main area). Mounted once per authenticated session
+ * so sidebar scroll and expand state survive client-side route changes.
+ */
+export function AppLayoutShell({ children }: AppLayoutShellProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleToggleMobile = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const handleCloseMobile = () => {
-    setMobileOpen(false);
-  };
-
   return (
     <LayoutContainer>
-      <Sidebar open={mobileOpen} onClose={handleCloseMobile} />
+      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
       <MainContent component="main">
         <ContentWrapper>
           {isMobile && (
-            <MobileMenuButton onClick={handleToggleMobile}>
+            <MobileMenuButton onClick={() => setMobileOpen((prev) => !prev)}>
               <MobileMenuIcon />
             </MobileMenuButton>
           )}

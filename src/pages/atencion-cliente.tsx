@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { Stack, InputAdornment, MenuItem, SelectChangeEvent } from "@mui/material";
 import { Search as SearchIcon, Check as CheckIcon } from "@mui/icons-material";
-import { MainLayout } from "@/components";
 import type { SearchType } from "@/types/atencion-cliente.types";
 import { searchInvoices } from "@/data/atencion-cliente.mockData";
 import {
@@ -62,7 +61,7 @@ export default function AtencionCliente() {
     };
 
     return (
-        <MainLayout>
+        <>
             <SearchPageContainer>
                 <LogoContainer>
                     <LogoText>
@@ -130,6 +129,6 @@ export default function AtencionCliente() {
                     </SearchButton>
                 </SearchBarContainer>
             </SearchPageContainer>
-        </MainLayout>
+        </>
     );
 }

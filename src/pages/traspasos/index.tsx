@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud, StatusChip, BranchSelectionModal } from "@/components";
+import { Title, TabFilters, TableCrud, StatusChip, BranchSelectionModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import type { BranchOrderStatus, BranchRequestListItem } from "@/types/solicitudes.types";
@@ -276,7 +276,7 @@ export default function TraspasosPage() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Traspasos" />
 
@@ -320,6 +320,6 @@ export default function TraspasosPage() {
                 onClose={handleCloseBranchModal}
                 onSelect={handleBranchSelect}
             />
-        </MainLayout>
+        </>
     );
 }

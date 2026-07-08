@@ -1,6 +1,5 @@
 import { Button, Typography } from "@mui/material";
 import { useRouter } from "next/router";
-import { MainLayout } from "@/components";
 import { getFirstAllowedRoute } from "@/lib/routeAccess";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ForbiddenContent } from "@/styles/forbidden.styles";
@@ -14,7 +13,7 @@ export default function ForbiddenPage() {
   };
 
   return (
-    <MainLayout>
+    <>
       <ForbiddenContent spacing={2}>
         <Typography variant="h4">No tienes acceso a esta pantalla</Typography>
         <Typography variant="body1" color="text.secondary">
@@ -24,6 +23,6 @@ export default function ForbiddenPage() {
           Ir a mi inicio
         </Button>
       </ForbiddenContent>
-    </MainLayout>
+    </>
   );
 }

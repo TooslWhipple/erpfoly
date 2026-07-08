@@ -8,7 +8,7 @@ import {
     Stack,
     Typography,
 } from "@mui/material";
-import { MainLayout, Breadcrumbs, BranchOrderItemRow, StatusChip } from "@/components";
+import { Breadcrumbs, BranchOrderItemRow, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type {
     BranchRequestFullDetail,
@@ -162,7 +162,6 @@ export default function TraspasoDetallePage() {
                 (item, index) => item.deliveryDate !== originalOrder.items[index].deliveryDate
             );
 
-
             if (scheduleChanges.length > 0) {
                 const payload: ScheduleBranchRequestPayload = {
                     items: order.items.map((item) => ({
@@ -213,20 +212,20 @@ export default function TraspasoDetallePage() {
 
     if (status === "loading" && !order) {
         return (
-            <MainLayout>
+            <>
                 <Stack spacing={3}>
                     <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                     <Stack alignItems="center" justifyContent="center" minHeight={400}>
                         <CircularProgress />
                     </Stack>
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (status === "empty") {
         return (
-            <MainLayout>
+            <>
                 <Stack spacing={3}>
                     <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                     <Stack spacing={1} alignItems="center">
@@ -236,13 +235,13 @@ export default function TraspasoDetallePage() {
                             onClick={handleBack}>Volver a traspasos</Button>
                     </Stack>
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (status === "error") {
         return (
-            <MainLayout>
+            <>
                 <Stack spacing={3}>
                     <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                     <Stack spacing={1} alignItems="center">
@@ -252,7 +251,7 @@ export default function TraspasoDetallePage() {
                             onClick={() => id && fetchOrder()}>Reintentar</Button>
                     </Stack>
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
@@ -264,7 +263,7 @@ export default function TraspasoDetallePage() {
     const minDeliveryDate = getMinDeliveryDate();
 
     return (
-        <MainLayout>
+        <>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="space-between">
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                 {showActionButtons && (
@@ -332,6 +331,6 @@ export default function TraspasoDetallePage() {
                     </Stack>
                 </ProductsSection>
             </PageContainer>
-        </MainLayout>
+        </>
     );
 }

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -85,7 +85,7 @@ export default function Roles() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Roles" />
         <TabFilters
@@ -120,6 +120,6 @@ export default function Roles() {
           emptyMessage="No hay roles registrados"
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

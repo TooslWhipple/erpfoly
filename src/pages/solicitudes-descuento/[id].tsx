@@ -17,14 +17,7 @@ import {
 import numeral from "numeral";
 import { CheckCircle2, Clock9, XCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  MainLayout,
-  Breadcrumbs,
-  DiscountRequestItemCard,
-  StatusChip,
-  ApproveDiscountRequestModal,
-  RejectDiscountRequestModal,
-} from "@/components";
+import { Breadcrumbs, DiscountRequestItemCard, StatusChip, ApproveDiscountRequestModal, RejectDiscountRequestModal } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { DiscountRequestDetail } from "@/types/discount-requests.types";
 import {
@@ -159,17 +152,17 @@ export default function DiscountRequestDetailPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={2} alignItems="center" justifyContent="center" minHeight={320}>
           <CircularProgress />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (isError || !detail) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={2} alignItems="center" justifyContent="center" minHeight={320}>
           <Typography variant="body1" color="text.secondary">
             No se encontró la solicitud de descuento.
@@ -178,7 +171,7 @@ export default function DiscountRequestDetailPage() {
             Volver al listado
           </Button>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -189,7 +182,7 @@ export default function DiscountRequestDetailPage() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <RejectDiscountRequestModal
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
@@ -444,6 +437,6 @@ export default function DiscountRequestDetailPage() {
           </Grid>
         </Grid>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

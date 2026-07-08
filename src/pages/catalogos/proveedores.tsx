@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -116,7 +116,7 @@ export default function Proveedores() {
     );
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Proveedores" />
                 <TabFilters
@@ -152,6 +152,6 @@ export default function Proveedores() {
                     emptyMessage="No hay proveedores registrados"
                 />
             </Stack>
-        </MainLayout>
+        </>
     );
 }

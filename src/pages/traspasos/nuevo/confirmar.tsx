@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Typography, Button, CircularProgress, Stack, Grid } from "@mui/material";
-import { MainLayout, Breadcrumbs } from "@/components";
+import { Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { SummaryCard, } from "@/styles/pedidos/confirmar.styles";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
@@ -208,17 +208,17 @@ export default function ConfirmarTraspasoPage() {
 
     if (status === "loading") {
         return (
-            <MainLayout>
+            <>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (status === "empty") {
         return (
-            <MainLayout>
+            <>
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
                 <Box sx={{ marginTop: 3, textAlign: "center" }}>
                     <Typography variant="body1" color="text.secondary">
@@ -228,12 +228,12 @@ export default function ConfirmarTraspasoPage() {
                         Volver a nuevo traspaso
                     </Button>
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
 
             <Stack direction="column" spacing={3}>
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
@@ -300,6 +300,6 @@ export default function ConfirmarTraspasoPage() {
                     </Grid>
                 </Grid>
             </Stack>
-        </MainLayout>
+        </>
     );
 }

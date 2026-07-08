@@ -1,5 +1,5 @@
 import { Box, CircularProgress, Stack } from "@mui/material";
-import { MainLayout, TabFilters, Title } from "@/components";
+import { TabFilters, Title } from "@/components";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { useFolypuntosPage } from "@/hooks/usePoints";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -22,7 +22,7 @@ export default function Folypuntos() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <Box
           sx={{
             display: "flex",
@@ -33,21 +33,21 @@ export default function Folypuntos() {
         >
           <CircularProgress />
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   if (!purchaseTypes.length) {
     return (
-      <MainLayout>
+      <>
         <Title title="Configuración de Folypuntos" />
         <Box sx={{ p: 2 }}>No hay tipos de compra configurados.</Box>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title
           title="Configuración de Folypuntos"
@@ -75,6 +75,6 @@ export default function Folypuntos() {
           disabled={saving || !canUpdatePoints}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

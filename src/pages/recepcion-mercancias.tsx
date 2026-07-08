@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TabFilters, TableCrud, ReceptionOrdersModal } from "@/components";
+import { Title, TabFilters, TableCrud, ReceptionOrdersModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
 import { StatusChip } from "@/styles/recepcion-mercancias.styles";
@@ -346,7 +346,7 @@ export default function RecepcionMercancias() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Recepción de mercancía" />
 
@@ -390,6 +390,6 @@ export default function RecepcionMercancias() {
                     loading={submitting}
                 />
             </Stack>
-        </MainLayout>
+        </>
     );
 }

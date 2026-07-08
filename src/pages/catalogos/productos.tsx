@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -171,7 +171,7 @@ export default function Productos() {
     );
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Catálogo de artículos" />
                 <TabFilters
@@ -208,6 +208,6 @@ export default function Productos() {
                     emptyMessage="No hay artículos registrados"
                 />
             </Stack>
-        </MainLayout>
+        </>
     );
 }

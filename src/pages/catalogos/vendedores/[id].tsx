@@ -4,7 +4,7 @@ import { Alert, Button, CircularProgress, Divider, Grid, Stack, Typography } fro
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import numeral from "numeral";
 import { ArrowDownFromLine, ArrowUpNarrowWide, BadgeDollarSign, Filter, LayoutList, ListFilter, ScanSearch } from "lucide-react";
-import { MainLayout, Breadcrumbs, TableCrud, StatusChip } from "@/components";
+import { Breadcrumbs, TableCrud, StatusChip } from "@/components";
 import { SalesMonthGoalCard, MonthlySalesComposedChartCard } from "@/components/SalesDashboard";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
@@ -93,22 +93,22 @@ export default function VendedorDetailPage() {
 
   if (!router.isReady) {
     return (
-      <MainLayout>
+      <>
         <Stack alignItems="center" py={6}>
           <CircularProgress />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (validId === null) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={2}>
           <Breadcrumbs items={breadcrumbItems} />
           <Alert severity="warning">Identificador de vendedor no válido.</Alert>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -130,7 +130,7 @@ export default function VendedorDetailPage() {
     })) ?? [];
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack
           direction={{ xs: "column", md: "row" }}
@@ -268,6 +268,6 @@ export default function VendedorDetailPage() {
           </Stack>
         }
       </Stack>
-    </MainLayout>
+    </>
   );
 }

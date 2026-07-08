@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Settings as SettingsIcon, LocalLaundryService as LaundryIcon } from "@mui/icons-material";
-import { MainLayout, Breadcrumbs, TabFilters } from "@/components";
+import { Breadcrumbs, TabFilters } from "@/components";
 import {
     CategoryChip,
     StatusChip,
@@ -164,7 +164,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={3}>
                 <Breadcrumbs items={breadcrumbs} />
 
@@ -194,7 +194,6 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                 />
-
 
                 {
                     activeTab === "inventory" &&
@@ -228,6 +227,6 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
                     />
                 }
             </Stack>
-        </MainLayout>
+        </>
     );
 }

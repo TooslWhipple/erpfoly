@@ -7,12 +7,7 @@ import {
   Delete as DeleteIcon,
   Visibility as ViewIcon,
 } from "@mui/icons-material";
-import {
-  MainLayout,
-  Title,
-  TabFilters,
-  TableCrud,
-} from "@/components";
+import { Title, TabFilters, TableCrud } from "@/components";
 import type { Column, RowAction, TitleAction } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
 import { CUSTOMERS_CREATE, CUSTOMERS_DELETE, CUSTOMERS_READ, CUSTOMERS_UPDATE, REPORTS_READ } from "@/lib/permissions";
@@ -138,7 +133,7 @@ export default function Clientes() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Clientes" />
         <TabFilters
@@ -164,6 +159,6 @@ export default function Clientes() {
           emptyMessage="No hay clientes registrados"
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

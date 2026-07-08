@@ -22,7 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Check as CheckIcon } from "@mui/icons-material";
-import { MainLayout, Title, BranchMonthlyGoalsTable } from "@/components";
+import { Title, BranchMonthlyGoalsTable } from "@/components";
 import type { BranchMonthlyGoalField } from "@/components";
 import type { BranchMonthlyGoal } from "@/types/goals.types";
 import {
@@ -226,16 +226,16 @@ export default function MetasPage() {
 
   if (loading && !salesHistory.length) {
     return (
-      <MainLayout>
+      <>
         <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
           <CircularProgress />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title
           title="Metas"
@@ -365,6 +365,6 @@ export default function MetasPage() {
           />
         </Card>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

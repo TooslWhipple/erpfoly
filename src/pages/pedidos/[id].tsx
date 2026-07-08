@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Typography, Skeleton, Stack, Button, Divider, Grid, Box } from "@mui/material";
-import { MainLayout, Breadcrumbs, StatusChipVariant, StatusChip, SendToWarehouseModal } from "@/components";
+import { Breadcrumbs, StatusChipVariant, StatusChip, SendToWarehouseModal } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
 import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
@@ -122,7 +122,7 @@ export default function PedidoDetalle() {
 
     if (loading) {
         return (
-            <MainLayout>
+            <>
                 <Stack spacing={3}>
                     <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
                     <Grid container spacing={4}>
@@ -138,13 +138,13 @@ export default function PedidoDetalle() {
                         </Grid>
                     </Grid>
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (!order) {
         return (
-            <MainLayout>
+            <>
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/pedidos")} />
                 <Box sx={{ marginTop: 4, textAlign: "center" }}>
                     <Typography variant="h5" color="text.secondary">
@@ -154,12 +154,12 @@ export default function PedidoDetalle() {
                         Volver a pedidos
                     </Button>
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={3}>
                 <Stack
                     direction={{ xs: "column", sm: "row" }}
@@ -232,6 +232,6 @@ export default function PedidoDetalle() {
                 orderId={Number(id)}
                 onSuccess={() => loadOrder(String(id))}
             />
-        </MainLayout>
+        </>
     );
 }

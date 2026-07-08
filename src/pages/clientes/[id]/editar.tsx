@@ -9,7 +9,7 @@ import {
   FamilyTab,
   ReferencesTab,
 } from "@/components/CreditApplicationForm";
-import { Breadcrumbs, MainLayout } from "@/components";
+import { Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { getClientDetail } from "@/data/clientes.mockData";
 import { useFamilyRelationships } from "@/hooks/useFamilyRelationships";
@@ -290,7 +290,7 @@ export default function ClientEditPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs
           items={breadcrumbs}
@@ -300,6 +300,6 @@ export default function ClientEditPage() {
         <Divider />
         {renderSelectedTab()}
       </Stack>
-    </MainLayout>
+    </>
   );
 }

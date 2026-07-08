@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Link, Stack } from "@mui/material";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { Title, TabFilters, TableCrud } from "@/components";
 import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
@@ -455,7 +455,7 @@ export default function ClientesMorosidad() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Title title="Morosidad" />
 
@@ -484,6 +484,6 @@ export default function ClientesMorosidad() {
           emptyMessage="No hay clientes con morosidad"
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

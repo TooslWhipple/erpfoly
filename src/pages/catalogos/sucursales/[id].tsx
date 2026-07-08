@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
-import { MainLayout, Breadcrumbs, TabFilters, StatusChip } from "@/components";
+import { Breadcrumbs, TabFilters, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { SalesTab, GoalsTab, PromotionsTab, SettingsTab } from "@/components/BranchDetailTabs";
 import { getBranch } from "@/services/branchDetail.service";
@@ -68,7 +68,7 @@ export default function BranchDetailPage() {
   };
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Breadcrumbs items={breadcrumbItems} showBackButton />
@@ -93,6 +93,6 @@ export default function BranchDetailPage() {
 
         {renderTabContent()}
       </Stack>
-    </MainLayout>
+    </>
   );
 }

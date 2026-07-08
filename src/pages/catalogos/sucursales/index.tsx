@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
-import { MainLayout, Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
+import { Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { BranchCreateModal } from "@/components/BranchCreateModal/BranchCreateModal";
 
@@ -245,7 +245,7 @@ export default function Sucursales() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Sucursales" />
         <TabFilters
@@ -329,6 +329,6 @@ export default function Sucursales() {
         }
         loading={confirmLoading}
       />
-    </MainLayout>
+    </>
   );
 }

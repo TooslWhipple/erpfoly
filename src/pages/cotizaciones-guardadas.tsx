@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, InputAdornment, Stack } from "@mui/material";
 import { Search } from "lucide-react";
-import { MainLayout, Title, TableCrud, FormTextField } from "@/components";
+import { Title, TableCrud, FormTextField } from "@/components";
 import { theme } from "@/styles/theme";
 import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -150,7 +150,7 @@ export default function CotizacionesGuardadas() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Title title="Cotizaciones guardadas" />
@@ -187,6 +187,6 @@ export default function CotizacionesGuardadas() {
           onRowClick={(row) => void router.push(`/cotizaciones/${row.id}`)}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

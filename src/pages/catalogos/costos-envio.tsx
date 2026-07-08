@@ -15,10 +15,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import {
-  MainLayout,
-  ShippingMunicipalityAutocomplete,
-} from "@/components";
+import { ShippingMunicipalityAutocomplete } from "@/components";
 import {
   DividerSpace,
   LeftPanel,
@@ -532,16 +529,16 @@ export default function CostosEnvioPage() {
 
   if (shouldShowInitialLoading) {
     return (
-      <MainLayout>
+      <>
         <Box sx={{ minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <CircularProgress />
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
           <Typography variant="h5">Costos de envío</Typography>
@@ -778,6 +775,6 @@ export default function CostosEnvioPage() {
           </Alert>
         </Snackbar>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

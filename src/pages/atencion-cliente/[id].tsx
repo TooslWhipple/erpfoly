@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Box, Stack, Skeleton, IconButton, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
-import { MainLayout, Breadcrumbs, Tabs } from "@/components";
+import { Breadcrumbs, Tabs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { InvoiceDetail } from "@/types/atencion-cliente.types";
 import { getInvoiceDetail } from "@/data/atencion-cliente.mockData";
@@ -129,7 +129,7 @@ export default function InvoiceDetailPage() {
 
     if (loading) {
         return (
-            <MainLayout>
+            <>
                 <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/atencion-cliente")} />
                 <DetailPageContainer>
                     <HeaderSection>
@@ -142,20 +142,20 @@ export default function InvoiceDetailPage() {
                     <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
                     <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2, mt: 3 }} />
                 </DetailPageContainer>
-            </MainLayout>
+            </>
         );
     }
 
     if (!invoice) {
         return (
-            <MainLayout>
+            <>
                 <Typography>Factura no encontrada</Typography>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Breadcrumbs items={breadcrumbs} showBackButton onBack={() => router.push("/atencion-cliente")} />
 
             <DetailPageContainer>
@@ -312,6 +312,6 @@ export default function InvoiceDetailPage() {
                     </SummaryPanel>
                 </ContentLayout>
             </DetailPageContainer>
-        </MainLayout>
+        </>
     );
 }

@@ -2,16 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, Button, Typography, Skeleton, Grid } from "@mui/material";
-import {
-  MainLayout,
-  Breadcrumbs,
-  VerticalSidebarTabs,
-  ImageViewerModal,
-  ApproveCreditModal,
-  RejectCreditModal,
-  RequestAdditionalInfoModal,
-  CreditApplicationStatusCard,
-} from "@/components";
+import { Breadcrumbs, VerticalSidebarTabs, ImageViewerModal, ApproveCreditModal, RejectCreditModal, RequestAdditionalInfoModal, CreditApplicationStatusCard } from "@/components";
 import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { VerticalSidebarTabItem } from "@/components/VerticalSidebarTabs";
@@ -109,7 +100,7 @@ export default function CreditApplicationReviewPage() {
 
   if (!idString || !idIsValid) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <RevisionErrorContainer>
@@ -119,13 +110,13 @@ export default function CreditApplicationReviewPage() {
             </Button>
           </RevisionErrorContainer>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (detailQuery.isPending) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <DetailLayout>
@@ -138,13 +129,13 @@ export default function CreditApplicationReviewPage() {
             </ContentColumn>
           </DetailLayout>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (detailQuery.isError || !detail) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <RevisionErrorContainer>
@@ -157,12 +148,12 @@ export default function CreditApplicationReviewPage() {
             </Button>
           </RevisionErrorContainer>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
@@ -276,6 +267,6 @@ export default function CreditApplicationReviewPage() {
         open={requestAdditionalInfoOpen}
         onClose={() => setRequestAdditionalInfoOpen(false)}
       />
-    </MainLayout>
+    </>
   );
 }

@@ -2,12 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Box, CircularProgress, Stack } from "@mui/material";
-import {
-  MainLayout,
-  Breadcrumbs,
-  Title,
-  TabFilters,
-} from "@/components";
+import { Breadcrumbs, Title, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
 import {
@@ -451,7 +446,7 @@ export default function PromotionFormPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <Box
           sx={{
             display: "flex",
@@ -462,12 +457,12 @@ export default function PromotionFormPage() {
         >
           <CircularProgress />
         </Box>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={2}>
         <Breadcrumbs items={breadcrumbItems} />
         <Title
@@ -553,6 +548,6 @@ export default function PromotionFormPage() {
           />
         )}
       </Stack>
-    </MainLayout>
+    </>
   );
 }

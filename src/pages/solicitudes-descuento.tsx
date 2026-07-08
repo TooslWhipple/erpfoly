@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -137,7 +137,7 @@ export default function SolicitudesDescuentoPage() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Title title="Solicitudes de descuentos" />
         <TabFilters
@@ -162,6 +162,6 @@ export default function SolicitudesDescuentoPage() {
           onRowClick={handleRowClick}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

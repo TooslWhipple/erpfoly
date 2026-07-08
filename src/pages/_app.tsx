@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { AuthGuard, GlobalSnackbar } from "@/components";
+import { AppLayoutGate } from "@/components/Layout";
 import "@/lib/dayjs";
 import { theme } from "@/styles/theme";
 
@@ -18,7 +19,9 @@ export default function App({ Component, pageProps }: AppProps) {
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es-mx">
           <CssBaseline />
           <AuthGuard>
-            <Component {...pageProps} />
+            <AppLayoutGate>
+              <Component {...pageProps} />
+            </AppLayoutGate>
           </AuthGuard>
           <GlobalSnackbar />
         </LocalizationProvider>

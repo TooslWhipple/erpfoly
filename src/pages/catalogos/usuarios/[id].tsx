@@ -2,13 +2,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Box, Button, CircularProgress, Divider, Grid, InputAdornment, Stack, Typography } from "@mui/material";
-import {
-    MainLayout,
-    Breadcrumbs,
-    FormTextField,
-    FormSelect,
-    MultiSelectChips,
-} from "@/components";
+import { Breadcrumbs, FormTextField, FormSelect, MultiSelectChips } from "@/components";
 import {
     UserDriverFields,
     initialDriverForm,
@@ -361,7 +355,7 @@ export default function UserFormPage() {
 
     if (loading) {
         return (
-            <MainLayout>
+            <>
                 <Box
                     sx={{
                         display: "flex",
@@ -372,12 +366,12 @@ export default function UserFormPage() {
                 >
                     <CircularProgress />
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Stack spacing={3}>
                 <Breadcrumbs items={breadcrumbItems} />
                 <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
@@ -507,6 +501,6 @@ export default function UserFormPage() {
                     />
                 </FormCard>
             </Stack>
-        </MainLayout>
+        </>
     );
 }

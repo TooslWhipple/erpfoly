@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { MainLayout, Title, TabFilters, TableCrud } from "@/components";
+import { Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -172,7 +172,7 @@ export default function SolicitudesCredito() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Solicitudes de crédito" />
 
@@ -200,6 +200,6 @@ export default function SolicitudesCredito() {
           onRowClick={handleVerDetalle}
         />
       </Stack>
-    </MainLayout>
+    </>
   );
 }

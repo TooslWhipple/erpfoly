@@ -1,13 +1,7 @@
 import { useMemo } from "react";
 import { Alert, Grid, Skeleton, Stack } from "@mui/material";
 import { Pencil } from "lucide-react";
-import {
-  MainLayout,
-  Breadcrumbs,
-  Title,
-  TabFilters,
-  DataTable,
-} from "@/components";
+import { Breadcrumbs, Title, TabFilters, DataTable } from "@/components";
 import type { DataTableColumn, StatusChipVariant } from "@/components/TableCrud";
 import {
   SupplierDashboardMetrics,
@@ -93,17 +87,17 @@ export default function SupplierDashboardPage() {
 
   if (routerReady && validId === null) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={2}>
           <Breadcrumbs items={breadcrumbItems} />
           <Alert severity="warning">Identificador de proveedor no válido.</Alert>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbItems} />
 
@@ -202,6 +196,6 @@ export default function SupplierDashboardPage() {
           </Grid>
         </Stack>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

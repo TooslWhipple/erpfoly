@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button, Divider, Grid, Skeleton, Stack, Typography } from "@mui/material";
-import { MainLayout, Breadcrumbs } from "@/components";
+import { Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useClientPayment } from "@/hooks/clientes/useClientPayment";
 import {
@@ -94,18 +94,18 @@ export default function ClientPaymentPage() {
 
   if (!routerReady || loading) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Skeleton variant="text" width="60%" height={32} />
           <Skeleton variant="rectangular" height={420} sx={{ borderRadius: 2 }} />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   if (error && !context) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <ErrorState>
@@ -120,7 +120,7 @@ export default function ClientPaymentPage() {
             </Stack>
           </ErrorState>
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
@@ -130,7 +130,7 @@ export default function ClientPaymentPage() {
 
   if (paymentResult) {
     return (
-      <MainLayout>
+      <>
         <Stack spacing={3}>
           <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
           <PaymentSuccessView
@@ -138,12 +138,12 @@ export default function ClientPaymentPage() {
             onDownloadReceipt={handleDownloadReceipt}
           />
         </Stack>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
         <Divider />
@@ -189,6 +189,6 @@ export default function ClientPaymentPage() {
 
         </Grid>
       </Stack>
-    </MainLayout>
+    </>
   );
 }

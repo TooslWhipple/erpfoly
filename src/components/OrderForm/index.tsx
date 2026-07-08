@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
+import { Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
 import SelectedItemsPanel from "@/components/SelectedItemsPanel";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
@@ -607,46 +607,46 @@ export default function OrderForm({
 
     if (orderLoading) {
         return (
-            <MainLayout>
+            <>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (mode === "edit" && (!originalOrder)) {
         return (
-            <MainLayout>
+            <>
                 <Box sx={{ marginTop: 4, textAlign: "center" }}>
                     <Typography variant="h5" color="text.secondary">Pedido no encontrado</Typography>
                 </Box>
-            </MainLayout>
+            </>
         );
     }
 
     if (mode === "create" && effectiveOrderType === "external" && !supplier) {
         return (
-            <MainLayout>
+            <>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     if (effectiveOrderType === "internal" && (!branch || !originBranch)) {
         return (
-            <MainLayout>
+            <>
                 <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
                     <CircularProgress />
                 </Stack>
-            </MainLayout>
+            </>
         );
     }
 
     return (
-        <MainLayout>
+        <>
             <Grid container spacing={4}>
                 <Grid size={{ xs: 12, md: 8, xl: 9 }}>
                     <Stack direction="column" spacing={3}>
@@ -722,6 +722,6 @@ export default function OrderForm({
                     costHistory={costHistory}
                 />
             )}
-        </MainLayout>
+        </>
     );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
   Alert,
@@ -18,27 +18,22 @@ import {
 } from "@mui/material";
 import { CheckCircle, Truck, Store, Clock, XCircle } from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
-import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
-import { PickersDay, type PickersDayProps } from "@mui/x-date-pickers/PickersDay";
-import type { Dayjs } from "dayjs";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSaleDetail,
-  getDeliveryAvailability,
   setDeliveryDate,
   removeDeliveryDate,
   registerLayawayPayment,
   completeLayaway,
   cancelLayaway,
 } from "@/services/ventas.service";
-import type { DeliveryAvailability } from "@/types/ventas.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
-import { SideModal } from "@/components/SideModal/SideModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
+import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 
 function layawayStatusMeta(status: string) {
   switch (status) {
@@ -86,8 +81,6 @@ export default function VentaDetalle() {
   const isNew = nuevo === "1";
 
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
-  const [modalDate, setModalDate] = useState<Dayjs | null>(null);
-  const [calendarMonth, setCalendarMonth] = useState<Dayjs>(dayjs());
   const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
@@ -102,38 +95,6 @@ export default function VentaDetalle() {
       return res.data!;
     },
   });
-
-  const {
-    data: availabilityData,
-    isLoading: availabilityLoading,
-    isError: availabilityError,
-  } = useQuery({
-    queryKey: [
-      "delivery-availability",
-      calendarMonth.month() + 1,
-      calendarMonth.year(),
-      sale?.branchId,
-    ],
-    queryFn: async () => {
-      return getDeliveryAvailability(
-        calendarMonth.month() + 1,
-        calendarMonth.year(),
-        sale?.branchId ?? undefined
-      );
-    },
-    staleTime: 60 * 1000,
-    enabled: !!sale,
-  });
-
-  const availabilityMap = useMemo(() => {
-    const map: Record<string, DeliveryAvailability> = {};
-    if (availabilityData) {
-      for (const item of availabilityData) {
-        map[item.date] = item.availability;
-      }
-    }
-    return map;
-  }, [availabilityData]);
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {
@@ -188,12 +149,6 @@ export default function VentaDetalle() {
       });
     },
   });
-
-  useEffect(() => {
-    if (availabilityError) {
-      snackbar.showError("No se pudo cargar la disponibilidad");
-    }
-  }, [availabilityError, snackbar]);
 
   const removeDateMutation = useMutation({
     mutationFn: () => removeDeliveryDate(saleId!),
@@ -278,24 +233,6 @@ export default function VentaDetalle() {
     },
     onError: (err: Error) => snackbar.showError(err.message),
   });
-
-  // Debounce month changes to avoid rapid refetch on << >> clicks
-  const monthChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleMonthChange = (newMonth: Dayjs) => {
-    if (monthChangeTimer.current) clearTimeout(monthChangeTimer.current);
-    monthChangeTimer.current = setTimeout(() => {
-      setCalendarMonth(newMonth);
-    }, 300);
-  };
-
-  const handleDateChange = (val: Dayjs | null) => {
-    if (!val) return;
-    setModalDate(val);
-    // Auto-navigate month if user clicks a day shown from adjacent month
-    if (!val.isSame(calendarMonth, 'month')) {
-      setCalendarMonth(val);
-    }
-  };
 
   const primaryCoords = useMemo(() => {
     if (!sale?.client?.primaryAddress) return null;
@@ -580,10 +517,7 @@ export default function VentaDetalle() {
                       {!isPendingLayaway && !isSaleCancelled && (
                         <Box
                           sx={{ flexShrink: 0 }}
-                          onClick={() => {
-                            setModalDate(selectedDate ?? dayjs());
-                            setDeliveryModalOpen(true);
-                          }}
+                          onClick={() => setDeliveryModalOpen(true)}
                         >
                           <Box
                             sx={{
@@ -1024,237 +958,25 @@ export default function VentaDetalle() {
         </Grid>
       </Grid>
 
-      <SideModal
+      <DeliveryDatePicker
         open={deliveryModalOpen}
         onClose={() => setDeliveryModalOpen(false)}
-        title="Selecciona un día de entrega"
-        maxWidth="xl"
-        contentSx={{ bgcolor: "#F8FAFC", overflow: "visible" }}
-        paperSx={{ overflow: "visible", height: "auto", maxHeight: "none" }}
-      >
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 7 }} sx={{ position: 'relative' }}>
-              {availabilityLoading && (
-                <Box sx={{ position: 'absolute', inset: 0, zIndex: 1, bgcolor: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Skeleton variant="rectangular" width="100%" height="100%" />
-                </Box>
-              )}
-              <DateCalendar
-                value={modalDate}
-                onChange={handleDateChange}
-                onMonthChange={handleMonthChange}
-                slots={{ day: CalendarDay }}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                slotProps={{ day: { availabilityMap } as any }}
-                fixedWeekNumber={6}
-                showDaysOutsideCurrentMonth
-                sx={{
-                  // Let the calendar fill width and grow in height naturally
-                  width: "100%",
-                  maxWidth: "100%",
-                  height: "auto !important",
-                  maxHeight: "none !important",
-                  overflow: "visible !important",
-                  bgcolor: "#fff",
-                  borderRadius: 1.25,
-                  p: 2,
-                  border: "1px solid rgba(0,0,0,0.05)",
-                  // Root container
-                  "&.MuiDateCalendar-root": {
-                    width: "100%",
-                    height: "auto !important",
-                    maxHeight: "none !important",
-                    overflow: "visible !important",
-                  },
-                  // Give slideTransition a stable minHeight for 6 weeks.
-                  // Keep overflow: hidden (MUI default) so the slide
-                  // animation clips correctly and doesn't show outside.
-                  "& .MuiDayCalendar-slideTransition": {
-                    minHeight: "300px !important",
-                  },
-                  // Week rows
-                  "& .MuiDayCalendar-header": {
-                    justifyContent: "space-around",
-                  },
-                  "& .MuiDayCalendar-weekContainer": {
-                    justifyContent: "space-around",
-                    margin: "2px 0",
-                  },
-                  // Header
-                  "& .MuiPickersCalendarHeader-root": {
-                    pl: 1,
-                    pr: 1,
-                  },
-                  "& .MuiPickersCalendarHeader-label": {
-                    fontWeight: 600,
-                    fontSize: "1.1rem",
-                    textTransform: "capitalize",
-                  },
-                  // Day labels row
-                  "& .MuiDayCalendar-weekDayLabel": {
-                    fontWeight: 500,
-                    color: "text.secondary",
-                    flex: 1,
-                    textAlign: "center",
-                    margin: 0,
-                  },
-                  // Day cells
-                  "& .MuiPickersDay-root": {
-                    borderRadius: "50%",
-                    fontSize: "0.95rem",
-                    flex: "0 0 auto",
-                    width: "2.4rem",
-                    height: "2.4rem",
-                    margin: "2px auto",
-                  },
-                  "& .MuiPickersDay-root.Mui-selected": {
-                    bgcolor: "#2563EB",
-                    color: "#fff",
-                    "&:hover, &:focus": { bgcolor: "#2563EB" },
-                  },
-                  "& .MuiPickersDay-root.MuiPickersDay-today": {
-                    bgcolor: "rgba(37, 99, 235, 0.08)",
-                    color: "#2563EB",
-                    fontWeight: 700,
-                    border: "none",
-                  },
-                  "& .MuiPickersDay-root:focus.Mui-selected": {
-                    bgcolor: "#2563EB",
-                  },
-                }}
-              />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Tu selección:
-              </Typography>
-
-              {modalDate && (
-                <>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    {(() => {
-                      const modalAvailability = availabilityLoading
-                        ? undefined
-                        : availabilityMap[modalDate.format('YYYY-MM-DD')];
-                      const colors = availabilityLoading
-                        ? getSelectionBoxColors(undefined)
-                        : getSelectionBoxColors(modalAvailability);
-                      return (
-                        <Box
-                          sx={{
-                            bgcolor: colors.boxBg,
-                            borderRadius: 1,
-                            width: 57,
-                            height: 68,
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            py: 1,
-                            px: 2,
-                            opacity: availabilityLoading ? 0.5 : 1,
-                            transition: 'opacity 0.2s',
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: colors.dayColor,
-                              fontWeight: 600,
-                              fontSize: "0.75rem",
-                              lineHeight: 1,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {modalDate.format("ddd")}
-                          </span>
-                          <span
-                            style={{
-                              color: colors.numberColor,
-                              fontWeight: 600,
-                              fontSize: "1.1rem",
-                              lineHeight: 1,
-                            }}
-                          >
-                            {modalDate.date()}
-                          </span>
-                        </Box>
-                      );
-                    })()}
-                    <Stack spacing={0.25}>
-                      <Typography variant="body2" fontWeight={600}>
-                        {modalDate
-                          .format("dddd D [de] MMMM")
-                          .replace(/^\w/, (c) => c.toUpperCase())}
-                      </Typography>
-                      {availabilityLoading ? (
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                          <Skeleton variant="circular" width={10} height={10} />
-                          <Skeleton variant="text" width={120} height={16} />
-                        </Stack>
-                      ) : (
-                        (() => {
-                          const modalAvailability = availabilityMap[modalDate.format('YYYY-MM-DD')];
-                          const colors = getSelectionBoxColors(modalAvailability);
-                          return (
-                            <Typography variant="caption" sx={{ color: colors.labelColor, fontWeight: 500 }}>
-                              {getAvailabilityLabel(modalAvailability)}
-                            </Typography>
-                          );
-                        })()
-                      )}
-                    </Stack>
-                  </Stack>
-
-                  <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                    Al confirmar la entrega será programada para esta fecha, hay una
-                    posibilidad que se reagende por la poca disponibilidad del día.
-                  </Typography>
-
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      textTransform: "none",
-                      borderRadius: 1.5,
-                      py: 1,
-                      mt: 1,
-                    }}
-                    disabled={setDateMutation.isPending || availabilityLoading}
-                    onClick={() => {
-                      if (modalDate) {
-                        setDateMutation.mutate({
-                          delivery_date: modalDate.format('YYYY-MM-DD'),
-                          // Sin tipo/sucursal/dirección propios ya guardados en la
-                          // venta (sale.deliveryType === null), este flujo asume
-                          // domicilio a la dirección principal del cliente, igual
-                          // que el comportamiento previo de esta pantalla.
-                          address_id: sale?.client?.primaryAddress?.id,
-                        });
-                      }
-                    }}
-                  >
-                    {setDateMutation.isPending ? 'Guardando...' : 'Confirmar'}
-                  </Button>
-                  {sale?.deliveryDate && (
-                    <Button
-                      variant="text"
-                      fullWidth
-                      sx={{ textTransform: "none", color: "error.main" }}
-                      disabled={removeDateMutation.isPending || availabilityLoading}
-                      onClick={() => removeDateMutation.mutate()}
-                    >
-                      Quitar fecha
-                    </Button>
-                  )}
-                </>
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-      </SideModal>
+        branchId={sale?.branchId ?? undefined}
+        value={sale?.deliveryDate ?? null}
+        onConfirm={(date) => {
+          setDateMutation.mutate({
+            delivery_date: date,
+            // Sin tipo/sucursal/dirección propios ya guardados en la
+            // venta (sale.deliveryType === null), este flujo asume
+            // domicilio a la dirección principal del cliente, igual
+            // que el comportamiento previo de esta pantalla.
+            address_id: sale?.client?.primaryAddress?.id,
+          });
+        }}
+        onRemove={sale?.deliveryDate ? () => removeDateMutation.mutate() : undefined}
+        confirmLoading={setDateMutation.isPending}
+        removeLoading={removeDateMutation.isPending}
+      />
 
       <DeliveryAddressModal
         open={addressModalOpen}
@@ -1275,153 +997,6 @@ export default function VentaDetalle() {
         cancelLabel="Volver"
         confirmColor="error"
       />
-    </Box>
-  );
-}
-
-function getAvailabilityColor(availability: DeliveryAvailability | undefined): string {
-  if (availability === 'available') return '#16A34A';
-  if (availability === 'low') return '#F97316';
-  if (availability === 'none') return '#E5E7EB';
-  return '#E5E7EB';
-}
-
-function getAvailabilityLabel(availability: DeliveryAvailability | undefined): string {
-  const color = getAvailabilityColor(availability);
-  if (color === '#16A34A') return 'Alta disponibilidad';
-  if (color === '#F97316') return 'Poca disponibilidad';
-  return 'Sin disponibilidad';
-}
-
-function getSelectionBoxColors(availability: DeliveryAvailability | undefined) {
-  const color = getAvailabilityColor(availability);
-  switch (color) {
-    case "#16A34A":
-      return {
-        boxBg: "#DCFCE7",
-        numberColor: "#16A34A",
-        dayColor: "#4ADE80",
-        labelColor: "#16A34A",
-      };
-    case "#F97316":
-      return {
-        boxBg: "#FFF7ED",
-        numberColor: "#EA580C",
-        dayColor: "#FDBA74",
-        labelColor: "#EA580C",
-      };
-    default:
-      return {
-        boxBg: "#E5E7EB",
-        numberColor: "#6B7280",
-        dayColor: "#9CA3AF",
-        labelColor: "#9CA3AF",
-      };
-  }
-}
-
-function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<string, DeliveryAvailability> }) {
-  const { day, outsideCurrentMonth, availabilityMap, selected, today, ...other } = props;
-
-  const dateStr = day.format('YYYY-MM-DD');
-  const availability = availabilityMap?.[dateStr];
-  const isPastDay = day.startOf('day').isBefore(dayjs().startOf('day'));
-
-  const color = outsideCurrentMonth
-    ? null
-    : isPastDay
-    ? '#E5E7EB'
-    : availability === 'available'
-    ? '#16A34A'
-    : availability === 'low'
-    ? '#F97316'
-    : availability === 'none'
-    ? '#E5E7EB'
-    : null;
-
-  return (
-    <Box sx={{ position: "relative" }}>
-      <PickersDay
-        {...other}
-        day={day}
-        outsideCurrentMonth={outsideCurrentMonth}
-        selected={selected}
-        today={today}
-        disabled={isPastDay}
-        sx={{
-          // Días deshabilitados (pasados)
-          "&.Mui-disabled": {
-            color: "#9CA3AF",
-            opacity: 0.6,
-            pointerEvents: "none",
-            "&:hover": {
-              bgcolor: "transparent",
-            },
-          },
-          // Días fuera del mes (debe ir primero para que otros estilos lo sobrescriban)
-          "&.MuiPickersDay-dayOutsideMonth": {
-            color: "rgba(0, 0, 0, 0.26)",
-            opacity: 0.5,
-            "&:hover": {
-              bgcolor: "rgba(0, 0, 0, 0.04)",
-            },
-          },
-          // Día seleccionado
-          "&.Mui-selected": {
-            bgcolor: "primary.main",
-            color: "#fff",
-            fontWeight: 600,
-            opacity: 1,
-            "&:hover": {
-              bgcolor: "primary.dark",
-            },
-            "&:focus": {
-              bgcolor: "primary.main",
-            },
-          },
-          // Día actual (no seleccionado)
-          "&.MuiPickersDay-today:not(.Mui-selected)": {
-            border: "2px solid",
-            borderColor: "primary.main",
-            color: "primary.main",
-            fontWeight: 600,
-            bgcolor: "transparent",
-            opacity: 1,
-          },
-          // Día actual Y seleccionado
-          "&.MuiPickersDay-today.Mui-selected": {
-            bgcolor: "primary.main",
-            color: "#fff",
-            fontWeight: 600,
-            border: "2px solid",
-            borderColor: "primary.dark",
-            opacity: 1,
-          },
-          // Días normales del mes actual
-          "&:not(.Mui-selected):not(.MuiPickersDay-today):not(.MuiPickersDay-dayOutsideMonth)": {
-            color: "text.primary",
-            opacity: 1,
-            "&:hover": {
-              bgcolor: "action.hover",
-            },
-          },
-        }}
-      />
-      {color && (
-        <Box
-          sx={{
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            bgcolor: color,
-            position: "absolute",
-            bottom: 2,
-            left: "50%",
-            transform: "translateX(-50%)",
-            pointerEvents: "none",
-          }}
-        />
-      )}
     </Box>
   );
 }

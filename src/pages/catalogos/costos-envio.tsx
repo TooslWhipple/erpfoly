@@ -504,8 +504,10 @@ export default function CostosEnvioPage() {
     nextMunicipalityId: number | null,
   ) => {
     if (nextMunicipalityId === municipalityId) return;
-    const allow = await requestLeaveConfirmation();
-    if (!allow) return;
+    if (isDirty) {
+      const allow = await requestLeaveConfirmation();
+      if (!allow) return;
+    }
     hasAutoSelectedMunicipalityRef.current = true;
     resetMapState();
     setServerSnapshot(null);

@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import type {
+  Column,
+  RowAction,
+  StatusChipVariant,
+} from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -13,19 +17,30 @@ import {
 } from "@/services/creditApplicationList.service";
 import { Stack } from "@mui/material";
 import { formatDateTimeShort, formatDate } from "@/utils/date";
-import { CREDIT_APPLICATIONS_READ, CREDIT_APPLICATIONS_UPDATE } from "@/lib/permissions";
-
+import {
+  CREDIT_APPLICATIONS_READ,
+  CREDIT_APPLICATIONS_UPDATE,
+} from "@/lib/permissions";
 const SEARCH_DEBOUNCE_MS = 300;
-
 type ApplicationTypeCode = "NEW" | "LINE_INCREASE";
-
 const STATUS_TABS: TabOption[] = [
-  { label: "Todas", value: "all" },
-  { label: "Pendiente", value: "in_review" },
-  { label: "Aceptadas", value: "approved" },
-  { label: "Rechazadas", value: "rejected" },
+  {
+    label: "Todas",
+    value: "all",
+  },
+  {
+    label: "Pendiente",
+    value: "in_review",
+  },
+  {
+    label: "Aceptadas",
+    value: "approved",
+  },
+  {
+    label: "Rechazadas",
+    value: "rejected",
+  },
 ];
-
 const STATUS_CHIP_LABELS: Record<CreditApplicationStatus, string> = {
   DRAFT: "Borrador",
   SUBMITTED: "Enviada",
@@ -34,33 +49,36 @@ const STATUS_CHIP_LABELS: Record<CreditApplicationStatus, string> = {
   REJECTED: "Rechazada",
   CANCELLED: "Cancelada",
 };
-
-const STATUS_CHIP_VARIANTS: Record<CreditApplicationStatus, StatusChipVariant> = {
-  DRAFT: "default",
-  SUBMITTED: "default",
-  IN_REVIEW: "default",
-  APPROVED: "success",
-  REJECTED: "error",
-  CANCELLED: "error",
-};
-
+const STATUS_CHIP_VARIANTS: Record<CreditApplicationStatus, StatusChipVariant> =
+  {
+    DRAFT: "default",
+    SUBMITTED: "default",
+    IN_REVIEW: "default",
+    APPROVED: "success",
+    REJECTED: "error",
+    CANCELLED: "error",
+  };
 const TIPO_CHIP_LABELS: Record<ApplicationTypeCode, string> = {
   NEW: "Nuevo",
   LINE_INCREASE: "Aumento",
 };
-
 const TIPO_CHIP_VARIANTS: Record<ApplicationTypeCode, StatusChipVariant> = {
   NEW: "nuevo",
   LINE_INCREASE: "aumento",
 };
-
 export default function SolicitudesCredito() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
-
-  const statusTabExtra: { statusTab?: CreditApplicationListStatusTab } | undefined =
-    activeTab === "all" ? undefined : { statusTab: activeTab as CreditApplicationListStatusTab };
-
+  const statusTabExtra:
+    | {
+        statusTab?: CreditApplicationListStatusTab;
+      }
+    | undefined =
+    activeTab === "all"
+      ? undefined
+      : {
+          statusTab: activeTab as CreditApplicationListStatusTab,
+        };
   const {
     data: solicitudes,
     total: totalRows,
@@ -80,34 +98,27 @@ export default function SolicitudesCredito() {
     initialSearch: "",
     extraParams: statusTabExtra,
   });
-
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
-    SEARCH_DEBOUNCE_MS
+    SEARCH_DEBOUNCE_MS,
   );
-
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setPage(0);
   };
-
   const tabs = STATUS_TABS.map((t) => ({
     ...t,
     count: t.value === activeTab ? totalRows : undefined,
   }));
-
   const handleEditar = (row: CreditApplicationListItem) => {
     void router.push(`/solicitudes-credito/${row.id}`);
   };
-
   const handleVerDetalle = (row: CreditApplicationListItem) => {
     void router.push(`/solicitudes-credito/${row.id}/revision`);
   };
-
   const columns: Column<CreditApplicationListItem>[] = [
     {
       id: "id",
@@ -155,7 +166,6 @@ export default function SolicitudesCredito() {
       chipVariantMap: TIPO_CHIP_VARIANTS,
     },
   ];
-
   const actions: RowAction<CreditApplicationListItem>[] = [
     {
       id: "ver",
@@ -168,38 +178,35 @@ export default function SolicitudesCredito() {
       label: "Editar",
       onClick: handleEditar,
       permission: CREDIT_APPLICATIONS_READ,
-    }
+    },
   ];
-
   return (
-    <>
-      <Stack direction="column" spacing={3}>
-        <Title title="Solicitudes de crédito" />
+    <Stack direction="column" spacing={3}>
+      <Title title="Solicitudes de crédito" />
 
-        <TabFilters
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          showSearch
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-        />
+      <TabFilters
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        showSearch
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+      />
 
-        <TableCrud
-          columns={columns}
-          rows={solicitudes}
-          actions={actions}
-          loading={loading}
-          rowKey="id"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalRows={totalRows}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-          emptyMessage="No hay solicitudes de crédito"
-          onRowClick={handleVerDetalle}
-        />
-      </Stack>
-    </>
+      <TableCrud
+        columns={columns}
+        rows={solicitudes}
+        actions={actions}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        emptyMessage="No hay solicitudes de crédito"
+        onRowClick={handleVerDetalle}
+      />
+    </Stack>
   );
 }

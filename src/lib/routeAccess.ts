@@ -178,6 +178,24 @@ export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
 }
 
+/**
+ * Whether the persistent app shell (sidebar + main chrome) should wrap the page.
+ * Keep layout routing rules centralized here so AuthGuard and AppLayoutGate stay aligned.
+ */
+export function shouldUseAppLayout(pathname: string, token: string | null): boolean {
+  if (shouldBypassAccessControl) {
+    return true;
+  }
+
+  const normalizedPath = normalizePathname(pathname);
+
+  if (isPublicRoute(normalizedPath) && !token) {
+    return false;
+  }
+
+  return true;
+}
+
 export function isChangePasswordRoute(pathname: string): boolean {
   return normalizePathname(pathname) === CHANGE_PASSWORD_ROUTE;
 }

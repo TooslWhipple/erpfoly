@@ -11,41 +11,32 @@ import { formatListDateTime } from "@/utils/date";
 import type { RoleListItem } from "@/types/roles.types";
 import { rolePlatformLabel } from "@/constants/role-platform";
 import { CATALOG_ROLES_CREATE, CATALOG_ROLES_UPDATE } from "@/lib/permissions";
-
 const SEARCH_DEBOUNCE_MS = 300;
-
 export default function Roles() {
   const router = useRouter();
-
   const list = usePaginatedList<RoleListItem>({
     queryKey: ["roles"],
     queryFn: getRolesList,
     initialPage: 0,
     initialRowsPerPage: 10,
   });
-
   const { setSearch } = list;
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     list.search,
     SEARCH_DEBOUNCE_MS,
   );
-
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
-
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
   };
-
   const handleCreateRole = () => {
     router.push("/catalogos/roles/nuevo");
   };
-
   const handleEditRole = (role: RoleListItem) => {
     router.push(`/catalogos/roles/${role.id}`);
   };
-
   const columns: Column<RoleListItem>[] = [
     {
       id: "id",
@@ -73,7 +64,6 @@ export default function Roles() {
       format: (value) => formatListDateTime(value as string | null | undefined),
     },
   ];
-
   const actions: RowAction<RoleListItem>[] = [
     {
       id: "edit",
@@ -83,43 +73,40 @@ export default function Roles() {
       permission: CATALOG_ROLES_UPDATE,
     },
   ];
-
   return (
-    <>
-      <Stack direction="column" spacing={3}>
-        <Title title="Roles" />
-        <TabFilters
-          tabs={[]}
-          activeTab={''}
-          onTabChange={() => { }}
-          showSearch
-          searchValue={searchInput}
-          onSearchChange={handleSearchChange}
-          actions={[
-            {
-              label: "Nuevo",
-              onClick: handleCreateRole,
-              variant: "contained",
-              color: "primary",
-              permission: CATALOG_ROLES_CREATE,
-            }
-          ]}
-        />
-        <TableCrud
-          columns={columns}
-          rows={list.data}
-          actions={actions}
-          loading={list.isLoading}
-          rowKey="id"
-          page={list.page}
-          rowsPerPage={list.rowsPerPage}
-          totalRows={list.total}
-          onPageChange={list.setPage}
-          onRowsPerPageChange={list.setRowsPerPage}
-          onRowClick={handleEditRole}
-          emptyMessage="No hay roles registrados"
-        />
-      </Stack>
-    </>
+    <Stack direction="column" spacing={3}>
+      <Title title="Roles" />
+      <TabFilters
+        tabs={[]}
+        activeTab={""}
+        onTabChange={() => {}}
+        showSearch
+        searchValue={searchInput}
+        onSearchChange={handleSearchChange}
+        actions={[
+          {
+            label: "Nuevo",
+            onClick: handleCreateRole,
+            variant: "contained",
+            color: "primary",
+            permission: CATALOG_ROLES_CREATE,
+          },
+        ]}
+      />
+      <TableCrud
+        columns={columns}
+        rows={list.data}
+        actions={actions}
+        loading={list.isLoading}
+        rowKey="id"
+        page={list.page}
+        rowsPerPage={list.rowsPerPage}
+        totalRows={list.total}
+        onPageChange={list.setPage}
+        onRowsPerPageChange={list.setRowsPerPage}
+        onRowClick={handleEditRole}
+        emptyMessage="No hay roles registrados"
+      />
+    </Stack>
   );
 }

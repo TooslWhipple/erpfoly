@@ -22,10 +22,16 @@ import { usePromotionDepartmentsCatalog } from "@/hooks/usePromotionDepartmentsC
 import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog";
 import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
-import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
-import { CATALOG_PROMOTIONS_CREATE, CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
+import {
+  validatePromotionEndDate,
+  validatePromotionAdvancePercentage,
+  resolvePromotionAdvanceRate,
+} from "@/lib/promotionFormValidation";
+import {
+  CATALOG_PROMOTIONS_CREATE,
+  CATALOG_PROMOTIONS_UPDATE,
+} from "@/lib/permissions";
 import { parsePositiveIntParam } from "@/utils/query";
-
 function emptyForm(): PromotionFormState {
   return {
     name: "",
@@ -45,10 +51,9 @@ function emptyForm(): PromotionFormState {
     suppliers: [],
   };
 }
-
 function mergeCustomerLevels(
   catalogLevels: PromotionFormConfiguration["customerLevels"],
-  saved: PromotionDetail["customer_level_down_payments"]
+  saved: PromotionDetail["customer_level_down_payments"],
 ): PromotionFormState["customerLevelDownPayments"] {
   const byId = new Map(saved.map((x) => [x.customer_level_id, x.percentage]));
   return catalogLevels.map((cl) => ({
@@ -56,15 +61,14 @@ function mergeCustomerLevels(
     percentage: byId.get(cl.id) ?? 0,
   }));
 }
-
 function mapDetailToForm(
   detail: PromotionDetail,
-  configuration: PromotionFormConfiguration
+  configuration: PromotionFormConfiguration,
 ): PromotionFormState {
   const deptIds = [...new Set(detail.products.map((p) => p.department_id))];
   const lineIds = [...new Set(detail.products.map((p) => p.line_id))];
   const purchaseType = configuration.purchaseTypes.find(
-    (p) => p.id === detail.purchase_type_id
+    (p) => p.id === detail.purchase_type_id,
   );
   const isApartado = purchaseType?.code === "APARTADO";
   return {
@@ -76,7 +80,7 @@ function mapDetailToForm(
     layawayTermIds: [...detail.layaway_term_ids],
     customerLevelDownPayments: mergeCustomerLevels(
       configuration.customerLevels,
-      detail.customer_level_down_payments
+      detail.customer_level_down_payments,
     ),
     startDate: detail.start_date,
     endDate: detail.end_date,
@@ -92,7 +96,6 @@ function mapDetailToForm(
     })),
   };
 }
-
 export default function PromotionFormPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -102,41 +105,35 @@ export default function PromotionFormPage() {
     typeof rawId === "string" && rawId !== "nuevo" && rawId !== ""
       ? Number(rawId)
       : NaN;
-
   const [activeTab, setActiveTab] = useState("configuration");
   const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<PromotionFormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
-
   const lastHydratedDetailAtRef = useRef<number | null>(null);
   const lastFetchedProductIdsRef = useRef<number[]>([]);
   const prefillAppliedRef = useRef(false);
-
   const configurationQuery = useQuery({
     queryKey: ["promotion-form-configuration"],
     queryFn: () => getPromotionFormConfiguration(),
     staleTime: 10 * 60 * 1000,
     enabled: router.isReady,
   });
-
   const promotionQuery = useQuery({
     queryKey: ["promotion-detail", promotionId],
     queryFn: () => getPromotionById(promotionId),
-    enabled:
-      router.isReady && !isNew && Number.isFinite(promotionId),
+    enabled: router.isReady && !isNew && Number.isFinite(promotionId),
     staleTime: 0,
     refetchOnMount: "always",
   });
-
-  const departmentsCatalogQuery = usePromotionDepartmentsCatalog(router.isReady);
+  const departmentsCatalogQuery = usePromotionDepartmentsCatalog(
+    router.isReady,
+  );
   const branchesCatalogQuery = usePromotionBranchesCatalog(router.isReady);
   const suppliersCatalogQuery = usePromotionSuppliersCatalog(router.isReady);
-
   useEffect(() => {
     lastHydratedDetailAtRef.current = null;
     lastFetchedProductIdsRef.current = [];
   }, [promotionId]);
-
   useEffect(() => {
     if (!configurationQuery.data || !isNew) return;
     setFormState((prev) => {
@@ -147,26 +144,25 @@ export default function PromotionFormPage() {
           (cl) => ({
             customer_level_id: cl.id,
             percentage: 0,
-          })
+          }),
         ),
       };
     });
   }, [configurationQuery.data, isNew]);
-
   useEffect(() => {
     if (!router.isReady || !isNew || prefillAppliedRef.current) return;
-
     const departmentId = parsePositiveIntParam(router.query.departmentId);
     if (departmentId == null) return;
-
     prefillAppliedRef.current = true;
     setFormState((prev) => {
       if (prev.selectedDepartmentIds.length > 0) return prev;
-      return { ...prev, selectedDepartmentIds: [departmentId] };
+      return {
+        ...prev,
+        selectedDepartmentIds: [departmentId],
+      };
     });
     setActiveTab("departments");
   }, [router.isReady, isNew, router.query.departmentId]);
-
   useEffect(() => {
     if (
       isNew ||
@@ -190,12 +186,10 @@ export default function PromotionFormPage() {
     promotionQuery.isFetching,
     configurationQuery.data,
   ]);
-
   const supplierIdsKey = formState.suppliers
     .map((s) => s.supplierId)
     .sort((a, b) => a - b)
     .join(",");
-
   useEffect(() => {
     const catalog = suppliersCatalogQuery.data;
     if (!catalog?.length || !supplierIdsKey) return;
@@ -206,48 +200,51 @@ export default function PromotionFormPage() {
         const name =
           row?.businessName?.trim() || row?.name?.trim() || s.supplierName;
         if (name === s.supplierName) return s;
-        return { ...s, supplierName: name };
+        return {
+          ...s,
+          supplierName: name,
+        };
       });
       const changed = next.some(
-        (s, i) => s.supplierName !== prev.suppliers[i]?.supplierName
+        (s, i) => s.supplierName !== prev.suppliers[i]?.supplierName,
       );
       if (!changed) return prev;
-      return { ...prev, suppliers: next };
+      return {
+        ...prev,
+        suppliers: next,
+      };
     });
   }, [suppliersCatalogQuery.data, supplierIdsKey]);
-
   const configuration = configurationQuery.data;
   const purchaseTypeMeta = configuration?.purchaseTypes.find(
-    (p) => p.id === formState.purchaseTypeId
+    (p) => p.id === formState.purchaseTypeId,
   );
-
   useEffect(() => {
     if (formState.selectedLineIds.length === 0) {
       lastFetchedProductIdsRef.current = [];
     }
   }, [formState.selectedLineIds.length]);
-
   const handleProductsFetched = useCallback((productIds: number[]) => {
     setFormState((prev) => {
       const fetchedSet = new Set(productIds);
       const previousFetchSet = new Set(lastFetchedProductIdsRef.current);
       lastFetchedProductIdsRef.current = productIds;
-
       const kept = prev.selectedProductIds.filter((id) => fetchedSet.has(id));
-
       const toAdd =
         previousFetchSet.size === 0
           ? prev.selectedProductIds.length > 0
             ? []
             : productIds
           : productIds.filter((id) => !previousFetchSet.has(id));
-
       const next = [...new Set([...kept, ...toAdd])];
       const same =
         next.length === prev.selectedProductIds.length &&
         next.every((id) => prev.selectedProductIds.includes(id));
       if (same) return prev;
-      return { ...prev, selectedProductIds: next };
+      return {
+        ...prev,
+        selectedProductIds: next,
+      };
     });
   }, []);
 
@@ -258,60 +255,58 @@ export default function PromotionFormPage() {
       (promotionQuery.isLoading ||
         promotionQuery.isFetching ||
         !promotionQuery.data));
-
-  const runValidation = (): { ok: boolean; nextErrors: FormErrors } => {
+  const runValidation = (): {
+    ok: boolean;
+    nextErrors: FormErrors;
+  } => {
     const newErrors: FormErrors = {};
-
     if (!formState.name.trim()) {
       newErrors.name = "El nombre es requerido";
     }
-
     if (!formState.percentage || Number(formState.percentage) <= 0) {
       newErrors.percentage = "El porcentaje debe ser mayor a 0";
     }
-
     const advancePercentageError = validatePromotionAdvancePercentage(
       purchaseTypeMeta?.code,
-      formState.advancePercentage
+      formState.advancePercentage,
     );
     if (advancePercentageError) {
       newErrors.advancePercentage = advancePercentageError;
     }
-
     if (!formState.startDate) {
       newErrors.startDate = "La fecha de inicio es requerida";
     }
-
     const endDateError = validatePromotionEndDate(formState);
     if (endDateError) {
       newErrors.endDate = endDateError;
     }
-
     if (formState.purchaseTypeId == null) {
       newErrors.purchaseTypeId = "Selecciona un tipo de aplicación";
     }
-
-    if (purchaseTypeMeta?.code === "CREDITO" && formState.creditTermIds.length === 0) {
+    if (
+      purchaseTypeMeta?.code === "CREDITO" &&
+      formState.creditTermIds.length === 0
+    ) {
       newErrors.creditTermIds = "Selecciona al menos una opción de meses";
     }
-
-    if (purchaseTypeMeta?.code === "APARTADO" && formState.layawayTermIds.length === 0) {
+    if (
+      purchaseTypeMeta?.code === "APARTADO" &&
+      formState.layawayTermIds.length === 0
+    ) {
       newErrors.layawayTermIds = "Selecciona al menos una opción de días";
     }
-
     if (
       purchaseTypeMeta?.code === "CREDITO" ||
       purchaseTypeMeta?.code === "APARTADO"
     ) {
       const invalidPct = formState.customerLevelDownPayments.some(
-        (r) => r.percentage < 0 || r.percentage > 100
+        (r) => r.percentage < 0 || r.percentage > 100,
       );
       if (invalidPct) {
         newErrors.customerLevelDownPayments =
           "Los porcentajes por nivel deben estar entre 0 y 100";
       }
     }
-
     const hasProducts = formState.selectedProductIds.length > 0;
     const hasBranches = formState.selectedBranchIds.length > 0;
     const hasSuppliers = (formState.suppliers?.length ?? 0) > 0;
@@ -319,10 +314,11 @@ export default function PromotionFormPage() {
       newErrors.scopeSelection =
         "Debes elegir al menos una opción: productos (tab Departamentos), sucursales o proveedores.";
     }
-
-    return { ok: Object.keys(newErrors).length === 0, nextErrors: newErrors };
+    return {
+      ok: Object.keys(newErrors).length === 0,
+      nextErrors: newErrors,
+    };
   };
-
   const buildPayload = (): SavePromotionPayload => {
     const code = purchaseTypeMeta?.code;
     return {
@@ -330,11 +326,13 @@ export default function PromotionFormPage() {
       discountRate: Number(formState.percentage),
       advanceRate: resolvePromotionAdvanceRate(
         purchaseTypeMeta?.code,
-        formState.advancePercentage
+        formState.advancePercentage,
       ),
       startDate: formState.startDate,
       endDate:
-        formState.hasEndDate && formState.endDate && String(formState.endDate).trim()
+        formState.hasEndDate &&
+        formState.endDate &&
+        String(formState.endDate).trim()
           ? formState.endDate
           : null,
       purchaseTypeId: formState.purchaseTypeId,
@@ -352,21 +350,20 @@ export default function PromotionFormPage() {
       supplierIds: formState.suppliers.map((s) => s.supplierId),
     };
   };
-
   const handleSave = async () => {
     const { ok, nextErrors } = runValidation();
     setErrors(nextErrors);
     if (!ok) {
       const hasConfigurationError = Boolean(
         nextErrors.name ||
-          nextErrors.percentage ||
-          nextErrors.advancePercentage ||
-          nextErrors.startDate ||
-          nextErrors.endDate ||
-          nextErrors.purchaseTypeId ||
-          nextErrors.creditTermIds ||
-          nextErrors.layawayTermIds ||
-          nextErrors.customerLevelDownPayments
+        nextErrors.percentage ||
+        nextErrors.advancePercentage ||
+        nextErrors.startDate ||
+        nextErrors.endDate ||
+        nextErrors.purchaseTypeId ||
+        nextErrors.creditTermIds ||
+        nextErrors.layawayTermIds ||
+        nextErrors.customerLevelDownPayments,
       );
       if (hasConfigurationError) {
         setActiveTab("configuration");
@@ -375,7 +372,6 @@ export default function PromotionFormPage() {
       }
       return;
     }
-
     setSaving(true);
     try {
       const payload = buildPayload();
@@ -387,7 +383,9 @@ export default function PromotionFormPage() {
           queryKey: ["promotion-detail", promotionId],
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ["promotions", "list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["promotions", "list"],
+      });
       await queryClient.invalidateQueries({
         queryKey: ["promotions", "list", "department"],
       });
@@ -398,16 +396,17 @@ export default function PromotionFormPage() {
       setSaving(false);
     }
   };
-
   const handleDiscard = () => {
     if (window.confirm("¿Estás seguro de descartar los cambios?")) {
       router.push("/catalogos/promociones");
     }
   };
-
   const handleFieldChange = useCallback(
     (field: keyof PromotionFormState, value: unknown) => {
-      setFormState((prev) => ({ ...prev, [field]: value }));
+      setFormState((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
       if (
         field === "selectedProductIds" ||
         field === "selectedBranchIds" ||
@@ -415,139 +414,160 @@ export default function PromotionFormPage() {
       ) {
         setErrors((prev) => {
           if (!prev.scopeSelection) return prev;
-          const next = { ...prev };
+          const next = {
+            ...prev,
+          };
           delete next.scopeSelection;
           return next;
         });
       }
     },
-    []
+    [],
   );
-
   const handleErrorClear = (field: string) => {
     setErrors((prev) => {
-      const next = { ...prev };
+      const next = {
+        ...prev,
+      };
       delete next[field];
       return next;
     });
   };
-
   const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Promociones", href: "/catalogos/promociones" },
-    { label: isNew ? "Nuevo" : "Editar" },
+    {
+      label: "Promociones",
+      href: "/catalogos/promociones",
+    },
+    {
+      label: isNew ? "Nuevo" : "Editar",
+    },
   ];
-
   const tabs = [
-    { value: "configuration", label: "Configuración" },
-    { value: "departments", label: "Departamentos" },
-    { value: "branches", label: "Sucursales" },
-    { value: "suppliers", label: "Proveedores" },
+    {
+      value: "configuration",
+      label: "Configuración",
+    },
+    {
+      value: "departments",
+      label: "Departamentos",
+    },
+    {
+      value: "branches",
+      label: "Sucursales",
+    },
+    {
+      value: "suppliers",
+      label: "Proveedores",
+    },
   ];
-
   if (loading) {
     return (
-      <>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: 400,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      </>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 400,
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
-
   return (
-    <>
-      <Stack spacing={2}>
-        <Breadcrumbs items={breadcrumbItems} />
-        <Title
-          title={isNew ? "Nueva promoción" : "Editar promoción"}
-          actions={[
-            {
-              id: "discard",
-              label: "Descartar cambios",
-              onClick: handleDiscard,
-              disabled: saving,
-              variant: "outlined",
-            },
-            {
-              id: "save",
-              label: "Guardar",
-              onClick: handleSave,
-              disabled: saving,
-              permission: isNew ? CATALOG_PROMOTIONS_CREATE : CATALOG_PROMOTIONS_UPDATE,
-            },
-          ]}
+    <Stack spacing={2}>
+      <Breadcrumbs items={breadcrumbItems} />
+      <Title
+        title={isNew ? "Nueva promoción" : "Editar promoción"}
+        actions={[
+          {
+            id: "discard",
+            label: "Descartar cambios",
+            onClick: handleDiscard,
+            disabled: saving,
+            variant: "outlined",
+          },
+          {
+            id: "save",
+            label: "Guardar",
+            onClick: handleSave,
+            disabled: saving,
+            permission: isNew
+              ? CATALOG_PROMOTIONS_CREATE
+              : CATALOG_PROMOTIONS_UPDATE,
+          },
+        ]}
+      />
+      <TabFilters
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+
+      {errors.scopeSelection ? (
+        <Alert
+          severity="error"
+          onClose={() => handleErrorClear("scopeSelection")}
+        >
+          {errors.scopeSelection}
+        </Alert>
+      ) : null}
+
+      {activeTab === "configuration" && (
+        <ConfigurationTab
+          formState={formState}
+          errors={errors}
+          configuration={configuration}
+          configurationLoading={configurationQuery.isPending}
+          configurationError={
+            configurationQuery.isError
+              ? getApiErrorMessage(configurationQuery.error)
+              : null
+          }
+          onFieldChange={handleFieldChange}
+          onErrorClear={handleErrorClear}
         />
-        <TabFilters tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      )}
 
-        {errors.scopeSelection ? (
-          <Alert severity="error" onClose={() => handleErrorClear("scopeSelection")}>
-            {errors.scopeSelection}
-          </Alert>
-        ) : null}
-
-        {activeTab === "configuration" && (
-          <ConfigurationTab
-            formState={formState}
-            errors={errors}
-            configuration={configuration}
-            configurationLoading={configurationQuery.isPending}
-            configurationError={
-              configurationQuery.isError
-                ? getApiErrorMessage(configurationQuery.error)
-                : null
-            }
-            onFieldChange={handleFieldChange}
-            onErrorClear={handleErrorClear}
-          />
-        )}
-
-        {activeTab === "departments" && (
-          <>
-            <DepartmentsTab
-              formState={formState}
-              onFieldChange={handleFieldChange}
-              onProductsFetched={handleProductsFetched}
-              departmentCatalog={departmentsCatalogQuery.data ?? []}
-              departmentsCatalogLoading={departmentsCatalogQuery.isPending}
-              departmentsCatalogError={
-                departmentsCatalogQuery.isError
-                  ? getApiErrorMessage(departmentsCatalogQuery.error)
-                  : null
-              }
-            />
-          </>
-        )}
-
-        {activeTab === "branches" && (
-          <BranchesTab
+      {activeTab === "departments" && (
+        <>
+          <DepartmentsTab
             formState={formState}
             onFieldChange={handleFieldChange}
-            branchCatalog={branchesCatalogQuery.data ?? []}
-            branchesCatalogLoading={branchesCatalogQuery.isPending}
-          />
-        )}
-
-        {activeTab === "suppliers" && (
-          <SuppliersTab
-            formState={formState}
-            onFieldChange={handleFieldChange}
-            supplierCatalog={suppliersCatalogQuery.data ?? []}
-            suppliersCatalogLoading={suppliersCatalogQuery.isPending}
-            suppliersCatalogError={
-              suppliersCatalogQuery.isError
-                ? getApiErrorMessage(suppliersCatalogQuery.error)
+            onProductsFetched={handleProductsFetched}
+            departmentCatalog={departmentsCatalogQuery.data ?? []}
+            departmentsCatalogLoading={departmentsCatalogQuery.isPending}
+            departmentsCatalogError={
+              departmentsCatalogQuery.isError
+                ? getApiErrorMessage(departmentsCatalogQuery.error)
                 : null
             }
           />
-        )}
-      </Stack>
-    </>
+        </>
+      )}
+
+      {activeTab === "branches" && (
+        <BranchesTab
+          formState={formState}
+          onFieldChange={handleFieldChange}
+          branchCatalog={branchesCatalogQuery.data ?? []}
+          branchesCatalogLoading={branchesCatalogQuery.isPending}
+        />
+      )}
+
+      {activeTab === "suppliers" && (
+        <SuppliersTab
+          formState={formState}
+          onFieldChange={handleFieldChange}
+          supplierCatalog={suppliersCatalogQuery.data ?? []}
+          suppliersCatalogLoading={suppliersCatalogQuery.isPending}
+          suppliersCatalogError={
+            suppliersCatalogQuery.isError
+              ? getApiErrorMessage(suppliersCatalogQuery.error)
+              : null
+          }
+        />
+      )}
+    </Stack>
   );
 }

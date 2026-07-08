@@ -13,27 +13,25 @@ import dayjs from "@/lib/dayjs";
 import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
 import { QUOTATIONS_READ } from "@/lib/permissions";
 import { useAuthStore } from "@/store/useAuthStore";
-import { SALE_STATUS_CHIP_LABELS, SALE_STATUS_CHIP_VARIANTS } from "@/utils/saleStatus";
-
+import {
+  SALE_STATUS_CHIP_LABELS,
+  SALE_STATUS_CHIP_VARIANTS,
+} from "@/utils/saleStatus";
 const SEARCH_DEBOUNCE_MS = 300;
-
 const PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
   CREDIT: "Crédito",
   CASH: "Contado",
   LAYAWAY: "Apartado",
 };
-
 const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
   CREDIT: "#7c3aed",
   CASH: "#2563eb",
   LAYAWAY: "#d97706",
 };
-
 export default function CotizacionesGuardadas() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const currentUserId = user ? Number(user.id) : null;
-
   const {
     data: cotizaciones,
     total: totalRows,
@@ -50,19 +48,19 @@ export default function CotizacionesGuardadas() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    extraParams: { statusTab: "pending", created_by: currentUserId ?? undefined },
+    extraParams: {
+      statusTab: "pending",
+      created_by: currentUserId ?? undefined,
+    },
     enabled: currentUserId !== null,
   });
-
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
-    SEARCH_DEBOUNCE_MS
+    SEARCH_DEBOUNCE_MS,
   );
-
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
-
   const columns: Column<SaleListItem>[] = [
     {
       id: "id",
@@ -88,7 +86,13 @@ export default function CotizacionesGuardadas() {
               component="img"
               src={row.productImageUrl}
               alt={String(value ?? "")}
-              sx={{ width: 36, height: 36, borderRadius: 1, objectFit: "cover", flexShrink: 0 }}
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 1,
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
             />
           )}
           <Box
@@ -135,11 +139,20 @@ export default function CotizacionesGuardadas() {
         const normalized = String(value ?? "") as SalePaymentType;
         const label = PAYMENT_TYPE_LABELS[normalized] ?? normalized;
         const color = PAYMENT_TYPE_COLORS[normalized] ?? "inherit";
-        return <span style={{ color, fontWeight: 500, fontSize: "0.85rem" }}>{label}</span>;
+        return (
+          <span
+            style={{
+              color,
+              fontWeight: 500,
+              fontSize: "0.85rem",
+            }}
+          >
+            {label}
+          </span>
+        );
       },
     },
   ];
-
   const actions: RowAction<SaleListItem>[] = [
     {
       id: "ver",
@@ -148,45 +161,56 @@ export default function CotizacionesGuardadas() {
       permission: QUOTATIONS_READ,
     },
   ];
-
   return (
-    <>
-      <Stack direction="column" spacing={3}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-          <Title title="Cotizaciones guardadas" />
-          <Box sx={{ width: { xs: "100%", sm: 320 }, flexShrink: 0 }}>
-            <FormTextField
-              placeholder="Buscar"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              fullWidth
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={18} color={theme.palette.text.secondary} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
-        </Stack>
-
-        <TableCrud
-          columns={columns}
-          rows={cotizaciones}
-          actions={actions}
-          loading={loading}
-          rowKey="id"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalRows={totalRows}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-          emptyMessage="No hay cotizaciones guardadas"
-          onRowClick={(row) => void router.push(`/cotizaciones/${row.id}`)}
-        />
+    <Stack direction="column" spacing={3}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        gap={2}
+      >
+        <Title title="Cotizaciones guardadas" />
+        <Box
+          sx={{
+            width: {
+              xs: "100%",
+              sm: 320,
+            },
+            flexShrink: 0,
+          }}
+        >
+          <FormTextField
+            placeholder="Buscar"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            fullWidth
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} color={theme.palette.text.secondary} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
       </Stack>
-    </>
+
+      <TableCrud
+        columns={columns}
+        rows={cotizaciones}
+        actions={actions}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        emptyMessage="No hay cotizaciones guardadas"
+        onRowClick={(row) => void router.push(`/cotizaciones/${row.id}`)}
+      />
+    </Stack>
   );
 }

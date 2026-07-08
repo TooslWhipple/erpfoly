@@ -56,35 +56,34 @@ import {
 import { polygonsOverlap } from "@/utils/shipping-zones-geo";
 import { geocodeMunicipality } from "@/utils/geocode-municipality";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
-
 const ShippingZonesMap = dynamic(
   () =>
     import("@/components/ShippingZonesMap/ShippingZonesMap").then(
-      (module) => module.ShippingZonesMap
+      (module) => module.ShippingZonesMap,
     ),
-  { ssr: false }
+  {
+    ssr: false,
+  },
 );
-
 function sanitizePriceInput(value: string): string {
   const cleaned = value.replace(/[^0-9.]/g, "");
   const dotIndex = cleaned.indexOf(".");
   if (dotIndex === -1) return cleaned.slice(0, 12);
-
   const intPart = cleaned.slice(0, dotIndex).slice(0, 12);
-  const decPart = cleaned.slice(dotIndex + 1).replace(/\./g, "").slice(0, 2);
+  const decPart = cleaned
+    .slice(dotIndex + 1)
+    .replace(/\./g, "")
+    .slice(0, 2);
   if (decPart.length === 0 && cleaned.endsWith(".")) return `${intPart}.`;
   return decPart.length > 0 ? `${intPart}.${decPart}` : intPart;
 }
-
 function parseCurrencyInput(value: string): number {
   const parsed = Number.parseFloat(sanitizePriceInput(value));
   return Number.isFinite(parsed) ? parsed : 0;
 }
-
 function formatCurrency(value: number): string {
   return value.toFixed(2);
 }
-
 function hasZonesOverlap(zones: ShippingZone[]): boolean {
   const zonePaths = zones
     .map((zone) => zoneToMapPath(zone))
@@ -96,28 +95,36 @@ function hasZonesOverlap(zones: ShippingZone[]): boolean {
   }
   return false;
 }
-
-function cloneConfig(config: MunicipalityShippingConfig): MunicipalityShippingConfig {
+function cloneConfig(
+  config: MunicipalityShippingConfig,
+): MunicipalityShippingConfig {
   return JSON.parse(JSON.stringify(config)) as MunicipalityShippingConfig;
 }
-
 function clonePolygon(polygon: GeoJsonPolygon): GeoJsonPolygon {
   return JSON.parse(JSON.stringify(polygon)) as GeoJsonPolygon;
 }
-
 export default function CostosEnvioPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const canUpdateShippingCosts = hasPermission(CATALOG_SHIPPING_COSTS_UPDATE);
   const [municipalityId, setMunicipalityId] = useState<number | null>(null);
-  const [serverSnapshot, setServerSnapshot] = useState<MunicipalityShippingConfig | null>(null);
-  const [draftConfig, setDraftConfig] = useState<MunicipalityShippingConfig | null>(null);
+  const [serverSnapshot, setServerSnapshot] =
+    useState<MunicipalityShippingConfig | null>(null);
+  const [draftConfig, setDraftConfig] =
+    useState<MunicipalityShippingConfig | null>(null);
   const [priceInZoneInput, setPriceInZoneInput] = useState("0.00");
   const [priceOutOfZoneInput, setPriceOutOfZoneInput] = useState("0.00");
-  const [selectedZoneId, setSelectedZoneId] = useState<number | undefined>(undefined);
-  const [editMode, setEditMode] = useState<MapEditMode>({ type: "idle" });
+  const [selectedZoneId, setSelectedZoneId] = useState<number | undefined>(
+    undefined,
+  );
+  const [editMode, setEditMode] = useState<MapEditMode>({
+    type: "idle",
+  });
   const [mapSession, setMapSession] = useState(0);
-  const editingZoneSnapshotRef = useRef<{ zoneId: number; polygon: GeoJsonPolygon } | null>(null);
+  const editingZoneSnapshotRef = useRef<{
+    zoneId: number;
+    polygon: GeoJsonPolygon;
+  } | null>(null);
   const hasAutoSelectedMunicipalityRef = useRef(false);
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
   const [confirmLeaveResolver, setConfirmLeaveResolver] = useState<
@@ -127,8 +134,11 @@ export default function CostosEnvioPage() {
     open: boolean;
     message: string;
     severity: "success" | "error" | "info";
-  }>({ open: false, message: "", severity: "success" });
-
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const catalogQuery = useQuery<MunicipalityShippingCatalogItem[]>({
     queryKey: ["shipping-costs", "municipalities"],
     queryFn: async () => {
@@ -138,15 +148,14 @@ export default function CostosEnvioPage() {
     },
     staleTime: Infinity,
   });
-
   useEffect(() => {
-    if (hasAutoSelectedMunicipalityRef.current || municipalityId != null) return;
+    if (hasAutoSelectedMunicipalityRef.current || municipalityId != null)
+      return;
     const first = catalogQuery.data?.[0];
     if (!first) return;
     hasAutoSelectedMunicipalityRef.current = true;
     setMunicipalityId(first.municipalityId);
   }, [catalogQuery.data, municipalityId]);
-
   const configQuery = useQuery({
     queryKey: ["shipping-costs", municipalityId],
     enabled: municipalityId != null,
@@ -158,7 +167,6 @@ export default function CostosEnvioPage() {
       return result.data;
     },
   });
-
   useEffect(() => {
     if (!configQuery.data) return;
     if (municipalityId == null) return;
@@ -172,10 +180,11 @@ export default function CostosEnvioPage() {
     setPriceInZoneInput(formatCurrency(normalized.priceInZone));
     setPriceOutOfZoneInput(formatCurrency(normalized.priceOutOfZone));
     editingZoneSnapshotRef.current = null;
-    setEditMode({ type: "idle" });
+    setEditMode({
+      type: "idle",
+    });
     setSelectedZoneId(undefined);
   }, [configQuery.data, municipalityId]);
-
   const mapViewportQuery = useQuery({
     queryKey: [
       "shipping-map-viewport",
@@ -189,10 +198,9 @@ export default function CostosEnvioPage() {
       if (!draftConfig) throw new Error("Configuración requerida");
       const zonesViewport = getZonesMapViewport(draftConfig.zones);
       if (zonesViewport) return zonesViewport;
-
       const center = await geocodeMunicipality(
         draftConfig.municipalityName,
-        draftConfig.stateName
+        draftConfig.stateName,
       );
       return {
         center,
@@ -202,30 +210,27 @@ export default function CostosEnvioPage() {
     staleTime: 0,
     gcTime: 0,
   });
-
   const resetMapState = useCallback(() => {
     setMapSession((prev) => prev + 1);
   }, []);
-
   const hasDraftZone = useMemo(
     () => draftConfig?.zones.some((zone) => zone.id == null) ?? false,
-    [draftConfig?.zones]
+    [draftConfig?.zones],
   );
-
-  const isMapZoneEditing = editMode.type === "creating" || editMode.type === "editing";
+  const isMapZoneEditing =
+    editMode.type === "creating" || editMode.type === "editing";
   const isZoneMetadataLocked = editMode.type === "editing";
-
   useEffect(() => {
     if (!hasDraftZone || editMode.type === "creating") return;
-    setEditMode({ type: "creating" });
+    setEditMode({
+      type: "creating",
+    });
     setSelectedZoneId(undefined);
   }, [editMode.type, hasDraftZone]);
-
   const isDirty = useMemo(() => {
     if (!serverSnapshot || !draftConfig) return false;
     return JSON.stringify(serverSnapshot) !== JSON.stringify(draftConfig);
   }, [draftConfig, serverSnapshot]);
-
   const requestLeaveConfirmation = useCallback(() => {
     if (!isDirty) return Promise.resolve(true);
     return new Promise<boolean>((resolve) => {
@@ -233,29 +238,32 @@ export default function CostosEnvioPage() {
       setConfirmLeaveOpen(true);
     });
   }, [isDirty]);
-
   useUnsavedChangesGuard({
     isDirty,
     confirmLeave: requestLeaveConfirmation,
   });
-
   const saveMutation = useMutation({
     mutationFn: async (payload: MunicipalityShippingConfig) => {
-      const result = await upsertMunicipalityShippingConfig(payload.municipalityId, {
-        priceInZone: payload.priceInZone,
-        priceOutOfZone: payload.priceOutOfZone,
-        mapCenter: payload.mapCenter ?? undefined,
-        mapDefaultZoom: payload.mapDefaultZoom,
-        zones: payload.zones.map((zone) => ({
-          ...zone,
-          id: isPersistedZoneId(zone.id) ? zone.id : undefined,
-        })),
-      });
+      const result = await upsertMunicipalityShippingConfig(
+        payload.municipalityId,
+        {
+          priceInZone: payload.priceInZone,
+          priceOutOfZone: payload.priceOutOfZone,
+          mapCenter: payload.mapCenter ?? undefined,
+          mapDefaultZoom: payload.mapDefaultZoom,
+          zones: payload.zones.map((zone) => ({
+            ...zone,
+            id: isPersistedZoneId(zone.id) ? zone.id : undefined,
+          })),
+        },
+      );
       if (result.error) throw new Error(result.error.message);
       return result.data;
     },
     onSuccess: async () => {
-      setEditMode({ type: "idle" });
+      setEditMode({
+        type: "idle",
+      });
       setSnackbar({
         open: true,
         severity: "success",
@@ -269,7 +277,6 @@ export default function CostosEnvioPage() {
       });
     },
   });
-
   const handlePriceChange = useCallback(
     (field: "priceInZone" | "priceOutOfZone", value: string) => {
       const sanitized = sanitizePriceInput(value);
@@ -282,46 +289,46 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-            ...prev,
-            [field]: Math.max(0, parseCurrencyInput(sanitized)),
-          }
+              ...prev,
+              [field]: Math.max(0, parseCurrencyInput(sanitized)),
+            },
       );
     },
-    []
+    [],
   );
-
-  const handlePriceBlur = useCallback((field: "priceInZone" | "priceOutOfZone") => {
-    setDraftConfig((prev) => {
-      if (!prev) return prev;
-      const nextValue = Math.max(0, prev[field]);
-      const formatted = formatCurrency(nextValue);
-      if (field === "priceInZone") {
-        setPriceInZoneInput(formatted);
-      } else {
-        setPriceOutOfZoneInput(formatted);
-      }
-      return {
-        ...prev,
-        [field]: nextValue,
-      };
-    });
-  }, []);
-
+  const handlePriceBlur = useCallback(
+    (field: "priceInZone" | "priceOutOfZone") => {
+      setDraftConfig((prev) => {
+        if (!prev) return prev;
+        const nextValue = Math.max(0, prev[field]);
+        const formatted = formatCurrency(nextValue);
+        if (field === "priceInZone") {
+          setPriceInZoneInput(formatted);
+        } else {
+          setPriceOutOfZoneInput(formatted);
+        }
+        return {
+          ...prev,
+          [field]: nextValue,
+        };
+      });
+    },
+    [],
+  );
   const handleMapViewportChange = useCallback(
     (viewport: { center: GeoPoint; zoom: number }) => {
       setDraftConfig((prev) =>
         prev == null
           ? prev
           : {
-            ...prev,
-            mapCenter: viewport.center,
-            mapDefaultZoom: viewport.zoom,
-          }
+              ...prev,
+              mapCenter: viewport.center,
+              mapDefaultZoom: viewport.zoom,
+            },
       );
     },
-    []
+    [],
   );
-
   const handleZonePathChange = useCallback(
     (zoneId: number | undefined, path: GeoPoint[]) => {
       setDraftConfig((prev) => {
@@ -331,44 +338,50 @@ export default function CostosEnvioPage() {
           ...prev,
           zones: prev.zones.map((zone) =>
             zone.id === zoneId || (zoneId == null && zone.id == null)
-              ? { ...zone, polygon }
-              : zone
+              ? {
+                  ...zone,
+                  polygon,
+                }
+              : zone,
           ),
         };
       });
     },
-    []
+    [],
   );
-
   const handleCreateZone = () => {
     if (!draftConfig) return;
-    const nextColor = DEFAULT_ZONE_COLORS[draftConfig.zones.length % DEFAULT_ZONE_COLORS.length];
+    const nextColor =
+      DEFAULT_ZONE_COLORS[
+        draftConfig.zones.length % DEFAULT_ZONE_COLORS.length
+      ];
     const nextZone: ShippingZone = {
       name: `Zona ${draftConfig.zones.length + 1}`,
       color: nextColor,
       sortOrder: draftConfig.zones.length,
-      polygon: { type: "Polygon", coordinates: [[]] },
+      polygon: {
+        type: "Polygon",
+        coordinates: [[]],
+      },
     };
     setDraftConfig({
       ...draftConfig,
       zones: [...draftConfig.zones, nextZone],
     });
-    setEditMode({ type: "creating" });
+    setEditMode({
+      type: "creating",
+    });
     setSelectedZoneId(undefined);
   };
-
   const handleFinishZoneMapEdit = () => {
     if (!draftConfig) return;
-
     const targetZone =
       editMode.type === "creating"
         ? draftConfig.zones.find((zone) => zone.id == null)
         : editMode.type === "editing"
           ? draftConfig.zones.find((zone) => zone.id === editMode.zoneId)
           : undefined;
-
     if (!targetZone) return;
-
     const rawPath = zoneToMapPath(targetZone);
     if (rawPath.length < 3) {
       setSnackbar({
@@ -378,19 +391,20 @@ export default function CostosEnvioPage() {
       });
       return;
     }
-
     const isCreating = editMode.type === "creating";
     const finalPath = rawPath;
     if (finalPath.length < 3) {
       setSnackbar({
         open: true,
         severity: "error",
-        message: "Los puntos deben formar un área válida. Agrega puntos más separados.",
+        message:
+          "Los puntos deben formar un área válida. Agrega puntos más separados.",
       });
       return;
     }
-
-    const tempId = isCreating ? getNextTempZoneId(draftConfig.zones) : undefined;
+    const tempId = isCreating
+      ? getNextTempZoneId(draftConfig.zones)
+      : undefined;
     const nextPolygon = mapPathToGeoJson(finalPath);
     const nextZones = draftConfig.zones.map((zone) => {
       const isTarget =
@@ -398,10 +412,16 @@ export default function CostosEnvioPage() {
         (editMode.type === "editing" && zone.id === editMode.zoneId);
       if (!isTarget) return zone;
       return isCreating
-        ? { ...zone, id: tempId, polygon: nextPolygon }
-        : { ...zone, polygon: nextPolygon };
+        ? {
+            ...zone,
+            id: tempId,
+            polygon: nextPolygon,
+          }
+        : {
+            ...zone,
+            polygon: nextPolygon,
+          };
     });
-
     if (hasZonesOverlap(nextZones)) {
       setSnackbar({
         open: true,
@@ -410,24 +430,31 @@ export default function CostosEnvioPage() {
       });
       return;
     }
-
-    setDraftConfig((prev) => (prev == null ? prev : { ...prev, zones: nextZones }));
+    setDraftConfig((prev) =>
+      prev == null
+        ? prev
+        : {
+            ...prev,
+            zones: nextZones,
+          },
+    );
     editingZoneSnapshotRef.current = null;
-    setEditMode({ type: "idle" });
+    setEditMode({
+      type: "idle",
+    });
     if (isCreating && tempId != null) {
       setSelectedZoneId(tempId);
     }
   };
-
   const handleCancelZoneMapEdit = () => {
     if (editMode.type === "creating") {
       setDraftConfig((prev) =>
         prev == null
           ? prev
           : {
-            ...prev,
-            zones: prev.zones.filter((zone) => zone.id != null),
-          }
+              ...prev,
+              zones: prev.zones.filter((zone) => zone.id != null),
+            },
       );
     } else if (editMode.type === "editing" && editingZoneSnapshotRef.current) {
       const snapshot = editingZoneSnapshotRef.current;
@@ -435,19 +462,23 @@ export default function CostosEnvioPage() {
         prev == null
           ? prev
           : {
-            ...prev,
-            zones: prev.zones.map((zone) =>
-              zone.id === snapshot.zoneId
-                ? { ...zone, polygon: clonePolygon(snapshot.polygon) }
-                : zone
-            ),
-          }
+              ...prev,
+              zones: prev.zones.map((zone) =>
+                zone.id === snapshot.zoneId
+                  ? {
+                      ...zone,
+                      polygon: clonePolygon(snapshot.polygon),
+                    }
+                  : zone,
+              ),
+            },
       );
     }
     editingZoneSnapshotRef.current = null;
-    setEditMode({ type: "idle" });
+    setEditMode({
+      type: "idle",
+    });
   };
-
   const handleSaveChanges = async () => {
     if (!draftConfig || !municipalityId) return;
     if (isMapZoneEditing) {
@@ -462,15 +493,15 @@ export default function CostosEnvioPage() {
       setSnackbar({
         open: true,
         severity: "error",
-        message: "No se permite solapar zonas. Ajusta los vértices antes de guardar.",
+        message:
+          "No se permite solapar zonas. Ajusta los vértices antes de guardar.",
       });
       return;
     }
     await saveMutation.mutateAsync(draftConfig);
   };
-
   const handleSelectMunicipalityFromCatalog = async (
-    nextMunicipalityId: number | null
+    nextMunicipalityId: number | null,
   ) => {
     if (nextMunicipalityId === municipalityId) return;
     const allow = await requestLeaveConfirmation();
@@ -479,7 +510,9 @@ export default function CostosEnvioPage() {
     resetMapState();
     setServerSnapshot(null);
     setDraftConfig(null);
-    setEditMode({ type: "idle" });
+    setEditMode({
+      type: "idle",
+    });
     setSelectedZoneId(undefined);
     if (nextMunicipalityId == null) {
       setMunicipalityId(null);
@@ -487,294 +520,363 @@ export default function CostosEnvioPage() {
     }
     setMunicipalityId(nextMunicipalityId);
   };
-
   const handleZoneChange = useCallback(
-    (zoneId: number | undefined, patch: Partial<Pick<ShippingZone, "name" | "color">>) => {
+    (
+      zoneId: number | undefined,
+      patch: Partial<Pick<ShippingZone, "name" | "color">>,
+    ) => {
       setDraftConfig((prev) =>
         prev == null
           ? prev
           : {
-            ...prev,
-            zones: prev.zones.map((zone) =>
-              zone.id === zoneId || (zoneId == null && zone.id == null)
-                ? { ...zone, ...patch }
-                : zone
-            ),
-          }
+              ...prev,
+              zones: prev.zones.map((zone) =>
+                zone.id === zoneId || (zoneId == null && zone.id == null)
+                  ? {
+                      ...zone,
+                      ...patch,
+                    }
+                  : zone,
+              ),
+            },
       );
     },
-    []
+    [],
   );
-
   const handleStartZoneEdit = (zone: ShippingZone) => {
     if (zone.id == null) return;
     editingZoneSnapshotRef.current = {
       zoneId: zone.id,
       polygon: clonePolygon(zone.polygon),
     };
-    setEditMode({ type: "editing", zoneId: zone.id });
+    setEditMode({
+      type: "editing",
+      zoneId: zone.id,
+    });
     setSelectedZoneId(zone.id);
   };
-
   const resolveConfirmLeave = (allow: boolean) => {
     setConfirmLeaveOpen(false);
     confirmLeaveResolver?.(allow);
     setConfirmLeaveResolver(null);
   };
-
-  const catalogData = (catalogQuery.data ?? []) as MunicipalityShippingCatalogItem[];
-
+  const catalogData = (catalogQuery.data ??
+    []) as MunicipalityShippingCatalogItem[];
   const shouldShowInitialLoading =
-    catalogQuery.isLoading && catalogData.length === 0 && municipalityId == null;
-
+    catalogQuery.isLoading &&
+    catalogData.length === 0 &&
+    municipalityId == null;
   if (shouldShowInitialLoading) {
     return (
-      <>
-        <Box sx={{ minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <CircularProgress />
-        </Box>
-      </>
+      <Box
+        sx={{
+          minHeight: 400,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
-
   return (
-    <>
-      <Stack spacing={3}>
-        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">Costos de envío</Typography>
-          <Button
-            variant="contained"
-            onClick={handleSaveChanges}
-            disabled={!canUpdateShippingCosts || !isDirty || saveMutation.isPending}
-            startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : null}
-          >
-            Guardar cambios
-          </Button>
-        </Stack>
+    <Stack spacing={3}>
+      <Stack
+        direction="row"
+        spacing={2}
+        justifyContent="space-between"
+        alignItems="center"
+      >
+        <Typography variant="h5">Costos de envío</Typography>
+        <Button
+          variant="contained"
+          onClick={handleSaveChanges}
+          disabled={
+            !canUpdateShippingCosts || !isDirty || saveMutation.isPending
+          }
+          startIcon={
+            saveMutation.isPending ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : null
+          }
+        >
+          Guardar cambios
+        </Button>
+      </Stack>
 
-        <MainContent>
-          <LeftPanel>
-            <ShippingMunicipalityAutocomplete
-              value={municipalityId}
-              configuredMunicipalities={catalogData}
-              disabled={!canUpdateShippingCosts || editMode.type !== "idle"}
-              onChange={handleSelectMunicipalityFromCatalog}
-            />
+      <MainContent>
+        <LeftPanel>
+          <ShippingMunicipalityAutocomplete
+            value={municipalityId}
+            configuredMunicipalities={catalogData}
+            disabled={!canUpdateShippingCosts || editMode.type !== "idle"}
+            onChange={handleSelectMunicipalityFromCatalog}
+          />
 
-            {draftConfig == null ? (
+          {draftConfig == null ? (
+            <SectionSubtitle>
+              {municipalityId != null && configQuery.isLoading
+                ? "Cargando configuración del municipio seleccionado..."
+                : "Selecciona una ciudad para cargar o crear su configuración de costos de envío."}
+            </SectionSubtitle>
+          ) : (
+            <>
+              <SectionTitle>Configuración de costos de envío</SectionTitle>
               <SectionSubtitle>
-                {municipalityId != null && configQuery.isLoading
-                  ? "Cargando configuración del municipio seleccionado..."
-                  : "Selecciona una ciudad para cargar o crear su configuración de costos de envío."}
+                Define los costos de envío por municipio para dentro y fuera de
+                zona.
               </SectionSubtitle>
-            ) : (
-              <>
-                <SectionTitle>Configuración de costos de envío</SectionTitle>
-                <SectionSubtitle>
-                  Define los costos de envío por municipio para dentro y fuera de zona.
-                </SectionSubtitle>
 
-                <PriceInput
+              <PriceInput
+                size="small"
+                label="Costo dentro de zona"
+                value={priceInZoneInput}
+                disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                onChange={(event) =>
+                  handlePriceChange("priceInZone", event.target.value)
+                }
+                onBlur={() => handlePriceBlur("priceInZone")}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                }}
+              />
+
+              <PriceInput
+                size="small"
+                label="Costo fuera de zona"
+                value={priceOutOfZoneInput}
+                disabled={!canUpdateShippingCosts || isMapZoneEditing}
+                onChange={(event) =>
+                  handlePriceChange("priceOutOfZone", event.target.value)
+                }
+                onBlur={() => handlePriceBlur("priceOutOfZone")}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                }}
+              />
+
+              <DividerSpace />
+
+              <ZoneHeader>
+                <SectionTitle>Configuración de zonas</SectionTitle>
+                <Button
+                  variant="outlined"
                   size="small"
-                  label="Costo dentro de zona"
-                  value={priceInZoneInput}
                   disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                  onChange={(event) => handlePriceChange("priceInZone", event.target.value)}
-                  onBlur={() => handlePriceBlur("priceInZone")}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  }}
-                />
+                  onClick={handleCreateZone}
+                >
+                  Nueva
+                </Button>
+              </ZoneHeader>
 
-                <PriceInput
-                  size="small"
-                  label="Costo fuera de zona"
-                  value={priceOutOfZoneInput}
-                  disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                  onChange={(event) => handlePriceChange("priceOutOfZone", event.target.value)}
-                  onBlur={() => handlePriceBlur("priceOutOfZone")}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  }}
-                />
-
-                <DividerSpace />
-
-                <ZoneHeader>
-                  <SectionTitle>Configuración de zonas</SectionTitle>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                    onClick={handleCreateZone}
-                  >
-                    Nueva
-                  </Button>
-                </ZoneHeader>
-
-                <ZoneList>
-                  {draftConfig.zones.map((zone, index) => (
-                    <ZoneItem key={zone.id ?? `new-${index}`}>
-                      <ZoneColor style={{ backgroundColor: zone.color }} />
-                      <ZoneName
-                        size="small"
-                        value={zone.name}
-                        disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                        onChange={(event) =>
-                          handleZoneChange(zone.id, { name: event.target.value })
-                        }
-                        placeholder={`Zona ${index + 1}`}
-                      />
-                      <PriceInput
-                        size="small"
-                        type="color"
-                        value={zone.color}
-                        disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                        onChange={(event) =>
-                          handleZoneChange(zone.id, { color: event.target.value })
-                        }
-                        sx={{ width: 46 }}
-                      />
-                      <Button
-                        variant="text"
-                        size="small"
-                        disabled={
-                          !canUpdateShippingCosts ||
-                          isMapZoneEditing ||
-                          zone.id == null
-                        }
-                        onClick={() => handleStartZoneEdit(zone)}
-                      >
-                        Editar
-                      </Button>
-                    </ZoneItem>
-                  ))}
-                </ZoneList>
-
-                {isMapZoneEditing ? (
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="contained"
+              <ZoneList>
+                {draftConfig.zones.map((zone, index) => (
+                  <ZoneItem key={zone.id ?? `new-${index}`}>
+                    <ZoneColor
+                      style={{
+                        backgroundColor: zone.color,
+                      }}
+                    />
+                    <ZoneName
                       size="small"
-                      onClick={handleFinishZoneMapEdit}
-                      disabled={!canUpdateShippingCosts}
-                    >
-                      {editMode.type === "creating" ? "Finalizar zona" : "Terminar edición"}
-                    </Button>
+                      value={zone.name}
+                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
+                      onChange={(event) =>
+                        handleZoneChange(zone.id, {
+                          name: event.target.value,
+                        })
+                      }
+                      placeholder={`Zona ${index + 1}`}
+                    />
+                    <PriceInput
+                      size="small"
+                      type="color"
+                      value={zone.color}
+                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
+                      onChange={(event) =>
+                        handleZoneChange(zone.id, {
+                          color: event.target.value,
+                        })
+                      }
+                      sx={{
+                        width: 46,
+                      }}
+                    />
                     <Button
                       variant="text"
                       size="small"
-                      onClick={handleCancelZoneMapEdit}
-                      disabled={!canUpdateShippingCosts}
+                      disabled={
+                        !canUpdateShippingCosts ||
+                        isMapZoneEditing ||
+                        zone.id == null
+                      }
+                      onClick={() => handleStartZoneEdit(zone)}
                     >
-                      Cancelar
+                      Editar
                     </Button>
-                  </Box>
-                ) : null}
+                  </ZoneItem>
+                ))}
+              </ZoneList>
 
-                {isMapZoneEditing ? (
-                  <SectionSubtitle>
+              {isMapZoneEditing ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleFinishZoneMapEdit}
+                    disabled={!canUpdateShippingCosts}
+                  >
                     {editMode.type === "creating"
-                      ? "Marca 3 puntos en el mapa para definir la zona. Después podrás arrastrar los vértices y añadir más desde los puntos intermedios."
-                      : "Arrastra los vértices del polígono para ajustar la zona. Click derecho en un vértice para eliminarlo."}
-                  </SectionSubtitle>
-                ) : null}
-              </>
-            )}
-          </LeftPanel>
+                      ? "Finalizar zona"
+                      : "Terminar edición"}
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleCancelZoneMapEdit}
+                    disabled={!canUpdateShippingCosts}
+                  >
+                    Cancelar
+                  </Button>
+                </Box>
+              ) : null}
 
-          <RightPanel>
-            {draftConfig == null ? (
-              <Box
-                sx={{
-                  minHeight: 520,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  px: 3,
-                }}
-              >
-                {municipalityId != null && configQuery.isLoading ? (
-                  <CircularProgress size={24} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Selecciona una ciudad para visualizar y editar sus zonas en el mapa.
-                  </Typography>
-                )}
-              </Box>
-            ) : mapViewportQuery.isLoading || !mapViewportQuery.data ? (
-              <Box
-                sx={{
-                  minHeight: 520,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              {isMapZoneEditing ? (
+                <SectionSubtitle>
+                  {editMode.type === "creating"
+                    ? "Marca 3 puntos en el mapa para definir la zona. Después podrás arrastrar los vértices y añadir más desde los puntos intermedios."
+                    : "Arrastra los vértices del polígono para ajustar la zona. Click derecho en un vértice para eliminarlo."}
+                </SectionSubtitle>
+              ) : null}
+            </>
+          )}
+        </LeftPanel>
+
+        <RightPanel>
+          {draftConfig == null ? (
+            <Box
+              sx={{
+                minHeight: 520,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                px: 3,
+              }}
+            >
+              {municipalityId != null && configQuery.isLoading ? (
                 <CircularProgress size={24} />
-              </Box>
-            ) : mapViewportQuery.isError ? (
-              <Box
-                sx={{
-                  minHeight: 520,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  px: 3,
-                }}
-              >
-                <Typography variant="body2" color="error" textAlign="center">
-                  {(mapViewportQuery.error as Error).message ||
-                    "No se pudo centrar el mapa en la ciudad seleccionada."}
+              ) : (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                >
+                  Selecciona una ciudad para visualizar y editar sus zonas en el
+                  mapa.
                 </Typography>
-              </Box>
-            ) : (
-              <ShippingZonesMap
-                key={`shipping-map-${mapSession}-${draftConfig.municipalityId}`}
-                initialCenter={mapViewportQuery.data.center}
-                initialZoom={mapViewportQuery.data.zoom}
-                zones={draftConfig.zones}
-                canEdit={canUpdateShippingCosts}
-                editMode={editMode}
-                selectedZoneId={selectedZoneId}
-                onZoneSelect={(zoneId) => setSelectedZoneId(zoneId)}
-                onZonePathChange={handleZonePathChange}
-                onViewportChange={handleMapViewportChange}
-              />
-            )}
-          </RightPanel>
-        </MainContent>
+              )}
+            </Box>
+          ) : mapViewportQuery.isLoading || !mapViewportQuery.data ? (
+            <Box
+              sx={{
+                minHeight: 520,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress size={24} />
+            </Box>
+          ) : mapViewportQuery.isError ? (
+            <Box
+              sx={{
+                minHeight: 520,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                px: 3,
+              }}
+            >
+              <Typography variant="body2" color="error" textAlign="center">
+                {(mapViewportQuery.error as Error).message ||
+                  "No se pudo centrar el mapa en la ciudad seleccionada."}
+              </Typography>
+            </Box>
+          ) : (
+            <ShippingZonesMap
+              key={`shipping-map-${mapSession}-${draftConfig.municipalityId}`}
+              initialCenter={mapViewportQuery.data.center}
+              initialZoom={mapViewportQuery.data.zoom}
+              zones={draftConfig.zones}
+              canEdit={canUpdateShippingCosts}
+              editMode={editMode}
+              selectedZoneId={selectedZoneId}
+              onZoneSelect={(zoneId) => setSelectedZoneId(zoneId)}
+              onZonePathChange={handleZonePathChange}
+              onViewportChange={handleMapViewportChange}
+            />
+          )}
+        </RightPanel>
+      </MainContent>
 
-        <Dialog open={confirmLeaveOpen} onClose={() => resolveConfirmLeave(false)}>
-          <DialogTitle>Cambios sin guardar</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2">
-              Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => resolveConfirmLeave(false)}>Quedarme</Button>
-            <Button color="error" onClick={() => resolveConfirmLeave(true)}>
-              Salir sin guardar
-            </Button>
-          </DialogActions>
-        </Dialog>
+      <Dialog
+        open={confirmLeaveOpen}
+        onClose={() => resolveConfirmLeave(false)}
+      >
+        <DialogTitle>Cambios sin guardar</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas
+            salir?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => resolveConfirmLeave(false)}>Quedarme</Button>
+          <Button color="error" onClick={() => resolveConfirmLeave(true)}>
+            Salir sin guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={5000}
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() =>
+          setSnackbar((prev) => ({
+            ...prev,
+            open: false,
+          }))
+        }
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          onClose={() =>
+            setSnackbar((prev) => ({
+              ...prev,
+              open: false,
+            }))
+          }
+          severity={snackbar.severity}
+          sx={{
+            width: "100%",
+          }}
         >
-          <Alert
-            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-            severity={snackbar.severity}
-            sx={{ width: "100%" }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Stack>
-    </>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Stack>
   );
 }

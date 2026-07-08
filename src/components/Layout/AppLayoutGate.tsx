@@ -1,7 +1,6 @@
 import { useRouter } from "next/router";
 import { AppLayoutShell } from "@/components/Layout";
-import { shouldBypassAccessControl } from "@/lib/accessControl";
-import { isPublicRoute, normalizePathname } from "@/lib/routeAccess";
+import { normalizePathname, shouldUseAppLayout } from "@/lib/routeAccess";
 import { useAuthStore } from "@/store/useAuthStore";
 
 interface AppLayoutGateProps {
@@ -9,25 +8,20 @@ interface AppLayoutGateProps {
 }
 
 /**
- * Applies the persistent app shell only on authenticated app routes.
+ * Applies the persistent app shell only when shouldUseAppLayout says so.
  * AuthGuard decides whether the page may render; this component only handles chrome.
  */
 export function AppLayoutGate({ children }: AppLayoutGateProps) {
   const router = useRouter();
   const token = useAuthStore((state) => state.token);
 
-  if (shouldBypassAccessControl) {
-    return <AppLayoutShell>{children}</AppLayoutShell>;
-  }
-
   if (!router.isReady) {
     return children;
   }
 
   const currentPath = normalizePathname(router.asPath);
-  const publicRoute = isPublicRoute(currentPath);
 
-  if (publicRoute && !token) {
+  if (!shouldUseAppLayout(currentPath, token)) {
     return children;
   }
 

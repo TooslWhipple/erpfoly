@@ -7,10 +7,8 @@ import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { getSellers } from "@/services/sellers.service";
 import type { SellerListItem } from "@/types/sellers.types";
 import { CATALOG_SELLERS_CREATE } from "@/lib/permissions";
-
 export default function VendedoresPage() {
   const router = useRouter();
-
   const [rows, setRows] = useState<SellerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +16,6 @@ export default function VendedoresPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
-
   useAsyncEffect(
     async (isCancelled) => {
       await Promise.resolve();
@@ -43,27 +40,22 @@ export default function VendedoresPage() {
         setLoading(false);
       }
     },
-    [page, rowsPerPage, searchValue]
+    [page, rowsPerPage, searchValue],
   );
-
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
     setPage(0);
   };
-
   const handleRowNavigate = (row: SellerListItem) => {
     router.push(`/catalogos/vendedores/${row.id}`);
   };
-
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
-
   const handleRowsPerPageChange = (newRowsPerPage: number) => {
     setRowsPerPage(newRowsPerPage);
     setPage(0);
   };
-
   const columns: Column<SellerListItem>[] = [
     {
       id: "id",
@@ -88,41 +80,38 @@ export default function VendedoresPage() {
       size: "lg",
     },
   ];
-
   return (
-    <>
-      <Stack direction="column" spacing={3}>
-        <Title title="Equipo de ventas" />
-        {error && <Alert severity="error">{error}</Alert>}
-        <TabFilters
-          tabs={[]}
-          activeTab=""
-          onTabChange={() => {}}
-          showSearch
-          searchValue={searchValue}
-          onSearchChange={handleSearchChange}
-          actions={[
-            {
-              label: "Nuevo",
-              onClick: () => {},
-              permission: CATALOG_SELLERS_CREATE,
-            },
-          ]}
-        />
-        <TableCrud
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          rowKey="id"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalRows={totalRows}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          onRowClick={handleRowNavigate}
-          emptyMessage="No hay vendedores registrados"
-        />
-      </Stack>
-    </>
+    <Stack direction="column" spacing={3}>
+      <Title title="Equipo de ventas" />
+      {error && <Alert severity="error">{error}</Alert>}
+      <TabFilters
+        tabs={[]}
+        activeTab=""
+        onTabChange={() => {}}
+        showSearch
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        actions={[
+          {
+            label: "Nuevo",
+            onClick: () => {},
+            permission: CATALOG_SELLERS_CREATE,
+          },
+        ]}
+      />
+      <TableCrud
+        columns={columns}
+        rows={rows}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+        onRowClick={handleRowNavigate}
+        emptyMessage="No hay vendedores registrados"
+      />
+    </Stack>
   );
 }

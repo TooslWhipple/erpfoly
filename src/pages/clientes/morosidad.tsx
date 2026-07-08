@@ -13,7 +13,6 @@ import dayjs from "@/lib/dayjs";
 // ============================================================================
 
 type DelinquencyPeriod = "1_day" | "1_week" | "1_month" | "2_months";
-
 interface DelinquentCustomer {
   id: number;
   fullName: string;
@@ -23,14 +22,28 @@ interface DelinquentCustomer {
   delinquencyPeriod: DelinquencyPeriod;
   debtAmount: number;
 }
-
 interface DelinquencySummary {
-  oneDay: { count: number; change: number; changeType: "increase" | "decrease" };
-  oneWeek: { count: number; change: number; changeType: "increase" | "decrease" };
-  oneMonth: { count: number; change: number; changeType: "increase" | "decrease" };
-  twoMonths: { count: number; change: number; changeType: "increase" | "decrease" };
+  oneDay: {
+    count: number;
+    change: number;
+    changeType: "increase" | "decrease";
+  };
+  oneWeek: {
+    count: number;
+    change: number;
+    changeType: "increase" | "decrease";
+  };
+  oneMonth: {
+    count: number;
+    change: number;
+    changeType: "increase" | "decrease";
+  };
+  twoMonths: {
+    count: number;
+    change: number;
+    changeType: "increase" | "decrease";
+  };
 }
-
 interface GetDelinquentCustomersParams {
   page: number;
   limit: number;
@@ -39,7 +52,6 @@ interface GetDelinquentCustomersParams {
   sortOrder?: "asc" | "desc";
   search?: string;
 }
-
 interface GetDelinquentCustomersResponse {
   data: DelinquentCustomer[];
   total: number;
@@ -52,12 +64,27 @@ interface GetDelinquentCustomersResponse {
 // ============================================================================
 
 const DUMMY_SUMMARY: DelinquencySummary = {
-  oneDay: { count: 2533, change: 32, changeType: "increase" },
-  oneWeek: { count: 1034, change: 12, changeType: "decrease" },
-  oneMonth: { count: 821, change: 12, changeType: "decrease" },
-  twoMonths: { count: 785, change: 150, changeType: "decrease" },
+  oneDay: {
+    count: 2533,
+    change: 32,
+    changeType: "increase",
+  },
+  oneWeek: {
+    count: 1034,
+    change: 12,
+    changeType: "decrease",
+  },
+  oneMonth: {
+    count: 821,
+    change: 12,
+    changeType: "decrease",
+  },
+  twoMonths: {
+    count: 785,
+    change: 150,
+    changeType: "decrease",
+  },
 };
-
 const DUMMY_CUSTOMERS: DelinquentCustomer[] = [
   {
     id: 1,
@@ -177,17 +204,17 @@ async function getDelinquencySummary(): Promise<DelinquencySummary> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   return DUMMY_SUMMARY;
 }
-
 async function getDelinquentCustomers(
-  params: GetDelinquentCustomersParams
+  params: GetDelinquentCustomersParams,
 ): Promise<GetDelinquentCustomersResponse> {
   await new Promise((resolve) => setTimeout(resolve, 500));
-
   let filteredData = [...DUMMY_CUSTOMERS];
 
   // Filter by period
   if (params.period && params.period !== "all") {
-    filteredData = filteredData.filter((c) => c.delinquencyPeriod === params.period);
+    filteredData = filteredData.filter(
+      (c) => c.delinquencyPeriod === params.period,
+    );
   }
 
   // Filter by search
@@ -196,24 +223,32 @@ async function getDelinquentCustomers(
     filteredData = filteredData.filter(
       (c) =>
         c.fullName.toLowerCase().includes(searchLower) ||
-        c.phone.includes(params.search!)
+        c.phone.includes(params.search!),
     );
   }
 
   // Sort by due date if requested
   if (params.sortField === "dueDate") {
     filteredData.sort((a, b) => {
-      const dateA = dayjs(a.dueDate, "D [de] MMMM, YYYY", "es-mx", true).valueOf();
-      const dateB = dayjs(b.dueDate, "D [de] MMMM, YYYY", "es-mx", true).valueOf();
+      const dateA = dayjs(
+        a.dueDate,
+        "D [de] MMMM, YYYY",
+        "es-mx",
+        true,
+      ).valueOf();
+      const dateB = dayjs(
+        b.dueDate,
+        "D [de] MMMM, YYYY",
+        "es-mx",
+        true,
+      ).valueOf();
       return params.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
   }
-
   const total = filteredData.length;
   const start = params.page * params.limit;
   const end = start + params.limit;
   const paginatedData = filteredData.slice(start, end);
-
   return {
     data: paginatedData,
     total,
@@ -227,14 +262,31 @@ async function getDelinquentCustomers(
 // ============================================================================
 
 const TABS: TabOption[] = [
-  { label: "Todos", value: "all" },
-  { label: "1 día", value: "1_day" },
-  { label: "1 semana", value: "1_week" },
-  { label: "1 mes", value: "1_month" },
-  { label: "2 meses", value: "2_months" },
-  { label: "Listas compartidas", value: "shared_lists" },
+  {
+    label: "Todos",
+    value: "all",
+  },
+  {
+    label: "1 día",
+    value: "1_day",
+  },
+  {
+    label: "1 semana",
+    value: "1_week",
+  },
+  {
+    label: "1 mes",
+    value: "1_month",
+  },
+  {
+    label: "2 meses",
+    value: "2_months",
+  },
+  {
+    label: "Listas compartidas",
+    value: "shared_lists",
+  },
 ];
-
 const DELINQUENCY_CHIP_LABELS: Record<string, string> = {
   "1_day": "1 día",
   "1_week": "1 semana",
@@ -243,7 +295,6 @@ const DELINQUENCY_CHIP_LABELS: Record<string, string> = {
   "2_days": "2 días",
   "5_days": "5 días",
 };
-
 const DELINQUENCY_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   "1_day": "default",
   "1_week": "error",
@@ -285,14 +336,12 @@ export default function ClientesMorosidad() {
     setLoading(true);
     try {
       const period = activeTab !== "shared_lists" ? activeTab : "all";
-
       const response = await getDelinquentCustomers({
         page,
         limit: rowsPerPage,
         period,
         search: searchValue,
       });
-
       setCustomers(response.data);
       setTotalRows(response.total);
     } catch (err) {
@@ -306,11 +355,9 @@ export default function ClientesMorosidad() {
   useEffect(() => {
     fetchSummary();
   }, [fetchSummary]);
-
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
-
   useEffect(() => {
     setPage(0);
   }, [activeTab, searchValue]);
@@ -319,29 +366,23 @@ export default function ClientesMorosidad() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
-
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
   };
-
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
-
   const handleRowsPerPageChange = (newRowsPerPage: number) => {
     setRowsPerPage(newRowsPerPage);
     setPage(0);
   };
-
   const handleViewCustomer = (customer: DelinquentCustomer) => {
     router.push(`/clientes/${customer.id}`);
   };
-
   const handleContactCustomer = (customer: DelinquentCustomer) => {
     console.log("[Morosidad] Contact customer:", customer.phone);
     // Open contact modal or initiate call
   };
-
   const handleRegisterPayment = (customer: DelinquentCustomer) => {
     console.log("[Morosidad] Register payment for:", customer.id);
     // Open payment registration modal
@@ -350,47 +391,47 @@ export default function ClientesMorosidad() {
   // Build stats cards data
   const statsCards: StatsCardData[] = summary
     ? [
-      {
-        id: "one_day",
-        label: "1 día",
-        value: summary.oneDay.count,
-        comparison: {
-          value: summary.oneDay.change,
-          type: summary.oneDay.changeType,
-          period: "el mes anterior",
+        {
+          id: "one_day",
+          label: "1 día",
+          value: summary.oneDay.count,
+          comparison: {
+            value: summary.oneDay.change,
+            type: summary.oneDay.changeType,
+            period: "el mes anterior",
+          },
         },
-      },
-      {
-        id: "one_week",
-        label: "1 semana",
-        value: summary.oneWeek.count,
-        comparison: {
-          value: summary.oneWeek.change,
-          type: summary.oneWeek.changeType,
-          period: "el mes anterior",
+        {
+          id: "one_week",
+          label: "1 semana",
+          value: summary.oneWeek.count,
+          comparison: {
+            value: summary.oneWeek.change,
+            type: summary.oneWeek.changeType,
+            period: "el mes anterior",
+          },
         },
-      },
-      {
-        id: "one_month",
-        label: "1 mes",
-        value: summary.oneMonth.count,
-        comparison: {
-          value: summary.oneMonth.change,
-          type: summary.oneMonth.changeType,
-          period: "el mes anterior",
+        {
+          id: "one_month",
+          label: "1 mes",
+          value: summary.oneMonth.count,
+          comparison: {
+            value: summary.oneMonth.change,
+            type: summary.oneMonth.changeType,
+            period: "el mes anterior",
+          },
         },
-      },
-      {
-        id: "two_months",
-        label: "2 meses",
-        value: summary.twoMonths.count,
-        comparison: {
-          value: summary.twoMonths.change,
-          type: summary.twoMonths.changeType,
-          period: "el mes anterior",
+        {
+          id: "two_months",
+          label: "2 meses",
+          value: summary.twoMonths.count,
+          comparison: {
+            value: summary.twoMonths.change,
+            type: summary.twoMonths.changeType,
+            period: "el mes anterior",
+          },
         },
-      },
-    ]
+      ]
     : [];
 
   // Table columns configuration
@@ -453,37 +494,34 @@ export default function ClientesMorosidad() {
       align: "right",
     },
   ];
-
   return (
-    <>
-      <Stack spacing={3}>
-        <Title title="Morosidad" />
+    <Stack spacing={3}>
+      <Title title="Morosidad" />
 
-        {summary && <StatsCardGroup cards={statsCards} />}
+      {summary && <StatsCardGroup cards={statsCards} />}
 
-        <TabFilters
-          tabs={TABS}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          showSearch
-          searchValue={searchValue}
-          onSearchChange={handleSearchChange}
-        />
+      <TabFilters
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        showSearch
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+      />
 
-        <TableCrud
-          columns={columns}
-          rows={customers}
-          loading={loading}
-          rowKey="id"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalRows={totalRows}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          onRowClick={(row) => router.push(`/clientes/${row.id}`)}
-          emptyMessage="No hay clientes con morosidad"
-        />
-      </Stack>
-    </>
+      <TableCrud
+        columns={columns}
+        rows={customers}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
+        emptyMessage="No hay clientes con morosidad"
+      />
+    </Stack>
   );
 }

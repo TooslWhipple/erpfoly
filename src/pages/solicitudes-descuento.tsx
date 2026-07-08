@@ -14,39 +14,42 @@ import type {
 import { formatDateTimeShort } from "@/utils/date";
 import { formatDiscountRequestReasonList } from "@/utils/discountRequest";
 import { Stack } from "@mui/material";
-
 const SEARCH_DEBOUNCE_MS = 300;
-
 const TABS: TabOption[] = [
-  { label: "Pendientes", value: "pending" },
-  { label: "Aceptadas", value: "approved" },
-  { label: "Rechazadas", value: "rejected" },
+  {
+    label: "Pendientes",
+    value: "pending",
+  },
+  {
+    label: "Aceptadas",
+    value: "approved",
+  },
+  {
+    label: "Rechazadas",
+    value: "rejected",
+  },
 ];
-
 const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {
   contado: "Contado",
   credito: "Crédito",
   apartado: "Apartado",
 };
-
 const TYPE_CHIP_VARIANTS: Record<DiscountRequestType, StatusChipVariant> = {
   contado: "info",
   credito: "infoAlt",
   apartado: "default",
 };
-
 function formatArticleCount(count: number): string {
   return count === 1 ? "1 artículo" : `${count} artículos`;
 }
-
 export default function SolicitudesDescuentoPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("pending");
-
-  const statusExtra: { status?: DiscountRequestStatus } = {
+  const statusExtra: {
+    status?: DiscountRequestStatus;
+  } = {
     status: activeTab as DiscountRequestStatus,
   };
-
   const {
     data: requests,
     total: totalRows,
@@ -65,25 +68,20 @@ export default function SolicitudesDescuentoPage() {
     initialSearch: "",
     extraParams: statusExtra,
   });
-
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
-    SEARCH_DEBOUNCE_MS
+    SEARCH_DEBOUNCE_MS,
   );
-
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setPage(0);
   };
-
   const handleRowClick = (row: DiscountRequest) => {
     void router.push(`/solicitudes-descuento/${row.id}`);
   };
-
   const columns: Column<DiscountRequest>[] = [
     {
       id: "id",
@@ -96,7 +94,8 @@ export default function SolicitudesDescuentoPage() {
       id: "createdAt",
       label: "FECHA Y HORA",
       size: "md",
-      format: (value) => formatDateTimeShort(value != null ? String(value) : null),
+      format: (value) =>
+        formatDateTimeShort(value != null ? String(value) : null),
     },
     {
       id: "type",
@@ -135,33 +134,30 @@ export default function SolicitudesDescuentoPage() {
         formatDiscountRequestReasonList(row.reason, row.reasonCode, row.notes),
     },
   ];
-
   return (
-    <>
-      <Stack spacing={3}>
-        <Title title="Solicitudes de descuentos" />
-        <TabFilters
-          tabs={TABS}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          showSearch
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-        />
-        <TableCrud<DiscountRequest>
-          columns={columns}
-          rows={requests}
-          loading={loading}
-          rowKey="id"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalRows={totalRows}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-          emptyMessage="No hay solicitudes de descuento"
-          onRowClick={handleRowClick}
-        />
-      </Stack>
-    </>
+    <Stack spacing={3}>
+      <Title title="Solicitudes de descuentos" />
+      <TabFilters
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        showSearch
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+      />
+      <TableCrud<DiscountRequest>
+        columns={columns}
+        rows={requests}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={totalRows}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        emptyMessage="No hay solicitudes de descuento"
+        onRowClick={handleRowClick}
+      />
+    </Stack>
   );
 }

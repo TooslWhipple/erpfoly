@@ -17,7 +17,13 @@ import {
 import numeral from "numeral";
 import { CheckCircle2, Clock9, XCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Breadcrumbs, DiscountRequestItemCard, StatusChip, ApproveDiscountRequestModal, RejectDiscountRequestModal } from "@/components";
+import {
+  Breadcrumbs,
+  DiscountRequestItemCard,
+  StatusChip,
+  ApproveDiscountRequestModal,
+  RejectDiscountRequestModal,
+} from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { DiscountRequestDetail } from "@/types/discount-requests.types";
 import {
@@ -37,16 +43,13 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DISCOUNT_REQUESTS_UPDATE } from "@/lib/permissions";
-
 const DELIVERY_LABELS: Record<string, string> = {
   a_domicilio: "A domicilio",
   recoger_sucursal: "Recoger en sucursal",
 };
-
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
-
 function getStatusBadge(detail: DiscountRequestDetail) {
   if (detail.status === "approved") {
     return (
@@ -77,7 +80,6 @@ function getStatusBadge(detail: DiscountRequestDetail) {
     />
   );
 }
-
 export default function DiscountRequestDetailPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -87,11 +89,13 @@ export default function DiscountRequestDetailPage() {
   const showError = useSnackbarStore((s) => s.showError);
   const { hasPermission } = usePermissions();
   const canResolve = hasPermission(DISCOUNT_REQUESTS_UPDATE);
-
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-
-  const { data: detail, isLoading, isError } = useQuery<DiscountRequestDetail | null>({
+  const {
+    data: detail,
+    isLoading,
+    isError,
+  } = useQuery<DiscountRequestDetail | null>({
     queryKey: ["discount-request", requestId],
     enabled: requestId !== null && !Number.isNaN(requestId),
     queryFn: async () => {
@@ -101,86 +105,104 @@ export default function DiscountRequestDetailPage() {
       return result.data ?? null;
     },
   });
-
   const approveMutation = useMutation({
     mutationFn: async (approvedDiscountPct: number) => {
       if (!requestId) throw new Error("Solicitud no encontrada");
-      const result = await approveDiscountRequest(requestId, { approvedDiscountPct });
+      const result = await approveDiscountRequest(requestId, {
+        approvedDiscountPct,
+      });
       if (result.error) throw new Error(result.error.message);
       return result.data;
     },
     onSuccess: () => {
       showSuccess("Solicitud de descuento aprobada.");
       setApproveModalOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["discount-requests"] });
-      void queryClient.invalidateQueries({ queryKey: ["discount-request", requestId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["discount-requests"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["discount-request", requestId],
+      });
       void router.push("/solicitudes-descuento");
     },
     onError: (err: Error) => showError(err.message),
   });
-
   const rejectMutation = useMutation({
     mutationFn: async (rejectionReason: string) => {
       if (!requestId) throw new Error("Solicitud no encontrada");
-      const result = await rejectDiscountRequest(requestId, { rejectionReason });
+      const result = await rejectDiscountRequest(requestId, {
+        rejectionReason,
+      });
       if (result.error) throw new Error(result.error.message);
       return result.data;
     },
     onSuccess: () => {
       showSuccess("Solicitud de descuento rechazada.");
       setRejectModalOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["discount-requests"] });
-      void queryClient.invalidateQueries({ queryKey: ["discount-request", requestId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["discount-requests"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["discount-request", requestId],
+      });
       void router.push("/solicitudes-descuento");
     },
     onError: (err: Error) => showError(err.message),
   });
-
   const handleRejectDiscountRequest = useCallback(
     (rejectionReason: string) => {
       rejectMutation.mutate(rejectionReason);
     },
-    [rejectMutation]
+    [rejectMutation],
   );
-
   const handleApproveDiscountRequest = useCallback(
     (approvedDiscountPercent: number) => {
       approveMutation.mutate(approvedDiscountPercent);
     },
-    [approveMutation]
+    [approveMutation],
   );
-
   if (isLoading) {
     return (
-      <>
-        <Stack spacing={2} alignItems="center" justifyContent="center" minHeight={320}>
-          <CircularProgress />
-        </Stack>
-      </>
+      <Stack
+        spacing={2}
+        alignItems="center"
+        justifyContent="center"
+        minHeight={320}
+      >
+        <CircularProgress />
+      </Stack>
     );
   }
-
   if (isError || !detail) {
     return (
-      <>
-        <Stack spacing={2} alignItems="center" justifyContent="center" minHeight={320}>
-          <Typography variant="body1" color="text.secondary">
-            No se encontró la solicitud de descuento.
-          </Typography>
-          <Button variant="contained" onClick={() => router.push("/solicitudes-descuento")}>
-            Volver al listado
-          </Button>
-        </Stack>
-      </>
+      <Stack
+        spacing={2}
+        alignItems="center"
+        justifyContent="center"
+        minHeight={320}
+      >
+        <Typography variant="body1" color="text.secondary">
+          No se encontró la solicitud de descuento.
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => router.push("/solicitudes-descuento")}
+        >
+          Volver al listado
+        </Button>
+      </Stack>
     );
   }
-
   const isPending = detail.status === "pending";
   const breadcrumbs: BreadcrumbItem[] = [
-    { label: "Solicitudes de descuentos", href: "/solicitudes-descuento" },
-    { label: `Cotización ${detail.saleFolio}` },
+    {
+      label: "Solicitudes de descuentos",
+      href: "/solicitudes-descuento",
+    },
+    {
+      label: `Cotización ${detail.saleFolio}`,
+    },
   ];
-
   return (
     <>
       <RejectDiscountRequestModal
@@ -198,8 +220,14 @@ export default function DiscountRequestDetailPage() {
       <Stack spacing={2}>
         <Stack
           spacing={2}
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ xs: "flex-start", md: "center" }}
+          direction={{
+            xs: "column",
+            md: "row",
+          }}
+          alignItems={{
+            xs: "flex-start",
+            md: "center",
+          }}
           justifyContent="space-between"
         >
           <Breadcrumbs
@@ -215,8 +243,12 @@ export default function DiscountRequestDetailPage() {
                 <Button
                   variant="contained"
                   color="error"
-                  style={{ width: 112 }}
-                  disabled={rejectMutation.isPending || approveMutation.isPending}
+                  style={{
+                    width: 112,
+                  }}
+                  disabled={
+                    rejectMutation.isPending || approveMutation.isPending
+                  }
                   onClick={() => setRejectModalOpen(true)}
                 >
                   Rechazar
@@ -224,8 +256,12 @@ export default function DiscountRequestDetailPage() {
                 <Button
                   variant="contained"
                   color="primary"
-                  style={{ width: 112 }}
-                  disabled={rejectMutation.isPending || approveMutation.isPending}
+                  style={{
+                    width: 112,
+                  }}
+                  disabled={
+                    rejectMutation.isPending || approveMutation.isPending
+                  }
                   onClick={() => setApproveModalOpen(true)}
                 >
                   Aprobar
@@ -241,12 +277,19 @@ export default function DiscountRequestDetailPage() {
         <Divider />
 
         <Grid container spacing={4}>
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 8,
+            }}
+          >
             <Stack spacing={2}>
               {isPending && (
                 <DiscountCard>
                   <Stack flex={1}>
-                    <Typography variant="subtitle1">Descuento solicitado</Typography>
+                    <Typography variant="subtitle1">
+                      Descuento solicitado
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Motivo: {detail.reasonLabel}
                     </Typography>
@@ -281,13 +324,21 @@ export default function DiscountRequestDetailPage() {
                 )}
 
                 <Stack spacing={3}>
-                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignContent="center"
+                  >
                     <Typography variant="body1">Subtotal</Typography>
                     <Typography variant="subtitle1" fontWeight={600}>
                       {formatCurrency(detail.subtotal)}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignContent="center"
+                  >
                     <Typography variant="body1">Envío</Typography>
                     <Typography variant="subtitle1" fontWeight={600}>
                       {formatCurrency(detail.shipping)}
@@ -302,32 +353,48 @@ export default function DiscountRequestDetailPage() {
                     </Typography>
                   </TotalCard>
 
-                  {detail.status === "approved" && detail.approvedDiscountPct != null && (
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body1">
-                          Descuento ({detail.approvedDiscountPct}%)
+                  {detail.status === "approved" &&
+                    detail.approvedDiscountPct != null && (
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="body1">
+                            Descuento ({detail.approvedDiscountPct}%)
+                          </Typography>
+                          <StatusChip
+                            label="Aprobada"
+                            variant="success"
+                            size="small"
+                          />
+                        </Stack>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {formatCurrency(detail.totalAfterSpecialDiscount)}
                         </Typography>
-                        <StatusChip label="Aprobada" variant="success" size="small" />
                       </Stack>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {formatCurrency(detail.totalAfterSpecialDiscount)}
-                      </Typography>
-                    </Stack>
-                  )}
+                    )}
 
                   {detail.status === "rejected" && detail.rejectionReason && (
                     <Stack spacing={0.5}>
                       <Typography variant="body2" color="text.secondary">
                         Motivo de rechazo
                       </Typography>
-                      <Typography variant="body1">{detail.rejectionReason}</Typography>
+                      <Typography variant="body1">
+                        {detail.rejectionReason}
+                      </Typography>
                     </Stack>
                   )}
 
-                  <Stack direction="row" justifyContent="space-between" alignContent="center">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignContent="center"
+                  >
                     <Typography variant="body1">
-                      Enganche solicitado ({Math.round(detail.downPaymentPct * 100)}%)
+                      Enganche solicitado (
+                      {Math.round(detail.downPaymentPct * 100)}%)
                     </Typography>
                     <Typography variant="subtitle1" fontWeight={600}>
                       {formatCurrency(detail.downPaymentAmount)}
@@ -338,7 +405,12 @@ export default function DiscountRequestDetailPage() {
             </Stack>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 4,
+            }}
+          >
             <Stack spacing={2}>
               <SectionGrayCard>
                 <Typography variant="h6">Tipo de venta</Typography>
@@ -368,11 +440,20 @@ export default function DiscountRequestDetailPage() {
                 <Typography variant="h6">Cliente</Typography>
                 {detail.client ? (
                   <Stack spacing={0.5}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="nowrap">
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      flexWrap="nowrap"
+                    >
                       <Typography variant="body1" fontWeight={500}>
                         {detail.client.fullName}
                       </Typography>
-                      <StatusChip label="Activo" variant="success" size="small" />
+                      <StatusChip
+                        label="Activo"
+                        variant="success"
+                        size="small"
+                      />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
                       {detail.client.phone}
@@ -399,7 +480,10 @@ export default function DiscountRequestDetailPage() {
                   <Select
                     value={detail.delivery?.type ?? "a_domicilio"}
                     readOnly
-                    sx={{ backgroundColor: "transparent", pointerEvents: "none" }}
+                    sx={{
+                      backgroundColor: "transparent",
+                      pointerEvents: "none",
+                    }}
                   >
                     <MenuItem value={detail.delivery?.type ?? "a_domicilio"}>
                       {DELIVERY_LABELS[detail.delivery?.type ?? "a_domicilio"]}

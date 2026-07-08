@@ -445,7 +445,7 @@ export default function DepartmentDetailPage() {
         open={groupModalOpen}
         onClose={handleCloseGroupModal}
         title={editingLine ? "Editar línea" : "Nueva línea"}
-        description={`Línea: ${department.name}`}
+        description={`Departamento: ${department.name}`}
         fields={departmentLineFormFields}
         defaultValues={groupModalInitialValues}
         onSubmit={handleSaveGroup}

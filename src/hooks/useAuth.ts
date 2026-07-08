@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, LoginCredentials } from "@/services/auth.service";
+import { saveTempPasswordChangeContext } from "@/utils/temp-password-change";
 
 export function useAuth() {
 	const router = useRouter();
@@ -19,6 +20,18 @@ export function useAuth() {
 		const result = await authService.login(credentials);
 		if (result.error) {
 			setError(result.error.message);
+			setIsLoading(false);
+			setLoading(false);
+			return;
+		}
+
+		if (result.data?.requiresPasswordChange) {
+			saveTempPasswordChangeContext({
+				username: credentials.username?.trim() || undefined,
+				cellphone: credentials.cellphone?.trim() || undefined,
+				currentPassword: credentials.password,
+			});
+			router.push("/login/change-password");
 			setIsLoading(false);
 			setLoading(false);
 			return;

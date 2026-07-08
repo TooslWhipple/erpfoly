@@ -929,7 +929,7 @@ export default function ProductFormPage() {
                 description="Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?"
                 cancelLabel="Quedarme"
                 confirmLabel="Salir sin guardar"
-                confirmColor="error"
+                type="warning"
             />
         </MainLayout>
     );

@@ -46,7 +46,7 @@ type RepairSupplierForm = {
     contactPerson?: string;
     phone: string;
     email?: string;
-    departmentIds?: (string | number)[];
+    departmentIds: (string | number)[];
 };
 
 function buildRepairSupplierFields(departmentItems: AutocompleteItem[]) {
@@ -85,7 +85,9 @@ function buildRepairSupplierFields(departmentItems: AutocompleteItem[]) {
         },
         {
             name: "departmentIds",
-            schema: z.array(z.union([z.string(), z.number()])).optional(),
+            schema: z
+                .array(z.union([z.string(), z.number()]))
+                .min(1, "Debe seleccionar al menos un departamento"),
             label: "Departamentos que puede atender",
             type: "autocomplete",
             placeholder: "Buscar departamentos...",
@@ -275,7 +277,7 @@ export default function ProveedoresReparaciones() {
                 contactPerson: data.contactPerson || undefined,
                 phone: data.phone || undefined,
                 email: data.email || undefined,
-                departmentIds: departmentIds.length > 0 ? departmentIds : undefined,
+                departmentIds,
             });
             if (result.error) {
                 setSaving(false);
@@ -456,6 +458,8 @@ export default function ProveedoresReparaciones() {
                 confirmLabel="Guardar cambios"
                 maxWidth="md"
                 fullWidth
+                validateOn="change"
+                allowInvalidSubmit
             />
 
         </MainLayout>

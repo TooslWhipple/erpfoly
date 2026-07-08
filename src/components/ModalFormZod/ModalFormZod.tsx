@@ -32,6 +32,8 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   fullWidth?: boolean;
   validateOn?: "change" | "blur" | "submit";
+  /** When true, submit stays enabled even if the form is invalid (errors still show on submit / revalidation). */
+  allowInvalidSubmit?: boolean;
   /** When true, fields are not auto-rendered; use a function child to render `FormField` / `form.Field` manually. */
   customFieldLayout?: boolean;
   children?: React.ReactNode | ModalFormZodRenderFn<T>;
@@ -54,6 +56,7 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
   maxWidth = "md",
   fullWidth = true,
   validateOn = "blur",
+  allowInvalidSubmit = false,
   customFieldLayout = false,
   children,
   headerContent,
@@ -107,7 +110,7 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
               type="button"
               variant="contained"
               color="primary"
-              disabled={loading || !canSubmit || isSubmitting}
+              disabled={loading || (!allowInvalidSubmit && !canSubmit) || isSubmitting}
               onClick={() => form.handleSubmit()}
             >
               {loading || isSubmitting ? (

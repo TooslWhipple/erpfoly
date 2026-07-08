@@ -1,2 +1,2 @@
-export { ConfirmModal } from "./ConfirmModal";
-export type { ConfirmModalProps } from "./ConfirmModal";
+export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";
+export type { ConfirmModalProps, ConfirmModalType } from "./ConfirmModal";

@@ -5,6 +5,7 @@ export interface RoleListItem {
     id: number;
     name: string;
     description?: string | null;
+    platform: 'ERP' | 'APP' | 'INTERNAL';
     status: string;
     createdAt: string;
     updatedAt: string | null;
@@ -30,6 +31,7 @@ export interface RoleDetailResponse {
         id: number;
         name: string;
         description: string | null;
+        platform: 'ERP' | 'APP' | 'INTERNAL';
     };
     modules: Array<{
         screenId: number;

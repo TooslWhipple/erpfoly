@@ -33,6 +33,7 @@ export async function getPermissionsTemplate(): Promise<ApiResult<PermissionsTem
 export interface CreateRolePayload {
   name: string;
   description?: string;
+  platform?: 'ERP' | 'APP' | 'INTERNAL';
 }
 
 export async function createRole(
@@ -47,6 +48,7 @@ export async function createRole(
 export interface UpdateRolePayload {
   name?: string;
   description?: string;
+  platform?: 'ERP' | 'APP' | 'INTERNAL';
 }
 
 export async function updateRole(

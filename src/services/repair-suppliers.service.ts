@@ -34,7 +34,7 @@ export interface CreateRepairSupplierPayload {
   contactPerson?: string;
   phone?: string;
   email?: string;
-  departmentIds?: number[];
+  departmentIds: number[];
 }
 
 export interface UpdateRepairSupplierPayload {

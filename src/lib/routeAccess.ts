@@ -58,11 +58,11 @@ import {
 export const PUBLIC_ROUTES = [
 	"/login",
 	"/login/validate-otp",
+	"/login/change-password",
 	"/login/recover",
 	"/login/recover/sent",
-	"/login/recover/reset",
-	"/login/recover/success",
 ] as const;
+export const CHANGE_PASSWORD_ROUTE = "/login/change-password";
 export const FORBIDDEN_ROUTE = "/403";
 export const DEFAULT_AUTHENTICATED_ROUTE = "/solicitudes-credito";
 
@@ -176,6 +176,10 @@ export function normalizePathname(pathname: string): string {
 export function isPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
+}
+
+export function isChangePasswordRoute(pathname: string): boolean {
+  return normalizePathname(pathname) === CHANGE_PASSWORD_ROUTE;
 }
 
 export function isSuperAdmin(user: User | null): boolean {

@@ -14,9 +14,10 @@ export interface LoginCredentials {
 	password: string;
 }
 
-/** Response from POST /auth/login when OTP is sent (no tokens yet). */
+/** Response from POST /auth/login when OTP is sent or password change is required. */
 export interface LoginOtpSentResponse {
 	message: string;
+	requiresPasswordChange?: boolean;
 }
 
 export interface LoginResponse {
@@ -134,6 +135,8 @@ interface BackendUser {
 	roleName?: string;
 	permissions?: BackendPermission[];
 	avatar?: string;
+	temporaryPassword?: boolean;
+	temporary_password?: boolean;
 }
 
 function asNonEmptyString(value: unknown): string | null {
@@ -226,6 +229,7 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 		avatar: u.avatar,
 		...role,
 		permissions: normalizeBackendPermissions(u.permissions),
+		temporaryPassword: u.temporaryPassword ?? u.temporary_password ?? false,
 	};
 }
 
@@ -266,6 +270,28 @@ export interface ResendOtpRequest {
 export interface RefreshTokenResponse {
 	accessToken: string;
 	refreshToken?: string;
+}
+
+export interface ChangeRequiredPasswordRequest {
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export interface ReplaceTemporaryPasswordRequest {
+	username?: string;
+	cellphone?: string;
+	currentPassword: string;
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export interface ReplaceTemporaryPasswordResponse {
+	message: string;
+}
+
+export interface ChangeRequiredPasswordResponse {
+	message: string;
+	user: User;
 }
 
 export const authService = {
@@ -335,16 +361,34 @@ export const authService = {
 		return post<ApiSuccessPayload>("/auth/password/recovery", data);
 	},
 
-	async validateRecoveryToken(
-		token: string
-	): Promise<ApiResult<ValidateRecoveryTokenResponse>> {
-		return get<ValidateRecoveryTokenResponse>(
-			`/auth/password/recovery/validate?token=${encodeURIComponent(token)}`
+	async replaceTemporaryPassword(
+		data: ReplaceTemporaryPasswordRequest,
+	): Promise<ApiResult<ReplaceTemporaryPasswordResponse>> {
+		return post<ReplaceTemporaryPasswordResponse>(
+			"/auth/password/replace-temporary",
+			data,
 		);
 	},
 
-	async resetPassword(data: ResetPasswordRequest): Promise<ApiResult<ApiSuccessPayload>> {
-		return post<ApiSuccessPayload>("/auth/password/recovery/reset", data);
+	async changeRequiredPassword(
+		data: ChangeRequiredPasswordRequest
+	): Promise<ApiResult<ChangeRequiredPasswordResponse>> {
+		const result = await post<{
+			message: string;
+			user: BackendUser;
+		}>("/auth/password/change-required", data);
+
+		if (result.error || !result.data) {
+			return { data: null, error: result.error };
+		}
+
+		return {
+			data: {
+				message: result.data.message,
+				user: mapBackendUserToFrontend(result.data.user),
+			},
+			error: null,
+		};
 	},
 };
 

@@ -6,6 +6,7 @@ import { Logout as LogoutIcon } from "@mui/icons-material";
 import { Plus } from "@/components/Icons";
 import {
   StyledDrawer,
+  SidebarHeader,
   NavigationContainer,
   UserProfileContainer,
   UserAvatar,
@@ -103,7 +104,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         open={isMobile ? open : true}
         onClose={onClose}
         isMobile={isMobile}>
-        <NavigationContainer>
+        <SidebarHeader>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Stack direction="row" alignItems="center" spacing={1}>
               <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
@@ -125,7 +126,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               Nueva solicitud
             </Button>
           )}
+        </SidebarHeader>
 
+        <NavigationContainer>
           <SidebarNavList
             items={visibleNavItems}
             pathname={router.pathname}

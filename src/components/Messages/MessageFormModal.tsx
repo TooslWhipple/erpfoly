@@ -1,18 +1,19 @@
 import { useState, useCallback, useRef } from "react";
 import { Typography, CircularProgress, Stack, Button } from "@mui/material";
+import { Copy } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
+import { theme } from "@/styles/theme";
 import {
   VariablesSection,
   VariablesContainer,
   VariableChip,
   ContentTextarea,
   MessageNameInput,
+  FormContent
 } from "@/styles/catalogos/mensajes.styles";
 import { MessageVariablesProvider } from "./MessageVariablesContext";
 import HighlightedContentInput from "./HighlightedContentInput";
 import { StatusChip } from "../StatusChip";
-import { Copy } from "lucide-react";
-import { theme } from "@/styles/theme";
 
 export interface MessageFormData {
   name: string;
@@ -54,11 +55,12 @@ export function MessageFormModal({
   const handleInsertVariable = useCallback(
     (variable: string) => {
       const ta = textareaRef.current;
-      const start =
-        ta && document.activeElement === ta ? ta.selectionStart : content.length;
+      const start = ta && document.activeElement === ta ? ta.selectionStart : content.length;
       const end = ta && document.activeElement === ta ? ta.selectionEnd : content.length;
       const newContent = content.substring(0, start) + variable + content.substring(end);
+
       setContent(newContent);
+
       setTimeout(() => {
         if (ta) {
           const newPosition = start + variable.length;
@@ -90,7 +92,7 @@ export function MessageFormModal({
       open={open}
       onClose={onClose}
       disableClose={loading}
-      maxWidth="lg"
+      maxWidth="md"
       fullWidth
       header={
         <Stack
@@ -98,38 +100,31 @@ export function MessageFormModal({
           width="100%"
           spacing={2}
           justifyContent="space-between"
-          alignItems="center"
-        >
+          alignItems="center">
           <Stack spacing={1} alignItems="flex-start">
-            {isEditing && (
+            {
+              isEditing &&
               <StatusChip
                 size="small"
                 label={inUse ? "En uso" : "Sin uso"}
                 variant={inUse ? "success" : "default"}
               />
-            )}
+            }
             <Typography variant="h6">{title}</Typography>
           </Stack>
-          <Button variant="contained" onClick={handleSave} disabled={!canSave || loading}>
-            {loading ? <CircularProgress size={24} color="inherit" /> : "Guardar"}
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={!canSave || loading}>
+            {
+              (loading) ? <CircularProgress size={24} color="inherit" /> : "Guardar"
+            }
           </Button>
         </Stack>
       }
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-          border: "1px solid #e0e0e0",
-          borderRadius: "16px",
-          padding: "24px",
-          backgroundColor: "white",
-        }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          Nombre del mensaje
-        </Typography>
+      <FormContent>
+        <Typography variant="body2" color="text.secondary">Nombre del mensaje</Typography>
         <MessageNameInput
           fullWidth
           size="small"
@@ -142,9 +137,7 @@ export function MessageFormModal({
           }}
         />
 
-        <Typography variant="body2" color="text.secondary">
-          Contenido del mensaje.
-        </Typography>
+        <Typography variant="body2" color="text.secondary">Contenido del mensaje.</Typography>
         <MessageVariablesProvider value={messageVariables.map((v) => v.value)}>
           <ContentTextarea
             fullWidth
@@ -164,28 +157,26 @@ export function MessageFormModal({
         </MessageVariablesProvider>
 
         <VariablesSection>
-          <Typography variant="body2" color="text.secondary">
-            Puedes incrustar datos variables del cliente en tu mensaje como:
-          </Typography>
+          <Typography variant="body2" color="text.secondary">Puedes incrustar datos variables del cliente en tu mensaje como:</Typography>
           <VariablesContainer>
-            {messageVariables.map((variable) => (
-              <VariableChip
-                key={variable.key}
-                label={
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Typography component="span" sx={{ fontSize: "0.875rem" }}>
-                      {variable.value}
-                    </Typography>
-                    <Copy size={16} />
-                  </Stack>
-                }
-                onClick={() => handleInsertVariable(variable.value)}
-                clickable
-              />
-            ))}
+            {
+              messageVariables.map((variable) => (
+                <VariableChip
+                  key={variable.key}
+                  label={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Typography variant="caption" component="span">{variable.value}</Typography>
+                      <Copy size={12} />
+                    </Stack>
+                  }
+                  onClick={() => handleInsertVariable(variable.value)}
+                  clickable
+                />
+              ))
+            }
           </VariablesContainer>
         </VariablesSection>
-      </div>
+      </FormContent>
     </SideModal>
   );
 }

@@ -105,21 +105,23 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
             state.isSubmitting,
           ]}
         >
-          {([canSubmit, isSubmitting]) => (
-            <SubmitButton
-              type="button"
-              variant="contained"
-              color="primary"
-              disabled={loading || (!allowInvalidSubmit && !canSubmit) || isSubmitting}
-              onClick={() => form.handleSubmit()}
-            >
-              {loading || isSubmitting ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                confirmLabel
-              )}
-            </SubmitButton>
-          )}
+          {
+            ([canSubmit, isSubmitting]) => (
+              <SubmitButton
+                type="button"
+                variant="contained"
+                color="primary"
+                disabled={loading || (!allowInvalidSubmit && !canSubmit) || isSubmitting}
+                onClick={() => form.handleSubmit()}>
+                {
+                  loading || isSubmitting ?
+                    <CircularProgress size={20} color="inherit" />
+                    :
+                    confirmLabel
+                }
+              </SubmitButton>
+            )
+          }
         </form.Subscribe>
       }
       maxWidth={maxWidth}

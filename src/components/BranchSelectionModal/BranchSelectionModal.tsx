@@ -9,16 +9,10 @@ import {
     Typography,
 } from "@mui/material";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { getBranchesCatalog, type BranchCatalogItem } from "@/services/branches.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import {
-    BranchAutocompleteField,
-    BranchPreviewCard,
-    RouteArrow,
-    RoutePreviewCard,
-} from "./styles";
+import { BranchAutocompleteField } from "./styles";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -34,7 +28,11 @@ export interface BranchSelectionModalProps {
 }
 
 function getBranchLabel(branch: BranchCatalogItem): string {
-    return branch.name;
+    if (branch.is_main_warehouse) {
+        return `${branch.name} (Matriz)`;
+    }
+
+    return `${branch.name}`;
 }
 
 function withSelectedBranch(
@@ -132,11 +130,7 @@ function BranchCatalogAutocomplete({
             renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                     <Stack spacing={0.25}>
-                        <Typography variant="body2">{option.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            ID {option.id}
-                            {option.is_main_warehouse ? " · Matriz" : ""}
-                        </Typography>
+                        <Typography variant="body2">{getBranchLabel(option)}</Typography>
                     </Stack>
                 </li>
             )}
@@ -160,31 +154,6 @@ function BranchCatalogAutocomplete({
                 />
             )}
         />
-    );
-}
-
-interface BranchRoutePreviewProps {
-    origin: BranchCatalogItem | null;
-    destination: BranchCatalogItem | null;
-}
-
-function BranchRoutePreview({ origin, destination }: BranchRoutePreviewProps) {
-    return (
-        <RoutePreviewCard>
-            <BranchPreviewCard>
-                <Typography variant="body2" color="text.secondary">Origen</Typography>
-                <Typography variant="body1" fontWeight={600}>{(origin) ? origin.name : "Sin seleccionar"}</Typography>
-            </BranchPreviewCard>
-
-            <RouteArrow>
-                <ArrowRight size={20} />
-            </RouteArrow>
-
-            <BranchPreviewCard>
-                <Typography variant="body2" color="text.secondary">Destino</Typography>
-                <Typography variant="body1" fontWeight={600}>{(destination) ? destination.name : "Sin seleccionar"}</Typography>
-            </BranchPreviewCard>
-        </RoutePreviewCard>
     );
 }
 
@@ -259,9 +228,8 @@ export function BranchSelectionModal({
             open={open}
             onClose={handleClose}
             title="Sucursales"
-            description="Selecciona la sucursal de origen y la de destino para continuar"
+            description="Selecciona el origen y el destino para continuar"
             maxWidth="md"
-            contentSx={{ flex: 1, minHeight: 0 }}
             headerActions={
                 <Button
                     variant="contained"
@@ -295,11 +263,6 @@ export function BranchSelectionModal({
                     enabled={open && !destinationDisabled}
                     error={Boolean(destinationError)}
                     helperText={destinationError ?? undefined}
-                />
-
-                <BranchRoutePreview
-                    origin={resolvedOriginBranch}
-                    destination={destinationBranch}
                 />
             </Stack>
         </SideModal>

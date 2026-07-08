@@ -15,7 +15,6 @@ import type {
     BranchOrderDetail,
     BranchOrderLineItem,
     ScheduleBranchRequestPayload,
-    UpdateBranchRequestPayload,
 } from "@/types/solicitudes.types";
 import {
     getBranchRequestFull,

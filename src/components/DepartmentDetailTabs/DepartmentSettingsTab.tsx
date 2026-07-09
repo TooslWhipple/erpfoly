@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { Stack, Button, Box, InputAdornment } from "@mui/material";
+import { Stack, Button, Box, InputAdornment, Typography, CircularProgress } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
+import numeral from "numeral";
 import { FormTextField, TableCrud } from "@/components";
 import type { Column, RowAction } from "@/components";
 import {
@@ -14,6 +15,16 @@ import {
 import type { PromotionListItem } from "@/types/promociones.types";
 import { formatDate } from "@/utils/date";
 import { CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
+import {
+  parsePercentFieldInput,
+  sanitizeIntegerPercentInput,
+  MIN_PROFIT_MARGIN_PERCENT,
+  MAX_PROFIT_MARGIN_PERCENT,
+} from "@/utils/percentInput";
+import { useProductPricePreview } from "@/hooks/useProductPricePreview";
+
+/** Costo de referencia fijo solo para mostrar un ejemplo de precio mientras se captura el margen. */
+const MARGIN_PREVIEW_EXAMPLE_COST = 1000;
 
 export interface DepartmentSettingsTabProps {
   marginDraft: string;
@@ -98,6 +109,19 @@ export function DepartmentSettingsTab({
     [onOpenPromotion]
   );
 
+  const marginParsed = parsePercentFieldInput(marginDraft);
+  const {
+    subtotal: marginPreviewSubtotal,
+    price: marginPreviewPrice,
+    isLoading: marginPreviewLoading,
+    isError: marginPreviewError,
+  } = useProductPricePreview(MARGIN_PREVIEW_EXAMPLE_COST, marginParsed ?? 0, {
+    enabled:
+      marginParsed !== null &&
+      marginParsed >= MIN_PROFIT_MARGIN_PERCENT &&
+      marginParsed <= MAX_PROFIT_MARGIN_PERCENT,
+  });
+
   return (
     <Stack spacing={2}>
       <SettingsGrid
@@ -115,13 +139,13 @@ export function DepartmentSettingsTab({
             <FormTextField
               placeholder="Ej. 32"
               value={marginDraft}
-              onChange={(e) => onMarginDraftChange(e.target.value)}
+              onChange={(e) => onMarginDraftChange(sanitizeIntegerPercentInput(e.target.value))}
               error={marginFieldError}
               helperText={marginHelperText}
               disabled={savingMargin}
               slotProps={{
                 htmlInput: {
-                  inputMode: "decimal",
+                  inputMode: "numeric",
                   "aria-label": "Margen de utilidad (porcentaje)",
                 },
                 input: {
@@ -130,6 +154,30 @@ export function DepartmentSettingsTab({
               }}
             />
           </Box>
+          {marginParsed !== null &&
+            marginParsed >= MIN_PROFIT_MARGIN_PERCENT &&
+            marginParsed <= MAX_PROFIT_MARGIN_PERCENT && (
+            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+              <Typography variant="body2" color="text.secondary">
+                Ejemplo: costo {numeral(MARGIN_PREVIEW_EXAMPLE_COST).format("$0,0.00")} → precio
+              </Typography>
+              {marginPreviewLoading ? (
+                <CircularProgress size={14} />
+              ) : marginPreviewError ? (
+                <Typography variant="body2" fontWeight={700}>No se pudo calcular</Typography>
+              ) : (
+                <>
+                  <Typography variant="body2" fontWeight={700}>
+                    {numeral(marginPreviewSubtotal).format("$0,0.00")}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">→ precio final</Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {numeral(marginPreviewPrice).format("$0,0.00")}
+                  </Typography>
+                </>
+              )}
+            </Stack>
+          )}
         </SettingsCard>
       </SettingsGrid>
 

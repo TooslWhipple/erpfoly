@@ -21,6 +21,7 @@ const TABS: TabOption[] = [
   { label: "Pendientes", value: "pending" },
   { label: "Aceptadas", value: "approved" },
   { label: "Rechazadas", value: "rejected" },
+  { label: "Invalidadas", value: "invalidated" },
 ];
 
 const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {

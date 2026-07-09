@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { Search as SearchIcon, SmartToy as RobotIcon } from "@mui/icons-material";
 import { SideModal } from "@/components";
+import { formatDateOnly } from "@/utils/date";
 import { theme } from "@/styles/theme";
 import type {
   AddRoutePointPayload,
@@ -273,7 +274,11 @@ export function AddOrdersToRouteModal({
                   <StyledTableCell>{row.sku}</StyledTableCell>
                   <StyledTableCell>{row.articleName}</StyledTableCell>
                   <StyledTableCell>{fourthValue}</StyledTableCell>
-                  <StyledTableCell>{row.scheduledDate}</StyledTableCell>
+                  <StyledTableCell>
+                    {row.scheduledDate
+                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
+                      : "-"}
+                  </StyledTableCell>
                 </StyledTableRow>
               );
             })}
@@ -353,7 +358,11 @@ export function AddOrdersToRouteModal({
                     {row.articleName}
                   </StyledTableCell>
                   <StyledTableCell>{fourthValue}</StyledTableCell>
-                  <StyledTableCell>{row.scheduledDate}</StyledTableCell>
+                  <StyledTableCell>
+                    {row.scheduledDate
+                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
+                      : "-"}
+                  </StyledTableCell>
                 </StyledTableRow>
               );
             })}

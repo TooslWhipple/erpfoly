@@ -1,6 +1,6 @@
 import { Skeleton, Table, TableBody, Typography } from "@mui/material";
 import numeral from "numeral";
-import { formatDate } from "@/utils/date";
+import { formatDate, formatDateOnly } from "@/utils/date";
 import {
   TableWrapper,
   StyledTableContainer,
@@ -22,6 +22,7 @@ export type DataTableColumnType =
   | "currency"
   | "percentage"
   | "date"
+  | "dateOnly"
   | "boolean"
   | "chip"
   | "chipGroup"
@@ -92,6 +93,9 @@ function formatCellValue<T>(
 
     case "date":
       return formatDate(rawValue, "dateNumeric");
+
+    case "dateOnly":
+      return formatDateOnly(rawValue, "dateNumeric");
 
     case "boolean":
       return rawValue ? "Sí" : "No";

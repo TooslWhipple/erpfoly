@@ -54,7 +54,6 @@ export interface CreateOrderPayload {
   order_date: string;
   notes?: string;
   client_id?: number;
-  requested_by?: number;
   status?: string;
   supplier_id?: number;
   items: OrderItemInput[];
@@ -67,7 +66,6 @@ export interface UpdateOrderPayload {
   order_date?: string;
   notes?: string;
   client_id?: number;
-  requested_by?: number;
   status?: string;
   items: UpdateOrderItemInput[];
 }
@@ -103,7 +101,6 @@ export interface QueryOrdersParams {
   status?: string;
   branch_id?: number;
   client_id?: number;
-  requested_by?: number;
   date_from?: string;
   date_to?: string;
 }
@@ -135,7 +132,7 @@ export interface OrderListItem {
   origin_branch: { id: number; name: string } | null;
   supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string } | null;
-  requested_by_user: { id: number; first_name: string; last_name: string } | null;
+  created_by_user: { id: number; first_name: string; last_name: string } | null;
   order_items: Array<{
     id: number;
     requested_quantity: number;
@@ -157,7 +154,7 @@ export interface OrderFullDetail {
   origin_branch: { id: number; name: string } | null;
   supplier: { id: number; name: string; business_name?: string } | null;
   client: { id: number; first_name: string; last_surname: string; phone_number: string | null } | null;
-  requested_by_user: { id: number; first_name: string; last_name: string; username: string } | null;
+  created_by_user: { id: number; first_name: string; last_name: string; username: string } | null;
   order_items: Array<{
     id: number;
     requested_quantity: number;

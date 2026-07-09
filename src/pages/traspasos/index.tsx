@@ -14,7 +14,7 @@ import {
 import { Stack } from "@mui/material";
 import { TRASPASOS_CREATE, TRASPASOS_READ, TRASPASOS_UPDATE } from "@/lib/permissions";
 import dayjs from "@/lib/dayjs";
-import { formatDate } from "@/utils/date";
+import { formatDate, formatDateOnly } from "@/utils/date";
 
 interface BranchOrder {
     id: number;
@@ -55,11 +55,11 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
     return {
         id: order.id,
         folio: order.folio,
-        date: dayjs(order.order_date).toDate(),
+        date: dayjs.utc(order.order_date).toDate(),
         originBranch: order.origin_branch?.name ?? "—",
         branch: order.branch?.name ?? "Sin sucursal",
-        requestedBy: order.requested_by_user
-            ? `${order.requested_by_user.first_name} ${order.requested_by_user.last_name}`
+        requestedBy: order.created_by_user
+            ? `${order.created_by_user.first_name} ${order.created_by_user.last_name}`
             : "—",
         requestedItems: totalRequested,
         deliveredItems: totalDelivered > 0 ? totalDelivered : null,
@@ -207,12 +207,12 @@ export default function TraspasosPage() {
             id: "date",
             label: "Fecha",
             size: "lg",
-            format: (value) => formatDate(value, "dateLong"),
+            format: (value) => formatDateOnly(value, "dateLong"),
         },
         {
             id: "originBranch",
             label: "Origen",
-            size: "lg",
+            size: "xl",
             truncate: true,
         },
         {
@@ -272,6 +272,7 @@ export default function TraspasosPage() {
             icon: <EditIcon fontSize="small" />,
             onClick: handleEditOrder,
             permission: TRASPASOS_UPDATE,
+            hidden: (row) => row.status !== "pending",
         },
     ];
 

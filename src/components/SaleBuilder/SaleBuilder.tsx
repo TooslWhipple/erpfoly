@@ -61,6 +61,7 @@ import {
   createLayaway,
   setDeliveryDate,
   getSaleDetail,
+  invalidateSaleDiscount,
 } from "@/services/ventas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
@@ -134,6 +135,12 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   const [originalItemIds, setOriginalItemIds] = useState<Set<number>>(
     new Set(),
   );
+  // Snapshot productId -> quantity al retomar la venta, usado para detectar
+  // si quitar/reducir un artículo debe invalidar un descuento especial ya
+  // aprobado (agregar artículos nuevos no invalida).
+  const [originalQuantities, setOriginalQuantities] = useState<
+    Map<number, number>
+  >(new Map());
   const [hydratedSaleId, setHydratedSaleId] = useState<number | null>(null);
   const [hydratedClientForSaleId, setHydratedClientForSaleId] = useState<
     number | null
@@ -352,6 +359,9 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     setActiveSaleId(resumeSaleData.id);
     setActiveSaleFolio(resumeSaleData.folio);
     setOriginalItemIds(new Set(resumeSaleData.items.map((item) => item.id)));
+    setOriginalQuantities(
+      new Map(resumeSaleData.items.map((item) => [item.product.id, item.quantity])),
+    );
 
     setCart(
       resumeSaleData.items.map((item) => ({
@@ -861,7 +871,33 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     setProductSearch("");
   }, [productDetail, productSources, lockedBranch, snackbar]);
 
+  // Invalidación optimista: el cambio de carrito ya se aplicó localmente
+  // cuando se llama esta función. Si el endpoint falla, se revierte al
+  // `previousCart` y se avisa por snackbar.
+  const triggerDiscountInvalidation = useCallback(
+    (previousCart: CartItem[]) => {
+      const request = resumeSaleData?.discountRequest;
+      if (!request || request.status !== "APPROVED") return;
+
+      void invalidateSaleDiscount(request.id).then((res) => {
+        if (res.error) {
+          setCart(previousCart);
+          snackbar.showError(
+            `No se pudo invalidar el descuento especial: ${res.error.message}`,
+          );
+          return;
+        }
+        void queryClient.invalidateQueries({
+          queryKey: ["resume-sale-draft", resumeSaleId],
+        });
+      });
+    },
+    [resumeSaleData?.discountRequest, resumeSaleId, queryClient, snackbar],
+  );
+
   const handleCartQtyChange = (productId: number, delta: number) => {
+    const previousCart = cart;
+
     setCart((prev) =>
       prev
         .map((item) =>
@@ -871,10 +907,26 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         )
         .filter((item) => item.quantity > 0),
     );
+
+    if (delta < 0) {
+      const originalQty = originalQuantities.get(productId);
+      const previousQty =
+        previousCart.find((item) => item.productId === productId)?.quantity ??
+        0;
+      const newQty = Math.max(0, previousQty + delta);
+      if (originalQty != null && newQty < originalQty) {
+        triggerDiscountInvalidation(previousCart);
+      }
+    }
   };
 
   const handleRemoveFromCart = (productId: number) => {
+    const previousCart = cart;
     setCart((prev) => prev.filter((item) => item.productId !== productId));
+
+    if (originalQuantities.has(productId)) {
+      triggerDiscountInvalidation(previousCart);
+    }
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
@@ -923,12 +975,21 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     (s, item) => s + item.discountAmount * item.quantity,
     0,
   );
-  const totalFinal = subtotalOriginal - totalDiscounts;
+  const approvedDiscountRequest =
+    resumeSaleData?.discountRequest?.status === "APPROVED"
+      ? resumeSaleData.discountRequest
+      : null;
+  const specialDiscountAmount = approvedDiscountRequest
+    ? (approvedDiscountRequest.approvedDiscountAmount ??
+      (subtotalOriginal - totalDiscounts) *
+        ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
+    : 0;
+  const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
   const totalPaid = cashAmtNum + cardAmtNum;
   const ENGANCHE_PCT = 0.1;
-  const enganche = subtotal * ENGANCHE_PCT;
+  const enganche = totalFinal * ENGANCHE_PCT;
   const amountToPay =
     paymentType === "CREDIT"
       ? enganche
@@ -1803,6 +1864,16 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     </Typography>
                   </Stack>
                 )}
+                {specialDiscountAmount > 0 && (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Descuento especial aprobado
+                    </Typography>
+                    <Typography variant="body2" color="error.main">
+                      -{formatCurrency(specialDiscountAmount)}
+                    </Typography>
+                  </Stack>
+                )}
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">
                     Total
@@ -2553,7 +2624,10 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
             <Button
               variant="outlined"
               sx={{ borderRadius: 2, textTransform: "none" }}
-              disabled={resumeSaleData?.discountRequest != null}
+              disabled={
+                resumeSaleData?.discountRequest != null &&
+                resumeSaleData.discountRequest.status !== "INVALIDATED"
+              }
               onClick={() => setDiscountRequestModalOpen(true)}
             >
               Solicitar descuento
@@ -2596,6 +2670,11 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
               estado={getDiscountRequestStatusLabel(
                 resumeSaleData.discountRequest.status,
               )}
+              warning={
+                resumeSaleData.discountRequest.status === "APPROVED"
+                  ? "Quitar un artículo o reducir su cantidad invalidará este descuento."
+                  : undefined
+              }
             />
           )}
           <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
@@ -2858,6 +2937,26 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     </Typography>
                   </Stack>
 
+                  {specialDiscountAmount > 0 && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Descuento especial aprobado
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        color="error.main"
+                      >
+                        -{formatCurrency(specialDiscountAmount)}
+                      </Typography>
+                    </Stack>
+                  )}
+
                   <Box
                     sx={{
                       bgcolor: "grey.100",
@@ -2873,7 +2972,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                       Total
                     </Typography>
                     <Typography variant="body2" fontWeight={700}>
-                      {formatCurrency(subtotal)}
+                      {formatCurrency(totalFinal)}
                     </Typography>
                   </Box>
 
@@ -2914,7 +3013,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                             Total a liquidar
                           </Typography>
                           <Typography variant="h6" fontWeight={700}>
-                            {formatCurrency(subtotal)}
+                            {formatCurrency(totalFinal)}
                           </Typography>
                         </Stack>
 
@@ -3663,7 +3762,11 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
               open={discountRequestModalOpen}
               onClose={() => setDiscountRequestModalOpen(false)}
               saleId={resumeSaleId}
-              existingRequest={resumeSaleData?.discountRequest ?? null}
+              existingRequest={
+                resumeSaleData?.discountRequest?.status === "INVALIDATED"
+                  ? null
+                  : (resumeSaleData?.discountRequest ?? null)
+              }
               onSuccess={() => {
                 showSuccess("Solicitud de descuento enviada.");
                 void queryClient.invalidateQueries({

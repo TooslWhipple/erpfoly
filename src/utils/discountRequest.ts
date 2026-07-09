@@ -28,6 +28,7 @@ export const DISCOUNT_REQUEST_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pendiente de autorización",
   APPROVED: "Aprobado",
   REJECTED: "Rechazado",
+  INVALIDATED: "Invalidado",
 };
 
 export function getDiscountRequestStatusLabel(status: string): string {

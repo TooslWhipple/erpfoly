@@ -90,6 +90,8 @@ export { LiquidationRuleActivityModal } from "./LiquidationRuleActivityModal";
 export type { LiquidationRuleActivityModalProps } from "./LiquidationRuleActivityModal";
 export { FileUpload } from "./FileUpload";
 export type { FileUploadProps, UploadedFileItem } from "./FileUpload";
+export { ImageGalleryUpload } from "./ImageGalleryUpload";
+export type { ImageGalleryUploadProps, ImageGalleryUploadItem } from "./ImageGalleryUpload";
 export { ImageViewerModal } from "./ImageViewerModal";
 export type { ImageViewerModalProps } from "./ImageViewerModal";
 export { ApproveCreditModal } from "./ApproveCreditModal";
@@ -107,7 +109,11 @@ export type {
 export { CreditApplicationStatusCard } from "./CreditApplicationStatusCard";
 export type { CreditApplicationStatusCardProps } from "./CreditApplicationStatusCard";
 export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
-export type { ApproveDiscountRequestModalProps } from "./ApproveDiscountRequestModal";
+export type {
+  ApproveDiscountRequestModalProps,
+  ApproveDiscountRequestMode,
+  ApproveDiscountRequestResult,
+} from "./ApproveDiscountRequestModal";
 export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";
 export type { RejectDiscountRequestModalProps } from "./RejectDiscountRequestModal";
 export { TrackSlider } from "./TrackSlider";

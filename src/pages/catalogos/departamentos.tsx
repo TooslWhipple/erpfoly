@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, ModalFormZod, TabFilters } from "@/components";
+import { Title, TableCrud, ModalFormZod, TabFilters } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -274,7 +274,7 @@ export default function Departamentos() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Departamentos" />
 
@@ -326,6 +326,6 @@ export default function Departamentos() {
         fullWidth
         validateOn="change"
       />
-    </MainLayout>
+    </>
   );
 }

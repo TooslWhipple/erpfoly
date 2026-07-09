@@ -20,11 +20,19 @@ export const StyledDrawer = styled(Drawer, {
     marginTop: (isMobile) ? 0 : "16px",
     marginLeft: (isMobile) ? 0 : "16px",
     padding: theme.spacing(1),
-    overflow: "hidden",
+    overflow: "visible",
     backgroundColor: (isMobile) ? theme.palette.background.paper : "transparent",
     borderRadius: (isMobile) ? 0 : "8px",
     border: (isMobile) ? "none" : `1px solid ${theme.palette.app.border}`,
   },
+}));
+
+export const SidebarHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+  flexShrink: 0,
+  overflow: "visible",
 }));
 
 export const NavigationContainer = styled("div")(({ theme }) => ({

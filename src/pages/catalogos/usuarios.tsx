@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
 import { KeyRound, UserCheck, UserX } from "lucide-react";
-import { MainLayout, Title, TableCrud, TabFilters, ItemNameHighlight } from "@/components";
+import { Title, TableCrud, TabFilters, ItemNameHighlight } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import {
     getUsers as getUsersApi,
@@ -245,7 +245,7 @@ export default function Usuarios() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
                 <Title title="Usuarios" />
                 <TabFilters
@@ -279,6 +279,6 @@ export default function Usuarios() {
                 />
             </Stack>
             {confirmationModal}
-        </MainLayout>
+        </>
     );
 }

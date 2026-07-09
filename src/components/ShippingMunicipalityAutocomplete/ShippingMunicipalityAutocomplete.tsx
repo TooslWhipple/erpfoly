@@ -111,12 +111,8 @@ export function ShippingMunicipalityAutocomplete({
   useEffect(() => {
     if (selectedOption != null) {
       setInputValue(selectedOption.label);
-      return;
     }
-    if (value == null) {
-      setInputValue("");
-    }
-  }, [selectedOption, value]);
+  }, [selectedOption]);
 
   return (
     <Autocomplete<MunicipalityOption, false, false, false>
@@ -148,14 +144,14 @@ export function ShippingMunicipalityAutocomplete({
       onInputChange={(_, inputValue: string, reason: AutocompleteInputChangeReason) => {
         if (reason === "input") {
           if (selectedOption != null) {
-            return;
+            clearSelection(true);
           }
           setInputValue(inputValue);
           setSearchInput(inputValue);
           return;
         }
         if (reason === "clear") {
-          clearSelection(false);
+          clearSelection(true);
           return;
         }
         if (reason === "reset") {
@@ -189,7 +185,6 @@ export function ShippingMunicipalityAutocomplete({
           }}
           InputProps={{
             ...params.InputProps,
-            readOnly: selectedOption != null,
             endAdornment: (
               <>
                 {isFetching ? <CircularProgress color="inherit" size={18} /> : null}

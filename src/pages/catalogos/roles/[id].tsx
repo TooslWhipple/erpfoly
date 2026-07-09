@@ -9,9 +9,17 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { MainLayout, Breadcrumbs, FormTextField, FormSelect, PermissionsTable } from "@/components";
+import {
+  Breadcrumbs,
+  FormTextField,
+  FormSelect,
+  PermissionsTable,
+} from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { ModulePermission, Permission } from "@/components/PermissionsTable";
+import type {
+  ModulePermission,
+  Permission,
+} from "@/components/PermissionsTable";
 import { FormCard } from "@/styles/catalogos/roles.styles";
 import {
   getRoleDetail,
@@ -32,16 +40,15 @@ import {
   ROLE_PLATFORM_OPTIONS,
   type RolePlatform,
 } from "@/constants/role-platform";
-
 export default function RoleFormPage() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const { id } = router.query;
-
   const isNew = id === "nuevo";
-  const canSaveRole = hasPermission(isNew ? CATALOG_ROLES_CREATE : CATALOG_ROLES_UPDATE);
+  const canSaveRole = hasPermission(
+    isNew ? CATALOG_ROLES_CREATE : CATALOG_ROLES_UPDATE,
+  );
   const roleId = isNew ? null : Number(id);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -50,20 +57,21 @@ export default function RoleFormPage() {
   const [nameError, setNameError] = useState<string | undefined>();
   const [apiModules, setApiModules] = useState<PermissionsTemplateResponse>([]);
   const [tableModules, setTableModules] = useState<ModulePermission[]>([]);
-
   const initialDataRef = useRef<{
     name: string;
     description: string;
     platform: RolePlatform;
     tableModules: ModulePermission[];
   } | null>(null);
-
   useEffect(() => {
     if (isNew) {
       getPermissionsTemplate()
         .then((result) => {
           if (result.error) {
-            console.error("[RoleForm] Error loading permissions template:", result.error.message);
+            console.error(
+              "[RoleForm] Error loading permissions template:",
+              result.error.message,
+            );
             return;
           }
           if (result.data) {
@@ -104,26 +112,24 @@ export default function RoleFormPage() {
       })
       .finally(() => setLoading(false));
   }, [isNew, roleId]);
-
   const handlePermissionChange = useCallback(
     (moduleId: string, permission: keyof Permission, value: boolean) => {
       setTableModules((prev) =>
         prev.map((m) =>
           m.id === moduleId
             ? {
-              ...m,
-              permissions: {
-                ...m.permissions,
-                [permission]: value,
-              },
-            }
+                ...m,
+                permissions: {
+                  ...m.permissions,
+                  [permission]: value,
+                },
+              }
             : m,
         ),
       );
     },
     [],
   );
-
   const handleGroupPermissionChange = useCallback(
     (permission: keyof Permission, value: boolean) => {
       setTableModules((prev) =>
@@ -138,7 +144,6 @@ export default function RoleFormPage() {
     },
     [],
   );
-
   const isGroupChecked = useCallback(
     (permission: keyof Permission): boolean => {
       if (tableModules.length === 0) return false;
@@ -146,7 +151,6 @@ export default function RoleFormPage() {
     },
     [tableModules],
   );
-
   const isGroupIndeterminate = useCallback(
     (permission: keyof Permission): boolean => {
       if (tableModules.length === 0) return false;
@@ -157,16 +161,13 @@ export default function RoleFormPage() {
     },
     [tableModules],
   );
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
     if (nameError) setNameError(undefined);
   };
-
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDescription(e.target.value);
   };
-
   const validateForm = (): boolean => {
     if (!name.trim()) {
       setNameError("El nombre es requerido");
@@ -178,25 +179,29 @@ export default function RoleFormPage() {
     }
     return true;
   };
-
   const handleSave = async () => {
     if (!validateForm()) return;
-
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
-
     if (!isNew && roleId && initialDataRef.current) {
       const initial = initialDataRef.current;
       const nameUnchanged = trimmedName === initial.name;
       const descriptionUnchanged = trimmedDescription === initial.description;
       const platformUnchanged = platform === initial.platform;
-      const permissionsUnchanged = areModulesEqual(tableModules, initial.tableModules);
-      if (nameUnchanged && descriptionUnchanged && platformUnchanged && permissionsUnchanged) {
+      const permissionsUnchanged = areModulesEqual(
+        tableModules,
+        initial.tableModules,
+      );
+      if (
+        nameUnchanged &&
+        descriptionUnchanged &&
+        platformUnchanged &&
+        permissionsUnchanged
+      ) {
         router.push("/catalogos/roles");
         return;
       }
     }
-
     setSaving(true);
     if (isNew) {
       const created = await createRole({
@@ -210,10 +215,15 @@ export default function RoleFormPage() {
         return;
       }
       const payload = tableModulesToPayload(apiModules, tableModules);
-      const permResult = await updateRolePermissions(created.data.id, { permissions: payload });
+      const permResult = await updateRolePermissions(created.data.id, {
+        permissions: payload,
+      });
       setSaving(false);
       if (permResult.error) {
-        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        console.error(
+          "[RoleForm] Error saving permissions:",
+          permResult.error.message,
+        );
         return;
       }
       router.push("/catalogos/roles");
@@ -229,10 +239,15 @@ export default function RoleFormPage() {
         return;
       }
       const payload = tableModulesToPayload(apiModules, tableModules);
-      const permResult = await updateRolePermissions(roleId, { permissions: payload });
+      const permResult = await updateRolePermissions(roleId, {
+        permissions: payload,
+      });
       setSaving(false);
       if (permResult.error) {
-        console.error("[RoleForm] Error saving permissions:", permResult.error.message);
+        console.error(
+          "[RoleForm] Error saving permissions:",
+          permResult.error.message,
+        );
         return;
       }
       router.push("/catalogos/roles");
@@ -240,107 +255,131 @@ export default function RoleFormPage() {
       setSaving(false);
     }
   };
-
   const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Roles", href: "/catalogos/roles" },
-    { label: isNew ? "Nuevo" : "Editar" },
+    {
+      label: "Roles",
+      href: "/catalogos/roles",
+    },
+    {
+      label: isNew ? "Nuevo" : "Editar",
+    },
   ];
-
   if (loading) {
     return (
-      <MainLayout>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: 400,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      </MainLayout>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 400,
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
-
   return (
-    <MainLayout>
-      <Stack spacing={3}>
-        <Breadcrumbs items={breadcrumbItems} />
-        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">{isNew ? "Nuevo rol" : "Editar rol"}</Typography>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving || !canSaveRole}
-          >
-            {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
-          </Button>
-        </Stack>
-        <Divider />
-        <FormCard>
-          <Typography variant="subtitle2" fontWeight={600}>Datos generales</Typography>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField
-                label="Nombre"
-                placeholder="Ej. Administrador"
-                value={name}
-                onChange={handleNameChange}
-                error={Boolean(nameError)}
-                helperText={nameError}
-                autoFocus
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField
-                label="Descripción"
-                placeholder="Opcional"
-                value={description}
-                onChange={handleDescriptionChange}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormSelect
-                label="Plataforma"
-                placeholder="Selecciona una plataforma"
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value as RolePlatform)}
-                options={ROLE_PLATFORM_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-                disabled={saving}
-              />
-            </Grid>
-          </Grid>
-          <Typography variant="subtitle2" fontWeight={600}>Permisos</Typography>
-          <PermissionsTable
-            modules={tableModules}
-            onChange={handlePermissionChange}
-            onGroupChange={handleGroupPermissionChange}
-            groupState={{
-              view: {
-                checked: isGroupChecked("view"),
-                indeterminate: isGroupIndeterminate("view"),
-              },
-              create: {
-                checked: isGroupChecked("create"),
-                indeterminate: isGroupIndeterminate("create"),
-              },
-              edit: {
-                checked: isGroupChecked("edit"),
-                indeterminate: isGroupIndeterminate("edit"),
-              },
-              delete: {
-                checked: isGroupChecked("delete"),
-                indeterminate: isGroupIndeterminate("delete"),
-              },
-            }}
-            disabled={saving}
-          />
-        </FormCard>
+    <Stack spacing={3}>
+      <Breadcrumbs items={breadcrumbItems} />
+      <Stack
+        direction="row"
+        spacing={2}
+        justifyContent="space-between"
+        alignItems="center"
+      >
+        <Typography variant="h5">
+          {isNew ? "Nuevo rol" : "Editar rol"}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving || !canSaveRole}
+        >
+          {saving ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
+        </Button>
       </Stack>
-    </MainLayout>
+      <Divider />
+      <FormCard>
+        <Typography variant="subtitle2" fontWeight={600}>
+          Datos generales
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <FormTextField
+              label="Nombre"
+              placeholder="Ej. Administrador"
+              value={name}
+              onChange={handleNameChange}
+              error={Boolean(nameError)}
+              helperText={nameError}
+              autoFocus
+            />
+          </Grid>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <FormTextField
+              label="Descripción"
+              placeholder="Opcional"
+              value={description}
+              onChange={handleDescriptionChange}
+            />
+          </Grid>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <FormSelect
+              label="Plataforma"
+              placeholder="Selecciona una plataforma"
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as RolePlatform)}
+              options={ROLE_PLATFORM_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              disabled={saving}
+            />
+          </Grid>
+        </Grid>
+        <Typography variant="subtitle2" fontWeight={600}>
+          Permisos
+        </Typography>
+        <PermissionsTable
+          modules={tableModules}
+          onChange={handlePermissionChange}
+          onGroupChange={handleGroupPermissionChange}
+          groupState={{
+            view: {
+              checked: isGroupChecked("view"),
+              indeterminate: isGroupIndeterminate("view"),
+            },
+            create: {
+              checked: isGroupChecked("create"),
+              indeterminate: isGroupIndeterminate("create"),
+            },
+            edit: {
+              checked: isGroupChecked("edit"),
+              indeterminate: isGroupIndeterminate("edit"),
+            },
+            delete: {
+              checked: isGroupChecked("delete"),
+              indeterminate: isGroupIndeterminate("delete"),
+            },
+          }}
+          disabled={saving}
+        />
+      </FormCard>
+    </Stack>
   );
 }

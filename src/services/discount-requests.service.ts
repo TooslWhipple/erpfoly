@@ -16,6 +16,7 @@ const STATUS_TO_API: Record<DiscountRequestStatus, string> = {
   pending: "PENDING",
   approved: "APPROVED",
   rejected: "REJECTED",
+  invalidated: "INVALIDATED",
 };
 
 export type GetDiscountRequestsResponse = PaginatedRowsResponse<DiscountRequest>;

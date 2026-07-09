@@ -1,7 +1,11 @@
 /**
  * Discount request status for list filtering and display.
  */
-export type DiscountRequestStatus = "pending" | "approved" | "rejected";
+export type DiscountRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "invalidated";
 
 /**
  * Payment/sale type for the discount request (displayed as chip).
@@ -80,7 +84,9 @@ export interface DiscountRequestDetail {
   notes: string | null;
   rejectionReason: string | null;
   requestedDiscountPct: number | null;
+  requestedDiscountAmount: number | null;
   approvedDiscountPct: number | null;
+  approvedDiscountAmount: number | null;
   resolvedAt: string | null;
   createdAt: string;
   saleType: SaleTypeForm;
@@ -96,10 +102,9 @@ export interface DiscountRequestDetail {
   delivery: DiscountRequestDelivery | null;
 }
 
-export interface ApproveDiscountRequestPayload {
-  approvedDiscountPct: number;
-  notes?: string;
-}
+export type ApproveDiscountRequestPayload =
+  | { approvedDiscountPct: number; notes?: string }
+  | { approvedDiscountAmount: number; notes?: string };
 
 export interface RejectDiscountRequestPayload {
   rejectionReason: string;

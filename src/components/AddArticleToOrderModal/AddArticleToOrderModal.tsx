@@ -64,7 +64,8 @@ export function AddArticleToOrderModal({
     const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = event.target.value;
         if (inputValue === "" || /^\d*\.?\d*$/.test(inputValue)) {
-            const numValue = parseFloat(inputValue) || 0;
+            const parsed = parseFloat(inputValue);
+            const numValue = Number.isFinite(parsed) ? parsed : 0;
             setUnitPrice(numValue);
         }
     };
@@ -121,7 +122,7 @@ export function AddArticleToOrderModal({
                             variant="outlined"
                             size="small"
                             type="text"
-                            value={unitPrice === 0 ? "" : unitPrice.toString()}
+                            value={unitPrice != null && unitPrice > 0 ? unitPrice.toString() : ""}
                             onChange={handlePriceChange}
                             placeholder="0.00"
                             InputProps={{

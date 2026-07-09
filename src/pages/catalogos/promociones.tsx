@@ -12,7 +12,7 @@ import type { Column, RowAction } from "@/components/TableCrud";
 import type { PromotionListItem } from "@/types/promociones.types";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { formatDate } from "@/utils/date";
+import { formatDateOnly } from "@/utils/date";
 import {
   getPromotions,
   deletePromotion,
@@ -181,7 +181,7 @@ export default function Promociones() {
         label: "Inicio",
         type: "text",
         size: "md",
-        format: (value) => formatDate(String(value), "dateNumeric"),
+        format: (value) => formatDateOnly(String(value), "dateNumeric"),
       },
       {
         id: "end_date",
@@ -189,7 +189,7 @@ export default function Promociones() {
         type: "text",
         size: "md",
         format: (value) =>
-          formatDate(value as string | null | undefined, "dateNumeric", {
+          formatDateOnly(value as string | null | undefined, "dateNumeric", {
             fallback: "Sin fecha fin",
           }),
       },

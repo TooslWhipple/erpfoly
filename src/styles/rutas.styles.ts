@@ -1,19 +1,64 @@
+import { Skeleton, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { theme } from "@/styles/theme";
 
-export const RouteDetailPanel = styled("div")(({ theme }) => ({
+export const RutasPageLayout = styled(Stack)({
+  flex: 1,
+  minHeight: 0,
+  height: "100%",
+  overflow: "hidden",
+});
+
+export const RoutesSidebar = styled(Stack)(({ theme }) => ({
+  flex: "0 0 272px",
+  maxWidth: 272,
+  minHeight: 0,
+  minWidth: 260,
+  gap: theme.spacing(1),
+  [theme.breakpoints.down("md")]: {
+    flex: "0 0 auto",
+    maxWidth: "100%",
+  },
+}));
+
+export const DateHeaderRow = styled(Stack)(({ theme }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  flexWrap: "nowrap",
+  minWidth: 260,
+  gap: theme.spacing(1),
+  flexShrink: 0,
+}));
+
+export const DateLabel = styled(Typography)({
+  fontWeight: 500,
+  textOverflow: "ellipsis",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+});
+
+export const RoutesList = styled(Stack)(({ theme }) => ({
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+  gap: theme.spacing(1),
+}));
+
+export const RouteDetailPanel = styled(Stack)({
   flex: 1,
   minWidth: 0,
-  display: "flex",
-  flexDirection: "column",
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${theme.palette.app.border}`,
+  minHeight: 0,
+  overflow: "auto",
+});
+
+export const RoundedSkeleton = styled(Skeleton)({
   borderRadius: 8,
-  overflow: "hidden",
-}));
+});
 
 export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selected }) => ({
   display: "flex",
+  flexShrink: 0,
+  minHeight: 96,
   backgroundColor: theme.palette.background.paper,
   border: (selected) ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
@@ -32,18 +77,21 @@ export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selecte
 
 export const MapPlaceholder = styled("div")(({ theme }) => ({
   width: "88px",
-  height: "100%",
+  height: 88,
+  minHeight: 72,
   flexShrink: 0,
+  alignSelf: "flex-start",
   backgroundColor: "#E4E4E7",
   borderRadius: "12px",
   [theme.breakpoints.down("sm")]: {
-    width: 64
+    width: 64,
+    height: 64,
   },
 }));
 
 export const RouteMiniMapThumb = styled("img")({
   width: "88px",
-  height: "100%",
+  height: 88,
   minHeight: 72,
   maxHeight: 120,
   objectFit: "contain",
@@ -51,6 +99,7 @@ export const RouteMiniMapThumb = styled("img")({
   borderRadius: "12px",
   border: `1px solid ${theme.palette.app.border}`,
   flexShrink: 0,
+  alignSelf: "flex-start",
   display: "block",
 });
 

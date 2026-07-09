@@ -1325,7 +1325,7 @@ function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<
 
   const dateStr = day.format('YYYY-MM-DD');
   const availability = availabilityMap?.[dateStr];
-  const isPastDay = day.startOf('day').isBefore(dayjs().startOf('day'));
+  const isPastDay = dayjs.utc(dateStr).isBefore(dayjs.utc().startOf('day'));
 
   const color = outsideCurrentMonth
     ? null

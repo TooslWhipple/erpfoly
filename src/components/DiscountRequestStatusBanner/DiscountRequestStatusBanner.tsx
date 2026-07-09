@@ -5,11 +5,13 @@ import { BannerContainer, StatusBadge } from "./styles";
 export interface DiscountRequestStatusBannerProps {
   motivo: string;
   estado: string;
+  warning?: string;
 }
 
 export function DiscountRequestStatusBanner({
   motivo,
   estado,
+  warning,
 }: DiscountRequestStatusBannerProps) {
   return (
     <BannerContainer>
@@ -20,6 +22,13 @@ export function DiscountRequestStatusBanner({
         <Typography sx={{ fontSize: 15, color: "#6B7280", mt: 0.5 }}>
           Motivo: {motivo}
         </Typography>
+        {warning && (
+          <Typography
+            sx={{ fontSize: 13, color: "#B45309", fontWeight: 600, mt: 0.5 }}
+          >
+            {warning}
+          </Typography>
+        )}
       </div>
       <StatusBadge>
         <Clock size={16} />

@@ -7,6 +7,8 @@ import {
   Button,
   InputAdornment,
   Grid,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { TrackSlider } from "@/components/TrackSlider";
@@ -15,6 +17,13 @@ import { PriceComparisonPanel } from "./styles";
 import { ChevronRight } from "lucide-react";
 
 const DISCOUNT_MARKS = [2, 5, 10, 15, 20, 25, 30, 35, 40] as const;
+const MAX_SPECIAL_DISCOUNT_PCT = 40;
+
+export type ApproveDiscountRequestMode = "pct" | "amount";
+
+export type ApproveDiscountRequestResult =
+  | { mode: "pct"; value: number }
+  | { mode: "amount"; value: number };
 
 function snapToNearestMark(value: number): number {
   return DISCOUNT_MARKS.reduce((closest, mark) =>
@@ -36,7 +45,7 @@ export interface ApproveDiscountRequestModalProps {
   onClose: () => void;
   saleTotal: number;
   suggestedDiscountPercent?: number;
-  onApprove?: (approvedDiscountPercent: number) => void;
+  onApprove?: (result: ApproveDiscountRequestResult) => void;
 }
 
 export function ApproveDiscountRequestModal({
@@ -46,6 +55,12 @@ export function ApproveDiscountRequestModal({
   suggestedDiscountPercent = 5,
   onApprove,
 }: ApproveDiscountRequestModalProps) {
+  const [mode, setMode] = useState<ApproveDiscountRequestMode>("pct");
+  const maxAmount = useMemo(
+    () => saleTotal * (MAX_SPECIAL_DISCOUNT_PCT / 100),
+    [saleTotal]
+  );
+
   const [discountPercent, setDiscountPercent] = useState(() =>
     snapToNearestMark(suggestedDiscountPercent)
   );
@@ -53,10 +68,42 @@ export function ApproveDiscountRequestModal({
     String(snapToNearestMark(suggestedDiscountPercent))
   );
 
-  const discountedTotal = useMemo(
-    () => saleTotal * (1 - discountPercent / 100),
-    [saleTotal, discountPercent]
+  const [discountAmount, setDiscountAmount] = useState(() => maxAmount);
+  const [amountInputDraft, setAmountInputDraft] = useState(() =>
+    maxAmount.toFixed(2)
   );
+
+  const discountedTotal = useMemo(() => {
+    if (mode === "amount") {
+      return saleTotal - discountAmount;
+    }
+    return saleTotal * (1 - discountPercent / 100);
+  }, [mode, saleTotal, discountPercent, discountAmount]);
+
+  const handleModeChange = useCallback(
+    (_: React.MouseEvent<HTMLElement>, value: ApproveDiscountRequestMode | null) => {
+      if (value) setMode(value);
+    },
+    []
+  );
+
+  const handleAmountInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setAmountInputDraft(event.target.value.replace(/[^\d.]/g, ""));
+    },
+    []
+  );
+
+  const handleAmountInputBlur = useCallback(() => {
+    const parsed = Number.parseFloat(amountInputDraft);
+    if (Number.isNaN(parsed)) {
+      setAmountInputDraft(discountAmount.toFixed(2));
+      return;
+    }
+    const clamped = Math.min(Math.max(parsed, 0), maxAmount);
+    setDiscountAmount(clamped);
+    setAmountInputDraft(clamped.toFixed(2));
+  }, [amountInputDraft, discountAmount, maxAmount]);
 
   const syncPercentFromNumber = useCallback((value: number) => {
     const snapped = snapToNearestMark(value);
@@ -88,7 +135,11 @@ export function ApproveDiscountRequestModal({
   }, [percentInputDraft, discountPercent, syncPercentFromNumber]);
 
   const handleApproveClick = () => {
-    onApprove?.(discountPercent);
+    if (mode === "amount") {
+      onApprove?.({ mode: "amount", value: discountAmount });
+    } else {
+      onApprove?.({ mode: "pct", value: discountPercent });
+    }
     onClose();
   };
 
@@ -101,6 +152,9 @@ export function ApproveDiscountRequestModal({
           const snapped = snapToNearestMark(suggestedDiscountPercent);
           setDiscountPercent(snapped);
           setPercentInputDraft(String(snapped));
+          setMode("pct");
+          setDiscountAmount(maxAmount);
+          setAmountInputDraft(maxAmount.toFixed(2));
         },
       }}
       maxWidth="sm"
@@ -128,40 +182,84 @@ export function ApproveDiscountRequestModal({
             <Typography variant="body2" color="text.secondary">Selecciona el descuento a aplicar para esta venta.</Typography>
           </Stack>
 
-          <Grid container spacing={1} alignItems="center">
-            <Grid size={{ xs: "grow" }}>
-              <Typography variant="body2" fontWeight={600}>Descuento aplicado:</Typography>
-            </Grid>
-            <Grid size={{ xs: 4 }}>
-              <FormTextField
-                size="small"
-                value={percentInputDraft}
-                onChange={handlePercentInputChange}
-                onBlur={handlePercentInputBlur}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                }}
-              />
-            </Grid>
-          </Grid>
+          <ToggleButtonGroup
+            value={mode}
+            exclusive
+            fullWidth
+            size="small"
+            onChange={handleModeChange}
+            sx={{
+              "& .MuiToggleButtonGroup-grouped": {
+                border: `1px solid ${theme.palette.app.border}`,
+                "&.Mui-selected": {
+                  backgroundColor: theme.palette.app.sidebar.itemSelected,
+                  color: theme.palette.app.sidebar.textSelected,
+                },
+              },
+            }}
+          >
+            <ToggleButton value="pct">Porcentaje</ToggleButton>
+            <ToggleButton value="amount">Monto fijo</ToggleButton>
+          </ToggleButtonGroup>
 
-          <TrackSlider
-            value={discountPercent}
-            onChange={handleSliderChange}
-            min={DISCOUNT_MARKS[0]}
-            max={DISCOUNT_MARKS[DISCOUNT_MARKS.length - 1]}
-            marks={DISCOUNT_MARKS}
-            getMarkLabel={(markValue) => (
-              <Typography
-                component="span"
-                variant="caption"
-                fontWeight={markValue === discountPercent ? 700 : 400}
-                color="text.secondary"
-              >
-                {markValue}%
-              </Typography>
-            )}
-          />
+          {mode === "pct" ? (
+            <>
+              <Grid container spacing={1} alignItems="center">
+                <Grid size={{ xs: "grow" }}>
+                  <Typography variant="body2" fontWeight={600}>Descuento aplicado:</Typography>
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <FormTextField
+                    size="small"
+                    value={percentInputDraft}
+                    onChange={handlePercentInputChange}
+                    onBlur={handlePercentInputBlur}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+              </Grid>
+
+              <TrackSlider
+                value={discountPercent}
+                onChange={handleSliderChange}
+                min={DISCOUNT_MARKS[0]}
+                max={DISCOUNT_MARKS[DISCOUNT_MARKS.length - 1]}
+                marks={DISCOUNT_MARKS}
+                getMarkLabel={(markValue) => (
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    fontWeight={markValue === discountPercent ? 700 : 400}
+                    color="text.secondary"
+                  >
+                    {markValue}%
+                  </Typography>
+                )}
+              />
+            </>
+          ) : (
+            <Grid container spacing={1} alignItems="center">
+              <Grid size={{ xs: "grow" }}>
+                <Typography variant="body2" fontWeight={600}>Monto de descuento:</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Máximo {formatCurrency(maxAmount)} ({MAX_SPECIAL_DISCOUNT_PCT}% del total)
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <FormTextField
+                  size="small"
+                  value={amountInputDraft}
+                  onChange={handleAmountInputChange}
+                  onBlur={handleAmountInputBlur}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            </Grid>
+          )}
 
           <PriceComparisonPanel>
             <Stack spacing={0.5} flex={1}>
@@ -182,7 +280,9 @@ export function ApproveDiscountRequestModal({
           </PriceComparisonPanel>
 
           <Button variant="contained" color="primary" fullWidth onClick={handleApproveClick} sx={{ mt: 1 }}>
-            Aprobar descuento [{discountPercent}%]
+            {mode === "amount"
+              ? `Aprobar descuento [${formatCurrency(discountAmount)}]`
+              : `Aprobar descuento [${discountPercent}%]`}
           </Button>
         </Stack>
       </DialogContent>

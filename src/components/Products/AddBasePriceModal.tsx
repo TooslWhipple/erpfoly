@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Grid, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Grid, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import { FormTextField } from "@/components";
 import { SideModal } from "@/components/SideModal";
 import { theme } from "@/styles/theme";
+import { useProductPricePreview } from "@/hooks/useProductPricePreview";
+import {
+    parsePercentFieldInput,
+    sanitizeIntegerPercentInput,
+    MIN_PROFIT_MARGIN_PERCENT,
+    MAX_PROFIT_MARGIN_PERCENT,
+} from "@/utils/percentInput";
 import type { ProductBasePrice } from "@/types/productos.types";
 
 export interface AddBasePriceModalProps {
@@ -15,10 +22,8 @@ export interface AddBasePriceModalProps {
 }
 
 function parseMarginPercent(raw: string): number | null {
-    const trimmed = raw.trim();
-    if (trimmed === "") return null;
-    const n = Number(trimmed);
-    if (Number.isNaN(n) || n < 0) return null;
+    const n = parsePercentFieldInput(raw);
+    if (n === null || n < MIN_PROFIT_MARGIN_PERCENT || n > MAX_PROFIT_MARGIN_PERCENT) return null;
     return n;
 }
 
@@ -41,11 +46,14 @@ export function AddBasePriceModal({
 
     const marginParsed = useMemo(() => parseMarginPercent(marginPercent), [marginPercent]);
 
-    const calculatedPrice = useMemo(() => {
-        if (marginParsed === null) return null;
-        const safeCost = Math.max(0, referenceCost);
-        return safeCost * (1 + marginParsed / 100);
-    }, [referenceCost, marginParsed]);
+    const {
+        subtotal: calculatedSubtotal,
+        price: calculatedPrice,
+        isLoading: calculatedPriceLoading,
+        isError: calculatedPriceError,
+    } = useProductPricePreview(Math.max(0, referenceCost), marginParsed ?? 0, {
+        enabled: marginParsed !== null,
+    });
 
     const canSubmit = name.trim().length > 0 && marginParsed !== null;
 
@@ -81,12 +89,14 @@ export function AddBasePriceModal({
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <FormTextField
                             label="Margen (%)"
-                            placeholder="0.00"
-                            type="number"
+                            placeholder="Ej. 20"
                             value={marginPercent}
-                            onChange={(e) => setMarginPercent(e.target.value)}
+                            onChange={(e) => setMarginPercent(sanitizeIntegerPercentInput(e.target.value))}
                             fullWidth
-                            inputProps={{ min: 0, step: "0.01" }}
+                            slotProps={{
+                                htmlInput: { inputMode: "numeric" },
+                            }}
+                            helperText={`Número entero entre ${MIN_PROFIT_MARGIN_PERCENT} y ${MAX_PROFIT_MARGIN_PERCENT}.`}
                         />
                     </Grid>
                 </Grid>
@@ -94,18 +104,37 @@ export function AddBasePriceModal({
                 <div
                     style={{
                         display: "flex",
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
                         borderRadius: "8px",
                         padding: "16px",
                         backgroundColor: "#E2E8F0",
                         textAlign: "right",
-                        gap: "8px",
+                        gap: "4px",
                     }}
                 >
-                    <Typography variant="body2" color="text.secondary">Precio después del cálculo:</Typography>
-                    <Typography variant="body2" fontWeight={700} color="text.primary">{numeral(calculatedPrice ?? 0).format("$0,0.00")}</Typography>
+                    {
+                        calculatedPriceLoading ? (
+                            <CircularProgress size={16} />
+                        ) : calculatedPriceError ? (
+                            <Typography variant="body2" fontWeight={700} color="text.primary">No se pudo calcular</Typography>
+                        ) : (
+                            <>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="body2" color="text.secondary">Precio:</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="text.primary">
+                                        {numeral(calculatedSubtotal).format("$0,0.00")}
+                                    </Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="body2" color="text.secondary">Precio final:</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="text.primary">
+                                        {numeral(calculatedPrice).format("$0,0.00")}
+                                    </Typography>
+                                </Stack>
+                            </>
+                        )
+                    }
                 </div>
 
                 <Button

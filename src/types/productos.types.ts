@@ -75,6 +75,13 @@ export interface ProductPreviewCodeResponse {
     code: string;
 }
 
+export interface ProductPricePreviewResponse {
+    /** costo/(1-margen), sin IVA. */
+    subtotal: number;
+    /** subtotal*IVA, redondeado a terminación .99. */
+    price: number;
+}
+
 export interface ProductSupplier {
     id: string;
     supplierId: number;

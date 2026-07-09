@@ -16,18 +16,10 @@ import { formatDiscountRequestReasonList } from "@/utils/discountRequest";
 import { Stack } from "@mui/material";
 const SEARCH_DEBOUNCE_MS = 300;
 const TABS: TabOption[] = [
-  {
-    label: "Pendientes",
-    value: "pending",
-  },
-  {
-    label: "Aceptadas",
-    value: "approved",
-  },
-  {
-    label: "Rechazadas",
-    value: "rejected",
-  },
+  { label: "Pendientes", value: "pending" },
+  { label: "Aceptadas", value: "approved" },
+  { label: "Rechazadas", value: "rejected" },
+  { label: "Invalidadas", value: "invalidated" },
 ];
 const TYPE_CHIP_LABELS: Record<DiscountRequestType, string> = {
   contado: "Contado",

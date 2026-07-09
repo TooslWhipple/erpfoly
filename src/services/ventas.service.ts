@@ -204,6 +204,12 @@ export async function requestSaleDiscount(
   return post<unknown>(`${BASE}/sales/${saleId}/discounts`, payload);
 }
 
+export async function invalidateSaleDiscount(
+  discountRequestId: number,
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/discount-requests/${discountRequestId}/invalidate`, {});
+}
+
 export interface RegisterPaymentPayload {
   payment_method: "CASH" | "CARD" | "TRANSFER";
   amount: number;

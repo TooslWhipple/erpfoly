@@ -165,10 +165,15 @@ export function formatRequestedAt(iso: string): string {
  * // → "6 de jul" (no "5 de jul") en México
  * ```
  */
-export function formatDateOnly(value: DateInput, format: DateFormatArg): string {
-  if (value == null || value === "") return DEFAULT_FALLBACK;
+export function formatDateOnly(
+  value: DateInput,
+  format: DateFormatArg,
+  options?: FormatDateOptions,
+): string {
+  const fallback = options?.fallback ?? DEFAULT_FALLBACK;
+  if (value == null || value === "") return fallback;
   const d = dayjs.utc(value as string | number | Date);
-  if (!d.isValid()) return DEFAULT_FALLBACK;
+  if (!d.isValid()) return fallback;
   return d.format(resolvePattern(format));
 }
 

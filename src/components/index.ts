@@ -108,7 +108,11 @@ export type {
 export { CreditApplicationStatusCard } from "./CreditApplicationStatusCard";
 export type { CreditApplicationStatusCardProps } from "./CreditApplicationStatusCard";
 export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
-export type { ApproveDiscountRequestModalProps } from "./ApproveDiscountRequestModal";
+export type {
+  ApproveDiscountRequestModalProps,
+  ApproveDiscountRequestMode,
+  ApproveDiscountRequestResult,
+} from "./ApproveDiscountRequestModal";
 export { RejectDiscountRequestModal } from "./RejectDiscountRequestModal";
 export type { RejectDiscountRequestModalProps } from "./RejectDiscountRequestModal";
 export { TrackSlider } from "./TrackSlider";

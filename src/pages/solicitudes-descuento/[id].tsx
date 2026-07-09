@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import numeral from "numeral";
-import { CheckCircle2, Clock9, XCircle } from "lucide-react";
+import { Ban, CheckCircle2, Clock9, XCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Breadcrumbs,
@@ -25,7 +25,11 @@ import {
   RejectDiscountRequestModal,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { DiscountRequestDetail } from "@/types/discount-requests.types";
+import type { ApproveDiscountRequestResult } from "@/components";
+import type {
+  ApproveDiscountRequestPayload,
+  DiscountRequestDetail,
+} from "@/types/discount-requests.types";
 import {
   DiscountCard,
   SectionCard,
@@ -71,6 +75,16 @@ function getStatusBadge(detail: DiscountRequestDetail) {
       />
     );
   }
+  if (detail.status === "invalidated") {
+    return (
+      <StatusChip
+        label="Invalidada"
+        variant="disabled"
+        size="small"
+        startIcon={<Ban size={12} />}
+      />
+    );
+  }
   return (
     <StatusChip
       label="Pendiente de autorización"
@@ -106,11 +120,9 @@ export default function DiscountRequestDetailPage() {
     },
   });
   const approveMutation = useMutation({
-    mutationFn: async (approvedDiscountPct: number) => {
+    mutationFn: async (payload: ApproveDiscountRequestPayload) => {
       if (!requestId) throw new Error("Solicitud no encontrada");
-      const result = await approveDiscountRequest(requestId, {
-        approvedDiscountPct,
-      });
+      const result = await approveDiscountRequest(requestId, payload);
       if (result.error) throw new Error(result.error.message);
       return result.data;
     },
@@ -156,8 +168,12 @@ export default function DiscountRequestDetailPage() {
     [rejectMutation],
   );
   const handleApproveDiscountRequest = useCallback(
-    (approvedDiscountPercent: number) => {
-      approveMutation.mutate(approvedDiscountPercent);
+    (result: ApproveDiscountRequestResult) => {
+      approveMutation.mutate(
+        result.mode === "amount"
+          ? { approvedDiscountAmount: result.value }
+          : { approvedDiscountPct: result.value }
+      );
     },
     [approveMutation],
   );
@@ -354,7 +370,8 @@ export default function DiscountRequestDetailPage() {
                   </TotalCard>
 
                   {detail.status === "approved" &&
-                    detail.approvedDiscountPct != null && (
+                    (detail.approvedDiscountPct != null ||
+                      detail.approvedDiscountAmount != null) && (
                       <Stack
                         direction="row"
                         justifyContent="space-between"
@@ -362,7 +379,9 @@ export default function DiscountRequestDetailPage() {
                       >
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Typography variant="body1">
-                            Descuento ({detail.approvedDiscountPct}%)
+                            {detail.approvedDiscountAmount != null
+                              ? `Descuento (${formatCurrency(detail.approvedDiscountAmount)})`
+                              : `Descuento (${detail.approvedDiscountPct}%)`}
                           </Typography>
                           <StatusChip
                             label="Aprobada"

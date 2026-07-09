@@ -150,14 +150,20 @@ export interface SaleDetailLayaway {
 export type DiscountRequestReason =
   "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
 
-export type DiscountRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type DiscountRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "INVALIDATED";
 
 export interface SaleDiscountRequest {
   id: number;
   status: DiscountRequestStatus;
   reason: DiscountRequestReason;
   discountPct: number | null;
+  requestedDiscountAmount: number | null;
   approvedDiscountPct: number | null;
+  approvedDiscountAmount: number | null;
   notes: string | null;
   rejectionReason: string | null;
 }

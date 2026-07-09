@@ -22,6 +22,7 @@ export type DataTableColumnType =
   | "currency"
   | "percentage"
   | "date"
+  | "dateOnly"
   | "boolean"
   | "chip"
   | "chipGroup"

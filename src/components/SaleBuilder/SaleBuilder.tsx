@@ -40,6 +40,7 @@ import {
   Warehouse,
   Truck,
   Package,
+  Calendar,
 } from "@/components/Icons";
 import NumberSpinner from "@/components/NumberSpinner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +80,8 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
@@ -164,6 +167,13 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     formatted: string;
   } | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
+    useState(false);
+  const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
+    string | null
+  >(null);
+  const [checkoutDeliveryDateModalOpen, setCheckoutDeliveryDateModalOpen] =
+    useState(false);
+  const [deliveryDateWarningOpen, setDeliveryDateWarningOpen] =
     useState(false);
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
@@ -553,12 +563,13 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         await setDeliveryDate(saleId, {
           delivery_type: "ADDRESS",
           address_id: addressId,
+          delivery_date: checkoutDeliveryDate ?? undefined,
         });
       } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
         await setDeliveryDate(saleId, {
           delivery_type: "BRANCH",
           branch_id: effectiveDeliveryBranch.id,
-          delivery_date: effectivePickupDate || undefined,
+          delivery_date: effectivePickupDate || checkoutDeliveryDate || undefined,
         });
       }
 
@@ -729,6 +740,14 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     deliveryType === "pickup" &&
     isDeliveryBranchCurrent &&
     hasStockAtDeliveryBranch === true;
+
+  // El apartado difiere la fecha de entrega hasta liquidar (banner ya
+  // existente en ventas/[id].tsx); el pickup del mismo día sigue con fecha
+  // automática y no muestra el campo.
+  const showCheckoutDeliveryDateField =
+    paymentType !== "LAYAWAY" &&
+    (deliveryType === "delivery" ||
+      (deliveryType === "pickup" && !isSameDayPickup));
 
   // La fecha de recolección en otra sucursal con stock (escenario 3) y la
   // fecha de domicilio quedan diferidas para después del pago; el único caso
@@ -2406,7 +2425,13 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 variant="contained"
                 size="large"
                 disabled={!canRegister}
-                onClick={() => cobrarMutation.mutate()}
+                onClick={() => {
+                  if (showCheckoutDeliveryDateField && !checkoutDeliveryDate) {
+                    setDeliveryDateWarningOpen(true);
+                  } else {
+                    cobrarMutation.mutate();
+                  }
+                }}
                 sx={{ borderRadius: 1.5, textTransform: "none", py: 1.5 }}
               >
                 {cobrarMutation.isPending
@@ -2416,6 +2441,20 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
             </Box>
           </Stack>
         </Box>
+
+        <ConfirmModal
+          open={deliveryDateWarningOpen}
+          onClose={() => setDeliveryDateWarningOpen(false)}
+          onConfirm={() => {
+            setDeliveryDateWarningOpen(false);
+            cobrarMutation.mutate();
+          }}
+          type="warning"
+          title="¿Continuar sin asignar fecha de entrega?"
+          description="No has asignado una fecha de entrega. Podrás asignarla después desde el detalle de la venta, pero se recomienda confirmarla con el cliente antes de cobrar."
+          confirmLabel="Continuar sin fecha"
+          cancelLabel="Asignar fecha"
+        />
 
         <SideModal
           open={billingModalOpen}
@@ -3133,6 +3172,45 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 Entrega
               </Typography>
 
+              {showCheckoutDeliveryDateField && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    mb={0.5}
+                  >
+                    Fecha de entrega (opcional)
+                  </Typography>
+                  <Box
+                    onClick={() => setCheckoutDeliveryDateModalOpen(true)}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1.5,
+                      px: 1.5,
+                      py: 0.75,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      color: checkoutDeliveryDate
+                        ? "text.primary"
+                        : "primary.main",
+                      fontWeight: 500,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    {checkoutDeliveryDate
+                      ? dayjs(checkoutDeliveryDate)
+                          .format("dddd D [de] MMMM, YYYY")
+                          .replace(/^\w/, (c) => c.toUpperCase())
+                      : "Asignar fecha de entrega"}
+                    <Calendar size={16} />
+                  </Box>
+                </Box>
+              )}
+
               <Select
                 fullWidth
                 size="small"
@@ -3312,6 +3390,17 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
               )}
             </Paper>
           )}
+
+          <DeliveryDatePicker
+            open={checkoutDeliveryDateModalOpen}
+            onClose={() => setCheckoutDeliveryDateModalOpen(false)}
+            branchId={CURRENT_BRANCH_ID}
+            value={checkoutDeliveryDate}
+            onConfirm={(date) => {
+              setCheckoutDeliveryDate(date);
+              setCheckoutDeliveryDateModalOpen(false);
+            }}
+          />
 
           <Dialog
             open={branchPickerOpen}

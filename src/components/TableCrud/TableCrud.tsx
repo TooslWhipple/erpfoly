@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
-import { formatDate } from "@/utils/date";
+import { formatDate, formatDateOnly } from "@/utils/date";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   TableWrapper,
@@ -27,7 +27,7 @@ import { ChipGroup } from "../ChipGroup";
 import { StatusChip } from "../StatusChip";
 import type { StatusChipVariant } from "../StatusChip";
 
-export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "boolean" | "chip" | "chipGroup" | "button" | "id";
+export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "dateOnly" | "boolean" | "chip" | "chipGroup" | "button" | "id";
 
 export type ColumnSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -225,6 +225,9 @@ export function TableCrud<T>({
 
       case "date":
         return formatDate(rawValue, "dateNumeric");
+
+      case "dateOnly":
+        return formatDateOnly(rawValue, "dateNumeric");
 
       case "boolean":
         return rawValue ? "Sí" : "No";

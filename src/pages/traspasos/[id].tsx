@@ -15,7 +15,6 @@ import type {
   BranchOrderDetail,
   BranchOrderLineItem,
   ScheduleBranchRequestPayload,
-  UpdateBranchRequestPayload,
 } from "@/types/solicitudes.types";
 import {
   getBranchRequestFull,
@@ -43,10 +42,10 @@ const DELIVERY_DATE_PAST_MESSAGE =
   "La fecha de entrega no puede ser anterior a mañana.";
 function formatScheduledDate(value: string | null | undefined): string {
   if (!value) return "";
-  return dayjs(value).format("YYYY-MM-DD");
+  return dayjs.utc(value).format("YYYY-MM-DD");
 }
 function getMinDeliveryDate(): string {
-  return dayjs().add(1, "day").startOf("day").format("YYYY-MM-DD");
+  return dayjs.utc().add(1, "day").format("YYYY-MM-DD");
 }
 function mapBackendToBranchOrderDetail(
   detail: BranchRequestFullDetail,

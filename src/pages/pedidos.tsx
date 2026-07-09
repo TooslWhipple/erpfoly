@@ -29,7 +29,7 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
         status = "pending";
     }
 
-    const orderDate = dayjs(order.order_date);
+    const orderDate = dayjs.utc(order.order_date);
     const estimatedDelivery = orderDate.add(7, "day");
 
     return {

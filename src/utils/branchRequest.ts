@@ -41,5 +41,5 @@ export function getBranchOrderStatusVariant(
 }
 
 export function isBranchOrderEditable(status: BranchOrderStatus): boolean {
-    return status === "pending" || status === "scheduled";
+    return status === "pending";
 }

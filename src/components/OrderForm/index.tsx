@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
+  Alert,
   Box,
   InputAdornment,
   TextField,
@@ -141,6 +142,8 @@ export default function OrderForm({
     return orderType;
   }, [mode, originalOrder, orderType]);
   const isInternalOrder = effectiveOrderType === "internal";
+  const isEditLocked =
+    mode === "edit" && !!originalOrder && originalOrder.status !== "pending";
   const resolvedSupplierId =
     propSupplierId ?? (router.query.supplierId as string | undefined);
   const resolvedSupplierName =
@@ -473,6 +476,12 @@ export default function OrderForm({
         router.push("/traspasos/nuevo/confirmar");
       }
     } else if (mode === "edit" && orderId) {
+      if (isEditLocked) {
+        showError(
+          "Este traspaso no puede editarse porque su estatus no es pendiente.",
+        );
+        return;
+      }
       const payload = {
         items: selectedItems.map((item) => ({
           product_id: item.productId,
@@ -734,6 +743,12 @@ export default function OrderForm({
           <Stack direction="column" spacing={3}>
             <Breadcrumbs items={breadcrumbs} />
             <Typography variant="h1">{pageTitle}</Typography>
+            {isEditLocked && (
+              <Alert severity="warning">
+                Este traspaso no puede editarse porque su estatus no es
+                pendiente.
+              </Alert>
+            )}
             <SuggestionsList>
               {suggestionsLoading
                 ? [1, 2, 3, 4].map((i) => (
@@ -806,6 +821,7 @@ export default function OrderForm({
             onContinue={handleContinue}
             continueLabel={mode === "edit" ? "Guardar cambios" : "Continuar"}
             hidePrices={isInternalOrder}
+            disabled={isEditLocked}
           />
         </StickySidebarGrid>
       </Grid>

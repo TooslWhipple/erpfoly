@@ -33,6 +33,7 @@ export type PermissionModule =
   | "catalogos.departamentos"
   | "catalogos.promociones"
   | "catalogos.sucursales"
+  | "catalogos.cajas"
   | "catalogos.proveedores"
   | "catalogos.proveedores_reparaciones"
   | "catalogos.usuarios"
@@ -195,6 +196,12 @@ export const CATALOG_BRANCHES_READ = CATALOG_BRANCHES_PERMISSIONS.read;
 export const CATALOG_BRANCHES_UPDATE = CATALOG_BRANCHES_PERMISSIONS.update;
 export const CATALOG_BRANCHES_DELETE = CATALOG_BRANCHES_PERMISSIONS.delete;
 
+export const CATALOG_CASH_REGISTERS_PERMISSIONS = createCrudPermissions("catalogos.cajas");
+export const CATALOG_CASH_REGISTERS_CREATE = CATALOG_CASH_REGISTERS_PERMISSIONS.create;
+export const CATALOG_CASH_REGISTERS_READ = CATALOG_CASH_REGISTERS_PERMISSIONS.read;
+export const CATALOG_CASH_REGISTERS_UPDATE = CATALOG_CASH_REGISTERS_PERMISSIONS.update;
+export const CATALOG_CASH_REGISTERS_DELETE = CATALOG_CASH_REGISTERS_PERMISSIONS.delete;
+
 export const CATALOG_SUPPLIERS_PERMISSIONS = createCrudPermissions("catalogos.proveedores");
 export const CATALOG_SUPPLIERS_CREATE = CATALOG_SUPPLIERS_PERMISSIONS.create;
 export const CATALOG_SUPPLIERS_READ = CATALOG_SUPPLIERS_PERMISSIONS.read;
@@ -300,6 +307,7 @@ export const PERMISSIONS_BY_MODULE = {
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),
     promotions: Object.values(CATALOG_PROMOTIONS_PERMISSIONS),
     branches: Object.values(CATALOG_BRANCHES_PERMISSIONS),
+    cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),
     suppliers: Object.values(CATALOG_SUPPLIERS_PERMISSIONS),
     repairSuppliers: Object.values(CATALOG_REPAIR_SUPPLIERS_PERMISSIONS),
     users: Object.values(CATALOG_USERS_PERMISSIONS),

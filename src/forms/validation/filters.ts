@@ -21,13 +21,20 @@ export const filters = {
         return (value: string) => value.replace(pattern, "");
     },
 
-    /** Digits and one decimal point; max fraction digits (e.g. 720.00). */
-    decimal(maxFractionDigits = 2): InputFilter {
+    /**
+     * Digits and one decimal point; max fraction digits (e.g. 720.00).
+     * Optionally cap integer digits (e.g. cash amounts).
+     */
+    decimal(maxFractionDigits = 2, maxIntegerDigits?: number): InputFilter {
         return (value: string) => {
             const allowed = value.replace(/[^\d.]/g, "");
             const [first, ...rest] = allowed.split(".");
+            const integerPart =
+                maxIntegerDigits != null
+                    ? (first ?? "").slice(0, maxIntegerDigits)
+                    : (first ?? "");
             const frac = rest.join("").slice(0, maxFractionDigits);
-            return rest.length > 0 ? `${first ?? ""}.${frac}` : first ?? "";
+            return rest.length > 0 ? `${integerPart}.${frac}` : integerPart;
         };
     },
 

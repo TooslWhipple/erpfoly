@@ -181,7 +181,7 @@ ComponentName/
 - Rutas estáticas: `nombre-pagina.tsx`
 - Rutas dinámicas: `[id].tsx` para páginas de detalle
 - Subcarpetas para componentes específicos de página si es necesario
-- Usar `MainLayout` para layout consistente
+- El shell de la app (`Sidebar`, chrome) lo aplica `AppLayoutGate` en `_app.tsx` vía `shouldUseAppLayout`; **no** envolver páginas con `MainLayout` (eliminado)
 
 #### Imports
 - Usar path alias `@/` para imports absolutos

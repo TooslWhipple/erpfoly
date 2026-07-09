@@ -2,11 +2,19 @@ export type SellerStatus = "ACTIVE" | "INACTIVE";
 
 export type SellerSaleType = "cash" | "credit";
 
+export interface SellerBranchItem {
+  id: number;
+  name: string;
+}
+
 export interface SellerListItem {
   id: number;
   fullName: string;
   cellphone: string;
-  branchName: string | null;
+  branchIds: number[];
+  branches: SellerBranchItem[];
+  cashRegisterId: number | null;
+  cashRegisterName: string | null;
 }
 
 export interface SellerMonthlyBreakdownRow {

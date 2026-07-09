@@ -13,6 +13,7 @@ interface SelectedItemsPanelProps {
   onContinue: () => void;
   continueLabel?: string;
   hidePrices?: boolean;
+  disabled?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -30,6 +31,7 @@ export default function SelectedItemsPanel({
   onContinue,
   continueLabel = "Continuar",
   hidePrices = false,
+  disabled = false,
 }: SelectedItemsPanelProps) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -68,7 +70,7 @@ export default function SelectedItemsPanel({
           fullWidth
           variant="contained"
           color="primary"
-          disabled={items.length === 0}
+          disabled={items.length === 0 || disabled}
           onClick={onContinue}
           sx={{ textTransform: 'none' }}>
           <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">

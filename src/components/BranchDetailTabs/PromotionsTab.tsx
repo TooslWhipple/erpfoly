@@ -4,7 +4,7 @@ import { TableCrud } from "@/components";
 import type { Column } from "@/components/TableCrud";
 import { getPromotions } from "@/services/branchDetail.service";
 import type { BranchPromotion } from "@/types/sucursales.types";
-import { formatDate } from "@/utils/date";
+import { formatDateOnly } from "@/utils/date";
 
 interface PromotionsTabProps {
   branchId: number;
@@ -21,7 +21,7 @@ function getTypeLabel(type: BranchPromotion["type"]): string {
 
 function formatEndDate(value: unknown): string {
   if (value == null) return "Sin fecha fin";
-  return formatDate(value, "dateLong");
+  return formatDateOnly(value, "dateLong");
 }
 
 export function PromotionsTab({ branchId }: PromotionsTabProps) {
@@ -78,7 +78,7 @@ export function PromotionsTab({ branchId }: PromotionsTabProps) {
       id: "startDate",
       label: "Inicio",
       size: "md",
-      format: (value) => formatDate(value, "dateLong"),
+      format: (value) => formatDateOnly(value, "dateLong"),
     },
     {
       id: "endDate",

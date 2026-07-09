@@ -38,6 +38,13 @@ import type { NewRouteFormValues } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
 import {
+  RutasPageLayout,
+  RoutesSidebar,
+  DateHeaderRow,
+  DateLabel,
+  RoutesList,
+  RouteDetailPanel,
+  RoundedSkeleton,
   RouteCard,
   MapPlaceholder,
   DetailHeader,
@@ -174,13 +181,6 @@ type PendingRemoval =
     articleName: string;
   }
   | null;
-
-
-function formatDateLabel(date: Date): string {
-  const d = dayjs(date);
-  if (!d.isValid()) return "—";
-  return d.format("dddd D [de] MMM");
-}
 
 export default function RutaPage() {
   const { hasPermission } = usePermissions();
@@ -838,21 +838,27 @@ export default function RutaPage() {
 
   return (
     <MainLayout>
-      <Stack direction={{ xs: "column", md: "row" }} height="100%" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
-        <Stack spacing={1} flex="0 1 272px" maxWidth="272px">
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="nowrap" minWidth="260px">
+      <RutasPageLayout
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        divider={<Divider orientation="vertical" flexItem />}
+      >
+        <RoutesSidebar>
+          <DateHeaderRow>
             <IconButton size="small" onClick={handlePrevDay}>
               <ChevronLeft size={20} />
             </IconButton>
             <IconButton size="small" onClick={handleNextDay}>
               <ChevronRight size={20} />
             </IconButton>
-            <Typography variant="body1" fontWeight={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{dayjs(selectedDate).format("dddd DD [de] MMMM")}</Typography>
+            <DateLabel variant="body1">
+              {dayjs(selectedDate).format("dddd DD [de] MMMM")}
+            </DateLabel>
             <Button
               size="small"
               variant="text"
               onClick={handleToday}>Hoy</Button>
-          </Stack>
+          </DateHeaderRow>
           <Button
             fullWidth
             variant="option"
@@ -861,66 +867,68 @@ export default function RutaPage() {
             onClick={() => setNewRouteModalOpen(true)}>
             Nueva ruta
           </Button>
-          {
-            routesLoading ?
-              [1, 2, 3].map((i) => (
-                <Skeleton
-                  key={i}
-                  variant="rectangular"
-                  height={100}
-                  sx={{ borderRadius: 1 }}
-                />
-              ))
-              :
-              routes.map((route) => (
-                <RouteCard
-                  key={route.id}
-                  selected={resolvedRouteId === route.id}
-                  onClick={() => {
-                    setSelectedRouteId(route.id);
-                    setActiveTab(TAB_ARTICLES);
-                  }}>
-                  {
-                    (route.miniMapUrl) ?
-                      <RouteMiniMapThumb src={route.miniMapUrl} alt="" loading="lazy" decoding="async" />
-                      :
-                      <MapPlaceholder />
-                  }
-                  <Stack flex={1} spacing={0.5} alignItems="flex-start" minWidth={0}>
-                    <Typography variant="subtitle2" color="primary.main" fontWeight={700}>Ruta {route.name}</Typography>
-                    <StatusChip
-                      size="small"
-                      label={STATUS_LABEL[route.status] ?? route.status}
-                    />
-                    {
-                      route.routeType && (
-                        <StatusChip
-                          size="small"
-                          variant="info"
-                          label={ROUTE_TYPE_LABEL[route.routeType] ?? route.routeType}
-                        />
-                      )
-                    }
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Box size={16} />
-                      <Typography variant="body1">{route.articleCount} artículos</Typography>
-                    </Stack>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Route size={16} />
-                      <Typography variant="body1">{route.pointCount} puntos</Typography>
-                    </Stack>
-                  </Stack>
-                </RouteCard>
-              ))
-          }
-        </Stack>
 
-        <Stack flex={1}>
+          <RoutesList>
+            {
+              routesLoading ?
+                [1, 2, 3].map((i) => (
+                  <RoundedSkeleton
+                    key={i}
+                    variant="rectangular"
+                    height={100}
+                  />
+                ))
+                :
+                routes.map((route) => (
+                  <RouteCard
+                    key={route.id}
+                    selected={resolvedRouteId === route.id}
+                    onClick={() => {
+                      setSelectedRouteId(route.id);
+                      setActiveTab(TAB_ARTICLES);
+                    }}>
+                    {
+                      (route.miniMapUrl) ?
+                        <RouteMiniMapThumb src={route.miniMapUrl} alt="" loading="lazy" decoding="async" />
+                        :
+                        <MapPlaceholder />
+                    }
+                    <Stack flex={1} spacing={0.5} alignItems="flex-start" minWidth={0}>
+                      <Typography variant="subtitle2" color="primary.main" fontWeight={700}>Ruta {route.name}</Typography>
+                      <StatusChip
+                        size="small"
+                        label={STATUS_LABEL[route.status] ?? route.status}
+                      />
+                      {
+                        route.routeType && (
+                          <StatusChip
+                            size="small"
+                            variant="info"
+                            label={ROUTE_TYPE_LABEL[route.routeType] ?? route.routeType}
+                          />
+                        )
+                      }
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box size={16} />
+                        <Typography variant="body1">{route.articleCount} artículos</Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Route size={16} />
+                        <Typography variant="body1">{route.pointCount} puntos</Typography>
+                      </Stack>
+                    </Stack>
+                  </RouteCard>
+                ))
+            }
+          </RoutesList>
+        </RoutesSidebar>
+
+        <RouteDetailPanel>
           {
             (routesLoading) ?
               <Stack flex={1} p={3} spacing={2}>
                 <Skeleton variant="text" width="60%" height={32} />
-                <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 1 }} />
+                <RoundedSkeleton variant="rectangular" height={280} />
               </Stack>
               : (routes.length === 0) ?
                 <Stack flex={1} alignItems="center" justifyContent="center" p={4}>
@@ -934,7 +942,7 @@ export default function RutaPage() {
                     <Stack flex={1} p={3} spacing={2}>
                       <Skeleton variant="text" width="60%" height={32} />
                       <Skeleton variant="text" width="40%" />
-                      <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 1 }} />
+                      <RoundedSkeleton variant="rectangular" height={48} />
                     </Stack>
                     : detailQuery.isError
                       ? <Typography variant="body2" color="error">No se pudo cargar el detalle de la ruta.</Typography>
@@ -1161,8 +1169,8 @@ export default function RutaPage() {
                         :
                         <Typography variant="body2" color="text.secondary">No se encontró la ruta</Typography>
           }
-        </Stack>
-      </Stack>
+        </RouteDetailPanel>
+      </RutasPageLayout>
 
       <NewRouteModal
         open={newRouteModalOpen}

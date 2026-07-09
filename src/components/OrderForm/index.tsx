@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid } from "@mui/material";
+import { Alert, Box, InputAdornment, TextField, CircularProgress, Typography, useTheme, Stack, Skeleton, Grid } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout, Breadcrumbs, TableCrud, ProductSuggestionCard, AddArticleToOrderModal } from "@/components";
 import SelectedItemsPanel from "@/components/SelectedItemsPanel";
@@ -113,6 +113,8 @@ export default function OrderForm({
     }, [mode, originalOrder, orderType]);
 
     const isInternalOrder = effectiveOrderType === "internal";
+
+    const isEditLocked = mode === "edit" && !!originalOrder && originalOrder.status !== "pending";
 
     const resolvedSupplierId = propSupplierId ?? (router.query.supplierId as string | undefined);
     const resolvedSupplierName = propSupplierName ?? (router.query.supplierName as string | undefined);
@@ -442,6 +444,11 @@ export default function OrderForm({
                 router.push("/traspasos/nuevo/confirmar");
             }
         } else if (mode === "edit" && orderId) {
+            if (isEditLocked) {
+                showError("Este traspaso no puede editarse porque su estatus no es pendiente.");
+                return;
+            }
+
             const payload = {
                 items: selectedItems.map((item) => ({
                     product_id: item.productId,
@@ -652,6 +659,11 @@ export default function OrderForm({
                     <Stack direction="column" spacing={3}>
                         <Breadcrumbs items={breadcrumbs} />
                         <Typography variant="h1">{pageTitle}</Typography>
+                        {isEditLocked && (
+                            <Alert severity="warning">
+                                Este traspaso no puede editarse porque su estatus no es pendiente.
+                            </Alert>
+                        )}
                         <SuggestionsList>
                             {
                                 suggestionsLoading
@@ -709,6 +721,7 @@ export default function OrderForm({
                         onContinue={handleContinue}
                         continueLabel={mode === "edit" ? "Guardar cambios" : "Continuar"}
                         hidePrices={isInternalOrder}
+                        disabled={isEditLocked}
                     />
                 </StickySidebarGrid>
             </Grid>

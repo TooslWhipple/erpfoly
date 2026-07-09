@@ -90,6 +90,8 @@ export { LiquidationRuleActivityModal } from "./LiquidationRuleActivityModal";
 export type { LiquidationRuleActivityModalProps } from "./LiquidationRuleActivityModal";
 export { FileUpload } from "./FileUpload";
 export type { FileUploadProps, UploadedFileItem } from "./FileUpload";
+export { ImageGalleryUpload } from "./ImageGalleryUpload";
+export type { ImageGalleryUploadProps, ImageGalleryUploadItem } from "./ImageGalleryUpload";
 export { ImageViewerModal } from "./ImageViewerModal";
 export type { ImageViewerModalProps } from "./ImageViewerModal";
 export { ApproveCreditModal } from "./ApproveCreditModal";

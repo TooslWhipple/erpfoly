@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { InputAdornment, Stack } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { MainLayout, Title, TableCrud, TabFilters, ModalFormZod } from "@/components";
+import { Title, TableCrud, TabFilters, ModalFormZod } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import {
     SettingsCard,
@@ -350,7 +350,7 @@ export default function ProveedoresReparaciones() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction="column" spacing={3}>
 
                 <Title title="Proveedores de reparaciones" />
@@ -395,7 +395,6 @@ export default function ProveedoresReparaciones() {
                         emptyMessage="No hay proveedores de reparaciones registrados"
                     />
                 }
-
 
                 {
                     activeTab === "settings" &&
@@ -462,6 +461,6 @@ export default function ProveedoresReparaciones() {
                 allowInvalidSubmit
             />
 
-        </MainLayout>
+        </>
     );
 }

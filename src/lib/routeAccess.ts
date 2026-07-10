@@ -4,6 +4,7 @@ import {
   CASH_REGISTERS_READ,
   CATALOG_BRANCHES_CREATE,
   CATALOG_BRANCHES_READ,
+  CATALOG_CASH_REGISTERS_READ,
   CATALOG_DEPARTMENTS_CREATE,
   CATALOG_DEPARTMENTS_READ,
   CATALOG_DEPARTMENTS_UPDATE,
@@ -134,6 +135,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/sucursales\/nuevo$/, permission: CATALOG_BRANCHES_CREATE },
   { pattern: /^\/catalogos\/sucursales\/[^/]+$/, permission: CATALOG_BRANCHES_READ },
   { pattern: /^\/catalogos\/sucursales(\/.*)?$/, permission: CATALOG_BRANCHES_READ },
+  { pattern: /^\/catalogos\/cajas(\/.*)?$/, permission: CATALOG_CASH_REGISTERS_READ },
   { pattern: /^\/catalogos\/proveedores\/nuevo$/, permission: CATALOG_SUPPLIERS_CREATE },
   { pattern: /^\/catalogos\/proveedores\/[^/]+\/editar$/, permission: CATALOG_SUPPLIERS_UPDATE },
   { pattern: /^\/catalogos\/proveedores\/[^/]+$/, permission: CATALOG_SUPPLIERS_READ },
@@ -176,6 +178,24 @@ export function normalizePathname(pathname: string): string {
 export function isPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
+}
+
+/**
+ * Whether the persistent app shell (sidebar + main chrome) should wrap the page.
+ * Keep layout routing rules centralized here so AuthGuard and AppLayoutGate stay aligned.
+ */
+export function shouldUseAppLayout(pathname: string, token: string | null): boolean {
+  if (shouldBypassAccessControl) {
+    return true;
+  }
+
+  const normalizedPath = normalizePathname(pathname);
+
+  if (isPublicRoute(normalizedPath) && !token) {
+    return false;
+  }
+
+  return true;
 }
 
 export function isChangePasswordRoute(pathname: string): boolean {

@@ -24,16 +24,7 @@ import { formatDateOnly } from "@/utils/date";
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  MainLayout,
-  StatusChip,
-  TabFilters,
-  AddOrdersToRouteModal,
-  AddDriverToRouteModal,
-  AddAssistantToRouteModal,
-  NewRouteModal,
-  ConfirmModal,
-} from "@/components";
+import { StatusChip, TabFilters, AddOrdersToRouteModal, AddDriverToRouteModal, AddAssistantToRouteModal, NewRouteModal, ConfirmModal } from "@/components";
 import type { NewRouteFormValues } from "@/components";
 import type { TabItem } from "@/components/Tabs";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -837,7 +828,7 @@ export default function RutaPage() {
   };
 
   return (
-    <MainLayout>
+    <>
       <RutasPageLayout
         direction={{ xs: "column", md: "row" }}
         spacing={2}
@@ -1181,6 +1172,6 @@ export default function RutaPage() {
         loading={createRouteMutation.isPending}
         fetchBranches={getBranchesCatalog}
       />
-    </MainLayout>
+    </>
   );
 }

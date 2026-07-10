@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Stack } from "@mui/material";
-import { MainLayout, Title, TableCrud, TabFilters } from "@/components";
+import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
 import {
@@ -227,7 +227,7 @@ export default function Mensajes() {
   ];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction="column" spacing={3}>
         <Title title="Mensajes" />
         <TabFilters
@@ -282,6 +282,6 @@ export default function Mensajes() {
         inUse={editingMessage ? editingMessage.inUse : undefined}
         loading={saving}
       />
-    </MainLayout>
+    </>
   );
 }

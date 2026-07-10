@@ -16,6 +16,7 @@ import type {
     ProductPackage,
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
+    ProductPricePreviewResponse,
     CostHistoryEntry,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
@@ -213,6 +214,15 @@ export async function getProductPreviewCode(
 ): Promise<ApiResult<ProductPreviewCodeResponse>> {
     return get<ProductPreviewCodeResponse>(`${PRODUCTS_BASE}/preview-code`, {
         params: { lineId },
+    });
+}
+
+export async function getProductPricePreview(
+    costo: number,
+    margenPercent: number
+): Promise<ApiResult<ProductPricePreviewResponse>> {
+    return get<ProductPricePreviewResponse>(`${PRODUCTS_BASE}/price-preview`, {
+        params: { costo, margenPercent },
     });
 }
 

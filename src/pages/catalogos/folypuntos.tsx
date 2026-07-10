@@ -1,10 +1,9 @@
 import { Box, CircularProgress, Stack } from "@mui/material";
-import { MainLayout, TabFilters, Title } from "@/components";
+import { TabFilters, Title } from "@/components";
 import { FolypuntosForm } from "@/components/Folypuntos/FolypuntosForm";
 import { useFolypuntosPage } from "@/hooks/usePoints";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CATALOG_POINTS_UPDATE } from "@/lib/permissions";
-
 export default function Folypuntos() {
   const { hasPermission } = usePermissions();
   const canUpdatePoints = hasPermission(CATALOG_POINTS_UPDATE);
@@ -19,62 +18,61 @@ export default function Folypuntos() {
     loading,
     saving,
   } = useFolypuntosPage();
-
   if (loading) {
     return (
-      <MainLayout>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "400px",
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      </MainLayout>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
-
   if (!purchaseTypes.length) {
     return (
-      <MainLayout>
+      <>
         <Title title="Configuración de Folypuntos" />
-        <Box sx={{ p: 2 }}>No hay tipos de compra configurados.</Box>
-      </MainLayout>
+        <Box
+          sx={{
+            p: 2,
+          }}
+        >
+          No hay tipos de compra configurados.
+        </Box>
+      </>
     );
   }
-
   return (
-    <MainLayout>
-      <Stack direction="column" spacing={3}>
-        <Title
-          title="Configuración de Folypuntos"
-          actions={[
-            {
-              id: "save",
-              label: "Guardar",
-              onClick: handleSave,
-              disabled: saving || !canUpdatePoints,
-              permission: CATALOG_POINTS_UPDATE,
-            },
-          ]}
-        />
+    <Stack direction="column" spacing={3}>
+      <Title
+        title="Configuración de Folypuntos"
+        actions={[
+          {
+            id: "save",
+            label: "Guardar",
+            onClick: handleSave,
+            disabled: saving || !canUpdatePoints,
+            permission: CATALOG_POINTS_UPDATE,
+          },
+        ]}
+      />
 
-        <TabFilters
-          tabs={tabs}
-          activeTab={effectiveActiveTab}
-          onTabChange={handleTabChange}
-        />
+      <TabFilters
+        tabs={tabs}
+        activeTab={effectiveActiveTab}
+        onTabChange={handleTabChange}
+      />
 
-        <FolypuntosForm
-          formState={formState}
-          activePurchaseTypeId={effectiveActiveTab}
-          onFieldChange={handleFieldChange}
-          disabled={saving || !canUpdatePoints}
-        />
-      </Stack>
-    </MainLayout>
+      <FolypuntosForm
+        formState={formState}
+        activePurchaseTypeId={effectiveActiveTab}
+        onFieldChange={handleFieldChange}
+        disabled={saving || !canUpdatePoints}
+      />
+    </Stack>
   );
 }

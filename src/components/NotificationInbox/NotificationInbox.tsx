@@ -15,6 +15,7 @@ export default function NotificationInbox() {
     <Inbox
       applicationIdentifier={applicationIdentifier}
       subscriberId={String(userId)}
+      placement="bottom-end"
       appearance={{
         variables: {
           colorPrimary: '#2663EB',
@@ -30,6 +31,9 @@ export default function NotificationInbox() {
         elements: {
           bellIcon: {
             color: '#71717A',
+          },
+          inbox__popoverContent: {
+            zIndex: 1300,
           },
         },
       }}

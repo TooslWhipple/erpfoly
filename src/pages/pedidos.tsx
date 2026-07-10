@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Divider, Stack } from "@mui/material";
-import { MainLayout, Title, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
+import { Title, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
@@ -145,7 +145,7 @@ export default function Pedidos() {
     ];
 
     return (
-        <MainLayout>
+        <>
             <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
                 <Stack direction="column" spacing={3} flex="1 1 768px">
                     <Title title="Pedidos" actions={titleActions} />
@@ -174,6 +174,6 @@ export default function Pedidos() {
                 onClose={handleCloseSupplierModal}
                 onSelect={handleSupplierSelect}
             />
-        </MainLayout>
+        </>
     );
 }

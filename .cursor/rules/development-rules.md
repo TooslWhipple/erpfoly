@@ -82,11 +82,13 @@ grep -r "ComponentName" src/
 
 ```typescript
 //  CORRECTO
-import { TableCrud, Title, MainLayout } from "@/components";
+import { TableCrud, Title } from "@/components";
 
 //  INCORRECTO
 import { TableCrud } from "@/components/TableCrud/TableCrud";
 ```
+
+El layout de la app no se importa en páginas: `_app.tsx` usa `AppLayoutGate` (`@/components/Layout`) según la ruta. No uses `MainLayout` (ya no existe).
 
 ### 2. Imports de Tipos
 

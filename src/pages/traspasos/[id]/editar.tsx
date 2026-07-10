@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { CircularProgress, Stack } from "@mui/material";
-import { MainLayout } from "@/components";
 import OrderForm from "@/components/OrderForm";
 import { getBranchRequestFull } from "@/services/requests.service";
 import { mapBranchOrderStatus } from "@/utils/branchRequest";
@@ -17,6 +16,14 @@ function parseId(id: string | string[] | undefined): number | null {
     const parsed = Number(id);
     if (!Number.isFinite(parsed) || parsed < 1) return null;
     return parsed;
+}
+
+function LoadingState() {
+    return (
+        <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
+            <CircularProgress />
+        </Stack>
+    );
 }
 
 export default function EditarTraspaso() {
@@ -79,19 +86,11 @@ export default function EditarTraspaso() {
     }, [resolution, showError, router]);
 
     if (syncInvalidReason) {
-        return (
-            <RedirectAfterRender reason={syncInvalidReason} />
-        );
+        return <RedirectAfterRender reason={syncInvalidReason} />;
     }
 
     if (resolution.kind !== "editable") {
-        return (
-            <MainLayout>
-                <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
-                    <CircularProgress />
-                </Stack>
-            </MainLayout>
-        );
+        return <LoadingState />;
     }
 
     return <OrderForm mode="edit" orderId={resolution.orderId} orderType="internal" />;
@@ -106,11 +105,5 @@ function RedirectAfterRender({ reason }: { reason: string }) {
         router.replace("/traspasos");
     }, [reason, router, showError]);
 
-    return (
-        <MainLayout>
-            <Stack direction="row" justifyContent="center" alignItems="center" sx={{ minHeight: 400 }}>
-                <CircularProgress />
-            </Stack>
-        </MainLayout>
-    );
+    return <LoadingState />;
 }

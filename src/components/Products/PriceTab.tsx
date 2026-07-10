@@ -6,6 +6,7 @@ import { FormTextField, FormSelect } from "@/components";
 import { ProductPromotionModal } from "@/components/ProductPromotionModal";
 import { TabFilters } from "@/components/TabFilters";
 import type { TabOption } from "@/components/TabFilters";
+import { useProductPricePreview } from "@/hooks/useProductPricePreview";
 import { getPromotionFormConfiguration } from "@/services/promociones.service";
 import { getProductCostHistory } from "@/services/productos.service";
 import { FormCard, Card, LuquidationCard, LiquidationSwitch, LastCostCard } from "@/styles/catalogos/productos.styles";
@@ -21,33 +22,57 @@ import { AddBasePriceModal } from "./AddBasePriceModal";
 import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
 import { formatDate } from "@/utils/date";
 
-function getReferenceCostForCalculation(formState: PriceFormState): number {
-    const list = Number(formState.listCost) || 0;
-    const last = Number(formState.lastCost) || list;
-    const avg = Number(formState.averageCost) || list;
-    switch (formState.costBasisForCalculation) {
-        case "list_cost":
-            return list;
-        case "average_cost":
-            return avg;
-        case "last_cost":
-        default:
-            return last;
-    }
-}
-
 /**
- * Estimated shelf price for a promotion line: list cost with department margin, then promotion discount.
+ * Estimated shelf price for a promotion line: base price (ya calculado y redondeado
+ * por Apifoly) con el descuento de la promoción aplicado encima, sin volver a redondear.
  * discountRate is stored as a whole percent (e.g. 10 → 10% off → multiply by 0.9).
  */
 function computeEstimatedPromotionalPrice(
-    listCost: number,
-    marginPercent: number,
+    basePrice: number,
     discountRatePercent: number
 ): number {
-    const withMargin = listCost * (1 + marginPercent / 100);
     const clamped = Math.min(100, Math.max(0, discountRatePercent));
-    return withMargin * (1 - clamped / 100);
+    return basePrice * (1 - clamped / 100);
+}
+
+interface BasePriceRowProps {
+    row: ProductBasePrice;
+    referenceCost: number;
+}
+
+function BasePriceRow({ row, referenceCost }: BasePriceRowProps) {
+    const { subtotal, price, isLoading, isError } = useProductPricePreview(referenceCost, row.marginPercent);
+
+    return (
+        <Card backgroundColor="#CBD5E1">
+            <Stack spacing={1}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                    <Stack>
+                        <Typography variant="subtitle2" color="text.secondary">Margen</Typography>
+                        <Typography variant="body1">
+                            {numeral(row.marginPercent).format("0,0.00")}%
+                        </Typography>
+                    </Stack>
+                    {
+                        isLoading ? (
+                            <CircularProgress size={20} />
+                        ) : isError ? (
+                            <Typography variant="h5">No se pudo calcular</Typography>
+                        ) : (
+                            <Stack alignItems="flex-end">
+                                <Typography variant="caption" color="text.secondary">
+                                    Precio {numeral(subtotal).format("$0,0.00")}
+                                </Typography>
+                                <Typography variant="h5">
+                                    Precio final {numeral(price).format("$0,0.00")}
+                                </Typography>
+                            </Stack>
+                        )
+                    }
+                </Stack>
+            </Stack>
+        </Card>
+    );
 }
 
 interface PriceTabProps {
@@ -124,8 +149,16 @@ export function PriceTab({
         return promotionDrafts.filter((d) => d.payload.purchaseTypeId === selectedId);
     }, [promotionDrafts, activePurchaseTypeTab]);
 
-    const listCostForOtherPrices = useMemo(() => Number(formState.listCost) || 0, [formState.listCost]);
+    // Igual al costo que usa Apifoly para el precio real de venta (sale.service.ts siempre lee list_cost).
+    const referenceCost = useMemo(() => Number(formState.listCost) || 0, [formState.listCost]);
     const firstBaseMarginPercent = basePrices[0]?.marginPercent ?? 0;
+    const {
+        price: firstBasePrice,
+        isLoading: firstBasePriceLoading,
+        isError: firstBasePriceError,
+    } = useProductPricePreview(referenceCost, firstBaseMarginPercent, {
+        enabled: promotionDrafts.length > 0,
+    });
 
     const editingPromotionDraft = editingPromotionId != null
         ? promotionDrafts.find((d) => d.id === editingPromotionId) ?? null
@@ -158,8 +191,6 @@ export function PriceTab({
     const handleRemovePromotionDraft = (id: string) => {
         onPromotionDraftsChange(promotionDrafts.filter((d) => d.id !== id));
     };
-
-    const referenceCost = useMemo(() => getReferenceCostForCalculation(formState), [formState]);
 
     const loadCostHistory = useCallback(async () => {
         if (productNumericId == null) {
@@ -363,24 +394,9 @@ export function PriceTab({
                                     )
                                 }
                                 {
-                                    basePrices.map((row) => {
-                                        const linePrice = referenceCost * (1 + row.marginPercent / 100);
-                                        return (
-                                            <Card key={row.id} backgroundColor="#CBD5E1">
-                                                <Stack spacing={1}>
-                                                    <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-                                                        <Stack>
-                                                            <Typography variant="subtitle2" color="text.secondary">Margen</Typography>
-                                                            <Typography variant="body1">
-                                                                {numeral(row.marginPercent).format("0,0.00")}%
-                                                            </Typography>
-                                                        </Stack>
-                                                        <Typography variant="h5">{numeral(linePrice).format("$0,0.00")}</Typography>
-                                                    </Stack>
-                                                </Stack>
-                                            </Card>
-                                        );
-                                    })
+                                    basePrices.map((row) => (
+                                        <BasePriceRow key={row.id} row={row} referenceCost={referenceCost} />
+                                    ))
                                 }
                             </Stack>
                         </Card>
@@ -413,8 +429,7 @@ export function PriceTab({
                                                         :
                                                         filteredPromotionDrafts.map((draft) => {
                                                             const estimatedPrice = computeEstimatedPromotionalPrice(
-                                                                listCostForOtherPrices,
-                                                                firstBaseMarginPercent,
+                                                                firstBasePrice,
                                                                 draft.payload.discountRate
                                                             );
                                                             return (
@@ -426,7 +441,15 @@ export function PriceTab({
                                                                             <Typography variant="body2" color="text.secondary">{draft.payload.name}</Typography>
                                                                             <Typography variant="body1">{numeral(draft.payload.discountRate).format("0,0.00")}%</Typography>
                                                                         </Stack>
-                                                                        <Typography variant="h5">{numeral(estimatedPrice).format("$0,0.00")}</Typography>
+                                                                        {
+                                                                            firstBasePriceLoading ? (
+                                                                                <CircularProgress size={20} />
+                                                                            ) : (
+                                                                                <Typography variant="h5">
+                                                                                    {firstBasePriceError ? "No se pudo calcular" : numeral(estimatedPrice).format("$0,0.00")}
+                                                                                </Typography>
+                                                                            )
+                                                                        }
                                                                     </Stack>
                                                                 </Card>
                                                             );

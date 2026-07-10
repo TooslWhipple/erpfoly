@@ -6,14 +6,7 @@ import {
   InfoOutlined as InfoIcon,
   ViewModule as InventoryIcon,
 } from "@mui/icons-material";
-import {
-  MainLayout,
-  Title,
-  DepartmentCard,
-  PriceSuggestionsSidebar,
-  ConfirmPriceChangeModal,
-  StatsCardGroup
-} from "@/components";
+import { Title, DepartmentCard, PriceSuggestionsSidebar, ConfirmPriceChangeModal, StatsCardGroup } from "@/components";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
@@ -123,7 +116,7 @@ export default function LiquidacionesPage() {
     : [];
 
   return (
-    <MainLayout>
+    <>
       <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
         <Stack direction="column" spacing={3} flex="1 1 768px">
           <Title title="Estrategia de baja rotación" />
@@ -179,6 +172,6 @@ export default function LiquidacionesPage() {
         onConfirm={handleConfirmPriceChange}
         loading={applyLoading}
       />
-    </MainLayout>
+    </>
   );
 }

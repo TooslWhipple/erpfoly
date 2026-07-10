@@ -10,6 +10,7 @@ import {
   getFirstAllowedRoute,
   isPublicRoute,
   normalizePathname,
+  shouldUseAppLayout,
 } from "@/lib/routeAccess";
 
 interface AuthGuardProps {
@@ -152,7 +153,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const currentPath = normalizePathname(router.asPath);
   const publicRoute = isPublicRoute(currentPath);
 
-  if (publicRoute && !token) {
+  if (!shouldUseAppLayout(currentPath, token)) {
     return <>{children}</>;
   }
 

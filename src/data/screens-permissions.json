@@ -152,6 +152,12 @@
       "actions": ["view", "edit"]
     },
     {
+      "code": "catalogos-cajas",
+      "name": "Cajas",
+      "path": "/catalogos/cajas",
+      "actions": ["view", "create", "edit"]
+    },
+    {
       "code": "catalogos-proveedores",
       "name": "Proveedores",
       "path": "/catalogos/proveedores",

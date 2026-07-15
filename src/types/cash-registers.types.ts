@@ -42,6 +42,6 @@ export interface UpdateCashRegisterPayload {
   status?: CashRegisterStatus;
 }
 
-export interface AssignCashRegisterSellerPayload {
+export interface AssignCashRegisterCashierPayload {
   user_id: number | null;
 }

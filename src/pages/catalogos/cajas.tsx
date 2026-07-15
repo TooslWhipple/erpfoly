@@ -321,7 +321,7 @@ export default function CajasCatalogPage() {
     },
     {
       id: "assignedUserName",
-      label: "Vendedor",
+      label: "Cajero",
       size: "md",
       format: (value) => (
         <Typography variant="body2" color={value ? "text.primary" : "text.secondary"}>

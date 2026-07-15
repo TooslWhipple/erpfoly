@@ -13,8 +13,6 @@ export interface SellerListItem {
   cellphone: string;
   branchIds: number[];
   branches: SellerBranchItem[];
-  cashRegisterId: number | null;
-  cashRegisterName: string | null;
 }
 
 export interface SellerMonthlyBreakdownRow {

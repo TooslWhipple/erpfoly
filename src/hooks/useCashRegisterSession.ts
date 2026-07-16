@@ -39,11 +39,6 @@ export function useCashRegisterSession(
     try {
       setIsLoading(true);
       const summary = await getSessionSummary();
-      if (!summary) {
-        showError("No tienes una caja asignada. Contacta a un administrador.");
-        setCashRegister(null);
-        return;
-      }
 
       setCashRegister({
         id: String(summary.cash_register_id),
@@ -59,7 +54,12 @@ export function useCashRegisterSession(
         await loadMovements();
       }
     } catch (err) {
-      showError(getApiErrorMessage(err));
+      const message = getApiErrorMessage(err);
+      if (message === "El usuario no tiene una caja asignada") {
+        setCashRegister(null);
+        return;
+      }
+      showError(message);
     } finally {
       setIsLoading(false);
     }

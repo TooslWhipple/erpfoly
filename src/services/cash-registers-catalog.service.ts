@@ -7,7 +7,7 @@ import {
 } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
-  AssignCashRegisterSellerPayload,
+  AssignCashRegisterCashierPayload,
   CashRegisterCatalogItem,
   CashRegisterListItem,
   CreateCashRegisterPayload,
@@ -46,12 +46,12 @@ export async function getCashRegistersCatalog(): Promise<CashRegisterCatalogItem
   return result.data ?? [];
 }
 
-export async function assignCashRegisterToSeller(
+export async function assignCashRegisterToCashier(
   cashRegisterId: number,
-  payload: AssignCashRegisterSellerPayload,
+  payload: AssignCashRegisterCashierPayload,
 ): Promise<ApiResult<CashRegisterListItem>> {
   return post<CashRegisterListItem>(
-    `${BASE}/${cashRegisterId}/assign-seller`,
+    `${BASE}/${cashRegisterId}/assign-cashier`,
     payload,
   );
 }

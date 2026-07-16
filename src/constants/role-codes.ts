@@ -1,6 +1,7 @@
 export const ROLE_CODES = {
   CHOFER: "CHOFER",
   AYUDANTE_CHOFER: "AYUDANTE_CHOFER",
+  CAJERO: "CAJERO",
 } as const;
 
 export type RoleCode = (typeof ROLE_CODES)[keyof typeof ROLE_CODES];

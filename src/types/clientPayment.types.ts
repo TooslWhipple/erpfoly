@@ -5,8 +5,11 @@ export interface PendingInstallment {
   installmentNumber: number;
   totalInstallments: number;
   dueDate: string;
+  /** Remaining principal portion (scaled to unpaid balance). */
   principalAmount: number;
-  interestAmount: number;
+  /** Remaining IVA portion (scaled to unpaid balance). */
+  ivaAmount: number;
+  /** Amount still owed on this installment (what can be collected). */
   totalAmount: number;
 }
 
@@ -143,6 +146,45 @@ export interface BackendSaleCreditPaymentResult {
     outstanding_balance: number;
     status: string;
   };
+  message: string;
+}
+
+export interface BackendSaleCreditMultiPaymentAllocation {
+  sale_credit_id: number;
+  installment_id: number;
+  amount: number;
+}
+
+export interface BackendSaleCreditMultiPaymentPayload {
+  client_id: number;
+  payment_method: "CASH" | "CARD" | "TRANSFER" | "CHECK";
+  reference?: string;
+  notes?: string;
+  allocations: BackendSaleCreditMultiPaymentAllocation[];
+}
+
+export interface BackendSaleCreditMultiPaymentResult {
+  total_amount: number;
+  payments: Array<{
+    id: number;
+    sale_credit_id: number;
+    payment_date: string;
+    amount: number;
+    payment_method: string;
+    reference: string | null;
+    notes: string | null;
+  }>;
+  credits: Array<{
+    id: number;
+    outstanding_balance: number;
+    status: string;
+  }>;
+  allocations: Array<{
+    sale_credit_id: number;
+    installment_id: number;
+    installment_number: number;
+    amount: number;
+  }>;
   message: string;
 }
 

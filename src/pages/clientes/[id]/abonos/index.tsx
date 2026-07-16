@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import {
+  Alert,
   Button,
   Divider,
   Grid,
@@ -18,11 +19,8 @@ import {
   PaymentSummaryPanel,
 } from "../../abonos/components";
 import { ErrorState } from "@/styles/clientes/detalle.styles";
-import {
-  Card,
-  PageLayout,
-  SidebarColumn,
-} from "@/styles/clientes/abonos.styles";
+import { Card } from "@/styles/clientes/abonos.styles";
+
 export default function ClientPaymentPage() {
   const router = useRouter();
   const {
@@ -40,18 +38,22 @@ export default function ClientPaymentPage() {
     isSubmitting,
     paymentResult,
     subtotal,
-    totalInterest,
+    totalIva,
     totalDue,
     change,
     canRegister,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    canSelectInstallment,
+    canEditAmount,
     toggleInstallment,
     updateAmountToPay,
+    clearError,
     submitPayment,
     refetch,
   } = useClientPayment();
+
   const breadcrumbs: BreadcrumbItem[] = useMemo(() => {
     const clientName = context?.clientName ?? "...";
     if (fromCashRegister) {
@@ -91,6 +93,7 @@ export default function ClientPaymentPage() {
       },
     ];
   }, [cashRegisterName, clientId, context?.clientName, fromCashRegister]);
+
   const handleBack = () => {
     if (fromCashRegister) {
       router.push("/cajas");
@@ -102,6 +105,7 @@ export default function ClientPaymentPage() {
     }
     router.push("/clientes");
   };
+
   const handleDownloadReceipt = () => {
     if (!paymentResult?.receiptUrl) return;
     const link = document.createElement("a");
@@ -109,6 +113,7 @@ export default function ClientPaymentPage() {
     link.download = `comprobante-${paymentResult.id}.pdf`;
     link.click();
   };
+
   if (!routerReady || loading) {
     return (
       <Stack spacing={3}>
@@ -123,6 +128,7 @@ export default function ClientPaymentPage() {
       </Stack>
     );
   }
+
   if (error && !context) {
     return (
       <Stack spacing={3}>
@@ -141,76 +147,109 @@ export default function ClientPaymentPage() {
       </Stack>
     );
   }
+
   if (!context) {
     return null;
   }
+
   if (paymentResult) {
     return (
       <Stack spacing={3}>
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
         <PaymentSuccessView
           result={paymentResult}
-          onDownloadReceipt={handleDownloadReceipt}
+          onDownloadReceipt={paymentResult.receiptUrl ? handleDownloadReceipt : undefined}
         />
       </Stack>
     );
   }
+
+  const hasCredits = context.creditAccounts.length > 0;
+
   return (
     <Stack spacing={3}>
       <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
       <Divider />
-      <Grid container spacing={3}>
-        <Grid
-          size={{
-            xs: 12,
-            lg: 8,
-            xl: 9,
-          }}
-        >
-          <Card>
-            <Typography variant="h6" fontWeight={600}>
-              Selecciona las letras que deseas cobrar:
-            </Typography>
 
-            {context.creditAccounts.map((account) => (
-              <CreditAccountCard
-                key={account.id}
-                account={account}
-                selections={selections}
-                onToggleInstallment={toggleInstallment}
-                onAmountChange={updateAmountToPay}
-              />
-            ))}
-          </Card>
-        </Grid>
-        <Grid
-          size={{
-            xs: 12,
-            lg: 4,
-            xl: 3,
-          }}
-        >
-          <Stack width="100%" spacing={2}>
-            <PaymentSummaryPanel
-              subtotal={subtotal}
-              totalInterest={totalInterest}
-              totalDue={totalDue}
-            />
-            <PaymentCapturePanel
-              paymentAmount={paymentAmount}
-              paymentMethod={paymentMethod}
-              isCashDeposit={isCashDeposit}
-              change={change}
-              canRegister={canRegister}
-              isSubmitting={isSubmitting}
-              onPaymentAmountChange={setPaymentAmount}
-              onPaymentMethodChange={setPaymentMethod}
-              onCashDepositChange={setIsCashDeposit}
-              onSubmit={() => void submitPayment()}
-            />
+      {error && (
+        <Alert severity="error" onClose={clearError}>
+          {error}
+        </Alert>
+      )}
+
+      {!hasCredits ? (
+        <Card>
+          <Stack spacing={2} alignItems="flex-start">
+            <Typography variant="h6" fontWeight={600}>
+              Sin créditos activos
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Este cliente no tiene ventas a crédito pendientes de cobro.
+            </Typography>
+            <Button variant="outlined" onClick={handleBack}>
+              Volver
+            </Button>
           </Stack>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          <Grid
+            size={{
+              xs: 12,
+              lg: 8,
+              xl: 9,
+            }}
+          >
+            <Card>
+              <Typography variant="h6" fontWeight={600}>
+                Selecciona las letras que deseas cobrar:
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Deben ir en orden por crédito (sin saltar parcialidades). Solo la última seleccionada puede ser un abono parcial.
+              </Typography>
+
+              {context.creditAccounts.map((account) => (
+                <CreditAccountCard
+                  key={account.id}
+                  account={account}
+                  selections={selections}
+                  canSelectInstallment={canSelectInstallment}
+                  canEditAmount={canEditAmount}
+                  onToggleInstallment={toggleInstallment}
+                  onAmountChange={updateAmountToPay}
+                />
+              ))}
+            </Card>
+          </Grid>
+          <Grid
+            size={{
+              xs: 12,
+              lg: 4,
+              xl: 3,
+            }}
+          >
+            <Stack width="100%" spacing={2}>
+              <PaymentSummaryPanel
+                subtotal={subtotal}
+                totalIva={totalIva}
+                totalDue={totalDue}
+              />
+              <PaymentCapturePanel
+                paymentAmount={paymentAmount}
+                paymentMethod={paymentMethod}
+                isCashDeposit={isCashDeposit}
+                change={change}
+                canRegister={canRegister}
+                isSubmitting={isSubmitting}
+                onPaymentAmountChange={setPaymentAmount}
+                onPaymentMethodChange={setPaymentMethod}
+                onCashDepositChange={setIsCashDeposit}
+                onSubmit={() => void submitPayment()}
+              />
+            </Stack>
+          </Grid>
         </Grid>
-      </Grid>
+      )}
     </Stack>
   );
 }

@@ -17,7 +17,7 @@ function buildPendingInstallments(
 ): PendingInstallment[] {
   return Array.from({ length: 3 }, (_, index) => {
     const installmentNumber = startInstallment + index;
-    const interestAmount = interestByInstallment[installmentNumber] ?? 0;
+    const ivaAmount = interestByInstallment[installmentNumber] ?? 0;
 
     return {
       id: String(installmentNumber),
@@ -25,8 +25,8 @@ function buildPendingInstallments(
       totalInstallments,
       dueDate: dueDates[index] ?? "30 de Jun",
       principalAmount: basePrincipal,
-      interestAmount,
-      totalAmount: basePrincipal + interestAmount,
+      ivaAmount,
+      totalAmount: basePrincipal + ivaAmount,
     };
   });
 }

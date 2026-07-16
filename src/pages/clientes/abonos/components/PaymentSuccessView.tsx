@@ -11,7 +11,7 @@ import {
 
 export interface PaymentSuccessViewProps {
   result: ClientPaymentResult;
-  onDownloadReceipt: () => void;
+  onDownloadReceipt?: () => void;
 }
 
 function formatCurrency(value: number): string {
@@ -19,6 +19,8 @@ function formatCurrency(value: number): string {
 }
 
 export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccessViewProps) {
+  const canDownload = Boolean(result.receiptUrl) && Boolean(onDownloadReceipt);
+
   return (
     <SuccessCard>
       <SuccessIconWrapper>
@@ -70,18 +72,18 @@ export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccess
         </Stack>
       </ReceiptDetailsCard>
 
-      <Typography variant="caption" color="text.secondary" textAlign="center">
-        Un comprobante de pago digital fue enviado a {result.clientPhone}
-      </Typography>
-
-      <Button
-        variant="outlined"
-        startIcon={<Download size={16} />}
-        onClick={onDownloadReceipt}
-        sx={{ textTransform: "none" }}
-      >
-        Descargar comprobante
-      </Button>
+      {
+        canDownload && (
+          <Button
+            variant="outlined"
+            startIcon={<Download size={16} />}
+            onClick={onDownloadReceipt}
+            sx={{ textTransform: "none" }}
+          >
+            Descargar comprobante
+          </Button>
+        )
+      }
     </SuccessCard>
   );
 }

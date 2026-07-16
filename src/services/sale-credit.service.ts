@@ -150,6 +150,52 @@ export async function registerSaleCreditPayment(
   return post<SaleCreditPaymentResult>(`/sale-credits/${creditId}/payments`, payload);
 }
 
+export interface SaleCreditMultiPaymentAllocation {
+  sale_credit_id: number;
+  installment_id: number;
+  amount: number;
+}
+
+export interface SaleCreditMultiPaymentPayload {
+  client_id: number;
+  payment_method: "CASH" | "CARD" | "TRANSFER" | "CHECK";
+  reference?: string;
+  notes?: string;
+  allocations: SaleCreditMultiPaymentAllocation[];
+}
+
+export interface SaleCreditMultiPaymentResult {
+  total_amount: number;
+  payments: Array<{
+    id: number;
+    sale_credit_id: number;
+    payment_date: string;
+    amount: number;
+    payment_method: string;
+    reference: string | null;
+    notes: string | null;
+  }>;
+  credits: Array<{
+    id: number;
+    outstanding_balance: number;
+    status: string;
+  }>;
+  allocations: Array<{
+    sale_credit_id: number;
+    installment_id: number;
+    installment_number: number;
+    amount: number;
+  }>;
+  message: string;
+}
+
+/** Multi-allocation payment (separate from single-installment registerSaleCreditPayment). */
+export async function registerSaleCreditMultiPayment(
+  payload: SaleCreditMultiPaymentPayload,
+): Promise<ApiResult<SaleCreditMultiPaymentResult>> {
+  return post<SaleCreditMultiPaymentResult>("/sale-credits/multi-payments", payload);
+}
+
 function buildSaleCreditUrl(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

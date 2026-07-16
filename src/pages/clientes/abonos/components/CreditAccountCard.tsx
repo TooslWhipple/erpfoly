@@ -13,7 +13,9 @@ import {
 export interface CreditAccountCardProps {
   account: ClientCreditAccount;
   selections: InstallmentSelection[];
-  onToggleInstallment: (purchaseId: string, installmentId: string, totalAmount: number) => void;
+  canSelectInstallment: (purchaseId: string, installmentId: string) => boolean;
+  canEditAmount: (purchaseId: string, installmentId: string) => boolean;
+  onToggleInstallment: (purchaseId: string, installmentId: string) => void;
   onAmountChange: (purchaseId: string, installmentId: string, amount: number) => void;
 }
 
@@ -34,6 +36,8 @@ function getSelection(
 export function CreditAccountCardComponent({
   account,
   selections,
+  canSelectInstallment,
+  canEditAmount,
   onToggleInstallment,
   onAmountChange,
 }: CreditAccountCardProps) {
@@ -100,7 +104,9 @@ export function CreditAccountCardComponent({
       </Grid>
 
       <GrayCard>
-        <Typography variant="body2" color="text.secondary">Siguientes parcialidades pendientes</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Parcialidades pendientes (selección en orden, sin saltos)
+        </Typography>
 
         <InstallmentsTableWrapper>
           <InstallmentsTable>
@@ -110,8 +116,8 @@ export function CreditAccountCardComponent({
                 <th>Pago</th>
                 <th>Fecha</th>
                 <th>Monto</th>
-                <th>Interes</th>
-                <th>Total</th>
+                <th>IVA</th>
+                <th>Pendiente</th>
                 <th>A pagar</th>
               </tr>
             </thead>
@@ -120,31 +126,41 @@ export function CreditAccountCardComponent({
                 account.pendingInstallments.map((installment) => {
                   const selection = getSelection(selections, account.id, installment.id);
                   const amountToPay = selection?.amountToPay ?? 0;
+                  const isSelected = selection?.selected ?? false;
+                  const interactive = canSelectInstallment(account.id, installment.id);
+                  const amountEditable = canEditAmount(account.id, installment.id);
+                  const inputValue = isSelected
+                    ? String(amountToPay > 0 ? amountToPay : "")
+                    : "";
 
                   return (
                     <tr key={installment.id}>
                       <td>
                         <Checkbox
                           size="small"
-                          checked={selection?.selected ?? false}
-                          onChange={() =>
-                            onToggleInstallment(account.id, installment.id, installment.totalAmount)
-                          }
+                          checked={isSelected}
+                          disabled={!interactive}
+                          onChange={() => onToggleInstallment(account.id, installment.id)}
                         />
                       </td>
                       <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
                       <td>{installment.dueDate}</td>
                       <td>{formatCurrency(installment.principalAmount)}</td>
-                      <td>{formatCurrency(installment.interestAmount)}</td>
+                      <td>{formatCurrency(installment.ivaAmount)}</td>
                       <td>{formatCurrency(installment.totalAmount)}</td>
                       <td>
                         <AmountInput
                           size="small"
-                          value={amountToPay > 0 ? amountToPay.toFixed(2) : ""}
+                          value={inputValue}
                           placeholder="0.00"
+                          disabled={!amountEditable}
                           onChange={(event) => {
                             const raw = event.target.value.replace(/[^0-9.]/g, "");
-                            const parsed = parseFloat(raw);
+                            const parts = raw.split(".");
+                            const sanitized = parts.length > 2
+                              ? `${parts[0]}.${parts.slice(1).join("")}`
+                              : raw;
+                            const parsed = parseFloat(sanitized);
                             onAmountChange(
                               account.id,
                               installment.id,
@@ -161,7 +177,7 @@ export function CreditAccountCardComponent({
           </InstallmentsTable>
         </InstallmentsTableWrapper>
       </GrayCard>
-    </InnerCard >
+    </InnerCard>
   );
 }
 

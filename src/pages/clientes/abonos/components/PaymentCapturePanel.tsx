@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Checkbox, FormControlLabel, InputAdornment, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import type { ClientPaymentMethod } from "@/types/clientPayment.types";
@@ -7,7 +7,6 @@ import {
   CaptureCardActions,
   CaptureAmountInput,
   CaptureCardChangeRow,
-  PaymentMethodButton,
 } from "@/styles/clientes/abonos.styles";
 import { RadioButton } from "@/components";
 import { CircleDollarSign, CreditCard } from "lucide-react";
@@ -41,9 +40,21 @@ export function PaymentCapturePanel({
   onCashDepositChange,
   onSubmit,
 }: PaymentCapturePanelProps) {
-  const [inputValue, setInputValue] = useState("");
+  const isCard = paymentMethod === "card";
+  const [inputValue, setInputValue] = useState(
+    paymentAmount > 0 ? String(paymentAmount) : "",
+  );
+
+  useEffect(() => {
+    if (isCard) {
+      setInputValue(paymentAmount > 0 ? paymentAmount.toFixed(2) : "");
+      return;
+    }
+  }, [isCard, paymentAmount]);
 
   const handleInputChange = (raw: string) => {
+    if (isCard) return;
+
     const cleaned = raw.replace(/[^0-9.]/g, "");
     const parts = cleaned.split(".");
     const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
@@ -52,17 +63,19 @@ export function PaymentCapturePanel({
     onPaymentAmountChange(Number.isNaN(parsed) ? 0 : parsed);
   };
 
-  const displayValue = inputValue.length > 0 ? inputValue : "";
-
   return (
     <CaptureCard>
       <Typography variant="body2" fontWeight={600} textAlign="center">
-        Ingresa el cobro realizado al cliente:
+        {isCard
+          ? "El cobro con tarjeta se fija al total a cobrar:"
+          : "Ingresa el cobro realizado al cliente:"}
       </Typography>
 
       <CaptureAmountInput
-        value={displayValue}
+        value={inputValue}
         placeholder="0.00"
+        disabled={isCard}
+        readOnly={isCard}
         startAdornment={
           <InputAdornment position="start">
             <Typography variant="h4" color="text.secondary">$</Typography>
@@ -91,19 +104,23 @@ export function PaymentCapturePanel({
         />
       </Stack>
 
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={isCashDeposit}
-            onChange={(event) => onCashDepositChange(event.target.checked)}
+      {
+        !isCard && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isCashDeposit}
+                onChange={(event) => onCashDepositChange(event.target.checked)}
+              />
+            }
+            label={
+              <Typography variant="caption" color="text.secondary">
+                Activa esta opción si el abono fue realizado como depósito en efectivo
+              </Typography>
+            }
           />
-        }
-        label={
-          <Typography variant="caption" color="text.secondary">
-            Activa esta opción si el abono fue realizado como depósito en efectivo
-          </Typography>
-        }
-      />
+        )
+      }
 
       <CaptureCardActions>
         {
@@ -119,7 +136,8 @@ export function PaymentCapturePanel({
           fullWidth
           variant="contained"
           disabled={!canRegister}
-          onClick={onSubmit}>
+          onClick={onSubmit}
+        >
           {isSubmitting ? "Registrando..." : "Registrar cobro"}
         </Button>
       </CaptureCardActions>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
   getActiveSaleCredits,
-  registerSaleCreditPayment,
+  registerSaleCreditMultiPayment,
   getSaleCreditDetail,
 } from "@/services/sale-credit.service";
 import { unwrapOrThrow, get } from "@/lib/axios";
@@ -14,9 +14,14 @@ import type {
   InstallmentSelection,
   PendingInstallment,
   BackendSaleCreditActiveItem,
-  BackendSaleCreditPaymentPayload,
-  BackendSaleCreditPaymentResult,
+  BackendSaleCreditMultiPaymentResult,
 } from "@/types/clientPayment.types";
+import {
+  applyOrderedAmountChange,
+  applyOrderedToggle,
+  canInteractWithInstallment,
+  isLastSelectedInstallment,
+} from "@/utils/client-payment-selection";
 import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 
@@ -35,15 +40,18 @@ interface UseClientPaymentResult {
   isSubmitting: boolean;
   paymentResult: ClientPaymentResult | null;
   subtotal: number;
-  totalInterest: number;
+  totalIva: number;
   totalDue: number;
   change: number;
   canRegister: boolean;
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
-  toggleInstallment: (purchaseId: string, installmentId: string, totalAmount: number) => void;
+  canSelectInstallment: (purchaseId: string, installmentId: string) => boolean;
+  canEditAmount: (purchaseId: string, installmentId: string) => boolean;
+  toggleInstallment: (purchaseId: string, installmentId: string) => void;
   updateAmountToPay: (purchaseId: string, installmentId: string, amount: number) => void;
+  clearError: () => void;
   submitPayment: () => Promise<void>;
   refetch: () => void;
 }
@@ -73,23 +81,35 @@ function mapBackendInstallments(
 ): PendingInstallment[] {
   return installments
     .filter((inst) => inst.status !== "PAID" && inst.status !== "CANCELLED")
-    .map((inst) => ({
-      id: String(inst.id),
-      installmentNumber: inst.installment_number,
-      totalInstallments,
-      dueDate: formatDueDate(inst.due_date),
-      principalAmount: inst.base_amount,
-      interestAmount: inst.iva_amount,
-      totalAmount: inst.amount,
-    }));
+    .map((inst) => {
+      const remaining = Math.max(parseFloat(Number(inst.remaining).toFixed(2)), 0);
+      const originalAmount = Number(inst.amount);
+      const ratio = originalAmount > 0 ? Math.min(remaining / originalAmount, 1) : 0;
+
+      return {
+        id: String(inst.id),
+        installmentNumber: inst.installment_number,
+        totalInstallments,
+        dueDate: formatDueDate(inst.due_date),
+        principalAmount: parseFloat((inst.base_amount * ratio).toFixed(2)),
+        ivaAmount: parseFloat((inst.iva_amount * ratio).toFixed(2)),
+        totalAmount: remaining,
+      };
+    })
+    .filter((inst) => inst.totalAmount > 0)
+    .sort((left, right) => left.installmentNumber - right.installmentNumber);
 }
 
 function mapBackendCreditToAccount(
   item: BackendSaleCreditActiveItem,
 ): ClientCreditAccount {
   const nextPaymentBreakdown = item.next_payment_iva > 0
-    ? `($${item.next_payment_base.toFixed(2)} + $${item.next_payment_iva.toFixed(2)} Int)`
+    ? `($${item.next_payment_base.toFixed(2)} + $${item.next_payment_iva.toFixed(2)} IVA)`
     : undefined;
+
+  const isOverdue = Boolean(
+    item.next_due_date && dayjs(item.next_due_date).isBefore(dayjs(), "day"),
+  );
 
   return {
     id: String(item.id),
@@ -99,7 +119,7 @@ function mapBackendCreditToAccount(
     totalPaid: item.total_paid,
     remaining: item.outstanding_balance,
     paymentDueDate: item.next_due_date ? formatDueDate(item.next_due_date) : "N/A",
-    highlightPaymentDueDate: item.status === "ACTIVE" && item.outstanding_balance > 0,
+    highlightPaymentDueDate: isOverdue,
     nextPaymentAmount: item.next_payment_amount,
     nextPaymentBreakdown,
     paidInstallments: item.paid_installments,
@@ -119,29 +139,40 @@ function buildInitialSelections(accounts: ClientCreditAccount[]): InstallmentSel
   );
 }
 
+function findInstallment(
+  accounts: ClientCreditAccount[],
+  purchaseId: string,
+  installmentId: string,
+): PendingInstallment | undefined {
+  const account = accounts.find((item) => item.id === purchaseId);
+  return account?.pendingInstallments.find((item) => item.id === installmentId);
+}
+
 function getSelectionAmounts(
   selections: InstallmentSelection[],
   accounts: ClientCreditAccount[],
-): { subtotal: number; totalInterest: number; totalDue: number } {
+): { subtotal: number; totalIva: number; totalDue: number } {
   let subtotal = 0;
-  let totalInterest = 0;
+  let totalIva = 0;
+  let totalDue = 0;
 
   for (const selection of selections) {
-    if (selection.amountToPay <= 0) continue;
+    if (!selection.selected || selection.amountToPay <= 0) continue;
 
-    const account = accounts.find((item) => item.id === selection.purchaseId);
-    const installment = account?.pendingInstallments.find((item) => item.id === selection.installmentId);
+    const installment = findInstallment(accounts, selection.purchaseId, selection.installmentId);
     if (!installment || installment.totalAmount <= 0) continue;
 
-    const ratio = Math.min(selection.amountToPay / installment.totalAmount, 1);
+    const cappedAmount = Math.min(selection.amountToPay, installment.totalAmount);
+    const ratio = cappedAmount / installment.totalAmount;
     subtotal += installment.principalAmount * ratio;
-    totalInterest += installment.interestAmount * ratio;
+    totalIva += installment.ivaAmount * ratio;
+    totalDue += cappedAmount;
   }
 
   return {
     subtotal: parseFloat(subtotal.toFixed(2)),
-    totalInterest: parseFloat(totalInterest.toFixed(2)),
-    totalDue: parseFloat((subtotal + totalInterest).toFixed(2)),
+    totalIva: parseFloat(totalIva.toFixed(2)),
+    totalDue: parseFloat(totalDue.toFixed(2)),
   };
 }
 
@@ -168,6 +199,10 @@ export function useClientPayment(): UseClientPaymentResult {
   const fromCashRegister = from === "cajas";
   const cashRegisterName = typeof caja === "string" ? decodeURIComponent(caja) : "Caja 1";
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const fetchContext = useCallback(async () => {
     if (!clientId) return;
 
@@ -181,7 +216,11 @@ export function useClientPayment(): UseClientPaymentResult {
 
       if (!data.rows || data.rows.length === 0) {
         const clientResult = await get(`/clients/${numericClientId}/detail`);
-        const clientData = unwrapOrThrow(clientResult) as { firstName?: string; lastSurname?: string; phoneNumber?: string } | null;
+        const clientData = unwrapOrThrow(clientResult) as {
+          firstName?: string;
+          lastSurname?: string;
+          phoneNumber?: string;
+        } | null;
 
         setContext({
           clientId,
@@ -220,8 +259,7 @@ export function useClientPayment(): UseClientPaymentResult {
         return account;
       });
 
-      const firstAccount = accounts[0];
-      const clientName = firstAccount ? "Cliente" : "Cliente";
+      const clientName = data.rows[0]?.client_name?.trim() || "Cliente";
       const clientPhone = data.rows[0]?.client_phone ?? "";
 
       setContext({
@@ -249,9 +287,19 @@ export function useClientPayment(): UseClientPaymentResult {
     void fetchContext();
   }, [routerReady, clientId, fetchContext]);
 
-  const { subtotal, totalInterest, totalDue } = useMemo(
+  const { subtotal, totalIva, totalDue } = useMemo(
     () => getSelectionAmounts(selections, context?.creditAccounts ?? []),
     [selections, context?.creditAccounts],
+  );
+
+  useEffect(() => {
+    if (paymentMethod !== "card") return;
+    setPaymentAmount(totalDue);
+  }, [paymentMethod, totalDue]);
+
+  const selectedCount = useMemo(
+    () => selections.filter((selection) => selection.selected && selection.amountToPay > 0).length,
+    [selections],
   );
 
   const change = useMemo(() => {
@@ -259,46 +307,75 @@ export function useClientPayment(): UseClientPaymentResult {
     return Math.max(parseFloat((paymentAmount - totalDue).toFixed(2)), 0);
   }, [paymentAmount, paymentMethod, totalDue]);
 
-  const canRegister = totalDue > 0 && paymentAmount >= totalDue && !isSubmitting;
+  const canRegister =
+    selectedCount > 0 &&
+    totalDue > 0 &&
+    paymentAmount >= totalDue &&
+    !isSubmitting;
+
+  const handleSetPaymentMethod = useCallback((method: ClientPaymentMethod) => {
+    setPaymentMethod(method);
+    if (method === "card") {
+      setIsCashDeposit(false);
+    }
+  }, []);
+
+  const handleSetPaymentAmount = useCallback(
+    (value: number) => {
+      if (paymentMethod === "card") return;
+      setPaymentAmount(value);
+    },
+    [paymentMethod],
+  );
+
+  const canSelectInstallment = useCallback(
+    (purchaseId: string, installmentId: string) => {
+      const account = context?.creditAccounts.find((item) => item.id === purchaseId);
+      if (!account) return false;
+      return canInteractWithInstallment(account, installmentId, selections);
+    },
+    [context?.creditAccounts, selections],
+  );
+
+  const canEditAmount = useCallback(
+    (purchaseId: string, installmentId: string) => {
+      const account = context?.creditAccounts.find((item) => item.id === purchaseId);
+      if (!account) return false;
+      return isLastSelectedInstallment(account, installmentId, selections);
+    },
+    [context?.creditAccounts, selections],
+  );
 
   const toggleInstallment = useCallback(
-    (purchaseId: string, installmentId: string, totalAmount: number) => {
-      setSelections((prev) =>
-        prev.map((selection) => {
-          if (selection.purchaseId !== purchaseId || selection.installmentId !== installmentId) {
-            return selection;
-          }
+    (purchaseId: string, installmentId: string) => {
+      if (!context) return;
+      if (!canSelectInstallment(purchaseId, installmentId)) return;
 
-          const selected = !selection.selected;
-          return {
-            ...selection,
-            selected,
-            amountToPay: selected ? totalAmount : 0,
-          };
-        }),
+      setError(null);
+      setSelections((prev) =>
+        applyOrderedToggle(context.creditAccounts, prev, purchaseId, installmentId),
       );
     },
-    [],
+    [canSelectInstallment, context],
   );
 
   const updateAmountToPay = useCallback(
     (purchaseId: string, installmentId: string, amount: number) => {
-      const sanitized = Math.max(amount, 0);
-      setSelections((prev) =>
-        prev.map((selection) => {
-          if (selection.purchaseId !== purchaseId || selection.installmentId !== installmentId) {
-            return selection;
-          }
+      if (!context) return;
+      if (!canEditAmount(purchaseId, installmentId)) return;
 
-          return {
-            ...selection,
-            selected: sanitized > 0,
-            amountToPay: sanitized,
-          };
-        }),
+      setError(null);
+      setSelections((prev) =>
+        applyOrderedAmountChange(
+          context.creditAccounts,
+          prev,
+          purchaseId,
+          installmentId,
+          amount,
+        ),
       );
     },
-    [],
+    [canEditAmount, context],
   );
 
   const submitPayment = useCallback(async () => {
@@ -308,56 +385,88 @@ export function useClientPayment(): UseClientPaymentResult {
     setError(null);
 
     try {
-      const selectedInstallments = selections.filter((s) => s.amountToPay > 0);
+      const selectedInstallments = selections.filter(
+        (selection) => selection.selected && selection.amountToPay > 0,
+      );
 
       if (selectedInstallments.length === 0) {
         setError("Selecciona al menos una parcialidad para registrar el abono");
         return;
       }
 
-      const firstSelection = selectedInstallments[0];
-      const creditId = parseInt(firstSelection.purchaseId, 10);
-      const installmentId = parseInt(firstSelection.installmentId, 10);
+      const allocations = selectedInstallments.map((selection) => {
+        const installment = findInstallment(
+          context.creditAccounts,
+          selection.purchaseId,
+          selection.installmentId,
+        );
+        const amount = Math.min(
+          selection.amountToPay,
+          installment?.totalAmount ?? selection.amountToPay,
+        );
 
-      const backendPayload: BackendSaleCreditPaymentPayload = {
-        amount: paymentAmount,
+        return {
+          sale_credit_id: parseInt(selection.purchaseId, 10),
+          installment_id: parseInt(selection.installmentId, 10),
+          amount,
+        };
+      });
+
+      const result = await registerSaleCreditMultiPayment({
+        client_id: parseInt(clientId, 10),
         payment_method: mapFrontendToBackendMethod(paymentMethod),
         reference: isCashDeposit ? "Depósito en efectivo" : undefined,
         notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
-        installment_id: installmentId,
-      };
+        allocations,
+      });
 
-      const result = await registerSaleCreditPayment(creditId, backendPayload);
-      const backendResult = unwrapOrThrow(result) as BackendSaleCreditPaymentResult;
+      const backendResult = unwrapOrThrow(result) as BackendSaleCreditMultiPaymentResult;
 
-      const allocations: { label: string; amount: number }[] = [];
-      for (const sel of selectedInstallments) {
-        const account = context.creditAccounts.find((a) => a.id === sel.purchaseId);
-        const installment = account?.pendingInstallments.find((i) => i.id === sel.installmentId);
-        if (installment) {
-          const isFullPayment = sel.amountToPay >= installment.totalAmount - 0.001;
-          const label = isFullPayment
+      const receiptAllocations = selectedInstallments.map((selection) => {
+        const installment = findInstallment(
+          context.creditAccounts,
+          selection.purchaseId,
+          selection.installmentId,
+        );
+        const amount = Math.min(
+          selection.amountToPay,
+          installment?.totalAmount ?? selection.amountToPay,
+        );
+        const isFullPayment = Boolean(
+          installment && amount >= installment.totalAmount - 0.001,
+        );
+        const label = installment
+          ? isFullPayment
             ? `Pago de parcialidad ${installment.installmentNumber} de ${installment.totalInstallments}`
-            : `Abono de parcialidad ${installment.installmentNumber} de ${installment.totalInstallments}`;
-          allocations.push({ label, amount: sel.amountToPay });
-        }
-      }
+            : `Abono de parcialidad ${installment.installmentNumber} de ${installment.totalInstallments}`
+          : "Abono a cuenta";
 
-      const now = new Date();
-      const dateLabel = dayjs(now).format("D [de] MMMM, YYYY");
+        return { label, amount };
+      });
+
+      const primaryAccount = context.creditAccounts.find(
+        (account) => account.id === selectedInstallments[0]?.purchaseId,
+      );
+      const fullyPaidCount = selectedInstallments.filter((selection) => {
+        const installment = findInstallment(
+          context.creditAccounts,
+          selection.purchaseId,
+          selection.installmentId,
+        );
+        return (
+          installment &&
+          selection.amountToPay >= installment.totalAmount - 0.001
+        );
+      }).length;
 
       setPaymentResult({
-        id: String(backendResult.payment.id),
-        totalAmount: backendResult.payment.amount,
-        dateLabel,
-        allocations: allocations.length > 0
-          ? allocations
-          : [{ label: "Abono a cuenta", amount: paymentAmount }],
+        id: String(backendResult.payments[0]?.id ?? Date.now()),
+        totalAmount: backendResult.total_amount,
+        dateLabel: dayjs().format("D [de] MMMM, YYYY"),
+        allocations: receiptAllocations,
         clientPhone: context.clientPhone,
-        paidInstallments: backendResult.credit.status === "PAID"
-          ? (context.creditAccounts[0]?.totalInstallments ?? 0)
-          : (context.creditAccounts[0]?.paidInstallments ?? 0) + 1,
-        totalInstallments: context.creditAccounts[0]?.totalInstallments ?? 0,
+        paidInstallments: (primaryAccount?.paidInstallments ?? 0) + fullyPaidCount,
+        totalInstallments: primaryAccount?.totalInstallments ?? 0,
         receiptUrl: "",
       });
 
@@ -374,7 +483,6 @@ export function useClientPayment(): UseClientPaymentResult {
     clientId,
     context,
     isCashDeposit,
-    paymentAmount,
     paymentMethod,
     selections,
     fetchContext,
@@ -395,15 +503,18 @@ export function useClientPayment(): UseClientPaymentResult {
     isSubmitting,
     paymentResult,
     subtotal,
-    totalInterest,
+    totalIva,
     totalDue,
     change,
     canRegister,
-    setPaymentMethod,
+    setPaymentMethod: handleSetPaymentMethod,
     setIsCashDeposit,
-    setPaymentAmount,
+    setPaymentAmount: handleSetPaymentAmount,
+    canSelectInstallment,
+    canEditAmount,
     toggleInstallment,
     updateAmountToPay,
+    clearError,
     submitPayment,
     refetch: fetchContext,
   };

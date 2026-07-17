@@ -138,6 +138,15 @@ export const CaptureAmountInput = styled(OutlinedInput)(({ theme }) => ({
   },
 }));
 
+export const CaptureSplitRow = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(1.5),
+  paddingBottom: theme.spacing(1.5),
+  borderBottom: `1px solid ${theme.palette.app.border}`,
+}));
+
 export const PaymentMethodButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ theme, active }) => ({

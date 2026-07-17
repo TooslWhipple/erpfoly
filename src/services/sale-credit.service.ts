@@ -150,6 +150,96 @@ export async function registerSaleCreditPayment(
   return post<SaleCreditPaymentResult>(`/sale-credits/${creditId}/payments`, payload);
 }
 
+export interface ClientCardPaymentEntry {
+  amount: number;
+  reference?: string;
+}
+
+export interface ClientPaymentPreviewPayload {
+  cash_amount: number;
+  card_payments: ClientCardPaymentEntry[];
+  notes?: string;
+}
+
+export interface ClientPaymentPreviewAllocation {
+  credit_id: number;
+  installment_id: number;
+  installment_number: number;
+  total_installments: number;
+  due_date: string;
+  product_name: string;
+  amount_to_pay: number;
+  principal_amount: number;
+  interest_amount: number;
+  is_full_payment: boolean;
+}
+
+export interface ClientPaymentPreviewResponse {
+  total_captured: number;
+  total_card_amount: number;
+  total_applied: number;
+  subtotal: number;
+  total_interest: number;
+  total_due: number;
+  change: number;
+  allocations: ClientPaymentPreviewAllocation[];
+}
+
+export interface ClientPaymentRegisterPayload {
+  cash_amount: number;
+  card_payments: ClientCardPaymentEntry[];
+  selected_installment_ids?: number[];
+  notes?: string;
+}
+
+export interface ClientPaymentRegisterResponse {
+  payment: {
+    id: number;
+    payment_date: string;
+    amount: number;
+    payment_method: string;
+    reference: string | null;
+    notes: string | null;
+  };
+  credit: {
+    id: number;
+    outstanding_balance: number;
+    status: string;
+  };
+  allocations: Array<{
+    label: string;
+    amount: number;
+    credit_id: number;
+    installment_id: number;
+    product_name: string;
+  }>;
+  total_amount: number;
+  total_applied: number;
+  change: number;
+  message: string;
+}
+
+export async function previewClientPayment(
+  clientId: number,
+  payload: ClientPaymentPreviewPayload,
+): Promise<ApiResult<ClientPaymentPreviewResponse>> {
+  return post<ClientPaymentPreviewResponse>(
+    `/sale-credits/client/${clientId}/payments/preview`,
+    payload,
+    { skipGlobalErrorToast: true },
+  );
+}
+
+export async function registerClientPayment(
+  clientId: number,
+  payload: ClientPaymentRegisterPayload,
+): Promise<ApiResult<ClientPaymentRegisterResponse>> {
+  return post<ClientPaymentRegisterResponse>(
+    `/sale-credits/client/${clientId}/payments`,
+    payload,
+  );
+}
+
 function buildSaleCreditUrl(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

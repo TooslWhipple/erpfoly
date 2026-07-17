@@ -6,15 +6,15 @@ import {
   GrayCard,
   InstallmentsTableWrapper,
   InstallmentsTable,
-  AmountInput,
   PaymentDot,
 } from "@/styles/clientes/abonos.styles";
 
 export interface CreditAccountCardProps {
   account: ClientCreditAccount;
   selections: InstallmentSelection[];
-  onToggleInstallment: (purchaseId: string, installmentId: string, totalAmount: number) => void;
-  onAmountChange: (purchaseId: string, installmentId: string, amount: number) => void;
+  onToggleInstallment: (purchaseId: string, installmentId: string) => void;
+  canToggleInstallment: (purchaseId: string, installmentId: string) => boolean;
+  isInPreview: (purchaseId: string, installmentId: string) => boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -35,7 +35,8 @@ export function CreditAccountCardComponent({
   account,
   selections,
   onToggleInstallment,
-  onAmountChange,
+  canToggleInstallment,
+  isInPreview,
 }: CreditAccountCardProps) {
   return (
     <InnerCard>
@@ -120,38 +121,38 @@ export function CreditAccountCardComponent({
                 account.pendingInstallments.map((installment) => {
                   const selection = getSelection(selections, account.id, installment.id);
                   const amountToPay = selection?.amountToPay ?? 0;
+                  const isAllocated = amountToPay > 0;
+                  const inPreview = isInPreview(account.id, installment.id);
+                  const canToggle = canToggleInstallment(account.id, installment.id);
 
                   return (
-                    <tr key={installment.id}>
+                    <tr
+                      key={installment.id}
+                      style={
+                        isAllocated
+                          ? { backgroundColor: "rgba(25, 118, 210, 0.06)" }
+                          : undefined
+                      }
+                    >
                       <td>
                         <Checkbox
                           size="small"
-                          checked={selection?.selected ?? false}
+                          checked={isAllocated}
+                          disabled={!inPreview || !canToggle}
                           onChange={() =>
-                            onToggleInstallment(account.id, installment.id, installment.totalAmount)
+                            onToggleInstallment(account.id, installment.id)
                           }
                         />
                       </td>
-                      <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
+                      <td style={isAllocated ? { fontWeight: 600 } : undefined}>
+                        {installment.installmentNumber} de {installment.totalInstallments}
+                      </td>
                       <td>{installment.dueDate}</td>
                       <td>{formatCurrency(installment.principalAmount)}</td>
                       <td>{formatCurrency(installment.interestAmount)}</td>
                       <td>{formatCurrency(installment.totalAmount)}</td>
-                      <td>
-                        <AmountInput
-                          size="small"
-                          value={amountToPay > 0 ? amountToPay.toFixed(2) : ""}
-                          placeholder="0.00"
-                          onChange={(event) => {
-                            const raw = event.target.value.replace(/[^0-9.]/g, "");
-                            const parsed = parseFloat(raw);
-                            onAmountChange(
-                              account.id,
-                              installment.id,
-                              Number.isNaN(parsed) ? 0 : parsed,
-                            );
-                          }}
-                        />
+                      <td style={isAllocated ? { fontWeight: 700 } : undefined}>
+                        {isAllocated ? formatCurrency(amountToPay) : "$0.00"}
                       </td>
                     </tr>
                   );

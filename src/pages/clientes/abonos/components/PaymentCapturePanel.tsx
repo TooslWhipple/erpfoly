@@ -1,27 +1,35 @@
-import { useState } from "react";
-import { Button, Checkbox, FormControlLabel, InputAdornment, Stack, Typography } from "@mui/material";
+import { useMemo, useState } from "react";
+import {
+  Button,
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  Stack,
+  Typography,
+} from "@mui/material";
 import numeral from "numeral";
-import type { ClientPaymentMethod } from "@/types/clientPayment.types";
+import { CircleDollarSign, CreditCard, PlusCircle, Trash2 } from "lucide-react";
+import type { CardPaymentEntry } from "@/types/clientPayment.types";
 import {
   CaptureCard,
   CaptureCardActions,
-  CaptureAmountInput,
   CaptureCardChangeRow,
-  PaymentMethodButton,
+  CaptureSplitRow
 } from "@/styles/clientes/abonos.styles";
-import { RadioButton } from "@/components";
-import { CircleDollarSign, CreditCard } from "lucide-react";
+import { theme } from "@/styles/theme";
 
 export interface PaymentCapturePanelProps {
-  paymentAmount: number;
-  paymentMethod: ClientPaymentMethod;
-  isCashDeposit: boolean;
+  cashAmount: number;
+  cardPayments: CardPaymentEntry[];
+  totalCaptured: number;
   change: number;
   canRegister: boolean;
   isSubmitting: boolean;
-  onPaymentAmountChange: (value: number) => void;
-  onPaymentMethodChange: (method: ClientPaymentMethod) => void;
-  onCashDepositChange: (value: boolean) => void;
+  previewLoading?: boolean;
+  onCashAmountChange: (value: number) => void;
+  onCardPaymentChange: (id: string, amount: number) => void;
+  onAddCardPayment: () => void;
+  onRemoveCardPayment: (id: string) => void;
   onSubmit: () => void;
 }
 
@@ -29,98 +37,178 @@ function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
 
+function sanitizeAmountInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const parts = cleaned.split(".");
+  return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
+}
+
+function parseAmount(raw: string): number {
+  const parsed = parseFloat(raw);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function PaymentCapturePanel({
-  paymentAmount,
-  paymentMethod,
-  isCashDeposit,
+  cashAmount,
+  cardPayments,
+  totalCaptured,
   change,
   canRegister,
   isSubmitting,
-  onPaymentAmountChange,
-  onPaymentMethodChange,
-  onCashDepositChange,
+  previewLoading = false,
+  onCashAmountChange,
+  onCardPaymentChange,
+  onAddCardPayment,
+  onRemoveCardPayment,
   onSubmit,
 }: PaymentCapturePanelProps) {
-  const [inputValue, setInputValue] = useState("");
+  const [cashInput, setCashInput] = useState(
+    cashAmount > 0 ? String(cashAmount) : "",
+  );
+  const [cardInputs, setCardInputs] = useState<Record<string, string>>({});
 
-  const handleInputChange = (raw: string) => {
-    const cleaned = raw.replace(/[^0-9.]/g, "");
-    const parts = cleaned.split(".");
-    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
-    setInputValue(sanitized);
-    const parsed = parseFloat(sanitized);
-    onPaymentAmountChange(Number.isNaN(parsed) ? 0 : parsed);
+  const cardInputValues = useMemo(() => {
+    const next: Record<string, string> = {};
+    for (const entry of cardPayments) {
+      if (cardInputs[entry.id] !== undefined) {
+        next[entry.id] = cardInputs[entry.id];
+      } else {
+        next[entry.id] = entry.amount > 0 ? String(entry.amount) : "";
+      }
+    }
+    return next;
+  }, [cardInputs, cardPayments]);
+
+  const handleCashChange = (raw: string) => {
+    const sanitized = sanitizeAmountInput(raw);
+    setCashInput(sanitized);
+    onCashAmountChange(parseAmount(sanitized));
   };
 
-  const displayValue = inputValue.length > 0 ? inputValue : "";
+  const handleCardChange = (id: string, raw: string) => {
+    const sanitized = sanitizeAmountInput(raw);
+    setCardInputs((prev) => ({ ...prev, [id]: sanitized }));
+    onCardPaymentChange(id, parseAmount(sanitized));
+  };
+
+  const handleRemoveCard = (id: string) => {
+    setCardInputs((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    onRemoveCardPayment(id);
+  };
 
   return (
     <CaptureCard>
-      <Typography variant="body2" fontWeight={600} textAlign="center">
-        Ingresa el cobro realizado al cliente:
-      </Typography>
+      <Typography variant="body2" fontWeight={600} textAlign="center">Ingresa el cobro realizado a el cliente:</Typography>
 
-      <CaptureAmountInput
-        value={displayValue}
-        placeholder="0.00"
-        startAdornment={
-          <InputAdornment position="start">
-            <Typography variant="h4" color="text.secondary">$</Typography>
-          </InputAdornment>
-        }
-        onChange={(event) => handleInputChange(event.target.value)}
-      />
+      <Stack spacing={1.5}>
+        <CaptureSplitRow>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <CircleDollarSign size={16} color={theme.palette.text.secondary} />
+            <Typography variant="body1">Efectivo</Typography>
+          </Stack>
+          <OutlinedInput
+            size="small"
+            style={{ width: "108px" }}
+            value={cashInput}
+            placeholder="0.00"
+            startAdornment={
+              <InputAdornment position="start">
+                <Typography variant="h6" color="text.primary" fontWeight={400}>
+                  $
+                </Typography>
+              </InputAdornment>
+            }
+            onChange={(event) => handleCashChange(event.target.value)}
+          />
+        </CaptureSplitRow>
 
-      <Stack direction="row" spacing={1}>
-        <RadioButton
-          fullWidth
-          value="cash"
-          label="Efectivo"
-          endIcon={<CircleDollarSign size={18} />}
-          checked={paymentMethod === "cash"}
-          onChange={() => onPaymentMethodChange("cash")}
-        />
+        {
+          cardPayments.map((entry, index) => {
+            const label = cardPayments.length > 1 ? `Tarjeta ${index + 1}` : "Tarjeta";
 
-        <RadioButton
-          fullWidth
-          value="card"
-          label="Tarjeta"
-          endIcon={<CreditCard size={18} />}
-          checked={paymentMethod === "card"}
-          onChange={() => onPaymentMethodChange("card")}
-        />
+            return (
+              <CaptureSplitRow key={entry.id}>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <CreditCard size={16} color={theme.palette.text.secondary} />
+                  <Typography variant="body1">{label}</Typography>
+                </Stack>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <OutlinedInput
+                    size="small"
+                    style={{ width: "108px" }}
+                    value={cardInputValues[entry.id] ?? ""}
+                    placeholder="0.0"
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Typography
+                          variant="h6"
+                          color="text.primary"
+                          fontWeight={400}>
+                          $
+                        </Typography>
+                      </InputAdornment>
+                    }
+                    onChange={(event) =>
+                      handleCardChange(entry.id, event.target.value)
+                    }
+                  />
+                  {
+                    cardPayments.length > 1 &&
+                    <IconButton
+                      size="small"
+                      aria-label={`Eliminar ${label}`}
+                      onClick={() => handleRemoveCard(entry.id)}>
+                      <Trash2 size={16} />
+                    </IconButton>
+                  }
+                </Stack>
+              </CaptureSplitRow>
+            );
+          })}
       </Stack>
 
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={isCashDeposit}
-            onChange={(event) => onCashDepositChange(event.target.checked)}
-          />
-        }
-        label={
-          <Typography variant="caption" color="text.secondary">
-            Activa esta opción si el abono fue realizado como depósito en efectivo
-          </Typography>
-        }
-      />
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<PlusCircle size={16} />}
+        onClick={onAddCardPayment}
+        sx={{
+          textTransform: "none",
+          color: "primary.main",
+          alignSelf: "flex-start",
+          px: 0,
+        }}
+      >
+        Agregar otra tarjeta
+      </Button>
 
       <CaptureCardActions>
-        {
-          paymentMethod === "cash" && (
-            <CaptureCardChangeRow>
-              <Typography variant="body2" color="text.secondary">Cambio</Typography>
-              <Typography variant="subtitle1">{formatCurrency(change)}</Typography>
-            </CaptureCardChangeRow>
-          )
-        }
+        {(cashAmount > 0 || change > 0) && (
+          <CaptureCardChangeRow>
+            <Typography variant="body2" color="text.secondary">
+              Cambio:
+            </Typography>
+            <Typography variant="subtitle1" fontWeight={600}>
+              {formatCurrency(change)}
+            </Typography>
+          </CaptureCardChangeRow>
+        )}
 
         <Button
           fullWidth
           variant="contained"
           disabled={!canRegister}
-          onClick={onSubmit}>
-          {isSubmitting ? "Registrando..." : "Registrar cobro"}
+          onClick={onSubmit}
+        >
+          {isSubmitting
+            ? "Registrando..."
+            : previewLoading
+              ? "Calculando..."
+              : `Registrar cobro | ${formatCurrency(totalCaptured)}`}
         </Button>
       </CaptureCardActions>
     </CaptureCard>

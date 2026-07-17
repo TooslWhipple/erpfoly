@@ -20,9 +20,8 @@ import {
 import { ErrorState } from "@/styles/clientes/detalle.styles";
 import {
   Card,
-  PageLayout,
-  SidebarColumn,
 } from "@/styles/clientes/abonos.styles";
+
 export default function ClientPaymentPage() {
   const router = useRouter();
   const {
@@ -34,9 +33,9 @@ export default function ClientPaymentPage() {
     loading,
     error,
     selections,
-    paymentMethod,
-    isCashDeposit,
-    paymentAmount,
+    cashAmount,
+    cardPayments,
+    totalCaptured,
     isSubmitting,
     paymentResult,
     subtotal,
@@ -44,14 +43,19 @@ export default function ClientPaymentPage() {
     totalDue,
     change,
     canRegister,
-    setPaymentMethod,
-    setIsCashDeposit,
-    setPaymentAmount,
+    previewLoading,
+    previewError,
+    setCashAmount,
+    addCardPayment,
+    updateCardPayment,
+    removeCardPayment,
     toggleInstallment,
-    updateAmountToPay,
+    canToggleInstallment,
+    isInPreview,
     submitPayment,
     refetch,
   } = useClientPayment();
+
   const breadcrumbs: BreadcrumbItem[] = useMemo(() => {
     const clientName = context?.clientName ?? "...";
     if (fromCashRegister) {
@@ -91,6 +95,7 @@ export default function ClientPaymentPage() {
       },
     ];
   }, [cashRegisterName, clientId, context?.clientName, fromCashRegister]);
+
   const handleBack = () => {
     if (fromCashRegister) {
       router.push("/cajas");
@@ -102,6 +107,7 @@ export default function ClientPaymentPage() {
     }
     router.push("/clientes");
   };
+
   const handleDownloadReceipt = () => {
     if (!paymentResult?.receiptUrl) return;
     const link = document.createElement("a");
@@ -109,6 +115,7 @@ export default function ClientPaymentPage() {
     link.download = `comprobante-${paymentResult.id}.pdf`;
     link.click();
   };
+
   if (!routerReady || loading) {
     return (
       <Stack spacing={3}>
@@ -123,6 +130,7 @@ export default function ClientPaymentPage() {
       </Stack>
     );
   }
+
   if (error && !context) {
     return (
       <Stack spacing={3}>
@@ -141,9 +149,11 @@ export default function ClientPaymentPage() {
       </Stack>
     );
   }
+
   if (!context) {
     return null;
   }
+
   if (paymentResult) {
     return (
       <Stack spacing={3}>
@@ -155,22 +165,29 @@ export default function ClientPaymentPage() {
       </Stack>
     );
   }
+
   return (
     <Stack spacing={3}>
       <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
       <Divider />
       <Grid container spacing={3}>
-        <Grid
-          size={{
-            xs: 12,
-            lg: 8,
-            xl: 9,
-          }}
-        >
+        <Grid size={{ xs: 12, lg: 8, xl: 9 }}>
           <Card>
             <Typography variant="h6" fontWeight={600}>
               Selecciona las letras que deseas cobrar:
             </Typography>
+
+            {previewError && (
+              <Typography variant="body2" color="error">
+                {previewError}
+              </Typography>
+            )}
+
+            {error && (
+              <Typography variant="body2" color="error">
+                {error}
+              </Typography>
+            )}
 
             {context.creditAccounts.map((account) => (
               <CreditAccountCard
@@ -178,18 +195,13 @@ export default function ClientPaymentPage() {
                 account={account}
                 selections={selections}
                 onToggleInstallment={toggleInstallment}
-                onAmountChange={updateAmountToPay}
+                canToggleInstallment={canToggleInstallment}
+                isInPreview={isInPreview}
               />
             ))}
           </Card>
         </Grid>
-        <Grid
-          size={{
-            xs: 12,
-            lg: 4,
-            xl: 3,
-          }}
-        >
+        <Grid size={{ xs: 12, lg: 4, xl: 3 }}>
           <Stack width="100%" spacing={2}>
             <PaymentSummaryPanel
               subtotal={subtotal}
@@ -197,15 +209,17 @@ export default function ClientPaymentPage() {
               totalDue={totalDue}
             />
             <PaymentCapturePanel
-              paymentAmount={paymentAmount}
-              paymentMethod={paymentMethod}
-              isCashDeposit={isCashDeposit}
+              cashAmount={cashAmount}
+              cardPayments={cardPayments}
+              totalCaptured={totalCaptured}
               change={change}
               canRegister={canRegister}
               isSubmitting={isSubmitting}
-              onPaymentAmountChange={setPaymentAmount}
-              onPaymentMethodChange={setPaymentMethod}
-              onCashDepositChange={setIsCashDeposit}
+              previewLoading={previewLoading}
+              onCashAmountChange={setCashAmount}
+              onCardPaymentChange={updateCardPayment}
+              onAddCardPayment={addCardPayment}
+              onRemoveCardPayment={removeCardPayment}
               onSubmit={() => void submitPayment()}
             />
           </Stack>

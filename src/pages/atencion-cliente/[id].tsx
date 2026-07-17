@@ -1,97 +1,83 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Box, Stack, Skeleton, IconButton, Typography } from "@mui/material";
-import { MoreVert as MoreVertIcon } from "@mui/icons-material";
+import { IconButton, Menu, MenuItem, Skeleton, Stack, Typography } from "@mui/material";
+import { MoreVertical } from "lucide-react";
 import numeral from "numeral";
-import { Breadcrumbs, Tabs } from "@/components";
+import { Breadcrumbs, StatusChip, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import type { InvoiceDetail } from "@/types/atencion-cliente.types";
+import type { StatusChipVariant } from "@/components/StatusChip";
+import type {
+  InvoiceDetail,
+  InvoiceStatus,
+} from "@/types/atencion-cliente.types";
 import { getInvoiceDetail } from "@/data/atencion-cliente.mockData";
+import { InvoiceArticlesTab } from "./components";
 import {
   DetailPageContainer,
-  HeaderSection,
-  TitleSection,
-  InvoiceTitle,
-  InvoiceNumber,
-  PurchaseDate,
-  HeaderRightSection,
-  StatusChip,
-  MoreOptionsButton,
-  FinancialSummary,
+  EmptyState,
   FinancialItem,
   FinancialLabel,
+  FinancialSummary,
   FinancialValue,
-  PaymentIndicator,
-  PaymentDots,
-  PaymentDot,
-  PaymentText,
-  TabsContainer,
-  TabContent,
-  EmptyState,
-  ArticlesList,
-  ArticleCard,
-  ArticleHeader,
-  ArticleInfo,
-  ArticleCode,
-  ArticleDescription,
-  ArticleStatusChip,
-  ArticleDetails,
-  ArticleDetailItem,
-  ArticleDetailLabel,
-  ArticleDetailValue,
-  ContentLayout,
+  HeaderRightSection,
+  HeaderSection,
+  InvoiceNumber,
   MainContent,
-  SummaryPanel,
+  PaymentDot,
+  PaymentDots,
+  PaymentIndicator,
+  PaymentText,
+  PurchaseDate,
   SummaryCard,
-  SummaryTitle,
-  SummaryRow,
   SummaryLabel,
-  SummaryValue,
-  SummaryTotalRow,
+  SummaryPanel,
+  SummaryRow,
+  SummaryTitle,
   SummaryTotalLabel,
+  SummaryTotalRow,
   SummaryTotalValue,
+  SummaryValue,
+  TitleSection,
+  ContentLayout,
 } from "@/styles/atencion-cliente.styles";
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+const INVOICE_TABS = [
+  { value: "actividad", label: "Actividad" },
+  { value: "articulos", label: "Artículos" },
+];
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  activo: "Activo",
+  cancelado: "Cancelado",
+  pagado: "Pagado",
+};
+
+const STATUS_VARIANTS: Record<InvoiceStatus, StatusChipVariant> = {
+  activo: "success",
+  cancelado: "error",
+  pagado: "info",
+};
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
-function getStatusLabel(status: "activo" | "cancelado" | "pagado"): string {
-  const labels = {
-    activo: "Activo",
-    cancelado: "Cancelado",
-    pagado: "Pagado",
-  };
-  return labels[status];
-}
-function getArticleStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    entregado: "Entregado",
-    reparacion: "Reparación",
-    pendiente: "Pendiente",
-    cancelado: "Cancelado",
-  };
-  return labels[status] || status;
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("actividad");
+  const [activeTab, setActiveTab] = useState("articulos");
+  const [headerMenuAnchor, setHeaderMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
+
   useEffect(() => {
     if (id && typeof id === "string") {
       loadInvoice(id);
     }
   }, [id]);
+
   const loadInvoice = async (invoiceId: string) => {
     setLoading(true);
     try {
@@ -103,273 +89,197 @@ export default function InvoiceDetailPage() {
       setLoading(false);
     }
   };
-  const handleMoreOptions = () => {
-    console.log("[InvoiceDetail] More options clicked");
-    // TODO: Open menu with options
+
+  const breadcrumbs: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: "Atención al cliente", href: "/atencion-cliente" },
+      { label: invoice?.customerName || "..." },
+      { label: invoice?.customerId || "..." },
+    ],
+    [invoice?.customerId, invoice?.customerName],
+  );
+
+  const handleBack = () => {
+    router.push("/atencion-cliente");
   };
 
-  // Breadcrumbs
-  const breadcrumbs: BreadcrumbItem[] = [
-    {
-      label: "Clientes",
-      href: "/clientes",
-    },
-    {
-      label: invoice?.customerName || "...",
-      href: `/clientes/${invoice?.customerId}`,
-    },
-    {
-      label: invoice?.customerId || "...",
-    },
-  ];
-
-  // Tabs configuration
-  const tabs = [
-    {
-      value: "actividad",
-      label: "Actividad",
-    },
-    {
-      value: "articulos",
-      label: "Artículos",
-    },
-  ];
   if (loading) {
     return (
-      <>
+      <Stack spacing={3}>
+        <Skeleton variant="text" width="50%" height={32} />
+        <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 2 }} />
+      </Stack>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <Stack spacing={3}>
         <Breadcrumbs
           items={breadcrumbs}
           showBackButton
-          onBack={() => router.push("/atencion-cliente")}
+          onBack={handleBack}
         />
-        <DetailPageContainer>
-          <HeaderSection>
-            <TitleSection>
-              <Skeleton variant="text" width={200} height={32} />
-              <Skeleton variant="text" width={300} height={48} />
-              <Skeleton variant="text" width={200} height={20} />
-            </TitleSection>
-          </HeaderSection>
-          <Skeleton
-            variant="rectangular"
-            height={100}
-            sx={{
-              borderRadius: 2,
-            }}
-          />
-          <Skeleton
-            variant="rectangular"
-            height={400}
-            sx={{
-              borderRadius: 2,
-              mt: 3,
-            }}
-          />
-        </DetailPageContainer>
-      </>
+        <Typography>Factura no encontrada</Typography>
+      </Stack>
     );
   }
-  if (!invoice) {
-    return <Typography>Factura no encontrada</Typography>;
-  }
+
   return (
-    <>
-      <Breadcrumbs
-        items={breadcrumbs}
-        showBackButton
-        onBack={() => router.push("/atencion-cliente")}
-      />
+    <DetailPageContainer>
+      <Stack
+        direction={{ xs: "column", lg: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", lg: "center" }}
+        spacing={2}
+      >
+        <Breadcrumbs
+          items={breadcrumbs}
+          showBackButton
+          onBack={handleBack}
+        />
+        <HeaderRightSection>
+          <StatusChip
+            label={STATUS_LABELS[invoice.status]}
+            variant={STATUS_VARIANTS[invoice.status]}
+            size="small"
+          />
+          <IconButton
+            size="small"
+            aria-label="Opciones de la factura"
+            onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
+          >
+            <MoreVertical size={18} />
+          </IconButton>
+          <Menu
+            anchorEl={headerMenuAnchor}
+            open={Boolean(headerMenuAnchor)}
+            onClose={() => setHeaderMenuAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <MenuItem disabled>Más opciones próximamente</MenuItem>
+          </Menu>
+        </HeaderRightSection>
+      </Stack>
 
-      <DetailPageContainer>
-        <HeaderSection>
-          <TitleSection>
-            <InvoiceTitle>Factura</InvoiceTitle>
-            <InvoiceNumber>{invoice.invoiceNumber}</InvoiceNumber>
-            <PurchaseDate>Comprado el {invoice.purchaseDate}</PurchaseDate>
-          </TitleSection>
+      <HeaderSection>
+        <TitleSection>
+          <InvoiceNumber>Factura {invoice.invoiceNumber}</InvoiceNumber>
+          <PurchaseDate>Comprado el {invoice.purchaseDate}</PurchaseDate>
+        </TitleSection>
+      </HeaderSection>
 
-          <HeaderRightSection>
-            <StatusChip
-              label={getStatusLabel(invoice.status)}
-              statusType={invoice.status}
-              size="small"
-            />
-            <MoreOptionsButton onClick={handleMoreOptions} size="small">
-              <MoreVertIcon fontSize="small" />
-            </MoreOptionsButton>
-          </HeaderRightSection>
-        </HeaderSection>
+      <FinancialSummary>
+        <FinancialItem>
+          <FinancialLabel>Costo inicial</FinancialLabel>
+          <FinancialValue>{formatCurrency(invoice.initialCost)}</FinancialValue>
+        </FinancialItem>
+        <FinancialItem>
+          <FinancialLabel>Total abonos</FinancialLabel>
+          <FinancialValue>
+            {formatCurrency(invoice.totalPayments)}
+          </FinancialValue>
+        </FinancialItem>
+        <FinancialItem>
+          <FinancialLabel>Resta</FinancialLabel>
+          <FinancialValue>{formatCurrency(invoice.remaining)}</FinancialValue>
+        </FinancialItem>
+        <FinancialItem>
+          <FinancialLabel>Fecha de pago</FinancialLabel>
+          <FinancialValue>{invoice.paymentDate}</FinancialValue>
+        </FinancialItem>
+        <FinancialItem>
+          <FinancialLabel>Próx. Pago</FinancialLabel>
+          <FinancialValue>
+            {formatCurrency(invoice.nextPayment)}
+          </FinancialValue>
+        </FinancialItem>
 
-        <FinancialSummary>
-          <FinancialItem>
-            <FinancialLabel>Costo inicial</FinancialLabel>
-            <FinancialValue>
-              {formatCurrency(invoice.initialCost)}
-            </FinancialValue>
-          </FinancialItem>
-          <FinancialItem>
-            <FinancialLabel>Total abonos</FinancialLabel>
-            <FinancialValue>
-              {formatCurrency(invoice.totalPayments)}
-            </FinancialValue>
-          </FinancialItem>
-          <FinancialItem>
-            <FinancialLabel>Resta</FinancialLabel>
-            <FinancialValue>{formatCurrency(invoice.remaining)}</FinancialValue>
-          </FinancialItem>
-          <FinancialItem>
-            <FinancialLabel>Fecha de pago</FinancialLabel>
-            <FinancialValue>{invoice.paymentDate}</FinancialValue>
-          </FinancialItem>
-          <FinancialItem>
-            <FinancialLabel>Próx. Pago</FinancialLabel>
-            <FinancialValue>
-              {formatCurrency(invoice.nextPayment)}
-            </FinancialValue>
-          </FinancialItem>
-
-          <PaymentIndicator>
-            <PaymentDots>
-              {Array.from({
-                length: invoice.totalPaymentsCount,
-              }).map((_, index) => (
+        <PaymentIndicator>
+          <PaymentDots>
+            {Array.from({ length: invoice.totalPaymentsCount }).map(
+              (_, index) => (
                 <PaymentDot
                   key={index}
                   active={index < invoice.currentPayment}
                 />
-              ))}
-            </PaymentDots>
-            <PaymentText>
-              {invoice.currentPayment} de {invoice.totalPaymentsCount} pagos
-            </PaymentText>
-          </PaymentIndicator>
-        </FinancialSummary>
+              ),
+            )}
+          </PaymentDots>
+          <PaymentText>
+            {invoice.currentPayment} de {invoice.totalPaymentsCount} pagos
+          </PaymentText>
+        </PaymentIndicator>
+      </FinancialSummary>
 
-        <TabsContainer>
-          <Tabs
-            tabs={tabs}
-            value={activeTab}
-            onChange={(value) => setActiveTab(value)}
-            withBorder={true}
-          />
-        </TabsContainer>
+      <TabFilters
+        tabs={INVOICE_TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-        <ContentLayout>
-          <MainContent>
-            <TabContent>
-              {activeTab === "actividad" && (
-                <>
-                  {invoice.activities.length === 0 ? (
-                    <EmptyState>No hay actividad reciente</EmptyState>
-                  ) : (
-                    <Stack>
-                      {/* TODO: Render activities when available */}
-                      {invoice.activities.map((activity) => (
-                        <Box key={activity.id}>{activity.description}</Box>
-                      ))}
-                    </Stack>
-                  )}
-                </>
-              )}
-
-              {activeTab === "articulos" && (
-                <ArticlesList>
-                  {invoice.articles.map((article) => (
-                    <ArticleCard key={article.id}>
-                      <ArticleHeader>
-                        <ArticleInfo>
-                          <ArticleCode>{article.code}</ArticleCode>
-                          <ArticleDescription>
-                            {article.description}
-                          </ArticleDescription>
-                        </ArticleInfo>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <ArticleStatusChip
-                            label={getArticleStatusLabel(article.status)}
-                            statusType={article.status}
-                            size="small"
-                          />
-                          <IconButton
-                            size="small"
-                            sx={{
-                              color: "#71717A",
-                            }}
-                          >
-                            <MoreVertIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </ArticleHeader>
-
-                      <ArticleDetails>
-                        <ArticleDetailItem>
-                          <ArticleDetailLabel>Precio</ArticleDetailLabel>
-                          <ArticleDetailValue>
-                            {formatCurrency(article.price)}
-                          </ArticleDetailValue>
-                        </ArticleDetailItem>
-                        <ArticleDetailItem>
-                          <ArticleDetailLabel>Promociones</ArticleDetailLabel>
-                          <ArticleDetailValue>
-                            {formatCurrency(article.promotions)}
-                          </ArticleDetailValue>
-                        </ArticleDetailItem>
-                        <ArticleDetailItem>
-                          <ArticleDetailLabel>Total</ArticleDetailLabel>
-                          <ArticleDetailValue>
-                            {formatCurrency(article.total)}
-                          </ArticleDetailValue>
-                        </ArticleDetailItem>
-                        <ArticleDetailItem>
-                          <ArticleDetailLabel>Puntos</ArticleDetailLabel>
-                          <ArticleDetailValue>
-                            {article.points}
-                          </ArticleDetailValue>
-                        </ArticleDetailItem>
-                      </ArticleDetails>
-                    </ArticleCard>
+      <ContentLayout>
+        <MainContent>
+          {activeTab === "actividad" && (
+            <>
+              {invoice.activities.length === 0 ? (
+                <EmptyState>No hay actividad reciente</EmptyState>
+              ) : (
+                <Stack spacing={1.5}>
+                  {invoice.activities.map((activity) => (
+                    <EmptyState key={activity.id}>
+                      {activity.description}
+                    </EmptyState>
                   ))}
-                </ArticlesList>
+                </Stack>
               )}
-            </TabContent>
-          </MainContent>
+            </>
+          )}
 
-          <SummaryPanel>
-            <SummaryCard>
-              <SummaryTitle>Resumen</SummaryTitle>
-              <SummaryRow>
-                <SummaryLabel>Subtotal sin IVA</SummaryLabel>
-                <SummaryValue>
-                  {formatCurrency(invoice.summary.subtotalWithoutTax)}
-                </SummaryValue>
-              </SummaryRow>
-              <SummaryRow>
-                <SummaryLabel>IVA</SummaryLabel>
-                <SummaryValue>
-                  {formatCurrency(invoice.summary.tax)}
-                </SummaryValue>
-              </SummaryRow>
-              <SummaryRow>
-                <SummaryLabel>Importe con IVA</SummaryLabel>
-                <SummaryValue>
-                  {formatCurrency(invoice.summary.amountWithTax)}
-                </SummaryValue>
-              </SummaryRow>
-              <SummaryRow>
-                <SummaryLabel>Impuesto Suntuario</SummaryLabel>
-                <SummaryValue>
-                  {formatCurrency(invoice.summary.luxuryTax)}
-                </SummaryValue>
-              </SummaryRow>
-              <SummaryTotalRow>
-                <SummaryTotalLabel>Total</SummaryTotalLabel>
-                <SummaryTotalValue>
-                  {formatCurrency(invoice.summary.total)}
-                </SummaryTotalValue>
-              </SummaryTotalRow>
-            </SummaryCard>
-          </SummaryPanel>
-        </ContentLayout>
-      </DetailPageContainer>
-    </>
+          {activeTab === "articulos" && (
+            <InvoiceArticlesTab invoice={invoice} />
+          )}
+        </MainContent>
+
+        <SummaryPanel>
+          <SummaryCard>
+            <SummaryTitle>Resumen</SummaryTitle>
+            <SummaryRow>
+              <SummaryLabel>Subtotal sin IVA</SummaryLabel>
+              <SummaryValue>
+                {formatCurrency(invoice.summary.subtotalWithoutTax)}
+              </SummaryValue>
+            </SummaryRow>
+            <SummaryRow>
+              <SummaryLabel>IVA</SummaryLabel>
+              <SummaryValue>
+                {formatCurrency(invoice.summary.tax)}
+              </SummaryValue>
+            </SummaryRow>
+            <SummaryRow>
+              <SummaryLabel>Importe con IVA</SummaryLabel>
+              <SummaryValue>
+                {formatCurrency(invoice.summary.amountWithTax)}
+              </SummaryValue>
+            </SummaryRow>
+            <SummaryRow>
+              <SummaryLabel>Impuesto Suntuario</SummaryLabel>
+              <SummaryValue>
+                {formatCurrency(invoice.summary.luxuryTax)}
+              </SummaryValue>
+            </SummaryRow>
+            <SummaryTotalRow>
+              <SummaryTotalLabel>Total</SummaryTotalLabel>
+              <SummaryTotalValue>
+                {formatCurrency(invoice.summary.total)}
+              </SummaryTotalValue>
+            </SummaryTotalRow>
+          </SummaryCard>
+        </SummaryPanel>
+      </ContentLayout>
+    </DetailPageContainer>
   );
 }

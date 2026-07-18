@@ -8,11 +8,12 @@ import {
 } from "@mui/material";
 import { ImagePlus, Settings2, X } from "lucide-react";
 import { SideModal, FormSelect, FormTextField, StatusChip } from "@/components";
-import { createServiceOrder } from "@/data/atencion-cliente.mockData";
+import { createServiceOrder } from "@/services/service-orders.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type {
   InvoiceArticle,
   InvoiceDetail,
+  ServiceOrder,
 } from "@/types/atencion-cliente.types";
 import {
   ArticleMetaInfo,
@@ -35,7 +36,7 @@ export interface CreateServiceOrderModalProps {
   invoice: InvoiceDetail;
   initialArticleId?: string;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (order: ServiceOrder) => void;
 }
 
 interface EvidencePreview {
@@ -162,7 +163,7 @@ export function CreateServiceOrderModal({
 
     setSubmitting(true);
     try {
-      await createServiceOrder({
+      const order = await createServiceOrder({
         invoiceId: invoice.id,
         articleId: selectedArticle.id,
         quantity: Number(quantity),
@@ -171,8 +172,8 @@ export function CreateServiceOrderModal({
         observations: observations.trim(),
         evidenceFiles: evidence.map((item) => item.file),
       });
-      showSuccess("La orden de servicio se creó correctamente.");
-      onSuccess?.();
+      showSuccess("Orden de servicio registrada");
+      onSuccess?.(order);
       onClose();
     } catch (error) {
       console.error("[CreateServiceOrderModal] Error creating order:", error);

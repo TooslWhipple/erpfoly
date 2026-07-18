@@ -1,16 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { IconButton, Menu, MenuItem, Skeleton, Stack, Typography } from "@mui/material";
-import { MoreVertical } from "lucide-react";
+import {
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Ban, MoreVertical } from "lucide-react";
 import numeral from "numeral";
-import { Breadcrumbs, StatusChip, TabFilters } from "@/components";
+import { Breadcrumbs, ConfirmModal, StatusChip, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import type {
   InvoiceDetail,
   InvoiceStatus,
 } from "@/types/atencion-cliente.types";
-import { getInvoiceDetail } from "@/data/atencion-cliente.mockData";
+import { canCancelInvoice } from "@/types/atencion-cliente.types";
+import {
+  cancelInvoice,
+  getInvoiceDetail,
+} from "@/data/atencion-cliente.mockData";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { InvoiceArticlesTab } from "./components";
 import {
   DetailPageContainer,
@@ -39,6 +54,7 @@ import {
   SummaryValue,
   TitleSection,
   ContentLayout,
+  TopBar,
 } from "@/styles/atencion-cliente.styles";
 
 const INVOICE_TABS = [
@@ -65,16 +81,20 @@ function formatCurrency(value: number): string {
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const { id } = router.query;
+  const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const showError = useSnackbarStore((state) => state.showError);
+
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("articulos");
-  const [headerMenuAnchor, setHeaderMenuAnchor] = useState<null | HTMLElement>(
-    null,
-  );
+  const [headerMenuAnchor, setHeaderMenuAnchor] =
+    useState<null | HTMLElement>(null);
+  const [cancelInvoiceOpen, setCancelInvoiceOpen] = useState(false);
+  const [cancelInvoiceLoading, setCancelInvoiceLoading] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === "string") {
-      loadInvoice(id);
+      void loadInvoice(id);
     }
   }, [id]);
 
@@ -99,8 +119,37 @@ export default function InvoiceDetailPage() {
     [invoice?.customerId, invoice?.customerName],
   );
 
+  const invoiceCancellable = invoice
+    ? canCancelInvoice(invoice.articles)
+    : false;
+
   const handleBack = () => {
     router.push("/atencion-cliente");
+  };
+
+  const handleOpenCancelInvoice = () => {
+    setHeaderMenuAnchor(null);
+    setCancelInvoiceOpen(true);
+  };
+
+  const handleConfirmCancelInvoice = async () => {
+    if (!invoice) return;
+    setCancelInvoiceLoading(true);
+    try {
+      await cancelInvoice(invoice.id);
+      showSuccess("La factura se canceló correctamente.");
+      setCancelInvoiceOpen(false);
+      await loadInvoice(invoice.id);
+    } catch (error) {
+      console.error("[InvoiceDetail] Error canceling invoice:", error);
+      showError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cancelar la factura.",
+      );
+    } finally {
+      setCancelInvoiceLoading(false);
+    }
   };
 
   if (loading) {
@@ -129,12 +178,7 @@ export default function InvoiceDetailPage() {
 
   return (
     <DetailPageContainer>
-      <Stack
-        direction={{ xs: "column", lg: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", lg: "center" }}
-        spacing={2}
-      >
+      <TopBar>
         <Breadcrumbs
           items={breadcrumbs}
           showBackButton
@@ -146,30 +190,51 @@ export default function InvoiceDetailPage() {
             variant={STATUS_VARIANTS[invoice.status]}
             size="small"
           />
-          <IconButton
-            size="small"
-            aria-label="Opciones de la factura"
-            onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
-          >
-            <MoreVertical size={18} />
-          </IconButton>
-          <Menu
-            anchorEl={headerMenuAnchor}
-            open={Boolean(headerMenuAnchor)}
-            onClose={() => setHeaderMenuAnchor(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-          >
-            <MenuItem disabled>Más opciones próximamente</MenuItem>
-          </Menu>
         </HeaderRightSection>
-      </Stack>
+      </TopBar>
 
       <HeaderSection>
         <TitleSection>
           <InvoiceNumber>Factura {invoice.invoiceNumber}</InvoiceNumber>
           <PurchaseDate>Comprado el {invoice.purchaseDate}</PurchaseDate>
         </TitleSection>
+        <IconButton
+          size="small"
+          aria-label="Opciones de la factura"
+          onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
+          disabled={invoice.status === "cancelado"}
+        >
+          <MoreVertical size={18} />
+        </IconButton>
+        <Menu
+          anchorEl={headerMenuAnchor}
+          open={Boolean(headerMenuAnchor)}
+          onClose={() => setHeaderMenuAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Tooltip
+            title={
+              invoiceCancellable
+                ? ""
+                : "Cancela todos los artículos primero"
+            }
+            placement="left"
+          >
+            <span>
+              <MenuItem
+                onClick={handleOpenCancelInvoice}
+                disabled={!invoiceCancellable}
+                sx={{ color: "error.main" }}
+              >
+                <ListItemIcon sx={{ color: "error.main" }}>
+                  <Ban size={16} />
+                </ListItemIcon>
+                <ListItemText>Cancelar factura</ListItemText>
+              </MenuItem>
+            </span>
+          </Tooltip>
+        </Menu>
       </HeaderSection>
 
       <FinancialSummary>
@@ -240,7 +305,15 @@ export default function InvoiceDetailPage() {
           )}
 
           {activeTab === "articulos" && (
-            <InvoiceArticlesTab invoice={invoice} />
+            <InvoiceArticlesTab
+              invoice={invoice}
+              onRefresh={() => {
+                if (typeof id === "string") {
+                  void loadInvoice(id);
+                }
+              }}
+              onRequestCancelInvoice={handleOpenCancelInvoice}
+            />
           )}
         </MainContent>
 
@@ -280,6 +353,17 @@ export default function InvoiceDetailPage() {
           </SummaryCard>
         </SummaryPanel>
       </ContentLayout>
+
+      <ConfirmModal
+        open={cancelInvoiceOpen}
+        onClose={() => !cancelInvoiceLoading && setCancelInvoiceOpen(false)}
+        onConfirm={handleConfirmCancelInvoice}
+        title="Cancelar factura"
+        itemName={`Factura ${invoice.invoiceNumber}`}
+        confirmLabel="Cancelar factura"
+        type="error"
+        loading={cancelInvoiceLoading}
+      />
     </DetailPageContainer>
   );
 }

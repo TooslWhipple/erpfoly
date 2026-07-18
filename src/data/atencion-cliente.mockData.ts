@@ -1,10 +1,30 @@
 import type {
+  AuthorizerOption,
   CreateServiceOrderPayload,
   InvoiceActivity,
   InvoiceArticle,
   InvoiceDetail,
+  InvoiceStatus,
   SearchResult,
+  ServiceOrder,
+  ServiceOrderStatus,
+  UpdateServiceOrderPayload,
 } from "@/types/atencion-cliente.types";
+import {
+  canCancelInvoice,
+  createDefaultIndicaciones,
+  createDefaultSolucion,
+} from "@/types/atencion-cliente.types";
+
+export const MOCK_AUTHORIZERS: AuthorizerOption[] = [
+  { id: "1", name: "Lizeth Montoya" },
+  { id: "2", name: "Gustavo Alfonso Fuentes" },
+  { id: "3", name: "Ricardo Montes" },
+];
+
+export { canCancelInvoice };
+
+const SEED_SERVICE_ORDER_ID = "OS-1249941-1";
 
 export const MOCK_INVOICE_ARTICLES: InvoiceArticle[] = [
   {
@@ -20,6 +40,7 @@ export const MOCK_INVOICE_ARTICLES: InvoiceArticle[] = [
     deliveryMethod: "Piso",
     serialNumber: "123456788990",
     quantity: 1,
+    serviceOrderId: SEED_SERVICE_ORDER_ID,
   },
   {
     id: "2",
@@ -68,6 +89,48 @@ export const MOCK_INVOICE_DETAIL: InvoiceDetail = {
   },
 };
 
+const seedAddress =
+  "Circuito del Valle 1234, Rincón del Valle, Culiacán Sinaloa.";
+
+const seedServiceOrder: ServiceOrder = {
+  id: SEED_SERVICE_ORDER_ID,
+  invoiceId: "1249941",
+  invoiceNumber: "193270",
+  title: "Sofá hundido",
+  status: "por_realizar",
+  purchaseDate: "03 Mayo 2025",
+  paymentType: "credito",
+  customerName: "Lucía Montes Guerrero",
+  customerPhone: "667 123 4567",
+  customerAddress: seedAddress,
+  generatedBy: "Gustavo Alfonso Fuentes",
+  generatedAt: "21 de Mayo, 2025, 11:45 am",
+  queja: {
+    articleId: "1",
+    quantity: 1,
+    serialNumber: "123456788990",
+    complaint:
+      "El cliente comenta que se ha hundido una parte del asiento del sofa a los pocos días de comprarlo.",
+    evidenceUrls: [],
+    observations: "",
+  },
+  indicaciones: {
+    ...createDefaultIndicaciones(seedAddress),
+    action: "reparacion",
+    repairBy: "interna",
+    scheduledDate: "2025-08-15",
+    authorizedById: "1",
+  },
+  solucion: createDefaultSolucion(),
+};
+
+const serviceOrdersById = new Map<string, ServiceOrder>([
+  [SEED_SERVICE_ORDER_ID, structuredClone(seedServiceOrder)],
+]);
+
+let invoiceArticlesStore: InvoiceArticle[] = structuredClone(MOCK_INVOICE_ARTICLES);
+let invoiceStatusStore: InvoiceStatus = MOCK_INVOICE_DETAIL.status;
+
 export const MOCK_SEARCH_RESULTS: SearchResult[] = [
   {
     id: "1249941",
@@ -91,11 +154,23 @@ export const MOCK_SEARCH_RESULTS: SearchResult[] = [
   },
 ];
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildTitleFromComplaint(complaint: string): string {
+  const trimmed = complaint.trim();
+  if (!trimmed) return "Órden de servicio";
+  const firstSentence = trimmed.split(/[.!\n]/)[0]?.trim() ?? trimmed;
+  if (firstSentence.length <= 48) return firstSentence;
+  return `${firstSentence.slice(0, 45)}…`;
+}
+
 export async function searchInvoices(
   query: string,
   type: "facturas" | "clientes" | "pedidos",
 ): Promise<SearchResult[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await delay(500);
 
   if (!query.trim()) {
     return [];
@@ -139,25 +214,162 @@ export async function searchInvoices(
 export async function getInvoiceDetail(
   invoiceId: string,
 ): Promise<InvoiceDetail> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await delay(500);
 
   return {
     ...MOCK_INVOICE_DETAIL,
     id: invoiceId,
     invoiceNumber: invoiceId,
+    status: invoiceStatusStore,
+    articles: structuredClone(invoiceArticlesStore),
   };
 }
 
-/** ponytail: mock create until reparaciones API exists — swap for service call */
-export async function createServiceOrder(
-  payload: CreateServiceOrderPayload,
-): Promise<{ id: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  return { id: `OS-${payload.invoiceId}-${payload.articleId}` };
+export async function getServiceOrderById(
+  serviceOrderId: string,
+): Promise<ServiceOrder | null> {
+  await delay(300);
+  const order = serviceOrdersById.get(serviceOrderId);
+  return order ? structuredClone(order) : null;
 }
 
-/** ponytail: mock cancel until articles API exists — swap for service call */
+export async function getServiceOrderByArticleId(
+  articleId: string,
+): Promise<ServiceOrder | null> {
+  await delay(300);
+  const article = invoiceArticlesStore.find((item) => item.id === articleId);
+  if (!article?.serviceOrderId) return null;
+  return getServiceOrderById(article.serviceOrderId);
+}
+
+export async function createServiceOrder(
+  payload: CreateServiceOrderPayload,
+): Promise<ServiceOrder> {
+  await delay(600);
+
+  const id = `OS-${payload.invoiceId}-${payload.articleId}-${Date.now()}`;
+  const now = new Date();
+  const generatedAt = now.toLocaleString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const order: ServiceOrder = {
+    id,
+    invoiceId: payload.invoiceId,
+    invoiceNumber: payload.invoiceId,
+    title: buildTitleFromComplaint(payload.complaint),
+    status: "por_realizar",
+    purchaseDate: MOCK_INVOICE_DETAIL.purchaseDate,
+    paymentType: MOCK_INVOICE_DETAIL.paymentType,
+    customerName: MOCK_INVOICE_DETAIL.customerName,
+    customerPhone: MOCK_INVOICE_DETAIL.customerPhone,
+    customerAddress: MOCK_INVOICE_DETAIL.customerAddress,
+    generatedBy: "Usuario actual",
+    generatedAt,
+    queja: {
+      articleId: payload.articleId,
+      quantity: payload.quantity,
+      serialNumber: payload.serialNumber,
+      complaint: payload.complaint,
+      evidenceUrls: payload.evidenceFiles.map((file) =>
+        URL.createObjectURL(file),
+      ),
+      observations: payload.observations,
+    },
+    indicaciones: createDefaultIndicaciones(MOCK_INVOICE_DETAIL.customerAddress),
+    solucion: createDefaultSolucion(),
+  };
+
+  serviceOrdersById.set(id, order);
+
+  invoiceArticlesStore = invoiceArticlesStore.map((item) =>
+    item.id === payload.articleId
+      ? {
+          ...item,
+          status: "reparacion",
+          serviceOrderId: id,
+          serialNumber: payload.serialNumber || item.serialNumber,
+          quantity: payload.quantity,
+        }
+      : item,
+  );
+
+  return structuredClone(order);
+}
+
+export async function updateServiceOrder(
+  serviceOrderId: string,
+  payload: UpdateServiceOrderPayload,
+): Promise<ServiceOrder> {
+  await delay(500);
+
+  const existing = serviceOrdersById.get(serviceOrderId);
+  if (!existing) {
+    throw new Error("Orden de servicio no encontrada");
+  }
+
+  const updated: ServiceOrder = {
+    ...existing,
+    title: payload.title ?? existing.title,
+    status: payload.status ?? existing.status,
+    queja: payload.queja
+      ? { ...existing.queja, ...payload.queja }
+      : existing.queja,
+    indicaciones: payload.indicaciones
+      ? { ...existing.indicaciones, ...payload.indicaciones }
+      : existing.indicaciones,
+    solucion: payload.solucion
+      ? { ...existing.solucion, ...payload.solucion }
+      : existing.solucion,
+  };
+
+  serviceOrdersById.set(serviceOrderId, updated);
+
+  const articleId = updated.queja.articleId;
+  if (updated.indicaciones.action === "cancelar_venta") {
+    invoiceArticlesStore = invoiceArticlesStore.map((item) =>
+      item.id === articleId
+        ? {
+            ...item,
+            status: "esperando_recuperacion",
+            hasRecoveryOrder: true,
+            serviceOrderId: updated.id,
+          }
+        : item,
+    );
+  }
+
+  return structuredClone(updated);
+}
+
+export async function updateServiceOrderStatus(
+  serviceOrderId: string,
+  status: ServiceOrderStatus,
+): Promise<ServiceOrder> {
+  return updateServiceOrder(serviceOrderId, { status });
+}
+
 export async function cancelInvoiceArticle(articleId: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  void articleId;
+  await delay(400);
+  invoiceArticlesStore = invoiceArticlesStore.map((item) =>
+    item.id === articleId ? { ...item, status: "cancelado" } : item,
+  );
+}
+
+export async function cancelInvoice(invoiceId: string): Promise<void> {
+  await delay(500);
+  void invoiceId;
+
+  if (!canCancelInvoice(invoiceArticlesStore)) {
+    throw new Error(
+      "No se puede cancelar la factura: cancela todos los artículos primero.",
+    );
+  }
+
+  invoiceStatusStore = "cancelado";
 }

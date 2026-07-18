@@ -68,6 +68,10 @@ export interface GetUsersParams {
     page?: number;
     limit?: number;
     search?: string;
+    /** Filter by exact role code (e.g. CHOFER). Takes precedence over excludeRoleCodes. */
+    roleCode?: string;
+    /** Comma-separated role codes to exclude (e.g. "CHOFER,AYUDANTE_CHOFER"). */
+    excludeRoleCodes?: string;
 }
 
 export interface GetUsersResponse {

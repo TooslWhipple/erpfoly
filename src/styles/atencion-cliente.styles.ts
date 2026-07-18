@@ -98,6 +98,26 @@ export const DetailPageContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(3),
+  width: "100%",
+  minWidth: 0,
+  [theme.breakpoints.down("md")]: {
+    gap: theme.spacing(2),
+  },
+}));
+
+export const TopBar = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(2),
+  width: "100%",
+  minWidth: 0,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: theme.spacing(1.5),
+  },
 }));
 
 export const HeaderSection = styled(Box)(({ theme }) => ({
@@ -105,13 +125,17 @@ export const HeaderSection = styled(Box)(({ theme }) => ({
   justifyContent: "space-between",
   alignItems: "flex-start",
   gap: theme.spacing(2),
-  flexWrap: "wrap",
+  flexWrap: "nowrap",
+  width: "100%",
+  minWidth: 0,
 }));
 
 export const TitleSection = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 4,
+  minWidth: 0,
+  flex: 1,
 });
 
 export const InvoiceNumber = styled(Typography)(({ theme }) => ({
@@ -119,6 +143,10 @@ export const InvoiceNumber = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   color: theme.palette.text.primary,
   lineHeight: 1.2,
+  wordBreak: "break-word",
+  [theme.breakpoints.down("sm")]: {
+    fontSize: 22,
+  },
 }));
 
 export const PurchaseDate = styled(Typography)(({ theme }) => ({
@@ -129,7 +157,13 @@ export const PurchaseDate = styled(Typography)(({ theme }) => ({
 export const HeaderRightSection = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "flex-end",
   gap: theme.spacing(1.5),
+  flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    justifyContent: "flex-start",
+  },
 }));
 
 export const MoreOptionsButton = styled(IconButton)(({ theme }) => ({
@@ -143,14 +177,26 @@ export const FinancialSummary = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
   alignItems: "flex-end",
   width: "100%",
+  [theme.breakpoints.down("md")]: {
+    gap: theme.spacing(2),
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    alignItems: "start",
+    gap: theme.spacing(2),
+  },
 }));
 
-export const FinancialItem = styled(Box)({
+export const FinancialItem = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: 4,
   minWidth: 120,
-});
+  [theme.breakpoints.down("sm")]: {
+    minWidth: 0,
+  },
+}));
 
 export const FinancialLabel = styled(Typography)(({ theme }) => ({
   fontSize: 12,
@@ -161,6 +207,9 @@ export const FinancialValue = styled(Typography)(({ theme }) => ({
   fontSize: 16,
   fontWeight: 700,
   color: theme.palette.text.primary,
+  [theme.breakpoints.down("sm")]: {
+    fontSize: 15,
+  },
 }));
 
 export const PaymentIndicator = styled(Box)(({ theme }) => ({
@@ -169,6 +218,12 @@ export const PaymentIndicator = styled(Box)(({ theme }) => ({
   alignItems: "flex-end",
   gap: theme.spacing(1),
   marginLeft: "auto",
+  [theme.breakpoints.down("sm")]: {
+    gridColumn: "1 / -1",
+    marginLeft: 0,
+    alignItems: "flex-start",
+    width: "100%",
+  },
 }));
 
 export const PaymentDots = styled(Box)(({ theme }) => ({
@@ -220,8 +275,11 @@ export const ArticleCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 16,
   padding: theme.spacing(2.5),
+  width: "100%",
+  minWidth: 0,
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
+    padding: theme.spacing(2),
   },
 }));
 
@@ -249,6 +307,7 @@ export const ArticleDescription = styled(Typography)(({ theme }) => ({
   fontSize: 15,
   fontWeight: 600,
   color: theme.palette.text.primary,
+  wordBreak: "break-word",
 }));
 
 export const ServiceOrderButton = styled(Button)(({ theme }) => ({
@@ -273,6 +332,12 @@ export const ArticleDetails = styled(Box)(({ theme }) => ({
     width: "100%",
     justifyContent: "space-between",
     flexWrap: "wrap",
+    gap: theme.spacing(2),
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: theme.spacing(1.5),
   },
 }));
 
@@ -298,6 +363,8 @@ export const ContentLayout = styled(Box)(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
   alignItems: "flex-start",
+  width: "100%",
+  minWidth: 0,
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
   },
@@ -306,6 +373,7 @@ export const ContentLayout = styled(Box)(({ theme }) => ({
 export const MainContent = styled(Box)({
   flex: 1,
   minWidth: 0,
+  width: "100%",
 });
 
 export const SummaryPanel = styled(Box)(({ theme }) => ({
@@ -495,4 +563,161 @@ export const ModalFooterActions = styled(Box)(({ theme }) => ({
   marginTop: "auto",
   paddingTop: theme.spacing(2),
   borderTop: `1px solid ${theme.palette.app.border}`,
+}));
+
+// ============================================================================
+// SERVICE ORDER DETAIL MODAL
+// ============================================================================
+
+export const ServiceOrderBadge = styled(Box)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(0.75),
+  fontSize: 13,
+  fontWeight: 500,
+  color: theme.palette.text.secondary,
+}));
+
+export const ServiceOrderTitle = styled(Typography)(({ theme }) => ({
+  fontSize: 24,
+  fontWeight: 700,
+  color: theme.palette.text.primary,
+  lineHeight: 1.25,
+}));
+
+export const GeneratedByText = styled(Typography)(({ theme }) => ({
+  fontSize: 12,
+  color: theme.palette.text.secondary,
+}));
+
+export const DetailHeaderActions = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  flexShrink: 0,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+  width: "100%",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    "& > *": {
+      width: "100%",
+    },
+  },
+}));
+
+export const StatusMenuButton = styled(Button)(({ theme }) => ({
+  textTransform: "none",
+  fontWeight: 600,
+  fontSize: 13,
+  borderRadius: 8,
+  padding: theme.spacing(0.75, 1.25),
+  minWidth: 0,
+  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  "&:hover": {
+    backgroundColor: theme.palette.app.background.lowerGray,
+  },
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "space-between",
+  },
+}));
+
+export const SectionLabel = styled(Typography)(({ theme }) => ({
+  fontSize: 14,
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  marginBottom: theme.spacing(1),
+}));
+
+export const CostSection = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+  padding: theme.spacing(2),
+  borderRadius: 12,
+  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: theme.palette.app.background.lowerGray,
+}));
+
+export const SwitchRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(2),
+  width: "100%",
+}));
+
+export const RadioGroupResponsive = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: theme.spacing(1),
+  width: "100%",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    "& > *": {
+      width: "100%",
+    },
+  },
+}));
+
+export const DamagedGoodsCard = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(2),
+  borderRadius: 12,
+  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: theme.palette.background.paper,
+  cursor: "pointer",
+  "&:hover": {
+    backgroundColor: theme.palette.app.background.lowerGray,
+  },
+}));
+
+export const AlertBox = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "tone",
+})<{ tone?: "warning" | "info" }>(({ theme, tone = "info" }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing(1),
+  padding: theme.spacing(1.5, 2),
+  borderRadius: 12,
+  fontSize: 13,
+  lineHeight: 1.45,
+  ...(tone === "warning"
+    ? {
+        backgroundColor: theme.palette.app.chip.variants.pending.background,
+        color: theme.palette.app.chip.variants.pending.color,
+        border: `1px solid ${theme.palette.warning.light}`,
+      }
+    : {
+        backgroundColor: theme.palette.app.background.lowerBlue,
+        color: theme.palette.primary.dark,
+        border: `1px solid ${theme.palette.app.border}`,
+      }),
+}));
+
+export const AlertLinkButton = styled(Button)(({ theme }) => ({
+  textTransform: "none",
+  fontWeight: 600,
+  fontSize: 13,
+  padding: 0,
+  minWidth: 0,
+  color: theme.palette.primary.main,
+  textDecoration: "underline",
+  "&:hover": {
+    backgroundColor: "transparent",
+    textDecoration: "underline",
+  },
+}));
+
+export const ArticleActionsRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: theme.spacing(1),
 }));

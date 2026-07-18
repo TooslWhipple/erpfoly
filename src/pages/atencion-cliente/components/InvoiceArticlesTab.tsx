@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Stack } from "@mui/material";
-import { Ban, FileText, MoreVertical, Wrench } from "lucide-react";
+import {
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Stack,
+} from "@mui/material";
+import { Ban, Download, FileText, MoreVertical, Wrench } from "lucide-react";
 import numeral from "numeral";
 import { ConfirmModal, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
@@ -10,8 +17,10 @@ import type {
   ArticleStatus,
   InvoiceArticle,
   InvoiceDetail,
+  ServiceOrder,
 } from "@/types/atencion-cliente.types";
 import {
+  ArticleActionsRow,
   ArticleCard,
   ArticleCode,
   ArticleDescription,
@@ -25,12 +34,15 @@ import {
   ServiceOrderButton,
 } from "@/styles/atencion-cliente.styles";
 import { CreateServiceOrderModal } from "./CreateServiceOrderModal";
+import { ServiceOrderDetailModal } from "./ServiceOrderDetailModal";
 
 const ARTICLE_STATUS_LABELS: Record<ArticleStatus, string> = {
   entregado: "Entregado",
   reparacion: "Reparación",
   pendiente: "Pendiente",
   cancelado: "Cancelado",
+  esperando_recuperacion: "Esperando recuperación",
+  recuperado: "Recuperado",
 };
 
 const ARTICLE_STATUS_VARIANTS: Record<ArticleStatus, StatusChipVariant> = {
@@ -38,6 +50,8 @@ const ARTICLE_STATUS_VARIANTS: Record<ArticleStatus, StatusChipVariant> = {
   reparacion: "pending",
   pendiente: "info",
   cancelado: "error",
+  esperando_recuperacion: "pending",
+  recuperado: "success",
 };
 
 function formatCurrency(value: number): string {
@@ -46,18 +60,24 @@ function formatCurrency(value: number): string {
 
 export interface InvoiceArticlesTabProps {
   invoice: InvoiceDetail;
+  onRefresh?: () => void;
+  onRequestCancelInvoice?: () => void;
 }
 
-export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
+export function InvoiceArticlesTab({
+  invoice,
+  onRefresh,
+  onRequestCancelInvoice,
+}: InvoiceArticlesTabProps) {
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
 
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuArticle, setMenuArticle] = useState<InvoiceArticle | null>(null);
-  const [serviceOrderOpen, setServiceOrderOpen] = useState(false);
-  const [serviceOrderArticleId, setServiceOrderArticleId] = useState<
-    string | undefined
-  >();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createArticleId, setCreateArticleId] = useState<string | undefined>();
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [cancelArticle, setCancelArticle] = useState<InvoiceArticle | null>(
     null,
   );
@@ -76,15 +96,44 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
     setMenuArticle(null);
   };
 
-  const handleOpenServiceOrder = (article: InvoiceArticle) => {
+  const handleOpenCreate = (article: InvoiceArticle) => {
     handleCloseMenu();
-    setServiceOrderArticleId(article.id);
-    setServiceOrderOpen(true);
+    setCreateArticleId(article.id);
+    setCreateOpen(true);
   };
 
-  const handleCloseServiceOrder = () => {
-    setServiceOrderOpen(false);
-    setServiceOrderArticleId(undefined);
+  const handleOpenDetail = (article: InvoiceArticle) => {
+    handleCloseMenu();
+    if (!article.serviceOrderId) {
+      handleOpenCreate(article);
+      return;
+    }
+    setDetailOrderId(article.serviceOrderId);
+    setDetailOpen(true);
+  };
+
+  const handleServiceOrderClick = (article: InvoiceArticle) => {
+    if (article.serviceOrderId) {
+      handleOpenDetail(article);
+    } else {
+      handleOpenCreate(article);
+    }
+  };
+
+  const handleCloseCreate = () => {
+    setCreateOpen(false);
+    setCreateArticleId(undefined);
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setDetailOrderId(null);
+  };
+
+  const handleCreateSuccess = (order: ServiceOrder) => {
+    onRefresh?.();
+    setDetailOrderId(order.id);
+    setDetailOpen(true);
   };
 
   const handleRequestCancel = (article: InvoiceArticle) => {
@@ -99,6 +148,7 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
       await cancelInvoiceArticle(cancelArticle.id);
       showSuccess("El artículo se canceló correctamente.");
       setCancelArticle(null);
+      onRefresh?.();
     } catch (error) {
       console.error("[InvoiceArticlesTab] Error canceling article:", error);
       showError("No se pudo cancelar el artículo. Intenta de nuevo.");
@@ -106,6 +156,21 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
       setCancelLoading(false);
     }
   };
+
+  const handleRecoverySheet = () => {
+    showSuccess("La hoja de recuperación estará disponible próximamente.");
+  };
+
+  const showServiceOrderButton = (article: InvoiceArticle) =>
+    article.status === "reparacion" ||
+    article.status === "esperando_recuperacion" ||
+    article.status === "recuperado" ||
+    Boolean(article.serviceOrderId);
+
+  const showRecoverySheetButton = (article: InvoiceArticle) =>
+    article.hasRecoveryOrder ||
+    article.status === "esperando_recuperacion" ||
+    article.status === "recuperado";
 
   return (
     <>
@@ -122,17 +187,39 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
                 />
               </ArticleMetaRow>
               <ArticleDescription>{article.description}</ArticleDescription>
-              {article.status === "reparacion" && (
-                <ServiceOrderButton
-                  startIcon={<Wrench size={14} />}
-                  onClick={() => handleOpenServiceOrder(article)}
-                >
-                  Órden de servicio
-                </ServiceOrderButton>
+              {(showServiceOrderButton(article) ||
+                showRecoverySheetButton(article)) && (
+                <ArticleActionsRow>
+                  {showRecoverySheetButton(article) && (
+                    <ServiceOrderButton
+                      startIcon={<Download size={14} />}
+                      onClick={handleRecoverySheet}
+                    >
+                      Hoja de recuperación
+                    </ServiceOrderButton>
+                  )}
+                  {showServiceOrderButton(article) && (
+                    <ServiceOrderButton
+                      startIcon={<Wrench size={14} />}
+                      onClick={() => handleServiceOrderClick(article)}
+                    >
+                      Órden de servicio
+                    </ServiceOrderButton>
+                  )}
+                </ArticleActionsRow>
               )}
             </ArticleLeft>
 
-            <Stack direction="row" alignItems="flex-start" spacing={1}>
+            <Stack
+              direction="row"
+              alignItems="flex-start"
+              spacing={1}
+              sx={{
+                flexShrink: 0,
+                width: { xs: "100%", md: "auto" },
+                justifyContent: { xs: "space-between", md: "flex-end" },
+              }}
+            >
               <ArticleDetails>
                 <ArticleDetailItem>
                   <ArticleDetailLabel>Precio</ArticleDetailLabel>
@@ -162,6 +249,7 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
                 size="small"
                 aria-label="Opciones del artículo"
                 onClick={(event) => handleOpenMenu(event, article)}
+                sx={{ flexShrink: 0 }}
               >
                 <MoreVertical size={18} />
               </IconButton>
@@ -178,12 +266,16 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <MenuItem
-          onClick={() => menuArticle && handleOpenServiceOrder(menuArticle)}
+          onClick={() => menuArticle && handleServiceOrderClick(menuArticle)}
         >
           <ListItemIcon>
             <FileText size={16} />
           </ListItemIcon>
-          <ListItemText>Generar órden de servicio</ListItemText>
+          <ListItemText>
+            {menuArticle?.serviceOrderId
+              ? "Ver órden de servicio"
+              : "Generar órden de servicio"}
+          </ListItemText>
         </MenuItem>
         <MenuItem
           onClick={() => menuArticle && handleRequestCancel(menuArticle)}
@@ -197,10 +289,20 @@ export function InvoiceArticlesTab({ invoice }: InvoiceArticlesTabProps) {
       </Menu>
 
       <CreateServiceOrderModal
-        open={serviceOrderOpen}
+        open={createOpen}
         invoice={invoice}
-        initialArticleId={serviceOrderArticleId}
-        onClose={handleCloseServiceOrder}
+        initialArticleId={createArticleId}
+        onClose={handleCloseCreate}
+        onSuccess={handleCreateSuccess}
+      />
+
+      <ServiceOrderDetailModal
+        open={detailOpen}
+        serviceOrderId={detailOrderId}
+        invoice={invoice}
+        onClose={handleCloseDetail}
+        onSuccess={onRefresh}
+        onRequestCancelInvoice={onRequestCancelInvoice}
       />
 
       <ConfirmModal

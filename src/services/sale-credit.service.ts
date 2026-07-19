@@ -150,6 +150,44 @@ export async function registerSaleCreditPayment(
   return post<SaleCreditPaymentResult>(`/sale-credits/${creditId}/payments`, payload);
 }
 
+export interface CascadePaymentPayload {
+  amount: number;
+  payment_method: "CASH" | "CARD" | "TRANSFER" | "CHECK";
+  reference?: string;
+  notes?: string;
+  credit_order?: number[];
+}
+
+export interface CascadePaymentInstallmentResult {
+  id: number;
+  installment_number: number;
+  amount_applied: number;
+  status: string;
+}
+
+export interface CascadePaymentCreditResult {
+  credit_id: number;
+  payment_id: number;
+  amount_applied: number;
+  outstanding_balance: number;
+  status: string;
+  installments: CascadePaymentInstallmentResult[];
+}
+
+export interface CascadePaymentResult {
+  amount: number;
+  amount_applied: number;
+  credits: CascadePaymentCreditResult[];
+  message: string;
+}
+
+export async function registerCascadePayment(
+  clientId: number,
+  payload: CascadePaymentPayload,
+): Promise<ApiResult<CascadePaymentResult>> {
+  return post<CascadePaymentResult>(`/sale-credits/client/${clientId}/cascade-payment`, payload);
+}
+
 function buildSaleCreditUrl(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

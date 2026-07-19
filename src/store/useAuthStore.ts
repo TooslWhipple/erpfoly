@@ -9,6 +9,7 @@ export interface User {
 	role: string;
 	roleId?: number;
 	roleName?: string;
+	principalBranchId?: number | null;
 	permissions: string[];
 	temporaryPassword?: boolean;
 }

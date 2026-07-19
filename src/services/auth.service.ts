@@ -134,6 +134,7 @@ interface BackendUser {
 	role?: BackendRole;
 	roleId?: number;
 	roleName?: string;
+	principalBranchId?: number | null;
 	permissions?: BackendPermission[];
 	avatar?: string;
 	temporaryPassword?: boolean;
@@ -229,6 +230,7 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 		email,
 		avatar: u.avatar,
 		...role,
+		principalBranchId: u.principalBranchId ?? null,
 		permissions: normalizeBackendPermissions(u.permissions),
 		temporaryPassword: u.temporaryPassword ?? u.temporary_password ?? false,
 	};

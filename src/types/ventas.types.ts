@@ -80,6 +80,13 @@ export interface CartItem {
   sources: InventorySource[];
   /** Set when this line was hydrated from an existing DRAFT sale being resumed. */
   saleItemId?: number;
+  /**
+   * Portion of `quantity` without stock backing it, resolved later when
+   * merchandise arrives. Recomputed locally from `sources` whenever they're
+   * known (fresh line); for resumed lines (`sources: []`) it keeps the
+   * value the backend last computed until the sale is re-synced.
+   */
+  backorderedQuantity: number;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -87,6 +94,7 @@ export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
 export interface SaleDetailItem {
   id: number;
   quantity: number;
+  backorderedQuantity: number;
   unitPrice: number;
   discountAmount: number;
   totalAmount: number;

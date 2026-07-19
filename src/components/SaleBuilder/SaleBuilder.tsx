@@ -30,6 +30,7 @@ import {
   DollarSign,
   CreditCard,
   PlusCircle,
+  AlertTriangle,
 } from "lucide-react";
 import {
   X,
@@ -376,6 +377,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         quantity: item.quantity,
         sources: [],
         saleItemId: item.id,
+        backorderedQuantity: item.backorderedQuantity,
       })),
     );
 
@@ -840,6 +842,14 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       return;
     }
 
+    // Misma cuenta que hace el backend al confirmar (sale.branch_id +
+    // ProductInventory.existence): lo que exceda la existencia de la
+    // sucursal queda en backorder, sin bloquear el alta al carrito.
+    const branchAvailable =
+      productSources.find((src) => src.sourceType === "branch")?.available ??
+      0;
+    const backorderedQuantity = Math.max(0, totalQty - branchAvailable);
+
     setCart((prev) => {
       const existing = prev.findIndex((c) => c.productId === productDetail.id);
       const newItem: CartItem = {
@@ -853,6 +863,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         unitPrice: productDetail.finalPrice,
         quantity: totalQty,
         sources: productSources,
+        backorderedQuantity,
       };
       if (existing >= 0) {
         const updated = [...prev];
@@ -860,6 +871,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           ...updated[existing],
           quantity: totalQty,
           sources: productSources,
+          backorderedQuantity,
         };
         return updated;
       }
@@ -900,11 +912,22 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
 
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item,
-        )
+        .map((item) => {
+          if (item.productId !== productId) return item;
+          const quantity = Math.max(0, item.quantity + delta);
+          // Sin `sources` (línea hidratada de una venta retomada) no hay
+          // existencia de sucursal a mano para recalcular — se conserva el
+          // último valor que confirmó el backend hasta el próximo sync.
+          if (item.sources.length === 0) return { ...item, quantity };
+          const branchAvailable =
+            item.sources.find((src) => src.sourceType === "branch")
+              ?.available ?? 0;
+          return {
+            ...item,
+            quantity,
+            backorderedQuantity: Math.max(0, quantity - branchAvailable),
+          };
+        })
         .filter((item) => item.quantity > 0),
     );
 
@@ -1453,11 +1476,9 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                                 )
                               }
                               min={0}
-                              max={
-                                src.sourceType === "incoming"
-                                  ? undefined
-                                  : src.available
-                              }
+                              // Sin `max`: se permite pedir más de lo
+                              // disponible — el excedente queda en
+                              // backorder (ver sale.service.ts addItem).
                               disabled={branchLocked}
                               size="small"
                               iconSize={13}
@@ -1575,7 +1596,9 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                                     )
                                   }
                                   min={0}
-                                  max={src.available}
+                                  // Sin `max`: se permite pedir más de lo
+                                  // disponible — el excedente queda en
+                                  // backorder (ver sale.service.ts addItem).
                                   disabled={branchLocked}
                                   size="small"
                                   iconSize={13}
@@ -1753,6 +1776,16 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                         </Box>
                       </Stack>
                     </Stack>
+                    {item.backorderedQuantity > 0 && (
+                      <Chip
+                        icon={<AlertTriangle size={12} />}
+                        label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
+                      />
+                    )}
                   </Box>
                 ))}
               </Stack>
@@ -2917,6 +2950,16 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                             </Typography>
                           </Box>
                         </Stack>
+                      )}
+                      {item.backorderedQuantity > 0 && (
+                        <Chip
+                          icon={<AlertTriangle size={12} />}
+                          label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
+                        />
                       )}
                     </Paper>
                   ))}

@@ -4,8 +4,10 @@ import Link from "next/link";
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Divider,
+  FormControlLabel,
   Grid,
   InputAdornment,
   Stack,
@@ -24,7 +26,11 @@ import {
   type DriverFormErrors,
 } from "@/components/UserDriverFields";
 import type { UserDriverDetailsPayload } from "@/services/users.service";
-import { ROLE_CODES, isDriverRoleCode } from "@/constants/role-codes";
+import {
+  ROLE_CODES,
+  isDriverRoleCode,
+  isHighPrivilegeRoleCode,
+} from "@/constants/role-codes";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { SelectableItem } from "@/components/MultiSelectChips";
 import { FormCard, HelperTextLink } from "@/styles/catalogos/usuarios.styles";
@@ -69,6 +75,7 @@ type UserFormState = {
   cellphone: string;
   roleId: number | "";
   branchIds: number[];
+  requiresOtp: boolean;
 };
 type UserFormErrors = Partial<Record<keyof UserFormState, string>>;
 const initialUser: UserFormState = {
@@ -78,6 +85,7 @@ const initialUser: UserFormState = {
   cellphone: "",
   roleId: "",
   branchIds: [],
+  requiresOtp: true,
 };
 export default function UserFormPage() {
   const router = useRouter();
@@ -140,6 +148,7 @@ export default function UserFormPage() {
           cellphone: data.cellphone ?? "",
           roleId: data.roleId,
           branchIds: data.branchIds,
+          requiresOtp: data.requiresOtp,
         });
         if (data.driverDetails) {
           setDriverForm({
@@ -308,6 +317,7 @@ export default function UserFormPage() {
           cellphone: user.cellphone.trim(),
           roleId: user.roleId as number,
           branchIds: user.branchIds,
+          requiresOtp: user.requiresOtp,
           driverDetails,
         })
       : await updateUser(userId!, {
@@ -317,6 +327,7 @@ export default function UserFormPage() {
           cellphone: user.cellphone.trim(),
           roleId: user.roleId as number,
           branchIds: user.branchIds,
+          requiresOtp: user.requiresOtp,
           driverDetails,
         });
     if (result.error) {
@@ -335,6 +346,13 @@ export default function UserFormPage() {
   };
   const handleBranchChange = (selectedIds: (string | number)[]) => {
     setUserField("branchIds", selectedIds as number[]);
+  };
+  const handleRoleChange = (value: number | "") => {
+    setUserField("roleId", value);
+    if (isNew) {
+      const role = roles.find((r) => r.id === value);
+      setUserField("requiresOtp", isHighPrivilegeRoleCode(role?.code));
+    }
   };
   const branchItems: SelectableItem[] = branches.map((branch) => ({
     id: branch.id,
@@ -547,8 +565,7 @@ export default function UserFormPage() {
               placeholder="Selecciona un rol"
               value={user.roleId}
               onChange={(e) =>
-                setUserField(
-                  "roleId",
+                handleRoleChange(
                   e.target.value === "" ? "" : Number(e.target.value),
                 )
               }
@@ -565,6 +582,27 @@ export default function UserFormPage() {
             </HelperTextLink>
           </Grid>
         </Grid>
+        {canSaveUser && (
+          <Box>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={user.requiresOtp}
+                  onChange={(e) =>
+                    setUserField("requiresOtp", e.target.checked)
+                  }
+                  disabled={sendingInvite}
+                />
+              }
+              label="Requiere doble factor (OTP) para iniciar sesión"
+            />
+            {isNew && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                Sugerido según el rol seleccionado; puedes cambiarlo antes de guardar.
+              </Typography>
+            )}
+          </Box>
+        )}
         {isDriverRoleCode(selectedRoleCode) && (
           <>
             <Divider />

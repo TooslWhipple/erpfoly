@@ -35,6 +35,7 @@ const MOCK_CREDIT_ACCOUNTS: ClientCreditAccount[] = [
   {
     id: "1",
     productName: "Enfriador Split Mirage CHF120T 1Ton 110v F/F",
+    purchaseDate: "2025-05-16",
     purchaseDateLabel: "16 de Mayo, 2025",
     initialCost: 9490,
     totalPaid: 2372.49,
@@ -56,6 +57,7 @@ const MOCK_CREDIT_ACCOUNTS: ClientCreditAccount[] = [
   {
     id: "2",
     productName: "Lavadora Whirlpool 22Kg 8MWTW2224WJM",
+    purchaseDate: "2024-11-22",
     purchaseDateLabel: "22 de Nov, 2024",
     initialCost: 14399,
     totalPaid: 10799.19,
@@ -289,6 +291,7 @@ export async function createClientPayment(
     clientPhone: CLIENT_NAMES[payload.clientId]?.phone ?? "55 0000 0000",
     paidInstallments: primaryAccount?.paidInstallments ?? 0,
     totalInstallments: primaryAccount?.totalInstallments ?? 12,
+    creditsAffectedCount: 1,
     receiptUrl: "/api/receipts/demo.pdf",
   };
 }

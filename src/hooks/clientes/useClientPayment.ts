@@ -2,23 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
   getActiveSaleCredits,
-  registerSaleCreditPayment,
+  registerCascadePayment,
   getSaleCreditDetail,
 } from "@/services/sale-credit.service";
+import type { CascadePaymentPayload, CascadePaymentResult } from "@/services/sale-credit.service";
 import { unwrapOrThrow, get } from "@/lib/axios";
 import type {
   ClientCreditAccount,
   ClientPaymentContext,
   ClientPaymentMethod,
   ClientPaymentResult,
-  InstallmentSelection,
   PendingInstallment,
   BackendSaleCreditActiveItem,
-  BackendSaleCreditPaymentPayload,
-  BackendSaleCreditPaymentResult,
 } from "@/types/clientPayment.types";
 import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
+import { calculateCascadePreview, type CascadeInstallmentPreview } from "@/utils/cascadePayment";
 
 interface UseClientPaymentResult {
   routerReady: boolean;
@@ -28,22 +27,22 @@ interface UseClientPaymentResult {
   context: ClientPaymentContext | null;
   loading: boolean;
   error: string | null;
-  selections: InstallmentSelection[];
   paymentMethod: ClientPaymentMethod;
   isCashDeposit: boolean;
   paymentAmount: number;
   isSubmitting: boolean;
   paymentResult: ClientPaymentResult | null;
-  subtotal: number;
-  totalInterest: number;
-  totalDue: number;
+  totalOutstanding: number;
   change: number;
   canRegister: boolean;
+  orderedCreditAccounts: ClientCreditAccount[];
+  excludedCreditIds: string[];
+  cascadePreview: CascadeInstallmentPreview[];
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
-  toggleInstallment: (purchaseId: string, installmentId: string, totalAmount: number) => void;
-  updateAmountToPay: (purchaseId: string, installmentId: string, amount: number) => void;
+  toggleCreditExcluded: (purchaseId: string) => void;
+  moveCreditOrder: (purchaseId: string, direction: "up" | "down") => void;
   submitPayment: () => Promise<void>;
   refetch: () => void;
 }
@@ -94,6 +93,7 @@ function mapBackendCreditToAccount(
   return {
     id: String(item.id),
     productName: item.product_name,
+    purchaseDate: item.purchase_date,
     purchaseDateLabel: formatPurchaseDate(item.purchase_date),
     initialCost: item.initial_cost,
     totalPaid: item.total_paid,
@@ -108,43 +108,6 @@ function mapBackendCreditToAccount(
   };
 }
 
-function buildInitialSelections(accounts: ClientCreditAccount[]): InstallmentSelection[] {
-  return accounts.flatMap((account) =>
-    account.pendingInstallments.map((installment) => ({
-      purchaseId: account.id,
-      installmentId: installment.id,
-      selected: false,
-      amountToPay: 0,
-    })),
-  );
-}
-
-function getSelectionAmounts(
-  selections: InstallmentSelection[],
-  accounts: ClientCreditAccount[],
-): { subtotal: number; totalInterest: number; totalDue: number } {
-  let subtotal = 0;
-  let totalInterest = 0;
-
-  for (const selection of selections) {
-    if (selection.amountToPay <= 0) continue;
-
-    const account = accounts.find((item) => item.id === selection.purchaseId);
-    const installment = account?.pendingInstallments.find((item) => item.id === selection.installmentId);
-    if (!installment || installment.totalAmount <= 0) continue;
-
-    const ratio = Math.min(selection.amountToPay / installment.totalAmount, 1);
-    subtotal += installment.principalAmount * ratio;
-    totalInterest += installment.interestAmount * ratio;
-  }
-
-  return {
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    totalInterest: parseFloat(totalInterest.toFixed(2)),
-    totalDue: parseFloat((subtotal + totalInterest).toFixed(2)),
-  };
-}
-
 function mapFrontendToBackendMethod(method: ClientPaymentMethod): "CASH" | "CARD" {
   return method === "cash" ? "CASH" : "CARD";
 }
@@ -154,7 +117,8 @@ export function useClientPayment(): UseClientPaymentResult {
   const { id, from, caja } = router.query;
 
   const [context, setContext] = useState<ClientPaymentContext | null>(null);
-  const [selections, setSelections] = useState<InstallmentSelection[]>([]);
+  const [creditOrder, setCreditOrder] = useState<string[]>([]);
+  const [excludedCreditIds, setExcludedCreditIds] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<ClientPaymentMethod>("cash");
   const [isCashDeposit, setIsCashDeposit] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
@@ -191,7 +155,8 @@ export function useClientPayment(): UseClientPaymentResult {
           clientPhone: clientData?.phoneNumber ?? "",
           creditAccounts: [],
         });
-        setSelections([]);
+        setCreditOrder([]);
+        setExcludedCreditIds([]);
         return;
       }
 
@@ -207,18 +172,20 @@ export function useClientPayment(): UseClientPaymentResult {
         }),
       );
 
-      const accounts: ClientCreditAccount[] = creditDetails.map(({ item, detail }) => {
-        const account = mapBackendCreditToAccount(item);
+      const accounts: ClientCreditAccount[] = creditDetails
+        .map(({ item, detail }) => {
+          const account = mapBackendCreditToAccount(item);
 
-        if (detail?.installments) {
-          account.pendingInstallments = mapBackendInstallments(
-            detail.installments,
-            item.total_installments,
-          );
-        }
+          if (detail?.installments) {
+            account.pendingInstallments = mapBackendInstallments(
+              detail.installments,
+              item.total_installments,
+            );
+          }
 
-        return account;
-      });
+          return account;
+        })
+        .sort((a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime());
 
       const firstAccount = accounts[0];
       const clientName = firstAccount ? "Cliente" : "Cliente";
@@ -230,7 +197,8 @@ export function useClientPayment(): UseClientPaymentResult {
         clientPhone,
         creditAccounts: accounts,
       });
-      setSelections(buildInitialSelections(accounts));
+      setCreditOrder(accounts.map((account) => account.id));
+      setExcludedCreditIds([]);
     } catch (err) {
       console.error("[useClientPayment] Error loading payment context:", err);
       setContext(null);
@@ -249,57 +217,58 @@ export function useClientPayment(): UseClientPaymentResult {
     void fetchContext();
   }, [routerReady, clientId, fetchContext]);
 
-  const { subtotal, totalInterest, totalDue } = useMemo(
-    () => getSelectionAmounts(selections, context?.creditAccounts ?? []),
-    [selections, context?.creditAccounts],
+  const orderedCreditAccounts = useMemo(() => {
+    const accounts = context?.creditAccounts ?? [];
+    const accountsById = new Map(accounts.map((account) => [account.id, account]));
+    return creditOrder
+      .map((id) => accountsById.get(id))
+      .filter((account): account is ClientCreditAccount => account !== undefined);
+  }, [context?.creditAccounts, creditOrder]);
+
+  const cascadePreview = useMemo(
+    () => calculateCascadePreview(orderedCreditAccounts, excludedCreditIds, paymentAmount),
+    [orderedCreditAccounts, excludedCreditIds, paymentAmount],
+  );
+
+  const totalOutstanding = useMemo(
+    () =>
+      orderedCreditAccounts
+        .filter((account) => !excludedCreditIds.includes(account.id))
+        .reduce((sum, account) => sum + account.remaining, 0),
+    [orderedCreditAccounts, excludedCreditIds],
   );
 
   const change = useMemo(() => {
     if (paymentMethod !== "cash") return 0;
-    return Math.max(parseFloat((paymentAmount - totalDue).toFixed(2)), 0);
-  }, [paymentAmount, paymentMethod, totalDue]);
+    return Math.max(parseFloat((paymentAmount - totalOutstanding).toFixed(2)), 0);
+  }, [paymentAmount, paymentMethod, totalOutstanding]);
 
-  const canRegister = totalDue > 0 && paymentAmount >= totalDue && !isSubmitting;
+  const canRegister =
+    totalOutstanding > 0 &&
+    paymentAmount > 0 &&
+    paymentAmount <= totalOutstanding &&
+    !isSubmitting;
 
-  const toggleInstallment = useCallback(
-    (purchaseId: string, installmentId: string, totalAmount: number) => {
-      setSelections((prev) =>
-        prev.map((selection) => {
-          if (selection.purchaseId !== purchaseId || selection.installmentId !== installmentId) {
-            return selection;
-          }
+  const toggleCreditExcluded = useCallback((purchaseId: string) => {
+    setExcludedCreditIds((prev) =>
+      prev.includes(purchaseId)
+        ? prev.filter((id) => id !== purchaseId)
+        : [...prev, purchaseId],
+    );
+  }, []);
 
-          const selected = !selection.selected;
-          return {
-            ...selection,
-            selected,
-            amountToPay: selected ? totalAmount : 0,
-          };
-        }),
-      );
-    },
-    [],
-  );
-
-  const updateAmountToPay = useCallback(
-    (purchaseId: string, installmentId: string, amount: number) => {
-      const sanitized = Math.max(amount, 0);
-      setSelections((prev) =>
-        prev.map((selection) => {
-          if (selection.purchaseId !== purchaseId || selection.installmentId !== installmentId) {
-            return selection;
-          }
-
-          return {
-            ...selection,
-            selected: sanitized > 0,
-            amountToPay: sanitized,
-          };
-        }),
-      );
-    },
-    [],
-  );
+  const moveCreditOrder = useCallback((purchaseId: string, direction: "up" | "down") => {
+    setCreditOrder((prev) => {
+      const index = prev.indexOf(purchaseId);
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (index === -1 || targetIndex < 0 || targetIndex >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  }, []);
 
   const submitPayment = useCallback(async () => {
     if (!clientId || !context || !canRegister) return;
@@ -308,38 +277,44 @@ export function useClientPayment(): UseClientPaymentResult {
     setError(null);
 
     try {
-      const selectedInstallments = selections.filter((s) => s.amountToPay > 0);
+      const numericClientId = parseInt(clientId, 10);
+      const includedCreditOrder = orderedCreditAccounts
+        .filter((account) => !excludedCreditIds.includes(account.id))
+        .map((account) => parseInt(account.id, 10));
 
-      if (selectedInstallments.length === 0) {
-        setError("Selecciona al menos una parcialidad para registrar el abono");
-        return;
-      }
-
-      const firstSelection = selectedInstallments[0];
-      const creditId = parseInt(firstSelection.purchaseId, 10);
-      const installmentId = parseInt(firstSelection.installmentId, 10);
-
-      const backendPayload: BackendSaleCreditPaymentPayload = {
+      const backendPayload: CascadePaymentPayload = {
         amount: paymentAmount,
         payment_method: mapFrontendToBackendMethod(paymentMethod),
         reference: isCashDeposit ? "Depósito en efectivo" : undefined,
         notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
-        installment_id: installmentId,
+        credit_order: includedCreditOrder,
       };
 
-      const result = await registerSaleCreditPayment(creditId, backendPayload);
-      const backendResult = unwrapOrThrow(result) as BackendSaleCreditPaymentResult;
+      const result = await registerCascadePayment(numericClientId, backendPayload);
+      const backendResult = unwrapOrThrow(result) as CascadePaymentResult;
 
       const allocations: { label: string; amount: number }[] = [];
-      for (const sel of selectedInstallments) {
-        const account = context.creditAccounts.find((a) => a.id === sel.purchaseId);
-        const installment = account?.pendingInstallments.find((i) => i.id === sel.installmentId);
-        if (installment) {
-          const isFullPayment = sel.amountToPay >= installment.totalAmount - 0.001;
+      let paidInstallmentsDelta = 0;
+      let firstAffectedAccount: ClientCreditAccount | undefined;
+
+      for (const creditResult of backendResult.credits) {
+        const account = context.creditAccounts.find(
+          (a) => a.id === String(creditResult.credit_id),
+        );
+        firstAffectedAccount ??= account;
+
+        for (const installmentResult of creditResult.installments) {
+          const installment = account?.pendingInstallments.find(
+            (i) => i.id === String(installmentResult.id),
+          );
+          const totalInstallments = installment?.totalInstallments ?? account?.totalInstallments ?? 0;
+          const isFullPayment = installmentResult.status === "PAID";
+          if (isFullPayment) paidInstallmentsDelta += 1;
+
           const label = isFullPayment
-            ? `Pago de parcialidad ${installment.installmentNumber} de ${installment.totalInstallments}`
-            : `Abono de parcialidad ${installment.installmentNumber} de ${installment.totalInstallments}`;
-          allocations.push({ label, amount: sel.amountToPay });
+            ? `Pago de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`
+            : `Abono de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`;
+          allocations.push({ label, amount: installmentResult.amount_applied });
         }
       }
 
@@ -347,17 +322,16 @@ export function useClientPayment(): UseClientPaymentResult {
       const dateLabel = dayjs(now).format("D [de] MMMM, YYYY");
 
       setPaymentResult({
-        id: String(backendResult.payment.id),
-        totalAmount: backendResult.payment.amount,
+        id: String(backendResult.credits[0]?.payment_id ?? ""),
+        totalAmount: backendResult.amount_applied,
         dateLabel,
         allocations: allocations.length > 0
           ? allocations
           : [{ label: "Abono a cuenta", amount: paymentAmount }],
         clientPhone: context.clientPhone,
-        paidInstallments: backendResult.credit.status === "PAID"
-          ? (context.creditAccounts[0]?.totalInstallments ?? 0)
-          : (context.creditAccounts[0]?.paidInstallments ?? 0) + 1,
-        totalInstallments: context.creditAccounts[0]?.totalInstallments ?? 0,
+        paidInstallments: (firstAffectedAccount?.paidInstallments ?? 0) + paidInstallmentsDelta,
+        totalInstallments: firstAffectedAccount?.totalInstallments ?? 0,
+        creditsAffectedCount: backendResult.credits.length,
         receiptUrl: "",
       });
 
@@ -373,10 +347,11 @@ export function useClientPayment(): UseClientPaymentResult {
     canRegister,
     clientId,
     context,
+    excludedCreditIds,
     isCashDeposit,
+    orderedCreditAccounts,
     paymentAmount,
     paymentMethod,
-    selections,
     fetchContext,
   ]);
 
@@ -388,22 +363,22 @@ export function useClientPayment(): UseClientPaymentResult {
     context,
     loading,
     error,
-    selections,
     paymentMethod,
     isCashDeposit,
     paymentAmount,
     isSubmitting,
     paymentResult,
-    subtotal,
-    totalInterest,
-    totalDue,
+    totalOutstanding,
     change,
     canRegister,
+    orderedCreditAccounts,
+    excludedCreditIds,
+    cascadePreview,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
-    toggleInstallment,
-    updateAmountToPay,
+    toggleCreditExcluded,
+    moveCreditOrder,
     submitPayment,
     refetch: fetchContext,
   };

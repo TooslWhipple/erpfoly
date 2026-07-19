@@ -1,44 +1,54 @@
-import { Checkbox, Grid, Stack, Typography } from "@mui/material";
+import { Checkbox, FormControlLabel, Grid, IconButton, Stack, Typography } from "@mui/material";
+import { KeyboardArrowUp, KeyboardArrowDown } from "@mui/icons-material";
 import numeral from "numeral";
-import type { ClientCreditAccount, InstallmentSelection } from "@/types/clientPayment.types";
+import type { ClientCreditAccount } from "@/types/clientPayment.types";
+import type { CascadeInstallmentPreview } from "@/utils/cascadePayment";
+import { StatusChip } from "@/components/StatusChip/StatusChip";
 import {
   InnerCard,
   GrayCard,
   InstallmentsTableWrapper,
   InstallmentsTable,
-  AmountInput,
   PaymentDot,
 } from "@/styles/clientes/abonos.styles";
 
 export interface CreditAccountCardProps {
   account: ClientCreditAccount;
-  selections: InstallmentSelection[];
-  onToggleInstallment: (purchaseId: string, installmentId: string, totalAmount: number) => void;
-  onAmountChange: (purchaseId: string, installmentId: string, amount: number) => void;
+  cascadePreview: CascadeInstallmentPreview[];
+  excludedFromCascade: boolean;
+  onToggleExcluded: (purchaseId: string) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: (purchaseId: string) => void;
+  onMoveDown: (purchaseId: string) => void;
 }
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
 
-function getSelection(
-  selections: InstallmentSelection[],
+function getCascadeResult(
+  cascadePreview: CascadeInstallmentPreview[],
   purchaseId: string,
   installmentId: string,
-): InstallmentSelection | undefined {
-  return selections.find(
-    (selection) => selection.purchaseId === purchaseId && selection.installmentId === installmentId,
+): CascadeInstallmentPreview | undefined {
+  return cascadePreview.find(
+    (preview) => preview.purchaseId === purchaseId && preview.installmentId === installmentId,
   );
 }
 
 export function CreditAccountCardComponent({
   account,
-  selections,
-  onToggleInstallment,
-  onAmountChange,
+  cascadePreview,
+  excludedFromCascade,
+  onToggleExcluded,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
 }: CreditAccountCardProps) {
   return (
-    <InnerCard>
+    <InnerCard sx={excludedFromCascade ? { opacity: 0.5 } : undefined}>
       <Stack
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
@@ -49,7 +59,37 @@ export function CreditAccountCardComponent({
           <Typography variant="body2" color="text.secondary">Comprado el {account.purchaseDateLabel}</Typography>
         </Stack>
 
-        <Stack direction={{ xs: "column", md: "row" }} spacing={0.5} alignItems="center">
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems="center">
+          <Stack direction="row" spacing={0} alignItems="center">
+            <IconButton
+              size="small"
+              aria-label="Mover antes en la cascada"
+              disabled={!canMoveUp}
+              onClick={() => onMoveUp(account.id)}>
+              <KeyboardArrowUp fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              aria-label="Mover después en la cascada"
+              disabled={!canMoveDown}
+              onClick={() => onMoveDown(account.id)}>
+              <KeyboardArrowDown fontSize="small" />
+            </IconButton>
+          </Stack>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={!excludedFromCascade}
+                onChange={() => onToggleExcluded(account.id)}
+              />
+            }
+            label={
+              <Typography variant="body2" color="text.secondary">
+                Incluir en este abono
+              </Typography>
+            }
+          />
           <Stack direction="row" spacing={0.25}>
             {
               Array.from({ length: account.totalInstallments }).map((_, index) => (
@@ -106,52 +146,40 @@ export function CreditAccountCardComponent({
           <InstallmentsTable>
             <thead>
               <tr>
-                <th aria-label="Seleccionar" />
                 <th>Pago</th>
                 <th>Fecha</th>
                 <th>Monto</th>
                 <th>Interes</th>
                 <th>Total</th>
-                <th>A pagar</th>
+                <th>Resultado de este abono</th>
               </tr>
             </thead>
             <tbody>
               {
                 account.pendingInstallments.map((installment) => {
-                  const selection = getSelection(selections, account.id, installment.id);
-                  const amountToPay = selection?.amountToPay ?? 0;
+                  const cascadeResult = getCascadeResult(cascadePreview, account.id, installment.id);
 
                   return (
                     <tr key={installment.id}>
-                      <td>
-                        <Checkbox
-                          size="small"
-                          checked={selection?.selected ?? false}
-                          onChange={() =>
-                            onToggleInstallment(account.id, installment.id, installment.totalAmount)
-                          }
-                        />
-                      </td>
                       <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
                       <td>{installment.dueDate}</td>
                       <td>{formatCurrency(installment.principalAmount)}</td>
                       <td>{formatCurrency(installment.interestAmount)}</td>
                       <td>{formatCurrency(installment.totalAmount)}</td>
                       <td>
-                        <AmountInput
-                          size="small"
-                          value={amountToPay > 0 ? amountToPay.toFixed(2) : ""}
-                          placeholder="0.00"
-                          onChange={(event) => {
-                            const raw = event.target.value.replace(/[^0-9.]/g, "");
-                            const parsed = parseFloat(raw);
-                            onAmountChange(
-                              account.id,
-                              installment.id,
-                              Number.isNaN(parsed) ? 0 : parsed,
-                            );
-                          }}
-                        />
+                        {cascadeResult ? (
+                          <StatusChip
+                            size="small"
+                            variant={cascadeResult.fullyCovered ? "success" : "warning"}
+                            label={
+                              cascadeResult.fullyCovered
+                                ? `Se cubre (${formatCurrency(cascadeResult.amountApplied)})`
+                                : `Abono parcial (${formatCurrency(cascadeResult.amountApplied)})`
+                            }
+                          />
+                        ) : (
+                          <StatusChip size="small" variant="disabled" label="Sin abono" />
+                        )}
                       </td>
                     </tr>
                   );

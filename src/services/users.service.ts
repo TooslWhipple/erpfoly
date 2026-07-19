@@ -32,6 +32,7 @@ export interface UserDetail {
     roleName?: string;
     branches?: BranchItem[];
     branchIds: number[];
+    requiresOtp: boolean;
     driverDetails?: UserDriverDetails;
 }
 
@@ -93,6 +94,7 @@ export interface CreateUserPayload {
     email?: string;
     roleId: number;
     branchIds: number[];
+    requiresOtp?: boolean;
     driverDetails?: UserDriverDetailsPayload;
 }
 
@@ -104,6 +106,7 @@ export interface UpdateUserPayload {
     email?: string;
     roleId?: number;
     branchIds?: number[];
+    requiresOtp?: boolean;
     driverDetails?: UserDriverDetailsPayload;
 }
 
@@ -143,6 +146,7 @@ export async function createUser(
         email: payload.email || undefined,
         roleId: payload.roleId,
         branchIds: payload.branchIds,
+        ...(payload.requiresOtp !== undefined ? { requiresOtp: payload.requiresOtp } : {}),
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
     };
     return post<ApiSuccessPayload>(BASE, body);
@@ -160,6 +164,7 @@ export async function updateUser(
     if (payload.email !== undefined) body.email = payload.email;
     if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
+    if (payload.requiresOtp !== undefined) body.requiresOtp = payload.requiresOtp;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
 }

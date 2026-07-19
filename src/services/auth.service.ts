@@ -297,18 +297,28 @@ export interface ChangeRequiredPasswordResponse {
 
 export const authService = {
 	/**
-	 * Step 1: request OTP. Body is { username, password } or { cellphone, password }.
-	 * Response 200: { message: "OTP enviado a tu celular" }. Uses credentials for cookies.
+	 * Step 1: request OTP, or direct login success when the user doesn't require OTP.
+	 * Response 200 is either { message: "OTP enviado a tu celular" } or the same
+	 * { accessToken, refreshToken, user } shape as /auth/validate-otp, for users with
+	 * requires_otp = false. Uses credentials for cookies.
 	 */
-	async login(credentials: LoginCredentials): Promise<ApiResult<LoginOtpSentResponse>> {
+	async login(credentials: LoginCredentials): Promise<ApiResult<LoginOtpSentResponse | LoginResponse>> {
 		const identifier =
 			credentials.cellphone != null && credentials.cellphone !== ""
 				? { cellphone: credentials.cellphone.trim() }
 				: parseLoginIdentifier(credentials.username ?? "");
 		const body = { ...identifier, password: credentials.password };
-		const result = await post<LoginOtpSentResponse>("/auth/login", body, AUTH_CREDENTIALS);
+		const result = await post<LoginOtpSentResponse | BackendLoginResponse>(
+			"/auth/login",
+			body,
+			AUTH_CREDENTIALS
+		);
 		if (result.error) return { data: null, error: result.error };
-		return { data: result.data!, error: null };
+		const data = result.data!;
+		if ("accessToken" in data) {
+			return { data: mapAuthResponseToLoginData(data), error: null };
+		}
+		return { data, error: null };
 	},
 
 	/**

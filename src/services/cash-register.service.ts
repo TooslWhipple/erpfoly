@@ -98,8 +98,10 @@ export interface CashRegisterSummary {
   limit: number;
 }
 
-export async function getSessionSummary(): Promise<CashRegisterSummary | null> {
-  const result = await get<CashRegisterSummary | null>("/cash-register-sessions/summary");
+export async function getSessionSummary(): Promise<CashRegisterSummary> {
+  const result = await get<CashRegisterSummary>("/cash-register-sessions/summary", {
+    skipGlobalErrorToast: true,
+  });
   return unwrapOrThrow(result);
 }
 

@@ -8,15 +8,19 @@ import { buildListUrl } from "@/lib/apiHelpers";
 export interface UserListItem {
     id: number;
     fullName?: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
     username: string;
     cellphone: string;
     roleId: number;
     roleName: string;
+    roleCode?: string;
     rolePlatform?: 'ERP' | 'APP' | 'INTERNAL';
     status?: string;
-    breanches: number[];
+    branchIds: number[];
+    branches: string[];
+    cashRegisterId: number | null;
+    cashRegisterName: string | null;
     createdAt: string;
     updatedAt: string;
 }

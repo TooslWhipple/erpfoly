@@ -4,7 +4,7 @@ import { getProductPricePreview } from "@/services/productos.service";
 
 const DEBOUNCE_MS = 400;
 
-/** Precio de lista (costo/(1-margen)*IVA, redondeado a .99) calculado en Apifoly, debounced. */
+/** Precio de lista (costo/(1-margen)*IVA, redondeado a peso entero) calculado en Apifoly, debounced. */
 export function useProductPricePreview(
   costo: number,
   marginPercent: number,

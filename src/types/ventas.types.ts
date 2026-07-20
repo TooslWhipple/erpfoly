@@ -218,3 +218,24 @@ export interface SetDeliveryDatePayload {
   address_id?: number;
   estimated_delivery_date?: string;
 }
+
+export interface RedDeliveryListItem {
+  id: number;
+  saleId: number;
+  folio: string;
+  saleStatus: SaleStatus;
+  deliveryStatus: string;
+  clientName: string | null;
+  saleCreatedAt: string;
+  flaggedAt: string;
+}
+
+export interface GetRedDeliveriesParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
+export interface CancelRedDeliveryPayload {
+  reason?: string;
+}

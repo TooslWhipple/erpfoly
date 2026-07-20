@@ -428,6 +428,7 @@ export function TableCrud<T>({
 
       {total > 0 && (
         <StyledTablePagination
+          slots={{ root: "div" }}
           rowsPerPageOptions={rowsPerPageOptions}
           count={total}
           rowsPerPage={rowsPerPage}

@@ -16,7 +16,14 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { CheckCircle, Truck, Store, Clock, XCircle } from "lucide-react";
+import {
+  CheckCircle,
+  Truck,
+  Store,
+  Clock,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -513,6 +520,23 @@ export default function VentaDetalle() {
                         >
                           {item.product.name}
                         </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          Cantidad: {item.quantity}
+                        </Typography>
+                        {item.backorderedQuantity > 0 && (
+                          <Chip
+                            icon={<AlertTriangle size={12} />}
+                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          />
+                        )}
                       </Box>
                       {!isPendingLayaway && !isSaleCancelled && (
                         <Box
@@ -604,6 +628,23 @@ export default function VentaDetalle() {
                         >
                           {item.product.name}
                         </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          Cantidad: {item.quantity}
+                        </Typography>
+                        {item.backorderedQuantity > 0 && (
+                          <Chip
+                            icon={<AlertTriangle size={12} />}
+                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          />
+                        )}
                       </Box>
                     </Stack>
                   ))}

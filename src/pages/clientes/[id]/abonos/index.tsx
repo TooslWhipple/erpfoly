@@ -33,22 +33,22 @@ export default function ClientPaymentPage() {
     context,
     loading,
     error,
-    selections,
     paymentMethod,
     isCashDeposit,
     paymentAmount,
     isSubmitting,
     paymentResult,
-    subtotal,
-    totalInterest,
-    totalDue,
+    totalOutstanding,
     change,
     canRegister,
+    orderedCreditAccounts,
+    excludedCreditIds,
+    cascadePreview,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
-    toggleInstallment,
-    updateAmountToPay,
+    toggleCreditExcluded,
+    moveCreditOrder,
     submitPayment,
     refetch,
   } = useClientPayment();
@@ -172,13 +172,17 @@ export default function ClientPaymentPage() {
               Selecciona las letras que deseas cobrar:
             </Typography>
 
-            {context.creditAccounts.map((account) => (
+            {orderedCreditAccounts.map((account, index) => (
               <CreditAccountCard
                 key={account.id}
                 account={account}
-                selections={selections}
-                onToggleInstallment={toggleInstallment}
-                onAmountChange={updateAmountToPay}
+                cascadePreview={cascadePreview}
+                excludedFromCascade={excludedCreditIds.includes(account.id)}
+                onToggleExcluded={toggleCreditExcluded}
+                canMoveUp={index > 0}
+                canMoveDown={index < orderedCreditAccounts.length - 1}
+                onMoveUp={(purchaseId) => moveCreditOrder(purchaseId, "up")}
+                onMoveDown={(purchaseId) => moveCreditOrder(purchaseId, "down")}
               />
             ))}
           </Card>
@@ -192,9 +196,8 @@ export default function ClientPaymentPage() {
         >
           <Stack width="100%" spacing={2}>
             <PaymentSummaryPanel
-              subtotal={subtotal}
-              totalInterest={totalInterest}
-              totalDue={totalDue}
+              totalOutstanding={totalOutstanding}
+              paymentAmount={paymentAmount}
             />
             <PaymentCapturePanel
               paymentAmount={paymentAmount}

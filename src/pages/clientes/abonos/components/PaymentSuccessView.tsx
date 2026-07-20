@@ -34,16 +34,26 @@ export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccess
         <Typography variant="subtitle2" fontWeight={700}>Detalles del pago</Typography>
 
         <Stack spacing={0.5} alignItems="flex-end">
-          <Typography variant="caption" color="text.secondary">
-            {result.paidInstallments} de {result.totalInstallments} pagos
-          </Typography>
-          <Stack direction="row" spacing={0.25}>
-            {
-              Array.from({ length: result.totalInstallments }).map((_, index) => (
-                <PaymentDot key={index} active={index < result.paidInstallments} />
-              ))
-            }
-          </Stack>
+          {
+            result.creditsAffectedCount > 1 ? (
+              <Typography variant="caption" color="text.secondary">
+                {result.creditsAffectedCount} créditos abonados en este pago
+              </Typography>
+            ) : (
+              <>
+                <Typography variant="caption" color="text.secondary">
+                  {result.paidInstallments} de {result.totalInstallments} pagos
+                </Typography>
+                <Stack direction="row" spacing={0.25}>
+                  {
+                    Array.from({ length: result.totalInstallments }).map((_, index) => (
+                      <PaymentDot key={index} active={index < result.paidInstallments} />
+                    ))
+                  }
+                </Stack>
+              </>
+            )
+          }
         </Stack>
 
         <Stack spacing={1}>

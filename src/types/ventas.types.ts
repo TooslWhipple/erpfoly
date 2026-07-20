@@ -80,6 +80,13 @@ export interface CartItem {
   sources: InventorySource[];
   /** Set when this line was hydrated from an existing DRAFT sale being resumed. */
   saleItemId?: number;
+  /**
+   * Portion of `quantity` without stock backing it, resolved later when
+   * merchandise arrives. Recomputed locally from `sources` whenever they're
+   * known (fresh line); for resumed lines (`sources: []`) it keeps the
+   * value the backend last computed until the sale is re-synced.
+   */
+  backorderedQuantity: number;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -87,6 +94,7 @@ export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
 export interface SaleDetailItem {
   id: number;
   quantity: number;
+  backorderedQuantity: number;
   unitPrice: number;
   discountAmount: number;
   totalAmount: number;
@@ -209,4 +217,25 @@ export interface SetDeliveryDatePayload {
   branch_id?: number;
   address_id?: number;
   estimated_delivery_date?: string;
+}
+
+export interface RedDeliveryListItem {
+  id: number;
+  saleId: number;
+  folio: string;
+  saleStatus: SaleStatus;
+  deliveryStatus: string;
+  clientName: string | null;
+  saleCreatedAt: string;
+  flaggedAt: string;
+}
+
+export interface GetRedDeliveriesParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
+export interface CancelRedDeliveryPayload {
+  reason?: string;
 }

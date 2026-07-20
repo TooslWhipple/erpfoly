@@ -13,6 +13,7 @@ export interface PendingInstallment {
 export interface ClientCreditAccount {
   id: string;
   productName: string;
+  purchaseDate: string;
   purchaseDateLabel: string;
   initialCost: number;
   totalPaid: number;
@@ -62,6 +63,7 @@ export interface ClientPaymentResult {
   clientPhone: string;
   paidInstallments: number;
   totalInstallments: number;
+  creditsAffectedCount: number;
   receiptUrl: string;
 }
 
@@ -119,31 +121,6 @@ export interface BackendSaleCreditDetail {
     iva: number;
     total: number;
   };
-}
-
-export interface BackendSaleCreditPaymentPayload {
-  amount: number;
-  payment_method: "CASH" | "CARD" | "TRANSFER" | "CHECK";
-  reference?: string;
-  notes?: string;
-  installment_id?: number;
-}
-
-export interface BackendSaleCreditPaymentResult {
-  payment: {
-    id: number;
-    payment_date: string;
-    amount: number;
-    payment_method: string;
-    reference: string | null;
-    notes: string | null;
-  };
-  credit: {
-    id: number;
-    outstanding_balance: number;
-    status: string;
-  };
-  message: string;
 }
 
 export interface BackendSaleCreditActiveItem {

@@ -44,6 +44,7 @@ import {
   ROUTES_READ,
 } from "@/lib/permissions";
 import type { AccessRequirement } from "@/lib/routeAccess";
+import { ROLE_CODES } from "@/constants/role-codes";
 
 export interface NavSubItem {
   label: string;
@@ -73,6 +74,10 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/ventas",
     icon: <ShoppingCart size={ICON_SIZE} />,
     requirement: { permission: SALES_READ },
+    subItems: [
+      { label: "Todas las ventas", path: "/ventas", requirement: { permission: SALES_READ } },
+      { label: "Ventas en rojo", path: "/ventas/en-rojo", requirement: { roles: [ROLE_CODES.ADMINISTRADOR] } },
+    ],
   },
   {
     label: "Cotizaciones guardadas",

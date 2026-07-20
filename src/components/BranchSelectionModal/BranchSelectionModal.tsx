@@ -12,6 +12,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { SideModal } from "@/components/SideModal";
 import { getBranchesCatalog, type BranchCatalogItem } from "@/services/branches.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAuthStore } from "@/store/useAuthStore";
+import { ROLE_CODES } from "@/constants/role-codes";
 import { BranchAutocompleteField } from "./styles";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -179,10 +181,17 @@ export function BranchSelectionModal({
         staleTime: 60_000,
     });
 
-    const defaultOriginBranch = useMemo(
-        () => initialBranches?.find((b) => b.is_main_warehouse) ?? null,
-        [initialBranches],
-    );
+    const currentUser = useAuthStore((s) => s.user);
+
+    const defaultOriginBranch = useMemo(() => {
+        const isGerente = currentUser?.role === ROLE_CODES.GERENTE;
+        const principalBranchId = currentUser?.principalBranchId;
+        if (isGerente && principalBranchId != null) {
+            const principalBranch = initialBranches?.find((b) => b.id === principalBranchId);
+            if (principalBranch) return principalBranch;
+        }
+        return initialBranches?.find((b) => b.is_main_warehouse) ?? null;
+    }, [initialBranches, currentUser]);
 
     const resolvedOriginBranch = originBranch ?? defaultOriginBranch;
 

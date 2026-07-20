@@ -11,6 +11,9 @@ import type {
   DeliveryAvailabilityItem,
   SetDeliveryDatePayload,
   DiscountRequestReason,
+  RedDeliveryListItem,
+  GetRedDeliveriesParams,
+  CancelRedDeliveryPayload,
 } from "@/types/ventas.types";
 
 export type { SaleListItem, GetSalesParams };
@@ -286,5 +289,25 @@ export async function setDeliveryDate(
 export async function removeDeliveryDate(saleId: number): Promise<void> {
   return unwrapOrThrow(
     await del<void>(`${BASE}/sales/${saleId}/delivery-date`),
+  );
+}
+
+export type GetRedDeliveriesResponse = PaginatedRowsResponse<RedDeliveryListItem>;
+
+export async function getRedDeliveries(
+  params: GetRedDeliveriesParams,
+): Promise<ApiResult<GetRedDeliveriesResponse>> {
+  return get<GetRedDeliveriesResponse>(
+    buildListUrl(`${BASE}/sales/red-deliveries`, params),
+  );
+}
+
+export async function cancelRedDelivery(
+  saleId: number,
+  payload: CancelRedDeliveryPayload,
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(
+    `${BASE}/sales/${saleId}/delivery-review/cancel`,
+    payload,
   );
 }

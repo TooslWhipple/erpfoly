@@ -78,6 +78,9 @@ function toDayjs(value: DateInput): Dayjs | null {
   if (value == null || value === "") {
     return null;
   }
+  if (dayjs.isDayjs(value)) {
+    return value.isValid() ? value : null;
+  }
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (DATE_ONLY_PATTERN.test(trimmed)) {

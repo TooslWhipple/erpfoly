@@ -3,12 +3,13 @@ import { useRouter } from "next/router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, LoginCredentials } from "@/services/auth.service";
 import { saveTempPasswordChangeContext } from "@/utils/temp-password-change";
+import { canAccessPath, getFirstAllowedRoute, normalizePathname } from "@/lib/routeAccess";
 
 export function useAuth() {
 	const router = useRouter();
 
-	const { token, user, isAuthenticated, logout: clearAuth, setLoading } = useAuthStore();
-	
+	const { token, user, isAuthenticated, setAuth, logout: clearAuth, setLoading } = useAuthStore();
+
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
@@ -25,7 +26,22 @@ export function useAuth() {
 			return;
 		}
 
-		if (result.data?.requiresPasswordChange) {
+		const data = result.data!;
+
+		if ("token" in data) {
+			// Usuario con requires_otp = false: login directo, sin pasar por OTP.
+			setAuth(data.token, data.user);
+			const redirect = typeof router.query.redirect === "string" ? normalizePathname(router.query.redirect) : "";
+			const nextPath = redirect && canAccessPath(redirect, data.user)
+				? redirect
+				: getFirstAllowedRoute(data.user);
+			router.push(nextPath);
+			setIsLoading(false);
+			setLoading(false);
+			return;
+		}
+
+		if (data.requiresPasswordChange) {
 			saveTempPasswordChangeContext({
 				username: credentials.username?.trim() || undefined,
 				cellphone: credentials.cellphone?.trim() || undefined,

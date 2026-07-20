@@ -6,7 +6,8 @@ import {
   MenuItem,
   SelectChangeEvent,
 } from "@mui/material";
-import { Search as SearchIcon, Check as CheckIcon } from "@mui/icons-material";
+import { Check as CheckIcon } from "@mui/icons-material";
+import { Search } from "lucide-react";
 import type { SearchType } from "@/types/atencion-cliente.types";
 import { searchInvoices } from "@/data/atencion-cliente.mockData";
 import {
@@ -125,13 +126,8 @@ export default function AtencionCliente() {
           fullWidth
           InputProps={{
             startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon
-                  sx={{
-                    color: "#71717A",
-                    fontSize: 20,
-                  }}
-                />
+              <InputAdornment position="start" sx={{ color: "text.secondary" }}>
+                <Search size={18} />
               </InputAdornment>
             ),
           }}

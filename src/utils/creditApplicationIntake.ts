@@ -1,9 +1,3 @@
-/**
- * Minimal valid PNG (1×1 px) as data URI. Used until hardware fingerprint capture is integrated.
- */
-export const SIMULATED_FINGERPRINT_DATA_URL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-
 function mimeTypeFromDataUrl(dataUrl: string): string | null {
   const match = dataUrl.match(/^data:([^;]+);base64,/i);
   return match?.[1]?.trim() ?? null;

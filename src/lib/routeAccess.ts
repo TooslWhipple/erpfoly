@@ -1,5 +1,6 @@
 import type { User } from "@/store/useAuthStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
+import { ROLE_CODES } from "@/constants/role-codes";
 import {
   CASH_REGISTERS_READ,
   CATALOG_BRANCHES_CREATE,
@@ -90,6 +91,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes-credito(\/.*)?$/, permission: CREDIT_APPLICATIONS_READ },
 
   { pattern: /^\/ventas\/nueva$/, permission: SALES_CREATE },
+  { pattern: /^\/ventas\/en-rojo$/, roles: [ROLE_CODES.ADMINISTRADOR] },
   { pattern: /^\/ventas(\/.*)?$/, permission: SALES_READ },
   { pattern: /^\/cotizaciones-guardadas(\/.*)?$/, permission: QUOTATIONS_READ },
   { pattern: /^\/cotizaciones(\/.*)?$/, permission: QUOTATIONS_READ },

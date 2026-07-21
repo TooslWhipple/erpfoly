@@ -1010,16 +1010,16 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
-  const totalPaid = cashAmtNum + cardAmtNum;
+  const totalPaid = Math.round(cashAmtNum + cardAmtNum);
   const ENGANCHE_PCT = 0.1;
-  const enganche = totalFinal * ENGANCHE_PCT;
+  const enganche = Math.round(totalFinal * ENGANCHE_PCT);
   const amountToPay =
     paymentType === "CREDIT"
       ? enganche
       : paymentType === "LAYAWAY"
         ? 0
-        : totalFinal;
-  const change = Math.max(0, cashAmtNum - amountToPay);
+        : Math.round(totalFinal);
+  const change = Math.max(0, totalPaid - amountToPay);
 
   const PAYMENT_OPTIONS: {
     value: "CREDIT" | "CASH" | "LAYAWAY";
@@ -2540,7 +2540,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
               >
                 {cobrarMutation.isPending
                   ? "Registrando..."
-                  : `Registrar cobro  ${formatCurrency(totalFinal)}`}
+                  : `Registrar cobro  ${formatCurrency(amountToPay)}`}
               </Button>
             </Box>
           </Stack>

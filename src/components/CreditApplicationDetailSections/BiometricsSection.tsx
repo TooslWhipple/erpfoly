@@ -21,7 +21,7 @@ export function BiometricsSection({ detail, onOpenImageViewer }: BiometricsSecti
       <Stack>
         <Typography variant="h6">Datos Biométricos</Typography>
         <Typography variant="body2" color="text.secondary">
-          Revisa los datos biométricos proporcionados, como la foto facial o las huellas dactilares. Asegúrate de
+          Revisa los datos biométricos proporcionados, como la foto facial. Asegúrate de
           que los datos sean consistentes y correspondan al solicitante.
         </Typography>
       </Stack>

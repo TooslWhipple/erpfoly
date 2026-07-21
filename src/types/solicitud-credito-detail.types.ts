@@ -104,7 +104,7 @@ export interface BiometricItem {
   name: string;
   verifiedBy: string;
   thumbnailUrl?: string;
-  type: "photo" | "fingerprint";
+  type: "photo";
 }
 
 export interface CreditApplicationBiometrics {

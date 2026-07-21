@@ -33,11 +33,13 @@ import {
 import { formatListDateTime } from "@/utils/date";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
 import { ROLE_CODES } from "@/constants/role-codes";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useConfirmationModal } from "@/hooks/useConfirmationModal";
 
 type User = UserListItem;
 
+const SEARCH_DEBOUNCE_MS = 300;
 const CASH_REGISTERS_CATALOG_QUERY_KEY = ["catalog", "cash-registers"] as const;
 const CASH_REGISTERS_LIST_QUERY_KEY = ["cash-registers"] as const;
 const NONE_VALUE = "__none__";
@@ -78,6 +80,10 @@ export default function Usuarios() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
+    const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+        "",
+        SEARCH_DEBOUNCE_MS,
+    );
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
@@ -87,6 +93,10 @@ export default function Usuarios() {
         { open: false } | { open: true; user: User }
     >({ open: false });
     const [assignSaving, setAssignSaving] = useState(false);
+
+    useEffect(() => {
+        setSearchValue(debouncedSearch);
+    }, [debouncedSearch]);
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -165,7 +175,7 @@ export default function Usuarios() {
     );
 
     const handleSearchChange = (value: string) => {
-        setSearchValue(value);
+        setSearchInput(value);
     };
 
     const handleCreateUser = () => {
@@ -447,7 +457,7 @@ export default function Usuarios() {
                     activeTab={""}
                     onTabChange={() => {}}
                     showSearch
-                    searchValue={searchValue}
+                    searchValue={searchInput}
                     onSearchChange={handleSearchChange}
                     actions={[
                         {

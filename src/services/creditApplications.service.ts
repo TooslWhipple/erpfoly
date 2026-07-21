@@ -3,7 +3,7 @@ import type { ApiSuccessPayload } from "@/lib/axios";
 import type { PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
-import { dataUrlToFile, SIMULATED_FINGERPRINT_DATA_URL } from "@/utils/creditApplicationIntake";
+import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { sanitizeFormValues } from "@/utils/sanitizeInput";
 import type {
   CreditApplicationFormPayload,
@@ -122,7 +122,6 @@ interface CreditApplicationDocumentationResponse {
   guarantorIneBackFiles: CreditApplicationDocumentItemResponse[];
   bureauAuthorizationSignatureFiles?: CreditApplicationDocumentItemResponse[];
   faceCaptureFiles?: CreditApplicationDocumentItemResponse[];
-  fingerprintFiles?: CreditApplicationDocumentItemResponse[];
 }
 
 interface CreditApplicationGuarantorResponse {
@@ -271,7 +270,6 @@ type CreditApplicationDocumentTypeCode =
   | "INE_BACK"
   | "FACE_CAPTURE"
   | "BUREAU_AUTHORIZATION_SIGNATURE"
-  | "FINGERPRINT"
   | "INCOME_PROOF"
   | "EMPLOYMENT_PROOF_LETTER"
   | "GUARANTOR_INE_FRONT"
@@ -539,13 +537,6 @@ export async function createCreditApplicationFromIntake(
   formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
   formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));
   formData.append("faceCapture", dataUrlToFile(faceCapture, "face-capture"));
-  formData.append(
-    "fingerprint",
-    dataUrlToFile(
-      SIMULATED_FINGERPRINT_DATA_URL,
-      "fingerprint",
-    ),
-  );
   formData.append(
     "bureauAuthorizationSignature",
     dataUrlToFile(signature, "bureau-authorization-signature"),

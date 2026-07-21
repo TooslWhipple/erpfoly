@@ -39,7 +39,6 @@ export interface CreditApplicationBiometricsData {
   selfieImage: string | null;
   ineExecutionId?: string | null;
   livenessExecutionId?: string | null;
-  fingerprintConfirmed: boolean;
   signatureDataUrl: string | null;
   completedAt: string | null;
 }

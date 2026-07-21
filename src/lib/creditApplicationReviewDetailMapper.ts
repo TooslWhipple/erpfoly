@@ -144,10 +144,9 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
 
   const signatureFile = documentation?.bureauAuthorizationSignatureFiles?.[0];
   const faceCaptureFile = documentation?.faceCaptureFiles?.[0];
-  const fingerprintFile = documentation?.fingerprintFiles?.[0];
 
   const biometricItems: BiometricItem[] = [];
- 
+
   if (faceCaptureFile) {
     biometricItems.push({
       id: `FACE_CAPTURE-${faceCaptureFile.id}`,
@@ -155,16 +154,6 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       verifiedBy: verifiedByLabel,
       thumbnailUrl: faceCaptureFile.fileUrl,
       type: "photo",
-    });
-  }
-  
-  if (fingerprintFile) {
-    biometricItems.push({
-      id: `FINGERPRINT-${fingerprintFile.id}`,
-      name: "Huella dactilar",
-      verifiedBy: verifiedByLabel,
-      thumbnailUrl: fingerprintFile.fileUrl,
-      type: "fingerprint",
     });
   }
 

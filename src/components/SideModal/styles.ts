@@ -31,7 +31,7 @@ export const PANEL_WIDTHS: Record<string, number> = {
   sm: 440,
   md: 560,
   lg: 720,
-  xl: 900,
+  xl: 960,
 };
 
 export function getDefaultPaperSx(

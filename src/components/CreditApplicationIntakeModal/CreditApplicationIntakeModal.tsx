@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button, CircularProgress, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Fingerprint, PenSquare } from "lucide-react";
+import { PenSquare } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import {
-  FingerprintIconWrapper,
   FooterActions,
   SdkBootstrapState,
   SignatureCanvas,
@@ -18,7 +17,6 @@ import {
   StepContainer,
   StepContent,
   StepProgress,
-  StepSection,
 } from "./styles";
 
 interface CreditApplicationIntakeModalProps {
@@ -28,12 +26,11 @@ interface CreditApplicationIntakeModalProps {
   onFinalize: (payload: CreditApplicationBiometricsData) => Promise<void>;
 }
 
-type IntakeStepId = "ine-capture" | "liveness" | "fingerprint" | "signature";
+type IntakeStepId = "ine-capture" | "liveness" | "signature";
 
 const STEP_ORDER: IntakeStepId[] = [
   "ine-capture",
   "liveness",
-  "fingerprint",
   "signature",
 ];
 
@@ -47,11 +44,6 @@ const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string; progr
     title: "Prueba de vida",
     subtitle: "Confirma la identidad del cliente",
     progressLabel: "Prueba de vida",
-  },
-  fingerprint: {
-    title: "Huella digital",
-    subtitle: "Registra la huella del cliente",
-    progressLabel: "Huella digital",
   },
   signature: {
     title: "Autorización de Buró",
@@ -72,7 +64,6 @@ export function CreditApplicationIntakeModal({
   const [ineBackImage, setIneBackImage] = useState<string | null>(null);
   const [livenessExecutionId, setLivenessExecutionId] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
-  const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [signatureDrawn, setSignatureDrawn] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ineCaptureSessionKey, setIneCaptureSessionKey] = useState(0);
@@ -99,11 +90,9 @@ export function CreditApplicationIntakeModal({
   const canContinue = useMemo(() => {
     if (activeStep === "ine-capture") return Boolean(ineFrontImage && ineBackImage);
     if (activeStep === "liveness") return Boolean(selfieImage);
-    if (activeStep === "fingerprint") return fingerprintConfirmed;
     return signatureDrawn;
   }, [
     activeStep,
-    fingerprintConfirmed,
     ineBackImage,
     ineFrontImage,
     selfieImage,
@@ -117,7 +106,6 @@ export function CreditApplicationIntakeModal({
     setIneBackImage(null);
     setLivenessExecutionId(null);
     setSelfieImage(null);
-    setFingerprintConfirmed(false);
     setSignatureDrawn(false);
     setIneCaptureSessionKey(0);
     setLivenessCaptureSessionKey(0);
@@ -174,7 +162,6 @@ export function CreditApplicationIntakeModal({
           selfieImage,
           ineExecutionId,
           livenessExecutionId,
-          fingerprintConfirmed,
           signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
           completedAt: new Date().toISOString(),
         });
@@ -191,36 +178,40 @@ export function CreditApplicationIntakeModal({
     setActiveStep(nextStep);
   };
 
-  const getCanvasCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  const getCanvasCoordinates = (clientX: number, clientY: number) => {
     const canvas = signatureCanvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (event.clientX - rect.left) * scaleX,
-      y: (event.clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
-  const handleStartDrawing = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (saving) return;
     const canvas = signatureCanvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
 
-    const { x, y } = getCanvasCoordinates(event);
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
     context.beginPath();
     context.moveTo(x, y);
     isDrawingRef.current = true;
   };
 
-  const handleDraw = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return;
+  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current || saving) return;
     const canvas = signatureCanvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
 
-    const { x, y } = getCanvasCoordinates(event);
+    event.preventDefault();
+    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
     context.lineTo(x, y);
     context.strokeStyle = theme.palette.text.primary;
     context.lineWidth = 2;
@@ -230,7 +221,10 @@ export function CreditApplicationIntakeModal({
     setSignatureDrawn(true);
   };
 
-  const handleEndDrawing = () => {
+  const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (signatureCanvasRef.current?.hasPointerCapture(event.pointerId)) {
+      signatureCanvasRef.current.releasePointerCapture(event.pointerId);
+    }
     isDrawingRef.current = false;
   };
 
@@ -326,21 +320,6 @@ export function CreditApplicationIntakeModal({
           </StepContent>
         )}
 
-        {activeStep === "fingerprint" && (
-          <StepSection>
-            <FingerprintIconWrapper>
-              <Fingerprint size={120} strokeWidth={1.25} />
-            </FingerprintIconWrapper>
-            <Typography variant="subtitle1">Dedo índice</Typography>
-            <Button
-              variant={fingerprintConfirmed ? "contained" : "outlined"}
-              onClick={() => setFingerprintConfirmed(true)}
-            >
-              {fingerprintConfirmed ? "Huella confirmada" : "Confirmar huella"}
-            </Button>
-          </StepSection>
-        )}
-
         {activeStep === "signature" && (
           <SignatureSection>
             <Typography variant="body2" color="text.secondary">
@@ -351,12 +330,12 @@ export function CreditApplicationIntakeModal({
               <SignatureCanvas
                 ref={signatureCanvasRef}
                 width={900}
-                height={296}
+                height={480}
                 disabled={saving}
-                onMouseDown={saving ? undefined : handleStartDrawing}
-                onMouseMove={saving ? undefined : handleDraw}
-                onMouseUp={saving ? undefined : handleEndDrawing}
-                onMouseLeave={saving ? undefined : handleEndDrawing}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
               />
             </SignatureCanvasWrapper>
             <SignatureLegalText variant="body2">
@@ -384,7 +363,7 @@ export function CreditApplicationIntakeModal({
           disabled={
             !canContinue
             || saving
-            || (activeStep !== "fingerprint" && activeStep !== "signature" && sdkLoading)
+            || (activeStep !== "signature" && sdkLoading)
           }
         >
           {saving ? (

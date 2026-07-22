@@ -65,8 +65,7 @@ function mapBackendInstallments(
     remaining: number;
     paid_date: string | null;
     status: string;
-    base_amount: number;
-    iva_amount: number;
+    overdue_amount: number;
   }[],
   totalInstallments: number,
 ): PendingInstallment[] {
@@ -77,8 +76,7 @@ function mapBackendInstallments(
       installmentNumber: inst.installment_number,
       totalInstallments,
       dueDate: formatDueDate(inst.due_date),
-      principalAmount: inst.base_amount,
-      interestAmount: inst.iva_amount,
+      overdueAmount: inst.overdue_amount,
       totalAmount: inst.amount,
     }));
 }
@@ -86,8 +84,8 @@ function mapBackendInstallments(
 function mapBackendCreditToAccount(
   item: BackendSaleCreditActiveItem,
 ): ClientCreditAccount {
-  const nextPaymentBreakdown = item.next_payment_iva > 0
-    ? `($${item.next_payment_base.toFixed(2)} + $${item.next_payment_iva.toFixed(2)} Int)`
+  const nextPaymentBreakdown = item.next_payment_overdue > 0
+    ? `(+ $${item.next_payment_overdue.toFixed(2)} mora)`
     : undefined;
 
   return {
@@ -102,6 +100,7 @@ function mapBackendCreditToAccount(
     highlightPaymentDueDate: item.status === "ACTIVE" && item.outstanding_balance > 0,
     nextPaymentAmount: item.next_payment_amount,
     nextPaymentBreakdown,
+    nextPaymentOverdue: item.next_payment_overdue,
     paidInstallments: item.paid_installments,
     totalInstallments: item.total_installments,
     pendingInstallments: [],

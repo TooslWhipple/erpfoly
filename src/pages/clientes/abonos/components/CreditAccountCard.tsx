@@ -148,8 +148,7 @@ export function CreditAccountCardComponent({
               <tr>
                 <th>Pago</th>
                 <th>Fecha</th>
-                <th>Monto</th>
-                <th>Interes</th>
+                <th>Mora</th>
                 <th>Total</th>
                 <th>Resultado de este abono</th>
               </tr>
@@ -163,8 +162,7 @@ export function CreditAccountCardComponent({
                     <tr key={installment.id}>
                       <td>{installment.installmentNumber} de {installment.totalInstallments}</td>
                       <td>{installment.dueDate}</td>
-                      <td>{formatCurrency(installment.principalAmount)}</td>
-                      <td>{formatCurrency(installment.interestAmount)}</td>
+                      <td>{formatCurrency(installment.overdueAmount)}</td>
                       <td>{formatCurrency(installment.totalAmount)}</td>
                       <td>
                         {cascadeResult ? (

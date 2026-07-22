@@ -11,22 +11,19 @@ import type {
 function buildPendingInstallments(
   startInstallment: number,
   totalInstallments: number,
-  basePrincipal: number,
-  interestByInstallment: Record<number, number>,
+  installmentAmount: number,
   dueDates: string[],
 ): PendingInstallment[] {
   return Array.from({ length: 3 }, (_, index) => {
     const installmentNumber = startInstallment + index;
-    const interestAmount = interestByInstallment[installmentNumber] ?? 0;
 
     return {
       id: String(installmentNumber),
       installmentNumber,
       totalInstallments,
       dueDate: dueDates[index] ?? "30 de Jun",
-      principalAmount: basePrincipal,
-      interestAmount,
-      totalAmount: basePrincipal + interestAmount,
+      overdueAmount: 0,
+      totalAmount: installmentAmount,
     };
   });
 }
@@ -42,15 +39,14 @@ const MOCK_CREDIT_ACCOUNTS: ClientCreditAccount[] = [
     remaining: 7117.51,
     paymentDueDate: "16 de Sep",
     highlightPaymentDueDate: true,
-    nextPaymentAmount: 840.83,
-    nextPaymentBreakdown: "($790.83 + $50.00 Int)",
+    nextPaymentAmount: 790.83,
+    nextPaymentOverdue: 0,
     paidInstallments: 3,
     totalInstallments: 12,
     pendingInstallments: buildPendingInstallments(
       4,
       12,
       790.83,
-      { 4: 50, 5: 0, 6: 0 },
       ["16 de Oct", "16 de Nov", "16 de Dic"],
     ),
   },
@@ -65,13 +61,13 @@ const MOCK_CREDIT_ACCOUNTS: ClientCreditAccount[] = [
     paymentDueDate: "22 de Sep",
     highlightPaymentDueDate: false,
     nextPaymentAmount: 1199.91,
+    nextPaymentOverdue: 0,
     paidInstallments: 9,
     totalInstallments: 12,
     pendingInstallments: buildPendingInstallments(
       10,
       12,
       1199.91,
-      { 10: 0, 11: 0, 12: 0 },
       ["22 de Oct", "22 de Nov", "22 de Dic"],
     ),
   },

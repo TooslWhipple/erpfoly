@@ -5,8 +5,7 @@ export interface PendingInstallment {
   installmentNumber: number;
   totalInstallments: number;
   dueDate: string;
-  principalAmount: number;
-  interestAmount: number;
+  overdueAmount: number;
   totalAmount: number;
 }
 
@@ -22,6 +21,7 @@ export interface ClientCreditAccount {
   highlightPaymentDueDate: boolean;
   nextPaymentAmount: number;
   nextPaymentBreakdown?: string;
+  nextPaymentOverdue: number;
   paidInstallments: number;
   totalInstallments: number;
   pendingInstallments: PendingInstallment[];
@@ -76,8 +76,7 @@ export interface BackendSaleCreditInstallment {
   remaining: number;
   paid_date: string | null;
   status: string;
-  base_amount: number;
-  iva_amount: number;
+  overdue_amount: number;
 }
 
 export interface BackendSaleCreditPayment {
@@ -137,8 +136,7 @@ export interface BackendSaleCreditActiveItem {
   outstanding_balance: number;
   next_due_date: string | null;
   next_payment_amount: number;
-  next_payment_base: number;
-  next_payment_iva: number;
+  next_payment_overdue: number;
   status: string;
   total_installments: number;
   paid_installments: number;

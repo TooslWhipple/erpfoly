@@ -65,6 +65,7 @@ import {
   invalidateSaleDiscount,
 } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
 import type {
@@ -596,7 +597,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
-          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+          payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
@@ -610,7 +611,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
           deposit_amount: depositAmount,
-          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+          payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
@@ -622,10 +623,10 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       }
 
       const paymentRes = await registerSalePayment(saleId, {
-        payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+        payment_method: isCardPayment ? "CARD" : "CASH",
         amount: totalFinal,
-        received_amount: cashAmtNum > 0 ? cashAmtNum : undefined,
-        change_amount: cashAmtNum > 0 ? change : undefined,
+        received_amount: !isCardPayment && cashAmtNum > 0 ? cashAmtNum : undefined,
+        change_amount: !isCardPayment && cashAmtNum > 0 ? change : undefined,
         payment_terminal_id: selectedTerminal ?? undefined,
       });
       if (paymentRes.error) throw new Error(paymentRes.error.message);
@@ -699,11 +700,21 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   const lockedBranch = cartBranch ?? selectionBranch;
 
   const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
-  const paymentTerminalBranchId = lockedBranch?.id ?? CURRENT_BRANCH_ID;
+
+  // La sucursal desde la que se está cobrando en este momento (caja activa
+  // del cajero), no la sucursal del carrito/venta — el backend valida la
+  // terminal contra esa misma sucursal (getActiveBranchId).
+  const activeSessionQuery = useQuery({
+    queryKey: ["cash-register-session-summary"],
+    queryFn: () => getSessionSummary(),
+    enabled: isCardPayment,
+    staleTime: 60_000,
+  });
+  const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
   const paymentTerminalsQuery = useQuery({
     queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
-    queryFn: () => getPaymentTerminalsCatalog(paymentTerminalBranchId),
-    enabled: isCardPayment,
+    queryFn: () => getPaymentTerminalsCatalog(paymentTerminalBranchId!),
+    enabled: isCardPayment && paymentTerminalBranchId != null,
     staleTime: 60_000,
   });
 

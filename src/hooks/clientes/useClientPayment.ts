@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { useQuery } from "@tanstack/react-query";
 import {
   getActiveSaleCredits,
   registerCascadePayment,
   getSaleCreditDetail,
 } from "@/services/sale-credit.service";
 import type { CascadePaymentPayload, CascadePaymentResult } from "@/services/sale-credit.service";
+import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types";
+import { getSessionSummary } from "@/services/cash-register.service";
 import { unwrapOrThrow, get } from "@/lib/axios";
 import type {
   ClientCreditAccount,
@@ -38,9 +42,13 @@ interface UseClientPaymentResult {
   orderedCreditAccounts: ClientCreditAccount[];
   excludedCreditIds: string[];
   cascadePreview: CascadeInstallmentPreview[];
+  paymentTerminalId: number | null;
+  paymentTerminals: PaymentTerminalCatalogItem[];
+  paymentTerminalsLoading: boolean;
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
+  setPaymentTerminalId: (value: number | null) => void;
   toggleCreditExcluded: (purchaseId: string) => void;
   moveCreditOrder: (purchaseId: string, direction: "up" | "down") => void;
   submitPayment: () => Promise<void>;
@@ -118,9 +126,15 @@ export function useClientPayment(): UseClientPaymentResult {
   const [context, setContext] = useState<ClientPaymentContext | null>(null);
   const [creditOrder, setCreditOrder] = useState<string[]>([]);
   const [excludedCreditIds, setExcludedCreditIds] = useState<string[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<ClientPaymentMethod>("cash");
+  const [paymentMethod, setPaymentMethodState] = useState<ClientPaymentMethod>("cash");
   const [isCashDeposit, setIsCashDeposit] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentTerminalId, setPaymentTerminalId] = useState<number | null>(null);
+
+  const setPaymentMethod = useCallback((method: ClientPaymentMethod) => {
+    setPaymentMethodState(method);
+    setPaymentTerminalId(null);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -242,10 +256,31 @@ export function useClientPayment(): UseClientPaymentResult {
     return Math.max(parseFloat((paymentAmount - totalOutstanding).toFixed(2)), 0);
   }, [paymentAmount, paymentMethod, totalOutstanding]);
 
+  const isCardPayment = paymentMethod === "card";
+
+  // La sucursal desde la que se está cobrando el abono en este momento
+  // (caja activa del cajero), no la sucursal original de la venta a crédito.
+  const activeSessionQuery = useQuery({
+    queryKey: ["cash-register-session-summary"],
+    queryFn: () => getSessionSummary(),
+    enabled: isCardPayment,
+    staleTime: 60_000,
+  });
+  const activeBranchId = activeSessionQuery.data?.branch_id ?? null;
+
+  const paymentTerminalsQuery = useQuery({
+    queryKey: ["payment-terminals-catalog", activeBranchId],
+    queryFn: () => getPaymentTerminalsCatalog(activeBranchId!),
+    enabled: isCardPayment && activeBranchId != null,
+    staleTime: 60_000,
+  });
+  const paymentTerminals = paymentTerminalsQuery.data ?? [];
+
   const canRegister =
     totalOutstanding > 0 &&
     paymentAmount > 0 &&
     paymentAmount <= totalOutstanding &&
+    !(isCardPayment && !paymentTerminalId) &&
     !isSubmitting;
 
   const toggleCreditExcluded = useCallback((purchaseId: string) => {
@@ -287,6 +322,7 @@ export function useClientPayment(): UseClientPaymentResult {
         reference: isCashDeposit ? "Depósito en efectivo" : undefined,
         notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
         credit_order: includedCreditOrder,
+        payment_terminal_id: isCardPayment ? (paymentTerminalId ?? undefined) : undefined,
       };
 
       const result = await registerCascadePayment(numericClientId, backendPayload);
@@ -347,10 +383,12 @@ export function useClientPayment(): UseClientPaymentResult {
     clientId,
     context,
     excludedCreditIds,
+    isCardPayment,
     isCashDeposit,
     orderedCreditAccounts,
     paymentAmount,
     paymentMethod,
+    paymentTerminalId,
     fetchContext,
   ]);
 
@@ -373,9 +411,13 @@ export function useClientPayment(): UseClientPaymentResult {
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    paymentTerminalId,
+    paymentTerminals,
+    paymentTerminalsLoading: paymentTerminalsQuery.isLoading,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setPaymentTerminalId,
     toggleCreditExcluded,
     moveCreditOrder,
     submitPayment,

@@ -35,6 +35,8 @@ import {
   completeLayaway,
   cancelLayaway,
 } from "@/services/ventas.service";
+import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import { getSessionSummary } from "@/services/cash-register.service";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -195,10 +197,34 @@ export default function VentaDetalle() {
 
   const [layawayAmount, setLayawayAmount] = useState("");
   const [layawayMethod, setLayawayMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
+  const [layawayTerminalId, setLayawayTerminalId] = useState<number | null>(null);
   const [cancelLayawayModalOpen, setCancelLayawayModalOpen] = useState(false);
 
+  const isLayawayCardPayment = layawayMethod === "CARD";
+
+  // La sucursal desde la que se está cobrando el abono (caja activa del
+  // cajero), no la sucursal original del apartado — pueden diferir.
+  const activeSessionQuery = useQuery({
+    queryKey: ["cash-register-session-summary"],
+    queryFn: () => getSessionSummary(),
+    enabled: isLayawayCardPayment,
+    staleTime: 60_000,
+  });
+  const activeBranchId = activeSessionQuery.data?.branch_id ?? null;
+
+  const layawayTerminalsQuery = useQuery({
+    queryKey: ["payment-terminals-catalog", activeBranchId],
+    queryFn: () => getPaymentTerminalsCatalog(activeBranchId!),
+    enabled: isLayawayCardPayment && activeBranchId != null,
+    staleTime: 60_000,
+  });
+
   const registerLayawayPaymentMutation = useMutation({
-    mutationFn: async (payload: { amount: number; payment_method: "CASH" | "CARD" | "TRANSFER" }) => {
+    mutationFn: async (payload: {
+      amount: number;
+      payment_method: "CASH" | "CARD" | "TRANSFER";
+      payment_terminal_id?: number;
+    }) => {
       if (!sale?.layaway) throw new Error("Este apartado no existe");
       const res = await registerLayawayPayment(sale.layaway.id, payload);
       if (res.error) throw new Error(res.error.message);
@@ -856,9 +882,10 @@ export default function VentaDetalle() {
                           select
                           size="small"
                           value={layawayMethod}
-                          onChange={(e) =>
-                            setLayawayMethod(e.target.value as "CASH" | "CARD" | "TRANSFER")
-                          }
+                          onChange={(e) => {
+                            setLayawayMethod(e.target.value as "CASH" | "CARD" | "TRANSFER");
+                            setLayawayTerminalId(null);
+                          }}
                           sx={{ width: 150 }}
                         >
                           <MenuItem value="CASH">Efectivo</MenuItem>
@@ -866,18 +893,47 @@ export default function VentaDetalle() {
                           <MenuItem value="TRANSFER">Transferencia</MenuItem>
                         </TextField>
                       </Stack>
+                      {isLayawayCardPayment && (
+                        <TextField
+                          select
+                          size="small"
+                          fullWidth
+                          value={layawayTerminalId ?? ""}
+                          onChange={(e) => setLayawayTerminalId(Number(e.target.value) || null)}
+                          disabled={layawayTerminalsQuery.isLoading}
+                          sx={{ mb: 1.5 }}
+                        >
+                          <MenuItem value="" disabled>
+                            {layawayTerminalsQuery.isLoading
+                              ? "Cargando terminales..."
+                              : "Selecciona una terminal"}
+                          </MenuItem>
+                          {(layawayTerminalsQuery.data ?? []).map((terminal) => (
+                            <MenuItem key={terminal.id} value={terminal.id}>
+                              {terminal.name} ({terminal.bank})
+                            </MenuItem>
+                          ))}
+                          {layawayTerminalsQuery.data?.length === 0 && (
+                            <MenuItem value="" disabled>
+                              Esta sucursal no tiene terminales activas
+                            </MenuItem>
+                          )}
+                        </TextField>
+                      )}
                       <Button
                         fullWidth
                         variant="outlined"
                         disabled={
                           layawayAmountNum <= 0 ||
                           layawayAmountNum > layawayRemaining ||
+                          (isLayawayCardPayment && !layawayTerminalId) ||
                           registerLayawayPaymentMutation.isPending
                         }
                         onClick={() =>
                           registerLayawayPaymentMutation.mutate({
                             amount: layawayAmountNum,
                             payment_method: layawayMethod,
+                            payment_terminal_id: layawayTerminalId ?? undefined,
                           })
                         }
                         sx={{ textTransform: "none", mb: 1 }}

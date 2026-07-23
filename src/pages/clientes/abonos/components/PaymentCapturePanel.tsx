@@ -1,7 +1,17 @@
 import { useState } from "react";
-import { Button, Checkbox, FormControlLabel, InputAdornment, Stack, Typography } from "@mui/material";
+import {
+  Button,
+  Checkbox,
+  FormControlLabel,
+  InputAdornment,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
 import numeral from "numeral";
 import type { ClientPaymentMethod } from "@/types/clientPayment.types";
+import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types";
 import {
   CaptureCard,
   CaptureCardActions,
@@ -19,9 +29,13 @@ export interface PaymentCapturePanelProps {
   change: number;
   canRegister: boolean;
   isSubmitting: boolean;
+  paymentTerminalId: number | null;
+  paymentTerminals: PaymentTerminalCatalogItem[];
+  paymentTerminalsLoading: boolean;
   onPaymentAmountChange: (value: number) => void;
   onPaymentMethodChange: (method: ClientPaymentMethod) => void;
   onCashDepositChange: (value: boolean) => void;
+  onPaymentTerminalChange: (value: number | null) => void;
   onSubmit: () => void;
 }
 
@@ -36,9 +50,13 @@ export function PaymentCapturePanel({
   change,
   canRegister,
   isSubmitting,
+  paymentTerminalId,
+  paymentTerminals,
+  paymentTerminalsLoading,
   onPaymentAmountChange,
   onPaymentMethodChange,
   onCashDepositChange,
+  onPaymentTerminalChange,
   onSubmit,
 }: PaymentCapturePanelProps) {
   const [inputValue, setInputValue] = useState("");
@@ -90,6 +108,33 @@ export function PaymentCapturePanel({
           onChange={() => onPaymentMethodChange("card")}
         />
       </Stack>
+
+      {paymentMethod === "card" && (
+        <Select
+          fullWidth
+          size="small"
+          displayEmpty
+          value={paymentTerminalId ?? ""}
+          onChange={(e) => onPaymentTerminalChange(Number(e.target.value) || null)}
+          disabled={paymentTerminalsLoading}
+        >
+          <MenuItem value="" disabled>
+            {paymentTerminalsLoading
+              ? "Cargando terminales..."
+              : "Selecciona una terminal"}
+          </MenuItem>
+          {paymentTerminals.map((terminal) => (
+            <MenuItem key={terminal.id} value={terminal.id}>
+              {terminal.name} ({terminal.bank})
+            </MenuItem>
+          ))}
+          {!paymentTerminalsLoading && paymentTerminals.length === 0 && (
+            <MenuItem value="" disabled>
+              Esta sucursal no tiene terminales activas
+            </MenuItem>
+          )}
+        </Select>
+      )}
 
       <FormControlLabel
         control={

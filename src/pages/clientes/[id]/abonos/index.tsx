@@ -44,9 +44,13 @@ export default function ClientPaymentPage() {
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    paymentTerminalId,
+    paymentTerminals,
+    paymentTerminalsLoading,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setPaymentTerminalId,
     toggleCreditExcluded,
     moveCreditOrder,
     submitPayment,
@@ -206,9 +210,13 @@ export default function ClientPaymentPage() {
               change={change}
               canRegister={canRegister}
               isSubmitting={isSubmitting}
+              paymentTerminalId={paymentTerminalId}
+              paymentTerminals={paymentTerminals}
+              paymentTerminalsLoading={paymentTerminalsLoading}
               onPaymentAmountChange={setPaymentAmount}
               onPaymentMethodChange={setPaymentMethod}
               onCashDepositChange={setIsCashDeposit}
+              onPaymentTerminalChange={setPaymentTerminalId}
               onSubmit={() => void submitPayment()}
             />
           </Stack>

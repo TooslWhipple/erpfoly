@@ -87,6 +87,7 @@ export interface CreateLayawayPayload {
   layaway_term_id: number;
   deposit_amount: number;
   payment_method: "CASH" | "CARD";
+  payment_terminal_id?: number;
 }
 
 export async function createLayaway(
@@ -103,6 +104,7 @@ export interface RegisterLayawayPaymentPayload {
   payment_method: "CASH" | "CARD" | "TRANSFER";
   amount: number;
   notes?: string;
+  payment_terminal_id?: number;
 }
 
 export async function registerLayawayPayment(
@@ -218,6 +220,7 @@ export interface RegisterPaymentPayload {
   amount: number;
   received_amount?: number;
   change_amount?: number;
+  payment_terminal_id?: number;
 }
 
 export async function registerSalePayment(
@@ -239,6 +242,7 @@ export interface ConfirmCreditSalePayload {
   term_months: number;
   down_payment: number;
   payment_method: "CASH" | "CARD";
+  payment_terminal_id?: number;
 }
 
 export async function confirmCreditSale(

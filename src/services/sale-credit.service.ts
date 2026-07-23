@@ -10,8 +10,7 @@ export interface SaleCreditInstallment {
   remaining: number;
   paid_date: string | null;
   status: string;
-  base_amount: number;
-  iva_amount: number;
+  overdue_amount: number;
 }
 
 export interface SaleCreditPayment {
@@ -91,8 +90,7 @@ export interface SaleCreditActiveItem {
   outstanding_balance: number;
   next_due_date: string | null;
   next_payment_amount: number;
-  next_payment_base: number;
-  next_payment_iva: number;
+  next_payment_overdue: number;
   status: string;
   total_installments: number;
   paid_installments: number;
@@ -156,6 +154,7 @@ export interface CascadePaymentPayload {
   reference?: string;
   notes?: string;
   credit_order?: number[];
+  payment_terminal_id?: number;
 }
 
 export interface CascadePaymentInstallmentResult {

@@ -40,6 +40,7 @@ import {
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
+  COSTEOS_READ,
   ORDERS_READ,
   ROUTES_READ,
 } from "@/lib/permissions";
@@ -126,6 +127,12 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/recepcion-mercancias",
     icon: <Package size={ICON_SIZE} />,
     requirement: { permission: MERCHANDISE_RECEPTION_READ },
+  },
+  {
+    label: "Costeos",
+    path: "/costeos",
+    icon: <ClipboardList size={ICON_SIZE} />,
+    requirement: { permission: COSTEOS_READ },
   },
   {
     label: "Atención a cliente",

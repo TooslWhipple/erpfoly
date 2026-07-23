@@ -1,0 +1,1 @@
+export { CosteoDetailHeader } from "./CosteoDetailHeader";

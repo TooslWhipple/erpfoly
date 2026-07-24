@@ -154,9 +154,9 @@ export function AddCosteoExpenseModal({
     await onSubmit({
       name,
       currency,
-      exchangeRate: rate,
+      exchange_rate: rate,
       amount: amountNumber,
-      includedInInvoice,
+      included_in_invoice: includedInInvoice,
     });
   };
 

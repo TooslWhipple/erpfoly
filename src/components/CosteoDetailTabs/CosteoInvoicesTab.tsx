@@ -20,7 +20,7 @@ interface CosteoInvoicesTabProps {
 const INVOICE_TYPE_LABELS: Record<CosteoInvoiceType, string> = {
   PUE: "PUE",
   PPD: "PPD",
-  credit_note: "Nota de crédito",
+  CREDIT_NOTE: "Nota de crédito",
 };
 
 function formatCurrency(value: number): string {

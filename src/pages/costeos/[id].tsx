@@ -25,10 +25,13 @@ export default function CosteoDetailPage() {
     breadcrumbItems,
     expenseModalOpen,
     invoiceModalOpen,
+    availableInvoices,
+    loadingAvailableInvoices,
     isEditingExchangeRate,
     exchangeRateDraft,
     setExpenseModalOpen,
     setInvoiceModalOpen,
+    openInvoiceModal,
     handleTabChange,
     handleBack,
     handleReceivedChange,
@@ -50,8 +53,8 @@ export default function CosteoDetailPage() {
         {
           label: "Agregar gasto",
           onClick: () => setExpenseModalOpen(true),
-          variant: "option",
-          color: "inherit",
+          variant: "outlined",
+          color: "primary",
           showIcon: true,
         },
       ]
@@ -59,9 +62,9 @@ export default function CosteoDetailPage() {
         ? [
           {
             label: "Agregar factura",
-            onClick: () => setInvoiceModalOpen(true),
-            variant: "option",
-            color: "inherit",
+            onClick: openInvoiceModal,
+            variant: "outlined",
+            color: "primary",
             showIcon: true,
           },
         ]
@@ -185,7 +188,8 @@ export default function CosteoDetailPage() {
       <AddCosteoInvoiceModal
         open={invoiceModalOpen}
         onClose={() => setInvoiceModalOpen(false)}
-        availableInvoices={detail.availableInvoices}
+        availableInvoices={availableInvoices}
+        loadingAvailableInvoices={loadingAvailableInvoices}
         saving={saving}
         onSubmit={handleAddInvoices}
       />

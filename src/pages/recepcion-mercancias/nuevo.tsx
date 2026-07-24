@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  Box,
+  IconButton,
   Stack,
-  Table,
   TableBody,
   TableRow,
+  Typography,
 } from "@mui/material";
-import { Minus, Plus } from "lucide-react";
+import { CircleMinus, Plus } from "lucide-react";
 import numeral from "numeral";
 import { Breadcrumbs, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
@@ -37,31 +37,20 @@ import {
   DeliveryDate,
   ActionButton,
   ContentLayout,
-  MainContent,
-  SidePanel,
-  ContentSection,
-  SectionHeader,
-  SectionTitle,
-  SectionDescription,
   TableContainer,
   StyledTableHead,
   StyledTableRow,
   StyledTableCell,
   ArticleNameCell,
-  InvoicesPanel,
-  InvoicesPanelHeader,
   AddInvoiceButton,
-  InvoicesEmptyState,
   InvoiceCard,
   InvoiceCardInfo,
   InvoiceCardId,
   InvoiceCardDate,
   InvoiceCardAmount,
-  RemoveInvoiceButton,
-  InvoicesTotalRow,
-  InvoicesTotalLabel,
-  InvoicesTotalValue,
+  InvoiceTotalCard,
   InvoiceAmountAlert,
+  Table
 } from "@/styles/recepcion-mercancias/nuevo.styles";
 
 type ActivePanel = "invoices" | "confirm" | null;
@@ -263,9 +252,9 @@ export default function NuevaRecepcion() {
       prev.map((article) =>
         article.id === articleId
           ? {
-              ...article,
-              received: Math.min(Math.max(0, newQuantity), article.quantity),
-            }
+            ...article,
+            received: Math.min(Math.max(0, newQuantity), article.quantity),
+          }
           : article,
       ),
     );
@@ -333,7 +322,6 @@ export default function NuevaRecepcion() {
               label: "Nuevo",
             },
           ]}
-          showBackButton={false}
         />
         <HeaderActions>
           {statusChip != null && (
@@ -376,119 +364,108 @@ export default function NuevaRecepcion() {
       </ProgressSection>
 
       <ContentLayout>
-        <MainContent>
-          <ContentSection>
-            <SectionHeader>
-              <Box>
-                <SectionTitle>Artículos recibidos</SectionTitle>
-                <SectionDescription>
-                  Confirma la cantidad de artículos recibidos.
-                </SectionDescription>
-              </Box>
-            </SectionHeader>
+        <Stack spacing={2} flex="1 1 0">
+          <Stack>
+            <Typography variant="h6">Artículos recibidos</Typography>
+            <Typography variant="body2" color="text.secondary">Confirma la cantidad de artículos recibidos.</Typography>
+          </Stack>
+          <TableContainer>
+            <Table>
+              <StyledTableHead>
+                <TableRow>
+                  <StyledTableCell>Nombre</StyledTableCell>
+                  <StyledTableCell>SKU</StyledTableCell>
+                  <StyledTableCell>Pedido</StyledTableCell>
+                  <StyledTableCell>Cantidad</StyledTableCell>
+                  <StyledTableCell>Recibidos</StyledTableCell>
+                </TableRow>
+              </StyledTableHead>
+              <TableBody>
+                {articles.map((article) => (
+                  <StyledTableRow key={article.id}>
+                    <ArticleNameCell>{article.name}</ArticleNameCell>
+                    <StyledTableCell>{article.sku}</StyledTableCell>
+                    <StyledTableCell>{article.orderNumber}</StyledTableCell>
+                    <StyledTableCell>{article.quantity}</StyledTableCell>
+                    <StyledTableCell>
+                      <NumberInput
+                        value={article.received}
+                        onChange={(value) =>
+                          handleQuantityChange(article.id, value)
+                        }
+                        min={0}
+                        max={article.quantity}
+                        step={1}
+                        width={80}
+                        size="small"
+                        disabled={!canEditQuantities}
+                      />
+                    </StyledTableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
 
-            <TableContainer>
-              <Table>
-                <StyledTableHead>
-                  <TableRow>
-                    <StyledTableCell>Nombre</StyledTableCell>
-                    <StyledTableCell>SKU</StyledTableCell>
-                    <StyledTableCell>Pedido</StyledTableCell>
-                    <StyledTableCell>Cantidad</StyledTableCell>
-                    <StyledTableCell>Recibidos</StyledTableCell>
-                  </TableRow>
-                </StyledTableHead>
-                <TableBody>
-                  {articles.map((article) => (
-                    <StyledTableRow key={article.id}>
-                      <ArticleNameCell>{article.name}</ArticleNameCell>
-                      <StyledTableCell>{article.sku}</StyledTableCell>
-                      <StyledTableCell>{article.orderNumber}</StyledTableCell>
-                      <StyledTableCell>{article.quantity}</StyledTableCell>
-                      <StyledTableCell>
-                        <NumberInput
-                          value={article.received}
-                          onChange={(value) =>
-                            handleQuantityChange(article.id, value)
-                          }
-                          min={0}
-                          max={article.quantity}
-                          step={1}
-                          width={80}
-                          size="small"
-                          disabled={!canEditQuantities}
-                        />
-                      </StyledTableCell>
-                    </StyledTableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </ContentSection>
-        </MainContent>
-
-        <SidePanel>
-          <InvoicesPanel>
-            <InvoicesPanelHeader>
-              <Box>
-                <SectionTitle>Facturas</SectionTitle>
-                <SectionDescription>
-                  Facturas pertenecientes a esta mercancía.
-                </SectionDescription>
-              </Box>
-              {canManageInvoices && (
+        <Stack spacing={2} flex="0 1 320px">
+          <Stack direction="row" spacing={2}>
+            <Stack>
+              <Typography variant="h6">Facturas</Typography>
+              <Typography variant="body2" color="text.secondary">Facturas pertenecientes a esta mercancía.</Typography>
+            </Stack>
+            {
+              canManageInvoices && (
                 <AddInvoiceButton
-                  aria-label="Agregar facturas"
-                  onClick={() => setActivePanel("invoices")}
-                >
+                  onClick={() => setActivePanel("invoices")}>
                   <Plus size={18} />
                 </AddInvoiceButton>
-              )}
-            </InvoicesPanelHeader>
+              )
+            }
+          </Stack>
 
-            {invoices.length === 0 ? (
-              <InvoicesEmptyState>
-                Aún no vinculas ninguna factura a esta recepción de mercancía
-              </InvoicesEmptyState>
-            ) : (
-              <Stack spacing={1.5}>
-                {invoices.map((invoice) => (
-                  <InvoiceCard key={invoice.id}>
-                    {canManageInvoices && (
-                      <RemoveInvoiceButton
-                        aria-label="Quitar factura"
-                        onClick={() => handleRemoveInvoice(invoice.id)}
-                      >
-                        <Minus size={16} />
-                      </RemoveInvoiceButton>
-                    )}
-                    <InvoiceCardInfo>
-                      <InvoiceCardId>ID: {invoice.fiscalFolio}</InvoiceCardId>
-                      <InvoiceCardDate>{invoice.date}</InvoiceCardDate>
-                    </InvoiceCardInfo>
-                    <InvoiceCardAmount>
-                      {numeral(invoice.amount).format("$0,0.00")}
-                    </InvoiceCardAmount>
-                  </InvoiceCard>
-                ))}
+          {
+            invoices.length === 0 ?
+              <Typography variant="body2" color="text.secondary">Aún no vinculas ninguna factura a esta recepción de mercancía</Typography>
+              :
+              <Stack spacing={1}>
+                {
+                  invoices.map((invoice) => (
+                    <InvoiceCard key={invoice.id}>
+                      {
+                        canManageInvoices &&
+                        <IconButton
+                          onClick={() => handleRemoveInvoice(invoice.id)}>
+                          <CircleMinus size={16} />
+                        </IconButton>
+                      }
+                      <InvoiceCardInfo>
+                        <InvoiceCardId>ID: {invoice.fiscalFolio}</InvoiceCardId>
+                        <InvoiceCardDate>{invoice.date}</InvoiceCardDate>
+                      </InvoiceCardInfo>
+                      <InvoiceCardAmount>
+                        {numeral(invoice.amount).format("$0,0.00")}
+                      </InvoiceCardAmount>
+                    </InvoiceCard>
+                  ))
+                }
 
-                <InvoicesTotalRow>
-                  <InvoicesTotalLabel>Total</InvoicesTotalLabel>
-                  <InvoicesTotalValue>
-                    {numeral(invoicesTotal).format("$0,0.00")}
-                  </InvoicesTotalValue>
-                </InvoicesTotalRow>
+                <InvoiceTotalCard>
+                  <Typography variant="body1" fontWeight={500}>Total</Typography>
+                  <Typography variant="subtitle1">{numeral(invoicesTotal).format("$0,0.00")}</Typography>
+                </InvoiceTotalCard>
 
-                {invoicesExceedCost && (
+                {
+                  invoicesExceedCost &&
                   <InvoiceAmountAlert severity="warning" icon={false}>
-                    El monto total de las facturas es mayor al costo total de los
-                    artículos
+                    <Typography variant="body2">
+                      El monto total de las facturas es mayor al costo total de los artículos
+                    </Typography>
                   </InvoiceAmountAlert>
-                )}
+                }
               </Stack>
-            )}
-          </InvoicesPanel>
-        </SidePanel>
+          }
+        </Stack>
       </ContentLayout>
 
       <AddInvoicesModal

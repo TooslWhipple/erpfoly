@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
 import {
-  Box,
   Typography,
   Button,
   LinearProgress,
@@ -9,15 +8,16 @@ import {
   TableCell,
   IconButton,
   Alert,
+  Table as MuiTable,
 } from "@mui/material";
 
-export const PageContainer = styled(Box)(({ theme }) => ({
+export const PageContainer = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(3),
 }));
 
-export const PageHeader = styled(Box)(({ theme }) => ({
+export const PageHeader = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
@@ -25,7 +25,7 @@ export const PageHeader = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
 }));
 
-export const HeaderActions = styled(Box)(({ theme }) => ({
+export const HeaderActions = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
@@ -37,7 +37,7 @@ export const HeaderActions = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const HeaderSection = styled(Box)(({ theme }) => ({
+export const HeaderSection = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
@@ -45,7 +45,7 @@ export const HeaderSection = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
 }));
 
-export const TransferInfo = styled(Box)(({ theme }) => ({
+export const TransferInfo = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(2),
@@ -57,7 +57,7 @@ export const TransferInfo = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const SupplierInfo = styled(Box)({
+export const SupplierInfo = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 4,
@@ -76,7 +76,7 @@ export const SupplierDate = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const BranchInfo = styled(Box)({
+export const BranchInfo = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 4,
@@ -95,11 +95,11 @@ export const DeliveryDate = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const ProgressSection = styled(Box)(({ theme }) => ({
+export const ProgressSection = styled('div')(({ theme }) => ({
   marginTop: theme.spacing(-1),
 }));
 
-export const ProgressBarContainer = styled(Box)({
+export const ProgressBarContainer = styled('div')({
   width: "100%",
 });
 
@@ -123,7 +123,7 @@ export const ActionButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const ContentLayout = styled(Box)(({ theme }) => ({
+export const ContentLayout = styled('div')(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
   alignItems: "flex-start",
@@ -132,47 +132,7 @@ export const ContentLayout = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const MainContent = styled(Box)({
-  flex: 1,
-  minWidth: 0,
-});
-
-export const SidePanel = styled(Box)(({ theme }) => ({
-  width: 320,
-  flexShrink: 0,
-  [theme.breakpoints.down("lg")]: {
-    width: "100%",
-  },
-}));
-
-export const ContentSection = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: 12,
-  padding: theme.spacing(3),
-}));
-
-export const SectionHeader = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: theme.spacing(2),
-  marginBottom: theme.spacing(2),
-}));
-
-export const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: "1.25rem",
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-  marginBottom: theme.spacing(0.5),
-}));
-
-export const SectionDescription = styled(Typography)(({ theme }) => ({
-  fontSize: "0.875rem",
-  color: theme.palette.text.secondary,
-}));
-
-export const TableContainer = styled(Box)(({ theme }) => ({
+export const TableContainer = styled('div')(({ theme }) => ({
   width: "100%",
   overflowX: "auto",
   border: `1px solid ${theme.palette.app.border}`,
@@ -199,24 +159,6 @@ export const ArticleNameCell = styled(StyledTableCell)({
   fontWeight: 400,
 });
 
-export const InvoicesPanel = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: 12,
-  padding: theme.spacing(2.5),
-  minHeight: 280,
-}));
-
-export const InvoicesPanelHeader = styled(Box)({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 12,
-});
-
 export const AddInvoiceButton = styled(IconButton)(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,
@@ -225,30 +167,17 @@ export const AddInvoiceButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const InvoicesEmptyState = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textAlign: "center",
-  padding: theme.spacing(3),
-  borderRadius: 8,
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.secondary,
-  fontSize: "0.875rem",
-  lineHeight: 1.5,
-  flex: 1,
-}));
-
-export const InvoiceCard = styled(Box)(({ theme }) => ({
+export const InvoiceCard = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
-  padding: theme.spacing(1.5),
+  padding: "16px",
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: 10,
+  borderRadius: "12px",
 }));
 
-export const InvoiceCardInfo = styled(Box)({
+export const InvoiceCardInfo = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 2,
@@ -274,36 +203,21 @@ export const InvoiceCardAmount = styled(Typography)(({ theme }) => ({
   whiteSpace: "nowrap",
 }));
 
-export const RemoveInvoiceButton = styled(IconButton)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-  padding: 4,
-}));
-
-export const InvoicesTotalRow = styled(Box)(({ theme }) => ({
+export const InvoiceTotalCard = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   paddingTop: theme.spacing(1),
-  borderTop: `1px solid ${theme.palette.app.border}`,
-}));
-
-export const InvoicesTotalLabel = styled(Typography)(({ theme }) => ({
-  fontSize: "0.875rem",
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-}));
-
-export const InvoicesTotalValue = styled(Typography)(({ theme }) => ({
-  fontSize: "0.9375rem",
-  fontWeight: 700,
-  color: theme.palette.text.primary,
+  borderRadius: "12px",
+  padding: "16px",
+  backgroundColor: theme.palette.background.lowGray
 }));
 
 export const InvoiceAmountAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 8,
-  backgroundColor: theme.palette.app.chip.variants.pending.background,
-  color: theme.palette.app.chip.variants.pending.color,
-  "& .MuiAlert-icon": {
-    color: theme.palette.app.chip.variants.pending.color,
-  },
+  backgroundColor: "#FFEDD5"
+}));
+
+export const Table = styled(MuiTable)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
 }));

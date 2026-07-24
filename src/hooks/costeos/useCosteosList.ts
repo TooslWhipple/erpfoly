@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { getCosteos } from "@/services/costeos.service";
 import type { CosteoListFilter, CosteoListItem } from "@/types/costeos.types";
 
@@ -12,12 +13,11 @@ export function useCosteosList() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getCosteos({ filter });
-      setItems(result.data);
+      const result = await getCosteos({ filter, page: 1, limit: 50 });
+      const data = unwrapOrThrow(result);
+      setItems(data.rows);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al cargar costeos";
-      setError(message);
+      setError(getApiErrorMessage(err));
       setItems([]);
     } finally {
       setLoading(false);

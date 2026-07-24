@@ -20,7 +20,7 @@ import {
 
 interface CosteoArticlesTabProps {
   articles: CosteoArticle[];
-  onReceivedChange: (articleId: string, received: number) => void;
+  onReceivedChange: (articleId: number, received: number) => void;
 }
 
 function formatCurrency(value: number): string {

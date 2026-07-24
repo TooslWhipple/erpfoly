@@ -3,7 +3,8 @@ export type CosteoStatus =
   | "costed"
   | "reviewed"
   | "received"
-  | "ordered";
+  | "ordered"
+  | "cancelled";
 
 export type CosteoListFilter = "all" | "captured" | "received" | "ordered";
 
@@ -16,7 +17,7 @@ export type CosteoDetailTab =
 
 export type CosteoCurrency = "MXN" | "USD";
 
-export type CosteoInvoiceType = "PUE" | "PPD" | "credit_note";
+export type CosteoInvoiceType = "PUE" | "PPD" | "CREDIT_NOTE";
 
 export interface CosteoListItem {
   id: number;
@@ -32,7 +33,7 @@ export interface CosteoListItem {
 }
 
 export interface CosteoArticle {
-  id: string;
+  id: number;
   name: string;
   sku: string;
   orderNumber: string;
@@ -42,7 +43,7 @@ export interface CosteoArticle {
   totalCost: number;
   quantity: number;
   received: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
   costUsd: number;
   amountUsd: number;
   costMxn: number;
@@ -52,7 +53,7 @@ export interface CosteoArticle {
 }
 
 export interface CosteoExpense {
-  id: string;
+  id: number;
   name: string;
   currency: CosteoCurrency;
   exchangeRate: number;
@@ -64,16 +65,16 @@ export interface CosteoExpense {
 }
 
 export interface CosteoTermFreight {
-  id: string;
+  id: number;
   concept: string;
   termDays: number;
   freightType: string;
   amount: number;
-  notes: string;
+  notes: string | null;
 }
 
 export interface CosteoInvoice {
-  id: string;
+  id: number;
   externalId: string;
   date: string;
   type: CosteoInvoiceType;
@@ -81,7 +82,8 @@ export interface CosteoInvoice {
 }
 
 export interface CosteoAvailableInvoice {
-  id: string;
+  id: number;
+  supplierInvoiceId: number;
   externalId: string;
   date: string;
   type: CosteoInvoiceType;
@@ -122,22 +124,39 @@ export interface CosteoDetail {
 }
 
 export interface GetCosteosParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: CosteoStatus;
   filter?: CosteoListFilter;
+  supplier_id?: number;
+  branch_id?: number;
+  date_from?: string;
+  date_to?: string;
 }
 
 export interface GetCosteosResponse {
-  data: CosteoListItem[];
+  rows: CosteoListItem[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface AddCosteoExpensePayload {
   name: string;
   currency: CosteoCurrency;
-  exchangeRate: number;
+  exchange_rate: number;
   amount: number;
-  includedInInvoice: boolean;
+  included_in_invoice: boolean;
+}
+
+export interface SaveCosteoDetailPayload {
+  exchange_rate: number;
+  affect_article_prices: boolean;
+  items: Array<{ id?: number; received?: number }>;
 }
 
 export interface AddCosteoInvoicePayload {
-  invoiceIds: string[];
+  supplier_invoice_ids: number[];
 }

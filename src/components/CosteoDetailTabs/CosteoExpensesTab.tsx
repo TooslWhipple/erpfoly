@@ -26,7 +26,7 @@ interface CosteoExpensesTabProps {
   summary: CosteoExpenseSummary;
   affectArticlePrices: boolean;
   onAffectPricesChange: (checked: boolean) => void;
-  onRemoveExpense: (expenseId: string) => void;
+  onRemoveExpense: (expenseId: number) => void;
 }
 
 function formatCurrency(value: number): string {

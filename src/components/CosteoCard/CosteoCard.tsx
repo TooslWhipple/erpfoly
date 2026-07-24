@@ -34,6 +34,7 @@ const STATUS_LABELS: Record<CosteoStatus, string> = {
   reviewed: "Revisado",
   received: "Recibido",
   ordered: "Pedido",
+  cancelled: "Cancelado",
 };
 
 const STATUS_COLORS: Record<
@@ -65,6 +66,11 @@ const STATUS_COLORS: Record<
     color: theme.palette.app.chip.variants.info.color,
     progress: theme.palette.app.chip.variants.info.color,
   },
+  cancelled: {
+    backgroundColor: theme.palette.app.chip.variants.error?.background ?? theme.palette.app.chip.variants.pending.background,
+    color: theme.palette.app.chip.variants.error?.color ?? theme.palette.app.chip.variants.pending.color,
+    progress: theme.palette.app.chip.variants.error?.color ?? theme.palette.app.chip.variants.pending.color,
+  },
 };
 
 function getStatusVariant(status: CosteoStatus): StatusChipVariant {
@@ -74,6 +80,7 @@ function getStatusVariant(status: CosteoStatus): StatusChipVariant {
     reviewed: "success",
     received: "success",
     ordered: "info",
+    cancelled: "error",
   };
   return variants[status];
 }

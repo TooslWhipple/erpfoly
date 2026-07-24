@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import {
   addCosteoExpense,
   addCosteoInvoices,
+  getAvailableInvoices,
   getCosteoById,
   removeCosteoExpense,
   saveCosteoDetail,
 } from "@/services/costeos.service";
 import type {
   AddCosteoExpensePayload,
+  AddCosteoInvoicePayload,
+  CosteoAvailableInvoice,
   CosteoDetail,
   CosteoDetailTab,
 } from "@/types/costeos.types";
@@ -34,23 +38,19 @@ export function useCosteoDetail() {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false);
   const [exchangeRateDraft, setExchangeRateDraft] = useState("");
+  const [availableInvoices, setAvailableInvoices] = useState<CosteoAvailableInvoice[]>([]);
+  const [loadingAvailableInvoices, setLoadingAvailableInvoices] = useState(false);
 
   const fetchDetail = useCallback(async (id: number) => {
     setLoading(true);
     setError(null);
     try {
       const result = await getCosteoById(id);
-      if (!result) {
-        setDetail(null);
-        setError("Costeo no encontrado");
-        return;
-      }
-      setDetail(result);
-      setExchangeRateDraft(String(result.exchangeRate));
+      const data = unwrapOrThrow(result);
+      setDetail(data);
+      setExchangeRateDraft(String(data.exchangeRate));
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al cargar el costeo";
-      setError(message);
+      setError(getApiErrorMessage(err));
       setDetail(null);
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export function useCosteoDetail() {
     void router.push("/costeos");
   };
 
-  const handleReceivedChange = (articleId: string, received: number) => {
+  const handleReceivedChange = (articleId: number, received: number) => {
     setDetail((prev) => {
       if (!prev) return prev;
       return {
@@ -102,16 +102,18 @@ export function useCosteoDetail() {
     setSaving(true);
     setError(null);
     try {
-      const saved = await saveCosteoDetail(detail.id, {
-        exchangeRate: detail.exchangeRate,
-        affectArticlePrices: detail.affectArticlePrices,
-        articles: detail.articles,
+      const result = await saveCosteoDetail(detail.id, {
+        exchange_rate: detail.exchangeRate,
+        affect_article_prices: detail.affectArticlePrices,
+        items: detail.articles.map((article) => ({
+          id: article.id,
+          received: article.received,
+        })),
       });
+      const saved = unwrapOrThrow(result);
       setDetail(saved);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "No se pudo guardar el costeo";
-      setError(message);
+      setError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -141,47 +143,66 @@ export function useCosteoDetail() {
     if (!detail) return false;
     setSaving(true);
     try {
-      const updated = await addCosteoExpense(detail.id, payload);
+      const result = await addCosteoExpense(detail.id, payload);
+      const updated = unwrapOrThrow(result);
       setDetail(updated);
       setExpenseModalOpen(false);
       return true;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "No se pudo agregar el gasto";
-      setError(message);
+      setError(getApiErrorMessage(err));
       return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRemoveExpense = async (expenseId: string) => {
+  const handleRemoveExpense = async (expenseId: number) => {
     if (!detail) return;
     setSaving(true);
     try {
-      const updated = await removeCosteoExpense(detail.id, expenseId);
+      const result = await removeCosteoExpense(detail.id, expenseId);
+      const updated = unwrapOrThrow(result);
       setDetail(updated);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "No se pudo eliminar el gasto";
-      setError(message);
+      setError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleAddInvoices = async (invoiceIds: string[]) => {
+  const loadAvailableInvoices = useCallback(async (costeoIdValue: number) => {
+    setLoadingAvailableInvoices(true);
+    try {
+      const result = await getAvailableInvoices(costeoIdValue);
+      const data = unwrapOrThrow(result);
+      setAvailableInvoices(data);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      setAvailableInvoices([]);
+    } finally {
+      setLoadingAvailableInvoices(false);
+    }
+  }, []);
+
+  const openInvoiceModal = () => {
+    setInvoiceModalOpen(true);
+    if (costeoId && !Number.isNaN(costeoId)) {
+      void loadAvailableInvoices(costeoId);
+    }
+  };
+
+  const handleAddInvoices = async (payload: AddCosteoInvoicePayload) => {
     if (!detail) return false;
     setSaving(true);
     try {
-      const updated = await addCosteoInvoices(detail.id, invoiceIds);
+      const result = await addCosteoInvoices(detail.id, payload);
+      const updated = unwrapOrThrow(result);
       setDetail(updated);
+      setAvailableInvoices(updated.availableInvoices);
       setInvoiceModalOpen(false);
       return true;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "No se pudieron agregar facturas";
-      setError(message);
+      setError(getApiErrorMessage(err));
       return false;
     } finally {
       setSaving(false);
@@ -200,10 +221,13 @@ export function useCosteoDetail() {
     breadcrumbItems,
     expenseModalOpen,
     invoiceModalOpen,
+    availableInvoices,
+    loadingAvailableInvoices,
     isEditingExchangeRate,
     exchangeRateDraft,
     setExpenseModalOpen,
     setInvoiceModalOpen,
+    openInvoiceModal,
     handleTabChange,
     handleBack,
     handleReceivedChange,

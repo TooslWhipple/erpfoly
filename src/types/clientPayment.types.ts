@@ -5,6 +5,8 @@ export interface PendingInstallment {
   installmentNumber: number;
   totalInstallments: number;
   dueDate: string;
+  /** Fecha de vencimiento sin formatear (ISO), para ordenar por fecha real. */
+  dueDateRaw: string;
   overdueAmount: number;
   totalAmount: number;
 }

@@ -212,6 +212,12 @@
       "actions": ["view", "edit"]
     },
     {
+      "code": "catalogos-tasa-mora",
+      "name": "Tasa de mora",
+      "path": "/catalogos/tasa-mora",
+      "actions": ["view", "edit"]
+    },
+    {
       "code": "catalogos-mensajes",
       "name": "Mensajes",
       "path": "/catalogos/mensajes",

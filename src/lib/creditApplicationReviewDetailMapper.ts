@@ -4,6 +4,7 @@ import type {
   CreditApplicationDetail,
   DocumentItem,
 } from "@/types/solicitud-credito-detail.types";
+import { formatDateOnly } from "@/utils/date";
 
 type DocumentFileApiItem = {
   id: number;
@@ -168,7 +169,9 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       firstName: basicInformation.name ?? "",
       firstSurname: basicInformation.lastName ?? "",
       secondSurname: basicInformation.secondLastName ?? "",
-      birthDate: basicInformation.birthDate ?? "",
+      birthDate: formatDateOnly(basicInformation.birthDate, "dateNumeric", {
+        fallback: "",
+      }),
       maritalStatus: basicInformation.maritalStatus?.name ?? "",
       curp: basicInformation.curp ?? "",
       rfc: basicInformation.rfc ?? "",

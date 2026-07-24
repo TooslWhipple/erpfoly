@@ -28,6 +28,7 @@ export function EmploymentTab({
   const mainNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const spouseNeighborhoodsQuery = useNeighborhoodsByPostalCode(values.spousePostalCode);
   const spouseEmploymentEnabled = spouseSectionEnabled && values.spouseHasEmployment;
+
   return (
     <Card>
       <Typography variant="h5">Empleo</Typography>
@@ -49,10 +50,12 @@ export function EmploymentTab({
         <PostalCodeSettlementFields
           postalCode={values.postalCode}
           neighborhoodFullCode={values.neighborhoodFullCode}
+          state={values.state}
+          city={values.city}
           postalCodeError={errors.postalCode}
           neighborhoodError={errors.neighborhoodFullCode}
           neighborhoods={mainNeighborhoodsQuery.data ?? []}
-          neighborhoodsLoading={mainNeighborhoodsQuery.isFetching}
+          neighborhoodsLoading={mainNeighborhoodsQuery.isPending}
           fieldKeys={{
             postalCode: "postalCode",
             neighborhoodFullCode: "neighborhoodFullCode",
@@ -250,10 +253,12 @@ export function EmploymentTab({
         <PostalCodeSettlementFields
           postalCode={values.spousePostalCode}
           neighborhoodFullCode={values.spouseNeighborhoodFullCode}
+          state={values.spouseState}
+          city={values.spouseCity}
           postalCodeError={errors.spousePostalCode}
           neighborhoodError={errors.spouseNeighborhoodFullCode}
           neighborhoods={spouseNeighborhoodsQuery.data ?? []}
-          neighborhoodsLoading={spouseNeighborhoodsQuery.isFetching}
+          neighborhoodsLoading={spouseNeighborhoodsQuery.isPending}
           disabled={!spouseEmploymentEnabled || saving}
           fieldKeys={{
             postalCode: "spousePostalCode",

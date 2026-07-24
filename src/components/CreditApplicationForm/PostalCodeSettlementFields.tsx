@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { Grid, MenuItem } from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import type { NeighborhoodPostalLookupItem } from "@/services/address.service";
@@ -13,6 +14,8 @@ export type PostalSettlementFieldKeys = {
 interface PostalCodeSettlementFieldsProps {
   postalCode: string;
   neighborhoodFullCode: string;
+  state?: string;
+  city?: string;
   postalCodeError?: string;
   neighborhoodError?: string;
   neighborhoods: NeighborhoodPostalLookupItem[];
@@ -25,6 +28,8 @@ interface PostalCodeSettlementFieldsProps {
 export function PostalCodeSettlementFields({
   postalCode,
   neighborhoodFullCode,
+  state = "",
+  city = "",
   postalCodeError,
   neighborhoodError,
   neighborhoods,
@@ -64,7 +69,39 @@ export function PostalCodeSettlementFields({
   };
 
   const postalReady = postalCode.trim().length === 5;
-  const showNoResults = postalReady && !neighborhoodsLoading && neighborhoods.length === 0;
+  const showNoResults =
+    postalReady && !neighborhoodsLoading && neighborhoods.length === 0;
+
+  const formCode = neighborhoodFullCode.trim() || "-1";
+  // MUI Select must only bind to a value that exists in MenuItem options.
+  const selectValue = useMemo(() => {
+    if (formCode === "-1") return "-1";
+    if (neighborhoods.some((row) => row.full_code === formCode)) {
+      return formCode;
+    }
+    return "-1";
+  }, [formCode, neighborhoods]);
+
+  // When async options resolve, sync estado/ciudad from the matched colonia.
+  useEffect(() => {
+    if (neighborhoodsLoading || formCode === "-1") return;
+    const row = neighborhoods.find((item) => item.full_code === formCode);
+    if (!row) return;
+    if (state === row.state_name && city === row.municipality_name) return;
+    mergePatch({
+      [stateKey]: row.state_name,
+      [cityKey]: row.municipality_name,
+    });
+  }, [
+    city,
+    cityKey,
+    formCode,
+    mergePatch,
+    neighborhoods,
+    neighborhoodsLoading,
+    state,
+    stateKey,
+  ]);
 
   return (
     <>
@@ -87,21 +124,24 @@ export function PostalCodeSettlementFields({
           fullWidth
           required
           select
-          defaultValue="-1"
           label="Colonia"
-          value={neighborhoodFullCode}
+          value={selectValue}
           onChange={(event) => handleNeighborhoodChange(event.target.value)}
           error={Boolean(neighborhoodError)}
           helperText={
             neighborhoodError ??
-            (showNoResults ? "No hay colonias para este código postal." : undefined)
+            (showNoResults
+              ? "No hay colonias para este código postal."
+              : undefined)
           }
           disabled={disabled || !postalReady || neighborhoodsLoading}
         >
           <MenuItem value="-1">
-            {
-              neighborhoodsLoading ? "Cargando..." : postalReady ? "Selecciona una colonia" : "Ingresa el código postal"
-            }
+            {neighborhoodsLoading
+              ? "Cargando..."
+              : postalReady
+                ? "Selecciona una colonia"
+                : "Ingresa el código postal"}
           </MenuItem>
           {neighborhoods.map((row) => (
             <MenuItem key={row.full_code} value={row.full_code}>

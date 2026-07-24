@@ -52,6 +52,7 @@ export interface ClientDetailHeader {
   id: number;
   fullName: string;
   curp: string;
+  creditApplicationId: number | null;
   creditLine: {
     authorized: number;
     available: number | null;

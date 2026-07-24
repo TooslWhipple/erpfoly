@@ -44,6 +44,7 @@ export type PermissionModule =
   | "catalogos.metas"
   | "catalogos.costos_envio"
   | "catalogos.folypuntos"
+  | "catalogos.tasa_mora"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -263,6 +264,12 @@ export const CATALOG_POINTS_CREATE = CATALOG_POINTS_PERMISSIONS.create;
 export const CATALOG_POINTS_READ = CATALOG_POINTS_PERMISSIONS.read;
 export const CATALOG_POINTS_UPDATE = CATALOG_POINTS_PERMISSIONS.update;
 export const CATALOG_POINTS_DELETE = CATALOG_POINTS_PERMISSIONS.delete;
+
+export const CATALOG_MORATORY_RATE_PERMISSIONS = createCrudPermissions("catalogos.tasa_mora");
+export const CATALOG_MORATORY_RATE_CREATE = CATALOG_MORATORY_RATE_PERMISSIONS.create;
+export const CATALOG_MORATORY_RATE_READ = CATALOG_MORATORY_RATE_PERMISSIONS.read;
+export const CATALOG_MORATORY_RATE_UPDATE = CATALOG_MORATORY_RATE_PERMISSIONS.update;
+export const CATALOG_MORATORY_RATE_DELETE = CATALOG_MORATORY_RATE_PERMISSIONS.delete;
 
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");

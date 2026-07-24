@@ -1,3 +1,6 @@
+import dayjs from "@/lib/dayjs";
+import { toDateOnlyString } from "@/utils/date";
+
 const CURP_REGEX =
   /^[A-Z][AEIOUX][A-Z]{2}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[HM](AS|BC|BS|CC|CL|CM|CS|CH|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/;
 
@@ -25,25 +28,14 @@ export function isValidRfc(value: string): boolean {
 }
 
 export function isAdultBirthDate(value: string): boolean {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) return false;
+  const ymd = toDateOnlyString(value);
+  if (!ymd) return false;
 
-  const parsedDate = new Date(`${trimmedValue}T00:00:00`);
-  if (Number.isNaN(parsedDate.getTime())) return false;
+  const parsedDate = dayjs(ymd, "YYYY-MM-DD", true);
+  if (!parsedDate.isValid()) return false;
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (parsedDate > today) return false;
+  const today = dayjs().startOf("day");
+  if (parsedDate.isAfter(today)) return false;
 
-  let age = today.getFullYear() - parsedDate.getFullYear();
-  const hasNotHadBirthdayThisYear =
-    today.getMonth() < parsedDate.getMonth() ||
-    (today.getMonth() === parsedDate.getMonth() &&
-      today.getDate() < parsedDate.getDate());
-
-  if (hasNotHadBirthdayThisYear) {
-    age -= 1;
-  }
-
-  return age >= 18;
+  return today.diff(parsedDate, "year") >= 18;
 }

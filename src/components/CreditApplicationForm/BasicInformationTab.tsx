@@ -22,6 +22,8 @@ interface BasicInformationTabProps {
   onValidateSecurityCode: () => Promise<boolean>;
   onContinue: () => Promise<boolean>;
   saving: boolean;
+  /** Contado: same contact layout, hide birth/marital/CURP/RFC. */
+  variant?: "full" | "cash";
 }
 
 export function BasicInformationTab({
@@ -38,8 +40,9 @@ export function BasicInformationTab({
   onValidateSecurityCode,
   onContinue,
   saving,
+  variant = "full",
 }: BasicInformationTabProps) {
-  const isSendMode = otpActionLabel !== "Validar";
+  const isCash = variant === "cash";
 
   return (
     <Card>
@@ -85,71 +88,75 @@ export function BasicInformationTab({
             inputProps={{ maxLength: 32 }}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormDatePicker
-            fullWidth
-            required
-            openTo="year"
-            views={["year", "month", "day"]}
-            label="Fecha de nacimiento"
-            placeholder="Selecciona"
-            value={values.birthDate}
-            onChange={(nextValue) => onFieldChange("birthDate", nextValue)}
-            error={Boolean(errors.birthDate)}
-            helperText={errors.birthDate}
-            disabled={saving}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            required
-            label="Estado civil"
-            select
-            value={values.maritalStatus}
-            onChange={(event) => onFieldChange("maritalStatus", event.target.value)}
-            error={Boolean(errors.maritalStatus)}
-            helperText={errors.maritalStatus}
-            fullWidth
-            disabled={maritalStatusesLoading || saving}
-          >
-            <MenuItem value="">
-              {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
-            </MenuItem>
-            {maritalStatusOptions.map((item) => (
-              <MenuItem key={item.id} value={String(item.id)}>
-                {item.name}
-              </MenuItem>
-            ))}
-          </FormTextField>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="CURP"
-            placeholder="Ingresa"
-            value={values.curp}
-            onChange={(event) => onFieldChange("curp", event.target.value.toUpperCase())}
-            error={Boolean(errors.curp)}
-            helperText={errors.curp}
-            disabled={saving}
-            inputProps={{ maxLength: 18 }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormTextField
-            fullWidth
-            required
-            label="RFC"
-            placeholder="Ingresa"
-            value={values.rfc}
-            onChange={(event) => onFieldChange("rfc", event.target.value.toUpperCase())}
-            error={Boolean(errors.rfc)}
-            helperText={errors.rfc}
-            disabled={saving}
-            inputProps={{ maxLength: 13 }}
-          />
-        </Grid>
+        {!isCash ? (
+          <>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormDatePicker
+                fullWidth
+                required
+                openTo="year"
+                views={["year", "month", "day"]}
+                label="Fecha de nacimiento"
+                placeholder="Selecciona"
+                value={values.birthDate}
+                onChange={(nextValue) => onFieldChange("birthDate", nextValue)}
+                error={Boolean(errors.birthDate)}
+                helperText={errors.birthDate}
+                disabled={saving}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormTextField
+                required
+                label="Estado civil"
+                select
+                value={values.maritalStatus}
+                onChange={(event) => onFieldChange("maritalStatus", event.target.value)}
+                error={Boolean(errors.maritalStatus)}
+                helperText={errors.maritalStatus}
+                fullWidth
+                disabled={maritalStatusesLoading || saving}
+              >
+                <MenuItem value="">
+                  {maritalStatusesLoading ? "Cargando..." : "Selecciona"}
+                </MenuItem>
+                {maritalStatusOptions.map((item) => (
+                  <MenuItem key={item.id} value={String(item.id)}>
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </FormTextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormTextField
+                fullWidth
+                required
+                label="CURP"
+                placeholder="Ingresa"
+                value={values.curp}
+                onChange={(event) => onFieldChange("curp", event.target.value.toUpperCase())}
+                error={Boolean(errors.curp)}
+                helperText={errors.curp}
+                disabled={saving}
+                inputProps={{ maxLength: 18 }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormTextField
+                fullWidth
+                required
+                label="RFC"
+                placeholder="Ingresa"
+                value={values.rfc}
+                onChange={(event) => onFieldChange("rfc", event.target.value.toUpperCase())}
+                error={Boolean(errors.rfc)}
+                helperText={errors.rfc}
+                disabled={saving}
+                inputProps={{ maxLength: 13 }}
+              />
+            </Grid>
+          </>
+        ) : null}
         <Grid size={{ xs: 12 }}>
           <Typography variant="h6">Datos de contacto</Typography>
         </Grid>
@@ -177,7 +184,7 @@ export function BasicInformationTab({
             onChange={(event) => onFieldChange("whatsappNumber", event.target.value.replace(/\D/g, '').slice(0, 10))}
             error={Boolean(errors.whatsappNumber)}
             helperText={errors.whatsappNumber}
-            disabled={isSecurityCodeValid === true || saving}
+            disabled={saving}
             inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
           />
         </Grid>

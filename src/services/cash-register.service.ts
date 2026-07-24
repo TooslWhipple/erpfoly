@@ -90,6 +90,7 @@ export async function getCurrentSession(): Promise<CashRegisterSession | null> {
 export interface CashRegisterSummary {
   cash_register_id: number;
   cash_register_name: string;
+  branch_id: number;
   session_id?: number;
   status: "OPEN" | "CLOSED";
   opening_balance?: number;

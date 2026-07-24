@@ -64,6 +64,8 @@ import {
   getSaleDetail,
   invalidateSaleDiscount,
 } from "@/services/ventas.service";
+import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
 import type {
@@ -186,7 +188,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
-  const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
+  const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
@@ -263,6 +265,15 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       return result.data ?? null;
     },
   });
+
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [lastImageProductId, setLastImageProductId] = useState<
+    number | undefined
+  >(productDetail?.id);
+  if (productDetail?.id !== lastImageProductId) {
+    setLastImageProductId(productDetail?.id);
+    setSelectedImageIndex(0);
+  }
 
   const debouncedClientModalSearch = useDebouncedValue(
     clientModalSearch,
@@ -560,6 +571,10 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
 
   const cobrarMutation = useMutation({
     mutationFn: async () => {
+      if (isCardPayment && !selectedTerminal) {
+        throw new Error("Selecciona una terminal para el pago con tarjeta");
+      }
+
       const { id: saleId } = await ensureSaleSynced();
 
       if (deliveryType === "delivery") {
@@ -591,7 +606,8 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
-          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+          payment_method: isCardPayment ? "CARD" : "CASH",
+          payment_terminal_id: selectedTerminal ?? undefined,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
         return creditRes.data!;
@@ -604,7 +620,8 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
           deposit_amount: depositAmount,
-          payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+          payment_method: isCardPayment ? "CARD" : "CASH",
+          payment_terminal_id: selectedTerminal ?? undefined,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
         return {
@@ -615,10 +632,11 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       }
 
       const paymentRes = await registerSalePayment(saleId, {
-        payment_method: cashAmtNum > 0 ? "CASH" : "CARD",
+        payment_method: isCardPayment ? "CARD" : "CASH",
         amount: totalFinal,
-        received_amount: cashAmtNum > 0 ? cashAmtNum : undefined,
-        change_amount: cashAmtNum > 0 ? change : undefined,
+        received_amount: !isCardPayment && cashAmtNum > 0 ? cashAmtNum : undefined,
+        change_amount: !isCardPayment && cashAmtNum > 0 ? change : undefined,
+        payment_terminal_id: selectedTerminal ?? undefined,
       });
       if (paymentRes.error) throw new Error(paymentRes.error.message);
 
@@ -689,6 +707,25 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
   }, [productSources]);
 
   const lockedBranch = cartBranch ?? selectionBranch;
+
+  const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
+
+  // La sucursal desde la que se está cobrando en este momento (caja activa
+  // del cajero), no la sucursal del carrito/venta — el backend valida la
+  // terminal contra esa misma sucursal (getActiveBranchId).
+  const activeSessionQuery = useQuery({
+    queryKey: ["cash-register-session-summary"],
+    queryFn: () => getSessionSummary(),
+    enabled: isCardPayment,
+    staleTime: 60_000,
+  });
+  const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
+  const paymentTerminalsQuery = useQuery({
+    queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
+    queryFn: () => getPaymentTerminalsCatalog(paymentTerminalBranchId!),
+    enabled: isCardPayment && paymentTerminalBranchId != null,
+    staleTime: 60_000,
+  });
 
   const isBranchSourceLocked = (src: {
     sourceType: string;
@@ -1217,18 +1254,71 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 borderRadius: 3,
                 bgcolor: "background.paper",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 p: 3,
-                minHeight: 360,
+                gap: 2,
               }}
             >
               <Box
-                component="img"
-                src={productDetail.imageUrl ?? "/placeholder-product.png"}
-                alt={productDetail.name}
-                sx={{ maxWidth: "100%", maxHeight: 340, objectFit: "contain" }}
-              />
+                sx={{
+                  width: "100%",
+                  height: 340,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={
+                    productDetail.images[selectedImageIndex]?.imageUrl ??
+                    "/placeholder-product.png"
+                  }
+                  alt={productDetail.name}
+                  sx={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </Box>
+              {productDetail.images.length > 1 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    width: "100%",
+                    overflowX: "auto",
+                    pb: 0.5,
+                  }}
+                >
+                  {productDetail.images.map((image, index) => (
+                    <Box
+                      key={image.imageUrl}
+                      component="img"
+                      src={image.imageUrl}
+                      alt={`${productDetail.name} ${index + 1}`}
+                      onClick={() => setSelectedImageIndex(index)}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        flexShrink: 0,
+                        objectFit: "contain",
+                        borderRadius: 1,
+                        cursor: "pointer",
+                        border: "2px solid",
+                        borderColor:
+                          index === selectedImageIndex
+                            ? "primary.main"
+                            : "divider",
+                        p: 0.5,
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
             </Paper>
 
             {/* Box detalle — separado */}
@@ -2153,91 +2243,16 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                       }}
                     />
                   </Stack>
-                  {cardAmount && parseFloat(cardAmount) > 0 && (
+                  {isCardPayment && (
                     <Box sx={{ pl: 5.5 }}>
                       <Select
-                        value={selectedTerminal || ""}
-                        onChange={(e) => setSelectedTerminal(e.target.value)}
+                        value={selectedTerminal ?? ""}
+                        onChange={(e) =>
+                          setSelectedTerminal(Number(e.target.value) || null)
+                        }
                         displayEmpty
                         fullWidth
-                        renderValue={(value) => {
-                          if (!value) {
-                            return (
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={1}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 20,
-                                    height: 20,
-                                    borderRadius: "50%",
-                                    bgcolor: "rgba(0,0,0,0.06)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      width: 6,
-                                      height: 6,
-                                      borderRadius: "50%",
-                                      bgcolor: "rgba(0,0,0,0.2)",
-                                    }}
-                                  />
-                                </Box>
-                                <Typography
-                                  sx={{
-                                    fontSize: "0.875rem",
-                                    color: "text.disabled",
-                                    fontWeight: 400,
-                                  }}
-                                >
-                                  Selecciona una terminal
-                                </Typography>
-                              </Stack>
-                            );
-                          }
-                          return (
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              spacing={1}
-                            >
-                              <Box
-                                sx={{
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: "50%",
-                                  bgcolor: "rgba(22, 163, 74, 0.1)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: "50%",
-                                    bgcolor: "#16a34a",
-                                  }}
-                                />
-                              </Box>
-                              <Typography
-                                sx={{
-                                  fontSize: "0.875rem",
-                                  color: "text.primary",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {value}
-                              </Typography>
-                            </Stack>
-                          );
-                        }}
+                        disabled={paymentTerminalsQuery.isLoading}
                         sx={{
                           fontSize: "0.875rem",
                           bgcolor: "rgba(0,0,0,0.02)",
@@ -2257,231 +2272,43 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                             px: 1.5,
                           },
                         }}
-                        MenuProps={{
-                          PaperProps: {
-                            elevation: 8,
-                            sx: {
-                              borderRadius: 2,
-                              mt: 0.5,
-                              minWidth: 300,
-                              "& .MuiList-root": {
-                                py: 1,
-                              },
-                            },
-                          },
-                        }}
                       >
-                        <MenuItem
-                          disabled
-                          sx={{
-                            px: 2.5,
-                            py: 1.25,
-                            fontSize: "0.6875rem",
-                            color: "text.secondary",
-                            fontWeight: 600,
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          TERMINAL DE COBRO
+                        <MenuItem value="" disabled>
+                          {paymentTerminalsQuery.isLoading
+                            ? "Cargando terminales..."
+                            : "Selecciona una terminal"}
                         </MenuItem>
-                        <MenuItem
-                          value="BBVA 1234"
-                          sx={{
-                            px: 2.5,
-                            py: 1.75,
-                            mx: 1,
-                            my: 0.25,
-                            borderRadius: 1.5,
-                            "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
-                            "&.Mui-selected": {
-                              bgcolor: "rgba(25, 118, 210, 0.08)",
-                              "&:hover": {
-                                bgcolor: "rgba(25, 118, 210, 0.12)",
-                              },
-                            },
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            width="100%"
-                          >
+                        {(paymentTerminalsQuery.data ?? []).map((terminal) => (
+                          <MenuItem key={terminal.id} value={terminal.id}>
                             <Stack
                               direction="row"
+                              justifyContent="space-between"
                               alignItems="center"
-                              spacing={1.5}
+                              width="100%"
                             >
-                              <Box
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: "50%",
-                                  bgcolor: "rgba(22, 163, 74, 0.1)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: "50%",
-                                    bgcolor: "#16a34a",
-                                  }}
-                                />
-                              </Box>
                               <Typography
                                 sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
                               >
-                                BBVA 1234
+                                {terminal.name}
                               </Typography>
-                            </Stack>
-                            <Chip
-                              label="Conectada"
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: "0.6875rem",
-                                fontWeight: 600,
-                                bgcolor: "rgba(22, 163, 74, 0.1)",
-                                color: "#16a34a",
-                                "& .MuiChip-label": { px: 1 },
-                              }}
-                            />
-                          </Stack>
-                        </MenuItem>
-                        <MenuItem
-                          value="BBVA 3522"
-                          sx={{
-                            px: 2.5,
-                            py: 1.75,
-                            mx: 1,
-                            my: 0.25,
-                            borderRadius: 1.5,
-                            "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
-                            "&.Mui-selected": {
-                              bgcolor: "rgba(25, 118, 210, 0.08)",
-                              "&:hover": {
-                                bgcolor: "rgba(25, 118, 210, 0.12)",
-                              },
-                            },
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            width="100%"
-                          >
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              spacing={1.5}
-                            >
-                              <Box
+                              <Chip
+                                label={terminal.bank}
+                                size="small"
                                 sx={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: "50%",
-                                  bgcolor: "rgba(22, 163, 74, 0.1)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
+                                  height: 20,
+                                  fontSize: "0.6875rem",
+                                  fontWeight: 600,
+                                  "& .MuiChip-label": { px: 1 },
                                 }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: "50%",
-                                    bgcolor: "#16a34a",
-                                  }}
-                                />
-                              </Box>
-                              <Typography
-                                sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                              >
-                                BBVA 3522
-                              </Typography>
+                              />
                             </Stack>
-                            <Chip
-                              label="Conectada"
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: "0.6875rem",
-                                fontWeight: 600,
-                                bgcolor: "rgba(22, 163, 74, 0.1)",
-                                color: "#16a34a",
-                                "& .MuiChip-label": { px: 1 },
-                              }}
-                            />
-                          </Stack>
-                        </MenuItem>
-                        <MenuItem
-                          disabled
-                          sx={{
-                            px: 2.5,
-                            py: 1.75,
-                            mx: 1,
-                            my: 0.25,
-                            borderRadius: 1.5,
-                            opacity: 0.5,
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            width="100%"
-                          >
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              spacing={1.5}
-                            >
-                              <Box
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: "50%",
-                                  bgcolor: "rgba(148, 163, 184, 0.1)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: "50%",
-                                    bgcolor: "#94a3b8",
-                                  }}
-                                />
-                              </Box>
-                              <Typography
-                                sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                              >
-                                Santander 3522
-                              </Typography>
-                            </Stack>
-                            <Chip
-                              label="Sin conexión"
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: "0.6875rem",
-                                fontWeight: 600,
-                                bgcolor: "rgba(148, 163, 184, 0.1)",
-                                color: "#94a3b8",
-                                "& .MuiChip-label": { px: 1 },
-                              }}
-                            />
-                          </Stack>
-                        </MenuItem>
+                          </MenuItem>
+                        ))}
+                        {paymentTerminalsQuery.data?.length === 0 && (
+                          <MenuItem value="" disabled>
+                            Esta sucursal no tiene terminales activas
+                          </MenuItem>
+                        )}
                       </Select>
                     </Box>
                   )}

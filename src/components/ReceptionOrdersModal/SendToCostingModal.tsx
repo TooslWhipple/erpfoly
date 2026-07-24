@@ -1,99 +1,194 @@
-import { Dialog, CircularProgress, Typography } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { useEffect, useState } from "react";
+import { CircularProgress } from "@mui/material";
+import { SideModal } from "@/components/SideModal";
 import {
-    DialogContent,
-    ModalHeader,
-    ModalTitle,
-    CloseButton,
-    ModalActions,
-    ConfirmButton,
-    ModalContent,
-    StatsContainer,
-    StatItem,
-    StatLabel,
-    StatValue,
+  ModalContent,
+  DescriptionText,
+  StatsContainer,
+  StatRow,
+  StatLabel,
+  StatValue,
+  MismatchBanner,
+  MismatchText,
+  ReasonTextField,
+  ProgressBlock,
+  ProgressHeader,
+  ProgressLabel,
+  ProgressPercent,
+  PrintProgressBar,
+  ModalActions,
+  ConfirmButton,
+  CancelButton,
 } from "./SendToCostingModal.styles";
 
-interface SendToCostingModalProps {
-    open: boolean;
-    onClose: () => void;
-    onConfirm: () => void | Promise<void>;
-    totalArticles: number;
-    totalLabels: number;
-    loading?: boolean;
+export type ReceptionConfirmVariant =
+  | "save_labels"
+  | "save_extra_labels"
+  | "send_to_costing";
+
+export interface SendToCostingModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (reason?: string) => void | Promise<void>;
+  variant?: ReceptionConfirmVariant;
+  totalArticles?: number;
+  totalLabels?: number;
+  extraLabels?: number;
+  hasQuantityMismatch?: boolean;
+  loading?: boolean;
+  /** When set (0–100), shows print progress instead of action buttons. */
+  printProgress?: number | null;
 }
 
+const VARIANT_COPY: Record<
+  ReceptionConfirmVariant,
+  { title: string; description: string; confirmLabel: string }
+> = {
+  save_labels: {
+    title: "Guardar e imprimir etiquetas",
+    description:
+      "¿Estás seguro que deseas confirmar la cantidad de artículos recibidos? Una vez confirmados se imprimirán las etiquetas de control interno",
+    confirmLabel: "Guardar e imprimir etiquetas",
+  },
+  save_extra_labels: {
+    title: "Guardar e imprimir etiquetas adicionales",
+    description:
+      "¿Estás seguro que deseas confirmar la cantidad de artículos recibidos? Una vez confirmados se imprimirán las etiquetas extras que se han identificado.",
+    confirmLabel: "Guardar e imprimir etiquetas",
+  },
+  send_to_costing: {
+    title: "Enviar Recepción a Costeos",
+    description:
+      "¿Estás seguro que deseas confirmar esta acción? Una vez enviado ya no podrás hacer cambios",
+    confirmLabel: "Enviar",
+  },
+};
+
 export function SendToCostingModal({
-    open,
-    onClose,
-    onConfirm,
-    totalArticles,
-    totalLabels,
-    loading = false,
+  open,
+  onClose,
+  onConfirm,
+  variant = "save_labels",
+  totalArticles = 0,
+  totalLabels = 0,
+  extraLabels = 0,
+  hasQuantityMismatch = false,
+  loading = false,
+  printProgress = null,
 }: SendToCostingModalProps) {
-    const handleClose = () => {
-        if (!loading) {
-            onClose();
-        }
-    };
+  const [reason, setReason] = useState("");
+  const copy = VARIANT_COPY[variant];
+  const isPrinting = printProgress != null;
+  const showMismatchReason = variant === "send_to_costing" && hasQuantityMismatch;
+  const reasonRequired = showMismatchReason;
+  const canConfirm = !reasonRequired || reason.trim().length > 0;
 
-    const handleConfirm = async () => {
-        await onConfirm();
-    };
+  useEffect(() => {
+    if (!open) {
+      setReason("");
+    }
+  }, [open]);
 
-    return (
-        <Dialog
-            open={open}
-            onClose={handleClose}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                },
-            }}
-        >
-            <DialogContent>
-                <ModalHeader>
-                    <ModalTitle>Enviar a costeo</ModalTitle>
-                    <CloseButton onClick={handleClose} disabled={loading} size="small">
-                        <CloseIcon />
-                    </CloseButton>
-                </ModalHeader>
+  const handleClose = () => {
+    if (!loading && !isPrinting) {
+      onClose();
+    }
+  };
 
-                <ModalContent>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        ¿Estás seguro que deseas enviar la recepción a costeo? Una vez confirmado
-                        se enviarán los datos para su procesamiento.
-                    </Typography>
+  const handleConfirm = async () => {
+    if (!canConfirm) return;
+    await onConfirm(showMismatchReason ? reason.trim() : undefined);
+  };
 
-                    <StatsContainer>
-                        <StatItem>
-                            <StatLabel>Total de artículos</StatLabel>
-                            <StatValue>{totalArticles}</StatValue>
-                        </StatItem>
-                        <StatItem>
-                            <StatLabel>Etiquetas a imprimir</StatLabel>
-                            <StatValue>{totalLabels}</StatValue>
-                        </StatItem>
-                    </StatsContainer>
-                </ModalContent>
+  const showStats =
+    variant === "save_labels" || variant === "save_extra_labels";
 
-                <ModalActions>
-                    <ConfirmButton
-                        type="button"
-                        variant="contained"
-                        onClick={handleConfirm}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <CircularProgress size={20} color="inherit" />
-                        ) : (
-                            "Guardar e imprimir etiquetas"
-                        )}
-                    </ConfirmButton>
-                </ModalActions>
-            </DialogContent>
-        </Dialog>
-    );
+  return (
+    <SideModal
+      open={open}
+      onClose={handleClose}
+      title={copy.title}
+      maxWidth="sm"
+      disableClose={loading || isPrinting}
+    >
+      <ModalContent>
+        <DescriptionText>{copy.description}</DescriptionText>
+
+        {showMismatchReason && (
+          <MismatchBanner>
+            <MismatchText>
+              La cantidad de artículos recibida no coincide con la cantidad
+              inicial de los pedidos, describe la razón por la que esto sucedió
+            </MismatchText>
+            <ReasonTextField
+              placeholder="Ingresa aquí"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              multiline
+              minRows={3}
+              fullWidth
+              disabled={loading || isPrinting}
+            />
+          </MismatchBanner>
+        )}
+
+        {showStats && !isPrinting && (
+          <StatsContainer>
+            <StatRow>
+              <StatLabel>Total de artículos:</StatLabel>
+              <StatValue>{totalArticles}</StatValue>
+            </StatRow>
+            {variant === "save_extra_labels" ? (
+              <StatRow>
+                <StatLabel>Etiquetas extra a imprimir:</StatLabel>
+                <StatValue>{extraLabels}</StatValue>
+              </StatRow>
+            ) : (
+              <StatRow>
+                <StatLabel>Etiquetas a imprimir:</StatLabel>
+                <StatValue>{totalLabels}</StatValue>
+              </StatRow>
+            )}
+          </StatsContainer>
+        )}
+
+        {isPrinting && (
+          <ProgressBlock>
+            <ProgressHeader>
+              <ProgressLabel>Imprimiendo etiquetas</ProgressLabel>
+              <ProgressPercent>{Math.round(printProgress)}%</ProgressPercent>
+            </ProgressHeader>
+            <PrintProgressBar variant="determinate" value={printProgress} />
+          </ProgressBlock>
+        )}
+
+        {!isPrinting && (
+          <ModalActions>
+            <ConfirmButton
+              type="button"
+              variant="contained"
+              color="primary"
+              onClick={handleConfirm}
+              disabled={loading || !canConfirm}
+            >
+              {loading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                copy.confirmLabel
+              )}
+            </ConfirmButton>
+            <CancelButton
+              type="button"
+              variant="outlined"
+              color="primary"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Cancelar
+            </CancelButton>
+          </ModalActions>
+        )}
+      </ModalContent>
+    </SideModal>
+  );
 }

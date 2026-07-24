@@ -78,7 +78,16 @@ export { BranchOrderItemRow } from "./BranchOrderItemRow";
 export type { BranchOrderItemRowProps } from "./BranchOrderItemRow";
 export { AddArticleToOrderModal } from "./AddArticleToOrderModal";
 export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticleToOrderModal";
-export { ReceptionOrdersModal, SendToCostingModal } from "./ReceptionOrdersModal";
+export {
+  ReceptionOrdersModal,
+  SendToCostingModal,
+  AddInvoicesModal,
+} from "./ReceptionOrdersModal";
+export type {
+  ReceptionConfirmVariant,
+  SendToCostingModalProps,
+  AddInvoicesModalProps,
+} from "./ReceptionOrdersModal";
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";

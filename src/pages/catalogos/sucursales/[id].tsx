@@ -8,12 +8,14 @@ import {
   GoalsTab,
   PromotionsTab,
   SettingsTab,
+  PaymentTerminalsTab,
 } from "@/components/BranchDetailTabs";
 import { getBranch } from "@/services/branchDetail.service";
 import type { Branch } from "@/types/sucursales.types";
 const TAB_VENTAS = "ventas";
 const TAB_METAS = "metas";
 const TAB_PROMOCIONES = "promociones";
+const TAB_TERMINALES = "terminales";
 const TAB_CONFIGURACIONES = "configuraciones";
 const TABS = [
   {
@@ -27,6 +29,10 @@ const TABS = [
   {
     value: TAB_PROMOCIONES,
     label: "Promociones",
+  },
+  {
+    value: TAB_TERMINALES,
+    label: "Terminales de pago",
   },
   {
     value: TAB_CONFIGURACIONES,
@@ -73,6 +79,8 @@ export default function BranchDetailPage() {
         return <GoalsTab branchId={branchId} />;
       case TAB_PROMOCIONES:
         return <PromotionsTab branchId={branchId} />;
+      case TAB_TERMINALES:
+        return <PaymentTerminalsTab branchId={branchId} />;
       case TAB_CONFIGURACIONES:
         return <SettingsTab branchId={branchId} onSaved={loadBranch} />;
       default:

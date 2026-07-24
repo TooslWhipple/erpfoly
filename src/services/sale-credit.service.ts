@@ -154,6 +154,7 @@ export interface CascadePaymentPayload {
   reference?: string;
   notes?: string;
   credit_order?: number[];
+  payment_terminal_id?: number;
 }
 
 export interface CascadePaymentInstallmentResult {

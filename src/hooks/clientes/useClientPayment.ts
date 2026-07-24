@@ -21,7 +21,12 @@ import type {
 } from "@/types/clientPayment.types";
 import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
-import { calculateCascadePreview, type CascadeInstallmentPreview } from "@/utils/cascadePayment";
+import {
+  calculateCascadePreview,
+  calculateAmountForInstallmentCount,
+  getTotalPendingInstallmentsCount,
+  type CascadeInstallmentPreview,
+} from "@/utils/cascadePayment";
 
 interface UseClientPaymentResult {
   routerReady: boolean;
@@ -42,12 +47,14 @@ interface UseClientPaymentResult {
   orderedCreditAccounts: ClientCreditAccount[];
   excludedCreditIds: string[];
   cascadePreview: CascadeInstallmentPreview[];
+  totalPendingInstallmentsCount: number;
   paymentTerminalId: number | null;
   paymentTerminals: PaymentTerminalCatalogItem[];
   paymentTerminalsLoading: boolean;
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
+  setPaymentAmountByInstallmentCount: (count: number) => void;
   setPaymentTerminalId: (value: number | null) => void;
   toggleCreditExcluded: (purchaseId: string) => void;
   moveCreditOrder: (purchaseId: string, direction: "up" | "down") => void;
@@ -84,8 +91,9 @@ function mapBackendInstallments(
       installmentNumber: inst.installment_number,
       totalInstallments,
       dueDate: formatDueDate(inst.due_date),
+      dueDateRaw: inst.due_date,
       overdueAmount: inst.overdue_amount,
-      totalAmount: inst.amount,
+      totalAmount: inst.remaining,
     }));
 }
 
@@ -243,6 +251,20 @@ export function useClientPayment(): UseClientPaymentResult {
     [orderedCreditAccounts, excludedCreditIds, paymentAmount],
   );
 
+  const totalPendingInstallmentsCount = useMemo(
+    () => getTotalPendingInstallmentsCount(orderedCreditAccounts, excludedCreditIds),
+    [orderedCreditAccounts, excludedCreditIds],
+  );
+
+  const setPaymentAmountByInstallmentCount = useCallback(
+    (count: number) => {
+      setPaymentAmount(
+        calculateAmountForInstallmentCount(orderedCreditAccounts, excludedCreditIds, count),
+      );
+    },
+    [orderedCreditAccounts, excludedCreditIds],
+  );
+
   const totalOutstanding = useMemo(
     () =>
       orderedCreditAccounts
@@ -349,7 +371,15 @@ export function useClientPayment(): UseClientPaymentResult {
           const label = isFullPayment
             ? `Pago de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`
             : `Abono de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`;
-          allocations.push({ label, amount: installmentResult.amount_applied });
+          if (installmentResult.principal_applied > 0) {
+            allocations.push({ label, amount: installmentResult.principal_applied });
+          }
+          if (installmentResult.late_fee_applied > 0) {
+            allocations.push({
+              label: `Mora de parcialidad ${installmentResult.installment_number}`,
+              amount: installmentResult.late_fee_applied,
+            });
+          }
         }
       }
 
@@ -411,12 +441,14 @@ export function useClientPayment(): UseClientPaymentResult {
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    totalPendingInstallmentsCount,
     paymentTerminalId,
     paymentTerminals,
     paymentTerminalsLoading: paymentTerminalsQuery.isLoading,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
     toggleCreditExcluded,
     moveCreditOrder,

@@ -21,7 +21,12 @@ import type {
 } from "@/types/clientPayment.types";
 import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
-import { calculateCascadePreview, type CascadeInstallmentPreview } from "@/utils/cascadePayment";
+import {
+  calculateCascadePreview,
+  calculateAmountForInstallmentCount,
+  getTotalPendingInstallmentsCount,
+  type CascadeInstallmentPreview,
+} from "@/utils/cascadePayment";
 
 interface UseClientPaymentResult {
   routerReady: boolean;
@@ -42,12 +47,14 @@ interface UseClientPaymentResult {
   orderedCreditAccounts: ClientCreditAccount[];
   excludedCreditIds: string[];
   cascadePreview: CascadeInstallmentPreview[];
+  totalPendingInstallmentsCount: number;
   paymentTerminalId: number | null;
   paymentTerminals: PaymentTerminalCatalogItem[];
   paymentTerminalsLoading: boolean;
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
+  setPaymentAmountByInstallmentCount: (count: number) => void;
   setPaymentTerminalId: (value: number | null) => void;
   toggleCreditExcluded: (purchaseId: string) => void;
   moveCreditOrder: (purchaseId: string, direction: "up" | "down") => void;
@@ -244,6 +251,20 @@ export function useClientPayment(): UseClientPaymentResult {
     [orderedCreditAccounts, excludedCreditIds, paymentAmount],
   );
 
+  const totalPendingInstallmentsCount = useMemo(
+    () => getTotalPendingInstallmentsCount(orderedCreditAccounts, excludedCreditIds),
+    [orderedCreditAccounts, excludedCreditIds],
+  );
+
+  const setPaymentAmountByInstallmentCount = useCallback(
+    (count: number) => {
+      setPaymentAmount(
+        calculateAmountForInstallmentCount(orderedCreditAccounts, excludedCreditIds, count),
+      );
+    },
+    [orderedCreditAccounts, excludedCreditIds],
+  );
+
   const totalOutstanding = useMemo(
     () =>
       orderedCreditAccounts
@@ -420,12 +441,14 @@ export function useClientPayment(): UseClientPaymentResult {
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    totalPendingInstallmentsCount,
     paymentTerminalId,
     paymentTerminals,
     paymentTerminalsLoading: paymentTerminalsQuery.isLoading,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
     toggleCreditExcluded,
     moveCreditOrder,

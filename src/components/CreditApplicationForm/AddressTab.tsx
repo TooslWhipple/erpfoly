@@ -37,10 +37,12 @@ export function AddressTab({
         <PostalCodeSettlementFields
           postalCode={values.postalCode}
           neighborhoodFullCode={values.neighborhoodFullCode}
+          state={values.state}
+          city={values.city}
           postalCodeError={errors.postalCode}
           neighborhoodError={errors.neighborhoodFullCode}
           neighborhoods={neighborhoodsQuery.data ?? []}
-          neighborhoodsLoading={neighborhoodsQuery.isFetching}
+          neighborhoodsLoading={neighborhoodsQuery.isPending}
           fieldKeys={{
             postalCode: "postalCode",
             neighborhoodFullCode: "neighborhoodFullCode",

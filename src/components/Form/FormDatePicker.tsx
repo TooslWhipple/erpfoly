@@ -4,6 +4,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import type { Dayjs } from "dayjs";
 import { Calendar } from "@/components/Icons";
 import dayjs from "@/lib/dayjs";
+import { toDateOnlyString } from "@/utils/date";
 import { FieldLabel, FieldWrapper, StyledTextField } from "./FormTextField.styles";
 import { StyledOpenPickerButton } from "./FormDatePicker.styles";
 
@@ -27,6 +28,13 @@ function OpenPickerIcon() {
   return <Calendar size={16} />;
 }
 
+function toPickerDayjs(value: string | undefined): Dayjs | null {
+  const ymd = toDateOnlyString(value);
+  if (!ymd) return null;
+  const parsed = dayjs(ymd, "YYYY-MM-DD", true);
+  return parsed.isValid() ? parsed : null;
+}
+
 export const FormDatePicker = forwardRef<HTMLDivElement, FormDatePickerProps>(({
   label,
   required,
@@ -42,14 +50,9 @@ export const FormDatePicker = forwardRef<HTMLDivElement, FormDatePickerProps>(({
   maxDate,
   fullWidth = true,
 }, ref) => {
-  const parsedValue = useMemo(() => {
-    if (!value) {
-      return null;
-    }
-
-    const parsed = dayjs(value, "YYYY-MM-DD", true);
-    return parsed.isValid() ? parsed : null;
-  }, [value]);
+  const parsedValue = useMemo(() => toPickerDayjs(value), [value]);
+  const parsedMinDate = useMemo(() => toPickerDayjs(minDate), [minDate]);
+  const parsedMaxDate = useMemo(() => toPickerDayjs(maxDate), [maxDate]);
 
   const handleChange = (newValue: Dayjs | null) => {
     if (!newValue || !newValue.isValid()) {
@@ -79,8 +82,8 @@ export const FormDatePicker = forwardRef<HTMLDivElement, FormDatePickerProps>(({
         format="DD/MM/YYYY"
         openTo={openTo}
         views={views}
-        minDate={minDate ? dayjs(minDate, "YYYY-MM-DD", true) : undefined}
-        maxDate={maxDate ? dayjs(maxDate, "YYYY-MM-DD", true) : undefined}
+        minDate={parsedMinDate ?? undefined}
+        maxDate={parsedMaxDate ?? undefined}
         slots={{
           textField: StyledTextField,
           openPickerIcon: OpenPickerIcon,

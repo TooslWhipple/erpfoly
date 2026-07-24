@@ -181,6 +181,28 @@ export function formatDateOnly(
 }
 
 /**
+ * Normaliza una fecha de calendario (sin hora) a `YYYY-MM-DD` para inputs.
+ * Timestamps ISO del API se leen en UTC para no correr el día en México.
+ * Devuelve `""` si el valor es vacío o inválido.
+ */
+export function toDateOnlyString(value: DateInput): string {
+  if (value == null || value === "") return "";
+  if (dayjs.isDayjs(value)) {
+    return value.isValid() ? value.format("YYYY-MM-DD") : "";
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    if (DATE_ONLY_PATTERN.test(trimmed)) {
+      const dateOnly = dayjs(trimmed, "YYYY-MM-DD", true);
+      return dateOnly.isValid() ? trimmed : "";
+    }
+  }
+  const utc = dayjs.utc(value as string | number | Date);
+  return utc.isValid() ? utc.format("YYYY-MM-DD") : "";
+}
+
+/**
  * "Lunes 19 de feb. 12:30 pm" (compatibilidad con el formato previo de esta utilidad).
  */
 export function formatDateTime(dateStr: DateInput): string {

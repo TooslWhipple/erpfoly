@@ -18,15 +18,11 @@ export interface CascadeInstallmentPreview {
  * backend. Es solo un preview visual; el backend recalcula y persiste con
  * su propia lógica al confirmar.
  */
-export function calculateCascadePreview(
+function flattenPendingInstallments(
   accounts: ClientCreditAccount[],
   excludedCreditIds: string[],
-  totalAmount: number,
-): CascadeInstallmentPreview[] {
-  let remaining = totalAmount;
-  const preview: CascadeInstallmentPreview[] = [];
-
-  const flattened = accounts
+) {
+  return accounts
     .filter((account) => !excludedCreditIds.includes(account.id))
     .flatMap((account) =>
       account.pendingInstallments.map((installment) => ({
@@ -39,6 +35,17 @@ export function calculateCascadePreview(
         new Date(a.installment.dueDateRaw).getTime() -
         new Date(b.installment.dueDateRaw).getTime(),
     );
+}
+
+export function calculateCascadePreview(
+  accounts: ClientCreditAccount[],
+  excludedCreditIds: string[],
+  totalAmount: number,
+): CascadeInstallmentPreview[] {
+  let remaining = totalAmount;
+  const preview: CascadeInstallmentPreview[] = [];
+
+  const flattened = flattenPendingInstallments(accounts, excludedCreditIds);
 
   for (const { purchaseId, installment } of flattened) {
     if (remaining <= 0) break;
@@ -62,4 +69,54 @@ export function calculateCascadePreview(
   }
 
   return preview;
+}
+
+/**
+ * Total de parcialidades pendientes cruzando las cuentas incluidas (sin
+ * excluir). Sirve como máximo del stepper de "cuántas parcialidades".
+ */
+export function getTotalPendingInstallmentsCount(
+  accounts: ClientCreditAccount[],
+  excludedCreditIds: string[],
+): number {
+  return flattenPendingInstallments(accounts, excludedCreditIds).length;
+}
+
+function roundToCents(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/**
+ * Monto exacto (mora + principal) de las primeras `count` parcialidades
+ * pendientes, cruzando cuentas incluidas y ordenadas por `dueDateRaw`, igual
+ * que `calculateCascadePreview`. Se usa para autollenar el campo de monto
+ * cuando el cajero elige un conteo de parcialidades en vez de un monto libre.
+ */
+export function calculateAmountForInstallmentCount(
+  accounts: ClientCreditAccount[],
+  excludedCreditIds: string[],
+  count: number,
+): number {
+  const flattened = flattenPendingInstallments(accounts, excludedCreditIds);
+
+  const rawAmount = flattened
+    .slice(0, count)
+    .reduce(
+      (sum, { installment }) =>
+        sum + installment.overdueAmount + installment.totalAmount,
+      0,
+    );
+
+  // La suma de las parcialidades individuales puede exceder por unos
+  // centavos el saldo real de la cuenta (redondeo del backend al dividir el
+  // total entre parcialidades). Se acota al saldo pendiente real para que
+  // "seleccionar todas" siempre pueda registrarse sin bloquear el envío.
+  const outstandingBalance = accounts
+    .filter((account) => !excludedCreditIds.includes(account.id))
+    .reduce((sum, account) => sum + account.remaining, 0);
+
+  // Sumar montos en punto flotante puede dejar residuos (p. ej.
+  // 1076.4450000000002); se redondea a centavos antes de usarlo como monto
+  // a enviar al backend, no solo para mostrarlo en el input.
+  return roundToCents(Math.min(rawAmount, outstandingBalance));
 }

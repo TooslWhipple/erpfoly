@@ -44,12 +44,14 @@ export default function ClientPaymentPage() {
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    totalPendingInstallmentsCount,
     paymentTerminalId,
     paymentTerminals,
     paymentTerminalsLoading,
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
     toggleCreditExcluded,
     moveCreditOrder,
@@ -213,10 +215,12 @@ export default function ClientPaymentPage() {
               paymentTerminalId={paymentTerminalId}
               paymentTerminals={paymentTerminals}
               paymentTerminalsLoading={paymentTerminalsLoading}
+              totalPendingInstallmentsCount={totalPendingInstallmentsCount}
               onPaymentAmountChange={setPaymentAmount}
               onPaymentMethodChange={setPaymentMethod}
               onCashDepositChange={setIsCashDeposit}
               onPaymentTerminalChange={setPaymentTerminalId}
+              onInstallmentCountChange={setPaymentAmountByInstallmentCount}
               onSubmit={() => void submitPayment()}
             />
           </Stack>

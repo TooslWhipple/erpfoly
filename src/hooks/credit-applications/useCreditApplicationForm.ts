@@ -18,6 +18,7 @@ import { useFamilyTab } from "./tabs/useFamilyTab";
 import { hasValidGuarantorInformation, useGuarantorTab } from "./tabs/useGuarantorTab";
 import { useReferencesTab } from "./tabs/useReferencesTab";
 import { creditApplicationTabIdToSection, type CreditApplicationSectionKey } from "@/utils/credit-application-form";
+import { toDateOnlyString } from "@/utils/date";
 import type {
   AddressTabValues,
   BasicInformationFormValues,
@@ -204,7 +205,7 @@ function mapCreditApplicationToFormValues(
     firstName: creditApplication.basicInformation.name ?? "",
     lastName: creditApplication.basicInformation.lastName ?? "",
     secondLastName: creditApplication.basicInformation.secondLastName ?? "",
-    birthDate: creditApplication.basicInformation.birthDate ?? "",
+    birthDate: toDateOnlyString(creditApplication.basicInformation.birthDate),
     maritalStatus:
       creditApplication.basicInformation.maritalStatus.id != null
         ? String(creditApplication.basicInformation.maritalStatus.id)
@@ -354,7 +355,7 @@ function mapCreditApplicationToFormValues(
     externalNumber: creditApplication.guarantor?.address.externalNumber ?? "",
     internalNumber: creditApplication.guarantor?.address.internalNumber ?? "",
     betweenStreets: creditApplication.guarantor?.address.betweenStreets ?? "",
-    birthDate: creditApplication.guarantor?.birthDate ?? "",
+    birthDate: toDateOnlyString(creditApplication.guarantor?.birthDate),
     maritalStatus:
       creditApplication.guarantor?.maritalStatus.id != null
         ? String(creditApplication.guarantor.maritalStatus.id)

@@ -28,6 +28,7 @@ import {
   getClientPurchases,
 } from "@/services/client-movements.service";
 import { unwrapOrThrow } from "@/lib/axios";
+import { isCreditClient as checkIsCreditClient } from "@/utils/client";
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
@@ -100,6 +101,9 @@ export default function ClientDetailPage() {
       const result = await getClientDetail(numericClientId as number);
       return unwrapOrThrow(result);
     },
+  });
+  const isCreditClient = checkIsCreditClient({
+    creditApplicationId: clientHeaderQuery.data?.creditApplicationId ?? null,
   });
   const activityTypesQuery = useQuery({
     queryKey: ["clients", "collection-activity-types"],
@@ -247,7 +251,7 @@ export default function ClientDetailPage() {
           />
         );
       case "informacion":
-        return <InformationTab />;
+        return <InformationTab isCreditClient={isCreditClient} />;
       default:
         return null;
     }
@@ -281,49 +285,55 @@ export default function ClientDetailPage() {
           <Typography variant="h5">
             {clientHeaderQuery.data?.fullName ?? client.fullName}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Línea de crédito:{" "}
-            <span
-              style={{
-                color: theme.palette.primary.main,
-              }}
-            >
-              {formatCurrency(
-                clientHeaderQuery.data?.creditLine.authorized ??
-                  client.creditLine,
-              )}
-            </span>
-          </Typography>
-          <Typography variant="body2" color="text.primary">
-            Pago requerido{" "}
-            <strong>{formatCurrency(client.requiredPayment)}</strong>{" "}
-            <span
-              style={{
-                color: theme.palette.error.main,
-              }}
-            >
-              {client.requiredPaymentDate} ({client.requiredPaymentLabel})
-            </span>
-          </Typography>
+          {isCreditClient && (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Línea de crédito:{" "}
+                <span
+                  style={{
+                    color: theme.palette.primary.main,
+                  }}
+                >
+                  {formatCurrency(
+                    clientHeaderQuery.data?.creditLine.authorized ??
+                      client.creditLine,
+                  )}
+                </span>
+              </Typography>
+              <Typography variant="body2" color="text.primary">
+                Pago requerido{" "}
+                <strong>{formatCurrency(client.requiredPayment)}</strong>{" "}
+                <span
+                  style={{
+                    color: theme.palette.error.main,
+                  }}
+                >
+                  {client.requiredPaymentDate} ({client.requiredPaymentLabel})
+                </span>
+              </Typography>
+            </>
+          )}
         </Stack>
-        <CreditLimitBar
-          creditLimit={
-            clientHeaderQuery.data?.creditLine.authorized ?? client.creditLine
-          }
-          creditUsed={
-            clientHeaderQuery.data
-              ? Math.max(
-                  clientHeaderQuery.data.creditLine.authorized -
-                    (clientHeaderQuery.data.creditLine.available ?? 0),
-                  0,
-                )
-              : client.creditUsed
-          }
-          creditAvailable={
-            clientHeaderQuery.data?.creditLine.available ??
-            client.creditAvailable
-          }
-        />
+        {isCreditClient && (
+          <CreditLimitBar
+            creditLimit={
+              clientHeaderQuery.data?.creditLine.authorized ?? client.creditLine
+            }
+            creditUsed={
+              clientHeaderQuery.data
+                ? Math.max(
+                    clientHeaderQuery.data.creditLine.authorized -
+                      (clientHeaderQuery.data.creditLine.available ?? 0),
+                    0,
+                  )
+                : client.creditUsed
+            }
+            creditAvailable={
+              clientHeaderQuery.data?.creditLine.available ??
+              client.creditAvailable
+            }
+          />
+        )}
       </Stack>
       <Divider />
       <Stack
@@ -342,19 +352,21 @@ export default function ClientDetailPage() {
           onTabChange={(value: string) => setActiveTab(value)}
         />
 
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{
-            minWidth: {
-              xs: "100%",
-              sm: "144px",
-            },
-          }}
-          onClick={() => router.push(`/clientes/${id}/abonos`)}
-        >
-          Agregar abono
-        </Button>
+        {isCreditClient && (
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{
+              minWidth: {
+                xs: "100%",
+                sm: "144px",
+              },
+            }}
+            onClick={() => router.push(`/clientes/${id}/abonos`)}
+          >
+            Agregar abono
+          </Button>
+        )}
       </Stack>
 
       {renderTabContent()}

@@ -17,6 +17,8 @@ export interface SaleCreditPayment {
   id: number;
   payment_date: string;
   amount: number;
+  principal_amount: number;
+  late_fee_amount: number;
   payment_method: string;
   reference: string | null;
   notes: string | null;
@@ -109,6 +111,8 @@ export interface SaleCreditPaymentResult {
     id: number;
     payment_date: string;
     amount: number;
+    principal_amount: number;
+    late_fee_amount: number;
     payment_method: string;
     reference: string | null;
     notes: string | null;
@@ -161,6 +165,8 @@ export interface CascadePaymentInstallmentResult {
   id: number;
   installment_number: number;
   amount_applied: number;
+  principal_applied: number;
+  late_fee_applied: number;
   status: string;
 }
 
@@ -168,6 +174,8 @@ export interface CascadePaymentCreditResult {
   credit_id: number;
   payment_id: number;
   amount_applied: number;
+  principal_applied: number;
+  late_fee_applied: number;
   outstanding_balance: number;
   status: string;
   installments: CascadePaymentInstallmentResult[];
@@ -176,6 +184,8 @@ export interface CascadePaymentCreditResult {
 export interface CascadePaymentResult {
   amount: number;
   amount_applied: number;
+  principal_applied: number;
+  late_fee_applied: number;
   credits: CascadePaymentCreditResult[];
   message: string;
 }

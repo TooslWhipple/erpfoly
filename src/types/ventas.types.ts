@@ -60,6 +60,7 @@ export interface ProductDetail {
   name: string;
   brandName: string | null;
   imageUrl: string | null;
+  images: { imageUrl: string }[];
   originalPrice: number;
   discountAmount: number;
   finalPrice: number;

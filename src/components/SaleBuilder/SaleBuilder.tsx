@@ -266,6 +266,15 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
     },
   });
 
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [lastImageProductId, setLastImageProductId] = useState<
+    number | undefined
+  >(productDetail?.id);
+  if (productDetail?.id !== lastImageProductId) {
+    setLastImageProductId(productDetail?.id);
+    setSelectedImageIndex(0);
+  }
+
   const debouncedClientModalSearch = useDebouncedValue(
     clientModalSearch,
     SEARCH_DEBOUNCE_MS,
@@ -1245,18 +1254,71 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 borderRadius: 3,
                 bgcolor: "background.paper",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 p: 3,
-                minHeight: 360,
+                gap: 2,
               }}
             >
               <Box
-                component="img"
-                src={productDetail.imageUrl ?? "/placeholder-product.png"}
-                alt={productDetail.name}
-                sx={{ maxWidth: "100%", maxHeight: 340, objectFit: "contain" }}
-              />
+                sx={{
+                  width: "100%",
+                  height: 340,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={
+                    productDetail.images[selectedImageIndex]?.imageUrl ??
+                    "/placeholder-product.png"
+                  }
+                  alt={productDetail.name}
+                  sx={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </Box>
+              {productDetail.images.length > 1 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    width: "100%",
+                    overflowX: "auto",
+                    pb: 0.5,
+                  }}
+                >
+                  {productDetail.images.map((image, index) => (
+                    <Box
+                      key={image.imageUrl}
+                      component="img"
+                      src={image.imageUrl}
+                      alt={`${productDetail.name} ${index + 1}`}
+                      onClick={() => setSelectedImageIndex(index)}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        flexShrink: 0,
+                        objectFit: "contain",
+                        borderRadius: 1,
+                        cursor: "pointer",
+                        border: "2px solid",
+                        borderColor:
+                          index === selectedImageIndex
+                            ? "primary.main"
+                            : "divider",
+                        p: 0.5,
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
             </Paper>
 
             {/* Box detalle — separado */}

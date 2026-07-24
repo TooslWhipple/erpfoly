@@ -17,11 +17,15 @@ function buildPendingInstallments(
   return Array.from({ length: 3 }, (_, index) => {
     const installmentNumber = startInstallment + index;
 
+    const dueDate = new Date(2026, 5, 30);
+    dueDate.setMonth(dueDate.getMonth() + index);
+
     return {
       id: String(installmentNumber),
       installmentNumber,
       totalInstallments,
       dueDate: dueDates[index] ?? "30 de Jun",
+      dueDateRaw: dueDate.toISOString(),
       overdueAmount: 0,
       totalAmount: installmentAmount,
     };

@@ -84,8 +84,9 @@ function mapBackendInstallments(
       installmentNumber: inst.installment_number,
       totalInstallments,
       dueDate: formatDueDate(inst.due_date),
+      dueDateRaw: inst.due_date,
       overdueAmount: inst.overdue_amount,
-      totalAmount: inst.amount,
+      totalAmount: inst.remaining,
     }));
 }
 
@@ -349,7 +350,15 @@ export function useClientPayment(): UseClientPaymentResult {
           const label = isFullPayment
             ? `Pago de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`
             : `Abono de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`;
-          allocations.push({ label, amount: installmentResult.amount_applied });
+          if (installmentResult.principal_applied > 0) {
+            allocations.push({ label, amount: installmentResult.principal_applied });
+          }
+          if (installmentResult.late_fee_applied > 0) {
+            allocations.push({
+              label: `Mora de parcialidad ${installmentResult.installment_number}`,
+              amount: installmentResult.late_fee_applied,
+            });
+          }
         }
       }
 

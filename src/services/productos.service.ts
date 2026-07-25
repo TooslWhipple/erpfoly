@@ -1,6 +1,9 @@
 import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
-import type { SavePromotionPayload } from "@/services/promociones.service";
+import {
+    normalizeSavePromotionPayload,
+    type SavePromotionPayload,
+} from "@/services/promociones.service";
 import type {
     CreateProductImagePayload,
     CreateProductPackageItemPayload,
@@ -153,7 +156,9 @@ export function buildCreateProductRequest(
     const promotionPayloads =
         promotions
             ?.map((d) => {
-                const rest: typeof d.payload = { ...d.payload };
+                const rest: typeof d.payload = normalizeSavePromotionPayload({
+                    ...d.payload,
+                });
                 delete rest.creditTermOptionLabels;
                 delete rest.layawayTermOptionLabels;
                 return rest;
@@ -330,10 +335,10 @@ function mapDetailPromotionsToDrafts(
             id: `promo-${promotionId}`,
             isLiquidation: Boolean(row.isLiquidation),
             purchaseTypeCode: String(row.purchaseTypeCode ?? "").trim(),
-            payload: {
+            payload: normalizeSavePromotionPayload({
                 ...basePayload,
                 productIds,
-            },
+            }),
         });
     }
     return out;

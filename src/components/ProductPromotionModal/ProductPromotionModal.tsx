@@ -12,6 +12,7 @@ import { buildSelectedTermOptionLabels } from "@/lib/promotionTermOptionLabels";
 import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
 import {
   getPromotionFormConfiguration,
+  normalizeSavePromotionPayload,
   type PromotionFormConfiguration,
   type SavePromotionPayload,
 } from "@/services/promociones.service";
@@ -63,30 +64,31 @@ function mapPayloadToFormState(
       ? Array.from(new Set([...(payload.productIds ?? []), productId]))
       : [...(payload.productIds ?? [])];
 
+  const normalized = normalizeSavePromotionPayload(payload);
   const purchaseType = configuration.purchaseTypes.find(
-    (p) => p.id === (payload.purchaseTypeId ?? null)
+    (p) => p.id === (normalized.purchaseTypeId ?? null)
   );
   const isApartado = purchaseType?.code === "APARTADO";
 
   return {
-    name: payload.name,
-    percentage: String(payload.discountRate),
-    advancePercentage: isApartado ? String(payload.advanceRate) : "",
-    purchaseTypeId: payload.purchaseTypeId ?? null,
-    creditTermIds: [...(payload.creditTermIds ?? [])],
-    layawayTermIds: [...(payload.layawayTermIds ?? [])],
+    name: normalized.name,
+    percentage: String(normalized.discountRate),
+    advancePercentage: isApartado ? String(normalized.advanceRate) : "",
+    purchaseTypeId: normalized.purchaseTypeId ?? null,
+    creditTermIds: [...(normalized.creditTermIds ?? [])],
+    layawayTermIds: [...(normalized.layawayTermIds ?? [])],
     customerLevelDownPayments: mergeCustomerLevelsFromPayload(
       configuration.customerLevels,
-      payload.customerLevelDownPayments
+      normalized.customerLevelDownPayments
     ),
-    startDate: payload.startDate,
-    endDate: payload.endDate ?? null,
-    hasEndDate: payload.endDate != null,
+    startDate: normalized.startDate,
+    endDate: normalized.endDate ?? null,
+    hasEndDate: normalized.endDate != null,
     selectedDepartmentIds: [],
     selectedLineIds: [],
     selectedProductIds: productIds,
-    selectedBranchIds: [...(payload.branchIds ?? [])],
-    suppliers: (payload.supplierIds ?? []).map((sid, i) => ({
+    selectedBranchIds: [...(normalized.branchIds ?? [])],
+    suppliers: (normalized.supplierIds ?? []).map((sid, i) => ({
       id: i + 1,
       supplierId: sid,
       supplierName: `Proveedor ${sid}`,
@@ -310,7 +312,7 @@ export function ProductPromotionModal({
 
     setSaving(true);
     try {
-      const payload = buildPayload();
+      const payload = normalizeSavePromotionPayload(buildPayload());
       const draft: ProductPromotionDraft = {
         id: editingDraft?.id ?? newDraftId(),
         isLiquidation: Boolean(isLiquidation),

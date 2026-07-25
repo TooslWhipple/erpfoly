@@ -32,6 +32,7 @@ import {
   CATALOG_PROMOTIONS_UPDATE,
 } from "@/lib/permissions";
 import { parsePositiveIntParam } from "@/utils/query";
+import { toDateOnlyString } from "@/utils/date";
 function emptyForm(): PromotionFormState {
   return {
     name: "",
@@ -82,8 +83,8 @@ function mapDetailToForm(
       configuration.customerLevels,
       detail.customer_level_down_payments,
     ),
-    startDate: detail.start_date,
-    endDate: detail.end_date,
+    startDate: toDateOnlyString(detail.start_date),
+    endDate: detail.end_date ? toDateOnlyString(detail.end_date) : null,
     hasEndDate: Boolean(detail.end_date),
     selectedDepartmentIds: deptIds,
     selectedLineIds: lineIds,

@@ -18,6 +18,7 @@ import type {
     ProductGalleryImage,
     ProductPackage,
     ProductPackageItemApiType,
+    ProductNestedPromotionPayload,
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
     ProductPricePreviewResponse,
@@ -108,6 +109,16 @@ export function buildProductMultipartFormData(
     return formData;
 }
 
+/** Existing API promotion id from a hydrated draft (`promo-123`). New drafts use `promo-<timestamp>-…`. */
+function parseProductPromotionDraftId(draft: ProductPromotionDraft): number | undefined {
+    const match = /^promo-(\d+)$/.exec(draft.id);
+    if (!match) {
+        return undefined;
+    }
+    const promotionId = Number(match[1]);
+    return Number.isFinite(promotionId) && promotionId >= 1 ? promotionId : undefined;
+}
+
 export function buildCreateProductRequest(
     input: {
         generalData: GeneralDataFormState;
@@ -154,15 +165,16 @@ export function buildCreateProductRequest(
 
     const packageItems = mapProductPackagesToPackageItems(packages);
 
-    const promotionPayloads =
+    const promotionPayloads: ProductNestedPromotionPayload[] | undefined =
         promotions
             ?.map((d) => {
-                const rest: typeof d.payload = normalizeSavePromotionPayload({
+                const rest: SavePromotionPayload = normalizeSavePromotionPayload({
                     ...d.payload,
                 });
                 delete rest.creditTermOptionLabels;
                 delete rest.layawayTermOptionLabels;
-                return rest;
+                const promotionId = parseProductPromotionDraftId(d);
+                return promotionId != null ? { ...rest, promotionId } : rest;
             })
             .filter((p) => p.name?.trim()) ?? undefined;
 

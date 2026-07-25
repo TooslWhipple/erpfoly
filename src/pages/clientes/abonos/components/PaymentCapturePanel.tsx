@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import numeral from "numeral";
 import type { ClientPaymentMethod } from "@/types/clientPayment.types";
+import type { PartialRemainderDecision } from "@/hooks/clientes/useClientPayment";
 import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types";
 import {
   CaptureCard,
@@ -28,6 +29,8 @@ export interface PaymentCapturePanelProps {
   paymentMethod: ClientPaymentMethod;
   isCashDeposit: boolean;
   change: number;
+  hasPartialInstallmentRemainder: boolean;
+  partialRemainderDecision: PartialRemainderDecision | null;
   canRegister: boolean;
   isSubmitting: boolean;
   paymentTerminalId: number | null;
@@ -39,6 +42,7 @@ export interface PaymentCapturePanelProps {
   onCashDepositChange: (value: boolean) => void;
   onPaymentTerminalChange: (value: number | null) => void;
   onInstallmentCountChange: (count: number) => void;
+  onPartialRemainderDecisionChange: (choice: PartialRemainderDecision) => void;
   onSubmit: () => void;
 }
 
@@ -55,6 +59,8 @@ export function PaymentCapturePanel({
   paymentMethod,
   isCashDeposit,
   change,
+  hasPartialInstallmentRemainder,
+  partialRemainderDecision,
   canRegister,
   isSubmitting,
   paymentTerminalId,
@@ -66,6 +72,7 @@ export function PaymentCapturePanel({
   onCashDepositChange,
   onPaymentTerminalChange,
   onInstallmentCountChange,
+  onPartialRemainderDecisionChange,
   onSubmit,
 }: PaymentCapturePanelProps) {
   const [inputValue, setInputValue] = useState("");
@@ -232,9 +239,33 @@ export function PaymentCapturePanel({
         }
       />
 
+      {hasPartialInstallmentRemainder && (
+        <Stack spacing={0.5}>
+          <Typography variant="caption" color="text.secondary">
+            El monto no cubre la siguiente parcialidad completa. ¿Qué hacer con el sobrante?
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <RadioButton
+              fullWidth
+              value="apply-next"
+              label="Aplicar al siguiente abono"
+              checked={partialRemainderDecision === "apply-next"}
+              onChange={() => onPartialRemainderDecisionChange("apply-next")}
+            />
+            <RadioButton
+              fullWidth
+              value="give-change"
+              label="Dar cambio"
+              checked={partialRemainderDecision === "give-change"}
+              onChange={() => onPartialRemainderDecisionChange("give-change")}
+            />
+          </Stack>
+        </Stack>
+      )}
+
       <CaptureCardActions>
         {
-          paymentMethod === "cash" && (
+          paymentMethod === "cash" && !isCashDeposit && (
             <CaptureCardChangeRow>
               <Typography variant="body2" color="text.secondary">Cambio</Typography>
               <Typography variant="subtitle1">{formatCurrency(change)}</Typography>

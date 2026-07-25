@@ -309,6 +309,10 @@ export default function VentaDetalle() {
     : 0;
   const layawayAmountNum =
     parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
+  const layawayChange =
+    layawayMethod === "CASH"
+      ? Math.max(0, layawayAmountNum - layawayRemaining)
+      : 0;
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
   const isSaleCancelled = sale.status === "CANCELLED";
 
@@ -920,18 +924,31 @@ export default function VentaDetalle() {
                           )}
                         </TextField>
                       )}
+                      {layawayMethod === "CASH" && (
+                        <Stack direction="row" justifyContent="space-between" mb={1.5}>
+                          <Typography variant="body2" color="text.secondary">
+                            Cambio
+                          </Typography>
+                          <Typography variant="subtitle1">
+                            {formatCurrency(layawayChange)}
+                          </Typography>
+                        </Stack>
+                      )}
                       <Button
                         fullWidth
                         variant="outlined"
                         disabled={
                           layawayAmountNum <= 0 ||
-                          layawayAmountNum > layawayRemaining ||
+                          (layawayAmountNum > layawayRemaining && layawayMethod !== "CASH") ||
                           (isLayawayCardPayment && !layawayTerminalId) ||
                           registerLayawayPaymentMutation.isPending
                         }
                         onClick={() =>
                           registerLayawayPaymentMutation.mutate({
-                            amount: layawayAmountNum,
+                            amount:
+                              layawayMethod === "CASH"
+                                ? Math.min(layawayAmountNum, layawayRemaining)
+                                : layawayAmountNum,
                             payment_method: layawayMethod,
                             payment_terminal_id: layawayTerminalId ?? undefined,
                           })

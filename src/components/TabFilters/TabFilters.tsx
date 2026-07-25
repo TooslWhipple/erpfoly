@@ -26,8 +26,8 @@ export interface SelectFilterOption {
 export interface ActionButtonConfig {
   label: string;
   onClick: () => void;
-  variant?: "text" | "outlined" | "contained";
-  color?: "primary" | "secondary" | "error" | "warning" | "info" | "success";
+  variant?: "text" | "outlined" | "contained" | "option" | "white";
+  color?: "primary" | "secondary" | "error" | "warning" | "info" | "success" | "inherit";
   showIcon?: boolean;
   disabled?: boolean;
   permission?: string;

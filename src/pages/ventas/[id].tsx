@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Alert,
@@ -16,14 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  CheckCircle,
-  Truck,
-  Store,
-  Clock,
-  XCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { CheckCircle, Truck, Store, Clock, XCircle, FileCode, FileText, Archive, AlertTriangle } from "lucide-react";
 import { X, Calendar } from "@/components/Icons";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +27,8 @@ import {
   registerLayawayPayment,
   completeLayaway,
   cancelLayaway,
+  downloadSaleInvoiceFile,
+  printSaleInvoicePdfOnly,
 } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
@@ -91,9 +86,26 @@ export default function VentaDetalle() {
 
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [downloadingType, setDownloadingType] = useState<"xml" | "pdf" | "zip" | null>(null);
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
+
+  const handleDownloadInvoice = async (type: "xml" | "pdf" | "zip") => {
+    if (!saleId) return;
+    setDownloadingType(type);
+    try {
+      await downloadSaleInvoiceFile(saleId, type);
+      snackbar.showSuccess(`Archivo ${type.toUpperCase()} descargado con éxito`);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        `No se pudo descargar el archivo ${type.toUpperCase()} de la factura`;
+      snackbar.showError(msg);
+    } finally {
+      setDownloadingType(null);
+    }
+  };
 
   const { data: sale, isLoading, isError } = useQuery({
     queryKey: ["venta-detail", saleId],
@@ -104,6 +116,17 @@ export default function VentaDetalle() {
       return res.data!;
     },
   });
+
+  const [autoPrinted, setAutoPrinted] = useState(false);
+
+  useEffect(() => {
+    if (isNew && saleId && sale && !autoPrinted) {
+      setAutoPrinted(true);
+      printSaleInvoicePdfOnly(saleId).catch((err) => {
+        console.warn("No se pudo desplegar la impresión de la factura en automático:", err);
+      });
+    }
+  }, [isNew, saleId, sale, autoPrinted]);
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {
@@ -354,24 +377,24 @@ export default function VentaDetalle() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 7 }}>
-                {isNew && (
-        <Alert
-          icon={<CheckCircle size={18} />}
-          severity="success"
-          sx={{
-            mb: 3,
-            fontWeight: 500,
-            bgcolor: "#BBF7D0",
-            borderRadius: 2,
-            py: 1,
-            px: 1.5,
-            color: "text.primary",
-            "& .MuiAlert-icon": { color: "#16a34a", mr: 1 },
-          }}
-        >
-          Venta registrada con éxito
-        </Alert>
-      )}
+          {isNew && (
+            <Alert
+              icon={<CheckCircle size={18} />}
+              severity="success"
+              sx={{
+                mb: 3,
+                fontWeight: 500,
+                bgcolor: "#BBF7D0",
+                borderRadius: 2,
+                py: 1,
+                px: 1.5,
+                color: "text.primary",
+                "& .MuiAlert-icon": { color: "#16a34a", mr: 1 },
+              }}
+            >
+              Venta registrada con éxito
+            </Alert>
+          )}
           <Card
             elevation={0}
             sx={{
@@ -481,8 +504,8 @@ export default function VentaDetalle() {
                       {sale.deliveryType === 'BRANCH'
                         ? sale.deliveryBranchName ?? 'Sucursal no especificada'
                         : sale.deliveryAddressFormatted ??
-                          sale.client?.primaryAddress?.formatted ??
-                          'Dirección del cliente'}
+                        sale.client?.primaryAddress?.formatted ??
+                        'Dirección del cliente'}
                     </Typography>
                     {sale.estimatedDeliveryDate && sale.deliveryStatus !== 'DELIVERED' && (
                       <Typography variant="body2" color="text.secondary">
@@ -498,8 +521,8 @@ export default function VentaDetalle() {
                   const selectedDate = sale?.deliveryDate ? dayjs(sale.deliveryDate) : null;
                   const formattedDate = selectedDate
                     ? selectedDate
-                        .format("dddd D [de] MMMM[,] YYYY")
-                        .replace(/^\w/, (c: string) => c.toUpperCase())
+                      .format("dddd D [de] MMMM[,] YYYY")
+                      .replace(/^\w/, (c: string) => c.toUpperCase())
                     : null;
 
                   return (
@@ -603,6 +626,93 @@ export default function VentaDetalle() {
           <Typography variant="h6" fontWeight={700} mb={2}>
             Resumen de la venta
           </Typography>
+
+          {/* Card para descarga de Factura (XML, PDF y ZIP) */}
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 4,
+              bgcolor: "#fff",
+              border: "1px solid #E4E4E7",
+              mb: 2,
+            }}
+          >
+            <CardContent sx={{ p: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                Facturación (CFDI)
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                Descarga de archivos fiscales almacenados en el sistema
+              </Typography>
+
+              <Grid container spacing={1}>
+                <Grid size={{ xs: 4 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<FileCode size={15} />}
+                    disabled={downloadingType === "xml"}
+                    onClick={() => handleDownloadInvoice("xml")}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                      borderColor: "#D1D5DB",
+                      color: "#374151",
+                      "&:hover": { borderColor: "#9CA3AF", bgcolor: "#F9FAFB" },
+                    }}
+                  >
+                    XML
+                  </Button>
+                </Grid>
+
+                <Grid size={{ xs: 4 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<FileText size={15} />}
+                    disabled={downloadingType === "pdf"}
+                    onClick={() => handleDownloadInvoice("pdf")}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                      borderColor: "#FCA5A5",
+                      color: "#DC2626",
+                      bgcolor: "#FEF2F2",
+                      "&:hover": { borderColor: "#F87171", bgcolor: "#FEE2E2" },
+                    }}
+                  >
+                    PDF
+                  </Button>
+                </Grid>
+
+                <Grid size={{ xs: 4 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="small"
+                    startIcon={<Archive size={15} />}
+                    disabled={downloadingType === "zip"}
+                    onClick={() => handleDownloadInvoice("zip")}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                      bgcolor: "#1E293B",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0F172A" },
+                    }}
+                  >
+                    ZIP
+                  </Button>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
           <Stack spacing={2}>
             <Card
               elevation={0}

@@ -51,6 +51,8 @@ export type CreateProductRequest = {
     shortName: string;
     description: string;
     pieceCount: number;
+    satProductServiceKey: string;
+    satUnitOfMeasureKey: string;
     suppliers: CreateProductSupplierPayload[];
     images: CreateProductImagePayload[];
     branches: CreateProductBranchPayload[];
@@ -164,6 +166,8 @@ export interface GeneralDataFormState {
     description: string;
     shortName: string;
     piecesCount: string;
+    satProductServiceKey: string;
+    satUnitOfMeasureKey: string;
     warrantyType: WarrantyType;
     warrantyMonths: string;
     warrantyPolicy: string;

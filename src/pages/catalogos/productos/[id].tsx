@@ -145,6 +145,12 @@ function getProductFormValidationErrors(
   if (!generalData.shortName.trim()) {
     newErrors.shortName = "El nombre corto es requerido";
   }
+  if (!generalData.satProductServiceKey?.trim()) {
+    newErrors.satProductServiceKey = "La clave de producto/servicio SAT es requerida";
+  }
+  if (!generalData.satUnitOfMeasureKey?.trim()) {
+    newErrors.satUnitOfMeasureKey = "La clave de unidad de medida SAT es requerida";
+  }
   if (
     generalData.warrantyType === "months" &&
     (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)
@@ -205,6 +211,8 @@ export default function ProductFormPage() {
     description: "",
     shortName: "",
     piecesCount: "1",
+    satProductServiceKey: "",
+    satUnitOfMeasureKey: "",
     warrantyType: "months",
     warrantyMonths: "12",
     warrantyPolicy: "",

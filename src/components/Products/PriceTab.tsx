@@ -365,8 +365,8 @@ export function PriceTab({
                         </FormCard>
                     </FormCard>
                 </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <Stack spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }} sx={{ minWidth: 0 }}>
+                    <Stack spacing={2} sx={{ minWidth: 0 }}>
                         <Card backgroundColor="#E2E8F0">
                             <Stack spacing={1.5}>
                                 <Typography variant="body1">Costo a considerar para el cálculo</Typography>
@@ -402,8 +402,8 @@ export function PriceTab({
                         </Card>
                         {
                             promotionDrafts.length > 0 &&
-                            <FormCard>
-                                <Stack spacing={2}>
+                            <FormCard style={{ minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
+                                <Stack spacing={2} sx={{ minWidth: 0, width: "100%" }}>
                                     <Stack spacing={0.5}>
                                         <Typography variant="subtitle2">Otros precios</Typography>
                                         <Typography variant="body2" color="text.secondary">
@@ -415,11 +415,14 @@ export function PriceTab({
                                         !promotionFormConfigurationQuery.isError &&
                                         purchaseTypeTabs.length > 0 &&
                                         <>
-                                            <TabFilters
-                                                tabs={purchaseTypeTabs}
-                                                activeTab={activePurchaseTypeTab}
-                                                onTabChange={setActivePurchaseTypeTab}
-                                            />
+                                            <Box sx={{ width: "100%", minWidth: 0 }}>
+                                                <TabFilters
+                                                    tabs={purchaseTypeTabs}
+                                                    activeTab={activePurchaseTypeTab}
+                                                    onTabChange={setActivePurchaseTypeTab}
+                                                    layout="contained"
+                                                />
+                                            </Box>
                                             <Stack spacing={2}>
                                                 {
                                                     filteredPromotionDrafts.length === 0 ?

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Divider, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
-import { Package, Plus, Trash2, Wrench } from "lucide-react";
+import { Plus, Trash2, Wrench } from "lucide-react";
 import {
     EmptyStateContainer,
     FormCard,
@@ -13,12 +13,11 @@ import {
 } from "@/styles/catalogos/productos.styles";
 import { AddPackageModal } from "./AddPackageModal";
 import type { PackageFormData, ProductPackage, SelectableItem } from "@/types/productos.types";
-import type { ArticleForPackage } from "@/data/productos.mockData";
 
 interface PackagesTabProps {
     packages: ProductPackage[];
-    availableArticles: ArticleForPackage[];
     availableBranches: SelectableItem[];
+    excludeProductId?: number;
     onAddPackage: (data: PackageFormData) => Promise<void>;
     onRemovePackage: (packageId: string) => void;
 }
@@ -46,8 +45,8 @@ function shouldShowComplimentaryBadge(pkg: ProductPackage): boolean {
 
 export function PackagesTab({
     packages,
-    availableArticles,
     availableBranches,
+    excludeProductId,
     onAddPackage,
     onRemovePackage,
 }: PackagesTabProps) {
@@ -144,8 +143,8 @@ export function PackagesTab({
                 onClose={handleCloseModal}
                 onSave={handleSave}
                 loading={saving}
-                availableArticles={availableArticles}
                 availableBranches={availableBranches}
+                excludeProductId={excludeProductId}
             />
         </>
     );

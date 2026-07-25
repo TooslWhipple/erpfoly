@@ -17,6 +17,7 @@ import type {
     ProductBranch,
     ProductGalleryImage,
     ProductPackage,
+    ProductPackageItemApiType,
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
     ProductPricePreviewResponse,
@@ -273,6 +274,17 @@ export interface ProductDetailPromotionDto {
     payload: SavePromotionPayload;
 }
 
+export interface ProductDetailPackageItemDto {
+    id: number;
+    type: ProductPackageItemApiType;
+    productId: number | null;
+    productCode?: string | null;
+    productName?: string | null;
+    packagePrice: number | string | null;
+    serviceName?: string | null;
+    branchIds: number[];
+}
+
 export type ProductDetailDto = {
     id: number;
     departmentId: number;
@@ -284,6 +296,7 @@ export type ProductDetailDto = {
     suppliers: ProductDetailSupplierDto[];
     images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
+    packageItems?: ProductDetailPackageItemDto[] | null;
     price?: ProductDetailPriceDto | null;
     promotions?: ProductDetailPromotionDto[] | null;
 } & (
@@ -297,6 +310,7 @@ export interface LoadedProductFormSnapshot {
     priceData: PriceFormState;
     basePrices: ProductBasePrice[];
     galleryImages: ProductGalleryImage[];
+    packages: ProductPackage[];
     promotionDrafts: ProductPromotionDraft[];
 }
 
@@ -311,6 +325,49 @@ function normalizeCostBasis(value: string | null | undefined): CostBasisForCalcu
         return value as CostBasisForCalculation;
     }
     return "last_cost";
+}
+
+function parsePackageItemPrice(value: number | string | null | undefined): number {
+    if (value == null) {
+        return 0;
+    }
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function mapDetailPackageItemsToProductPackages(
+    rows: ProductDetailPackageItemDto[] | null | undefined
+): ProductPackage[] {
+    if (!rows?.length) {
+        return [];
+    }
+
+    return rows.map((row, index) => {
+        const packagePrice = parsePackageItemPrice(row.packagePrice);
+        const branches = Array.isArray(row.branchIds) ? [...row.branchIds] : [];
+
+        if (row.type === "SERVICE") {
+            return {
+                id: `pkg-${row.id ?? index}`,
+                type: "service",
+                serviceName: (row.serviceName ?? "").trim(),
+                quantity: 1,
+                packagePrice,
+                branches,
+            };
+        }
+
+        const productLabel = (row.productName ?? row.productCode ?? "").trim();
+        return {
+            id: `pkg-${row.id ?? index}`,
+            type: "article",
+            articleId: row.productId != null ? String(row.productId) : undefined,
+            articleName: productLabel || undefined,
+            quantity: 1,
+            packagePrice,
+            branches,
+        };
+    });
 }
 
 function mapDetailPromotionsToDrafts(
@@ -416,6 +473,7 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
             sortOrder: img.sortOrder ?? index,
             file: null,
         })),
+        packages: mapDetailPackageItemsToProductPackages(detail.packageItems),
         promotionDrafts: mapDetailPromotionsToDrafts(detail, detail.promotions),
     };
 }

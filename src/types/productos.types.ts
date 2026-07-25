@@ -202,6 +202,8 @@ export interface ProductPackage {
 export interface PackageFormData {
     type: PackageType;
     articleId?: string;
+    articleName?: string;
+    articleListCost?: number;
     serviceName?: string;
     packagePrice?: number;
     branches: number[];

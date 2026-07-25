@@ -48,7 +48,6 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import {
-  branchCatalogToPackageSelectableItems,
   branchCatalogToProductBranches,
   mergeBranchCatalogWithProductDetail,
   resolveDepartmentMarginFromCatalog,
@@ -56,7 +55,6 @@ import {
 } from "@/lib/productFormCatalogMappers";
 import {
   CURRENCIES,
-  MOCK_ARTICLES,
   COST_BASIS_FOR_PRICE_OPTIONS,
   DEFAULT_PRODUCT_BASE_PRICES,
 } from "@/data/productos.mockData";
@@ -195,6 +193,10 @@ export default function ProductFormPage() {
   /** Numeric id segment for edit mode; only defined once the router is ready. */
   const editProductIdStr =
     router.isReady && routeIdParam != null && !isNew ? routeIdParam : null;
+  const editProductId = useMemo(() => {
+    const id = Number(editProductIdStr);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }, [editProductIdStr]);
   const [productLoading, setProductLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
@@ -234,10 +236,6 @@ export default function ProductFormPage() {
     const n = Number(generalData.departmentId);
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [generalData.departmentId]);
-  const packageBranchSelectableItems = useMemo(
-    () => branchCatalogToPackageSelectableItems(branchCatalogItems),
-    [branchCatalogItems],
-  );
   useEffect(() => {
     if (selectedDepartmentNumericId == null) {
       setLineModalOpen(false);
@@ -266,6 +264,16 @@ export default function ProductFormPage() {
   >(null);
   const [galleryImages, setGalleryImages] = useState<ProductGalleryImage[]>([]);
   const [packages, setPackages] = useState<ProductPackage[]>([]);
+  const packageBranchSelectableItems = useMemo(
+    () =>
+      branches
+        .filter((branch) => branch.enabled)
+        .map((branch) => ({
+          id: branch.branchId,
+          label: branch.branchName,
+        })),
+    [branches],
+  );
   const [costHistoryOpen, setCostHistoryOpen] = useState(false);
   const [productPromotionDrafts, setProductPromotionDrafts] = useState<
     ProductPromotionDraft[]
@@ -355,12 +363,14 @@ export default function ProductFormPage() {
       setProductLoading(false);
       setDetailBranchRows(null);
       setProductPromotionDrafts([]);
+      setPackages([]);
       return;
     }
     async function loadProduct() {
       setProductLoading(true);
       setDetailBranchRows(null);
       setProductPromotionDrafts([]);
+      setPackages([]);
       try {
         const idNum = Number(editProductIdStr);
         if (!Number.isFinite(idNum)) {
@@ -383,6 +393,7 @@ export default function ProductFormPage() {
           setPriceData(snap.priceData);
           setBasePrices(snap.basePrices);
           setGalleryImages(snap.galleryImages);
+          setPackages(snap.packages);
           setProductPromotionDrafts(snap.promotionDrafts);
           setDetailBranchRows(result.data.branches ?? []);
         }
@@ -705,19 +716,15 @@ export default function ProductFormPage() {
     });
   };
   const handleAddPackage = async (data: PackageFormData) => {
-    const article =
-      data.type === "article" && data.articleId
-        ? MOCK_ARTICLES.find((a) => a.id === data.articleId)
-        : undefined;
     const resolvedArticlePrice =
       data.type === "article"
-        ? (data.packagePrice ?? article?.lastPrice ?? 0)
+        ? (data.packagePrice ?? data.articleListCost ?? 0)
         : 0;
     const newPackage: ProductPackage = {
       id: Date.now().toString(),
       type: data.type,
       articleId: data.articleId,
-      articleName: article?.name,
+      articleName: data.articleName,
       serviceName: data.serviceName,
       quantity: 1,
       packagePrice: resolvedArticlePrice,
@@ -957,8 +964,8 @@ export default function ProductFormPage() {
             {activeTab === "packages" && (
               <PackagesTab
                 packages={packages}
-                availableArticles={MOCK_ARTICLES}
                 availableBranches={packageBranchSelectableItems}
+                excludeProductId={editProductId ?? undefined}
                 onAddPackage={handleAddPackage}
                 onRemovePackage={handleRemovePackage}
               />

@@ -21,7 +21,6 @@ const DETAIL_TABS: Array<{ value: CosteoDetailTab; label: string }> = [
   { value: "articles", label: "Artículos" },
   { value: "expenses", label: "Gastos" },
   { value: "costing", label: "Costeos" },
-  { value: "terms_freight", label: "Plazos y Fletes" },
   { value: "invoices", label: "Facturas" },
 ];
 

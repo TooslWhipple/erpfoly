@@ -9,18 +9,20 @@ import {
 } from "@mui/material";
 import { CircleMinus, Plus } from "lucide-react";
 import numeral from "numeral";
-import { Breadcrumbs, StatusChip } from "@/components";
+import { Breadcrumbs, InvoiceSelectorModal, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import { NumberInput } from "@/components/Folypuntos";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
 import type { ReceptionConfirmVariant } from "@/components/ReceptionOrdersModal/SendToCostingModal";
-import { AddInvoicesModal } from "@/components/ReceptionOrdersModal/AddInvoicesModal";
+import type { SelectableInvoice } from "@/types/invoice-selector.types";
 import type {
   ReceptionArticle,
   ReceptionDetailStatus,
   ReceptionInvoice,
 } from "@/types/recepcion-mercancias.types";
 import { formatDate } from "@/utils/date";
+import { selectableToReceptionInvoice } from "./receptionInvoiceAdapter";
+import { useReceptionAvailableInvoices } from "./useReceptionAvailableInvoices";
 import {
   createReception,
   getPendingArticlesBySupplier,
@@ -41,9 +43,6 @@ import {
   SupplierInfo,
   SupplierName,
   SupplierDate,
-  ProgressSection,
-  ProgressBarContainer,
-  StyledProgressBar,
   BranchInfo,
   BranchName,
   DeliveryDate,
@@ -121,14 +120,6 @@ function detailInvoiceToReceptionInvoice(
     amount: inv.amount,
     paymentType: inv.type,
   };
-}
-
-function calculateProgress(articles: ReceptionArticle[]): number {
-  if (articles.length === 0) return 0;
-  const totalQuantity = articles.reduce((sum, article) => sum + article.quantity, 0);
-  const totalReceived = articles.reduce((sum, article) => sum + article.received, 0);
-  if (totalQuantity === 0) return 0;
-  return Math.round((totalReceived / totalQuantity) * 100);
 }
 
 function getTotalArticles(articles: ReceptionArticle[]): number {
@@ -235,7 +226,6 @@ export function ReceptionForm({
   );
   const [supplierNameFromReception, setSupplierNameFromReception] = useState("");
 
-  const progress = calculateProgress(articles);
   const totalArticles = getTotalArticles(articles);
   const totalLabels = getTotalLabels(articles);
   const extraLabels = Math.max(0, totalLabels - baselineLabels);
@@ -255,6 +245,9 @@ export function ReceptionForm({
     () => invoices.map((invoice) => invoice.id),
     [invoices],
   );
+
+  const { availableInvoices: receptionAvailableInvoices, loading: loadingAvailableInvoices }
+    = useReceptionAvailableInvoices();
 
   const supplierName =
     supplierNameProp ||
@@ -451,8 +444,8 @@ export function ReceptionForm({
     }
   };
 
-  const handleAddInvoices = async (selected: ReceptionInvoice[]) => {
-    setInvoices((prev) => [...prev, ...selected]);
+  const handleAddInvoices = async (selected: SelectableInvoice[]) => {
+    setInvoices((prev) => [...prev, ...selected.map(selectableToReceptionInvoice)]);
     setActivePanel(null);
   };
 
@@ -516,12 +509,6 @@ export function ReceptionForm({
           {submitError}
         </Typography>
       )}
-
-      <ProgressSection>
-        <ProgressBarContainer>
-          <StyledProgressBar variant="determinate" value={progress} />
-        </ProgressBarContainer>
-      </ProgressSection>
 
       <ContentLayout>
         <Stack spacing={2} flex="1 1 0">
@@ -657,11 +644,13 @@ export function ReceptionForm({
         </Stack>
       </ContentLayout>
 
-      <AddInvoicesModal
+      <InvoiceSelectorModal
         open={activePanel === "invoices"}
         onClose={() => setActivePanel(null)}
         onConfirm={handleAddInvoices}
+        availableInvoices={receptionAvailableInvoices}
         linkedInvoiceIds={linkedInvoiceIds}
+        loading={loadingAvailableInvoices}
       />
 
       <SendToCostingModal

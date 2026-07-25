@@ -15,6 +15,7 @@ export interface ReceptionListItem {
   id: number;
   warehouse: string;
   orderNumber: string;
+  orderCount: number;
   date: string;
   supplier: string;
   status: ReceptionStatusApi;

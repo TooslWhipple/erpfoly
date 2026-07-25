@@ -1,17 +1,17 @@
 import { Alert, Button, Skeleton, Stack } from "@mui/material";
-import { TabFilters } from "@/components";
+import { InvoiceSelectorModal, TabFilters } from "@/components";
 import type { ActionButtonConfig } from "@/components/TabFilters";
 import { CosteoDetailHeader } from "@/components/CosteoDetail";
 import {
   AddCosteoExpenseModal,
-  AddCosteoInvoiceModal,
   CosteoArticlesTab,
   CosteoCostingTab,
   CosteoExpensesTab,
   CosteoInvoicesTab,
-  CosteoTermsFreightTab,
 } from "@/components/CosteoDetailTabs";
+import { costeoInvoiceToSelectable } from "@/components/CosteoDetailTabs/costeoInvoiceAdapter";
 import { useCosteoDetail } from "@/hooks/costeos/useCosteoDetail";
+import type { SelectableInvoice } from "@/types/invoice-selector.types";
 
 export default function CosteoDetailPage() {
   const {
@@ -53,8 +53,8 @@ export default function CosteoDetailPage() {
         {
           label: "Agregar gasto",
           onClick: () => setExpenseModalOpen(true),
-          variant: "outlined",
-          color: "primary",
+          variant: "option",
+          color: "inherit",
           showIcon: true,
         },
       ]
@@ -63,12 +63,18 @@ export default function CosteoDetailPage() {
           {
             label: "Agregar factura",
             onClick: openInvoiceModal,
-            variant: "outlined",
-            color: "primary",
+            variant: "option",
+            color: "inherit",
             showIcon: true,
           },
         ]
         : undefined;
+
+  const handleConfirmInvoices = async (selected: SelectableInvoice[]) => {
+    await handleAddInvoices({
+      supplier_invoice_ids: selected.map((invoice) => Number(invoice.id)),
+    });
+  };
 
   if (!routerReady || loading) {
     return (
@@ -113,10 +119,10 @@ export default function CosteoDetailPage() {
         breadcrumbItems={breadcrumbItems}
         supplier={detail.supplier}
         supplierDate={detail.supplierDate}
-        destination={detail.destination}
+        branchName={detail.branch.name}
         deliveryDate={detail.deliveryDate}
+        receptionDate={detail.receptionDate}
         status={detail.status}
-        progress={detail.progress}
         exchangeRate={detail.exchangeRate}
         isEditingExchangeRate={isEditingExchangeRate}
         exchangeRateDraft={exchangeRateDraft}
@@ -165,11 +171,6 @@ export default function CosteoDetailPage() {
       }
 
       {
-        activeTab === "terms_freight" &&
-        <CosteoTermsFreightTab terms={detail.termsFreight} />
-      }
-
-      {
         activeTab === "invoices" &&
         <CosteoInvoicesTab
           invoices={detail.invoices}
@@ -185,13 +186,13 @@ export default function CosteoDetailPage() {
         onSubmit={handleAddExpense}
       />
 
-      <AddCosteoInvoiceModal
+      <InvoiceSelectorModal
         open={invoiceModalOpen}
         onClose={() => setInvoiceModalOpen(false)}
-        availableInvoices={availableInvoices}
-        loadingAvailableInvoices={loadingAvailableInvoices}
-        saving={saving}
-        onSubmit={handleAddInvoices}
+        availableInvoices={availableInvoices.map(costeoInvoiceToSelectable)}
+        linkedInvoiceIds={detail.invoices.map((invoice) => String(invoice.id))}
+        loading={loadingAvailableInvoices}
+        onConfirm={handleConfirmInvoices}
       />
     </Stack>
   );

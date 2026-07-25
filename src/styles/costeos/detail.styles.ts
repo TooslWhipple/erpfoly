@@ -11,16 +11,6 @@ export const NameCellText = styled(Typography)({
   whiteSpace: "nowrap",
 });
 
-export const FlowProgressBar = styled(muiLinearProgress)(({ theme }) => ({
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: theme.palette.app.border,
-  "& .MuiLinearProgress-bar": {
-    borderRadius: 4,
-    backgroundColor: theme.palette.app.chip.variants.success.color,
-  },
-}));
-
 export const ExchangeRateBox = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",

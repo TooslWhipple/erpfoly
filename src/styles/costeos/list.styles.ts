@@ -12,32 +12,6 @@ export const Card = styled("div")(({ theme }) => ({
   },
 }));
 
-export const ProgressBarContainer = styled("div")(({ theme }) => ({
-  position: "relative",
-  height: "8px",
-  borderRadius: "12px",
-  overflow: "hidden",
-  backgroundColor: theme.palette.app.border,
-}));
-
-interface ProgressBarFillProps {
-  fillColor: string;
-  progress: number;
-}
-
-export const ProgressBarFill = styled("div", {
-  shouldForwardProp: (prop) => prop !== "fillColor" && prop !== "progress",
-})<ProgressBarFillProps>(({ fillColor, progress }) => ({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  height: "100%",
-  width: `${progress}%`,
-  backgroundColor: fillColor,
-  borderRadius: 3,
-  transition: "width 0.3s ease",
-}));
-
 export const EmptyContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",

@@ -55,10 +55,8 @@ export {
   CosteoArticlesTab,
   CosteoExpensesTab,
   CosteoCostingTab,
-  CosteoTermsFreightTab,
   CosteoInvoicesTab,
   AddCosteoExpenseModal,
-  AddCosteoInvoiceModal,
 } from "./CosteoDetailTabs";
 export { FilterMenu } from "./FilterMenu";
 export type { FilterMenuProps, FilterOption } from "./FilterMenu";
@@ -81,14 +79,14 @@ export type { AddArticleToOrderModalProps, CostHistoryEntry } from "./AddArticle
 export {
   ReceptionOrdersModal,
   SendToCostingModal,
-  AddInvoicesModal,
 } from "./ReceptionOrdersModal";
+export { InvoiceSelectorModal } from "./InvoiceSelector";
+export type { InvoiceSelectorModalProps } from "./InvoiceSelector";
 export { ReceptionForm } from "./ReceptionForm";
 export type { ReceptionFormProps } from "./ReceptionForm";
 export type {
   ReceptionConfirmVariant,
   SendToCostingModalProps,
-  AddInvoicesModalProps,
 } from "./ReceptionOrdersModal";
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";

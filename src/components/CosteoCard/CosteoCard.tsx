@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Grid,
   IconButton,
   Menu,
   MenuItem,
@@ -16,8 +15,6 @@ import { theme } from "@/styles/theme";
 import {
   Card,
   EmptyContainer,
-  ProgressBarContainer,
-  ProgressBarFill,
 } from "@/styles/costeos/list.styles";
 
 export type CosteoCardData = CosteoListItem;
@@ -39,37 +36,31 @@ const STATUS_LABELS: Record<CosteoStatus, string> = {
 
 const STATUS_COLORS: Record<
   CosteoStatus,
-  { backgroundColor: string; color: string; progress: string }
+  { backgroundColor: string; color: string }
 > = {
   captured: {
     backgroundColor: theme.palette.app.chip.variants.pending.background,
     color: theme.palette.app.chip.variants.pending.color,
-    progress: theme.palette.app.chip.variants.pending.color,
   },
   costed: {
     backgroundColor: theme.palette.app.chip.variants.warning.background,
     color: theme.palette.app.chip.variants.warning.color,
-    progress: theme.palette.app.chip.variants.warning.color,
   },
   reviewed: {
     backgroundColor: theme.palette.app.chip.variants.success.background,
     color: theme.palette.app.chip.variants.success.color,
-    progress: theme.palette.app.chip.variants.success.color,
   },
   received: {
     backgroundColor: theme.palette.app.chip.variants.success.background,
     color: theme.palette.app.chip.variants.success.color,
-    progress: theme.palette.app.chip.variants.success.color,
   },
   ordered: {
     backgroundColor: theme.palette.app.chip.variants.info.background,
     color: theme.palette.app.chip.variants.info.color,
-    progress: theme.palette.app.chip.variants.info.color,
   },
   cancelled: {
     backgroundColor: theme.palette.app.chip.variants.error?.background ?? theme.palette.app.chip.variants.pending.background,
     color: theme.palette.app.chip.variants.error?.color ?? theme.palette.app.chip.variants.pending.color,
-    progress: theme.palette.app.chip.variants.error?.color ?? theme.palette.app.chip.variants.pending.color,
   },
 };
 
@@ -111,70 +102,60 @@ export function CosteoCard({ costeo, onClick, onViewDetail }: CosteoCardProps) {
 
   return (
     <Card onClick={handleCardClick}>
-      <Grid container spacing={2}>
-        <Grid size={12}>
-          <ProgressBarContainer>
-            <ProgressBarFill
-              fillColor={statusColors.progress}
-              progress={costeo.progress}
-            />
-          </ProgressBarContainer>
-        </Grid>
-        <Grid size={12}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            alignItems={{ xs: "flex-start", md: "center" }}
-            justifyContent="space-between"
-            spacing={{ xs: 2, md: 0 }}
-          >
-            <Stack
-              direction="row"
-              alignItems="center"
-              width="100%"
-              spacing={2}
-              flex={5}
-            >
-              <Stack spacing={0.5} width="100%" flex={3}>
-                <Typography variant="body1" fontWeight={500}>{costeo.supplier}</Typography>
-                <Typography variant="body2" color="text.secondary">{formatDateOnly(costeo.supplierDate, "dateLong")}</Typography>
-              </Stack>
-              <ArrowRight size={18} color={theme.palette.text.secondary} />
-              <Stack spacing={0.5} width="100%" flex={3}>
-                <Typography variant="body1" fontWeight={500}>{costeo.destination}</Typography>
-                <Typography variant="body2" color="text.secondary">Entrega: {formatDateOnly(costeo.deliveryDate, "dateLong")}</Typography>
-              </Stack>
-            </Stack>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent={{ xs: "flex-start", md: "flex-end" }}
-              spacing={2}
-              flex={2}>
-              <Typography variant="body2">SKU: <span style={{ color: theme.palette.text.primary, fontWeight: 500 }}>{costeo.sku}</span></Typography>
-              <StatusChip
-                label={STATUS_LABELS[costeo.status]}
-                size="small"
-                variant={getStatusVariant(costeo.status)}
-                backgroundColor={statusColors.backgroundColor}
-                color={statusColors.color}
-              />
-              <IconButton
-                size="small"
-                aria-label="Opciones de costeo"
-                onClick={handleMenuOpen}>
-                <MoreVertical size={18} />
-              </IconButton>
-              <Menu
-                anchorEl={menuAnchor}
-                open={Boolean(menuAnchor)}
-                onClose={() => handleMenuClose()}
-                onClick={(event) => event.stopPropagation()}>
-                <MenuItem onClick={handleViewDetail}>Ver detalle</MenuItem>
-              </Menu>
-            </Stack>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "flex-start", md: "center" }}
+        justifyContent="space-between"
+        spacing={{ xs: 2, md: 0 }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          width="100%"
+          spacing={2}
+          flex={5}
+        >
+          <Stack spacing={0.5} width="100%" flex={3}>
+            <Typography variant="body1" fontWeight={500}>{costeo.supplier}</Typography>
+            <Typography variant="body2" color="text.secondary">{formatDateOnly(costeo.orderDate, "dateLong")}</Typography>
           </Stack>
-        </Grid>
-      </Grid>
+          <ArrowRight size={18} color={theme.palette.text.secondary} />
+          <Stack spacing={0.5} width="100%" flex={3}>
+            <Typography variant="body1" fontWeight={500}>{costeo.branch.name}</Typography>
+            {
+              costeo.receptionDate &&
+              <Typography variant="body2" color="text.secondary">{formatDateOnly(costeo.receptionDate, "dateLong")}</Typography>
+            }
+          </Stack>
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent={{ xs: "flex-start", md: "flex-end" }}
+          spacing={2}
+          flex={2}>
+          <StatusChip
+            label={STATUS_LABELS[costeo.status]}
+            size="small"
+            variant={getStatusVariant(costeo.status)}
+            backgroundColor={statusColors.backgroundColor}
+            color={statusColors.color}
+          />
+          <IconButton
+            size="small"
+            aria-label="Opciones de costeo"
+            onClick={handleMenuOpen}>
+            <MoreVertical size={18} />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => handleMenuClose()}
+            onClick={(event) => event.stopPropagation()}>
+            <MenuItem onClick={handleViewDetail}>Ver detalle</MenuItem>
+          </Menu>
+        </Stack>
+      </Stack>
     </Card>
   );
 }
@@ -199,12 +180,6 @@ export function CosteoList({
       <Stack direction="column" spacing={2}>
         {[1, 2, 3].map((i) => (
           <Card key={i} style={{ opacity: 0.5, cursor: "default" }}>
-            <ProgressBarContainer>
-              <ProgressBarFill
-                fillColor={theme.palette.app.border}
-                progress={60}
-              />
-            </ProgressBarContainer>
             <Stack
               direction={{ xs: "column", md: "row" }}
               alignItems={{ xs: "flex-start", md: "center" }}

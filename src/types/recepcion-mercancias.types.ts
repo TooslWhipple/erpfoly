@@ -23,6 +23,7 @@ export interface MerchandiseReception {
     id: number;
     warehouse: string;
     orderNumber: string;
+    orderCount: number;
     date: string;
     supplier: string;
     status: ReceptionStatus;

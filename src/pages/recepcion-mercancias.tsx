@@ -37,6 +37,7 @@ function receptionListItemToUi(item: ReceptionListItem): MerchandiseReception {
     id: item.id,
     warehouse: item.warehouse,
     orderNumber: item.orderNumber,
+    orderCount: item.orderCount,
     date: item.date,
     supplier: item.supplier,
     status: normalizeReceptionStatus(item.status),
@@ -213,8 +214,8 @@ export default function RecepcionMercancias() {
       size: "md",
     },
     {
-      id: "orderNumber",
-      label: "Pedido",
+      id: "orderCount",
+      label: "Pedidos",
       size: "sm",
     },
     {

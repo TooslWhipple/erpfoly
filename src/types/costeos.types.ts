@@ -12,7 +12,6 @@ export type CosteoDetailTab =
   | "articles"
   | "expenses"
   | "costing"
-  | "terms_freight"
   | "invoices";
 
 export type CosteoCurrency = "MXN" | "USD";
@@ -23,11 +22,11 @@ export interface CosteoListItem {
   id: number;
   supplier: string;
   supplierDate: string;
-  destination: string;
+  branch: { id: number; name: string };
   deliveryDate: string;
-  sku: string;
+  receptionDate: string | null;
+  orderDate: string | null;
   status: CosteoStatus;
-  progress: number;
   orderNumber: string;
   filterGroup: Exclude<CosteoListFilter, "all">;
 }
@@ -64,15 +63,6 @@ export interface CosteoExpense {
   includedInInvoice: boolean;
 }
 
-export interface CosteoTermFreight {
-  id: number;
-  concept: string;
-  termDays: number;
-  freightType: string;
-  amount: number;
-  notes: string | null;
-}
-
 export interface CosteoInvoice {
   id: number;
   externalId: string;
@@ -107,17 +97,16 @@ export interface CosteoDetail {
   id: number;
   supplier: string;
   supplierDate: string;
-  destination: string;
+  branch: { id: number; name: string };
   deliveryDate: string;
+  receptionDate: string | null;
   orderNumber: string;
   status: CosteoStatus;
-  progress: number;
   exchangeRate: number;
   affectArticlePrices: boolean;
   articles: CosteoArticle[];
   expenses: CosteoExpense[];
   expenseSummary: CosteoExpenseSummary;
-  termsFreight: CosteoTermFreight[];
   invoices: CosteoInvoice[];
   availableInvoices: CosteoAvailableInvoice[];
   billingSummary: CosteoBillingSummary;

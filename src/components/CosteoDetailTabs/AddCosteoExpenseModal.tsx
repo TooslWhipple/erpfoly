@@ -7,8 +7,7 @@ import {
 } from "@mui/material";
 import numeral from "numeral";
 import { SideModal } from "@/components/SideModal";
-import { FormSelect, FormTextField } from "@/components/Form";
-import type { SelectOption } from "@/components/Form";
+import { FormTextField } from "@/components/Form";
 import { sanitizeDecimal } from "@/forms/validation/schemas";
 import type {
   AddCosteoExpensePayload,
@@ -20,13 +19,8 @@ const VAT_RATE = 0.16;
 const MAX_AMOUNT = 999_999.99;
 const MAX_EXCHANGE_RATE = 9_999.99;
 const MIN_EXCHANGE_RATE = 0.01;
-
-const EXPENSE_OPTIONS: SelectOption[] = [
-  { value: "Flete Nacional", label: "Flete Nacional" },
-  { value: "Maniobras", label: "Maniobras" },
-  { value: "Flete extranjero", label: "Flete extranjero" },
-  { value: "Seguro", label: "Seguro" },
-];
+const MIN_NAME_LENGTH = 2;
+const MAX_NAME_LENGTH = 100;
 
 interface AddCosteoExpenseModalProps {
   open: boolean;
@@ -52,6 +46,15 @@ function sanitizeBoundedDecimal(value: string, max: number): string {
     return numeral(max).format("0.00");
   }
   return cleaned;
+}
+
+function getNameError(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed === "") return "Ingresa el nombre del gasto";
+  if (trimmed.length < MIN_NAME_LENGTH) {
+    return `El nombre debe tener al menos ${MIN_NAME_LENGTH} caracteres`;
+  }
+  return undefined;
 }
 
 function getAmountError(value: string): string | undefined {
@@ -87,38 +90,42 @@ export function AddCosteoExpenseModal({
   saving = false,
   onSubmit,
 }: AddCosteoExpenseModalProps) {
-  const [name, setName] = useState("Maniobras");
+  const [name, setName] = useState("");
   const [isForeignCurrency, setIsForeignCurrency] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(String(defaultExchangeRate));
   const [amount, setAmount] = useState("");
   const [includedInInvoice, setIncludedInInvoice] = useState(false);
-  const [touched, setTouched] = useState({ amount: false, exchangeRate: false });
+  const [touched, setTouched] = useState({ name: false, amount: false, exchangeRate: false });
 
   useEffect(() => {
     if (!open) return;
-    setName("Maniobras");
+    setName("");
     setIsForeignCurrency(false);
     setExchangeRate(
       sanitizeBoundedDecimal(String(defaultExchangeRate), MAX_EXCHANGE_RATE),
     );
     setAmount("");
     setIncludedInInvoice(false);
-    setTouched({ amount: false, exchangeRate: false });
+    setTouched({ name: false, amount: false, exchangeRate: false });
   }, [open, defaultExchangeRate]);
 
+  const trimmedName = name.trim();
+  const nameError = touched.name ? getNameError(name) : undefined;
   const amountNumber = parseAmount(amount);
   const amountError = touched.amount ? getAmountError(amount) : undefined;
   const exchangeRateError = touched.exchangeRate
     ? getExchangeRateError(exchangeRate, isForeignCurrency)
     : undefined;
 
+  const isNameValid =
+    trimmedName.length >= MIN_NAME_LENGTH && trimmedName.length <= MAX_NAME_LENGTH;
   const isAmountValid = amountNumber > 0 && amountNumber <= MAX_AMOUNT;
   const exchangeRateNumber = parseAmount(exchangeRate);
   const isExchangeRateValid =
     !isForeignCurrency ||
     (exchangeRateNumber >= MIN_EXCHANGE_RATE &&
       exchangeRateNumber <= MAX_EXCHANGE_RATE);
-  const canSubmit = Boolean(name) && isAmountValid && isExchangeRateValid && !saving;
+  const canSubmit = isNameValid && isAmountValid && isExchangeRateValid && !saving;
 
   const totals = useMemo(() => {
     const rate = isForeignCurrency
@@ -143,7 +150,7 @@ export function AddCosteoExpenseModal({
   };
 
   const handleSubmit = async () => {
-    setTouched({ amount: true, exchangeRate: true });
+    setTouched({ name: true, amount: true, exchangeRate: true });
     if (!canSubmit) return;
 
     const currency: CosteoCurrency = isForeignCurrency ? "USD" : "MXN";
@@ -152,7 +159,7 @@ export function AddCosteoExpenseModal({
       : 1;
 
     await onSubmit({
-      name,
+      name: trimmedName,
       currency,
       exchange_rate: rate,
       amount: amountNumber,
@@ -177,11 +184,15 @@ export function AddCosteoExpenseModal({
       }
     >
       <Stack spacing={3}>
-        <FormSelect
+        <FormTextField
           label="Gasto"
           value={name}
-          options={EXPENSE_OPTIONS}
-          onChange={(event) => setName(String(event.target.value))}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+          required
+          error={Boolean(nameError)}
+          helperText={nameError}
+          inputProps={{ maxLength: MAX_NAME_LENGTH }}
         />
 
         <Stack direction="row" alignItems="center" spacing={1}>

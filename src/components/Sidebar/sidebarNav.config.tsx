@@ -121,19 +121,9 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Inventario", path: "/inventario", requirement: { permission: INVENTORY_READ } },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada", requirement: { permission: DAMAGED_INVENTORY_READ } },
       { label: "Liquidaciones", path: "/inventario/liquidaciones", requirement: { permission: INVENTORY_LIQUIDATIONS_READ } },
+      { label: "Recepción de mercancía", path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
+      { label: "Costeos", path: "/costeos", requirement: { permission: COSTEOS_READ } },
     ],
-  },
-  {
-    label: "Recepción de mercancía",
-    path: "/recepcion-mercancias",
-    icon: <Package size={ICON_SIZE} />,
-    requirement: { permission: MERCHANDISE_RECEPTION_READ },
-  },
-  {
-    label: "Costeos",
-    path: "/costeos",
-    icon: <ClipboardList size={ICON_SIZE} />,
-    requirement: { permission: COSTEOS_READ },
   },
   {
     label: "Atención a cliente",

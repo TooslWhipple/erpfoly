@@ -6,10 +6,7 @@ import type { StatusChipVariant } from "@/components/StatusChip";
 import type { CosteoStatus } from "@/types/costeos.types";
 import { formatDateOnly } from "@/utils/date";
 import { theme } from "@/styles/theme";
-import {
-  ExchangeRateBox,
-  FlowProgressBar,
-} from "@/styles/costeos/detail.styles";
+import { ExchangeRateBox } from "@/styles/costeos/detail.styles";
 
 const STATUS_LABELS: Record<CosteoStatus, string> = {
   captured: "Capturado",
@@ -67,10 +64,10 @@ interface CosteoDetailHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
   supplier: string;
   supplierDate: string;
-  destination: string;
+  branchName: string;
   deliveryDate: string;
+  receptionDate: string | null;
   status: CosteoStatus;
-  progress: number;
   exchangeRate: number;
   isEditingExchangeRate: boolean;
   exchangeRateDraft: string;
@@ -87,10 +84,10 @@ export function CosteoDetailHeader({
   breadcrumbItems,
   supplier,
   supplierDate,
-  destination,
+  branchName,
   deliveryDate,
+  receptionDate,
   status,
-  progress,
   exchangeRate,
   isEditingExchangeRate,
   exchangeRateDraft,
@@ -154,11 +151,14 @@ export function CosteoDetailHeader({
               <Typography variant="body2" color="text.secondary">{formatDateOnly(supplierDate, "dateLong")}</Typography>
             </Stack>
             <Stack spacing={0.5} flex={1} alignItems={{ xs: "flex-start", md: "flex-end" }}>
-              <Typography variant="body1" fontWeight={500}>{destination}</Typography>
-              <Typography variant="body2" color="text.secondary">Entrega: {formatDateOnly(deliveryDate, "dateLong")}</Typography>
+              <Typography variant="body1" fontWeight={500}>{branchName}</Typography>
+              {
+                receptionDate &&
+                <Typography variant="body2" color="text.secondary">{formatDateOnly(receptionDate, "dateLong")}</Typography>
+
+              }
             </Stack>
           </Stack>
-          <FlowProgressBar variant="determinate" value={progress} />
         </Stack>
 
         <ExchangeRateBox>

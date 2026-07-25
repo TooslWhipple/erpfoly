@@ -83,6 +83,8 @@ export {
   SendToCostingModal,
   AddInvoicesModal,
 } from "./ReceptionOrdersModal";
+export { ReceptionForm } from "./ReceptionForm";
+export type { ReceptionFormProps } from "./ReceptionForm";
 export type {
   ReceptionConfirmVariant,
   SendToCostingModalProps,

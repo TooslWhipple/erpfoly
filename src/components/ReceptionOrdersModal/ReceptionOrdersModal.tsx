@@ -9,7 +9,8 @@ import {
 } from "@mui/material";
 import { Search } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
-import type { OrderToReceive, SupplierWithPendingOrders } from "@/types/recepcion-mercancias.types";
+import type { SupplierWithPendingOrders } from "@/types/recepcion-mercancias.types";
+import { getSuppliersWithPendingOrders } from "@/services/recepcion-mercancias.service";
 import {
   SearchInput,
   SupplierList,
@@ -25,97 +26,8 @@ import {
 interface ReceptionOrdersModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (orderIds: string[]) => void | Promise<void>;
+  onConfirm: (supplierId: number, supplierName: string) => void | Promise<void>;
   loading?: boolean;
-}
-
-const DUMMY_ORDERS_TO_RECEIVE: OrderToReceive[] = [
-  {
-    id: "19988",
-    sku: "19988",
-    supplier: "Mabe",
-    supplierLegalName: "Mabe S.A. de C.V.",
-    deliveryDate: "2024-07-22",
-    total: 398390.6,
-  },
-  {
-    id: "19722",
-    sku: "19722",
-    supplier: "Mabe",
-    supplierLegalName: "Mabe S.A. de C.V.",
-    deliveryDate: "2024-07-22",
-    total: 398390.6,
-  },
-  {
-    id: "12345",
-    sku: "12345",
-    supplier: "Mabe",
-    supplierLegalName: "Mabe S.A. de C.V.",
-    deliveryDate: "2024-07-22",
-    total: 398390.6,
-  },
-  {
-    id: "12346",
-    sku: "12346",
-    supplier: "Whirlpool México",
-    supplierLegalName: "Whirlpool México S. de R.L. de C.V.",
-    deliveryDate: "2024-07-25",
-    total: 245890.75,
-  },
-  {
-    id: "12347",
-    sku: "12347",
-    supplier: "Whirlpool México",
-    supplierLegalName: "Whirlpool México S. de R.L. de C.V.",
-    deliveryDate: "2024-07-28",
-    total: 567890.0,
-  },
-  {
-    id: "12348",
-    sku: "12348",
-    supplier: "Distribuidora Hogar Feliz",
-    supplierLegalName: "Distribuidora Hogar Feliz S.A. de C.V.",
-    deliveryDate: "2024-08-01",
-    total: 189450.25,
-  },
-];
-
-const DUMMY_SUPPLIERS_WITHOUT_ORDERS: SupplierWithPendingOrders[] = [
-  {
-    id: "lg-mexico",
-    name: "LG Electronics",
-    legalName: "LG Electronics México S.A. de C.V.",
-    pendingOrdersCount: 0,
-    orderIds: [],
-  },
-];
-
-async function getOrdersToReceive(): Promise<OrderToReceive[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return DUMMY_ORDERS_TO_RECEIVE;
-}
-
-function groupOrdersBySupplier(orders: OrderToReceive[]): SupplierWithPendingOrders[] {
-  const map = new Map<string, SupplierWithPendingOrders>();
-
-  for (const order of orders) {
-    const key = order.supplier;
-    const existing = map.get(key);
-    if (existing) {
-      existing.pendingOrdersCount += 1;
-      existing.orderIds.push(order.id);
-    } else {
-      map.set(key, {
-        id: key,
-        name: order.supplier,
-        legalName: order.supplierLegalName ?? order.supplier,
-        pendingOrdersCount: 1,
-        orderIds: [order.id],
-      });
-    }
-  }
-
-  return [...map.values(), ...DUMMY_SUPPLIERS_WITHOUT_ORDERS];
 }
 
 function formatPendingOrdersLabel(count: number): string {
@@ -130,33 +42,40 @@ export function ReceptionOrdersModal({
   loading = false,
 }: ReceptionOrdersModalProps) {
   const theme = useTheme();
-  const [orders, setOrders] = useState<OrderToReceive[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  const [creatingSupplierId, setCreatingSupplierId] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierWithPendingOrders[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [creatingSupplierId, setCreatingSupplierId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (open) {
-      setLoadingOrders(true);
+      setLoadingSuppliers(true);
       setCreatingSupplierId(null);
       setSearchQuery("");
-      getOrdersToReceive()
-        .then((data) => {
-          setOrders(data);
+      getSuppliersWithPendingOrders()
+        .then((result) => {
+          if (result.error) {
+            console.error(
+              "[ReceptionOrdersModal] Error fetching suppliers:",
+              result.error,
+            );
+            setSuppliers([]);
+            return;
+          }
+          setSuppliers(result.data ?? []);
         })
         .catch((err) => {
-          console.error("[ReceptionOrdersModal] Error fetching orders:", err);
+          console.error("[ReceptionOrdersModal] Error fetching suppliers:", err);
+          setSuppliers([]);
         })
         .finally(() => {
-          setLoadingOrders(false);
+          setLoadingSuppliers(false);
         });
     } else {
       setCreatingSupplierId(null);
       setSearchQuery("");
     }
   }, [open]);
-
-  const suppliers = useMemo(() => groupOrdersBySupplier(orders), [orders]);
 
   const filteredSuppliers = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -166,7 +85,7 @@ export function ReceptionOrdersModal({
     return suppliers.filter(
       (supplier) =>
         supplier.name.toLowerCase().includes(query) ||
-        supplier.legalName.toLowerCase().includes(query),
+        (supplier.legalName ?? "").toLowerCase().includes(query),
     );
   }, [suppliers, searchQuery]);
 
@@ -175,24 +94,24 @@ export function ReceptionOrdersModal({
   };
 
   const handleCreate = async (supplier: SupplierWithPendingOrders) => {
-    if (supplier.pendingOrdersCount === 0 || loading || creatingSupplierId) {
+    if (supplier.pendingOrdersCount === 0 || loading || creatingSupplierId != null) {
       return;
     }
     setCreatingSupplierId(supplier.id);
     try {
-      await onConfirm(supplier.orderIds);
+      await onConfirm(supplier.id, supplier.legalName ?? supplier.name);
     } finally {
       setCreatingSupplierId(null);
     }
   };
 
   const handleClose = () => {
-    if (!loading && !loadingOrders && !creatingSupplierId) {
+    if (!loading && !loadingSuppliers && creatingSupplierId == null) {
       onClose();
     }
   };
 
-  const isBusy = loading || loadingOrders || creatingSupplierId != null;
+  const isBusy = loading || loadingSuppliers || creatingSupplierId != null;
 
   return (
     <SideModal
@@ -209,7 +128,7 @@ export function ReceptionOrdersModal({
         onChange={handleSearchChange}
         size="small"
         fullWidth
-        disabled={loadingOrders}
+        disabled={loadingSuppliers}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
@@ -219,7 +138,7 @@ export function ReceptionOrdersModal({
         }}
       />
 
-      {loadingOrders ? (
+      {loadingSuppliers ? (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} variant="rounded" height={72} />
@@ -243,7 +162,9 @@ export function ReceptionOrdersModal({
               <SupplierCard key={supplier.id}>
                 <SupplierCardInfo>
                   <SupplierCardName>{supplier.name}</SupplierCardName>
-                  <SupplierCardLegalName>{supplier.legalName}</SupplierCardLegalName>
+                  <SupplierCardLegalName>
+                    {supplier.legalName ?? supplier.name}
+                  </SupplierCardLegalName>
                 </SupplierCardInfo>
                 <SupplierCardMeta>
                   {formatPendingOrdersLabel(supplier.pendingOrdersCount)}

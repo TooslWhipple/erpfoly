@@ -56,7 +56,7 @@ export default function Pedidos() {
 
     const tabs: TabItem[] = [
         { value: "all", label: "Todos" },
-        { value: "pending", label: "Por recibir" },
+        { value: "pending", label: "Solicitado" },
         { value: "in_progress", label: "En curso" },
         { value: "received", label: "Recibidos" },
     ];

@@ -230,15 +230,29 @@ export async function registerSalePayment(
   return post<unknown>(`${BASE}/sales/${saleId}/payments`, payload);
 }
 
+export interface SaleInvoiceBillingPayload {
+  rfc?: string;
+  business_name?: string;
+  tax_regime_id?: string;
+  cfdi_use_id?: string;
+  neighborhood_code?: string;
+  street?: string;
+  external_number?: string;
+  postal_code?: string;
+  email?: string;
+}
+
 export async function confirmSalePayment(
   saleId: number,
+  payload?: SaleInvoiceBillingPayload,
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return post<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm`,
+    payload,
   );
 }
 
-export interface ConfirmCreditSalePayload {
+export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   term_months: number;
   down_payment: number;
   payment_method: "CASH" | "CARD";

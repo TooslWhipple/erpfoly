@@ -1,27 +1,49 @@
-import { useState, useMemo } from "react";
-import { CircularProgress, Grid, InputAdornment, Stack, Typography } from "@mui/material";
+import { useCallback, useEffect, useMemo, useState, type SyntheticEvent } from "react";
+import {
+    Autocomplete,
+    CircularProgress,
+    Grid,
+    InputAdornment,
+    Stack,
+    Typography,
+    useTheme,
+    type AutocompleteInputChangeReason,
+} from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import numeral from "numeral";
-import { FormTextField, FormSelect, MultiSelectChips } from "@/components";
+import { Search } from "lucide-react";
+import { FormTextField, MultiSelectChips } from "@/components";
 import { SideModal } from "@/components/SideModal";
+import { ConfirmButton } from "@/components/Form/styles";
+import { StyledFormControlLabel } from "@/styles/catalogos/productos.styles";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { unwrapOrThrow } from "@/lib/axios";
 import {
-    CancelButton,
-    ConfirmButton,
-} from "@/components/Form/styles";
-import {
-    RadioGroupContainer,
-    StyledRadioGroup,
-    StyledFormControlLabel,
-} from "@/styles/catalogos/productos.styles";
+    PRODUCT_SEARCH_DEFAULT_LIMIT,
+    searchProducts,
+    type ProductSearchItem,
+} from "@/services/productos.service";
 import type { PackageType, PackageFormData, SelectableItem } from "@/types/productos.types";
-import type { ArticleForPackage } from "@/data/productos.mockData";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 interface AddPackageModalProps {
     open: boolean;
     onClose: () => void;
     onSave: (data: PackageFormData) => Promise<void>;
     loading?: boolean;
-    availableArticles: ArticleForPackage[];
     availableBranches: SelectableItem[];
+    excludeProductId?: number;
+}
+
+function parseProductListCost(listCost: string): number {
+    const parsed = Number(listCost);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getProductOptionLabel(option: ProductSearchItem): string {
+    const code = option.code?.trim();
+    return code ? `${option.shortName} (${code})` : option.shortName;
 }
 
 export function AddPackageModal({
@@ -29,46 +51,80 @@ export function AddPackageModal({
     onClose,
     onSave,
     loading = false,
-    availableArticles,
     availableBranches,
+    excludeProductId,
 }: AddPackageModalProps) {
+    const theme = useTheme();
     const [packageType, setPackageType] = useState<PackageType>("article");
-    const [selectedArticleId, setSelectedArticleId] = useState<string>("");
+    const [selectedProduct, setSelectedProduct] = useState<ProductSearchItem | null>(null);
+    const [productSearchInput, setProductSearchInput] = useState("");
     const [serviceName, setServiceName] = useState<string>("");
     const [packagePrice, setPackagePrice] = useState<string>("");
     const [selectedBranches, setSelectedBranches] = useState<(string | number)[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const selectedArticle = useMemo(() => {
-        if (!selectedArticleId) return null;
-        return availableArticles.find((a) => a.id === selectedArticleId) || null;
-    }, [selectedArticleId, availableArticles]);
+    const debouncedSearch = useDebouncedValue(productSearchInput.trim(), SEARCH_DEBOUNCE_MS);
+
+    const { data: searchResults = [], isFetching: isSearching } = useQuery({
+        queryKey: ["product-package-search", debouncedSearch, excludeProductId],
+        queryFn: async () => {
+            const rows = unwrapOrThrow(
+                await searchProducts({
+                    q: debouncedSearch,
+                    limit: PRODUCT_SEARCH_DEFAULT_LIMIT,
+                }),
+            );
+            if (excludeProductId == null) {
+                return rows;
+            }
+            return rows.filter((row) => row.id !== excludeProductId);
+        },
+        staleTime: 30_000,
+        enabled: open && packageType === "article",
+    });
+
+    const selectedListCost = useMemo(() => {
+        if (!selectedProduct) {
+            return 0;
+        }
+        return parseProductListCost(selectedProduct.listCost);
+    }, [selectedProduct]);
 
     const total = useMemo(() => {
-        if (packageType === "article" && selectedArticle) {
-            const price = packagePrice ? Number(packagePrice) : selectedArticle.lastPrice;
-            return price;
+        if (packageType === "article" && selectedProduct) {
+            return packagePrice ? Number(packagePrice) : selectedListCost;
         }
         return 0;
-    }, [packageType, selectedArticle, packagePrice]);
+    }, [packageType, selectedProduct, packagePrice, selectedListCost]);
+
+    const resetForm = useCallback(() => {
+        setPackageType("article");
+        setSelectedProduct(null);
+        setProductSearchInput("");
+        setServiceName("");
+        setPackagePrice("");
+        setSelectedBranches([]);
+        setErrors({});
+    }, []);
 
     const handleClose = () => {
         if (!loading) {
-            setPackageType("article");
-            setSelectedArticleId("");
-            setServiceName("");
-            setPackagePrice("");
-            setSelectedBranches([]);
-            setErrors({});
+            resetForm();
             onClose();
         }
     };
+
+    useEffect(() => {
+        if (!open) {
+            resetForm();
+        }
+    }, [open, resetForm]);
 
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
 
         if (packageType === "article") {
-            if (!selectedArticleId) {
+            if (!selectedProduct) {
                 newErrors.articleId = "Debes seleccionar un artículo";
             }
             if (selectedBranches.length === 0) {
@@ -99,9 +155,13 @@ export function AddPackageModal({
             branches: selectedBranches.map((id) => Number(id)),
         };
 
-        if (packageType === "article") {
-            formData.articleId = selectedArticleId;
-            formData.packagePrice = packagePrice ? Number(packagePrice) : selectedArticle?.lastPrice;
+        if (packageType === "article" && selectedProduct) {
+            formData.articleId = String(selectedProduct.id);
+            formData.articleName = selectedProduct.shortName;
+            formData.articleListCost = selectedListCost;
+            formData.packagePrice = packagePrice
+                ? Number(packagePrice)
+                : selectedListCost;
         } else {
             formData.serviceName = serviceName.trim();
         }
@@ -110,13 +170,25 @@ export function AddPackageModal({
         handleClose();
     };
 
-    const articleOptions = useMemo(
-        () =>
-            availableArticles.map((article) => ({
-                value: article.id,
-                label: article.name,
-            })),
-        [availableArticles]
+    const handleProductInputChange = useCallback(
+        (_: SyntheticEvent, value: string, reason: AutocompleteInputChangeReason) => {
+            if (reason === "clear") {
+                setProductSearchInput("");
+                setSelectedProduct(null);
+                return;
+            }
+            if (reason === "reset" || reason === "blur") {
+                return;
+            }
+            setProductSearchInput(value);
+            if (
+                selectedProduct != null &&
+                value !== getProductOptionLabel(selectedProduct)
+            ) {
+                setSelectedProduct(null);
+            }
+        },
+        [selectedProduct],
     );
 
     return (
@@ -138,9 +210,7 @@ export function AddPackageModal({
                     variant="contained"
                     onClick={handleSave}
                     disabled={loading}>
-                    {
-                        (loading) ? <CircularProgress size={20} color="inherit" /> : "Guardar"
-                    }
+                    {loading ? <CircularProgress size={20} color="inherit" /> : "Guardar"}
                 </ConfirmButton>
             }
         >
@@ -156,7 +226,8 @@ export function AddPackageModal({
                             checked={packageType === "article"}
                             onChange={(e) => {
                                 setPackageType(e.target.value as PackageType);
-                                setSelectedArticleId("");
+                                setSelectedProduct(null);
+                                setProductSearchInput("");
                                 setServiceName("");
                                 setSelectedBranches([]);
                                 setErrors({});
@@ -168,7 +239,8 @@ export function AddPackageModal({
                             checked={packageType === "service"}
                             onChange={(e) => {
                                 setPackageType(e.target.value as PackageType);
-                                setSelectedArticleId("");
+                                setSelectedProduct(null);
+                                setProductSearchInput("");
                                 setServiceName("");
                                 setSelectedBranches([]);
                                 setErrors({});
@@ -180,44 +252,72 @@ export function AddPackageModal({
                 {packageType === "article" && (
                     <>
                         <Grid size={{ xs: 12 }}>
-                            <FormSelect
-                                label="Artículo"
-                                placeholder="Buscar"
-                                value={selectedArticleId}
-                                onChange={(e) => {
-                                    const articleId = String(e.target.value);
-                                    setSelectedArticleId(articleId);
-                                    const article = availableArticles.find((a) => a.id === articleId);
-                                    if (article) {
+                            <Autocomplete<ProductSearchItem, false, false, false>
+                                fullWidth
+                                openOnFocus
+                                options={searchResults}
+                                loading={isSearching}
+                                filterOptions={(list) => list}
+                                getOptionLabel={getProductOptionLabel}
+                                isOptionEqualToValue={(a, b) => a.id === b.id}
+                                value={selectedProduct}
+                                inputValue={productSearchInput}
+                                onInputChange={handleProductInputChange}
+                                onChange={(_, newValue) => {
+                                    if (newValue == null) {
+                                        setSelectedProduct(null);
+                                        setProductSearchInput("");
+                                        setPackagePrice("");
+                                    } else {
+                                        setSelectedProduct(newValue);
+                                        setProductSearchInput(getProductOptionLabel(newValue));
                                         setPackagePrice("");
                                     }
                                     if (errors.articleId) {
-                                        setErrors({ ...errors, articleId: "" });
+                                        setErrors((prev) => ({ ...prev, articleId: "" }));
                                     }
                                 }}
-                                options={articleOptions}
-                                error={Boolean(errors.articleId)}
-                                helperText={errors.articleId}
-                                required
+                                noOptionsText={
+                                    debouncedSearch.length < 2
+                                        ? "Escribe al menos 2 caracteres para buscar"
+                                        : "No se encontraron artículos"
+                                }
+                                renderInput={(params) => (
+                                    <FormTextField
+                                        {...params}
+                                        label="Artículo"
+                                        placeholder="Buscar por nombre o código"
+                                        required
+                                        error={Boolean(errors.articleId)}
+                                        helperText={errors.articleId}
+                                        InputProps={{
+                                            ...params.InputProps,
+                                            endAdornment: (
+                                                <>
+                                                    {isSearching ? (
+                                                        <CircularProgress color="inherit" size={18} />
+                                                    ) : null}
+                                                    {params.InputProps.endAdornment}
+                                                    <InputAdornment position="end">
+                                                        <Search
+                                                            size={18}
+                                                            color={theme.palette.text.secondary}
+                                                        />
+                                                    </InputAdornment>
+                                                </>
+                                            ),
+                                        }}
+                                    />
+                                )}
                             />
                         </Grid>
 
-                        {selectedArticle && (
-                            <Grid size={{ xs: 12 }}>
-                                <FormTextField
-                                    label="Proveedor"
-                                    value={selectedArticle.supplierName}
-                                    disabled
-                                />
-                            </Grid>
-                        )}
-
-                        {selectedArticle && (
+                        {selectedProduct && (
                             <>
                                 <Grid size={{ xs: 12, md: 6 }}>
                                     <FormTextField
-                                        label="Último precio"
-                                        value={numeral(selectedArticle.lastPrice).format("0,0.00")}
+                                        label="Costo de lista"
+                                        value={numeral(selectedListCost).format("0,0.00")}
                                         disabled
                                         InputProps={{
                                             startAdornment: (
@@ -262,7 +362,7 @@ export function AddPackageModal({
                                 Sucursales
                             </Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                Configura las sucursales donde estará activa este paquete.
+                                Solo se muestran las sucursales activas configuradas para este artículo.
                             </Typography>
                             <MultiSelectChips
                                 items={availableBranches}
@@ -270,11 +370,16 @@ export function AddPackageModal({
                                 onChange={(ids) => {
                                     setSelectedBranches(ids);
                                     if (errors.branches) {
-                                        setErrors({ ...errors, branches: "" });
+                                        setErrors((prev) => ({ ...prev, branches: "" }));
                                     }
                                 }}
                                 error={Boolean(errors.branches)}
-                                helperText={errors.branches}
+                                helperText={
+                                    errors.branches ??
+                                    (availableBranches.length === 0
+                                        ? "Activa al menos una sucursal en la pestaña Sucursales"
+                                        : undefined)
+                                }
                             />
                         </Grid>
                     </>
@@ -290,7 +395,7 @@ export function AddPackageModal({
                                 onChange={(e) => {
                                     setServiceName(e.target.value);
                                     if (errors.serviceName) {
-                                        setErrors({ ...errors, serviceName: "" });
+                                        setErrors((prev) => ({ ...prev, serviceName: "" }));
                                     }
                                 }}
                                 error={Boolean(errors.serviceName)}
@@ -303,7 +408,7 @@ export function AddPackageModal({
                                 Sucursales
                             </Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                Configura las sucursales donde estará activa este paquete.
+                                Solo se muestran las sucursales activas configuradas para este artículo.
                             </Typography>
                             <MultiSelectChips
                                 items={availableBranches}
@@ -311,11 +416,16 @@ export function AddPackageModal({
                                 onChange={(ids) => {
                                     setSelectedBranches(ids);
                                     if (errors.branches) {
-                                        setErrors({ ...errors, branches: "" });
+                                        setErrors((prev) => ({ ...prev, branches: "" }));
                                     }
                                 }}
                                 error={Boolean(errors.branches)}
-                                helperText={errors.branches}
+                                helperText={
+                                    errors.branches ??
+                                    (availableBranches.length === 0
+                                        ? "Activa al menos una sucursal en la pestaña Sucursales"
+                                        : undefined)
+                                }
                             />
                         </Grid>
                     </>

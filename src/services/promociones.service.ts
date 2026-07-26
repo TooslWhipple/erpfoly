@@ -9,6 +9,7 @@ import {
 	type PaginatedRowsResponse,
 } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
+import { toDateOnlyString } from "@/utils/date";
 import type { PromotionListItem } from "@/types/promociones.types";
 
 const BASE = "/promotions";
@@ -119,27 +120,42 @@ export interface CreatePromotionApiPayload {
 	supplier_ids?: number[];
 }
 
+/** Normalizes calendar dates to `YYYY-MM-DD` for form inputs and API payloads. */
+export function normalizeSavePromotionPayload(
+	payload: SavePromotionPayload
+): SavePromotionPayload {
+	return {
+		...payload,
+		startDate: toDateOnlyString(payload.startDate),
+		endDate:
+			payload.endDate != null && String(payload.endDate).trim()
+				? toDateOnlyString(payload.endDate)
+				: null,
+	};
+}
+
 function mapSavePromotionPayloadToApi(
 	payload: SavePromotionPayload
 ): CreatePromotionApiPayload {
+	const normalized = normalizeSavePromotionPayload(payload);
 	return {
-		name: payload.name,
-		discount_rate: payload.discountRate,
-		advance_rate: payload.advanceRate,
-		start_date: payload.startDate,
-		end_date: payload.endDate ?? null,
-		purchase_type_id: payload.purchaseTypeId ?? null,
-		credit_term_ids: payload.creditTermIds ?? [],
-		layaway_term_ids: payload.layawayTermIds ?? [],
-		customer_level_down_payments: (payload.customerLevelDownPayments ?? []).map(
+		name: normalized.name,
+		discount_rate: normalized.discountRate,
+		advance_rate: normalized.advanceRate,
+		start_date: normalized.startDate,
+		end_date: normalized.endDate ?? null,
+		purchase_type_id: normalized.purchaseTypeId ?? null,
+		credit_term_ids: normalized.creditTermIds ?? [],
+		layaway_term_ids: normalized.layawayTermIds ?? [],
+		customer_level_down_payments: (normalized.customerLevelDownPayments ?? []).map(
 			(row) => ({
 				customer_level_id: row.customerLevelId,
 				percentage: row.percentage,
 			})
 		),
-		product_ids: payload.productIds ?? [],
-		branch_ids: payload.branchIds ?? [],
-		supplier_ids: payload.supplierIds ?? [],
+		product_ids: normalized.productIds ?? [],
+		branch_ids: normalized.branchIds ?? [],
+		supplier_ids: normalized.supplierIds ?? [],
 	};
 }
 

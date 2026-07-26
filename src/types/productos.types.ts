@@ -44,6 +44,11 @@ export interface CreateProductPackageItemPayload {
     branchIds: number[];
 }
 
+/** Nested promotion on create/update product (includes existing id on edit). */
+export type ProductNestedPromotionPayload = SavePromotionPayload & {
+    promotionId?: number;
+};
+
 export type CreateProductRequest = {
     departmentId: number;
     lineId: number;
@@ -56,7 +61,7 @@ export type CreateProductRequest = {
     branches: CreateProductBranchPayload[];
     packageItems?: CreateProductPackageItemPayload[];
     /** Nested promotions to persist with the product (drafts from Price tab). */
-    promotions?: SavePromotionPayload[];
+    promotions?: ProductNestedPromotionPayload[];
     listCost?: number;
     currency?: string;
     exchangeRate?: number;
@@ -202,6 +207,8 @@ export interface ProductPackage {
 export interface PackageFormData {
     type: PackageType;
     articleId?: string;
+    articleName?: string;
+    articleListCost?: number;
     serviceName?: string;
     packagePrice?: number;
     branches: number[];

@@ -20,7 +20,6 @@ import { BranchesTab } from "@/components/Promotions/BranchesTab";
 import { SuppliersTab } from "@/components/Promotions/SuppliersTab";
 import { usePromotionDepartmentsCatalog } from "@/hooks/usePromotionDepartmentsCatalog";
 import { usePromotionBranchesCatalog } from "@/hooks/usePromotionBranchesCatalog";
-import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import {
   validatePromotionEndDate,
@@ -32,6 +31,7 @@ import {
   CATALOG_PROMOTIONS_UPDATE,
 } from "@/lib/permissions";
 import { parsePositiveIntParam } from "@/utils/query";
+import { toDateOnlyString } from "@/utils/date";
 function emptyForm(): PromotionFormState {
   return {
     name: "",
@@ -82,8 +82,8 @@ function mapDetailToForm(
       configuration.customerLevels,
       detail.customer_level_down_payments,
     ),
-    startDate: detail.start_date,
-    endDate: detail.end_date,
+    startDate: toDateOnlyString(detail.start_date),
+    endDate: detail.end_date ? toDateOnlyString(detail.end_date) : null,
     hasEndDate: Boolean(detail.end_date),
     selectedDepartmentIds: deptIds,
     selectedLineIds: lineIds,
@@ -129,7 +129,6 @@ export default function PromotionFormPage() {
     router.isReady,
   );
   const branchesCatalogQuery = usePromotionBranchesCatalog(router.isReady);
-  const suppliersCatalogQuery = usePromotionSuppliersCatalog(router.isReady);
   useEffect(() => {
     lastHydratedDetailAtRef.current = null;
     lastFetchedProductIdsRef.current = [];
@@ -186,35 +185,6 @@ export default function PromotionFormPage() {
     promotionQuery.isFetching,
     configurationQuery.data,
   ]);
-  const supplierIdsKey = formState.suppliers
-    .map((s) => s.supplierId)
-    .sort((a, b) => a - b)
-    .join(",");
-  useEffect(() => {
-    const catalog = suppliersCatalogQuery.data;
-    if (!catalog?.length || !supplierIdsKey) return;
-    setFormState((prev) => {
-      if (!prev.suppliers.length) return prev;
-      const next = prev.suppliers.map((s) => {
-        const row = catalog.find((c) => c.id === s.supplierId);
-        const name =
-          row?.businessName?.trim() || row?.name?.trim() || s.supplierName;
-        if (name === s.supplierName) return s;
-        return {
-          ...s,
-          supplierName: name,
-        };
-      });
-      const changed = next.some(
-        (s, i) => s.supplierName !== prev.suppliers[i]?.supplierName,
-      );
-      if (!changed) return prev;
-      return {
-        ...prev,
-        suppliers: next,
-      };
-    });
-  }, [suppliersCatalogQuery.data, supplierIdsKey]);
   const configuration = configurationQuery.data;
   const purchaseTypeMeta = configuration?.purchaseTypes.find(
     (p) => p.id === formState.purchaseTypeId,
@@ -555,19 +525,13 @@ export default function PromotionFormPage() {
         />
       )}
 
-      {activeTab === "suppliers" && (
+      <Box sx={{ display: activeTab === "suppliers" ? "block" : "none" }}>
         <SuppliersTab
           formState={formState}
           onFieldChange={handleFieldChange}
-          supplierCatalog={suppliersCatalogQuery.data ?? []}
-          suppliersCatalogLoading={suppliersCatalogQuery.isPending}
-          suppliersCatalogError={
-            suppliersCatalogQuery.isError
-              ? getApiErrorMessage(suppliersCatalogQuery.error)
-              : null
-          }
+          isActive
         />
-      )}
+      </Box>
     </Stack>
   );
 }

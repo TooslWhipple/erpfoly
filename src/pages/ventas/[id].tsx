@@ -334,6 +334,7 @@ export default function VentaDetalle() {
     parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
   const isSaleCancelled = sale.status === "CANCELLED";
+  const isDraftSale = sale.status === "DRAFT";
 
   return (
     <Box sx={{ p: 3, bgcolor: "#fafafa", minHeight: "100vh" }}>
@@ -628,90 +629,92 @@ export default function VentaDetalle() {
           </Typography>
 
           {/* Card para descarga de Factura (XML, PDF y ZIP) */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 4,
-              bgcolor: "#fff",
-              border: "1px solid #E4E4E7",
-              mb: 2,
-            }}
-          >
-            <CardContent sx={{ p: 2 }}>
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                Facturación (CFDI)
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                Descarga de archivos fiscales almacenados en el sistema
-              </Typography>
+          {!isDraftSale && (
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 4,
+                bgcolor: "#fff",
+                border: "1px solid #E4E4E7",
+                mb: 2,
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  Facturación (CFDI)
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                  Descarga de archivos fiscales almacenados en el sistema
+                </Typography>
 
-              <Grid container spacing={1}>
-                <Grid size={{ xs: 4 }}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FileCode size={15} />}
-                    disabled={downloadingType === "xml"}
-                    onClick={() => handleDownloadInvoice("xml")}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      fontWeight: 600,
-                      borderColor: "#D1D5DB",
-                      color: "#374151",
-                      "&:hover": { borderColor: "#9CA3AF", bgcolor: "#F9FAFB" },
-                    }}
-                  >
-                    XML
-                  </Button>
-                </Grid>
+                <Grid container spacing={1}>
+                  <Grid size={{ xs: 4 }}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FileCode size={15} />}
+                      disabled={downloadingType === "xml"}
+                      onClick={() => handleDownloadInvoice("xml")}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontWeight: 600,
+                        borderColor: "#D1D5DB",
+                        color: "#374151",
+                        "&:hover": { borderColor: "#9CA3AF", bgcolor: "#F9FAFB" },
+                      }}
+                    >
+                      XML
+                    </Button>
+                  </Grid>
 
-                <Grid size={{ xs: 4 }}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FileText size={15} />}
-                    disabled={downloadingType === "pdf"}
-                    onClick={() => handleDownloadInvoice("pdf")}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      fontWeight: 600,
-                      borderColor: "#FCA5A5",
-                      color: "#DC2626",
-                      bgcolor: "#FEF2F2",
-                      "&:hover": { borderColor: "#F87171", bgcolor: "#FEE2E2" },
-                    }}
-                  >
-                    PDF
-                  </Button>
-                </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FileText size={15} />}
+                      disabled={downloadingType === "pdf"}
+                      onClick={() => handleDownloadInvoice("pdf")}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontWeight: 600,
+                        borderColor: "#FCA5A5",
+                        color: "#DC2626",
+                        bgcolor: "#FEF2F2",
+                        "&:hover": { borderColor: "#F87171", bgcolor: "#FEE2E2" },
+                      }}
+                    >
+                      PDF
+                    </Button>
+                  </Grid>
 
-                <Grid size={{ xs: 4 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size="small"
-                    startIcon={<Archive size={15} />}
-                    disabled={downloadingType === "zip"}
-                    onClick={() => handleDownloadInvoice("zip")}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      fontWeight: 600,
-                      bgcolor: "#1E293B",
-                      color: "#fff",
-                      "&:hover": { bgcolor: "#0F172A" },
-                    }}
-                  >
-                    ZIP
-                  </Button>
+                  <Grid size={{ xs: 4 }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      size="small"
+                      startIcon={<Archive size={15} />}
+                      disabled={downloadingType === "zip"}
+                      onClick={() => handleDownloadInvoice("zip")}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontWeight: 600,
+                        bgcolor: "#1E293B",
+                        color: "#fff",
+                        "&:hover": { bgcolor: "#0F172A" },
+                      }}
+                    >
+                      ZIP
+                    </Button>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Stack spacing={2}>
             <Card

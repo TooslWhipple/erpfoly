@@ -291,6 +291,7 @@ export function useSupplierForm() {
         paymentTerm: formState.paymentTerm,
         freight: formState.freight,
         observations: formState.observations,
+        accountingAccount: formState.accountingAccount,
     };
 
     const creditData = {

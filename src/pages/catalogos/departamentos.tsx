@@ -27,6 +27,8 @@ import {
   type SchemaOutputFromFields,
 } from "@/forms";
 import { messages } from "@/forms/validation/messages";
+import { AccountingAccountSearchField } from "@/components/AccountingAccountSearchField";
+import { FormField } from "@/forms";
 import { z } from "zod";
 
 export type { Department } from "@/services/departments.service";
@@ -38,6 +40,7 @@ type DepartmentFormShape = {
   id: string;
   name: string;
   margin: string;
+  accountingAccount: string | null;
 };
 
 const departmentFormFields = defineFormFields<DepartmentFormShape>()([
@@ -73,6 +76,12 @@ const departmentFormFields = defineFormFields<DepartmentFormShape>()([
     placeholder: "32",
     helperText: "Porcentaje de margen (0-100)",
   },
+  {
+    name: "accountingAccount",
+    schema: z.string().nullable(),
+    label: "Cuenta contable",
+    when: () => false,
+  },
 ] as const);
 
 type DepartmentFormOutput = SchemaOutputFromFields<typeof departmentFormFields>;
@@ -86,12 +95,14 @@ function buildDepartmentFormDefaultValues(
       id: String(editing.id).padStart(2, "0"),
       name: editing.name,
       margin: String(editing.margin),
+      accountingAccount: editing.accountingAccount ?? null,
     };
   }
   return {
     id: nextId,
     name: "",
     margin: "",
+    accountingAccount: null,
   };
 }
 
@@ -160,6 +171,7 @@ export default function Departamentos() {
       const result = await updateDepartment(editingDepartment.id, {
         name: data.name,
         margin: data.margin,
+        accountingAccount: data.accountingAccount ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -171,6 +183,7 @@ export default function Departamentos() {
       const result = await createDepartment({
         name: data.name,
         margin: data.margin,
+        accountingAccount: data.accountingAccount ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -237,6 +250,15 @@ export default function Departamentos() {
       size: "xs",
       type: "percentage",
       align: "left",
+    },
+    {
+      id: "accountingAccount",
+      label: "Cuenta Contable",
+      size: "md",
+      format: (val, row) => {
+        if (!val) return "Sin asignar";
+        return row.accountingAccountName ? `${val} - ${row.accountingAccountName}` : (val as string);
+      },
     },
     {
       id: "groups",
@@ -324,8 +346,41 @@ export default function Departamentos() {
         confirmLabel={editingDepartment ? "Guardar" : "Crear"}
         maxWidth="sm"
         fullWidth
+        customFieldLayout
         validateOn="change"
-      />
+      >
+        {({ form }) => (
+          <Stack spacing={3}>
+            <FormField form={form} name="id" label="ID" disabled />
+            <FormField
+              form={form}
+              name="name"
+              label="Nombre de la categoría"
+              placeholder="Ej. Línea blanca"
+              required
+            />
+            <FormField
+              form={form}
+              name="margin"
+              label="Margen"
+              type="number"
+              placeholder="32"
+              helperText="Porcentaje de margen (0-100)"
+              required
+            />
+            <form.Field name="accountingAccount">
+              {(field) => (
+                <AccountingAccountSearchField
+                  label="Cuenta contable"
+                  placeholder="Buscar cuenta contable (contabilidad.cuentas)..."
+                  value={(field.state.value as string | null) ?? ""}
+                  onChange={(val) => field.handleChange((val || null) as any)}
+                />
+              )}
+            </form.Field>
+          </Stack>
+        )}
+      </ModalFormZod>
     </>
   );
 }

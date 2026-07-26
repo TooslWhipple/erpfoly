@@ -1,7 +1,7 @@
 "use client";
 
 import type { SyntheticEvent } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     Autocomplete,
     CircularProgress,
@@ -77,9 +77,12 @@ export function SatCatalogSearchField({
     const theme = useTheme();
 
     const [inputValue, setInputValue] = useState(value);
-    const [committedSelection, setCommittedSelection] = useState<SatCatalogOption | null>(null);
+    const [committedSelection, setCommittedSelection] = useState<SatCatalogOption | null>(
+        value ? { key: value, label: value } : null,
+    );
 
-    const debouncedQ = useDebouncedValue(inputValue.trim(), SEARCH_DEBOUNCE_MS);
+    const searchTerm = inputValue.trim() || value.trim();
+    const debouncedQ = useDebouncedValue(searchTerm, SEARCH_DEBOUNCE_MS);
 
     const { data: options = [], isFetching } = useQuery({
         queryKey: ["sat-catalog-search", type, debouncedQ],
@@ -100,6 +103,23 @@ export function SatCatalogSearchField({
         staleTime: 30_000,
         enabled: debouncedQ.length >= MIN_QUERY_LENGTH,
     });
+
+    useEffect(() => {
+        if (!value) {
+            setCommittedSelection(null);
+            setInputValue("");
+            return;
+        }
+
+        const matching = options.find((o) => o.key === value);
+        if (matching) {
+            setCommittedSelection(matching);
+            setInputValue(matching.label);
+        } else if (committedSelection == null || committedSelection.key !== value) {
+            setCommittedSelection({ key: value, label: value });
+            setInputValue((prev) => (prev === "" ? value : prev));
+        }
+    }, [value, options]);
 
     const handleInputChange = useCallback(
         (_: SyntheticEvent, newInputValue: string, reason: AutocompleteInputChangeReason) => {
@@ -133,7 +153,6 @@ export function SatCatalogSearchField({
 
     return (
         <Autocomplete<SatCatalogOption, false, false, false>
-            key={value || "empty"}
             fullWidth
             disabled={disabled}
             options={options}

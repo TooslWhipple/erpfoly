@@ -18,6 +18,13 @@ export interface BranchAddress {
   longitude?: number | null;
 }
 
+export interface BusinessSegmentItem {
+  id: number;
+  nombre: string;
+  codigo: string;
+  numero: number;
+}
+
 export interface Branch {
   id: number;
   name: string;
@@ -35,6 +42,8 @@ export interface Branch {
   latitude?: number | null;
   longitude?: number | null;
   geocodedAt?: string | null;
+  businessSegmentId?: number | null;
+  businessSegment?: BusinessSegmentItem | null;
 }
 
 export interface GetBranchesParams {
@@ -58,6 +67,7 @@ export interface CreateBranchPayload {
   internalNumber?: string;
   latitude?: number;
   longitude?: number;
+  businessSegmentId?: number | null;
 }
 
 export interface UpdateBranchPayload {
@@ -73,6 +83,7 @@ export interface UpdateBranchPayload {
   internalNumber?: string;
   latitude?: number;
   longitude?: number;
+  businessSegmentId?: number | null;
 }
 
 export interface GeocodeBranchPayload {
@@ -123,6 +134,18 @@ export async function deleteBranch(
   id: number
 ): Promise<ApiResult<ApiSuccessPayload>> {
   return del<ApiSuccessPayload>(`${BASE}/${id}`);
+}
+
+export async function getAvailableBusinessSegments(
+  currentBranchId?: number,
+  search?: string,
+): Promise<BusinessSegmentItem[]> {
+  const params: Record<string, string> = {};
+  if (currentBranchId) params.currentBranchId = String(currentBranchId);
+  if (search?.trim()) params.search = search.trim();
+  return unwrapOrThrow(
+    await get<BusinessSegmentItem[]>(`${BASE}/business-segments`, { params }),
+  );
 }
 
 export interface BranchCatalogItem {

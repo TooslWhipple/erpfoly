@@ -1,5 +1,6 @@
 import { Grid, Radio } from "@mui/material";
 import { FormTextField } from "@/components";
+import { AccountingAccountSearchField } from "@/components/AccountingAccountSearchField";
 import {
     FormCard,
     RadioGroupContainer,
@@ -137,6 +138,16 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
                             />
                         </StyledRadioGroup>
                     </RadioGroupContainer>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                    <AccountingAccountSearchField
+                        label="Cuenta contable"
+                        placeholder="Buscar cuenta contable (contabilidad.cuentas)..."
+                        value={values.accountingAccount}
+                        onChange={handleChange("accountingAccount")}
+                        error={Boolean(errors.accountingAccount)}
+                        helperText={errors.accountingAccount}
+                    />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
                     <FormTextField

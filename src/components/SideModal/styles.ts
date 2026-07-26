@@ -19,6 +19,7 @@ export const SideModalHeader = styled(Box)(({ theme }) => ({
 
 export const SideModalContent = styled(Stack)(({ theme }) => ({
   flex: 1,
+  minHeight: 0,
   width: "100%",
   backgroundColor: theme.palette.background.content,
   padding: theme.spacing(2, 3),

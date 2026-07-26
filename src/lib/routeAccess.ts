@@ -47,6 +47,7 @@ import {
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  INVOICE_REQUESTS_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -126,6 +127,8 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
+  { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+
   { pattern: /^\/atencion-cliente(\/.*)?$/, permission: CUSTOMER_SUPPORT_READ },
   { pattern: /^\/rutas(\/.*)?$/, permission: ROUTES_READ },
 
@@ -171,6 +174,7 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/inventario", requirement: { permission: INVENTORY_READ } },
   { path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
   { path: "/costeos", requirement: { permission: COSTEOS_READ } },
+  { path: "/facturas/solicitudes", requirement: { permission: INVOICE_REQUESTS_READ } },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },

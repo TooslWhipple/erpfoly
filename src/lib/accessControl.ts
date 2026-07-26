@@ -52,6 +52,8 @@ export const DEV_MOCK_USER: User = {
     "costeos:read",
     "costeos:create",
     "costeos:update",
+    "facturas.solicitudes.read",
+    "facturas.solicitudes.create",
     "routes:read",
     "catalog_products:read",
     "catalog_products:create",

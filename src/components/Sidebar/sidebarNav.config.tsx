@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown } from "lucide-react";
+import { BanknoteArrowDown, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
@@ -42,6 +42,7 @@ import {
   INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  INVOICE_REQUESTS_READ,
   ORDERS_READ,
   ROUTES_READ,
 } from "@/lib/permissions";
@@ -130,6 +131,19 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/atencion-cliente",
     icon: <HeartHandshake size={ICON_SIZE} />,
     requirement: { permission: CUSTOMER_SUPPORT_READ },
+  },
+  {
+    label: "Facturas",
+    path: "/facturas/solicitudes",
+    icon: <Receipt size={ICON_SIZE} />,
+    requirement: { permission: INVOICE_REQUESTS_READ },
+    subItems: [
+      {
+        label: "Solicitudes",
+        path: "/facturas/solicitudes",
+        requirement: { permission: INVOICE_REQUESTS_READ },
+      },
+    ],
   },
   { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} />, requirement: { permission: ROUTES_READ } },
   {

@@ -171,6 +171,10 @@ function getPrimaryActionLabel(
   }
 }
 
+function totalLabelsOf(items: ReceptionDetailItem[]): number {
+  return items.reduce((sum, item) => sum + item.received, 0);
+}
+
 function resolveConfirmVariant(
   status: ReceptionDetailStatus,
   extraLabels: number,
@@ -181,10 +185,13 @@ function resolveConfirmVariant(
   if (status === "pre_captured") {
     return "send_to_costing";
   }
-  if (extraLabels > 0) {
-    return "save_extra_labels";
-  }
   return "save_labels";
+}
+
+function getBaselineLabelsFromDetail(detail: ReceptionDetail): number {
+  return detail.printedLabelsCount > 0
+    ? detail.printedLabelsCount
+    : totalLabelsOf(detail.items);
 }
 
 function mapReceptionDetailStatus(
@@ -283,9 +290,7 @@ export function ReceptionForm({
           setArticles(detail.items.map(detailItemToReceptionArticle));
           setInvoices(detail.invoices.map(detailInvoiceToReceptionInvoice));
           setStatus(mapReceptionDetailStatus(detail.status));
-          setBaselineLabels(
-            detail.printedLabelsCount > 0 ? detail.printedLabelsCount : totalLabelsOf(detail.items),
-          );
+          setBaselineLabels(getBaselineLabelsFromDetail(detail));
           setSupplierNameFromReception(detail.supplier);
         })
         .catch((err) => {
@@ -395,8 +400,8 @@ export function ReceptionForm({
         }
         const detail = result.data;
         setCurrentReceptionId(detail.id);
-        setStatus("pre_captured");
-        setBaselineLabels(detail.printedLabelsCount || totalLabels);
+        setStatus(mapReceptionDetailStatus(detail.status));
+        setBaselineLabels(getBaselineLabelsFromDetail(detail));
         setActivePanel(null);
         await simulatePrintProgress();
         if (mode === "edit" && onSaved) {
@@ -428,9 +433,7 @@ export function ReceptionForm({
         }
         setStatus("in_costing");
         setActivePanel(null);
-        if (result.data?.costeoId) {
-          router.push(`/costeos/${result.data.costeoId}`);
-        }
+        router.push("/recepcion-mercancias");
         return;
       }
     } catch (err) {
@@ -671,8 +674,4 @@ export function ReceptionForm({
       />
     </PageContainer>
   );
-}
-
-function totalLabelsOf(items: ReceptionDetailItem[]): number {
-  return items.reduce((sum, item) => sum + item.received, 0);
 }

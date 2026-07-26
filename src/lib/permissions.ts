@@ -26,6 +26,7 @@ export type PermissionModule =
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
+  | "facturas.solicitudes"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
@@ -153,6 +154,13 @@ export const COSTEOS_CREATE = COSTEOS_PERMISSIONS.create;
 export const COSTEOS_READ = COSTEOS_PERMISSIONS.read;
 export const COSTEOS_UPDATE = COSTEOS_PERMISSIONS.update;
 export const COSTEOS_DELETE = COSTEOS_PERMISSIONS.delete;
+
+// Invoice requests
+export const INVOICE_REQUESTS_PERMISSIONS = createCrudPermissions("facturas.solicitudes");
+export const INVOICE_REQUESTS_CREATE = INVOICE_REQUESTS_PERMISSIONS.create;
+export const INVOICE_REQUESTS_READ = INVOICE_REQUESTS_PERMISSIONS.read;
+export const INVOICE_REQUESTS_UPDATE = INVOICE_REQUESTS_PERMISSIONS.update;
+export const INVOICE_REQUESTS_DELETE = INVOICE_REQUESTS_PERMISSIONS.delete;
 
 // Customer support
 export const CUSTOMER_SUPPORT_PERMISSIONS = createCrudPermissions("atencion_cliente");

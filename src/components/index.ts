@@ -36,6 +36,8 @@ export { ProductPromotionModal } from "./ProductPromotionModal";
 export type { ProductPromotionModalProps } from "./ProductPromotionModal";
 export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
 export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues } from "./AddDamagedGoodsModal";
+export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
+export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

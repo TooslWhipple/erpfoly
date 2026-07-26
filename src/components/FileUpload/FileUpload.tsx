@@ -21,22 +21,51 @@ export interface FileUploadProps {
   accept?: string[];
   maxFileSizeBytes?: number;
   placeholder?: string;
+  /** Secondary hint under the placeholder. Defaults to images/PDF copy. */
+  hint?: string;
   fileLabel?: string;
   disabled?: boolean;
   error?: string;
+  /** Makes the upload area fill the full height of its parent container. */
+  fullHeight?: boolean;
+  style?: React.CSSProperties;
 }
 
 const DEFAULT_ACCEPT = ["image/*", "image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
 const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const DEFAULT_HINT = "Imagenes y PDF. Max {maxMb} MB.";
+
+const MIME_EXTENSIONS: Record<string, string[]> = {
+  "application/pdf": [".pdf"],
+  "application/xml": [".xml"],
+  "text/xml": [".xml"],
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/gif": [".gif"],
+  "image/webp": [".webp"],
+};
+
+function getFileExtension(fileName: string): string {
+  const index = fileName.lastIndexOf(".");
+  return index >= 0 ? fileName.slice(index).toLowerCase() : "";
+}
 
 function isAccepted(file: File, accept: string[]): boolean {
   const mime = file.type;
+  const extension = getFileExtension(file.name);
+
   for (const pattern of accept) {
+    if (pattern.startsWith(".")) {
+      if (extension === pattern.toLowerCase()) return true;
+      continue;
+    }
     if (pattern.endsWith("/*")) {
       const [category] = pattern.split("/");
-      if (mime.startsWith(category + "/")) return true;
+      if (mime.startsWith(`${category}/`)) return true;
+      continue;
     }
     if (pattern === mime) return true;
+    if (MIME_EXTENSIONS[pattern]?.includes(extension)) return true;
   }
   return false;
 }
@@ -47,12 +76,17 @@ export function FileUpload({
   accept = DEFAULT_ACCEPT,
   maxFileSizeBytes = DEFAULT_MAX_SIZE,
   placeholder = "Drag and drop files here or click to browse",
+  hint,
   fileLabel,
   disabled = false,
   error,
+  fullHeight = false,
+  style,
 }: FileUploadProps) {
   const theme = useTheme();
   const inputId = useId();
+  const maxMb = Math.round(maxFileSizeBytes / 1024 / 1024);
+  const resolvedHint = (hint ?? DEFAULT_HINT).replace("{maxMb}", String(maxMb));
 
   const [isDragActive, setIsDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -62,19 +96,19 @@ export function FileUpload({
       const valid: File[] = [];
       for (const file of files) {
         if (!isAccepted(file, accept)) {
-          return { valid: [], error: `Type not allowed: ${file.name}. Use images or PDF.` };
+          return { valid: [], error: `Tipo no permitido: ${file.name}.` };
         }
         if (file.size > maxFileSizeBytes) {
           return {
             valid: [],
-            error: `File too large: ${file.name}. Max ${Math.round(maxFileSizeBytes / 1024 / 1024)} MB.`,
+            error: `Archivo demasiado grande: ${file.name}. Máximo ${maxMb} MB.`,
           };
         }
         valid.push(file);
       }
       return { valid };
     },
-    [accept, maxFileSizeBytes]
+    [accept, maxFileSizeBytes, maxMb]
   );
 
   const addFiles = useCallback(
@@ -158,11 +192,20 @@ export function FileUpload({
   const currentFile = hasFile ? value[0] : null;
 
   return (
-    <Stack spacing={1.5}>
+    <Stack
+      spacing={1.5}
+      style={style}
+      sx={
+        fullHeight
+          ? { height: "100%", flex: 1, minHeight: 0 }
+          : undefined
+      }
+    >
       {!hasFile && (
         <DropZoneRoot
           isDragActive={isDragActive}
           isError={!!displayError}
+          fullHeight={fullHeight}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -179,7 +222,7 @@ export function FileUpload({
           <Stack alignItems="center" spacing={0.5}>
             <Upload size={16} color={theme.palette.primary.main} strokeWidth={2} />
             <Typography variant="body1" fontWeight={500} color="primary.main">{placeholder}</Typography>
-            <Typography variant="body1" fontWeight={400} color="primary.main">Imagenes y PDF. Max {Math.round(maxFileSizeBytes / 1024 / 1024)} MB.</Typography>
+            <Typography variant="body1" fontWeight={400} color="primary.main">{resolvedHint}</Typography>
           </Stack>
         </DropZoneRoot>
       )}

@@ -31,7 +31,7 @@ type DisplayStatus =
   "pending" | "partially_delivered" | "delivered" | "cancelled";
 function getStatusLabel(status: string): string {
   const labels: Record<DisplayStatus, string> = {
-    pending: "Por recibir",
+    pending: "Solicitado",
     partially_delivered: "En curso",
     delivered: "Recibido",
     cancelled: "Cancelado",

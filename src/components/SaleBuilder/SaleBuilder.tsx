@@ -64,6 +64,7 @@ import {
   getSaleDetail,
   invalidateSaleDiscount,
 } from "@/services/ventas.service";
+import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -577,6 +578,23 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
 
       const { id: saleId } = await ensureSaleSynced();
 
+      const billingPayload: SaleInvoiceBillingPayload | undefined =
+        wantsInvoice && billingConfirmed
+          ? {
+              rfc: billing.values.rfc,
+              business_name: billing.values.businessName,
+              tax_regime_id: billing.values.taxRegimeId,
+              cfdi_use_id: billing.values.cfdiUseId,
+              neighborhood_code: billing.values.fiscalNeighborhoodFullCode,
+              street: billing.values.fiscalStreet,
+              external_number: billing.values.fiscalExternalNumber,
+              postal_code: billing.values.fiscalPostalCode,
+              email: billing.values.sendInvoiceByEmail
+                ? billing.values.invoiceEmail
+                : undefined,
+            }
+          : undefined;
+
       if (deliveryType === "delivery") {
         const clientPrimaryAddress =
           selectedClient?.addresses?.find((a) => a.isPrimary) ??
@@ -608,6 +626,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           down_payment: enganche,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          ...billingPayload,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
         return creditRes.data!;
@@ -640,7 +659,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       });
       if (paymentRes.error) throw new Error(paymentRes.error.message);
 
-      const confirmRes = await confirmSalePayment(saleId);
+      const confirmRes = await confirmSalePayment(saleId, billingPayload);
       if (confirmRes.error) throw new Error(confirmRes.error.message);
       return confirmRes.data!;
     },

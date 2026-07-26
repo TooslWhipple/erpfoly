@@ -19,161 +19,59 @@ import {
   MERCHANDISE_RECEPTION_READ,
 } from "@/lib/permissions";
 import { Stack } from "@mui/material";
-interface GetReceptionsParams {
-  page: number;
-  limit: number;
-  search?: string;
-  status?: "all" | ReceptionStatus;
-}
+import {
+  getReceptions as fetchReceptions,
+  type GetReceptionsParams,
+  type ReceptionListItem,
+} from "@/services/recepcion-mercancias.service";
+
 interface GetReceptionsResponse {
-  data: MerchandiseReception[];
+  data: ReceptionListItem[];
   total: number;
   page: number;
   limit: number;
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const DUMMY_RECEPTIONS: MerchandiseReception[] = [
-  {
-    id: 1,
-    warehouse: "Bodega",
-    orderNumber: "12345",
-    date: "01, Junio de 2025",
-    supplier: "Mirage - Norage S.A. De C.V.",
-    total: 32221.9,
-    status: "pre_captured",
-    receptionDate: "08, Junio de 2025",
-  },
-  {
-    id: 2,
-    warehouse: "Bodega",
-    orderNumber: "12345",
-    date: "01, Junio de 2025",
-    supplier: "Mirage - Norage S.A. De C.V.",
-    total: 32221.9,
-    status: "pre_captured",
-    receptionDate: "08, Junio de 2025",
-  },
-  {
-    id: 3,
-    warehouse: "Bodega Central",
-    orderNumber: "12346",
-    date: "28, Mayo de 2025",
-    supplier: "Muebles del Norte S.A.",
-    total: 45890.5,
-    status: "captured",
-    receptionDate: "05, Junio de 2025",
-  },
-  {
-    id: 4,
-    warehouse: "Bodega Altamira",
-    orderNumber: "12347",
-    date: "25, Mayo de 2025",
-    supplier: "Electrodomésticos Premium",
-    total: 78432.0,
-    status: "captured",
-    receptionDate: "02, Junio de 2025",
-  },
-  {
-    id: 5,
-    warehouse: "Bodega",
-    orderNumber: "12348",
-    date: "20, Mayo de 2025",
-    supplier: "Distribuidora Hogar Feliz",
-    total: 15678.25,
-    status: "costed",
-    receptionDate: "28, Mayo de 2025",
-  },
-  {
-    id: 6,
-    warehouse: "Bodega Central",
-    orderNumber: "12349",
-    date: "18, Mayo de 2025",
-    supplier: "Colchones y Más S.A.",
-    total: 92150.0,
-    status: "costed",
-    receptionDate: "25, Mayo de 2025",
-  },
-  {
-    id: 7,
-    warehouse: "Bodega Tampico",
-    orderNumber: "12350",
-    date: "15, Mayo de 2025",
-    supplier: "Línea Blanca Nacional",
-    total: 125890.75,
-    status: "costed",
-    receptionDate: "22, Mayo de 2025",
-  },
-  {
-    id: 8,
-    warehouse: "Bodega",
-    orderNumber: "12351",
-    date: "10, Mayo de 2025",
-    supplier: "Mirage - Norage S.A. De C.V.",
-    total: 54320.0,
-    status: "costed",
-    receptionDate: "18, Mayo de 2025",
-  },
-  {
-    id: 9,
-    warehouse: "Bodega Veracruz",
-    orderNumber: "12352",
-    date: "08, Mayo de 2025",
-    supplier: "Mueblería del Golfo",
-    total: 38765.5,
-    status: "costed",
-    receptionDate: "15, Mayo de 2025",
-  },
-  {
-    id: 10,
-    warehouse: "Bodega Central",
-    orderNumber: "12353",
-    date: "05, Mayo de 2025",
-    supplier: "Electrodomésticos Premium",
-    total: 67890.25,
-    status: "costed",
-    receptionDate: "12, Mayo de 2025",
-  },
-];
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getReceptions(
-  params: GetReceptionsParams,
-): Promise<GetReceptionsResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  let filteredData = [...DUMMY_RECEPTIONS];
-
-  // Filter by status
-  if (params.status && params.status !== "all") {
-    filteredData = filteredData.filter((item) => item.status === params.status);
-  }
-
-  // Filter by search
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter(
-      (item) =>
-        item.orderNumber.toLowerCase().includes(searchLower) ||
-        item.warehouse.toLowerCase().includes(searchLower) ||
-        item.supplier.toLowerCase().includes(searchLower),
-    );
-  }
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
+function receptionListItemToUi(item: ReceptionListItem): MerchandiseReception {
   return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
+    id: item.id,
+    warehouse: item.warehouse,
+    orderNumber: item.orderNumber,
+    orderCount: item.orderCount,
+    date: item.date,
+    supplier: item.supplier,
+    status: normalizeReceptionStatus(item.status),
+    printedLabelsCount: item.printedLabelsCount,
+    supplierId: item.supplierId,
+    branchId: item.branchId,
+    costeoId: item.costeoId,
+    invoices: [],
   };
+}
+
+function normalizeReceptionStatus(
+  status: ReceptionListItem["status"],
+): ReceptionStatus {
+  switch (status) {
+    case "draft":
+    case "cancelled":
+      return "pre_captured";
+    case "in_costing":
+      return "captured";
+    case "pre_captured":
+    case "costed":
+      return status;
+    default:
+      return "pre_captured";
+  }
+}
+
+function toApiStatusFilter(
+  status: "all" | ReceptionStatus,
+): "all" | ReceptionListItem["status"] {
+  if (status === "all") return "all";
+  if (status === "captured") return "in_costing";
+  return status;
 }
 
 // ============================================================================
@@ -229,17 +127,31 @@ export default function RecepcionMercancias() {
   }, [activeTab]);
 
   // Fetch receptions
-  const fetchReceptions = useCallback(async () => {
+  const fetchPage = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getReceptions({
-        page,
+      const statusFilter = toApiStatusFilter(getStatusFilter());
+      const params: GetReceptionsParams = {
+        page: page + 1,
         limit: rowsPerPage,
         search: searchValue,
-        status: getStatusFilter(),
-      });
-      setReceptions(response.data);
-      setTotalRows(response.total);
+        status: statusFilter,
+      };
+      const response = await fetchReceptions(params);
+      if (response.error) {
+        console.error("[RecepcionMercancias] Error fetching:", response.error);
+        setReceptions([]);
+        setTotalRows(0);
+        return;
+      }
+      const payload: GetReceptionsResponse = {
+        data: response.data?.rows ?? [],
+        total: response.data?.total ?? 0,
+        page: response.data?.page ?? page + 1,
+        limit: response.data?.limit ?? rowsPerPage,
+      };
+      setReceptions(payload.data.map(receptionListItemToUi));
+      setTotalRows(payload.total);
     } catch (err) {
       console.error("[RecepcionMercancias] Error fetching:", err);
     } finally {
@@ -247,8 +159,8 @@ export default function RecepcionMercancias() {
     }
   }, [page, rowsPerPage, searchValue, getStatusFilter]);
   useEffect(() => {
-    fetchReceptions();
-  }, [fetchReceptions]);
+    fetchPage();
+  }, [fetchPage]);
   useEffect(() => {
     setPage(0);
   }, [searchValue, activeTab]);
@@ -268,12 +180,15 @@ export default function RecepcionMercancias() {
       setModalOpen(false);
     }
   };
-  const handleConfirmOrders = async (orderIds: string[]) => {
+  const handleConfirmOrders = async (supplierId: number, supplierName: string) => {
     setSubmitting(true);
     try {
-      // Close modal and redirect to new reception page
       setModalOpen(false);
-      router.push(`/recepcion-mercancias/nuevo?orderIds=${orderIds.join(",")}`);
+      const params = new URLSearchParams({ supplierId: String(supplierId) });
+      if (supplierName) {
+        params.set("supplierName", supplierName);
+      }
+      router.push(`/recepcion-mercancias/nuevo?${params.toString()}`);
     } catch (err) {
       console.error("[RecepcionMercancias] Error creating receptions:", err);
     } finally {
@@ -299,8 +214,8 @@ export default function RecepcionMercancias() {
       size: "md",
     },
     {
-      id: "orderNumber",
-      label: "Pedido",
+      id: "orderCount",
+      label: "Pedidos",
       size: "sm",
     },
     {
@@ -315,13 +230,6 @@ export default function RecepcionMercancias() {
       truncate: true,
     },
     {
-      id: "total",
-      label: "Total",
-      type: "currency",
-      size: "md",
-      align: "left",
-    },
-    {
       id: "status",
       label: "Estatus",
       size: "md",
@@ -332,11 +240,6 @@ export default function RecepcionMercancias() {
           statusType={value as ReceptionStatus}
         />
       ),
-    },
-    {
-      id: "receptionDate",
-      label: "Fecha de recepción",
-      size: "lg",
     },
   ];
 

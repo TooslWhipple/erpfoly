@@ -40,7 +40,7 @@ function mapBackendStatus(status: string): DisplayStatus {
 }
 function getStatusLabel(status: DisplayStatus): string {
   const labels: Record<DisplayStatus, string> = {
-    pending: "Por recibir",
+    pending: "Solicitado",
     in_progress: "En curso",
     received: "Recibido",
     cancelled: "Cancelado",

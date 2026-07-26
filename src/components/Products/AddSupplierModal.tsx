@@ -8,6 +8,8 @@ import {
     InputAdornment,
     Typography,
     Button,
+    CircularProgress,
+    Box,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
@@ -31,6 +33,8 @@ interface AddSupplierModalProps {
     onAddSupplier: (supplierId: number) => Promise<void>;
     onNewSupplier?: () => void;
     loading?: boolean;
+    /** True while the supplier catalog is still loading (distinct from add-in-progress). */
+    catalogLoading?: boolean;
     availableSuppliers: SupplierCatalogItem[];
     existingSupplierIds?: number[];
 }
@@ -41,6 +45,7 @@ export function AddSupplierModal({
     onAddSupplier,
     onNewSupplier,
     loading = false,
+    catalogLoading = false,
     availableSuppliers,
     existingSupplierIds = [],
 }: AddSupplierModalProps) {
@@ -115,7 +120,25 @@ export function AddSupplierModal({
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredSuppliers.length === 0 ? (
+                        {catalogLoading && availableSuppliers.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                                    <Box
+                                        sx={{
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            gap: 1.5,
+                                        }}
+                                    >
+                                        <CircularProgress size={24} />
+                                        <Typography variant="body2" color="text.secondary">
+                                            Cargando proveedores…
+                                        </Typography>
+                                    </Box>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredSuppliers.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">

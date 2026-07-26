@@ -25,6 +25,7 @@ export type PermissionModule =
   | "inventario.mercancia_danada"
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
+  | "costeos"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
@@ -145,6 +146,13 @@ export const MERCHANDISE_RECEPTION_CREATE = MERCHANDISE_RECEPTION_PERMISSIONS.cr
 export const MERCHANDISE_RECEPTION_READ = MERCHANDISE_RECEPTION_PERMISSIONS.read;
 export const MERCHANDISE_RECEPTION_UPDATE = MERCHANDISE_RECEPTION_PERMISSIONS.update;
 export const MERCHANDISE_RECEPTION_DELETE = MERCHANDISE_RECEPTION_PERMISSIONS.delete;
+
+// Costeos
+export const COSTEOS_PERMISSIONS = createCrudPermissions("costeos");
+export const COSTEOS_CREATE = COSTEOS_PERMISSIONS.create;
+export const COSTEOS_READ = COSTEOS_PERMISSIONS.read;
+export const COSTEOS_UPDATE = COSTEOS_PERMISSIONS.update;
+export const COSTEOS_DELETE = COSTEOS_PERMISSIONS.delete;
 
 // Customer support
 export const CUSTOMER_SUPPORT_PERMISSIONS = createCrudPermissions("atencion_cliente");
@@ -303,6 +311,7 @@ export const PERMISSIONS_BY_MODULE = {
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),
+  costeos: Object.values(COSTEOS_PERMISSIONS),
   customerSupport: {
     customerSupport: Object.values(CUSTOMER_SUPPORT_PERMISSIONS),
     invoices: Object.values(CUSTOMER_SUPPORT_INVOICES_PERMISSIONS),

@@ -107,7 +107,7 @@ export default function TraspasosPage() {
 
     const tabs: TabOption[] = [
         { label: "Todos", value: ALL_TAB },
-        { label: "Pendientes", value: PENDING_TAB },
+        { label: "Solicitados", value: PENDING_TAB },
         { label: "Agendados", value: SCHEDULED_TAB },
         { label: "En curso", value: IN_PROGRESS_TAB },
         { label: "Entregados", value: DELIVERED_TAB },

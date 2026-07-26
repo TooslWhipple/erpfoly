@@ -1,7 +1,6 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Box,
   Button,
   InputAdornment,
   Stack,
@@ -14,6 +13,8 @@ import {
 } from "@mui/material";
 import { FormTextField } from "@/components";
 import { AddSupplierModal } from "@/components/Products/AddSupplierModal";
+import { usePromotionSuppliersCatalog } from "@/hooks/usePromotionSuppliersCatalog";
+import { getApiErrorMessage } from "@/lib/axios";
 import {
   FormCard,
   SupplierTableContainer,
@@ -45,25 +46,34 @@ function supplierDisplayName(
 interface SuppliersTabProps {
   formState: PromotionFormState;
   onFieldChange: (field: keyof PromotionFormState, value: unknown) => void;
-  supplierCatalog: SupplierCatalogItem[];
-  suppliersCatalogLoading: boolean;
-  suppliersCatalogError: string | null;
+  /** When false, catalog fetching is paused (tab hidden). */
+  isActive?: boolean;
 }
 
 export function SuppliersTab({
   formState,
   onFieldChange,
-  supplierCatalog,
-  suppliersCatalogLoading,
-  suppliersCatalogError,
+  isActive = true,
 }: SuppliersTabProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const catalog: SupplierCatalogItem[] = Array.isArray(supplierCatalog)
-    ? supplierCatalog
-    : [];
+  const suppliersCatalogQuery = usePromotionSuppliersCatalog(isActive);
+  const catalog = suppliersCatalogQuery.data ?? [];
+  const suppliersCatalogLoading =
+    suppliersCatalogQuery.isLoading ||
+    (suppliersCatalogQuery.isFetching && catalog.length === 0);
+  const suppliersCatalogError = suppliersCatalogQuery.isError
+    ? getApiErrorMessage(suppliersCatalogQuery.error)
+    : null;
+
+  useEffect(() => {
+    if (!modalOpen) {
+      return;
+    }
+    void suppliersCatalogQuery.refetch();
+  }, [modalOpen, suppliersCatalogQuery.refetch]);
 
   const filteredSuppliers = useMemo(() => {
     const suppliers = formState.suppliers || [];
@@ -149,74 +159,78 @@ export function SuppliersTab({
               startIcon={<PlusIcon size={12} />}
               sx={{ minWidth: 128 }}
               onClick={handleOpenModal}
-              disabled={suppliersCatalogLoading || Boolean(suppliersCatalogError)}
             >
               Agregar
             </Button>
           </Stack>
         </Stack>
 
-        {suppliersCatalogLoading ?
+        {suppliersCatalogError ? (
+          <Alert severity="error">{suppliersCatalogError}</Alert>
+        ) : null}
+
+        {suppliersCatalogLoading ? (
           <div
-            style={{ paddingTop: "32px", display: "flex", justifyContent: "center" }}>
+            style={{ paddingTop: "32px", display: "flex", justifyContent: "center" }}
+          >
             <CircularProgress size={28} />
           </div>
-          : formState.suppliers && formState.suppliers.length > 0 ?
-            <>
-              <Typography variant="body2" color="text.secondary">
-                {formState.suppliers.length}
-                {formState.suppliers.length > 1
-                  ? " proveedores agregados"
-                  : " proveedor agregado"}
-              </Typography>
-              <SupplierTableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <SupplierTableHeader>ID</SupplierTableHeader>
-                      <SupplierTableHeader>Proveedor</SupplierTableHeader>
-                      <SupplierTableHeader align="right"></SupplierTableHeader>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredSuppliers.length === 0 ? (
-                      <TableRow>
-                        <SupplierTableCell
-                          colSpan={3}
-                          align="center"
-                          sx={{ py: 3, color: "text.secondary" }}
-                        >
-                          No se encontraron proveedores
-                        </SupplierTableCell>
-                      </TableRow>
-                    ) : (
-                      filteredSuppliers.map((supplier) => (
-                        <SupplierTableRow key={supplier.id}>
-                          <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
-                          <SupplierTableCell>
-                            {supplierDisplayName(supplier, catalog)}
-                          </SupplierTableCell>
-                          <SupplierTableCell align="right">
-                            <SupplierRemoveIconButton
-                              size="small"
-                              aria-label="Quitar proveedor"
-                              onClick={() => handleRemoveSupplier(supplier.id)}
-                            >
-                              <Minus size={16} strokeWidth={2} />
-                            </SupplierRemoveIconButton>
-                          </SupplierTableCell>
-                        </SupplierTableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </SupplierTableContainer>
-            </>
-            :
+        ) : formState.suppliers && formState.suppliers.length > 0 ? (
+          <>
             <Typography variant="body2" color="text.secondary">
-              No hay proveedores agregados
+              {formState.suppliers.length}
+              {formState.suppliers.length > 1
+                ? " proveedores agregados"
+                : " proveedor agregado"}
             </Typography>
-        }
+            <SupplierTableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <SupplierTableHeader>ID</SupplierTableHeader>
+                    <SupplierTableHeader>Proveedor</SupplierTableHeader>
+                    <SupplierTableHeader align="right"></SupplierTableHeader>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredSuppliers.length === 0 ? (
+                    <TableRow>
+                      <SupplierTableCell
+                        colSpan={3}
+                        align="center"
+                        sx={{ py: 3, color: "text.secondary" }}
+                      >
+                        No se encontraron proveedores
+                      </SupplierTableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSuppliers.map((supplier) => (
+                      <SupplierTableRow key={supplier.id}>
+                        <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
+                        <SupplierTableCell>
+                          {supplierDisplayName(supplier, catalog)}
+                        </SupplierTableCell>
+                        <SupplierTableCell align="right">
+                          <SupplierRemoveIconButton
+                            size="small"
+                            aria-label="Quitar proveedor"
+                            onClick={() => handleRemoveSupplier(supplier.id)}
+                          >
+                            <Minus size={16} strokeWidth={2} />
+                          </SupplierRemoveIconButton>
+                        </SupplierTableCell>
+                      </SupplierTableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </SupplierTableContainer>
+          </>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            No hay proveedores agregados
+          </Typography>
+        )}
       </FormCard>
 
       <AddSupplierModal
@@ -225,6 +239,7 @@ export function SuppliersTab({
         onAddSupplier={handleAddSupplier}
         onNewSupplier={handleNewSupplier}
         loading={saving}
+        catalogLoading={suppliersCatalogLoading}
         availableSuppliers={catalog}
         existingSupplierIds={existingSupplierIds}
       />

@@ -18,7 +18,7 @@ export function mapBranchOrderStatus(status: string): BranchOrderStatus {
 
 export function getBranchOrderStatusLabel(status: BranchOrderStatus): string {
     const labels: Record<BranchOrderStatus, string> = {
-        pending: "Pendiente",
+        pending: "Solicitado",
         scheduled: "Agendado",
         partially_delivered: "En curso",
         delivered: "Entregado",

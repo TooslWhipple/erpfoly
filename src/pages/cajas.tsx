@@ -19,6 +19,7 @@ import {
   CashWithdrawalModal,
   type CutType,
   type Denomination,
+  type CashSearchMode,
 } from "@/components/CashRegister";
 import {
   type CashRegisterStatus,
@@ -45,6 +46,7 @@ export default function Cajas() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isCutting, setIsCutting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<CashSearchMode>("abonos");
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
   const [initialFund, setInitialFund] = useState("1500");
@@ -264,7 +266,7 @@ export default function Cajas() {
       showError("La caja debe estar abierta para buscar clientes.");
       return;
     }
-    router.push(buildCashRegisterSearchUrl(query));
+    router.push(buildCashRegisterSearchUrl(query, searchMode));
   };
   if (isLoading) {
     return (
@@ -345,6 +347,8 @@ export default function Cajas() {
             onWithdrawal={handleWithdrawal}
             onViewAllHistory={handleViewAllHistory}
             movements={movements}
+            mode={searchMode}
+            onModeChange={setSearchMode}
           />
         )}
       </Stack>

@@ -1,5 +1,6 @@
 import { CashRegisterStatus } from "@/styles/cajas.styles";
 import type { CashMovementType, CashMovementPaymentForm } from "@/lib/cashMovement.constants";
+import type { SaleListItem } from "@/types/ventas.types";
 
 export interface CashRegisterState {
   id: string;
@@ -9,6 +10,7 @@ export interface CashRegisterState {
   exchangeRate: number;
   currentCash: number;
   limit: number;
+  branchId: number;
 }
 
 export interface CashMovement {
@@ -44,11 +46,15 @@ export interface ClientSearchResult {
   address: string;
 }
 
+export type CashSearchMode = "abonos" | "ventas";
+
 export interface CashRegisterSearchBarProps {
   searchQuery: string;
   isSearching?: boolean;
   onSearchQueryChange: (value: string) => void;
   onSearch?: () => void;
+  mode: CashSearchMode;
+  onModeChange: (mode: CashSearchMode) => void;
 }
 
 export interface ClientSearchResultsProps {
@@ -57,11 +63,15 @@ export interface ClientSearchResultsProps {
   cashRegisterStatus: CashRegisterStatus;
   searchQuery: string;
   results: ClientSearchResult[];
+  saleResults: SaleListItem[];
   isSearching?: boolean;
   onSearchQueryChange: (value: string) => void;
   onSearch?: () => void;
   onBack: () => void;
   onRowClick: (client: ClientSearchResult) => void;
+  onSaleRowClick: (sale: SaleListItem) => void;
+  mode: CashSearchMode;
+  onModeChange: (mode: CashSearchMode) => void;
 }
 
 export interface CashRegisterHistoryProps {
@@ -84,4 +94,6 @@ export interface CashRegisterDashboardProps {
   onWithdrawal: () => void;
   onViewAllHistory: () => void;
   movements?: CashMovement[];
+  mode: CashSearchMode;
+  onModeChange: (mode: CashSearchMode) => void;
 }

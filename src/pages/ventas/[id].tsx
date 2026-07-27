@@ -43,6 +43,7 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
+import { SaleBuilder } from "@/components/SaleBuilder";
 
 function layawayStatusMeta(status: string) {
   switch (status) {
@@ -301,6 +302,24 @@ export default function VentaDetalle() {
       <Box sx={{ p: 3 }}>
         <Alert severity="error">No se pudo cargar la venta.</Alert>
       </Box>
+    );
+  }
+
+  // Venta ya registrada por el vendedor (contado/crédito) o apartado activo
+  // aún en cobro: el cajero la completa en SaleBuilder modo cajero (carrito
+  // bloqueado, solo la sección de cobro es interactiva) en vez de la vista
+  // de solo-detalle de abajo.
+  const isPendingCashierWork =
+    sale.status === "PENDING_CASHIER" ||
+    (sale.status === "PENDING_PAYMENT" && sale.layaway != null);
+
+  if (isPendingCashierWork) {
+    return (
+      <SaleBuilder
+        resumeSaleId={saleId}
+        onExit={() => void router.push("/ventas")}
+        mode="cajero"
+      />
     );
   }
 

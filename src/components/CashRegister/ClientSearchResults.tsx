@@ -5,6 +5,11 @@ import type { DataTableColumn, StatusChipVariant } from "@/components";
 import { BackButton } from "@/components/Breadcrumbs/Breadcrumbs.styles";
 import { CashRegisterSearchBar } from "./CashRegisterSearchBar";
 import type { ClientSearchResult, ClientSearchResultsProps } from "./types";
+import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
+import {
+  SALE_STATUS_CHIP_LABELS,
+  SALE_STATUS_CHIP_VARIANTS,
+} from "@/utils/saleStatus";
 
 const PAYMENT_STATUS_LABELS: Record<ClientSearchResult["paymentStatus"], string> = {
   overdue: "Retrasado",
@@ -15,6 +20,40 @@ const PAYMENT_STATUS_VARIANTS: Record<ClientSearchResult["paymentStatus"], Statu
   overdue: "error",
   current: "default",
 };
+
+const SALE_PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
+  CREDIT: "Crédito",
+  CASH: "Contado",
+  LAYAWAY: "Apartado",
+};
+
+const saleColumns: DataTableColumn<SaleListItem>[] = [
+  {
+    id: "folio",
+    label: "Folio",
+    type: "text",
+  },
+  {
+    id: "status",
+    label: "Estatus",
+    type: "chip",
+    chipLabelMap: SALE_STATUS_CHIP_LABELS,
+    chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
+  },
+  {
+    id: "clientName",
+    label: "Cliente",
+    type: "text",
+    format: (value) => (value == null || value === "" ? "—" : String(value)),
+  },
+  {
+    id: "paymentType",
+    label: "Tipo",
+    type: "text",
+    format: (value) =>
+      SALE_PAYMENT_TYPE_LABELS[value as SalePaymentType] ?? String(value),
+  },
+];
 
 const columns: DataTableColumn<ClientSearchResult>[] = [
   {
@@ -61,12 +100,17 @@ export function ClientSearchResults({
   cashRegisterName,
   searchQuery,
   results,
+  saleResults,
   isSearching = false,
   onSearchQueryChange,
   onSearch,
   onBack,
   onRowClick,
+  onSaleRowClick,
+  mode,
+  onModeChange,
 }: ClientSearchResultsProps) {
+  const resultCount = mode === "ventas" ? saleResults.length : results.length;
   return (
     <Stack spacing={3}>
       <Stack direction="row" spacing={2} alignItems="center">
@@ -83,18 +127,31 @@ export function ClientSearchResults({
         isSearching={isSearching}
         onSearchQueryChange={onSearchQueryChange}
         onSearch={onSearch}
+        mode={mode}
+        onModeChange={onModeChange}
       />
 
-      <Typography variant="body2" color="text.secondary">{results.length} {results.length === 1 ? "resultado" : "resultados"}</Typography>
+      <Typography variant="body2" color="text.secondary">{resultCount} {resultCount === 1 ? "resultado" : "resultados"}</Typography>
 
-      <DataTable
-        columns={columns}
-        rows={results}
-        rowKey="id"
-        loading={isSearching}
-        onRowClick={onRowClick}
-        emptyMessage="No se encontraron clientes"
-      />
+      {mode === "ventas" ? (
+        <DataTable
+          columns={saleColumns}
+          rows={saleResults}
+          rowKey="id"
+          loading={isSearching}
+          onRowClick={onSaleRowClick}
+          emptyMessage="No se encontraron ventas pendientes de cobro"
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={results}
+          rowKey="id"
+          loading={isSearching}
+          onRowClick={onRowClick}
+          emptyMessage="No se encontraron clientes"
+        />
+      )}
     </Stack>
   );
 }

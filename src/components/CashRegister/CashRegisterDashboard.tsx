@@ -29,6 +29,8 @@ export function CashRegisterDashboard({
     onWithdrawal,
     onViewAllHistory,
     movements = [],
+    mode,
+    onModeChange,
 }: CashRegisterDashboardProps) {
     const progressPercentage = (cashRegister.currentCash / cashRegister.limit) * 100;
     const visibleMovements = movements.slice(0, DASHBOARD_MOVEMENTS_LIMIT);
@@ -41,6 +43,8 @@ export function CashRegisterDashboard({
                 isSearching={isSearching}
                 onSearchQueryChange={onSearchQueryChange}
                 onSearch={onSearch}
+                mode={mode}
+                onModeChange={onModeChange}
             />
 
             <Stack spacing={0.4}>

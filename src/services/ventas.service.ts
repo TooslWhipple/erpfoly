@@ -269,6 +269,18 @@ export async function confirmCreditSale(
   );
 }
 
+export async function registerSale(
+  saleId: number,
+): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
+  return post<{ id: number; folio: string; status: string }>(
+    `${BASE}/sales/${saleId}/register`,
+  );
+}
+
+export async function cancelSale(saleId: number): Promise<ApiResult<unknown>> {
+  return del<unknown>(`${BASE}/sales/${saleId}`);
+}
+
 export async function getSaleDetail(
   saleId: number,
 ): Promise<ApiResult<SaleDetail>> {

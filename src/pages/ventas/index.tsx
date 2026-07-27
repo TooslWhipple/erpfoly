@@ -3,10 +3,10 @@ import { useRouter } from "next/router";
 import { Box, Stack } from "@mui/material";
 import { Title, TabFilters, TableCrud } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column } from "@/components/TableCrud";
+import type { Column, RowAction } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { getSales } from "@/services/ventas.service";
+import { getSales, cancelSale } from "@/services/ventas.service";
 import type {
   SaleListItem,
   SalePaymentType,
@@ -19,6 +19,7 @@ import {
   SALE_STATUS_CHIP_LABELS,
   SALE_STATUS_CHIP_VARIANTS,
 } from "@/utils/saleStatus";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 const SEARCH_DEBOUNCE_MS = 300;
 const STATUS_TABS: TabOption[] = [
   {
@@ -62,6 +63,8 @@ function formatRelativeDate(value: unknown): string {
 }
 export default function Ventas() {
   const router = useRouter();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
   const [activeTab, setActiveTab] = useState("all");
   const statusTabExtra =
     activeTab === "all"
@@ -79,6 +82,7 @@ export default function Ventas() {
     setRowsPerPage,
     setSearch,
     isLoading: loading,
+    refetch,
   } = usePaginatedList<SaleListItem>({
     queryKey: ["sales", activeTab],
     queryFn: getSales,
@@ -98,6 +102,15 @@ export default function Ventas() {
     setActiveTab(value);
     setPage(0);
   };
+  const handleCancelSale = async (row: SaleListItem) => {
+    const res = await cancelSale(row.id);
+    if (res.error) {
+      showError(res.error.message);
+      return;
+    }
+    showSuccess(`Venta ${row.folio} cancelada. Inventario liberado.`);
+    void refetch();
+  };
   const tabs = STATUS_TABS.map((t) => ({
     ...t,
     count: t.value === activeTab ? totalRows : undefined,
@@ -113,6 +126,12 @@ export default function Ventas() {
       type: "chip",
       chipLabelMap: SALE_STATUS_CHIP_LABELS,
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
+    },
+    {
+      id: "folio",
+      label: "Folio",
+      size: "sm",
+      format: (value) => String(value ?? "—"),
     },
     {
       id: "productName",
@@ -179,6 +198,15 @@ export default function Ventas() {
       },
     },
   ];
+  const actions: RowAction<SaleListItem>[] = [
+    {
+      id: "cancelar",
+      label: "Cancelar venta",
+      color: "error",
+      hidden: (row) => row.status !== "PENDING_CASHIER",
+      onClick: (row) => void handleCancelSale(row),
+    },
+  ];
   return (
     <Stack direction="column" spacing={3}>
       <Title
@@ -207,6 +235,7 @@ export default function Ventas() {
       <TableCrud
         columns={columns}
         rows={ventas}
+        actions={actions}
         loading={loading}
         rowKey="id"
         page={page}

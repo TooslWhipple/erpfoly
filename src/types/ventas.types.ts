@@ -1,6 +1,7 @@
 export type SaleStatus =
   | "DRAFT"
   | "PENDING_DISCOUNT"
+  | "PENDING_CASHIER"
   | "PENDING_PAYMENT"
   | "PAID"
   | "PARTIALLY_DELIVERED"
@@ -9,7 +10,12 @@ export type SaleStatus =
 
 export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
 
-export type SaleStatusTab = "all" | "completed" | "pending" | "finalized";
+export type SaleStatusTab =
+  | "all"
+  | "completed"
+  | "pending"
+  | "pendingCashier"
+  | "finalized";
 
 export interface SaleListItem {
   id: number;
@@ -28,6 +34,8 @@ export interface GetSalesParams {
   search?: string;
   statusTab?: SaleStatusTab;
   created_by?: number;
+  branch_id?: number;
+  amount?: number;
 }
 
 export interface ProductSearchResult {

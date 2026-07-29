@@ -31,6 +31,7 @@ export interface AppPalette {
     readOnlyControl: string;
   };
   border: string;
+  borderLight: string;
   text: {
     primary: string;
     secondary: string;
@@ -81,6 +82,7 @@ export const appPalette: AppPalette = {
     readOnlyControl: "#F4F4F5",
   },
   border: "#D4D4D8",
+  borderLight: "#E5E7EB",
   text: {
     primary: "#232325",
     secondary: "#71717A",

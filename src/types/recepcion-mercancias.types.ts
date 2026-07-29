@@ -2,50 +2,64 @@
 // TYPES - Merchandise Reception (Recepción de Mercancías)
 // ============================================================================
 
-export interface OrderToReceive {
-    id: string;
-    sku: string;
-    supplier: string;
-    /** Legal / business name shown under the supplier brand in selection UI. */
-    supplierLegalName?: string;
-    deliveryDate: string;
-    total: number;
-}
-
 /** Supplier row for "Nueva recepción" side modal (grouped pending orders). */
 export interface SupplierWithPendingOrders {
-    id: string;
+    id: number;
     name: string;
-    legalName: string;
+    legalName: string | null;
     pendingOrdersCount: number;
-    orderIds: string[];
+    orderIds: number[];
+}
+
+export interface ReceptionDetailInvoice {
+    id: number;
+    externalId: string;
+    date: string;
+    amount: number;
+    type: string;
 }
 
 export interface MerchandiseReception {
     id: number;
     warehouse: string;
     orderNumber: string;
+    orderCount: number;
     date: string;
     supplier: string;
-    total: number;
     status: ReceptionStatus;
-    receptionDate: string;
+    printedLabelsCount: number;
+    supplierId: number;
+    branchId: number;
+    costeoId: number | null;
+    invoices: ReceptionDetailInvoice[];
 }
 
 /** Detail/edit workflow status on the reception page. */
-export type ReceptionDetailStatus = "draft" | "pre_captured" | "in_costing" | "costed";
+export type ReceptionDetailStatus =
+    | "draft"
+    | "pre_captured"
+    | "in_costing"
+    | "costed";
 
+/**
+ * UI-facing reception status used in the listing chips.
+ * Mirrors the backend `MerchandiseReceptionStatus` enum but keeps the
+ * historical "captured" alias for the listing tab filter.
+ */
 export type ReceptionStatus = "pre_captured" | "captured" | "costed";
 
 export interface ReceptionArticle {
     id: string;
+    productId?: number;
     name: string;
     sku: string;
+    orderId?: number;
     orderNumber: string;
     quantity: number;
     received: number;
-    /** Unit cost used for invoice amount comparison (mock / API). */
-    unitCost?: number;
+    branchName?: string;
+    branchId?: number;
+    scheduledDeliveryDate?: string | null;
 }
 
 export interface ReceptionInvoice {

@@ -44,6 +44,8 @@ export interface Branch {
   geocodedAt?: string | null;
   businessSegmentId?: number | null;
   businessSegment?: BusinessSegmentItem | null;
+  zoneId?: number | null;
+  zoneName?: string | null;
 }
 
 export interface GetBranchesParams {
@@ -68,6 +70,7 @@ export interface CreateBranchPayload {
   latitude?: number;
   longitude?: number;
   businessSegmentId?: number | null;
+  zoneId?: number | null;
 }
 
 export interface UpdateBranchPayload {
@@ -84,6 +87,7 @@ export interface UpdateBranchPayload {
   latitude?: number;
   longitude?: number;
   businessSegmentId?: number | null;
+  zoneId?: number | null;
 }
 
 export interface GeocodeBranchPayload {

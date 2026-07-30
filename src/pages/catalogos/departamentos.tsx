@@ -40,7 +40,8 @@ type DepartmentFormShape = {
   id: string;
   name: string;
   margin: string;
-  accountingAccount: string | null;
+  accountingAccountInventory: string | null;
+  accountingAccountResults: string | null;
 };
 
 const departmentFormFields = defineFormFields<DepartmentFormShape>()([
@@ -77,9 +78,15 @@ const departmentFormFields = defineFormFields<DepartmentFormShape>()([
     helperText: "Porcentaje de margen (0-100)",
   },
   {
-    name: "accountingAccount",
+    name: "accountingAccountInventory",
     schema: z.string().nullable(),
-    label: "Cuenta contable",
+    label: "Cuenta contable inventario",
+    when: () => false,
+  },
+  {
+    name: "accountingAccountResults",
+    schema: z.string().nullable(),
+    label: "Cuenta contable resultados",
     when: () => false,
   },
 ] as const);
@@ -95,14 +102,16 @@ function buildDepartmentFormDefaultValues(
       id: String(editing.id).padStart(2, "0"),
       name: editing.name,
       margin: String(editing.margin),
-      accountingAccount: editing.accountingAccount ?? null,
+      accountingAccountInventory: editing.accountingAccountInventory ?? editing.accountingAccount ?? null,
+      accountingAccountResults: editing.accountingAccountResults ?? null,
     };
   }
   return {
     id: nextId,
     name: "",
     margin: "",
-    accountingAccount: null,
+    accountingAccountInventory: null,
+    accountingAccountResults: null,
   };
 }
 
@@ -171,7 +180,8 @@ export default function Departamentos() {
       const result = await updateDepartment(editingDepartment.id, {
         name: data.name,
         margin: data.margin,
-        accountingAccount: data.accountingAccount ?? null,
+        accountingAccountInventory: data.accountingAccountInventory ?? null,
+        accountingAccountResults: data.accountingAccountResults ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -183,7 +193,8 @@ export default function Departamentos() {
       const result = await createDepartment({
         name: data.name,
         margin: data.margin,
-        accountingAccount: data.accountingAccount ?? null,
+        accountingAccountInventory: data.accountingAccountInventory ?? null,
+        accountingAccountResults: data.accountingAccountResults ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -252,12 +263,21 @@ export default function Departamentos() {
       align: "left",
     },
     {
-      id: "accountingAccount",
-      label: "Cuenta Contable",
+      id: "accountingAccountInventory",
+      label: "Cuenta Inventario",
       size: "md",
       format: (val, row) => {
         if (!val) return "Sin asignar";
-        return row.accountingAccountName ? `${val} - ${row.accountingAccountName}` : (val as string);
+        return row.accountingAccountInventoryName ? `${val} - ${row.accountingAccountInventoryName}` : (val as string);
+      },
+    },
+    {
+      id: "accountingAccountResults",
+      label: "Cuenta Resultados",
+      size: "md",
+      format: (val, row) => {
+        if (!val) return "Sin asignar";
+        return row.accountingAccountResultsName ? `${val} - ${row.accountingAccountResultsName}` : (val as string);
       },
     },
     {
@@ -368,11 +388,21 @@ export default function Departamentos() {
               helperText="Porcentaje de margen (0-100)"
               required
             />
-            <form.Field name="accountingAccount">
+            <form.Field name="accountingAccountInventory">
               {(field) => (
                 <AccountingAccountSearchField
-                  label="Cuenta contable"
-                  placeholder="Buscar cuenta contable (contabilidad.cuentas)..."
+                  label="Cuenta contable inventario"
+                  placeholder="Buscar cuenta contable inventario..."
+                  value={(field.state.value as string | null) ?? ""}
+                  onChange={(val) => field.handleChange((val || null) as any)}
+                />
+              )}
+            </form.Field>
+            <form.Field name="accountingAccountResults">
+              {(field) => (
+                <AccountingAccountSearchField
+                  label="Cuenta contable resultados"
+                  placeholder="Buscar cuenta contable resultados..."
                   value={(field.state.value as string | null) ?? ""}
                   onChange={(val) => field.handleChange((val || null) as any)}
                 />

@@ -110,6 +110,7 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"catalogos-productos": "catalogos.productos",
 	"catalogos-departamentos": "catalogos.departamentos",
 	"catalogos-promociones": "catalogos.promociones",
+	"catalogos-zonas": "catalogos.zonas",
 	"catalogos-sucursales": "catalogos.sucursales",
 	"catalogos-cajas": "catalogos.cajas",
 	"catalogos-proveedores": "catalogos.proveedores",

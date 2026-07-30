@@ -37,6 +37,10 @@ function flattenPendingInstallments(
     );
 }
 
+function roundToCents(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
 export function calculateCascadePreview(
   accounts: ClientCreditAccount[],
   excludedCreditIds: string[],
@@ -52,10 +56,16 @@ export function calculateCascadePreview(
 
     const overdueAmount = Math.max(0, installment.overdueAmount);
     const lateFeeApplied = Math.min(remaining, overdueAmount);
-    remaining -= lateFeeApplied;
+    // Redondear a centavos en cada paso evita que el error de punto
+    // flotante acumulado dentro de esta cascada (p. ej. restar 637.42 tres
+    // veces) deje un residuo positivo ínfimo (2.27e-13) que no pasa el
+    // `if (remaining <= 0) break` y genera una parcialidad fantasma: como
+    // `numeral` no formatea notación exponencial, ese residuo se mostraba
+    // como "Abono parcial ($NaN)" en vez de agotar limpio la cascada.
+    remaining = roundToCents(remaining - lateFeeApplied);
 
     const principalApplied = Math.min(remaining, installment.totalAmount);
-    remaining -= principalApplied;
+    remaining = roundToCents(remaining - principalApplied);
 
     const amountApplied = lateFeeApplied + principalApplied;
     if (amountApplied <= 0) continue;
@@ -80,10 +90,6 @@ export function getTotalPendingInstallmentsCount(
   excludedCreditIds: string[],
 ): number {
   return flattenPendingInstallments(accounts, excludedCreditIds).length;
-}
-
-function roundToCents(amount: number): number {
-  return Math.round(amount * 100) / 100;
 }
 
 /**

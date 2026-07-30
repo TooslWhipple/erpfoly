@@ -16,6 +16,7 @@ export type {
   ClientSearchResultsProps,
   CashRegisterHistoryProps,
   CashMovement,
+  CashSearchMode,
 } from "./types";
 export type { CutType, Denomination } from "./CutModal";
 export type { CashWithdrawalModalProps } from "./CashWithdrawalModal";

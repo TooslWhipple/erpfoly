@@ -28,6 +28,8 @@ import {
   type CascadeInstallmentPreview,
 } from "@/utils/cascadePayment";
 
+export type PartialRemainderDecision = "apply-next" | "give-change";
+
 interface UseClientPaymentResult {
   routerReady: boolean;
   clientId: string | null;
@@ -43,10 +45,14 @@ interface UseClientPaymentResult {
   paymentResult: ClientPaymentResult | null;
   totalOutstanding: number;
   change: number;
+  hasPartialInstallmentRemainder: boolean;
+  partialInstallmentRemainderAmount: number;
+  partialRemainderDecision: PartialRemainderDecision | null;
   canRegister: boolean;
   orderedCreditAccounts: ClientCreditAccount[];
   excludedCreditIds: string[];
   cascadePreview: CascadeInstallmentPreview[];
+  displayedCascadePreview: CascadeInstallmentPreview[];
   totalPendingInstallmentsCount: number;
   paymentTerminalId: number | null;
   paymentTerminals: PaymentTerminalCatalogItem[];
@@ -56,6 +62,7 @@ interface UseClientPaymentResult {
   setPaymentAmount: (value: number) => void;
   setPaymentAmountByInstallmentCount: (count: number) => void;
   setPaymentTerminalId: (value: number | null) => void;
+  setPartialRemainderDecision: (choice: PartialRemainderDecision) => void;
   toggleCreditExcluded: (purchaseId: string) => void;
   moveCreditOrder: (purchaseId: string, direction: "up" | "down") => void;
   submitPayment: () => Promise<void>;
@@ -136,8 +143,19 @@ export function useClientPayment(): UseClientPaymentResult {
   const [excludedCreditIds, setExcludedCreditIds] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethodState] = useState<ClientPaymentMethod>("cash");
   const [isCashDeposit, setIsCashDeposit] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [manualPaymentAmount, setManualPaymentAmount] = useState(0);
   const [paymentTerminalId, setPaymentTerminalId] = useState<number | null>(null);
+  // Cuenta de parcialidades activa en el stepper, o `null` si el monto
+  // actual viene de edición manual. Se guarda la cuenta (no el monto en sí)
+  // para poder recalcular en render cuando el cajero excluye/reordena
+  // créditos después de haber usado el stepper, en vez de dejar el monto
+  // desincronizado sobre créditos que ya no aplican.
+  const [stepperInstallmentCount, setStepperInstallmentCount] = useState<number | null>(null);
+
+  const setPaymentAmount = useCallback((value: number) => {
+    setStepperInstallmentCount(null);
+    setManualPaymentAmount(value);
+  }, []);
 
   const setPaymentMethod = useCallback((method: ClientPaymentMethod) => {
     setPaymentMethodState(method);
@@ -246,24 +264,32 @@ export function useClientPayment(): UseClientPaymentResult {
       .filter((account): account is ClientCreditAccount => account !== undefined);
   }, [context?.creditAccounts, creditOrder]);
 
-  const cascadePreview = useMemo(
-    () => calculateCascadePreview(orderedCreditAccounts, excludedCreditIds, paymentAmount),
-    [orderedCreditAccounts, excludedCreditIds, paymentAmount],
-  );
-
   const totalPendingInstallmentsCount = useMemo(
     () => getTotalPendingInstallmentsCount(orderedCreditAccounts, excludedCreditIds),
     [orderedCreditAccounts, excludedCreditIds],
   );
 
-  const setPaymentAmountByInstallmentCount = useCallback(
-    (count: number) => {
-      setPaymentAmount(
-        calculateAmountForInstallmentCount(orderedCreditAccounts, excludedCreditIds, count),
-      );
-    },
-    [orderedCreditAccounts, excludedCreditIds],
+  // Si el monto viene del stepper, se deriva en cada render a partir de la
+  // cuenta seleccionada — así, si el cajero excluye/reordena créditos
+  // después de haber usado el stepper, el monto se recalcula solo en vez
+  // de quedar calculado sobre créditos que ya no aplican (ver "Riesgos y
+  // side effects a vigilar" del plan). Si el cajero editó el monto a mano,
+  // `stepperInstallmentCount` es `null` y se usa el valor manual tal cual.
+  const paymentAmount = useMemo(() => {
+    if (stepperInstallmentCount === null) return manualPaymentAmount;
+    const clampedCount = Math.min(stepperInstallmentCount, totalPendingInstallmentsCount);
+    if (clampedCount <= 0) return manualPaymentAmount;
+    return calculateAmountForInstallmentCount(orderedCreditAccounts, excludedCreditIds, clampedCount);
+  }, [stepperInstallmentCount, manualPaymentAmount, totalPendingInstallmentsCount, orderedCreditAccounts, excludedCreditIds]);
+
+  const cascadePreview = useMemo(
+    () => calculateCascadePreview(orderedCreditAccounts, excludedCreditIds, paymentAmount),
+    [orderedCreditAccounts, excludedCreditIds, paymentAmount],
   );
+
+  const setPaymentAmountByInstallmentCount = useCallback((count: number) => {
+    setStepperInstallmentCount(count);
+  }, []);
 
   const totalOutstanding = useMemo(
     () =>
@@ -273,10 +299,73 @@ export function useClientPayment(): UseClientPaymentResult {
     [orderedCreditAccounts, excludedCreditIds],
   );
 
+  const canExceedOutstandingForChange = paymentMethod === "cash" && !isCashDeposit;
+
+  const partialCascadeEntry = useMemo(
+    () => cascadePreview.find((entry) => !entry.fullyCovered && entry.amountApplied > 0) ?? null,
+    [cascadePreview],
+  );
+
+  const partialInstallmentRemainderAmount = partialCascadeEntry?.amountApplied ?? 0;
+
+  const hasPartialInstallmentRemainder =
+    canExceedOutstandingForChange && partialInstallmentRemainderAmount > 0;
+
+  // La decisión se ata a la parcialidad concreta que quedó parcial: si el
+  // cajero edita el monto y el remanente recae en otra parcialidad, la
+  // decisión anterior deja de aplicar y hay que volver a preguntar (no se
+  // recuerda como preferencia general).
+  const [partialRemainderChoiceState, setPartialRemainderChoiceState] = useState<{
+    installmentId: string;
+    choice: PartialRemainderDecision;
+  } | null>(null);
+
+  const partialRemainderDecision: PartialRemainderDecision | null =
+    hasPartialInstallmentRemainder &&
+    partialRemainderChoiceState !== null &&
+    partialRemainderChoiceState.installmentId === partialCascadeEntry?.installmentId
+      ? partialRemainderChoiceState.choice
+      : null;
+
+  const setPartialRemainderDecision = useCallback(
+    (choice: PartialRemainderDecision) => {
+      if (!partialCascadeEntry) return;
+      setPartialRemainderChoiceState({ installmentId: partialCascadeEntry.installmentId, choice });
+    },
+    [partialCascadeEntry],
+  );
+
+  // Suma de las parcialidades que la cascada cubre por completo con el
+  // monto tecleado — es el tope a enviar cuando el cajero elige "dar
+  // cambio" para el remanente parcial (excluye el pago parcial de la
+  // siguiente parcialidad, que en ese caso no se aplica).
+  const fullyCoveredCascadeAmount = useMemo(
+    () =>
+      cascadePreview
+        .filter((entry) => entry.fullyCovered)
+        .reduce((sum, entry) => sum + entry.amountApplied, 0),
+    [cascadePreview],
+  );
+
+  // Vista que se muestra en las tarjetas de crédito: si el cajero eligió
+  // "dar cambio", la parcialidad que había quedado parcial en el preview no
+  // se va a abonar de verdad (paso B3 la excluye del monto enviado), así
+  // que se le quita del preview visual para no mostrarle al cajero un
+  // abono parcial que no va a ocurrir.
+  const displayedCascadePreview = useMemo(() => {
+    if (partialRemainderDecision !== "give-change" || !partialCascadeEntry) return cascadePreview;
+    return cascadePreview.filter(
+      (entry) => entry.installmentId !== partialCascadeEntry.installmentId,
+    );
+  }, [cascadePreview, partialRemainderDecision, partialCascadeEntry]);
+
   const change = useMemo(() => {
-    if (paymentMethod !== "cash") return 0;
+    if (!canExceedOutstandingForChange) return 0;
+    if (partialRemainderDecision === "give-change") {
+      return Math.max(parseFloat((paymentAmount - fullyCoveredCascadeAmount).toFixed(2)), 0);
+    }
     return Math.max(parseFloat((paymentAmount - totalOutstanding).toFixed(2)), 0);
-  }, [paymentAmount, paymentMethod, totalOutstanding]);
+  }, [paymentAmount, canExceedOutstandingForChange, totalOutstanding, partialRemainderDecision, fullyCoveredCascadeAmount]);
 
   const isCardPayment = paymentMethod === "card";
 
@@ -301,8 +390,9 @@ export function useClientPayment(): UseClientPaymentResult {
   const canRegister =
     totalOutstanding > 0 &&
     paymentAmount > 0 &&
-    paymentAmount <= totalOutstanding &&
+    (paymentAmount <= totalOutstanding || canExceedOutstandingForChange) &&
     !(isCardPayment && !paymentTerminalId) &&
+    !(hasPartialInstallmentRemainder && !partialRemainderDecision) &&
     !isSubmitting;
 
   const toggleCreditExcluded = useCallback((purchaseId: string) => {
@@ -339,7 +429,12 @@ export function useClientPayment(): UseClientPaymentResult {
         .map((account) => parseInt(account.id, 10));
 
       const backendPayload: CascadePaymentPayload = {
-        amount: paymentAmount,
+        amount:
+          partialRemainderDecision === "give-change"
+            ? fullyCoveredCascadeAmount
+            : canExceedOutstandingForChange
+              ? Math.min(paymentAmount, totalOutstanding)
+              : paymentAmount,
         payment_method: mapFrontendToBackendMethod(paymentMethod),
         reference: isCashDeposit ? "Depósito en efectivo" : undefined,
         notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
@@ -409,16 +504,20 @@ export function useClientPayment(): UseClientPaymentResult {
       setIsSubmitting(false);
     }
   }, [
+    canExceedOutstandingForChange,
     canRegister,
     clientId,
     context,
     excludedCreditIds,
+    fullyCoveredCascadeAmount,
     isCardPayment,
     isCashDeposit,
     orderedCreditAccounts,
+    partialRemainderDecision,
     paymentAmount,
     paymentMethod,
     paymentTerminalId,
+    totalOutstanding,
     fetchContext,
   ]);
 
@@ -437,10 +536,14 @@ export function useClientPayment(): UseClientPaymentResult {
     paymentResult,
     totalOutstanding,
     change,
+    hasPartialInstallmentRemainder,
+    partialInstallmentRemainderAmount,
+    partialRemainderDecision,
     canRegister,
     orderedCreditAccounts,
     excludedCreditIds,
     cascadePreview,
+    displayedCascadePreview,
     totalPendingInstallmentsCount,
     paymentTerminalId,
     paymentTerminals,
@@ -450,6 +553,7 @@ export function useClientPayment(): UseClientPaymentResult {
     setPaymentAmount,
     setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
+    setPartialRemainderDecision,
     toggleCreditExcluded,
     moveCreditOrder,
     submitPayment,

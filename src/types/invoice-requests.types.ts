@@ -13,19 +13,26 @@ export interface InvoiceRequestListItem {
   details: string;
   requestedAt: string;
   status: InvoiceRequestStatus;
-  amount: number;
+  amount: number | null;
   concept?: string;
   paymentType?: InvoicePaymentType;
-  subtotal?: number;
-  vat?: number;
-  issuedAt?: string;
-  paymentDueAt?: string;
   requestingArea?: string;
   assignToSupplier?: boolean;
   supplierId?: string;
   supplierName?: string;
   orderId?: string;
   paymentDetails?: string;
+  cfdiId?: string;
+  cfdiUuid?: string;
+}
+
+export interface InvoiceRequestDetail extends InvoiceRequestListItem {
+  orderFolio?: string;
+  subtotal: number | null;
+  vat: number | null;
+  total: number | null;
+  issuedAt: string | null;
+  paymentDueAt: string | null;
 }
 
 export interface ParsedInvoiceFileData {
@@ -40,24 +47,25 @@ export interface ParsedInvoiceFileData {
   requestingArea: string;
   supplierName?: string;
   paymentDetails?: string;
+  /** Contabilidad CFDI id when parsed via backend proxy. */
+  cfdiId?: string;
+  /** Contabilidad CFDI UUID when parsed via backend proxy. */
+  cfdiUuid?: string;
+  /** True when contabilidad already had this CFDI (409 resolved). */
+  alreadyExists?: boolean;
 }
 
 export interface CreateInvoiceRequestPayload {
   invoiceNumber: string;
   concept: string;
   paymentType: InvoicePaymentType;
-  subtotal: number;
-  vat: number;
-  total: number;
-  issuedAt: string;
-  paymentDueAt: string;
   requestingArea: string;
   assignToSupplier: boolean;
-  supplierId?: string;
-  supplierName?: string;
-  orderId?: string;
+  supplierId?: number;
+  orderId?: number;
   paymentDetails?: string;
-  fileName?: string;
+  cfdiId: string;
+  cfdiUuid: string;
 }
 
 export interface GetInvoiceRequestsParams {
@@ -67,12 +75,16 @@ export interface GetInvoiceRequestsParams {
   statusTab?: InvoiceRequestStatusTab;
 }
 
-export interface InvoiceSupplierOption {
-  id: string;
-  label: string;
-}
-
 export interface InvoiceOrderOption {
   id: string;
   label: string;
 }
+
+export interface InvoiceSupplierWithOrdersOption {
+  id: string;
+  label: string;
+  orders: InvoiceOrderOption[];
+}
+
+/** @deprecated Use InvoiceSupplierWithOrdersOption */
+export type InvoiceSupplierOption = Omit<InvoiceSupplierWithOrdersOption, "orders">;

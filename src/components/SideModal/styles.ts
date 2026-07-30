@@ -11,18 +11,22 @@ export const HeaderRow = styled(Box)(({ theme }) => ({
 }));
 
 export const SideModalHeader = styled(Box)(({ theme }) => ({
+  flexShrink: 0,
   backgroundColor: theme.palette.background.paper,
   padding: theme.spacing(2, 3),
   borderTopLeftRadius: 24,
   borderTopRightRadius: 24,
+  zIndex: 1,
 }));
 
 export const SideModalContent = styled(Stack)(({ theme }) => ({
   flex: 1,
   minHeight: 0,
   width: "100%",
+  overflowY: "auto",
+  overflowX: "hidden",
   backgroundColor: theme.palette.background.content,
-  padding: theme.spacing(2, 3),
+  padding: theme.spacing(2, 3, 3),
   borderBottomLeftRadius: 24,
   borderBottomRightRadius: 24,
 }));

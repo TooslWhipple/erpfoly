@@ -38,6 +38,8 @@ export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
 export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues } from "./AddDamagedGoodsModal";
 export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
 export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
+export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
+export type { ReviewInvoiceRequestModalProps } from "./ReviewInvoiceRequestModal";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

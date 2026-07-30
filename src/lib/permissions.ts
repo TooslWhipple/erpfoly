@@ -26,6 +26,7 @@ export type PermissionModule =
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
+  | "facturas"
   | "facturas.solicitudes"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
@@ -154,6 +155,13 @@ export const COSTEOS_CREATE = COSTEOS_PERMISSIONS.create;
 export const COSTEOS_READ = COSTEOS_PERMISSIONS.read;
 export const COSTEOS_UPDATE = COSTEOS_PERMISSIONS.update;
 export const COSTEOS_DELETE = COSTEOS_PERMISSIONS.delete;
+
+// Payable invoices (Facturas)
+export const PAYABLE_INVOICES_PERMISSIONS = createCrudPermissions("facturas");
+export const PAYABLE_INVOICES_CREATE = PAYABLE_INVOICES_PERMISSIONS.create;
+export const PAYABLE_INVOICES_READ = PAYABLE_INVOICES_PERMISSIONS.read;
+export const PAYABLE_INVOICES_UPDATE = PAYABLE_INVOICES_PERMISSIONS.update;
+export const PAYABLE_INVOICES_DELETE = PAYABLE_INVOICES_PERMISSIONS.delete;
 
 // Invoice requests
 export const INVOICE_REQUESTS_PERMISSIONS = createCrudPermissions("facturas.solicitudes");
@@ -320,6 +328,10 @@ export const PERMISSIONS_BY_MODULE = {
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),
   costeos: Object.values(COSTEOS_PERMISSIONS),
+  invoices: {
+    payableInvoices: Object.values(PAYABLE_INVOICES_PERMISSIONS),
+    invoiceRequests: Object.values(INVOICE_REQUESTS_PERMISSIONS),
+  },
   customerSupport: {
     customerSupport: Object.values(CUSTOMER_SUPPORT_PERMISSIONS),
     invoices: Object.values(CUSTOMER_SUPPORT_INVOICES_PERMISSIONS),

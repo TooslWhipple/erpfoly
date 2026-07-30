@@ -97,7 +97,15 @@ export function SideModal({
         paper: { sx: paperSxMerged },
       }}
     >
-      <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column", flex: 1 }}>
+      <DialogContent
+        sx={{
+          p: 0,
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+        }}>
         <SideModalHeader>
           <Stack direction="column" alignItems="flex-start" spacing={2}>
             <CloseButton onClick={onClose} disabled={disableClose} size="small">

@@ -42,6 +42,7 @@ import {
   INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   ORDERS_READ,
   ROUTES_READ,
@@ -134,10 +135,17 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Facturas",
-    path: "/facturas/solicitudes",
+    path: "/facturas",
     icon: <Receipt size={ICON_SIZE} />,
-    requirement: { permission: INVOICE_REQUESTS_READ },
+    requirement: {
+      anyPermissions: [PAYABLE_INVOICES_READ, INVOICE_REQUESTS_READ],
+    },
     subItems: [
+      {
+        label: "Facturas",
+        path: "/facturas",
+        requirement: { permission: PAYABLE_INVOICES_READ },
+      },
       {
         label: "Solicitudes",
         path: "/facturas/solicitudes",

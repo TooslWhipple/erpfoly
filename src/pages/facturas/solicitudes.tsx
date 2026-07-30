@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { Stack } from "@mui/material";
+import { Eye } from "lucide-react";
 import numeral from "numeral";
-import { Title, TabFilters, TableCrud, CreateInvoiceRequestModal } from "@/components";
+import {
+  Title,
+  TabFilters,
+  TableCrud,
+  CreateInvoiceRequestModal,
+  ReviewInvoiceRequestModal,
+} from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -49,6 +56,7 @@ export default function InvoiceRequestsPage() {
   const showError = useSnackbarStore((state) => state.showError);
   const [activeTab, setActiveTab] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [reviewRequestId, setReviewRequestId] = useState<number | null>(null);
 
   const statusTabExtra:
     | { statusTab?: InvoiceRequestStatusTab }
@@ -99,6 +107,10 @@ export default function InvoiceRequestsPage() {
     setPage(0);
   };
 
+  const openReview = (row: InvoiceRequestListItem) => {
+    setReviewRequestId(row.id);
+  };
+
   const tabs = STATUS_TABS.map((tab) => ({
     ...tab,
     count: tab.value === activeTab ? totalRows : undefined,
@@ -141,7 +153,20 @@ export default function InvoiceRequestsPage() {
       id: "amount",
       label: "Monto",
       size: "md",
-      format: (value) => numeral(Number(value ?? 0)).format("$0,0.00"),
+      format: (value) => {
+        if (value == null || Number(value) === 0) return "—";
+        return numeral(Number(value)).format("$0,0.00");
+      },
+    },
+  ];
+
+  const actions: RowAction<InvoiceRequestListItem>[] = [
+    {
+      id: "review",
+      label: (row) =>
+        row.status === "pending" ? "Validar" : "Ver detalle",
+      icon: <Eye size={16} />,
+      onClick: openReview,
     },
   ];
 
@@ -169,6 +194,7 @@ export default function InvoiceRequestsPage() {
       <TableCrud
         columns={columns}
         rows={requests}
+        actions={actions}
         loading={loading}
         rowKey="id"
         page={page}
@@ -176,12 +202,22 @@ export default function InvoiceRequestsPage() {
         totalRows={totalRows}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
+        onRowClick={openReview}
         emptyMessage="No hay solicitudes de facturas"
       />
 
       <CreateInvoiceRequestModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        onSuccess={() => {
+          void refetch();
+        }}
+      />
+
+      <ReviewInvoiceRequestModal
+        open={reviewRequestId != null}
+        requestId={reviewRequestId}
+        onClose={() => setReviewRequestId(null)}
         onSuccess={() => {
           void refetch();
         }}

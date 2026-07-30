@@ -22,13 +22,13 @@ import { formatDate } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   createInvoiceRequest,
-  getInvoiceOrderOptions,
-  getInvoiceSupplierOptions,
+  getSuppliersWithOrders,
   parseInvoiceFile,
 } from "@/services/invoice-requests.service";
 import type {
   CreateInvoiceRequestPayload,
   InvoicePaymentType,
+  InvoiceSupplierWithOrdersOption,
   ParsedInvoiceFileData,
 } from "@/types/invoice-requests.types";
 import {
@@ -37,7 +37,7 @@ import {
   SupplierToggleRow,
 } from "./styles";
 
-type ModalStep = "upload" | "form";
+type ModalStep = "uploadXml" | "uploadPdf" | "form";
 
 interface FormValues {
   requestingArea: string;
@@ -52,7 +52,8 @@ interface FormValues {
   vat: number;
   total: number;
   issuedAt: string;
-  paymentDueAt: string;
+  cfdiId: string;
+  cfdiUuid: string;
 }
 
 export interface CreateInvoiceRequestModalProps {
@@ -61,13 +62,8 @@ export interface CreateInvoiceRequestModalProps {
   onSuccess?: () => void;
 }
 
-const INVOICE_FILE_ACCEPT = [
-  "application/pdf",
-  "application/xml",
-  "text/xml",
-  ".pdf",
-  ".xml",
-];
+const XML_ACCEPT = ["application/xml", "text/xml", ".xml"];
+const PDF_ACCEPT = ["application/pdf", ".pdf"];
 
 const PAYMENT_TYPE_OPTIONS: SelectOption[] = [
   { value: "PUE", label: "PUE" },
@@ -87,19 +83,22 @@ const EMPTY_FORM: FormValues = {
   vat: 0,
   total: 0,
   issuedAt: "",
-  paymentDueAt: "",
+  cfdiId: "",
+  cfdiUuid: "",
 };
 
-function mapParsedToForm(parsed: ParsedInvoiceFileData): FormValues {
-  const suppliers = getInvoiceSupplierOptions();
+function mapParsedToForm(
+  parsed: ParsedInvoiceFileData,
+  suppliers: InvoiceSupplierWithOrdersOption[],
+): FormValues {
   const matchedSupplier = suppliers.find(
     (supplier) =>
       supplier.label.toLowerCase() === (parsed.supplierName ?? "").toLowerCase(),
   );
 
   return {
-    requestingArea: parsed.requestingArea,
-    assignToSupplier: Boolean(parsed.supplierName),
+    requestingArea: parsed.requestingArea || "Administración",
+    assignToSupplier: Boolean(matchedSupplier),
     supplierId: matchedSupplier?.id ?? "",
     orderId: "",
     paymentDetails: parsed.paymentDetails ?? "",
@@ -110,7 +109,8 @@ function mapParsedToForm(parsed: ParsedInvoiceFileData): FormValues {
     vat: parsed.vat,
     total: parsed.total,
     issuedAt: parsed.issuedAt,
-    paymentDueAt: parsed.paymentDueAt,
+    cfdiId: parsed.cfdiId ?? "",
+    cfdiUuid: parsed.cfdiUuid ?? "",
   };
 }
 
@@ -126,70 +126,120 @@ export function CreateInvoiceRequestModal({
 }: CreateInvoiceRequestModalProps) {
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const showInfo = useSnackbarStore((state) => state.showInfo);
 
-  const [step, setStep] = useState<ModalStep>("upload");
-  const [files, setFiles] = useState<UploadedFileItem[]>([]);
+  const [step, setStep] = useState<ModalStep>("uploadXml");
+  const [xmlFiles, setXmlFiles] = useState<UploadedFileItem[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<UploadedFileItem[]>([]);
   const [formValues, setFormValues] = useState<FormValues>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<
     Partial<Record<keyof FormValues, string>>
   >({});
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [suppliers, setSuppliers] = useState<InvoiceSupplierWithOrdersOption[]>(
+    [],
+  );
 
   const supplierOptions: SelectOption[] = useMemo(
     () =>
-      getInvoiceSupplierOptions().map((supplier) => ({
+      suppliers.map((supplier) => ({
         value: supplier.id,
         label: supplier.label,
       })),
-    [],
+    [suppliers],
   );
 
-  const orderOptions: SelectOption[] = useMemo(
-    () =>
-      getInvoiceOrderOptions().map((order) => ({
-        value: order.id,
-        label: order.label,
-      })),
-    [],
-  );
+  const orderOptions: SelectOption[] = useMemo(() => {
+    const selected = suppliers.find((s) => s.id === formValues.supplierId);
+    return (selected?.orders ?? []).map((order) => ({
+      value: order.id,
+      label: order.label,
+    }));
+  }, [suppliers, formValues.supplierId]);
+
+  const xmlFile = xmlFiles[0]?.file ?? null;
+  const pdfFile = pdfFiles[0]?.file ?? null;
 
   useEffect(() => {
     if (!open) {
-      setStep("upload");
-      setFiles([]);
+      setStep("uploadXml");
+      setXmlFiles([]);
+      setPdfFiles([]);
       setFormValues(EMPTY_FORM);
       setFormErrors({});
       setParsing(false);
       setSaving(false);
+      return;
     }
-  }, [open]);
+
+    let cancelled = false;
+    setLoadingSuppliers(true);
+    void getSuppliersWithOrders().then((result) => {
+      if (cancelled) return;
+      setLoadingSuppliers(false);
+      if (result.error || !result.data) {
+        showError(
+          result.error?.message ??
+            "No se pudieron cargar proveedores con pedidos",
+        );
+        setSuppliers([]);
+        return;
+      }
+      setSuppliers(result.data);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, showError]);
 
   const handleClose = () => {
     if (parsing || saving) return;
     onClose();
   };
 
-  const handleFilesChange = async (nextFiles: UploadedFileItem[]) => {
-    setFiles(nextFiles);
-    const file = nextFiles[0]?.file;
-    if (!file) {
-      setStep("upload");
-      setFormValues(EMPTY_FORM);
+  const handleXmlChange = (nextFiles: UploadedFileItem[]) => {
+    setXmlFiles(nextFiles);
+  };
+
+  const handlePdfChange = (nextFiles: UploadedFileItem[]) => {
+    setPdfFiles(nextFiles);
+  };
+
+  const handleProcessFiles = async (options?: { skipPdf?: boolean }) => {
+    if (!xmlFile) {
+      showError("Carga el archivo XML de la factura");
       return;
     }
 
+    const includePdf = !options?.skipPdf && Boolean(pdfFile);
+    const filesToSend = includePdf && pdfFile ? [xmlFile, pdfFile] : [xmlFile];
+
     setParsing(true);
-    const result = await parseInvoiceFile(file);
+    const result = await parseInvoiceFile(filesToSend);
     setParsing(false);
 
     if (result.error || !result.data) {
-      showError(result.error?.message ?? "No se pudo leer el archivo de la factura");
-      setFiles([]);
+      showError(
+        result.error?.message ?? "No se pudo leer el archivo de la factura",
+      );
       return;
     }
 
-    setFormValues(mapParsedToForm(result.data));
+    if (!result.data.cfdiId || !result.data.cfdiUuid) {
+      showError("No se recibieron las referencias del CFDI");
+      return;
+    }
+
+    if (result.data.alreadyExists) {
+      showInfo(
+        "Este CFDI ya estaba registrado en contabilidad. Se reutilizaron sus datos.",
+      );
+    }
+
+    setFormValues(mapParsedToForm(result.data, suppliers));
     setFormErrors({});
     setStep("form");
   };
@@ -205,12 +255,20 @@ export function CreateInvoiceRequestModal({
       nextErrors.invoiceNumber = "Ingresa el número de factura.";
     }
 
+    if (!formValues.cfdiId || !formValues.cfdiUuid) {
+      nextErrors.invoiceNumber = "Debes procesar el XML antes de enviar.";
+    }
+
     if (formValues.total <= 0) {
       nextErrors.total = "El monto total debe ser mayor a cero.";
     }
 
     if (formValues.assignToSupplier && !formValues.supplierId) {
       nextErrors.supplierId = "Selecciona un proveedor.";
+    }
+
+    if (formValues.assignToSupplier && !formValues.orderId) {
+      nextErrors.orderId = "Selecciona un pedido.";
     }
 
     if (!formValues.assignToSupplier && !formValues.paymentDetails.trim()) {
@@ -224,30 +282,23 @@ export function CreateInvoiceRequestModal({
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    const selectedSupplier = supplierOptions.find(
-      (option) => String(option.value) === formValues.supplierId,
-    );
-
     const payload: CreateInvoiceRequestPayload = {
       invoiceNumber: formValues.invoiceNumber.trim(),
       concept: formValues.concept.trim(),
       paymentType: formValues.paymentType,
-      subtotal: formValues.subtotal,
-      vat: formValues.vat,
-      total: formValues.total,
-      issuedAt: formValues.issuedAt,
-      paymentDueAt: formValues.paymentDueAt,
       requestingArea: formValues.requestingArea,
       assignToSupplier: formValues.assignToSupplier,
-      supplierId: formValues.assignToSupplier ? formValues.supplierId : undefined,
-      supplierName: formValues.assignToSupplier
-        ? selectedSupplier?.label
+      supplierId: formValues.assignToSupplier
+        ? Number(formValues.supplierId)
         : undefined,
-      orderId: formValues.assignToSupplier ? formValues.orderId || undefined : undefined,
+      orderId: formValues.assignToSupplier
+        ? Number(formValues.orderId)
+        : undefined,
       paymentDetails: formValues.assignToSupplier
         ? undefined
         : formValues.paymentDetails.trim(),
-      fileName: files[0]?.name,
+      cfdiId: formValues.cfdiId,
+      cfdiUuid: formValues.cfdiUuid,
     };
 
     setSaving(true);
@@ -264,9 +315,12 @@ export function CreateInvoiceRequestModal({
     onClose();
   };
 
-  const description = (step === "upload")
-    ? "Carga la factura en formato XML o PDF"
-    : "Complete los detalles de la factura del proveedor";
+  const description =
+    step === "uploadXml"
+      ? "Carga el XML de la factura (obligatorio)"
+      : step === "uploadPdf"
+        ? "Agrega el PDF de representación impresa (opcional)"
+        : "Complete los detalles de la factura del proveedor";
 
   return (
     <SideModal
@@ -277,16 +331,48 @@ export function CreateInvoiceRequestModal({
       title="Nueva cuenta por pagar"
       description={description}>
       {
-        step === "upload" &&
+        step === "uploadXml" &&
         <Stack spacing={2} sx={{ height: "100%", flex: 1, minHeight: 0 }}>
           <FileUpload
-            value={files}
-            onChange={(next) => {
-              void handleFilesChange(next);
-            }}
-            accept={INVOICE_FILE_ACCEPT}
-            placeholder="Cargar factura en XML o PDF"
-            hint="XML o PDF. Máx. {maxMb} MB."
+            value={xmlFiles}
+            onChange={handleXmlChange}
+            accept={XML_ACCEPT}
+            maxFiles={1}
+            placeholder="Cargar factura en XML"
+            hint="Solo XML. Máx. {maxMb} MB."
+            disabled={parsing}
+            fullHeight
+          />
+
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={() => setStep("uploadPdf")}
+            disabled={!xmlFile}
+            sx={{ py: 1.5, mt: "auto" }}>
+            Continuar
+          </Button>
+        </Stack>
+      }
+
+      {
+        step === "uploadPdf" &&
+        <Stack spacing={2} sx={{ height: "100%", flex: 1, minHeight: 0 }}>
+          {
+            xmlFile &&
+            <Typography variant="body2" color="text.secondary">
+              XML cargado: <strong>{xmlFile.name}</strong>
+            </Typography>
+          }
+
+          <FileUpload
+            value={pdfFiles}
+            onChange={handlePdfChange}
+            accept={PDF_ACCEPT}
+            maxFiles={1}
+            placeholder="Cargar PDF (opcional)"
+            hint="PDF opcional. Máx. {maxMb} MB."
             disabled={parsing}
             fullHeight
           />
@@ -300,12 +386,52 @@ export function CreateInvoiceRequestModal({
               </Typography>
             </Stack>
           }
+
+          <Stack spacing={1} sx={{ mt: "auto" }}>
+            <Button
+              variant="text"
+              color="primary"
+              onClick={() => {
+                setStep("uploadXml");
+                setPdfFiles([]);
+              }}
+              disabled={parsing}>
+              Volver al XML
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              fullWidth
+              onClick={() => {
+                setPdfFiles([]);
+                void handleProcessFiles({ skipPdf: true });
+              }}
+              disabled={parsing}
+              sx={{ py: 1.5 }}>
+              Omitir PDF
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={() => {
+                void handleProcessFiles();
+              }}
+              disabled={parsing}
+              sx={{ py: 1.5 }}>
+              {
+                parsing
+                  ? <CircularProgress size={20} color="inherit" />
+                  : "Continuar"
+              }
+            </Button>
+          </Stack>
         </Stack>
       }
 
       {
         step === "form" &&
-        <Stack spacing={2.5}>
+        <Stack spacing={2.5} sx={{ pb: 1 }}>
           <FormTextField
             label="Área que solicita"
             value={formValues.requestingArea}
@@ -321,6 +447,11 @@ export function CreateInvoiceRequestModal({
                 setFormValues((prev) => ({
                   ...prev,
                   assignToSupplier: event.target.checked,
+                  supplierId: event.target.checked ? prev.supplierId : "",
+                  orderId: event.target.checked ? prev.orderId : "",
+                  paymentDetails: event.target.checked
+                    ? ""
+                    : prev.paymentDetails,
                 }))
               }
               color="primary"
@@ -328,7 +459,7 @@ export function CreateInvoiceRequestModal({
           </SupplierToggleRow>
 
           {
-            (formValues.assignToSupplier) ?
+            formValues.assignToSupplier ?
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <FormAutocomplete
@@ -337,22 +468,39 @@ export function CreateInvoiceRequestModal({
                     options={supplierOptions}
                     value={formValues.supplierId}
                     onChange={(value) =>
-                      setFormValues((prev) => ({ ...prev, supplierId: value }))
+                      setFormValues((prev) => ({
+                        ...prev,
+                        supplierId: value,
+                        orderId: "",
+                      }))
                     }
-                    placeholder="Buscar proveedor"
+                    placeholder={
+                      loadingSuppliers
+                        ? "Cargando proveedores..."
+                        : "Buscar proveedor"
+                    }
                     error={Boolean(formErrors.supplierId)}
                     helperText={formErrors.supplierId}
+                    disabled={loadingSuppliers}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <FormAutocomplete
                     label="Asignar pedido"
+                    required
                     options={orderOptions}
                     value={formValues.orderId}
                     onChange={(value) =>
                       setFormValues((prev) => ({ ...prev, orderId: value }))
                     }
-                    placeholder="Buscar pedido"
+                    placeholder={
+                      formValues.supplierId
+                        ? "Buscar pedido"
+                        : "Selecciona un proveedor"
+                    }
+                    error={Boolean(formErrors.orderId)}
+                    helperText={formErrors.orderId}
+                    disabled={!formValues.supplierId}
                   />
                 </Grid>
               </Grid>
@@ -425,50 +573,56 @@ export function CreateInvoiceRequestModal({
           <AmountSummaryCard>
             <Stack direction="row" spacing={1} alignItems="center">
               <Wallet size={16} />
-              <Typography variant="subtitle2" fontWeight={700}>MONTO DE LA FACTURA</Typography>
+              <Typography variant="subtitle2" fontWeight={700}>
+                MONTO DE LA FACTURA
+              </Typography>
             </Stack>
             <AmountSummaryRow>
-              <Typography variant="body2" color="text.secondary">Subtotal (sin IVA)*</Typography>
-              <Typography variant="body2">{numeral(formValues.subtotal).format("$0,0.00")}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Subtotal (sin IVA)*
+              </Typography>
+              <Typography variant="body2">
+                {numeral(formValues.subtotal).format("$0,0.00")}
+              </Typography>
             </AmountSummaryRow>
             <AmountSummaryRow>
-              <Typography variant="body2" color="text.secondary">IVA</Typography>
-              <Typography variant="body2">{numeral(formValues.vat).format("$0,0.00")}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                IVA
+              </Typography>
+              <Typography variant="body2">
+                {numeral(formValues.vat).format("$0,0.00")}
+              </Typography>
             </AmountSummaryRow>
             <AmountSummaryRow>
-              <Typography variant="subtitle1" fontWeight={700}>Total</Typography>
-              <Typography variant="subtitle1" fontWeight={700}>{numeral(formValues.total).format("$0,0.00")}</Typography>
+              <Typography variant="subtitle1" fontWeight={700}>
+                Total
+              </Typography>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {numeral(formValues.total).format("$0,0.00")}
+              </Typography>
             </AmountSummaryRow>
             {
-              formErrors.total && <Typography variant="caption" color="error">{formErrors.total}</Typography>
+              formErrors.total &&
+              <Typography variant="caption" color="error">
+                {formErrors.total}
+              </Typography>
             }
           </AmountSummaryCard>
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField
-                label="Fecha de emisión"
-                value={formatDisplayDate(formValues.issuedAt)}
-                disabled
-                InputProps={{ readOnly: true }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormTextField
-                label="Fecha de límite de pago"
-                value={formatDisplayDate(formValues.paymentDueAt)}
-                disabled
-                InputProps={{ readOnly: true }}
-              />
-            </Grid>
-          </Grid>
+          <FormTextField
+            label="Fecha de emisión"
+            value={formatDisplayDate(formValues.issuedAt)}
+            disabled
+            InputProps={{ readOnly: true }}
+          />
 
           <Button
             variant="text"
             color="primary"
             onClick={() => {
-              setStep("upload");
-              setFiles([]);
+              setStep("uploadXml");
+              setXmlFiles([]);
+              setPdfFiles([]);
               setFormValues(EMPTY_FORM);
               setFormErrors({});
             }}
@@ -481,9 +635,13 @@ export function CreateInvoiceRequestModal({
             color="primary"
             fullWidth
             onClick={handleSubmit}
-            disabled={saving || parsing}>
+            disabled={saving || parsing}
+            sx={{ py: 1.5, mt: 0.5 }}>
             {
-              (saving) ? <CircularProgress size={20} color="inherit" /> : "Enviar solicitud"}
+              saving
+                ? <CircularProgress size={20} color="inherit" />
+                : "Enviar solicitud"
+            }
           </Button>
         </Stack>
       }

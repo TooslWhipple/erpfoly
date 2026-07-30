@@ -149,6 +149,7 @@ export function buildCreateProductRequest(
         exchangeRate: Number(priceData.exchangeRate),
         iva: Number(priceData.iva),
         isLiquidation: priceData.liquidation,
+        costBasisForCalculation: priceData.costBasisForCalculation,
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
@@ -267,7 +268,7 @@ export interface ProductDetailPriceDto {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
-    costBasisForCalculation?: string | null;
+    costBasisForCalculation?: CostBasisForCalculation | null;
     lastEditedBy?: string | null;
     lastEditedDate?: string | null;
     basePrices?: Array<{

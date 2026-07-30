@@ -67,6 +67,7 @@ export type CreateProductRequest = {
     exchangeRate?: number;
     iva?: number;
     isLiquidation?: boolean;
+    costBasisForCalculation?: CostBasisForCalculation;
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }

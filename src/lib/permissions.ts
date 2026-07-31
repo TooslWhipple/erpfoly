@@ -28,6 +28,8 @@ export type PermissionModule =
   | "costeos"
   | "facturas"
   | "facturas.solicitudes"
+  | "facturas.gastos_generales"
+  | "facturas.proveedores"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
@@ -169,6 +171,20 @@ export const INVOICE_REQUESTS_CREATE = INVOICE_REQUESTS_PERMISSIONS.create;
 export const INVOICE_REQUESTS_READ = INVOICE_REQUESTS_PERMISSIONS.read;
 export const INVOICE_REQUESTS_UPDATE = INVOICE_REQUESTS_PERMISSIONS.update;
 export const INVOICE_REQUESTS_DELETE = INVOICE_REQUESTS_PERMISSIONS.delete;
+
+// General expenses
+export const GENERAL_EXPENSES_PERMISSIONS = createCrudPermissions("facturas.gastos_generales");
+export const GENERAL_EXPENSES_CREATE = GENERAL_EXPENSES_PERMISSIONS.create;
+export const GENERAL_EXPENSES_READ = GENERAL_EXPENSES_PERMISSIONS.read;
+export const GENERAL_EXPENSES_UPDATE = GENERAL_EXPENSES_PERMISSIONS.update;
+export const GENERAL_EXPENSES_DELETE = GENERAL_EXPENSES_PERMISSIONS.delete;
+
+// Supplier payables (Proveedores - Cuentas por pagar)
+export const SUPPLIER_PAYABLES_PERMISSIONS = createCrudPermissions("facturas.proveedores");
+export const SUPPLIER_PAYABLES_CREATE = SUPPLIER_PAYABLES_PERMISSIONS.create;
+export const SUPPLIER_PAYABLES_READ = SUPPLIER_PAYABLES_PERMISSIONS.read;
+export const SUPPLIER_PAYABLES_UPDATE = SUPPLIER_PAYABLES_PERMISSIONS.update;
+export const SUPPLIER_PAYABLES_DELETE = SUPPLIER_PAYABLES_PERMISSIONS.delete;
 
 // Customer support
 export const CUSTOMER_SUPPORT_PERMISSIONS = createCrudPermissions("atencion_cliente");
@@ -331,6 +347,8 @@ export const PERMISSIONS_BY_MODULE = {
   invoices: {
     payableInvoices: Object.values(PAYABLE_INVOICES_PERMISSIONS),
     invoiceRequests: Object.values(INVOICE_REQUESTS_PERMISSIONS),
+    generalExpenses: Object.values(GENERAL_EXPENSES_PERMISSIONS),
+    supplierPayables: Object.values(SUPPLIER_PAYABLES_PERMISSIONS),
   },
   customerSupport: {
     customerSupport: Object.values(CUSTOMER_SUPPORT_PERMISSIONS),

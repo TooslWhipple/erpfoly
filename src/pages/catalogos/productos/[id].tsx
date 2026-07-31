@@ -797,6 +797,10 @@ export default function ProductFormPage() {
       value: "general",
       label: "Datos generales",
     },
+     {
+      value: "branches",
+      label: "Sucursales",
+    },
     {
       value: "suppliers",
       label: "Proveedores",
@@ -806,16 +810,12 @@ export default function ProductFormPage() {
       label: "Precio",
     },
     {
-      value: "packages",
-      label: "Paquetes",
-    },
-    {
       value: "gallery",
       label: "Galería",
     },
-    {
-      value: "branches",
-      label: "Sucursales",
+     {
+      value: "packages",
+      label: "Paquetes",
     },
   ];
   if (pageLoading) {

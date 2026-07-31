@@ -53,11 +53,11 @@ export interface ProductSearchResult {
 
 export interface InventorySource {
   sourceKey: string;
-  sourceType: "branch" | "warehouse" | "incoming";
+  sourceType: "branch" | "warehouse";
   branchId?: number;
   label: string;
   available: number;
-  ordered?: number;
+  pendingOrdered?: number;
   inTransit?: number;
   quantity: number;
 }

@@ -45,6 +45,7 @@ import {
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
+  CATALOG_APPORTIONMENTS_READ,
 } from "@/lib/permissions";
 import type { AccessRequirement } from "@/lib/routeAccess";
 import { ROLE_CODES } from "@/constants/role-codes";
@@ -143,6 +144,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Promociones", path: "/catalogos/promociones", requirement: { permission: CATALOG_PROMOTIONS_READ } },
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },
       { label: "Zonas", path: "/catalogos/zonas", requirement: { permission: CATALOG_ZONES_READ } },
+      { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
       { label: "Sucursales", path: "/catalogos/sucursales", requirement: { permission: CATALOG_BRANCHES_READ } },
       { label: "Cajas", path: "/catalogos/cajas", requirement: { permission: CATALOG_CASH_REGISTERS_READ } },
       { label: "Proveedores", path: "/catalogos/proveedores", requirement: { permission: CATALOG_SUPPLIERS_READ } },

@@ -231,6 +231,14 @@
       ]
     },
     {
+      "code": "catalogos-prorrateos",
+      "name": "Prorrateos",
+      "path": "/catalogos/prorrateos",
+      "actions": [
+        "view"
+      ]
+    },
+    {
       "code": "catalogos-sucursales",
       "name": "Sucursales",
       "path": "/catalogos/sucursales",

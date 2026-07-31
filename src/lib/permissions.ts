@@ -34,6 +34,7 @@ export type PermissionModule =
   | "catalogos.departamentos"
   | "catalogos.promociones"
   | "catalogos.zonas"
+  | "catalogos.prorrateos"
   | "catalogos.sucursales"
   | "catalogos.cajas"
   | "catalogos.proveedores"
@@ -205,6 +206,9 @@ export const CATALOG_ZONES_CREATE = CATALOG_ZONES_PERMISSIONS.create;
 export const CATALOG_ZONES_READ = CATALOG_ZONES_PERMISSIONS.read;
 export const CATALOG_ZONES_UPDATE = CATALOG_ZONES_PERMISSIONS.update;
 export const CATALOG_ZONES_DELETE = CATALOG_ZONES_PERMISSIONS.delete;
+
+export const CATALOG_APPORTIONMENTS_PERMISSIONS = createCrudPermissions("catalogos.prorrateos");
+export const CATALOG_APPORTIONMENTS_READ = CATALOG_APPORTIONMENTS_PERMISSIONS.read;
 
 export const CATALOG_BRANCHES_PERMISSIONS = createCrudPermissions("catalogos.sucursales");
 export const CATALOG_BRANCHES_CREATE = CATALOG_BRANCHES_PERMISSIONS.create;

@@ -283,7 +283,7 @@ export default function GeneralExpensesPage() {
 
   return (
     <Stack direction="column" spacing={3}>
-      <Title title="Gastos generales" />
+      <Title title="Interno - Cuentas por pagar" />
 
       <Grid container spacing={2} alignItems="stretch">
         {kpiCards.map((card) => (

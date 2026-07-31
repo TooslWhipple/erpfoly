@@ -52,6 +52,20 @@ export type {
   UnassignedInvoicesModalProps,
   ExpenseProgressBarsProps,
 } from "./GeneralExpenses";
+export {
+  DiscrepanciesAlert,
+  DiscrepanciesModal,
+  StatementDetailModal,
+  SchedulePaymentDrawer,
+  StatementProgressBar,
+} from "./SupplierPayables";
+export type {
+  DiscrepanciesAlertProps,
+  DiscrepanciesModalProps,
+  StatementDetailModalProps,
+  SchedulePaymentDrawerProps,
+  StatementProgressBarProps,
+} from "./SupplierPayables";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

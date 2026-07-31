@@ -45,6 +45,7 @@ import {
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
+  SUPPLIER_PAYABLES_READ,
   ORDERS_READ,
   ROUTES_READ,
 } from "@/lib/permissions";
@@ -143,6 +144,7 @@ export const NAV_ITEMS: NavItem[] = [
         PAYABLE_INVOICES_READ,
         INVOICE_REQUESTS_READ,
         GENERAL_EXPENSES_READ,
+        SUPPLIER_PAYABLES_READ,
       ],
     },
     subItems: [
@@ -157,9 +159,14 @@ export const NAV_ITEMS: NavItem[] = [
         requirement: { permission: INVOICE_REQUESTS_READ },
       },
       {
-        label: "Gastos generales",
+        label: "Interno",
         path: "/facturas/gastos-generales",
         requirement: { permission: GENERAL_EXPENSES_READ },
+      },
+      {
+        label: "Proveedores",
+        path: "/facturas/proveedores",
+        requirement: { permission: SUPPLIER_PAYABLES_READ },
       },
     ],
   },

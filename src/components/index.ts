@@ -40,6 +40,18 @@ export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
 export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
 export type { ReviewInvoiceRequestModalProps } from "./ReviewInvoiceRequestModal";
+export {
+  RegisterExpenseModal,
+  UnassignedInvoicesAlert,
+  UnassignedInvoicesModal,
+  ExpenseProgressBars,
+} from "./GeneralExpenses";
+export type {
+  RegisterExpenseModalProps,
+  UnassignedInvoicesAlertProps,
+  UnassignedInvoicesModalProps,
+  ExpenseProgressBarsProps,
+} from "./GeneralExpenses";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

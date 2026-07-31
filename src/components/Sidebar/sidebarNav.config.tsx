@@ -44,6 +44,7 @@ import {
   COSTEOS_READ,
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
   ORDERS_READ,
   ROUTES_READ,
 } from "@/lib/permissions";
@@ -138,7 +139,11 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/facturas",
     icon: <Receipt size={ICON_SIZE} />,
     requirement: {
-      anyPermissions: [PAYABLE_INVOICES_READ, INVOICE_REQUESTS_READ],
+      anyPermissions: [
+        PAYABLE_INVOICES_READ,
+        INVOICE_REQUESTS_READ,
+        GENERAL_EXPENSES_READ,
+      ],
     },
     subItems: [
       {
@@ -150,6 +155,11 @@ export const NAV_ITEMS: NavItem[] = [
         label: "Solicitudes",
         path: "/facturas/solicitudes",
         requirement: { permission: INVOICE_REQUESTS_READ },
+      },
+      {
+        label: "Gastos generales",
+        path: "/facturas/gastos-generales",
+        requirement: { permission: GENERAL_EXPENSES_READ },
       },
     ],
   },

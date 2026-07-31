@@ -49,6 +49,7 @@ import {
   COSTEOS_READ,
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -129,6 +130,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
   { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+  { pattern: /^\/facturas\/gastos-generales(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
   { pattern: /^\/facturas(\/.*)?$/, permission: PAYABLE_INVOICES_READ },
 
   { pattern: /^\/atencion-cliente(\/.*)?$/, permission: CUSTOMER_SUPPORT_READ },
@@ -178,6 +180,7 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/costeos", requirement: { permission: COSTEOS_READ } },
   { path: "/facturas", requirement: { permission: PAYABLE_INVOICES_READ } },
   { path: "/facturas/solicitudes", requirement: { permission: INVOICE_REQUESTS_READ } },
+  { path: "/facturas/gastos-generales", requirement: { permission: GENERAL_EXPENSES_READ } },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },

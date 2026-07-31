@@ -12,6 +12,7 @@ export default function NuevaVenta() {
     <SaleBuilder
       resumeSaleId={resumeSaleId}
       onExit={() => void router.push("/ventas")}
+      mode="vendedor"
     />
   );
 }

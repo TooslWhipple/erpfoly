@@ -1,5 +1,4 @@
-import { Button, InputAdornment } from "@mui/material";
-import { KeyboardArrowDown as KeyboardArrowDownIcon } from "@mui/icons-material";
+import { Button, InputAdornment, MenuItem } from "@mui/material";
 import { Search } from "lucide-react";
 import { theme } from "@/styles/theme";
 import {
@@ -14,6 +13,8 @@ export function CashRegisterSearchBar({
   isSearching = false,
   onSearchQueryChange,
   onSearch,
+  mode,
+  onModeChange,
 }: CashRegisterSearchBarProps) {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -23,12 +24,21 @@ export function CashRegisterSearchBar({
 
   return (
     <SearchBarContainer>
-      <PaymentTypeSelect variant="outlined" endIcon={<KeyboardArrowDownIcon />}>
-        Abonos
+      <PaymentTypeSelect
+        size="small"
+        value={mode}
+        onChange={(event) => onModeChange(event.target.value as typeof mode)}
+      >
+        <MenuItem value="abonos">Abonos</MenuItem>
+        <MenuItem value="ventas">Ventas</MenuItem>
       </PaymentTypeSelect>
 
       <SearchInput
-        placeholder="Ingresa código o nombre del cliente"
+        placeholder={
+          mode === "ventas"
+            ? "Ingresa folio, cliente o monto"
+            : "Ingresa código o nombre del cliente"
+        }
         value={searchQuery}
         onChange={(event) => onSearchQueryChange(event.target.value)}
         onKeyDown={handleKeyDown}

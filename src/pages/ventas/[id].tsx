@@ -43,6 +43,7 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
+import { SaleBuilder } from "@/components/SaleBuilder";
 
 function layawayStatusMeta(status: string) {
   switch (status) {
@@ -304,11 +305,33 @@ export default function VentaDetalle() {
     );
   }
 
+  // Venta ya registrada por el vendedor (contado/crédito) o apartado activo
+  // aún en cobro: el cajero la completa en SaleBuilder modo cajero (carrito
+  // bloqueado, solo la sección de cobro es interactiva) en vez de la vista
+  // de solo-detalle de abajo.
+  const isPendingCashierWork =
+    sale.status === "PENDING_CASHIER" ||
+    (sale.status === "PENDING_PAYMENT" && sale.layaway != null);
+
+  if (isPendingCashierWork) {
+    return (
+      <SaleBuilder
+        resumeSaleId={saleId}
+        onExit={() => void router.push("/ventas")}
+        mode="cajero"
+      />
+    );
+  }
+
   const layawayRemaining = sale.layaway
     ? Math.max(0, sale.layaway.totalAmount - sale.layaway.paidAmount)
     : 0;
   const layawayAmountNum =
     parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
+  const layawayChange =
+    layawayMethod === "CASH"
+      ? Math.max(0, layawayAmountNum - layawayRemaining)
+      : 0;
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
   const isSaleCancelled = sale.status === "CANCELLED";
 
@@ -920,18 +943,31 @@ export default function VentaDetalle() {
                           )}
                         </TextField>
                       )}
+                      {layawayMethod === "CASH" && (
+                        <Stack direction="row" justifyContent="space-between" mb={1.5}>
+                          <Typography variant="body2" color="text.secondary">
+                            Cambio
+                          </Typography>
+                          <Typography variant="subtitle1">
+                            {formatCurrency(layawayChange)}
+                          </Typography>
+                        </Stack>
+                      )}
                       <Button
                         fullWidth
                         variant="outlined"
                         disabled={
                           layawayAmountNum <= 0 ||
-                          layawayAmountNum > layawayRemaining ||
+                          (layawayAmountNum > layawayRemaining && layawayMethod !== "CASH") ||
                           (isLayawayCardPayment && !layawayTerminalId) ||
                           registerLayawayPaymentMutation.isPending
                         }
                         onClick={() =>
                           registerLayawayPaymentMutation.mutate({
-                            amount: layawayAmountNum,
+                            amount:
+                              layawayMethod === "CASH"
+                                ? Math.min(layawayAmountNum, layawayRemaining)
+                                : layawayAmountNum,
                             payment_method: layawayMethod,
                             payment_terminal_id: layawayTerminalId ?? undefined,
                           })

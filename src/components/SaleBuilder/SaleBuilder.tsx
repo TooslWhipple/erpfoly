@@ -60,10 +60,12 @@ import {
   confirmSalePayment,
   confirmCreditSale,
   createLayaway,
+  registerSale,
   setDeliveryDate,
   getSaleDetail,
   invalidateSaleDiscount,
 } from "@/services/ventas.service";
+import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -125,9 +127,24 @@ function formatNumberInput(raw: string): string {
 export interface SaleBuilderProps {
   resumeSaleId: number | null;
   onExit: () => void;
+  /**
+   * 'vendedor' (default): arma el carrito y, para contado/crédito, la
+   * registra sin cobrarla (queda PENDING_CASHIER para que el cajero la
+   * cobre). Apartado es la excepción: sigue el flujo actual completo
+   * (captura enganche/plazo) sin pasar por PENDING_CASHIER — ver plan
+   * "Dudas resueltas, tarea SaleBuilder.tsx".
+   * 'cajero': el carrito queda bloqueado (solo lectura); solo la sección
+   * de cobro (biometría + pago) es interactiva.
+   */
+  mode?: "vendedor" | "cajero";
 }
 
-export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
+export function SaleBuilder({
+  resumeSaleId,
+  onExit,
+  mode = "vendedor",
+}: SaleBuilderProps) {
+  const isCajeroMode = mode === "cajero";
   const router = useRouter();
   const queryClient = useQueryClient();
   const [discountRequestModalOpen, setDiscountRequestModalOpen] =
@@ -498,44 +515,49 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       saleId = activeSaleId;
       folio = activeSaleFolio ?? "";
 
-      if (selectedClient) {
-        const clientRes = await updateSaleClient(saleId, selectedClient.id);
-        if (clientRes.error) throw new Error(clientRes.error.message);
-      }
-
-      const currentIds = new Set(
-        cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
-      );
-
-      for (const originalId of originalItemIds) {
-        if (!currentIds.has(originalId)) {
-          const removeRes = await removeSaleItem(saleId, originalId);
-          if (removeRes.error) throw new Error(removeRes.error.message);
+      // Modo cajero: el carrito/cliente están bloqueados en la UI y la venta
+      // ya no está en DRAFT, así que el backend rechaza estos endpoints
+      // (guard status !== DRAFT) — no hay nada que sincronizar.
+      if (!isCajeroMode) {
+        if (selectedClient) {
+          const clientRes = await updateSaleClient(saleId, selectedClient.id);
+          if (clientRes.error) throw new Error(clientRes.error.message);
         }
-      }
 
-      for (const item of cart) {
-        if (item.saleItemId) {
-          const updateRes = await updateSaleItem(saleId, item.saleItemId, {
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            discount_amount:
-              item.discountAmount > 0 ? item.discountAmount : undefined,
-          });
-          if (updateRes.error) throw new Error(updateRes.error.message);
-        } else {
-          const itemRes = await addSaleItem(saleId, {
-            product_id: item.productId,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            discount_amount:
-              item.discountAmount > 0 ? item.discountAmount : undefined,
-          });
-          if (itemRes.error) throw new Error(itemRes.error.message);
+        const currentIds = new Set(
+          cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
+        );
+
+        for (const originalId of originalItemIds) {
+          if (!currentIds.has(originalId)) {
+            const removeRes = await removeSaleItem(saleId, originalId);
+            if (removeRes.error) throw new Error(removeRes.error.message);
+          }
         }
-      }
 
-      setOriginalItemIds(currentIds);
+        for (const item of cart) {
+          if (item.saleItemId) {
+            const updateRes = await updateSaleItem(saleId, item.saleItemId, {
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              discount_amount:
+                item.discountAmount > 0 ? item.discountAmount : undefined,
+            });
+            if (updateRes.error) throw new Error(updateRes.error.message);
+          } else {
+            const itemRes = await addSaleItem(saleId, {
+              product_id: item.productId,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              discount_amount:
+                item.discountAmount > 0 ? item.discountAmount : undefined,
+            });
+            if (itemRes.error) throw new Error(itemRes.error.message);
+          }
+        }
+
+        setOriginalItemIds(currentIds);
+      }
     }
 
     if (paymentType === "LAYAWAY" && activeLayawayTerm) {
@@ -577,6 +599,23 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
 
       const { id: saleId } = await ensureSaleSynced();
 
+      const billingPayload: SaleInvoiceBillingPayload | undefined =
+        wantsInvoice && billingConfirmed
+          ? {
+              rfc: billing.values.rfc,
+              business_name: billing.values.businessName,
+              tax_regime_id: billing.values.taxRegimeId,
+              cfdi_use_id: billing.values.cfdiUseId,
+              neighborhood_code: billing.values.fiscalNeighborhoodFullCode,
+              street: billing.values.fiscalStreet,
+              external_number: billing.values.fiscalExternalNumber,
+              postal_code: billing.values.fiscalPostalCode,
+              email: billing.values.sendInvoiceByEmail
+                ? billing.values.invoiceEmail
+                : undefined,
+            }
+          : undefined;
+
       if (deliveryType === "delivery") {
         const clientPrimaryAddress =
           selectedClient?.addresses?.find((a) => a.isPrimary) ??
@@ -608,6 +647,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           down_payment: enganche,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          ...billingPayload,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
         return creditRes.data!;
@@ -640,12 +680,40 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
       });
       if (paymentRes.error) throw new Error(paymentRes.error.message);
 
-      const confirmRes = await confirmSalePayment(saleId);
+      const confirmRes = await confirmSalePayment(saleId, billingPayload);
       if (confirmRes.error) throw new Error(confirmRes.error.message);
       return confirmRes.data!;
     },
     onSuccess: (data) => {
+      // En modo cajero, SaleBuilder se monta dentro de /ventas/[id] (misma
+      // ruta, mismo saleId): el push de abajo solo cambia el query string,
+      // así que Next.js no remonta la página y el detalle no se refresca
+      // solo con eso — hay que invalidar la query del padre para que deje
+      // de renderizar SaleBuilder (status ya no es PENDING_CASHIER) y
+      // muestre VentaDetalle.
+      void queryClient.invalidateQueries({
+        queryKey: ["venta-detail", data.id],
+      });
       void router.push(`/ventas/${data.id}?nuevo=1`);
+    },
+    onError: (err: Error) => {
+      snackbar.showError(err.message);
+    },
+  });
+
+  // Paso vendedor para contado/crédito: registra la venta sin cobrarla
+  // (queda PENDING_CASHIER para que el cajero la cobre). Apartado sigue el
+  // flujo de cobrarMutation sin cambios — ver SaleBuilderProps.mode.
+  const registerSaleMutation = useMutation({
+    mutationFn: async () => {
+      const { id: saleId } = await ensureSaleSynced();
+      const registerRes = await registerSale(saleId);
+      if (registerRes.error) throw new Error(registerRes.error.message);
+      return registerRes.data!;
+    },
+    onSuccess: () => {
+      showSuccess("Venta registrada. Queda pendiente de cobro en caja.");
+      onExit();
     },
     onError: (err: Error) => {
       snackbar.showError(err.message);
@@ -1395,33 +1463,25 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 </Box>
               )}
 
-              {/* Orígenes principales: sucursal actual + bodega + por surtir */}
+              {/* Orígenes principales: sucursal actual + bodega (existencia + por surtir) */}
               <Stack spacing={1.5}>
                 {productSources
                   .filter(
                     (src) =>
                       src.sourceType === "warehouse" ||
-                      src.sourceType === "incoming" ||
                       src.branchId === CURRENT_BRANCH_ID,
                   )
                   .map((src) => {
                     const isWarehouse = src.sourceType === "warehouse";
-                    const isIncoming = src.sourceType === "incoming";
                     const isCurrentBranch =
                       src.sourceType === "branch" &&
                       src.branchId === CURRENT_BRANCH_ID;
 
                     const sourceLabel = isCurrentBranch
                       ? `Ésta sucursal (${src.label})`
-                      : isWarehouse
-                        ? "Bodega"
-                        : "Por surtir a Bodega";
+                      : "Bodega";
 
-                    const SourceIcon = isCurrentBranch
-                      ? Store
-                      : isWarehouse
-                        ? Warehouse
-                        : Package;
+                    const SourceIcon = isCurrentBranch ? Store : Warehouse;
 
                     const branchLocked = isBranchSourceLocked(src);
 
@@ -1509,29 +1569,29 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                                       Existencia: {src.available}
                                     </Typography>
                                   </Stack>
+                                  {(src.pendingOrdered ?? 0) > 0 && (
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={0.75}
+                                    >
+                                      <Box
+                                        sx={{
+                                          color: "text.disabled",
+                                          display: "flex",
+                                        }}
+                                      >
+                                        <Package size={13} />
+                                      </Box>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Por surtir: {src.pendingOrdered}
+                                      </Typography>
+                                    </Stack>
+                                  )}
                                 </>
-                              )}
-                              {isIncoming && (
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                >
-                                  <Box
-                                    sx={{
-                                      color: "text.disabled",
-                                      display: "flex",
-                                    }}
-                                  >
-                                    <Package size={13} />
-                                  </Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Por surtir: {src.available}
-                                  </Typography>
-                                </Stack>
                               )}
                               {isCurrentBranch && (
                                 <Stack
@@ -2466,48 +2526,71 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1.5}>
-          <Button
-            variant="outlined"
-            sx={{ borderRadius: 2, textTransform: "none" }}
-            disabled={cart.length === 0 || guardarCotizacionMutation.isPending}
-            onClick={() => guardarCotizacionMutation.mutate()}
-          >
-            {guardarCotizacionMutation.isPending ? (
-              <CircularProgress size={16} />
-            ) : resumeSaleId !== null ? (
-              "Actualizar cotización"
-            ) : (
-              "Guardar cotización"
-            )}
-          </Button>
-          {resumeSaleId !== null && (
+          {!isCajeroMode && (
+            <>
+              <Button
+                variant="outlined"
+                sx={{ borderRadius: 2, textTransform: "none" }}
+                disabled={
+                  cart.length === 0 || guardarCotizacionMutation.isPending
+                }
+                onClick={() => guardarCotizacionMutation.mutate()}
+              >
+                {guardarCotizacionMutation.isPending ? (
+                  <CircularProgress size={16} />
+                ) : resumeSaleId !== null ? (
+                  "Actualizar cotización"
+                ) : (
+                  "Guardar cotización"
+                )}
+              </Button>
+              {resumeSaleId !== null && (
+                <Button
+                  variant="outlined"
+                  sx={{ borderRadius: 2, textTransform: "none" }}
+                  disabled={
+                    resumeSaleData?.discountRequest != null &&
+                    resumeSaleData.discountRequest.status !== "INVALIDATED"
+                  }
+                  onClick={() => setDiscountRequestModalOpen(true)}
+                >
+                  Solicitar descuento
+                </Button>
+              )}
+            </>
+          )}
+          {/* Apartado es la excepción: sigue el flujo de cobro completo tal
+          cual hoy incluso en modo vendedor — ver SaleBuilderProps.mode. */}
+          {!isCajeroMode && paymentType !== "LAYAWAY" ? (
             <Button
-              variant="outlined"
+              variant="contained"
+              disabled={!canProceed || registerSaleMutation.isPending}
               sx={{ borderRadius: 2, textTransform: "none" }}
-              disabled={
-                resumeSaleData?.discountRequest != null &&
-                resumeSaleData.discountRequest.status !== "INVALIDATED"
-              }
-              onClick={() => setDiscountRequestModalOpen(true)}
+              onClick={() => registerSaleMutation.mutate()}
             >
-              Solicitar descuento
+              {registerSaleMutation.isPending ? (
+                <CircularProgress size={16} />
+              ) : (
+                "Registrar venta (pendiente de cobro)"
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              disabled={!canProceed}
+              sx={{ borderRadius: 2, textTransform: "none" }}
+              onClick={() => {
+                if (paymentType === "CREDIT") {
+                  setFingerprintConfirmed(false);
+                  setFingerprintModalOpen(true);
+                } else {
+                  setView("checkout");
+                }
+              }}
+            >
+              Proceder al cobro
             </Button>
           )}
-          <Button
-            variant="contained"
-            disabled={!canProceed}
-            sx={{ borderRadius: 2, textTransform: "none" }}
-            onClick={() => {
-              if (paymentType === "CREDIT") {
-                setFingerprintConfirmed(false);
-                setFingerprintModalOpen(true);
-              } else {
-                setView("checkout");
-              }
-            }}
-          >
-            Proceder al cobro
-          </Button>
         </Stack>
       </Box>
 
@@ -2552,25 +2635,27 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                   Agrega los artículos para este cliente.
                 </Typography>
               </Box>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<ScanLine size={16} />}
-                  sx={{ textTransform: "none" }}
-                >
-                  Escanear artículos
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Search size={16} />}
-                  sx={{ textTransform: "none" }}
-                  onClick={() => setView("search")}
-                >
-                  Buscar
-                </Button>
-              </Stack>
+              {!isCajeroMode && (
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ScanLine size={16} />}
+                    sx={{ textTransform: "none" }}
+                  >
+                    Escanear artículos
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Search size={16} />}
+                    sx={{ textTransform: "none" }}
+                    onClick={() => setView("search")}
+                  >
+                    Buscar
+                  </Button>
+                </Stack>
+              )}
             </Stack>
 
             {cart.length === 0 ? (
@@ -2663,6 +2748,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                         </Box>
                         <IconButton
                           size="small"
+                          disabled={isCajeroMode}
                           onClick={() => handleRemoveFromCart(item.productId)}
                           sx={{ color: "text.secondary", flexShrink: 0 }}
                         >
@@ -2731,6 +2817,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                               min={1}
                               size="small"
                               iconSize={13}
+                              disabled={isCajeroMode}
                             />
                           </Box>
                           <Box>
@@ -2981,6 +3068,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                   <Button
                     size="small"
                     variant="text"
+                    disabled={isCajeroMode}
                     sx={{
                       textTransform: "none",
                       fontWeight: 600,
@@ -3152,7 +3240,9 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     Fecha de entrega (opcional)
                   </Typography>
                   <Box
-                    onClick={() => setCheckoutDeliveryDateModalOpen(true)}
+                    onClick={() =>
+                      !isCajeroMode && setCheckoutDeliveryDateModalOpen(true)
+                    }
                     sx={{
                       border: "1px solid",
                       borderColor: "divider",
@@ -3162,10 +3252,12 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      cursor: "pointer",
-                      color: checkoutDeliveryDate
-                        ? "text.primary"
-                        : "primary.main",
+                      cursor: isCajeroMode ? "default" : "pointer",
+                      color: isCajeroMode
+                        ? "text.disabled"
+                        : checkoutDeliveryDate
+                          ? "text.primary"
+                          : "primary.main",
                       fontWeight: 500,
                       fontSize: "0.85rem",
                     }}
@@ -3184,6 +3276,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                 fullWidth
                 size="small"
                 displayEmpty
+                disabled={isCajeroMode}
                 value={deliveryType ?? ""}
                 onChange={(e) =>
                   setDeliveryType(
@@ -3243,6 +3336,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     <Button
                       size="small"
                       variant="text"
+                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,
@@ -3266,6 +3360,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     <Button
                       size="small"
                       variant="text"
+                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         p: 0,
@@ -3319,6 +3414,7 @@ export function SaleBuilder({ resumeSaleId, onExit }: SaleBuilderProps) {
                     <Button
                       size="small"
                       variant="text"
+                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,

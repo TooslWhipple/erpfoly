@@ -1,5 +1,5 @@
 import { styled } from "@mui/material/styles";
-import { TextField, Button, LinearProgress, TableCell as MuiTableCell, TableContainer } from "@mui/material";
+import { TextField, Button, Select, LinearProgress, TableCell as MuiTableCell, TableContainer } from "@mui/material";
 
 export type CashRegisterStatus = "open" | "closed";
 
@@ -54,13 +54,18 @@ export const SearchBarContainer = styled('div')(({ theme }) => ({
     padding: "8px"
 }));
 
-export const PaymentTypeSelect = styled(Button)(({ theme }) => ({
+export const PaymentTypeSelect = styled(Select)(({ theme }) => ({
     minWidth: 120,
     height: 36,
-    textTransform: "none",
-    borderColor: theme.palette.app.border,
     color: theme.palette.text.primary,
-    "&:hover": {
+    "& .MuiSelect-select": {
+        paddingTop: 8,
+        paddingBottom: 8,
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+        borderColor: theme.palette.app.border,
+    },
+    "&:hover .MuiOutlinedInput-notchedOutline": {
         borderColor: theme.palette.text.disabled,
     },
 }));

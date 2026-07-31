@@ -40,10 +40,12 @@ export default function ClientPaymentPage() {
     paymentResult,
     totalOutstanding,
     change,
+    hasPartialInstallmentRemainder,
+    partialRemainderDecision,
     canRegister,
     orderedCreditAccounts,
     excludedCreditIds,
-    cascadePreview,
+    displayedCascadePreview,
     totalPendingInstallmentsCount,
     paymentTerminalId,
     paymentTerminals,
@@ -53,6 +55,7 @@ export default function ClientPaymentPage() {
     setPaymentAmount,
     setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
+    setPartialRemainderDecision,
     toggleCreditExcluded,
     moveCreditOrder,
     submitPayment,
@@ -182,7 +185,7 @@ export default function ClientPaymentPage() {
               <CreditAccountCard
                 key={account.id}
                 account={account}
-                cascadePreview={cascadePreview}
+                cascadePreview={displayedCascadePreview}
                 excludedFromCascade={excludedCreditIds.includes(account.id)}
                 onToggleExcluded={toggleCreditExcluded}
                 canMoveUp={index > 0}
@@ -210,6 +213,8 @@ export default function ClientPaymentPage() {
               paymentMethod={paymentMethod}
               isCashDeposit={isCashDeposit}
               change={change}
+              hasPartialInstallmentRemainder={hasPartialInstallmentRemainder}
+              partialRemainderDecision={partialRemainderDecision}
               canRegister={canRegister}
               isSubmitting={isSubmitting}
               paymentTerminalId={paymentTerminalId}
@@ -221,6 +226,7 @@ export default function ClientPaymentPage() {
               onCashDepositChange={setIsCashDeposit}
               onPaymentTerminalChange={setPaymentTerminalId}
               onInstallmentCountChange={setPaymentAmountByInstallmentCount}
+              onPartialRemainderDecisionChange={setPartialRemainderDecision}
               onSubmit={() => void submitPayment()}
             />
           </Stack>

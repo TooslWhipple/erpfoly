@@ -48,6 +48,7 @@ export function useCashRegisterSession(
         exchangeRate: summary.exchange_rate ?? 17.6,
         currentCash: summary.current_cash ?? 0,
         limit: summary.limit ?? 20000,
+        branchId: summary.branch_id,
       });
 
       if (loadMovementsOnOpen && summary.status === "OPEN") {

@@ -66,6 +66,14 @@ export type {
   SchedulePaymentDrawerProps,
   StatementProgressBarProps,
 } from "./SupplierPayables";
+export {
+  DiscrepancyDetailHeader,
+  DiscrepancyInvoicesSection,
+} from "./MerchandiseReceptionDiscrepancies";
+export type {
+  DiscrepancyDetailHeaderProps,
+  DiscrepancyInvoicesSectionProps,
+} from "./MerchandiseReceptionDiscrepancies";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

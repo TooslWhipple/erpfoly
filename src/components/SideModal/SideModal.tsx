@@ -16,6 +16,7 @@ export interface SideModalProps {
   onClose: () => void;
   header?: React.ReactNode;
   headerActions?: React.ReactNode;
+  headerActionsPosition?: "title" | "top";
   title?: string;
   description?: string;
   headerContent?: React.ReactNode;
@@ -32,6 +33,7 @@ export function SideModal({
   onClose,
   header,
   headerActions,
+  headerActionsPosition = "title",
   title,
   description,
   headerContent,
@@ -77,9 +79,7 @@ export function SideModal({
         )}
         {headerContent != null ? headerContent : null}
       </Stack>
-      {
-        headerActions
-      }
+      {headerActionsPosition === "title" ? headerActions : null}
     </Stack>
   );
 
@@ -108,9 +108,17 @@ export function SideModal({
         }}>
         <SideModalHeader>
           <Stack direction="column" alignItems="flex-start" spacing={2}>
-            <CloseButton onClick={onClose} disabled={disableClose} size="small">
-              <CloseIcon size={16} />
-            </CloseButton>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              width="100%"
+            >
+              <CloseButton onClick={onClose} disabled={disableClose} size="small">
+                <CloseIcon size={16} />
+              </CloseButton>
+              {headerActionsPosition === "top" ? headerActions : null}
+            </Stack>
             {header ?? defaultHeader}
           </Stack>
         </SideModalHeader>

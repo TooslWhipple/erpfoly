@@ -1,11 +1,19 @@
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { InputAdornment, Button, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
-import type { ReactNode } from "react";
-import { TabsWrapper, StyledTabs, StyledTab } from "./styles";
+import { TabsWrapper, TabsFadeEdge, StyledTabs, StyledTab } from "./styles";
 import { FormTextField } from "../Form";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface TabOption {
   label: ReactNode;
@@ -23,7 +31,14 @@ export interface ActionButtonConfig {
   label: string;
   onClick: () => void;
   variant?: "text" | "outlined" | "contained" | "option" | "white";
-  color?: "primary" | "secondary" | "error" | "warning" | "info" | "success" | "inherit";
+  color?:
+    | "primary"
+    | "secondary"
+    | "error"
+    | "warning"
+    | "info"
+    | "success"
+    | "inherit";
   showIcon?: boolean;
   disabled?: boolean;
   permission?: string;
@@ -35,7 +50,7 @@ interface TabFiltersProps {
   tabs: TabOption[];
   activeTab: string;
   onTabChange: (value: string) => void;
-  /** contained: horizontal scroll inside a narrow panel; fullWidth: equal-width row. */
+  /** contained: fills parent width; fullWidth: equal-width tabs. */
   layout?: TabFiltersLayout;
   disabled?: boolean;
   showSearch?: boolean;
@@ -60,6 +75,63 @@ function formatTabLabelText(tab: TabOption): string {
   return tab.count !== undefined ? `${base} (${tab.count})` : base;
 }
 
+function useTabsScrollFade(
+  wrapperRef: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+  activeTab: string,
+  tabsLength: number,
+) {
+  const [fadeLeft, setFadeLeft] = useState(false);
+  const [fadeRight, setFadeRight] = useState(false);
+
+  const updateFade = useCallback(() => {
+    if (!enabled) {
+      setFadeLeft(false);
+      setFadeRight(false);
+      return;
+    }
+    const scroller = wrapperRef.current?.querySelector(
+      ".MuiTabs-scroller",
+    ) as HTMLElement | null;
+    if (!scroller) {
+      setFadeLeft(false);
+      setFadeRight(false);
+      return;
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = scroller;
+    const maxScroll = scrollWidth - clientWidth;
+    setFadeLeft(scrollLeft > 2);
+    setFadeRight(maxScroll > 2 && scrollLeft < maxScroll - 2);
+  }, [enabled, wrapperRef]);
+
+  useLayoutEffect(() => {
+    updateFade();
+  }, [updateFade, activeTab, tabsLength]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const wrapper = wrapperRef.current;
+    const scroller = wrapper?.querySelector(
+      ".MuiTabs-scroller",
+    ) as HTMLElement | null;
+    if (!scroller) return;
+
+    updateFade();
+    scroller.addEventListener("scroll", updateFade, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => updateFade());
+    resizeObserver.observe(scroller);
+    if (wrapper) resizeObserver.observe(wrapper);
+
+    return () => {
+      scroller.removeEventListener("scroll", updateFade);
+      resizeObserver.disconnect();
+    };
+  }, [enabled, updateFade, wrapperRef, activeTab, tabsLength]);
+
+  return { fadeLeft, fadeRight };
+}
+
 function HorizontalTabs({
   tabs,
   activeTab,
@@ -75,9 +147,30 @@ function HorizontalTabs({
 }) {
   const isFullWidthLayout = layout === "fullWidth";
   const isContainedLayout = layout === "contained";
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const { fadeLeft, fadeRight } = useTabsScrollFade(
+    wrapperRef,
+    !isFullWidthLayout,
+    activeTab,
+    tabs.length,
+  );
 
   return (
-    <TabsWrapper contained={isContainedLayout} fullWidth={isFullWidthLayout}>
+    <TabsWrapper
+      ref={wrapperRef}
+      contained={isContainedLayout}
+      fullWidth={isFullWidthLayout}
+    >
+      {fadeLeft ? (
+        <TabsFadeEdge side="left">
+          <ChevronLeft size={14} strokeWidth={2} aria-hidden />
+        </TabsFadeEdge>
+      ) : null}
+      {fadeRight ? (
+        <TabsFadeEdge side="right">
+          <ChevronRight size={14} strokeWidth={2} aria-hidden />
+        </TabsFadeEdge>
+      ) : null}
       <StyledTabs
         value={activeTab}
         onChange={(_, newValue) => {
@@ -86,6 +179,7 @@ function HorizontalTabs({
         }}
         variant={isFullWidthLayout ? "fullWidth" : "scrollable"}
         scrollButtons={false}
+        allowScrollButtonsMobile={false}
         fullWidth={isFullWidthLayout}
         sx={disabled ? { pointerEvents: "none", opacity: 0.6 } : undefined}
       >
@@ -99,7 +193,10 @@ function HorizontalTabs({
             title={formatTabLabelText(tab)}
             sx={
               tab.textColor
-                ? { color: tab.textColor, "&.Mui-selected": { color: tab.textColor } }
+                ? {
+                    color: tab.textColor,
+                    "&.Mui-selected": { color: tab.textColor },
+                  }
                 : undefined
             }
           />
@@ -130,8 +227,8 @@ export function TabFilters({
   const visibleActions = actions?.filter(
     (action) => !action.permission || hasPermission(action.permission),
   );
-  const hasActions = visibleActions && visibleActions.length > 0;
-  const singleAction = hasActions && visibleActions.length === 1;
+  const hasActions = Boolean(visibleActions && visibleActions.length > 0);
+  const singleAction = hasActions && visibleActions!.length === 1;
   const isContainedLayout = layout === "contained";
   const hasToolbarExtras = showSearch || hasActions;
 
@@ -168,7 +265,7 @@ export function TabFilters({
           minWidth: 0,
           maxWidth: "100%",
           flexShrink: 1,
-          overflow: isContainedLayout ? "visible" : "hidden",
+          overflow: "hidden",
         }}
       >
         {tabs.length > 0 && (
@@ -189,12 +286,15 @@ export function TabFilters({
         sx={{
           minWidth: 0,
           maxWidth: "100%",
-          flexShrink: 1,
+          flexShrink: 0,
           justifyContent: { xs: "flex-start", md: "flex-end" },
         }}
       >
         {showSearch && (
-          <Grid size={{ xs: 12, sm: 6, md: "auto" }} sx={{ minWidth: 0, maxWidth: "100%" }}>
+          <Grid
+            size={{ xs: 12, sm: 6, md: "auto" }}
+            sx={{ minWidth: 0, maxWidth: "100%" }}
+          >
             <FormTextField
               placeholder={searchPlaceholder}
               value={searchValue}
@@ -212,11 +312,11 @@ export function TabFilters({
           </Grid>
         )}
         {hasActions &&
-          visibleActions.map((action, index) => (
+          visibleActions!.map((action, index) => (
             <Grid
               key={`${action.label}-${index}`}
               size={{ xs: 12, sm: 6, md: "auto" }}
-              sx={{ minWidth: 0, maxWidth: "100%" }}
+              sx={{ minWidth: 0, maxWidth: "100%", flexShrink: 0 }}
             >
               <Button
                 fullWidth
@@ -225,6 +325,7 @@ export function TabFilters({
                 onClick={action.onClick}
                 disabled={action.disabled}
                 startIcon={action.showIcon ? <AddIcon /> : undefined}
+                sx={{ whiteSpace: "nowrap" }}
               >
                 {action.label}
               </Button>

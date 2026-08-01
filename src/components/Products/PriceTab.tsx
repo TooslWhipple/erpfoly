@@ -21,6 +21,8 @@ import { CostHistoryModal } from "./CostHistoryModal";
 import { AddBasePriceModal } from "./AddBasePriceModal";
 import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
 import { formatDate } from "@/utils/date";
+import { costBasisLabel, resolveEffectiveCost } from "@/utils/product-cost";
+import type { CostBasisForCalculation } from "@/types/productos.types";
 
 /**
  * Estimated shelf price for a promotion line: base price (ya calculado y redondeado
@@ -149,8 +151,25 @@ export function PriceTab({
         return promotionDrafts.filter((d) => d.payload.purchaseTypeId === selectedId);
     }, [promotionDrafts, activePurchaseTypeTab]);
 
-    // Igual al costo que usa Apifoly para el precio real de venta (sale.service.ts siempre lee list_cost).
-    const referenceCost = useMemo(() => Number(formState.listCost) || 0, [formState.listCost]);
+    // Cost basis selected in the form (fallback to list cost when derived costs are zero).
+    const referenceCost = useMemo(
+        () =>
+            resolveEffectiveCost({
+                listCost: Number(formState.listCost) || 0,
+                lastCost: Number(formState.lastCost) || 0,
+                averageCost: Number(formState.averageCost) || 0,
+                costBasis: formState.costBasisForCalculation,
+            }),
+        [
+            formState.listCost,
+            formState.lastCost,
+            formState.averageCost,
+            formState.costBasisForCalculation,
+        ],
+    );
+    const selectedCostBasisLabel = costBasisLabel(
+        formState.costBasisForCalculation as CostBasisForCalculation,
+    );
     const firstBaseMarginPercent = basePrices[0]?.marginPercent ?? 0;
     const {
         price: firstBasePrice,
@@ -382,7 +401,7 @@ export function PriceTab({
                             <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
                                 <Typography variant="subtitle2">Precios base</Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Este precio se calcula tomando el costo de lista y el margen definido por departamento.
+                                    Este precio se calcula tomando el {selectedCostBasisLabel} y el margen definido por departamento.
                                 </Typography>
                             </Stack>
                             <Stack spacing={2}>
@@ -407,7 +426,7 @@ export function PriceTab({
                                     <Stack spacing={0.5}>
                                         <Typography variant="subtitle2">Otros precios</Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Vista previa por tipo de compra: costo de lista, margen del primer precio base y descuento de la promoción.
+                                            Vista previa por tipo de compra: {selectedCostBasisLabel}, margen del primer precio base y descuento de la promoción.
                                         </Typography>
                                     </Stack>
                                     {

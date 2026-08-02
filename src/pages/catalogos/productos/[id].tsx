@@ -652,6 +652,15 @@ export default function ProductFormPage() {
       ),
     );
   };
+  const handleToggleAllBranches = () => {
+    const areAllEnabled = branches.length > 0 && branches.every((branch) => branch.enabled);
+    setBranches(
+      branches.map((branch) => ({
+        ...branch,
+        enabled: !areAllEnabled,
+      })),
+    );
+  };
   const handleInventoryChange = (
     branchId: string,
     field: "minInventory" | "maxInventory",
@@ -985,6 +994,7 @@ export default function ProductFormPage() {
               <BranchesTab
                 branches={branches}
                 onBranchToggle={handleBranchToggle}
+                onToggleAllBranches={handleToggleAllBranches}
                 onInventoryChange={handleInventoryChange}
                 onInventoryInputChange={handleInventoryInputChange}
               />

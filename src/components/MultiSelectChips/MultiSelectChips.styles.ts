@@ -1,6 +1,13 @@
 import { styled } from "@mui/material/styles";
 import { Chip, TextField, Typography } from "@mui/material";
 
+export const LabelRow = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+});
+
 export const Label = styled(Typography)(({ theme }) => ({
   fontSize: "0.875rem",
   fontWeight: 500,

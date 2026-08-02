@@ -1180,7 +1180,6 @@ export function SaleBuilder({
         <Box sx={{ p: 3 }}>
           <TableCrud<ProductSearchResult>
             columns={[
-              { id: "id", label: "ID", type: "id", size: "xs" },
               {
                 id: "imageUrl",
                 label: "Img",
@@ -1207,39 +1206,9 @@ export function SaleBuilder({
                 truncate: true,
               },
               {
-                id: "averageCost",
-                label: "Costo Prom.",
+                id: "finalPrice",
+                label: "Precio Final",
                 type: "currency",
-                size: "md",
-              },
-              {
-                id: "lastCost",
-                label: "Últ. Costo",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "costWithoutDiscount",
-                label: "Costo sin Descuentos",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "discountPct",
-                label: "% Desc.1",
-                type: "percentage",
-                size: "sm",
-              },
-              {
-                id: "supplier1Name",
-                label: "Proveedor 1",
-                type: "text",
-                size: "md",
-              },
-              {
-                id: "supplier2Name",
-                label: "Proveedor 2",
-                type: "text",
                 size: "md",
               },
             ]}

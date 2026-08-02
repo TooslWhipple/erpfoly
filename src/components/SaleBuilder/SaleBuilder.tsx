@@ -1180,7 +1180,6 @@ export function SaleBuilder({
         <Box sx={{ p: 3 }}>
           <TableCrud<ProductSearchResult>
             columns={[
-              { id: "id", label: "ID", type: "id", size: "xs" },
               {
                 id: "imageUrl",
                 label: "Img",
@@ -1207,39 +1206,9 @@ export function SaleBuilder({
                 truncate: true,
               },
               {
-                id: "averageCost",
-                label: "Costo Prom.",
+                id: "finalPrice",
+                label: "Precio Final",
                 type: "currency",
-                size: "md",
-              },
-              {
-                id: "lastCost",
-                label: "Últ. Costo",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "costWithoutDiscount",
-                label: "Costo sin Descuentos",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "discountPct",
-                label: "% Desc.1",
-                type: "percentage",
-                size: "sm",
-              },
-              {
-                id: "supplier1Name",
-                label: "Proveedor 1",
-                type: "text",
-                size: "md",
-              },
-              {
-                id: "supplier2Name",
-                label: "Proveedor 2",
-                type: "text",
                 size: "md",
               },
             ]}
@@ -1464,33 +1433,25 @@ export function SaleBuilder({
                 </Box>
               )}
 
-              {/* Orígenes principales: sucursal actual + bodega + por surtir */}
+              {/* Orígenes principales: sucursal actual + bodega (existencia + por surtir) */}
               <Stack spacing={1.5}>
                 {productSources
                   .filter(
                     (src) =>
                       src.sourceType === "warehouse" ||
-                      src.sourceType === "incoming" ||
                       src.branchId === CURRENT_BRANCH_ID,
                   )
                   .map((src) => {
                     const isWarehouse = src.sourceType === "warehouse";
-                    const isIncoming = src.sourceType === "incoming";
                     const isCurrentBranch =
                       src.sourceType === "branch" &&
                       src.branchId === CURRENT_BRANCH_ID;
 
                     const sourceLabel = isCurrentBranch
                       ? `Ésta sucursal (${src.label})`
-                      : isWarehouse
-                        ? "Bodega"
-                        : "Por surtir a Bodega";
+                      : "Bodega";
 
-                    const SourceIcon = isCurrentBranch
-                      ? Store
-                      : isWarehouse
-                        ? Warehouse
-                        : Package;
+                    const SourceIcon = isCurrentBranch ? Store : Warehouse;
 
                     const branchLocked = isBranchSourceLocked(src);
 
@@ -1578,29 +1539,29 @@ export function SaleBuilder({
                                       Existencia: {src.available}
                                     </Typography>
                                   </Stack>
+                                  {(src.pendingOrdered ?? 0) > 0 && (
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={0.75}
+                                    >
+                                      <Box
+                                        sx={{
+                                          color: "text.disabled",
+                                          display: "flex",
+                                        }}
+                                      >
+                                        <Package size={13} />
+                                      </Box>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Por surtir: {src.pendingOrdered}
+                                      </Typography>
+                                    </Stack>
+                                  )}
                                 </>
-                              )}
-                              {isIncoming && (
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                >
-                                  <Box
-                                    sx={{
-                                      color: "text.disabled",
-                                      display: "flex",
-                                    }}
-                                  >
-                                    <Package size={13} />
-                                  </Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Por surtir: {src.available}
-                                  </Typography>
-                                </Stack>
                               )}
                               {isCurrentBranch && (
                                 <Stack

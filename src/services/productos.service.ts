@@ -22,6 +22,7 @@ import type {
     CostBasisForCalculation,
     ProductPreviewCodeResponse,
     ProductPricePreviewResponse,
+    ExchangeRateResponse,
     CostHistoryEntry,
 } from "@/types/productos.types";
 import { DEFAULT_PRODUCT_BASE_PRICES } from "@/data/productos.mockData";
@@ -128,10 +129,11 @@ export function buildCreateProductRequest(
         galleryImages: ProductGalleryImage[];
         packages: ProductPackage[];
         promotions?: ProductPromotionDraft[];
+        refreshExchangeRate?: boolean;
     },
     mode: "create" | "update"
 ): CreateProductRequest {
-    const { generalData, priceData, suppliers, branches, galleryImages, packages, promotions } =
+    const { generalData, priceData, suppliers, branches, galleryImages, packages, promotions, refreshExchangeRate } =
         input;
 
     const departmentId = Number(generalData.departmentId);
@@ -151,6 +153,7 @@ export function buildCreateProductRequest(
         exchangeRate: Number(priceData.exchangeRate),
         iva: Number(priceData.iva),
         isLiquidation: priceData.liquidation,
+        costBasisForCalculation: priceData.costBasisForCalculation,
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
             supplierProductCode: (s.supplierProductCode ?? "").trim(),
@@ -190,6 +193,7 @@ export function buildCreateProductRequest(
                 code: generalData.code.trim(),
                 packageItems,
                 promotions: promotionPayloads ?? [],
+                refreshExchangeRate,
             }
             : {
                 ...baseFields,
@@ -246,6 +250,10 @@ export async function getProductPricePreview(
     });
 }
 
+export async function getCurrentExchangeRate(): Promise<ApiResult<ExchangeRateResponse>> {
+    return get<ExchangeRateResponse>(`${PRODUCTS_BASE}/exchange-rate`);
+}
+
 export interface ProductDetailSupplierDto {
     supplierId: number;
     supplierProductCode?: string | null;
@@ -269,7 +277,7 @@ export interface ProductDetailPriceDto {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
-    costBasisForCalculation?: string | null;
+    costBasisForCalculation?: CostBasisForCalculation | null;
     lastEditedBy?: string | null;
     lastEditedDate?: string | null;
     basePrices?: Array<{
@@ -455,8 +463,13 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
     }
 
     const price = detail.price;
+    const listCostInPesos = price?.listCost ?? 0;
+    const listCostForInput =
+        price?.currency === "USD" && price.exchangeRate > 0
+            ? listCostInPesos / price.exchangeRate
+            : listCostInPesos;
     const priceData: PriceFormState = {
-        listCost: (price?.listCost ?? 0).toFixed(2),
+        listCost: listCostForInput.toFixed(2),
         currency: price?.currency ?? "MXN",
         exchangeRate: (price?.exchangeRate ?? 1).toFixed(2),
         iva: String(price?.iva ?? 16),

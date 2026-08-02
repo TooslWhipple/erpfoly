@@ -40,6 +40,7 @@ import {
   collectNewGalleryFiles,
   getProductById,
   getProductPreviewCode,
+  getCurrentExchangeRate,
   updateProduct,
   productDetailDtoToFormSnapshot,
   type ProductDetailBranchDto,
@@ -181,6 +182,16 @@ function getProductFormValidationErrors(
       newErrors.listCost = "El costo de lista debe ser mayor a 0";
     }
   }
+  if (priceData.currency === "USD") {
+    const exchangeRate = Number(priceData.exchangeRate);
+    if (
+      !priceData.exchangeRate.trim() ||
+      !Number.isFinite(exchangeRate) ||
+      exchangeRate <= 0
+    ) {
+      newErrors.exchangeRate = "El tipo de cambio debe ser mayor a 0";
+    }
+  }
   return newErrors;
 }
 export default function ProductFormPage() {
@@ -287,6 +298,8 @@ export default function ProductFormPage() {
     ProductPromotionDraft[]
   >([]);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false);
+  const [refreshExchangeRate, setRefreshExchangeRate] = useState(false);
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
   const [confirmLeaveResolver, setConfirmLeaveResolver] = useState<
     ((value: boolean) => void) | null
@@ -399,6 +412,7 @@ export default function ProductFormPage() {
           setGeneralData(snap.generalData);
           setSuppliers(snap.suppliers);
           setPriceData(snap.priceData);
+          setRefreshExchangeRate(false);
           setBasePrices(snap.basePrices);
           setGalleryImages(snap.galleryImages);
           setPackages(snap.packages);
@@ -509,6 +523,7 @@ export default function ProductFormPage() {
           galleryImages,
           packages,
           promotions: productPromotionDrafts,
+          refreshExchangeRate,
         },
         isNew ? "create" : "update",
       );
@@ -546,6 +561,7 @@ export default function ProductFormPage() {
         }
         showSuccess("Artículo actualizado correctamente.");
       }
+      setRefreshExchangeRate(false);
       navigateWithoutGuard("/catalogos/productos");
     } catch (err) {
       console.error("[ProductForm] Error saving:", err);
@@ -627,6 +643,36 @@ export default function ProductFormPage() {
       return newErrors;
     });
   };
+  const fetchAndApplyExchangeRate = useCallback(async () => {
+    setExchangeRateLoading(true);
+    handleErrorClear("exchangeRate");
+    try {
+      const result = await getCurrentExchangeRate();
+      if (result.error) {
+        const message = result.error.message;
+        setErrors((prev) => ({ ...prev, exchangeRate: message }));
+        return;
+      }
+      const rate = result.data?.exchangeRate;
+      if (rate == null || rate <= 0) {
+        setErrors((prev) => ({
+          ...prev,
+          exchangeRate: "No se pudo obtener el tipo de cambio.",
+        }));
+        return;
+      }
+      setPriceData((prev) => ({ ...prev, exchangeRate: rate.toFixed(2) }));
+      setRefreshExchangeRate(true);
+    } catch (err) {
+      console.error("[ProductForm] Error fetching exchange rate:", err);
+      setErrors((prev) => ({
+        ...prev,
+        exchangeRate: "No se pudo obtener el tipo de cambio de Banxico.",
+      }));
+    } finally {
+      setExchangeRateLoading(false);
+    }
+  }, []);
   const handlePriceChange = (
     field: keyof PriceFormState,
     value: string | boolean,
@@ -634,10 +680,27 @@ export default function ProductFormPage() {
     if (field === "listCost" && errors.listCost) {
       handleErrorClear("listCost");
     }
+    if (field === "currency") {
+      if (value === "USD") {
+        setPriceData((prev) => ({ ...prev, currency: "USD" }));
+        void fetchAndApplyExchangeRate();
+      } else {
+        setRefreshExchangeRate(false);
+        setPriceData((prev) => ({
+          ...prev,
+          currency: value as string,
+          exchangeRate: "1.00",
+        }));
+      }
+      return;
+    }
     setPriceData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+  const handleRefreshExchangeRate = () => {
+    void fetchAndApplyExchangeRate();
   };
   const handleAddBasePrice = (entry: Omit<ProductBasePrice, "id">) => {
     setBasePrices((prev) => [
@@ -658,6 +721,15 @@ export default function ProductFormPage() {
             }
           : branch,
       ),
+    );
+  };
+  const handleToggleAllBranches = () => {
+    const areAllEnabled = branches.length > 0 && branches.every((branch) => branch.enabled);
+    setBranches(
+      branches.map((branch) => ({
+        ...branch,
+        enabled: !areAllEnabled,
+      })),
     );
   };
   const handleInventoryChange = (
@@ -805,6 +877,10 @@ export default function ProductFormPage() {
       value: "general",
       label: "Datos generales",
     },
+     {
+      value: "branches",
+      label: "Sucursales",
+    },
     {
       value: "suppliers",
       label: "Proveedores",
@@ -814,16 +890,12 @@ export default function ProductFormPage() {
       label: "Precio",
     },
     {
-      value: "packages",
-      label: "Paquetes",
-    },
-    {
       value: "gallery",
       label: "Galería",
     },
-    {
-      value: "branches",
-      label: "Sucursales",
+     {
+      value: "packages",
+      label: "Paquetes",
     },
   ];
   if (pageLoading) {
@@ -966,6 +1038,8 @@ export default function ProductFormPage() {
                 }
                 promotionDrafts={productPromotionDrafts}
                 onPromotionDraftsChange={setProductPromotionDrafts}
+                exchangeRateLoading={exchangeRateLoading}
+                onRefreshExchangeRate={handleRefreshExchangeRate}
               />
             )}
 
@@ -993,6 +1067,7 @@ export default function ProductFormPage() {
               <BranchesTab
                 branches={branches}
                 onBranchToggle={handleBranchToggle}
+                onToggleAllBranches={handleToggleAllBranches}
                 onInventoryChange={handleInventoryChange}
                 onInventoryInputChange={handleInventoryInputChange}
               />

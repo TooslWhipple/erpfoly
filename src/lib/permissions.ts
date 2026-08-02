@@ -47,6 +47,8 @@ export type PermissionModule =
   | "catalogos.costos_envio"
   | "catalogos.folypuntos"
   | "catalogos.tasa_mora"
+  | "catalogos.tipos-transaccion"
+  | "catalogos.polizas-sistema"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -281,6 +283,18 @@ export const CATALOG_MORATORY_RATE_CREATE = CATALOG_MORATORY_RATE_PERMISSIONS.cr
 export const CATALOG_MORATORY_RATE_READ = CATALOG_MORATORY_RATE_PERMISSIONS.read;
 export const CATALOG_MORATORY_RATE_UPDATE = CATALOG_MORATORY_RATE_PERMISSIONS.update;
 export const CATALOG_MORATORY_RATE_DELETE = CATALOG_MORATORY_RATE_PERMISSIONS.delete;
+
+export const CATALOG_TRANSACTION_TYPES_PERMISSIONS = createCrudPermissions("catalogos.tipos-transaccion");
+export const CATALOG_TRANSACTION_TYPES_CREATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.create;
+export const CATALOG_TRANSACTION_TYPES_READ = CATALOG_TRANSACTION_TYPES_PERMISSIONS.read;
+export const CATALOG_TRANSACTION_TYPES_UPDATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.update;
+export const CATALOG_TRANSACTION_TYPES_DELETE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.delete;
+
+export const CATALOG_SYSTEM_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas-sistema");
+export const CATALOG_SYSTEM_POLICIES_CREATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.create;
+export const CATALOG_SYSTEM_POLICIES_READ = CATALOG_SYSTEM_POLICIES_PERMISSIONS.read;
+export const CATALOG_SYSTEM_POLICIES_UPDATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.update;
+export const CATALOG_SYSTEM_POLICIES_DELETE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.delete;
 
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");

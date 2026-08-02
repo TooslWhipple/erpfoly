@@ -406,6 +406,28 @@
       ]
     },
     {
+      "code": "catalogos-tipos-transaccion",
+      "name": "Tipos de Transacción",
+      "path": "/catalogos/tipos-transaccion",
+      "actions": [
+        "view",
+        "create",
+        "edit",
+        "delete"
+      ]
+    },
+    {
+      "code": "catalogos-polizas-sistema",
+      "name": "Pólizas Sistema",
+      "path": "/catalogos/polizas-sistema",
+      "actions": [
+        "view",
+        "create",
+        "edit",
+        "delete"
+      ]
+    },
+    {
       "code": "cajas",
       "name": "Cajas",
       "path": "/cajas",

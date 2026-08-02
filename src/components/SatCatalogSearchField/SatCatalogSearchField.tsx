@@ -104,10 +104,22 @@ export function SatCatalogSearchField({
         enabled: debouncedQ.length >= MIN_QUERY_LENGTH,
     });
 
+    // Synchronize committedSelection & inputValue when `value` prop changes from parent
     useEffect(() => {
         if (!value) {
-            setCommittedSelection(null);
-            setInputValue("");
+            if (committedSelection !== null) {
+                setCommittedSelection(null);
+                setInputValue("");
+            }
+            return;
+        }
+
+        if (committedSelection?.key === value) {
+            const matching = options.find((o) => o.key === value);
+            if (matching && matching.label !== committedSelection.label) {
+                setCommittedSelection(matching);
+                setInputValue(matching.label);
+            }
             return;
         }
 
@@ -115,11 +127,22 @@ export function SatCatalogSearchField({
         if (matching) {
             setCommittedSelection(matching);
             setInputValue(matching.label);
-        } else if (committedSelection == null || committedSelection.key !== value) {
+        } else {
             setCommittedSelection({ key: value, label: value });
             setInputValue((prev) => (prev === "" ? value : prev));
         }
-    }, [value, options]);
+    }, [value]);
+
+    // Enhance initial fallback selection with full label once options arrive
+    useEffect(() => {
+        if (value && committedSelection && committedSelection.key === value && committedSelection.label === value) {
+            const matching = options.find((o) => o.key === value);
+            if (matching) {
+                setCommittedSelection(matching);
+                setInputValue(matching.label);
+            }
+        }
+    }, [options, value, committedSelection]);
 
     const handleInputChange = useCallback(
         (_: SyntheticEvent, newInputValue: string, reason: AutocompleteInputChangeReason) => {
@@ -163,6 +186,7 @@ export function SatCatalogSearchField({
             value={committedSelection}
             inputValue={inputValue}
             onInputChange={handleInputChange}
+            clearOnBlur={false}
             onChange={(_, newValue) => {
                 if (newValue == null) {
                     setCommittedSelection(null);

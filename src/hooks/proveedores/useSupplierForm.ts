@@ -89,7 +89,8 @@ export function useSupplierForm() {
     });
 
     const inviteSupplierMutation = useMutation({
-        mutationFn: inviteSupplier,
+        mutationFn: ({ id: supplierIdValue, force }: { id: number; force: boolean }) =>
+            inviteSupplier(supplierIdValue, force),
     });
 
     useEffect(() => {
@@ -128,7 +129,7 @@ export function useSupplierForm() {
             businessName: formState.businessName.trim(),
             rfc: formState.rfc.trim(),
             website: formState.website.trim() || undefined,
-            email: formState.email.trim() || undefined,
+            email: formState.email.trim(),
             paymentTerm: formState.paymentTerm,
         });
         const contacts = validateContactsForm(
@@ -258,23 +259,27 @@ export function useSupplierForm() {
         createTempId,
     });
 
-    const handleInvite = useCallback(async () => {
+    const handleInvite = useCallback(async (force = false) => {
         if (!hasValidSupplierId || supplierId == null) {
             showError("No se encontró un identificador de proveedor válido.");
             return;
         }
         try {
-            const result = await inviteSupplierMutation.mutateAsync(supplierId as number);
+            const result = await inviteSupplierMutation.mutateAsync({
+                id: supplierId as number,
+                force,
+            });
             if (result.error) {
                 showError(result.error.message);
                 return;
             }
             showSuccess(result.data?.message ?? "Invitación enviada correctamente.");
+            await queryClient.invalidateQueries({ queryKey: ["supplier", supplierId] });
         } catch (err) {
             console.error("[SupplierForm] Error inviting:", err);
             showError(getApiErrorMessage(err));
         }
-    }, [supplierId, hasValidSupplierId, inviteSupplierMutation, showError, showSuccess]);
+    }, [supplierId, hasValidSupplierId, inviteSupplierMutation, showError, showSuccess, queryClient]);
 
     const handleTabChange = useCallback((value: string) => {
         if (!isSupplierFormTab(value)) return;
@@ -306,6 +311,9 @@ export function useSupplierForm() {
     const saving = createSupplierMutation.isPending || updateSupplierMutation.isPending;
     const inviting = inviteSupplierMutation.isPending;
     const hasUser = supplierQuery.data?.hasUser ?? false;
+    const portalStatus = supplierQuery.data?.portalStatus ?? "NONE";
+    const inviteUrl = supplierQuery.data?.inviteUrl ?? null;
+    const inviteExpiresAt = supplierQuery.data?.inviteExpiresAt ?? null;
     const breadcrumbItems = useMemo(
         () => {
             const items: BreadcrumbItem[] = [
@@ -360,6 +368,9 @@ export function useSupplierForm() {
         saving,
         inviting,
         hasUser,
+        portalStatus,
+        inviteUrl,
+        inviteExpiresAt,
         handleSave,
         handleInvite,
         handleGeneralFieldChange,

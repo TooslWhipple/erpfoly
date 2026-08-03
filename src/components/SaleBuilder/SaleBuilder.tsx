@@ -947,13 +947,18 @@ export function SaleBuilder({
       return;
     }
 
-    // Misma cuenta que hace el backend al confirmar (sale.branch_id +
-    // ProductInventory.existence): lo que exceda la existencia de la
-    // sucursal queda en backorder, sin bloquear el alta al carrito.
-    const branchAvailable =
-      productSources.find((src) => src.sourceType === "branch")?.available ??
-      0;
-    const backorderedQuantity = Math.max(0, totalQty - branchAvailable);
+    // Lo que exceda la existencia de las fuentes elegidas (sucursal y/o
+    // bodega — cualquiera que el usuario haya usado para cubrir la
+    // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
+    // solo se miraba la fuente "branch", así que elegir desde "Bodega"
+    // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
+    const availableFromChosenSources = productSources
+      .filter((src) => src.quantity > 0)
+      .reduce((sum, src) => sum + src.available, 0);
+    const backorderedQuantity = Math.max(
+      0,
+      totalQty - availableFromChosenSources,
+    );
 
     setCart((prev) => {
       const existing = prev.findIndex((c) => c.productId === productDetail.id);
@@ -1024,13 +1029,19 @@ export function SaleBuilder({
           // existencia de sucursal a mano para recalcular — se conserva el
           // último valor que confirmó el backend hasta el próximo sync.
           if (item.sources.length === 0) return { ...item, quantity };
-          const branchAvailable =
-            item.sources.find((src) => src.sourceType === "branch")
-              ?.available ?? 0;
+          // Misma lógica que handleAddToCart: suma la existencia de todas
+          // las fuentes que se usaron para cubrir este item (sucursal y/o
+          // bodega), no solo la de "esta sucursal".
+          const availableFromChosenSources = item.sources
+            .filter((src) => src.quantity > 0)
+            .reduce((sum, src) => sum + src.available, 0);
           return {
             ...item,
             quantity,
-            backorderedQuantity: Math.max(0, quantity - branchAvailable),
+            backorderedQuantity: Math.max(
+              0,
+              quantity - availableFromChosenSources,
+            ),
           };
         })
         .filter((item) => item.quantity > 0),

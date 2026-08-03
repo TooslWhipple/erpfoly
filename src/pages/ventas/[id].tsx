@@ -29,12 +29,14 @@ import {
   cancelLayaway,
   downloadSaleInvoiceFile,
   printSaleInvoicePdfOnly,
+  getInvoicingConfig,
 } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { useInvoicingConfigStore } from "@/store/useInvoicingConfigStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
@@ -91,6 +93,13 @@ export default function VentaDetalle() {
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
+
+  const { data: invoicingConfig } = useQuery({
+    queryKey: ["invoicingConfig"],
+    queryFn: getInvoicingConfig,
+  });
+
+  const isFacturacionConfirmacionEncendida = invoicingConfig?.facturacionConfirmacionVentaEnabled ?? true;
 
   const handleDownloadInvoice = async (type: "xml" | "pdf" | "zip") => {
     if (!saleId) return;
@@ -652,7 +661,7 @@ export default function VentaDetalle() {
           </Typography>
 
           {/* Card para descarga de Factura (XML, PDF y ZIP) */}
-          {!isDraftSale && (
+          {!isDraftSale && isFacturacionConfirmacionEncendida && (
             <Card
               elevation={0}
               sx={{

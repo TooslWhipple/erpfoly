@@ -49,6 +49,7 @@ export type PermissionModule =
   | "catalogos.tasa_mora"
   | "catalogos.tipos-transaccion"
   | "catalogos.polizas-sistema"
+  | "catalogos.polizas"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -295,6 +296,12 @@ export const CATALOG_SYSTEM_POLICIES_CREATE = CATALOG_SYSTEM_POLICIES_PERMISSION
 export const CATALOG_SYSTEM_POLICIES_READ = CATALOG_SYSTEM_POLICIES_PERMISSIONS.read;
 export const CATALOG_SYSTEM_POLICIES_UPDATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.update;
 export const CATALOG_SYSTEM_POLICIES_DELETE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.delete;
+
+export const CATALOG_GENERATED_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas");
+export const CATALOG_GENERATED_POLICIES_CREATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.create;
+export const CATALOG_GENERATED_POLICIES_READ = CATALOG_GENERATED_POLICIES_PERMISSIONS.read;
+export const CATALOG_GENERATED_POLICIES_UPDATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.update;
+export const CATALOG_GENERATED_POLICIES_DELETE = CATALOG_GENERATED_POLICIES_PERMISSIONS.delete;
 
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");

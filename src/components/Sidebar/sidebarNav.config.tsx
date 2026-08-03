@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown } from "lucide-react";
+import { BanknoteArrowDown, Calculator } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
@@ -24,6 +24,7 @@ import {
   CATALOG_MORATORY_RATE_READ,
   CATALOG_TRANSACTION_TYPES_READ,
   CATALOG_SYSTEM_POLICIES_READ,
+  CATALOG_GENERATED_POLICIES_READ,
   CATALOG_POINTS_READ,
   CATALOG_PRODUCTS_READ,
   CATALOG_PROMOTIONS_READ,
@@ -137,6 +138,17 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} />, requirement: { permission: ROUTES_READ } },
   {
+    label: "Opciones contables",
+    path: "/catalogos/opciones-contables",
+    icon: <Calculator size={ICON_SIZE} />,
+    subItems: [
+      { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
+      { label: "Tipos de Transacción", path: "/catalogos/tipos-transaccion", requirement: { permission: CATALOG_TRANSACTION_TYPES_READ } },
+      { label: "Pólizas Sistema", path: "/catalogos/polizas-sistema", requirement: { permission: CATALOG_SYSTEM_POLICIES_READ } },
+      { label: "Pólizas Generadas", path: "/catalogos/polizas", requirement: { permission: CATALOG_GENERATED_POLICIES_READ } },
+    ],
+  },
+  {
     label: "Catálogos",
     path: "/catalogos",
     icon: <LayoutList size={ICON_SIZE} />,
@@ -146,7 +158,6 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Promociones", path: "/catalogos/promociones", requirement: { permission: CATALOG_PROMOTIONS_READ } },
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },
       { label: "Zonas", path: "/catalogos/zonas", requirement: { permission: CATALOG_ZONES_READ } },
-      { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
       { label: "Sucursales", path: "/catalogos/sucursales", requirement: { permission: CATALOG_BRANCHES_READ } },
       { label: "Cajas", path: "/catalogos/cajas", requirement: { permission: CATALOG_CASH_REGISTERS_READ } },
       { label: "Proveedores", path: "/catalogos/proveedores", requirement: { permission: CATALOG_SUPPLIERS_READ } },
@@ -155,8 +166,6 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Costo de envío", path: "/catalogos/costos-envio", requirement: { permission: CATALOG_SHIPPING_COSTS_READ } },
       { label: "Folypuntos", path: "/catalogos/folypuntos", requirement: { permission: CATALOG_POINTS_READ } },
       { label: "Tasa de mora", path: "/catalogos/tasa-mora", requirement: { permission: CATALOG_MORATORY_RATE_READ } },
-      { label: "Tipos de Transacción", path: "/catalogos/tipos-transaccion", requirement: { permission: CATALOG_TRANSACTION_TYPES_READ } },
-      { label: "Pólizas Sistema", path: "/catalogos/polizas-sistema", requirement: { permission: CATALOG_SYSTEM_POLICIES_READ } },
       { label: "Roles", path: "/catalogos/roles", requirement: { permission: CATALOG_ROLES_READ } },
       { label: "Usuarios", path: "/catalogos/usuarios", requirement: { permission: CATALOG_USERS_READ } },
       { label: "Vendedores", path: "/catalogos/vendedores", requirement: { permission: CATALOG_SELLERS_READ } },

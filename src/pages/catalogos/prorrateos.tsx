@@ -1,14 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
   Box,
+  Button,
   Card,
   Chip,
+  FormControl,
   Grid,
   LinearProgress,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Table,
   TableBody,
@@ -18,14 +22,33 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Banknote, CreditCard, ShoppingBag, Eye, Calendar, Store, MapPin } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  ChevronDown,
+  Banknote,
+  ShoppingBag,
+  Calendar,
+  Store,
+  MapPin,
+  History,
+  Play,
+  Clock,
+} from "lucide-react";
 import { Title, TabFilters } from "@/components";
-import { getApportionments } from "@/services/apportionments.service";
+import {
+  getApportionments,
+  getApportionmentConfigs,
+  updateApportionmentConfig,
+  getApportionmentSnapshots,
+  getApportionmentSnapshotById,
+  triggerApportionmentSnapshot,
+} from "@/services/apportionments.service";
 import type {
   ApportionmentCalculationType,
+  ApportionmentResponse,
 } from "@/types/apportionments.types";
 import { theme } from "@/styles/theme";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const CALCULATION_TYPES: {
   value: ApportionmentCalculationType;
@@ -45,12 +68,6 @@ const CALCULATION_TYPES: {
     icon: <Banknote size={18} />,
     description: "Cálculo basado en pagos recibidos en efectivo en caja.",
   },
-  {
-    value: "CARD",
-    label: "Por Pago de Tarjeta",
-    icon: <CreditCard size={18} />,
-    description: "Cálculo basado en cobros procesados por tarjeta de débito/crédito.",
-  },
 ];
 
 type GroupingViewTab = "branches" | "zones";
@@ -67,14 +84,70 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function formatDateDisplay(dateStr: string): string {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function ProrrateosPage() {
+  const queryClient = useQueryClient();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
+
+  const getThirtyDaysAgoStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  };
+
+  const getTodayStr = () => {
+    return new Date().toISOString().split("T")[0];
+  };
+
   const [calcType, setCalcType] = useState<ApportionmentCalculationType>("CONFIRMED_SALES");
   const [groupTab, setGroupTab] = useState<GroupingViewTab>("branches");
+  const [startDate, setStartDate] = useState<string>(getThirtyDaysAgoStr);
+  const [endDate, setEndDate] = useState<string>(getTodayStr);
 
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // Selected historical snapshot state
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  // Fetch configurations from DB (independent per calculation type)
+  const { data: configsData = [] } = useQuery({
+    queryKey: ["apportionmentConfigs"],
+    queryFn: getApportionmentConfigs,
+  });
+
+  const configMap = useMemo(() => {
+    const map = new Map<ApportionmentCalculationType, number>();
+    configsData.forEach((c) => {
+      map.set(c.calculationType, c.calculationDay);
+    });
+    return map;
+  }, [configsData]);
+
+  // Fetch historical snapshots list filtered by active calculation type
+  const { data: snapshots = [] } = useQuery({
+    queryKey: ["apportionmentSnapshots", calcType],
+    queryFn: () => getApportionmentSnapshots(calcType),
+  });
+
+  // Fetch snapshot detail if a historical snapshot is selected
+  const { data: snapshotDetail, isLoading: isLoadingSnapshot } = useQuery({
+    queryKey: ["apportionmentSnapshot", selectedSnapshotId],
+    queryFn: () => getApportionmentSnapshotById(selectedSnapshotId!),
+    enabled: selectedSnapshotId !== null,
+  });
+
+  // Live calculation query
+  const { data: liveData, isLoading: isLoadingLive, isError: isErrorLive } = useQuery({
     queryKey: ["apportionments", calcType, startDate, endDate],
     queryFn: () =>
       getApportionments({
@@ -82,11 +155,64 @@ export default function ProrrateosPage() {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       }),
+    enabled: selectedSnapshotId === null,
   });
 
-  const totalGlobalAmount = data?.totalGlobalAmount ?? 0;
-  const branches = useMemo(() => data?.branches ?? [], [data?.branches]);
-  const zones = useMemo(() => data?.zones ?? [], [data?.zones]);
+  // Active data to display (either historical snapshot detail or live data)
+  const displayData: ApportionmentResponse | undefined = useMemo(() => {
+    if (selectedSnapshotId !== null && snapshotDetail) {
+      const rawData = snapshotDetail.data as any;
+      if (rawData?.branches && rawData?.zones) {
+        return rawData as ApportionmentResponse;
+      }
+      if (rawData?.confirmedSales || rawData?.cash) {
+        if (calcType === "CASH" && rawData.cash) return rawData.cash;
+        if (rawData.confirmedSales) return rawData.confirmedSales;
+      }
+      return snapshotDetail.data as any;
+    }
+    return liveData;
+  }, [selectedSnapshotId, snapshotDetail, liveData, calcType]);
+
+  const isLoading = selectedSnapshotId !== null ? isLoadingSnapshot : isLoadingLive;
+  const isError = selectedSnapshotId === null && isErrorLive;
+
+  // Save config mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: updateApportionmentConfig,
+    onSuccess: (updated) => {
+      showSuccess(
+        `Configuración guardada: ${updated.calculationType === "CONFIRMED_SALES" ? "Ventas Confirmadas" : "Efectivo"} se recalculará los días ${updated.calculationDay} de cada mes.`
+      );
+      queryClient.invalidateQueries({ queryKey: ["apportionmentConfigs"] });
+    },
+    onError: (err: any) => {
+      showError(err?.message || "Error al guardar la configuración de recálculo.");
+    },
+  });
+
+  // Trigger manual snapshot recalculation (30-day window computing BOTH sales & cash)
+  const triggerSnapshotMutation = useMutation({
+    mutationFn: triggerApportionmentSnapshot,
+    onSuccess: () => {
+      showSuccess(
+        `Recálculo de los últimos 30 días ejecutado exitosamente y guardado como histórico.`
+      );
+      queryClient.invalidateQueries({ queryKey: ["apportionmentSnapshots"] });
+    },
+    onError: (err: any) => {
+      showError(err?.message || "Error al ejecutar el recálculo manual.");
+    },
+  });
+
+  const handleSelectCalcType = (type: ApportionmentCalculationType) => {
+    setCalcType(type);
+    setSelectedSnapshotId(null);
+  };
+
+  const totalGlobalAmount = displayData?.totalGlobalAmount ?? 0;
+  const branches = useMemo(() => displayData?.branches ?? [], [displayData?.branches]);
+  const zones = useMemo(() => displayData?.zones ?? [], [displayData?.zones]);
 
   // Top metric calculations
   const leaderBranch = useMemo(() => {
@@ -99,30 +225,95 @@ export default function ProrrateosPage() {
     return [...zones].sort((a, b) => b.totalBaseAmount - a.totalBaseAmount)[0];
   }, [zones]);
 
-  const activeCalcObj = CALCULATION_TYPES.find((c) => c.value === calcType);
+  const activeCalcObj = CALCULATION_TYPES.find((c) => c.value === (displayData?.calculationType ?? calcType));
+
+  const salesDayConfig = configMap.get("CONFIRMED_SALES") ?? 1;
+  const cashDayConfig = configMap.get("CASH") ?? 1;
 
   return (
     <Stack spacing={3}>
-      {/* Header with Title and Read-Only Badge */}
+      {/* Header with Title */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
         <Title
           title="Catálogo de Prorrateos"
-          description="Cálculo y desglose porcentual de participación por sucursales y por zonas."
-        />
-        <Chip
-          icon={<Eye size={16} />}
-          label="Solo Lectura"
-          variant="outlined"
-          color="info"
-          sx={{
-            fontWeight: 600,
-            px: 1,
-            py: 0.5,
-            borderColor: theme.palette.info.main,
-            color: theme.palette.info.main,
-          }}
+          description="Configuración de recálculo automático mensual independiente por tipo de prorrateo (3:00 AM, últimos 30 días) e histórico."
         />
       </Stack>
+
+      {/* Recalculation Schedule Info Banner */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          borderRadius: 3,
+          backgroundColor: "#f4f8ff",
+          border: "1px solid #d0e1fd",
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          <Box
+            sx={{
+              p: 1.25,
+              borderRadius: 2,
+              backgroundColor: "#e1edfe",
+              color: theme.palette.primary.main,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Clock size={22} />
+          </Box>
+          <Box flex={1}>
+            <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+              Programación Independiente de Recálculos Automáticos (03:00 AM)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              • <strong>Ventas Confirmadas:</strong> Se recalcula los días <strong>{salesDayConfig} de cada mes</strong> (últimos 30 días).<br />
+              • <strong>Efectivo:</strong> Se recalcula los días <strong>{cashDayConfig} de cada mes</strong> (últimos 30 días).
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
+
+      {/* Historical Selector & Mode Bar */}
+      <Card sx={{ p: 2, borderRadius: 3, border: `1px solid ${theme.palette.app.border}` }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <History size={20} color={theme.palette.primary.main} />
+              <Typography variant="subtitle2" fontWeight={700}>
+                Histórico ({calcType === "CONFIRMED_SALES" ? "Ventas Confirmadas" : "Efectivo"}):
+              </Typography>
+            </Stack>
+          </Grid>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <FormControl fullWidth size="small">
+              <Select
+                value={selectedSnapshotId ?? "live"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "live") {
+                    setSelectedSnapshotId(null);
+                  } else {
+                    setSelectedSnapshotId(Number(val));
+                  }
+                }}
+                sx={{ borderRadius: 2, fontWeight: 600 }}
+              >
+                <MenuItem value="live">
+                  🟢 Cálculo Actual (En Vivo / Tiempo Real)
+                </MenuItem>
+                {snapshots.map((s) => (
+                  <MenuItem key={s.id} value={s.id}>
+                    📜 Histórico #{s.id} ({formatDateDisplay(s.calculationDate)}) — 30 días ({s.periodStartDate} al {s.periodEndDate}) — {formatCurrency(s.totalGlobalAmount)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Card>
 
       {/* Top Metrics Cards */}
       <Grid container spacing={2}>
@@ -200,22 +391,30 @@ export default function ProrrateosPage() {
         </Grid>
       </Grid>
 
-      {/* Main Calculation Method Controls */}
+      {/* Main Calculation Method & Per-Type Configuration Card */}
       <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${theme.palette.app.border}` }}>
-        <Stack spacing={2}>
-          <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
-            FORMA DE CÁLCULO DE PRORRATEO
-          </Typography>
+        <Stack spacing={2.5}>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              FORMA DE CÁLCULO DE PRORRATEO Y CONFIGURACIÓN POR TIPO
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cada tipo de prorrateo guarda su propia fecha del mes e historial de cálculos de 30 días.
+            </Typography>
+          </Box>
+
           <Grid container spacing={2}>
             {CALCULATION_TYPES.map((item) => {
               const selected = calcType === item.value;
+              const typeDay = configMap.get(item.value) ?? 1;
+
               return (
-                <Grid size={{ xs: 12, sm: 4 }} key={item.value}>
+                <Grid size={{ xs: 12, sm: 6 }} key={item.value}>
                   <Paper
-                    onClick={() => setCalcType(item.value)}
+                    onClick={() => handleSelectCalcType(item.value)}
                     elevation={selected ? 2 : 0}
                     sx={{
-                      p: 2,
+                      p: 2.5,
                       cursor: "pointer",
                       borderRadius: 2.5,
                       border: `2px solid ${
@@ -230,83 +429,128 @@ export default function ProrrateosPage() {
                       },
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1.5} mb={1}>
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          backgroundColor: selected
-                            ? theme.palette.primary.main
-                            : theme.palette.action.selected,
-                          color: selected ? "#fff" : theme.palette.text.secondary,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.icon}
-                      </Box>
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        {item.label}
-                      </Typography>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Box
+                          sx={{
+                            p: 1,
+                            borderRadius: 2,
+                            backgroundColor: selected
+                              ? theme.palette.primary.main
+                              : theme.palette.action.selected,
+                            color: selected ? "#fff" : theme.palette.text.secondary,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {item.icon}
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          {item.label}
+                        </Typography>
+                      </Stack>
                     </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.825rem" }}>
+
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.825rem", mb: 2 }}>
                       {item.description}
                     </Typography>
+
+                    {/* Independent Day Config for this specific Calculation Type */}
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      onClick={(e) => e.stopPropagation()}
+                      sx={{
+                        pt: 1.5,
+                        borderTop: `1px solid ${theme.palette.app.border}`,
+                      }}
+                    >
+                      <Typography variant="caption" fontWeight={700} color="text.secondary">
+                        Día del mes para recálculo:
+                      </Typography>
+                      <Select
+                        size="small"
+                        value={typeDay}
+                        onChange={(e) => {
+                          const newDay = Number(e.target.value);
+                          saveConfigMutation.mutate({
+                            calculationType: item.value,
+                            calculationDay: newDay,
+                          });
+                        }}
+                        sx={{
+                          height: 32,
+                          fontSize: "0.8rem",
+                          borderRadius: 2,
+                          fontWeight: 700,
+                          backgroundColor: theme.palette.background.paper,
+                        }}
+                      >
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                          <MenuItem key={d} value={d} sx={{ fontSize: "0.8rem" }}>
+                            Día {d}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </Stack>
                   </Paper>
                 </Grid>
               );
             })}
           </Grid>
 
-          {/* Date range inputs */}
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ pt: 1 }} flexWrap="wrap">
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Calendar size={18} color={theme.palette.text.secondary} />
-              <Typography variant="body2" fontWeight={500}>
-                Período:
-              </Typography>
-            </Stack>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: `1px solid ${theme.palette.app.border}`,
-                backgroundColor: theme.palette.background.paper,
-                color: theme.palette.text.primary,
-                fontFamily: "inherit",
-              }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              hasta
-            </Typography>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: `1px solid ${theme.palette.app.border}`,
-                backgroundColor: theme.palette.background.paper,
-                color: theme.palette.text.primary,
-                fontFamily: "inherit",
-              }}
-            />
-            {(startDate || endDate) && (
-              <Chip
-                label="Limpiar fechas"
-                size="small"
-                onDelete={() => {
-                  setStartDate("");
-                  setEndDate("");
+          {/* Date range inputs for live mode */}
+          {selectedSnapshotId === null && (
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ pt: 1 }} flexWrap="wrap">
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Calendar size={18} color={theme.palette.text.secondary} />
+                <Typography variant="body2" fontWeight={500}>
+                  Período (En vivo):
+                </Typography>
+              </Stack>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: `1px solid ${theme.palette.app.border}`,
+                  backgroundColor: theme.palette.background.paper,
+                  color: theme.palette.text.primary,
+                  fontFamily: "inherit",
                 }}
               />
-            )}
-          </Stack>
+              <Typography variant="body2" color="text.secondary">
+                hasta
+              </Typography>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: `1px solid ${theme.palette.app.border}`,
+                  backgroundColor: theme.palette.background.paper,
+                  color: theme.palette.text.primary,
+                  fontFamily: "inherit",
+                }}
+              />
+              <Chip
+                label="Restablecer a últimos 30 días"
+                size="small"
+                variant="outlined"
+                color="primary"
+                onClick={() => {
+                  setStartDate(getThirtyDaysAgoStr());
+                  setEndDate(getTodayStr());
+                }}
+              />
+            </Stack>
+          )}
         </Stack>
       </Card>
 

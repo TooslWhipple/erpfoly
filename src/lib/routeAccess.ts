@@ -14,6 +14,7 @@ import {
   CATALOG_MORATORY_RATE_READ,
   CATALOG_TRANSACTION_TYPES_READ,
   CATALOG_SYSTEM_POLICIES_READ,
+  CATALOG_GENERATED_POLICIES_READ,
   CATALOG_POINTS_READ,
   CATALOG_PRODUCTS_CREATE,
   CATALOG_PRODUCTS_READ,
@@ -167,6 +168,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/tasa-mora(\/.*)?$/, permission: CATALOG_MORATORY_RATE_READ },
   { pattern: /^\/catalogos\/tipos-transaccion(\/.*)?$/, permission: CATALOG_TRANSACTION_TYPES_READ },
   { pattern: /^\/catalogos\/polizas-sistema(\/.*)?$/, permission: CATALOG_SYSTEM_POLICIES_READ },
+  { pattern: /^\/catalogos\/polizas(\/.*)?$/, permission: CATALOG_GENERATED_POLICIES_READ },
 ];
 
 export const authorizedHomeOptions: Array<{ path: string; requirement: AccessRequirement }> = [

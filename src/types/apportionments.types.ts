@@ -32,3 +32,23 @@ export interface GetApportionmentParams {
   startDate?: string;
   endDate?: string;
 }
+
+export interface ApportionmentConfig {
+  id: number;
+  calculationDay: number;
+  calculationType: ApportionmentCalculationType;
+  updatedAt: string;
+}
+
+export interface ApportionmentSnapshotItem {
+  id: number;
+  calculationDate: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  calculationType: ApportionmentCalculationType;
+  totalGlobalAmount: number;
+}
+
+export interface ApportionmentSnapshotDetail extends ApportionmentSnapshotItem {
+  data: ApportionmentResponse;
+}

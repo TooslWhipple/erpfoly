@@ -480,3 +480,8 @@ export async function cancelRedDelivery(
     payload,
   );
 }
+
+export async function getInvoicingConfig(): Promise<{ facturacionConfirmacionVentaEnabled: boolean }> {
+  const res: ApiResult<{ facturacionConfirmacionVentaEnabled: boolean }> = await get(`${BASE}/invoicing-config`);
+  return unwrapOrThrow(res);
+}

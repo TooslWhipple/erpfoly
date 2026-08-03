@@ -127,6 +127,7 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"catalogos-tasa-mora": "catalogos.tasa_mora",
 	"catalogos-tipos-transaccion": "catalogos.tipos-transaccion",
 	"catalogos-polizas-sistema": "catalogos.polizas-sistema",
+	"catalogos-polizas": "catalogos.polizas",
 };
 
 const DERIVED_SCREEN_SUFFIXES = ["-nuevo", "-detalle"] as const;

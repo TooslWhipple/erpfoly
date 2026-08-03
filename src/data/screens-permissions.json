@@ -428,6 +428,17 @@
       ]
     },
     {
+      "code": "catalogos-polizas",
+      "name": "Pólizas Generadas",
+      "path": "/catalogos/polizas",
+      "actions": [
+        "view",
+        "create",
+        "edit",
+        "delete"
+      ]
+    },
+    {
       "code": "cajas",
       "name": "Cajas",
       "path": "/cajas",

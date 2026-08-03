@@ -13,7 +13,7 @@ import { SidebarPanel } from "@/styles/pedidos.styles";
 import { ORDERS_CREATE } from "@/lib/permissions";
 import dayjs from "@/lib/dayjs";
 
-type OrderStatus = "pending" | "in_progress" | "received";
+type OrderStatus = "pending" | "scheduled" | "in_progress" | "received";
 
 function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
     const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
@@ -25,19 +25,23 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
         status = "received";
     } else if (order.status === "partially_delivered") {
         status = "in_progress";
+    } else if (order.status === "scheduled" || order.status === "shipped") {
+        status = "scheduled";
     } else if (order.status === "cancelled") {
         status = "pending";
     }
 
     const orderDate = dayjs.utc(order.order_date);
-    const estimatedDelivery = orderDate.add(7, "day");
+    // La fecha de entrega la confirma el proveedor desde el portal
+    // (order_deliveries) — no se muestra hasta que exista.
+    const confirmedDelivery = order.order_deliveries[0]?.delivery_date;
 
     return {
         id: order.id,
         supplier: order.supplier?.name ?? "Sin proveedor",
         supplierDate: orderDate.toDate(),
         destination: order.branch?.name ?? "Bodega",
-        deliveryDate: estimatedDelivery.toDate(),
+        deliveryDate: confirmedDelivery ? dayjs.utc(confirmedDelivery).toDate() : null,
         itemCount: order.order_items.length,
         status,
         progress,

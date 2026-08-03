@@ -92,6 +92,10 @@ interface PriceTabProps {
     productNumericId: number | null;
     promotionDrafts: ProductPromotionDraft[];
     onPromotionDraftsChange: (next: ProductPromotionDraft[]) => void;
+    /** True while a Banxico exchange-rate lookup (currency change or refresh) is in flight. */
+    exchangeRateLoading?: boolean;
+    /** Repeats the Banxico lookup for an existing USD product without changing currency. */
+    onRefreshExchangeRate?: () => void;
 }
 
 export function PriceTab({
@@ -108,6 +112,8 @@ export function PriceTab({
     productNumericId,
     promotionDrafts,
     onPromotionDraftsChange,
+    exchangeRateLoading = false,
+    onRefreshExchangeRate,
 }: PriceTabProps) {
     const theme = useTheme();
     const [addBasePriceOpen, setAddBasePriceOpen] = useState(false);
@@ -151,17 +157,24 @@ export function PriceTab({
         return promotionDrafts.filter((d) => d.payload.purchaseTypeId === selectedId);
     }, [promotionDrafts, activePurchaseTypeTab]);
 
+    // formState.listCost is in USD when currency is USD (see productDetailDtoToFormSnapshot);
+    // resolveEffectiveCost and the price preview always expect pesos, same conversion the backend does on save.
+    const listCostInPesos =
+        formState.currency === "USD"
+            ? (Number(formState.listCost) || 0) * (Number(formState.exchangeRate) || 0)
+            : Number(formState.listCost) || 0;
+
     // Cost basis selected in the form (fallback to list cost when derived costs are zero).
     const referenceCost = useMemo(
         () =>
             resolveEffectiveCost({
-                listCost: Number(formState.listCost) || 0,
+                listCost: listCostInPesos,
                 lastCost: Number(formState.lastCost) || 0,
                 averageCost: Number(formState.averageCost) || 0,
                 costBasis: formState.costBasisForCalculation,
             }),
         [
-            formState.listCost,
+            listCostInPesos,
             formState.lastCost,
             formState.averageCost,
             formState.costBasisForCalculation,
@@ -302,8 +315,15 @@ export function PriceTab({
                                         label="Tipo de cambio"
                                         placeholder="1.00"
                                         type="number"
+                                        readOnly
                                         value={formState.exchangeRate}
-                                        onChange={(e) => onFieldChange("exchangeRate", e.target.value)}
+                                        error={Boolean(errors.exchangeRate)}
+                                        helperText={errors.exchangeRate}
+                                        InputProps={{
+                                            endAdornment: exchangeRateLoading ? (
+                                                <CircularProgress size={16} />
+                                            ) : undefined,
+                                        }}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
@@ -315,6 +335,19 @@ export function PriceTab({
                                         onChange={(e) => onFieldChange("iva", e.target.value)}
                                     />
                                 </Grid>
+                                {
+                                    formState.currency === "USD" && productNumericId != null &&
+                                    <Grid size={12}>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            onClick={onRefreshExchangeRate}
+                                            disabled={exchangeRateLoading}
+                                            sx={{ alignSelf: "flex-start" }}>
+                                            Actualizar tipo de cambio
+                                        </Button>
+                                    </Grid>
+                                }
                             </Grid>
 
                             <LastCostCard>

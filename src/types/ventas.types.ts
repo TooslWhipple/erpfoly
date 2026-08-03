@@ -43,12 +43,7 @@ export interface ProductSearchResult {
   code: string;
   name: string;
   imageUrl: string | null;
-  averageCost: number;
-  lastCost: number;
-  costWithoutDiscount: number;
-  discountPct: number;
-  supplier1Name: string | null;
-  supplier2Name: string | null;
+  finalPrice: number;
 }
 
 export interface InventorySource {

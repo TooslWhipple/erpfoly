@@ -68,6 +68,8 @@ export type CreateProductRequest = {
     iva?: number;
     isLiquidation?: boolean;
     costBasisForCalculation?: CostBasisForCalculation;
+    /** Solo aplica en edición: si true, usa el exchangeRate del payload en vez de conservar el guardado. */
+    refreshExchangeRate?: boolean;
 } & (
     | { warrantyType: "MONTHS"; warrantyMonths: number }
     | { warrantyType: "ANNEX_POLICY"; warrantyPolicy: string }
@@ -86,6 +88,12 @@ export interface ProductPricePreviewResponse {
     subtotal: number;
     /** subtotal*IVA, redondeado a terminación .99. */
     price: number;
+}
+
+export interface ExchangeRateResponse {
+    /** Tipo de cambio USD/MXN vigente (Banxico, serie SF43718). */
+    exchangeRate: number;
+    date: string;
 }
 
 export interface ProductSupplier {

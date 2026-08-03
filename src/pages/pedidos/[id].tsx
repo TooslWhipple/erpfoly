@@ -13,7 +13,6 @@ import {
   Breadcrumbs,
   StatusChipVariant,
   StatusChip,
-  SendToWarehouseModal,
 } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
@@ -22,12 +21,21 @@ import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
 import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
+import { formatDateOnly } from "@/utils/date";
 const IVA_RATE = 0.16;
-type DisplayStatus = "pending" | "in_progress" | "received" | "cancelled";
+type DisplayStatus =
+  | "pending"
+  | "scheduled"
+  | "in_progress"
+  | "received"
+  | "cancelled";
 function mapBackendStatus(status: string): DisplayStatus {
   switch (status) {
     case "pending":
       return "pending";
+    case "scheduled":
+    case "shipped":
+      return "scheduled";
     case "partially_delivered":
       return "in_progress";
     case "delivered":
@@ -41,6 +49,7 @@ function mapBackendStatus(status: string): DisplayStatus {
 function getStatusLabel(status: DisplayStatus): string {
   const labels: Record<DisplayStatus, string> = {
     pending: "Solicitado",
+    scheduled: "Programado",
     in_progress: "En curso",
     received: "Recibido",
     cancelled: "Cancelado",
@@ -50,6 +59,7 @@ function getStatusLabel(status: DisplayStatus): string {
 function getStatusVariant(status: DisplayStatus): StatusChipVariant {
   const variants: Record<DisplayStatus, string> = {
     pending: "pending",
+    scheduled: "infoAlt",
     in_progress: "info",
     received: "success",
     cancelled: "error",
@@ -84,7 +94,6 @@ export default function PedidoDetalle() {
   const { id } = router.query;
   const [order, setOrder] = useState<OrderFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sendModalOpen, setSendModalOpen] = useState(false);
   useEffect(() => {
     if (id && typeof id === "string") {
       loadOrder(id);
@@ -104,8 +113,6 @@ export default function PedidoDetalle() {
     }
   };
   const displayStatus = order ? mapBackendStatus(order.status) : "pending";
-  const showSendButton =
-    order?.order_type === "external" && displayStatus === "pending";
   const subtotal = order
     ? order.order_items.reduce(
         (sum, item) =>
@@ -237,15 +244,6 @@ export default function PedidoDetalle() {
               sm: "center",
             }}
           >
-            {showSendButton && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => setSendModalOpen(true)}
-              >
-                Enviar a Almacén
-              </Button>
-            )}
             <StatusChip
               size="small"
               label={getStatusLabel(displayStatus)}
@@ -286,6 +284,36 @@ export default function PedidoDetalle() {
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">
+                    Entrega
+                  </Typography>
+                  <Typography variant="body1" textAlign="right">
+                    {order.order_deliveries[0] ? (
+                      <>
+                        {formatDateOnly(
+                          order.order_deliveries[0].delivery_date,
+                          "dateLong",
+                        )}
+                        {order.order_deliveries[0].delivery_method && (
+                          <>
+                            <br />
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              {order.order_deliveries[0].delivery_method.name}
+                            </Typography>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      "Pendiente de confirmar"
+                    )}
+                  </Typography>
+                </Stack>
+                <Divider />
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">
                     Subtotal
                   </Typography>
                   <Typography variant="body1">
@@ -311,13 +339,6 @@ export default function PedidoDetalle() {
           </Grid>
         </Grid>
       </Stack>
-
-      <SendToWarehouseModal
-        open={sendModalOpen}
-        onClose={() => setSendModalOpen(false)}
-        orderId={Number(id)}
-        onSuccess={() => loadOrder(String(id))}
-      />
     </>
   );
 }

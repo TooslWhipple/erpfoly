@@ -47,6 +47,8 @@ export interface SupplierPromotionItem {
   endDate: string | null;
 }
 
+export type SupplierPortalStatus = "NONE" | "PENDING" | "ACTIVE";
+
 export interface SupplierDetail extends SupplierListItem {
   website: string | null;
   observations: string | null;
@@ -55,6 +57,9 @@ export interface SupplierDetail extends SupplierListItem {
   bankAccounts: SupplierBankAccountItem[];
   promotions: SupplierPromotionItem[];
   hasUser: boolean;
+  portalStatus: SupplierPortalStatus;
+  inviteUrl: string | null;
+  inviteExpiresAt: string | null;
 }
 
 export interface ContactJobTitleOption {
@@ -189,9 +194,13 @@ export async function updateSupplier(
 }
 
 export async function inviteSupplier(
-  id: number
-): Promise<ApiResult<{ message: string }>> {
-  return post<{ message: string }>(`${SUPPLIERS_BASE}/${id}/invite`, {});
+  id: number,
+  force = false
+): Promise<ApiResult<{ message: string; setPasswordUrl: string }>> {
+  return post<{ message: string; setPasswordUrl: string }>(
+    `${SUPPLIERS_BASE}/${id}/invite`,
+    { force }
+  );
 }
 
 export async function getContactJobTitles(): Promise<

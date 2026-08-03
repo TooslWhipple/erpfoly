@@ -140,6 +140,7 @@ export interface OrderListItem {
     scheduled_delivery_date: string | null;
     product: { id: number; code: string; short_name: string } | null;
   }>;
+  order_deliveries: Array<{ delivery_date: string }>;
 }
 
 export interface OrderFullDetail {
@@ -174,6 +175,7 @@ export interface OrderFullDetail {
   order_deliveries: Array<{
     id: number;
     delivery_date: string;
+    delivery_method: { id: number; name: string } | null;
     received_by_user: { id: number; first_name: string; last_name: string } | null;
     order_delivery_items: Array<{
       id: number;

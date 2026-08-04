@@ -9,9 +9,10 @@ import {
   CosteoExpensesTab,
   CosteoInvoicesTab,
 } from "@/components/CosteoDetailTabs";
-import { costeoInvoiceToSelectable } from "@/components/CosteoDetailTabs/costeoInvoiceAdapter";
+import { payableToSelectableForCosteo } from "@/components/CosteoDetailTabs/costeoInvoiceAdapter";
 import { useCosteoDetail } from "@/hooks/costeos/useCosteoDetail";
 import type { SelectableInvoice } from "@/types/invoice-selector.types";
+import { useMemo } from "react";
 
 export default function CosteoDetailPage() {
   const {
@@ -44,6 +45,7 @@ export default function CosteoDetailPage() {
     handleAddExpense,
     handleRemoveExpense,
     handleAddInvoices,
+    handleRemoveInvoice,
     refetch,
   } = useCosteoDetail();
 
@@ -70,10 +72,28 @@ export default function CosteoDetailPage() {
         ]
         : undefined;
 
+  const linkedInvoiceIds = useMemo(
+    () => (detail?.invoices ?? []).map((invoice) => `payable-${invoice.id}`),
+    [detail?.invoices],
+  );
+
+  const selectableAvailableInvoices = useMemo(
+    () => availableInvoices.map(payableToSelectableForCosteo),
+    [availableInvoices],
+  );
+
   const handleConfirmInvoices = async (selected: SelectableInvoice[]) => {
-    await handleAddInvoices({
-      supplier_invoice_ids: selected.map((invoice) => Number(invoice.id)),
-    });
+    const payableIds = selected
+      .map((invoice) => Number(invoice.id.replace(/^payable-/, "")))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    if (payableIds.length === 0) return;
+    await handleAddInvoices(payableIds);
+  };
+
+  const handleConfirmRemoveInvoice = async (invoiceId: string) => {
+    const payableId = Number(invoiceId.replace(/^payable-/, ""));
+    if (!Number.isFinite(payableId) || payableId <= 0) return;
+    await handleRemoveInvoice(payableId);
   };
 
   if (!routerReady || loading) {
@@ -189,8 +209,8 @@ export default function CosteoDetailPage() {
       <InvoiceSelectorModal
         open={invoiceModalOpen}
         onClose={() => setInvoiceModalOpen(false)}
-        availableInvoices={availableInvoices.map(costeoInvoiceToSelectable)}
-        linkedInvoiceIds={detail.invoices.map((invoice) => String(invoice.id))}
+        availableInvoices={selectableAvailableInvoices}
+        linkedInvoiceIds={linkedInvoiceIds}
         loading={loadingAvailableInvoices}
         onConfirm={handleConfirmInvoices}
       />

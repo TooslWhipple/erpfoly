@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { CircularProgress } from "@mui/material";
-import { SideModal } from "@/components/SideModal";
+import { CircularProgress, Dialog } from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
 import {
+  StyledDialogContent,
+  ModalHeader,
+  ModalTitle,
+  CloseButton,
   ModalContent,
   DescriptionText,
   StatsContainer,
@@ -82,6 +86,7 @@ export function SendToCostingModal({
   const showMismatchReason = variant === "send_to_costing" && hasQuantityMismatch;
   const reasonRequired = showMismatchReason;
   const canConfirm = !reasonRequired || reason.trim().length > 0;
+  const disableClose = loading || isPrinting;
 
   useEffect(() => {
     if (!open) {
@@ -90,9 +95,15 @@ export function SendToCostingModal({
   }, [open]);
 
   const handleClose = () => {
-    if (!loading && !isPrinting) {
+    if (!disableClose) {
       onClose();
     }
+  };
+
+  const handleDialogClose = (_event: object, reason: string) => {
+    if (disableClose) return;
+    if (reason === "backdropClick") return;
+    onClose();
   };
 
   const handleConfirm = async () => {
@@ -104,91 +115,110 @@ export function SendToCostingModal({
     variant === "save_labels" || variant === "save_extra_labels";
 
   return (
-    <SideModal
+    <Dialog
       open={open}
-      onClose={handleClose}
-      title={copy.title}
-      maxWidth="sm"
-      disableClose={loading || isPrinting}
+      onClose={handleDialogClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          maxHeight: "90vh",
+        },
+      }}
     >
-      <ModalContent>
-        <DescriptionText>{copy.description}</DescriptionText>
+      <StyledDialogContent>
+        <ModalHeader>
+          <ModalTitle>{copy.title}</ModalTitle>
+          <CloseButton
+            onClick={handleClose}
+            disabled={disableClose}
+            size="small"
+            aria-label="Cerrar"
+          >
+            <CloseIcon fontSize="small" />
+          </CloseButton>
+        </ModalHeader>
 
-        {showMismatchReason && (
-          <MismatchBanner>
-            <MismatchText>
-              La cantidad de artículos recibida no coincide con la cantidad
-              inicial de los pedidos, describe la razón por la que esto sucedió
-            </MismatchText>
-            <ReasonTextField
-              placeholder="Ingresa aquí"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              multiline
-              minRows={3}
-              fullWidth
-              disabled={loading || isPrinting}
-            />
-          </MismatchBanner>
-        )}
+        <ModalContent>
+          <DescriptionText>{copy.description}</DescriptionText>
 
-        {showStats && !isPrinting && (
-          <StatsContainer>
-            <StatRow>
-              <StatLabel>Total de artículos:</StatLabel>
-              <StatValue>{totalArticles}</StatValue>
-            </StatRow>
-            {variant === "save_extra_labels" ? (
+          {showMismatchReason && (
+            <MismatchBanner>
+              <MismatchText>
+                La cantidad de artículos recibida no coincide con la cantidad
+                inicial de los pedidos, describe la razón por la que esto sucedió
+              </MismatchText>
+              <ReasonTextField
+                placeholder="Ingresa aquí"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+                disabled={disableClose}
+              />
+            </MismatchBanner>
+          )}
+
+          {showStats && !isPrinting && (
+            <StatsContainer>
               <StatRow>
-                <StatLabel>Etiquetas extra a imprimir:</StatLabel>
-                <StatValue>{extraLabels}</StatValue>
+                <StatLabel>Total de artículos:</StatLabel>
+                <StatValue>{totalArticles}</StatValue>
               </StatRow>
-            ) : (
-              <StatRow>
-                <StatLabel>Etiquetas a imprimir:</StatLabel>
-                <StatValue>{totalLabels}</StatValue>
-              </StatRow>
-            )}
-          </StatsContainer>
-        )}
-
-        {isPrinting && (
-          <ProgressBlock>
-            <ProgressHeader>
-              <ProgressLabel>Imprimiendo etiquetas</ProgressLabel>
-              <ProgressPercent>{Math.round(printProgress)}%</ProgressPercent>
-            </ProgressHeader>
-            <PrintProgressBar variant="determinate" value={printProgress} />
-          </ProgressBlock>
-        )}
-
-        {!isPrinting && (
-          <ModalActions>
-            <ConfirmButton
-              type="button"
-              variant="contained"
-              color="primary"
-              onClick={handleConfirm}
-              disabled={loading || !canConfirm}
-            >
-              {loading ? (
-                <CircularProgress size={20} color="inherit" />
+              {variant === "save_extra_labels" ? (
+                <StatRow>
+                  <StatLabel>Etiquetas extra a imprimir:</StatLabel>
+                  <StatValue>{extraLabels}</StatValue>
+                </StatRow>
               ) : (
-                copy.confirmLabel
+                <StatRow>
+                  <StatLabel>Etiquetas a imprimir:</StatLabel>
+                  <StatValue>{totalLabels}</StatValue>
+                </StatRow>
               )}
-            </ConfirmButton>
-            <CancelButton
-              type="button"
-              variant="outlined"
-              color="primary"
-              onClick={handleClose}
-              disabled={loading}
-            >
-              Cancelar
-            </CancelButton>
-          </ModalActions>
-        )}
-      </ModalContent>
-    </SideModal>
+            </StatsContainer>
+          )}
+
+          {isPrinting && (
+            <ProgressBlock>
+              <ProgressHeader>
+                <ProgressLabel>Imprimiendo etiquetas</ProgressLabel>
+                <ProgressPercent>{Math.round(printProgress)}%</ProgressPercent>
+              </ProgressHeader>
+              <PrintProgressBar variant="determinate" value={printProgress} />
+            </ProgressBlock>
+          )}
+
+          {!isPrinting && (
+            <ModalActions>
+              <ConfirmButton
+                type="button"
+                variant="contained"
+                color="primary"
+                onClick={handleConfirm}
+                disabled={loading || !canConfirm}
+              >
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  copy.confirmLabel
+                )}
+              </ConfirmButton>
+              <CancelButton
+                type="button"
+                variant="outlined"
+                color="primary"
+                onClick={handleClose}
+                disabled={loading}
+              >
+                Cancelar
+              </CancelButton>
+            </ModalActions>
+          )}
+        </ModalContent>
+      </StyledDialogContent>
+    </Dialog>
   );
 }

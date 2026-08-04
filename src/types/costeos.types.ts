@@ -16,7 +16,7 @@ export type CosteoDetailTab =
 
 export type CosteoCurrency = "MXN" | "USD";
 
-export type CosteoInvoiceType = "PUE" | "PPD" | "CREDIT_NOTE";
+export type InvoiceOrigin = "providers" | "administration";
 
 export interface CosteoListItem {
   id: number;
@@ -67,16 +67,8 @@ export interface CosteoInvoice {
   id: number;
   externalId: string;
   date: string;
-  type: CosteoInvoiceType;
-  amount: number;
-}
-
-export interface CosteoAvailableInvoice {
-  id: number;
-  supplierInvoiceId: number;
-  externalId: string;
-  date: string;
-  type: CosteoInvoiceType;
+  paymentType: "PUE" | "PPD";
+  origin: InvoiceOrigin;
   amount: number;
 }
 
@@ -96,6 +88,7 @@ export interface CosteoExpenseSummary {
 export interface CosteoDetail {
   id: number;
   supplier: string;
+  supplierId: number;
   supplierDate: string;
   branch: { id: number; name: string };
   deliveryDate: string;
@@ -108,7 +101,7 @@ export interface CosteoDetail {
   expenses: CosteoExpense[];
   expenseSummary: CosteoExpenseSummary;
   invoices: CosteoInvoice[];
-  availableInvoices: CosteoAvailableInvoice[];
+  receptionId: number | null;
   billingSummary: CosteoBillingSummary;
 }
 
@@ -144,8 +137,4 @@ export interface SaveCosteoDetailPayload {
   exchange_rate: number;
   affect_article_prices: boolean;
   items: Array<{ id?: number; received?: number }>;
-}
-
-export interface AddCosteoInvoicePayload {
-  supplier_invoice_ids: number[];
 }

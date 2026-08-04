@@ -1,7 +1,11 @@
 import { styled, darken } from "@mui/material/styles";
 
-export const DropZoneRoot = styled("div")<{ isDragActive: boolean; isError?: boolean }>(
-  ({ theme, isDragActive, isError }) => ({
+export const DropZoneRoot = styled("div")<{
+  isDragActive: boolean;
+  isError?: boolean;
+  fullHeight?: boolean;
+}>(
+  ({ theme, isDragActive, isError, fullHeight }) => ({
     border: `2px dashed ${(isError) ? "#DC2626" : (isDragActive) ? darken(theme.palette.primary.main, 0.06) : theme.palette.primary.main}`,
     borderRadius: "12px",
     backgroundColor: ((isDragActive) ? darken("EFF6FF", 0.06) : "#EFF6FF"),
@@ -9,6 +13,15 @@ export const DropZoneRoot = styled("div")<{ isDragActive: boolean; isError?: boo
     textAlign: "center",
     cursor: "pointer",
     transition: "border-color 0.2s, background-color 0.2s",
+    boxSizing: "border-box",
+    ...(fullHeight && {
+      flex: 1,
+      height: "100%",
+      minHeight: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }),
     "&:hover": {
       borderColor: (isError) ? "#DC2626" : darken(theme.palette.primary.main, 0.06),
       backgroundColor: darken("#EFF6FF", 0.06),

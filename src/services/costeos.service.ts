@@ -2,8 +2,6 @@ import { get, patch, post, del, type ApiResult } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   AddCosteoExpensePayload,
-  AddCosteoInvoicePayload,
-  CosteoAvailableInvoice,
   CosteoDetail,
   GetCosteosParams,
   GetCosteosResponse,
@@ -75,22 +73,4 @@ export async function removeCosteoExpense(
   expenseId: number,
 ): Promise<ApiResult<CosteoDetail>> {
   return del<CosteoDetail>(`${COSTEO_BASE}/${costeoId}/expenses/${expenseId}`);
-}
-
-export async function getAvailableInvoices(
-  costeoId: number,
-): Promise<ApiResult<CosteoAvailableInvoice[]>> {
-  return get<CosteoAvailableInvoice[]>(
-    `${COSTEO_BASE}/${costeoId}/invoices/available`,
-  );
-}
-
-export async function addCosteoInvoices(
-  costeoId: number,
-  payload: AddCosteoInvoicePayload,
-): Promise<ApiResult<CosteoDetail>> {
-  return post<CosteoDetail>(
-    `${COSTEO_BASE}/${costeoId}/invoices`,
-    payload,
-  );
 }

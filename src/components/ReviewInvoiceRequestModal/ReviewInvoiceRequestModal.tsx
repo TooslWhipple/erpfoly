@@ -3,12 +3,10 @@ import {
   Button,
   CircularProgress,
   Grid,
-  IconButton,
-  Link,
   Stack,
   Typography,
 } from "@mui/material";
-import { Check, ExternalLink, Wallet, X } from "lucide-react";
+import { Check, Wallet, X } from "lucide-react";
 import numeral from "numeral";
 import { SideModal } from "@/components/SideModal";
 import { FormTextField } from "@/components/Form";
@@ -132,10 +130,6 @@ export function ReviewInvoiceRequestModal({
     detail?.paymentDetails?.trim() ||
     "—";
 
-  const orderLabel = detail?.orderFolio?.trim() || "—";
-  const orderHref =
-    detail?.orderId != null ? `/pedidos/${detail.orderId}` : undefined;
-
   return (
     <SideModal
       open={open}
@@ -154,28 +148,6 @@ export function ReviewInvoiceRequestModal({
             label="Proveedor"
             value={supplierLabel}
             readOnly
-          />
-
-          <FormTextField
-            label="Pedido"
-            value={orderLabel}
-            readOnly
-            InputProps={{
-              endAdornment: orderHref ? (
-                <IconButton
-                  component={Link}
-                  href={orderHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  size="small"
-                  edge="end"
-                  aria-label="Abrir pedido"
-                  color="primary"
-                >
-                  <ExternalLink size={16} />
-                </IconButton>
-              ) : undefined,
-            }}
           />
 
           <FormTextField

@@ -21,12 +21,12 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  TextField,
 } from "@mui/material";
 import {
   Trash2,
   ScanLine,
   Pencil,
-  Fingerprint,
   DollarSign,
   CreditCard,
   PlusCircle,
@@ -64,8 +64,16 @@ import {
   setDeliveryDate,
   getSaleDetail,
   invalidateSaleDiscount,
+  verifySaleIdentity,
+  validateSupervisor,
+  skipSaleIdentityVerification,
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
+import {
+  NubariumFaceCapture,
+  type NubariumFaceCaptureResult,
+} from "@/components/NubariumFaceCapture";
+import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -206,8 +214,17 @@ export function SaleBuilder({
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
-  const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
-  const [fingerprintConfirmed, setFingerprintConfirmed] = useState(false);
+  const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
+  const [identityCaptureResult, setIdentityCaptureResult] =
+    useState<NubariumFaceCaptureResult | null>(null);
+  const [identityCaptureSessionKey, setIdentityCaptureSessionKey] =
+    useState(0);
+  const [skipIdentityModalOpen, setSkipIdentityModalOpen] = useState(false);
+  const [skipIdentityReason, setSkipIdentityReason] = useState("");
+  const [skipIdentitySupervisorUsername, setSkipIdentitySupervisorUsername] =
+    useState("");
+  const [skipIdentitySupervisorPassword, setSkipIdentitySupervisorPassword] =
+    useState("");
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -720,6 +737,77 @@ export function SaleBuilder({
     },
   });
 
+  const {
+    isReady: identitySdkReady,
+    isLoading: identitySdkLoading,
+    token: identitySdkToken,
+    error: identitySdkError,
+    reloadToken: reloadIdentitySdkToken,
+  } = useNubariumSdk({ enabled: identityVerificationModalOpen });
+
+  const verifyIdentityMutation = useMutation({
+    mutationFn: async (result: NubariumFaceCaptureResult) => {
+      if (activeSaleId == null) {
+        throw new Error("No hay una venta activa para verificar identidad");
+      }
+      const res = await verifySaleIdentity(
+        activeSaleId,
+        result.faceDataUrl,
+        result.executionId,
+      );
+      if (res.error) throw new Error(res.error.message);
+      return res.data!;
+    },
+    onSuccess: () => {
+      setIdentityVerificationModalOpen(false);
+      setIdentityCaptureResult(null);
+      setCashAmount(enganche.toFixed(2));
+      setView("checkout");
+    },
+    onError: (err: Error) => {
+      snackbar.showError(err.message);
+      setIdentityCaptureResult(null);
+      setIdentityCaptureSessionKey((current) => current + 1);
+    },
+  });
+
+  const skipIdentityMutation = useMutation({
+    mutationFn: async () => {
+      if (activeSaleId == null) {
+        throw new Error("No hay una venta activa para omitir la verificación");
+      }
+      if (!skipIdentityReason.trim()) {
+        throw new Error("El motivo es requerido");
+      }
+      if (!skipIdentitySupervisorUsername.trim() || !skipIdentitySupervisorPassword) {
+        throw new Error("Usuario y contraseña del supervisor son requeridos");
+      }
+
+      const supervisorRes = await validateSupervisor(
+        skipIdentitySupervisorUsername.trim(),
+        skipIdentitySupervisorPassword,
+      );
+      if (supervisorRes.error) throw new Error(supervisorRes.error.message);
+
+      const skipRes = await skipSaleIdentityVerification(
+        activeSaleId,
+        skipIdentityReason.trim(),
+        supervisorRes.data!.userId,
+      );
+      if (skipRes.error) throw new Error(skipRes.error.message);
+      return skipRes.data!;
+    },
+    onSuccess: () => {
+      setSkipIdentityModalOpen(false);
+      setSkipIdentityReason("");
+      setSkipIdentitySupervisorUsername("");
+      setSkipIdentitySupervisorPassword("");
+      setIdentityVerificationModalOpen(false);
+      setCashAmount(enganche.toFixed(2));
+      setView("checkout");
+    },
+  });
+
   const { data: clientSearchData, isLoading: clientSearchLoading } = useQuery({
     queryKey: [
       "client-search",
@@ -947,13 +1035,18 @@ export function SaleBuilder({
       return;
     }
 
-    // Misma cuenta que hace el backend al confirmar (sale.branch_id +
-    // ProductInventory.existence): lo que exceda la existencia de la
-    // sucursal queda en backorder, sin bloquear el alta al carrito.
-    const branchAvailable =
-      productSources.find((src) => src.sourceType === "branch")?.available ??
-      0;
-    const backorderedQuantity = Math.max(0, totalQty - branchAvailable);
+    // Lo que exceda la existencia de las fuentes elegidas (sucursal y/o
+    // bodega — cualquiera que el usuario haya usado para cubrir la
+    // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
+    // solo se miraba la fuente "branch", así que elegir desde "Bodega"
+    // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
+    const availableFromChosenSources = productSources
+      .filter((src) => src.quantity > 0)
+      .reduce((sum, src) => sum + src.available, 0);
+    const backorderedQuantity = Math.max(
+      0,
+      totalQty - availableFromChosenSources,
+    );
 
     setCart((prev) => {
       const existing = prev.findIndex((c) => c.productId === productDetail.id);
@@ -1024,13 +1117,19 @@ export function SaleBuilder({
           // existencia de sucursal a mano para recalcular — se conserva el
           // último valor que confirmó el backend hasta el próximo sync.
           if (item.sources.length === 0) return { ...item, quantity };
-          const branchAvailable =
-            item.sources.find((src) => src.sourceType === "branch")
-              ?.available ?? 0;
+          // Misma lógica que handleAddToCart: suma la existencia de todas
+          // las fuentes que se usaron para cubrir este item (sucursal y/o
+          // bodega), no solo la de "esta sucursal".
+          const availableFromChosenSources = item.sources
+            .filter((src) => src.quantity > 0)
+            .reduce((sum, src) => sum + src.available, 0);
           return {
             ...item,
             quantity,
-            backorderedQuantity: Math.max(0, quantity - branchAvailable),
+            backorderedQuantity: Math.max(
+              0,
+              quantity - availableFromChosenSources,
+            ),
           };
         })
         .filter((item) => item.quantity > 0),
@@ -1180,7 +1279,6 @@ export function SaleBuilder({
         <Box sx={{ p: 3 }}>
           <TableCrud<ProductSearchResult>
             columns={[
-              { id: "id", label: "ID", type: "id", size: "xs" },
               {
                 id: "imageUrl",
                 label: "Img",
@@ -1207,39 +1305,9 @@ export function SaleBuilder({
                 truncate: true,
               },
               {
-                id: "averageCost",
-                label: "Costo Prom.",
+                id: "finalPrice",
+                label: "Precio Final",
                 type: "currency",
-                size: "md",
-              },
-              {
-                id: "lastCost",
-                label: "Últ. Costo",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "costWithoutDiscount",
-                label: "Costo sin Descuentos",
-                type: "currency",
-                size: "md",
-              },
-              {
-                id: "discountPct",
-                label: "% Desc.1",
-                type: "percentage",
-                size: "sm",
-              },
-              {
-                id: "supplier1Name",
-                label: "Proveedor 1",
-                type: "text",
-                size: "md",
-              },
-              {
-                id: "supplier2Name",
-                label: "Proveedor 2",
-                type: "text",
                 size: "md",
               },
             ]}
@@ -1463,33 +1531,25 @@ export function SaleBuilder({
                 </Box>
               )}
 
-              {/* Orígenes principales: sucursal actual + bodega + por surtir */}
+              {/* Orígenes principales: sucursal actual + bodega (existencia + por surtir) */}
               <Stack spacing={1.5}>
                 {productSources
                   .filter(
                     (src) =>
                       src.sourceType === "warehouse" ||
-                      src.sourceType === "incoming" ||
                       src.branchId === CURRENT_BRANCH_ID,
                   )
                   .map((src) => {
                     const isWarehouse = src.sourceType === "warehouse";
-                    const isIncoming = src.sourceType === "incoming";
                     const isCurrentBranch =
                       src.sourceType === "branch" &&
                       src.branchId === CURRENT_BRANCH_ID;
 
                     const sourceLabel = isCurrentBranch
                       ? `Ésta sucursal (${src.label})`
-                      : isWarehouse
-                        ? "Bodega"
-                        : "Por surtir a Bodega";
+                      : "Bodega";
 
-                    const SourceIcon = isCurrentBranch
-                      ? Store
-                      : isWarehouse
-                        ? Warehouse
-                        : Package;
+                    const SourceIcon = isCurrentBranch ? Store : Warehouse;
 
                     const branchLocked = isBranchSourceLocked(src);
 
@@ -1577,29 +1637,29 @@ export function SaleBuilder({
                                       Existencia: {src.available}
                                     </Typography>
                                   </Stack>
+                                  {(src.pendingOrdered ?? 0) > 0 && (
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={0.75}
+                                    >
+                                      <Box
+                                        sx={{
+                                          color: "text.disabled",
+                                          display: "flex",
+                                        }}
+                                      >
+                                        <Package size={13} />
+                                      </Box>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Por surtir: {src.pendingOrdered}
+                                      </Typography>
+                                    </Stack>
+                                  )}
                                 </>
-                              )}
-                              {isIncoming && (
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                >
-                                  <Box
-                                    sx={{
-                                      color: "text.disabled",
-                                      display: "flex",
-                                    }}
-                                  >
-                                    <Package size={13} />
-                                  </Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Por surtir: {src.available}
-                                  </Typography>
-                                </Stack>
                               )}
                               {isCurrentBranch && (
                                 <Stack
@@ -2589,8 +2649,8 @@ export function SaleBuilder({
               sx={{ borderRadius: 2, textTransform: "none" }}
               onClick={() => {
                 if (paymentType === "CREDIT") {
-                  setFingerprintConfirmed(false);
-                  setFingerprintModalOpen(true);
+                  setIdentityCaptureResult(null);
+                  setIdentityVerificationModalOpen(true);
                 } else {
                   setView("checkout");
                 }
@@ -3523,46 +3583,166 @@ export function SaleBuilder({
           />
 
           <Dialog
-            open={fingerprintModalOpen}
-            onClose={() => setFingerprintModalOpen(false)}
+            open={identityVerificationModalOpen}
+            onClose={() => {
+              if (verifyIdentityMutation.isPending) return;
+              setIdentityVerificationModalOpen(false);
+            }}
             maxWidth="sm"
             fullWidth
             PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
           >
             <DialogContent sx={{ p: 4 }}>
-              <Stack spacing={4} alignItems="center" textAlign="center">
+              <Stack spacing={3} alignItems="center" textAlign="center">
                 <Typography variant="h5" fontWeight={600}>
                   Validación de identidad
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Para continuar, captura la huella dactilar del cliente
+                  Confirma que el cliente está presente antes de continuar con
+                  el cobro
                 </Typography>
-                <Box sx={{ py: 2 }}>
-                  <Fingerprint
-                    size={180}
-                    color={fingerprintConfirmed ? "#22c55e" : "#94a3b8"}
+
+                {!identitySdkReady || !identitySdkToken ? (
+                  <Stack spacing={2} alignItems="center">
+                    {identitySdkLoading ? <CircularProgress /> : null}
+                    <Typography variant="body2" textAlign="center">
+                      {identitySdkLoading
+                        ? "Preparando captura biométrica..."
+                        : (identitySdkError ??
+                          "No fue posible inicializar la captura biométrica.")}
+                    </Typography>
+                    {!identitySdkLoading && identitySdkError ? (
+                      <Button
+                        variant="outlined"
+                        onClick={() => void reloadIdentitySdkToken()}
+                      >
+                        Reintentar
+                      </Button>
+                    ) : null}
+                  </Stack>
+                ) : (
+                  <NubariumFaceCapture
+                    key={identityCaptureSessionKey}
+                    token={identitySdkToken}
+                    active={identityVerificationModalOpen && !verifyIdentityMutation.isPending}
+                    completed={Boolean(identityCaptureResult)}
+                    completedResult={identityCaptureResult}
+                    onSuccess={(result) => {
+                      setIdentityCaptureResult(result);
+                      verifyIdentityMutation.mutate(result);
+                    }}
+                    onReset={() => {
+                      setIdentityCaptureResult(null);
+                      setIdentityCaptureSessionKey((current) => current + 1);
+                    }}
                   />
-                </Box>
-                <Typography variant="body1">
-                  {fingerprintConfirmed
-                    ? "Dedo índice registrado"
-                    : "Coloca el dedo índice del cliente en el lector."}
+                )}
+
+                {verifyIdentityMutation.isPending ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CircularProgress size={16} />
+                    <Typography variant="body2" color="text.secondary">
+                      Verificando identidad...
+                    </Typography>
+                  </Stack>
+                ) : (
+                  <Button
+                    variant="text"
+                    size="small"
+                    sx={{ textTransform: "none" }}
+                    onClick={() => {
+                      skipIdentityMutation.reset();
+                      setSkipIdentityReason("");
+                      setSkipIdentitySupervisorUsername("");
+                      setSkipIdentitySupervisorPassword("");
+                      setSkipIdentityModalOpen(true);
+                    }}
+                  >
+                    ¿Problemas con la cámara?
+                  </Button>
+                )}
+              </Stack>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={skipIdentityModalOpen}
+            onClose={() => {
+              if (skipIdentityMutation.isPending) return;
+              setSkipIdentityModalOpen(false);
+            }}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+          >
+            <DialogContent sx={{ p: 4 }}>
+              <Stack spacing={3}>
+                <Typography variant="h5" fontWeight={600}>
+                  Omitir validación de identidad
                 </Typography>
-                <Button
-                  variant={fingerprintConfirmed ? "contained" : "outlined"}
-                  sx={{ borderRadius: 2, textTransform: "none" }}
-                  onClick={() => {
-                    if (fingerprintConfirmed) {
-                      setFingerprintModalOpen(false);
-                      setCashAmount(enganche.toFixed(2));
-                      setView("checkout");
-                    } else {
-                      setFingerprintConfirmed(true);
-                    }
-                  }}
-                >
-                  {fingerprintConfirmed ? "Continuar" : "Confirmar huella"}
-                </Button>
+                <Typography variant="body1" color="text.secondary">
+                  Requiere autorización de un supervisor (Administrador o
+                  Gerente). Ingresa el motivo y las credenciales del
+                  supervisor para continuar sin la captura facial.
+                </Typography>
+
+                <TextField
+                  label="Motivo"
+                  placeholder="Ej. Cámara no disponible en la sucursal"
+                  value={skipIdentityReason}
+                  onChange={(e) => setSkipIdentityReason(e.target.value)}
+                  multiline
+                  minRows={2}
+                  disabled={skipIdentityMutation.isPending}
+                  fullWidth
+                />
+                <TextField
+                  label="Usuario del supervisor"
+                  value={skipIdentitySupervisorUsername}
+                  onChange={(e) =>
+                    setSkipIdentitySupervisorUsername(e.target.value)
+                  }
+                  disabled={skipIdentityMutation.isPending}
+                  fullWidth
+                />
+                <TextField
+                  label="Contraseña del supervisor"
+                  type="password"
+                  value={skipIdentitySupervisorPassword}
+                  onChange={(e) =>
+                    setSkipIdentitySupervisorPassword(e.target.value)
+                  }
+                  disabled={skipIdentityMutation.isPending}
+                  fullWidth
+                />
+
+                {skipIdentityMutation.isError ? (
+                  <Alert severity="error">
+                    {skipIdentityMutation.error.message}
+                  </Alert>
+                ) : null}
+
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                  <Button
+                    variant="text"
+                    disabled={skipIdentityMutation.isPending}
+                    onClick={() => setSkipIdentityModalOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    sx={{ borderRadius: 2, textTransform: "none" }}
+                    disabled={skipIdentityMutation.isPending}
+                    onClick={() => skipIdentityMutation.mutate()}
+                  >
+                    {skipIdentityMutation.isPending ? (
+                      <CircularProgress size={16} />
+                    ) : (
+                      "Autorizar y continuar"
+                    )}
+                  </Button>
+                </Stack>
               </Stack>
             </DialogContent>
           </Dialog>

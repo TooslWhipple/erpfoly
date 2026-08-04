@@ -6,11 +6,9 @@ import type {
 } from "@/hooks/usePaginatedList";
 import type {
   CreateInvoiceRequestPayload,
-  InvoiceOrderOption,
   InvoiceRequestDetail,
   InvoiceRequestListItem,
   InvoiceRequestStatusTab,
-  InvoiceSupplierWithOrdersOption,
   ParsedInvoiceFileData,
 } from "@/types/invoice-requests.types";
 
@@ -20,18 +18,9 @@ export type {
   InvoiceRequestListItem,
   InvoiceRequestStatusTab,
   ParsedInvoiceFileData,
-  InvoiceSupplierWithOrdersOption,
-  InvoiceOrderOption,
 };
 
 export type GetInvoiceRequestsResponse = PaginatedListPayload<InvoiceRequestListItem>;
-
-interface SupplierWithOrdersApi {
-  id: number;
-  name: string;
-  legalName: string | null;
-  orders: { id: number; label: string }[];
-}
 
 function isXmlFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -95,10 +84,6 @@ export async function rejectInvoiceRequest(
   );
 }
 
-/**
- * Uploads XML (+ optional PDF) through folysoft-backend, which proxies to
- * contabilidad and returns the CFDI header mapped for the form.
- */
 export async function parseInvoiceFile(
   files: File[],
 ): Promise<ApiResult<ParsedInvoiceFileData>> {
@@ -131,28 +116,4 @@ export async function parseInvoiceFile(
       },
     },
   );
-}
-
-export async function getSuppliersWithOrders(): Promise<
-  ApiResult<InvoiceSupplierWithOrdersOption[]>
-> {
-  const result = await get<SupplierWithOrdersApi[]>(
-    "/invoice-requests/suppliers-with-orders",
-  );
-
-  if (result.error || !result.data) {
-    return { data: null, error: result.error };
-  }
-
-  return {
-    data: result.data.map((supplier) => ({
-      id: String(supplier.id),
-      label: supplier.legalName?.trim() || supplier.name,
-      orders: supplier.orders.map((order) => ({
-        id: String(order.id),
-        label: order.label,
-      })),
-    })),
-    error: null,
-  };
 }

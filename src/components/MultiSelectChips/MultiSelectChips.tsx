@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { InputAdornment, Stack } from "@mui/material";
+import { Button, InputAdornment, Stack } from "@mui/material";
 import { X as DeleteIcon, Plus, Search as SearchIcon } from "lucide-react";
 import {
     AvailableChip,
@@ -8,6 +8,7 @@ import {
     ErrorText,
     HelperText,
     Label,
+    LabelRow,
     SearchField,
     SelectedChip,
     SelectedContainer,
@@ -65,9 +66,30 @@ export function MultiSelectChips({
         onChange(selectedIds.filter((selectedId) => selectedId !== id));
     };
 
+    const areAllItemsSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
+
+    const handleToggleAll = () => {
+        if (disabled) return;
+        onChange(areAllItemsSelected ? [] : items.map((item) => item.id));
+    };
+
     return (
         <Stack spacing={1}>
-            {label && <Label>{label}</Label>}
+            {label || items.length > 0 ? (
+                <LabelRow>
+                    {label && <Label>{label}</Label>}
+                    {items.length > 0 && (
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={handleToggleAll}
+                            disabled={disabled}
+                        >
+                            {areAllItemsSelected ? "Quitar todas" : "Seleccionar todas"}
+                        </Button>
+                    )}
+                </LabelRow>
+            ) : null}
 
             {
                 searchable &&

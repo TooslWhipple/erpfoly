@@ -20,14 +20,12 @@ export interface InvoiceRequestListItem {
   assignToSupplier?: boolean;
   supplierId?: string;
   supplierName?: string;
-  orderId?: string;
   paymentDetails?: string;
   cfdiId?: string;
   cfdiUuid?: string;
 }
 
 export interface InvoiceRequestDetail extends InvoiceRequestListItem {
-  orderFolio?: string;
   subtotal: number | null;
   vat: number | null;
   total: number | null;
@@ -47,11 +45,8 @@ export interface ParsedInvoiceFileData {
   requestingArea: string;
   supplierName?: string;
   paymentDetails?: string;
-  /** Contabilidad CFDI id when parsed via backend proxy. */
   cfdiId?: string;
-  /** Contabilidad CFDI UUID when parsed via backend proxy. */
   cfdiUuid?: string;
-  /** True when contabilidad already had this CFDI (409 resolved). */
   alreadyExists?: boolean;
 }
 
@@ -62,7 +57,6 @@ export interface CreateInvoiceRequestPayload {
   requestingArea: string;
   assignToSupplier: boolean;
   supplierId?: number;
-  orderId?: number;
   paymentDetails?: string;
   cfdiId: string;
   cfdiUuid: string;
@@ -75,16 +69,8 @@ export interface GetInvoiceRequestsParams {
   statusTab?: InvoiceRequestStatusTab;
 }
 
-export interface InvoiceOrderOption {
+export interface InvoiceSupplierOption {
   id: string;
   label: string;
+  businessName?: string | null;
 }
-
-export interface InvoiceSupplierWithOrdersOption {
-  id: string;
-  label: string;
-  orders: InvoiceOrderOption[];
-}
-
-/** @deprecated Use InvoiceSupplierWithOrdersOption */
-export type InvoiceSupplierOption = Omit<InvoiceSupplierWithOrdersOption, "orders">;

@@ -46,10 +46,7 @@ export const generalSchema = z.object({
             (v) => !v || isValidWebsiteUrl(v),
             "La URL no es válida",
         ),
-    email: z.preprocess(
-        (v) => (v === "" ? undefined : v),
-        z.string().email("El email tiene un formato inválido").optional(),
-    ),
+    email: schemas.emailString("El email es requerido"),
     paymentTerm: z
         .string()
         .min(1, "El plazo de pagos es requerido")

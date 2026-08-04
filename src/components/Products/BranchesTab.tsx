@@ -1,4 +1,4 @@
-import { Divider, IconButton, Stack, Switch, Typography } from "@mui/material";
+import { Button, Divider, IconButton, Stack, Switch, Typography } from "@mui/material";
 import {
     FormCard,
     BranchItem,
@@ -12,6 +12,7 @@ import { theme } from "@/styles/theme";
 interface BranchesTabProps {
     branches: ProductBranch[];
     onBranchToggle: (branchId: string) => void;
+    onToggleAllBranches: () => void;
     onInventoryChange: (branchId: string, field: "minInventory" | "maxInventory", delta: number) => void;
     onInventoryInputChange: (branchId: string, field: "minInventory" | "maxInventory", value: string) => void;
 }
@@ -19,16 +20,26 @@ interface BranchesTabProps {
 export function BranchesTab({
     branches,
     onBranchToggle,
+    onToggleAllBranches,
     onInventoryChange,
     onInventoryInputChange,
 }: BranchesTabProps) {
+    const areAllBranchesEnabled = branches.length > 0 && branches.every((branch) => branch.enabled);
+
     return (
         <FormCard>
-            <Stack spacing={0.5}>
-                <Typography variant="h6">Sucursales de venta</Typography>
-                <Typography variant="body2" color="text.secondary">
-                    Configura las sucursales en las cuales se puede vender este artículo y el mínimo y máximo de inventario permitido.
-                </Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack spacing={0.5}>
+                    <Typography variant="h6">Sucursales de venta</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Configura las sucursales en las cuales se puede vender este artículo y el mínimo y máximo de inventario permitido.
+                    </Typography>
+                </Stack>
+                {branches.length > 0 && (
+                    <Button variant="text" size="small" onClick={onToggleAllBranches}>
+                        {areAllBranchesEnabled ? "Quitar todas" : "Seleccionar todas"}
+                    </Button>
+                )}
             </Stack>
             <Divider />
             <Stack spacing={1.5}>

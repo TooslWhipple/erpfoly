@@ -3,25 +3,17 @@ import numeral from "numeral";
 import type {
   CosteoBillingSummary,
   CosteoInvoice,
-  CosteoInvoiceType,
 } from "@/types/costeos.types";
 import {
   ContentCard,
   LinearProgress,
   InvoiceCard,
 } from "@/styles/costeos/detail.styles";
-import { theme } from "@/styles/theme";
 
 interface CosteoInvoicesTabProps {
   invoices: CosteoInvoice[];
   summary: CosteoBillingSummary;
 }
-
-const INVOICE_TYPE_LABELS: Record<CosteoInvoiceType, string> = {
-  PUE: "PUE",
-  PPD: "PPD",
-  CREDIT_NOTE: "Nota de crédito",
-};
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -31,12 +23,9 @@ export function CosteoInvoicesTab({
   invoices,
   summary,
 }: CosteoInvoicesTabProps) {
-  const hasDiscrepancy = Math.abs(summary.discrepancy) > 0.01;
   const progressValue = Math.min(
     100,
-    Math.abs(summary.totalInvoiced + summary.totalCreditNotes) /
-    Math.max(summary.totalArticles, 1) *
-    100,
+    (Math.abs(summary.totalInvoiced) / Math.max(summary.totalArticles, 1)) * 100,
   );
 
   return (
@@ -61,7 +50,7 @@ export function CosteoInvoicesTab({
                   </Typography>
                 </Stack>
                 <Typography variant="body2" flex={1}>
-                  Tipo: {INVOICE_TYPE_LABELS[invoice.type]}
+                  Tipo: {invoice.paymentType}
                 </Typography>
                 <Typography variant="body1" fontWeight={700}>
                   {formatCurrency(invoice.amount)}

@@ -22,13 +22,13 @@ import { formatDate } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   createInvoiceRequest,
-  getSuppliersWithOrders,
   parseInvoiceFile,
 } from "@/services/invoice-requests.service";
+import { searchSuppliers } from "@/services/suppliers.service";
+import type { SupplierSearchItem } from "@/services/suppliers.service";
 import type {
   CreateInvoiceRequestPayload,
   InvoicePaymentType,
-  InvoiceSupplierWithOrdersOption,
   ParsedInvoiceFileData,
 } from "@/types/invoice-requests.types";
 import {
@@ -43,7 +43,6 @@ interface FormValues {
   requestingArea: string;
   assignToSupplier: boolean;
   supplierId: string;
-  orderId: string;
   paymentDetails: string;
   concept: string;
   invoiceNumber: string;
@@ -74,7 +73,6 @@ const EMPTY_FORM: FormValues = {
   requestingArea: "Administración",
   assignToSupplier: false,
   supplierId: "",
-  orderId: "",
   paymentDetails: "",
   concept: "",
   invoiceNumber: "",
@@ -89,18 +87,17 @@ const EMPTY_FORM: FormValues = {
 
 function mapParsedToForm(
   parsed: ParsedInvoiceFileData,
-  suppliers: InvoiceSupplierWithOrdersOption[],
+  suppliers: SupplierSearchItem[],
 ): FormValues {
-  const matchedSupplier = suppliers.find(
-    (supplier) =>
-      supplier.label.toLowerCase() === (parsed.supplierName ?? "").toLowerCase(),
-  );
+  const matchedSupplier = suppliers.find((supplier) => {
+    const candidate = (supplier.businessName ?? supplier.name).toLowerCase();
+    return candidate === (parsed.supplierName ?? "").toLowerCase();
+  });
 
   return {
     requestingArea: parsed.requestingArea || "Administración",
     assignToSupplier: Boolean(matchedSupplier),
-    supplierId: matchedSupplier?.id ?? "",
-    orderId: "",
+    supplierId: matchedSupplier ? String(matchedSupplier.id) : "",
     paymentDetails: parsed.paymentDetails ?? "",
     concept: parsed.concept,
     invoiceNumber: parsed.invoiceNumber,
@@ -138,26 +135,16 @@ export function CreateInvoiceRequestModal({
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
-  const [suppliers, setSuppliers] = useState<InvoiceSupplierWithOrdersOption[]>(
-    [],
-  );
+  const [suppliers, setSuppliers] = useState<SupplierSearchItem[]>([]);
 
   const supplierOptions: SelectOption[] = useMemo(
     () =>
       suppliers.map((supplier) => ({
-        value: supplier.id,
-        label: supplier.label,
+        value: String(supplier.id),
+        label: supplier.businessName?.trim() || supplier.name,
       })),
     [suppliers],
   );
-
-  const orderOptions: SelectOption[] = useMemo(() => {
-    const selected = suppliers.find((s) => s.id === formValues.supplierId);
-    return (selected?.orders ?? []).map((order) => ({
-      value: order.id,
-      label: order.label,
-    }));
-  }, [suppliers, formValues.supplierId]);
 
   const xmlFile = xmlFiles[0]?.file ?? null;
   const pdfFile = pdfFiles[0]?.file ?? null;
@@ -176,13 +163,12 @@ export function CreateInvoiceRequestModal({
 
     let cancelled = false;
     setLoadingSuppliers(true);
-    void getSuppliersWithOrders().then((result) => {
+    void searchSuppliers({ q: "", limit: 100 }).then((result) => {
       if (cancelled) return;
       setLoadingSuppliers(false);
       if (result.error || !result.data) {
         showError(
-          result.error?.message ??
-            "No se pudieron cargar proveedores con pedidos",
+          result.error?.message ?? "No se pudieron cargar los proveedores",
         );
         setSuppliers([]);
         return;
@@ -267,10 +253,6 @@ export function CreateInvoiceRequestModal({
       nextErrors.supplierId = "Selecciona un proveedor.";
     }
 
-    if (formValues.assignToSupplier && !formValues.orderId) {
-      nextErrors.orderId = "Selecciona un pedido.";
-    }
-
     if (!formValues.assignToSupplier && !formValues.paymentDetails.trim()) {
       nextErrors.paymentDetails = "Ingresa los detalles del pago.";
     }
@@ -290,9 +272,6 @@ export function CreateInvoiceRequestModal({
       assignToSupplier: formValues.assignToSupplier,
       supplierId: formValues.assignToSupplier
         ? Number(formValues.supplierId)
-        : undefined,
-      orderId: formValues.assignToSupplier
-        ? Number(formValues.orderId)
         : undefined,
       paymentDetails: formValues.assignToSupplier
         ? undefined
@@ -448,7 +427,6 @@ export function CreateInvoiceRequestModal({
                   ...prev,
                   assignToSupplier: event.target.checked,
                   supplierId: event.target.checked ? prev.supplierId : "",
-                  orderId: event.target.checked ? prev.orderId : "",
                   paymentDetails: event.target.checked
                     ? ""
                     : prev.paymentDetails,
@@ -460,50 +438,26 @@ export function CreateInvoiceRequestModal({
 
           {
             formValues.assignToSupplier ?
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <FormAutocomplete
-                    label="Proveedor"
-                    required
-                    options={supplierOptions}
-                    value={formValues.supplierId}
-                    onChange={(value) =>
-                      setFormValues((prev) => ({
-                        ...prev,
-                        supplierId: value,
-                        orderId: "",
-                      }))
-                    }
-                    placeholder={
-                      loadingSuppliers
-                        ? "Cargando proveedores..."
-                        : "Buscar proveedor"
-                    }
-                    error={Boolean(formErrors.supplierId)}
-                    helperText={formErrors.supplierId}
-                    disabled={loadingSuppliers}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <FormAutocomplete
-                    label="Asignar pedido"
-                    required
-                    options={orderOptions}
-                    value={formValues.orderId}
-                    onChange={(value) =>
-                      setFormValues((prev) => ({ ...prev, orderId: value }))
-                    }
-                    placeholder={
-                      formValues.supplierId
-                        ? "Buscar pedido"
-                        : "Selecciona un proveedor"
-                    }
-                    error={Boolean(formErrors.orderId)}
-                    helperText={formErrors.orderId}
-                    disabled={!formValues.supplierId}
-                  />
-                </Grid>
-              </Grid>
+              <FormAutocomplete
+                label="Proveedor"
+                required
+                options={supplierOptions}
+                value={formValues.supplierId}
+                onChange={(value) =>
+                  setFormValues((prev) => ({
+                    ...prev,
+                    supplierId: value,
+                  }))
+                }
+                placeholder={
+                  loadingSuppliers
+                    ? "Cargando proveedores..."
+                    : "Buscar proveedor"
+                }
+                error={Boolean(formErrors.supplierId)}
+                helperText={formErrors.supplierId}
+                disabled={loadingSuppliers}
+              />
               :
               <FormTextField
                 label="Detalles del pago"

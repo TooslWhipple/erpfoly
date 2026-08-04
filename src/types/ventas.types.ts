@@ -43,21 +43,16 @@ export interface ProductSearchResult {
   code: string;
   name: string;
   imageUrl: string | null;
-  averageCost: number;
-  lastCost: number;
-  costWithoutDiscount: number;
-  discountPct: number;
-  supplier1Name: string | null;
-  supplier2Name: string | null;
+  finalPrice: number;
 }
 
 export interface InventorySource {
   sourceKey: string;
-  sourceType: "branch" | "warehouse" | "incoming";
+  sourceType: "branch" | "warehouse";
   branchId?: number;
   label: string;
   available: number;
-  ordered?: number;
+  pendingOrdered?: number;
   inTransit?: number;
   quantity: number;
 }

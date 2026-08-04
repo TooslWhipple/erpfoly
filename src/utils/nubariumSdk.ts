@@ -1,3 +1,30 @@
+export type NubariumCameraOption = "back" | "front" | "default";
+
+/**
+ * Preferencia de cámara según el dispositivo.
+ * En móvil: trasera primero (documentos / captura preferida), frontal como alternativa.
+ * En desktop: `default` primero — las PCs no tienen cámara trasera y pedir `back`
+ * deja el preview vacío aunque el navegador sí conceda permisos.
+ */
+export function getNubariumCameraOptions(): NubariumCameraOption[] {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return ["default", "front", "back"];
+  }
+
+  const ua = navigator.userAgent;
+  const isMobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  const isTouchTablet =
+    navigator.maxTouchPoints > 1 &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 1024px)").matches;
+
+  if (isMobileUa || isTouchTablet) {
+    return ["back", "front", "default"];
+  }
+
+  return ["default", "front", "back"];
+}
+
 export const NUBARIUM_ID_CAPTURE_CONFIG = {
   timeouts: { front: 180000, back: 180000 },
   captureMode: {
@@ -25,7 +52,6 @@ export const NUBARIUM_FACE_CAPTURE_CONFIG = {
   antispoofing: {
     enabled: false,
   },
-  cameras: ["front", "default"],
   timeout: 180000,
 } as const;
 

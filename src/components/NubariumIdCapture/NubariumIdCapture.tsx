@@ -6,6 +6,7 @@ import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractIdCaptureImages,
+  getNubariumCameraOptions,
   NUBARIUM_ID_CAPTURE_CONFIG,
   safeClearNubariumCapture,
   translateNubariumError,
@@ -55,6 +56,7 @@ export function NubariumIdCapture({
 
         capture.init({
           ...NUBARIUM_ID_CAPTURE_CONFIG,
+          cameras: getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
 

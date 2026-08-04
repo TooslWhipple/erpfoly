@@ -6,6 +6,7 @@ import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractFaceCaptureImage,
+  getNubariumCameraOptions,
   NUBARIUM_FACE_CAPTURE_CONFIG,
   safeClearNubariumCapture,
   translateNubariumError,
@@ -54,6 +55,7 @@ export function NubariumFaceCapture({
 
         capture.init({
           ...NUBARIUM_FACE_CAPTURE_CONFIG,
+          cameras: getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
 

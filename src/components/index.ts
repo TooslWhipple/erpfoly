@@ -148,8 +148,6 @@ export { ApproveCreditModal } from "./ApproveCreditModal";
 export type { ApproveCreditModalProps } from "./ApproveCreditModal";
 export { RejectCreditModal } from "./RejectCreditModal";
 export type { RejectCreditModalProps } from "./RejectCreditModal";
-export { SendToWarehouseModal } from "./SendToWarehouseModal";
-export type { SendToWarehouseModalProps } from "./SendToWarehouseModal";
 export { RequestAdditionalInfoModal } from "./RequestAdditionalInfoModal";
 export type {
   RequestAdditionalInfoModalProps,

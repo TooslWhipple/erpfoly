@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -152,7 +152,15 @@ export function useClientPayment(): UseClientPaymentResult {
   // desincronizado sobre créditos que ya no aplican.
   const [stepperInstallmentCount, setStepperInstallmentCount] = useState<number | null>(null);
 
+  // Guards del default de monto al entrar: `hasAppliedDefaultRef` asegura que
+  // el default (parcialidad 1) se evalúe una sola vez por vida del hook, y
+  // `hasUserInteractedRef` evita que ese default pise un monto que el cajero
+  // ya haya tecleado a mano mientras el fetch de créditos seguía en curso.
+  const hasAppliedDefaultRef = useRef(false);
+  const hasUserInteractedRef = useRef(false);
+
   const setPaymentAmount = useCallback((value: number) => {
+    hasUserInteractedRef.current = true;
     setStepperInstallmentCount(null);
     setManualPaymentAmount(value);
   }, []);
@@ -290,6 +298,21 @@ export function useClientPayment(): UseClientPaymentResult {
   const setPaymentAmountByInstallmentCount = useCallback((count: number) => {
     setStepperInstallmentCount(count);
   }, []);
+
+  // Default de monto al entrar: la primera vez que hay parcialidades
+  // pendientes disponibles, precarga el monto de la parcialidad 1 (salvo que
+  // el cajero ya haya editado el monto a mano mientras el fetch estaba en
+  // curso — ver refs arriba). Se evalúa una sola vez por vida del hook, así
+  // que un refetch posterior (p. ej. tras excluir un crédito) no lo repite.
+  useEffect(() => {
+    if (hasAppliedDefaultRef.current) return;
+    if (totalPendingInstallmentsCount <= 0) return;
+
+    hasAppliedDefaultRef.current = true;
+    if (!hasUserInteractedRef.current) {
+      setPaymentAmountByInstallmentCount(1);
+    }
+  }, [totalPendingInstallmentsCount, setPaymentAmountByInstallmentCount]);
 
   const totalOutstanding = useMemo(
     () =>

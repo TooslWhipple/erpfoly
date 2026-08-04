@@ -75,13 +75,6 @@ export async function getOrderFull(id: number): Promise<ApiResult<OrderFullDetai
   return get<OrderFullDetail>(`${ORDERS_BASE}/${id}/full`);
 }
 
-export async function updateOrderStatus(
-  id: number,
-  status: string
-): Promise<ApiResult<OrderFullDetail>> {
-  return patch<OrderFullDetail>(`${ORDERS_BASE}/${id}/status`, { status });
-}
-
 export async function getOrderStats(
   branchId?: number
 ): Promise<ApiResult<OrderStats>> {

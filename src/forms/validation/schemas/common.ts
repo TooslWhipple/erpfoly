@@ -22,7 +22,7 @@ export const schemas = {
             .max(max, messages.string.max(max));
     },
 
-    emailString(requiredMsg = messages.required) {
+    emailString(requiredMsg: string = messages.required) {
         return z.email({ error: messages.string.email }).min(1, requiredMsg);
     },
 

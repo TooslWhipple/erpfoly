@@ -86,7 +86,11 @@ function pendingArticleToReceptionArticle(
     orderId: item.orderId,
     orderNumber: item.orderNumber,
     quantity: item.quantity,
-    received: item.received,
+    // item.received es lo ya entregado históricamente del pedido (puede
+    // venir de una recepción anterior en pedidos "En curso"), no lo
+    // capturado en ESTA recepción nueva — arrancar en 0 para no
+    // re-enviarlo como si fuera lo recién llegado.
+    received: 0,
     branchName: item.branchName,
     branchId: item.branchId,
     scheduledDeliveryDate: item.scheduledDeliveryDate,

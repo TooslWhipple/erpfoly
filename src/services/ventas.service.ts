@@ -2,6 +2,7 @@ import { get, post, patch, del } from "@/lib/axios";
 import { unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
+import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import type {
   SaleListItem,
   GetSalesParams,
@@ -266,6 +267,58 @@ export async function confirmCreditSale(
   return post<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm-credit`,
     payload,
+  );
+}
+
+export interface VerifySaleIdentityResult {
+  id: number;
+  identity_verification_selfie_url: string | null;
+  identity_verification_execution_id: string | null;
+  identity_verified_at: string | null;
+}
+
+export async function verifySaleIdentity(
+  saleId: number,
+  faceDataUrl: string,
+  executionId?: string,
+): Promise<ApiResult<VerifySaleIdentityResult>> {
+  const formData = new FormData();
+  formData.append("faceCapture", dataUrlToFile(faceDataUrl, "face-capture"));
+  if (executionId) {
+    formData.append("executionId", executionId);
+  }
+
+  return post<VerifySaleIdentityResult>(
+    `${BASE}/sales/${saleId}/identity-verification`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+}
+
+export interface ValidateSupervisorResult {
+  userId: number;
+  firstName: string;
+  lastName: string;
+}
+
+export async function validateSupervisor(
+  username: string,
+  password: string,
+): Promise<ApiResult<ValidateSupervisorResult>> {
+  return post<ValidateSupervisorResult>("/auth/validate-supervisor", {
+    username,
+    password,
+  });
+}
+
+export async function skipSaleIdentityVerification(
+  saleId: number,
+  reason: string,
+  supervisorUserId: number,
+): Promise<ApiResult<VerifySaleIdentityResult>> {
+  return post<VerifySaleIdentityResult>(
+    `${BASE}/sales/${saleId}/identity-verification/skip`,
+    { reason, supervisorUserId },
   );
 }
 

@@ -2,6 +2,7 @@ import { CircularProgress, Stack } from "@mui/material";
 import { Breadcrumbs, Title, TabFilters } from "@/components";
 import { GeneralTab, ContactsTab, CreditTab } from "@/components/Proveedores";
 import { useSupplierForm } from "@/hooks/proveedores";
+import { useConfirmationModal } from "@/hooks/useConfirmationModal";
 import {
   CATALOG_SUPPLIERS_CREATE,
   CATALOG_SUPPLIERS_UPDATE,
@@ -34,8 +35,27 @@ export default function SupplierEditPage() {
     handleBankAccountChange,
     handleEdit,
     handleInvite,
-    hasUser,
+    portalStatus,
+    inviteUrl,
+    inviteExpiresAt,
   } = useSupplierForm();
+  const { requestConfirmation, confirmationModal } = useConfirmationModal();
+
+  const handleInviteClick = () => {
+    if (portalStatus === "ACTIVE") {
+      requestConfirmation({
+        title: "Regenerar acceso al portal",
+        type: "warning",
+        confirmLabel: "Regenerar acceso",
+        cancelLabel: "Cancelar",
+        description:
+          "Este proveedor ya tiene acceso activo al portal. Regenerar la invitación invalidará su contraseña actual y deberá fijar una nueva.",
+        onConfirm: () => handleInvite(true),
+      });
+      return;
+    }
+    handleInvite(false);
+  };
   if (showLoader) {
     return (
       <Stack alignItems="center" justifyContent="center" minHeight={400}>
@@ -68,8 +88,12 @@ export default function SupplierEditPage() {
           },
           {
             id: "invite",
-            label: inviting ? "Enviando..." : "Enviar invitación",
-            onClick: handleInvite,
+            label: inviting
+              ? "Enviando..."
+              : portalStatus === "ACTIVE"
+                ? "Regenerar acceso"
+                : "Enviar invitación",
+            onClick: handleInviteClick,
             disabled: inviting,
             icon: <Mail size={16} />,
             variant: "outlined" as const,
@@ -78,6 +102,7 @@ export default function SupplierEditPage() {
           },
         ]}
       />
+      {confirmationModal}
 
       <TabFilters
         tabs={tabs}
@@ -90,6 +115,9 @@ export default function SupplierEditPage() {
           values={generalFormValues}
           errors={errors}
           onFieldChange={handleGeneralFieldChange}
+          portalStatus={portalStatus}
+          inviteUrl={inviteUrl}
+          inviteExpiresAt={inviteExpiresAt}
         />
       )}
       {activeTab === "contacts" && (

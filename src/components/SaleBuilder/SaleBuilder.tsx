@@ -468,7 +468,7 @@ export function SaleBuilder({
         selectedClient?.addresses?.[0];
       const addressId = useCustomDeliveryAddress
         ? customDeliveryAddress?.id
-        : clientPrimaryAddress?.id;
+        : clientPrimaryAddress?.addressId;
       if (addressId) {
         await setDeliveryDate(saleId, {
           delivery_type: "ADDRESS",
@@ -639,7 +639,7 @@ export function SaleBuilder({
           selectedClient?.addresses?.[0];
         const addressId = useCustomDeliveryAddress
           ? customDeliveryAddress?.id
-          : clientPrimaryAddress?.id;
+          : clientPrimaryAddress?.addressId;
         if (!addressId) {
           throw new Error("Falta la dirección de entrega");
         }

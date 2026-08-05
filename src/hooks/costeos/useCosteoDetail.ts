@@ -3,16 +3,18 @@ import { useRouter } from "next/router";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import {
   addCosteoExpense,
-  addCosteoInvoices,
-  getAvailableInvoices,
   getCosteoById,
   removeCosteoExpense,
   saveCosteoDetail,
 } from "@/services/costeos.service";
+import {
+  assignReceptionInvoices,
+  getAvailablePayableInvoices,
+  unassignReceptionInvoice,
+  type AvailablePayableInvoice,
+} from "@/services/recepcion-mercancias.service";
 import type {
   AddCosteoExpensePayload,
-  AddCosteoInvoicePayload,
-  CosteoAvailableInvoice,
   CosteoDetail,
   CosteoDetailTab,
 } from "@/types/costeos.types";
@@ -37,7 +39,7 @@ export function useCosteoDetail() {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false);
   const [exchangeRateDraft, setExchangeRateDraft] = useState("");
-  const [availableInvoices, setAvailableInvoices] = useState<CosteoAvailableInvoice[]>([]);
+  const [availableInvoices, setAvailableInvoices] = useState<AvailablePayableInvoice[]>([]);
   const [loadingAvailableInvoices, setLoadingAvailableInvoices] = useState(false);
 
   const fetchDetail = useCallback(async (id: number) => {
@@ -169,40 +171,63 @@ export function useCosteoDetail() {
     }
   };
 
-  const loadAvailableInvoices = useCallback(async (costeoIdValue: number) => {
+  const loadAvailableInvoices = useCallback(async () => {
+    if (!detail?.receptionId) {
+      setAvailableInvoices([]);
+      return;
+    }
     setLoadingAvailableInvoices(true);
     try {
-      const result = await getAvailableInvoices(costeoIdValue);
-      const data = unwrapOrThrow(result);
-      setAvailableInvoices(data);
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-      setAvailableInvoices([]);
+      const result = await getAvailablePayableInvoices(
+        detail.supplierId,
+        detail.receptionId,
+      );
+      if (result.error || !result.data) {
+        setError(result.error?.message ?? "No se pudieron cargar las facturas");
+        setAvailableInvoices([]);
+        return;
+      }
+      setAvailableInvoices(result.data);
     } finally {
       setLoadingAvailableInvoices(false);
     }
-  }, []);
+  }, [detail]);
 
   const openInvoiceModal = () => {
     setInvoiceModalOpen(true);
-    if (costeoId && !Number.isNaN(costeoId)) {
-      void loadAvailableInvoices(costeoId);
-    }
+    void loadAvailableInvoices();
   };
 
-  const handleAddInvoices = async (payload: AddCosteoInvoicePayload) => {
-    if (!detail) return false;
+  const handleAddInvoices = async (payableInvoiceIds: number[]) => {
+    if (!detail?.receptionId) return false;
     setSaving(true);
     try {
-      const result = await addCosteoInvoices(detail.id, payload);
-      const updated = unwrapOrThrow(result);
+      await assignReceptionInvoices(detail.receptionId, payableInvoiceIds);
+      const refreshed = await getCosteoById(detail.id);
+      const updated = unwrapOrThrow(refreshed);
       setDetail(updated);
-      setAvailableInvoices(updated.availableInvoices);
       setInvoiceModalOpen(false);
+      void loadAvailableInvoices();
       return true;
     } catch (err) {
       setError(getApiErrorMessage(err));
       return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveInvoice = async (payableInvoiceId: number) => {
+    if (!detail?.receptionId) return;
+    setSaving(true);
+    try {
+      await unassignReceptionInvoice(detail.receptionId, payableInvoiceId);
+      const refreshed = await getCosteoById(detail.id);
+      const updated = unwrapOrThrow(refreshed);
+      setDetail(updated);
+      void loadAvailableInvoices();
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -239,6 +264,7 @@ export function useCosteoDetail() {
     handleAddExpense,
     handleRemoveExpense,
     handleAddInvoices,
+    handleRemoveInvoice,
     refetch: () => {
       if (!Number.isNaN(costeoId)) void fetchDetail(costeoId);
     },

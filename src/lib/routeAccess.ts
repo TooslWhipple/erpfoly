@@ -52,6 +52,10 @@ import {
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  PAYABLE_INVOICES_READ,
+  INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
+  SUPPLIER_PAYABLES_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -131,6 +135,11 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
+  { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+  { pattern: /^\/facturas\/gastos-generales(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
+  { pattern: /^\/facturas\/proveedores(\/.*)?$/, permission: SUPPLIER_PAYABLES_READ },
+  { pattern: /^\/facturas(\/.*)?$/, permission: PAYABLE_INVOICES_READ },
+
   { pattern: /^\/atencion-cliente(\/.*)?$/, permission: CUSTOMER_SUPPORT_READ },
   { pattern: /^\/rutas(\/.*)?$/, permission: ROUTES_READ },
 
@@ -181,6 +190,10 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/inventario", requirement: { permission: INVENTORY_READ } },
   { path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
   { path: "/costeos", requirement: { permission: COSTEOS_READ } },
+  { path: "/facturas", requirement: { permission: PAYABLE_INVOICES_READ } },
+  { path: "/facturas/solicitudes", requirement: { permission: INVOICE_REQUESTS_READ } },
+  { path: "/facturas/gastos-generales", requirement: { permission: GENERAL_EXPENSES_READ } },
+  { path: "/facturas/proveedores", requirement: { permission: SUPPLIER_PAYABLES_READ } },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },

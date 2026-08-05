@@ -37,6 +37,8 @@ export type PermissionModule =
   | "catalogos.productos"
   | "catalogos.departamentos"
   | "catalogos.promociones"
+  | "catalogos.zonas"
+  | "catalogos.prorrateos"
   | "catalogos.sucursales"
   | "catalogos.cajas"
   | "catalogos.proveedores"
@@ -49,6 +51,9 @@ export type PermissionModule =
   | "catalogos.costos_envio"
   | "catalogos.folypuntos"
   | "catalogos.tasa_mora"
+  | "catalogos.tipos-transaccion"
+  | "catalogos.polizas-sistema"
+  | "catalogos.polizas"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -231,6 +236,15 @@ export const CATALOG_PROMOTIONS_READ = CATALOG_PROMOTIONS_PERMISSIONS.read;
 export const CATALOG_PROMOTIONS_UPDATE = CATALOG_PROMOTIONS_PERMISSIONS.update;
 export const CATALOG_PROMOTIONS_DELETE = CATALOG_PROMOTIONS_PERMISSIONS.delete;
 
+export const CATALOG_ZONES_PERMISSIONS = createCrudPermissions("catalogos.zonas");
+export const CATALOG_ZONES_CREATE = CATALOG_ZONES_PERMISSIONS.create;
+export const CATALOG_ZONES_READ = CATALOG_ZONES_PERMISSIONS.read;
+export const CATALOG_ZONES_UPDATE = CATALOG_ZONES_PERMISSIONS.update;
+export const CATALOG_ZONES_DELETE = CATALOG_ZONES_PERMISSIONS.delete;
+
+export const CATALOG_APPORTIONMENTS_PERMISSIONS = createCrudPermissions("catalogos.prorrateos");
+export const CATALOG_APPORTIONMENTS_READ = CATALOG_APPORTIONMENTS_PERMISSIONS.read;
+
 export const CATALOG_BRANCHES_PERMISSIONS = createCrudPermissions("catalogos.sucursales");
 export const CATALOG_BRANCHES_CREATE = CATALOG_BRANCHES_PERMISSIONS.create;
 export const CATALOG_BRANCHES_READ = CATALOG_BRANCHES_PERMISSIONS.read;
@@ -303,6 +317,24 @@ export const CATALOG_MORATORY_RATE_READ = CATALOG_MORATORY_RATE_PERMISSIONS.read
 export const CATALOG_MORATORY_RATE_UPDATE = CATALOG_MORATORY_RATE_PERMISSIONS.update;
 export const CATALOG_MORATORY_RATE_DELETE = CATALOG_MORATORY_RATE_PERMISSIONS.delete;
 
+export const CATALOG_TRANSACTION_TYPES_PERMISSIONS = createCrudPermissions("catalogos.tipos-transaccion");
+export const CATALOG_TRANSACTION_TYPES_CREATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.create;
+export const CATALOG_TRANSACTION_TYPES_READ = CATALOG_TRANSACTION_TYPES_PERMISSIONS.read;
+export const CATALOG_TRANSACTION_TYPES_UPDATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.update;
+export const CATALOG_TRANSACTION_TYPES_DELETE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.delete;
+
+export const CATALOG_SYSTEM_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas-sistema");
+export const CATALOG_SYSTEM_POLICIES_CREATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.create;
+export const CATALOG_SYSTEM_POLICIES_READ = CATALOG_SYSTEM_POLICIES_PERMISSIONS.read;
+export const CATALOG_SYSTEM_POLICIES_UPDATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.update;
+export const CATALOG_SYSTEM_POLICIES_DELETE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.delete;
+
+export const CATALOG_GENERATED_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas");
+export const CATALOG_GENERATED_POLICIES_CREATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.create;
+export const CATALOG_GENERATED_POLICIES_READ = CATALOG_GENERATED_POLICIES_PERMISSIONS.read;
+export const CATALOG_GENERATED_POLICIES_UPDATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.update;
+export const CATALOG_GENERATED_POLICIES_DELETE = CATALOG_GENERATED_POLICIES_PERMISSIONS.delete;
+
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");
 export const SALES_CREATE = SALES_PERMISSIONS.create;
@@ -360,6 +392,7 @@ export const PERMISSIONS_BY_MODULE = {
     products: Object.values(CATALOG_PRODUCTS_PERMISSIONS),
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),
     promotions: Object.values(CATALOG_PROMOTIONS_PERMISSIONS),
+    zones: Object.values(CATALOG_ZONES_PERMISSIONS),
     branches: Object.values(CATALOG_BRANCHES_PERMISSIONS),
     cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),
     suppliers: Object.values(CATALOG_SUPPLIERS_PERMISSIONS),

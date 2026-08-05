@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
+  Autocomplete,
   Button,
   CircularProgress,
   Grid,
   Stack,
   Typography,
 } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-form";
 import { z } from "zod";
 import { SideModal, MapMarker } from "@/components";
+import { FormTextField } from "@/components/Form/FormTextField";
 import {
   defineFormFields,
   FormField,
@@ -30,8 +33,11 @@ import {
 import {
   createBranch,
   updateBranch,
+  getAvailableBusinessSegments,
   type Branch,
+  type BusinessSegmentItem,
 } from "@/services/branches.service";
+import { getZonesCatalog } from "@/services/zones-catalog.service";
 import { theme } from "@/styles/theme";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 
@@ -43,6 +49,8 @@ const DEFAULT_MAP_CENTER = { lat: 19.432608, lng: -99.133209 };
 
 interface BranchFormShape extends Record<string, unknown> {
   name: string;
+  businessSegmentId: number | null;
+  zoneId: number | null;
   postalCode: string;
   neighborhoodFullCode: string;
   neighborhoodName: string;
@@ -65,6 +73,18 @@ const branchFormFields = defineFormFields<BranchFormShape>()([
     label: "Nombre de la sucursal",
     type: "text",
     placeholder: "Ej. Foly Muebles Centro",
+  },
+  {
+    name: "businessSegmentId",
+    schema: z.number().nullable(),
+    label: "Segmento de negocio",
+    when: () => false,
+  },
+  {
+    name: "zoneId",
+    schema: z.number().nullable(),
+    label: "Zona",
+    when: () => false,
   },
   {
     name: "postalCode",
@@ -154,6 +174,8 @@ type BranchFormValues = SchemaOutputFromFields<typeof branchFormFields>;
 
 const EMPTY_DEFAULTS: BranchFormValues = {
   name: "",
+  businessSegmentId: null,
+  zoneId: null,
   postalCode: "",
   neighborhoodFullCode: "-1",
   neighborhoodName: "",
@@ -169,6 +191,8 @@ const EMPTY_DEFAULTS: BranchFormValues = {
 function branchToFormValues(branch: Branch): BranchFormValues {
   return {
     name: branch.name ?? "",
+    businessSegmentId: branch.businessSegmentId ?? null,
+    zoneId: branch.zoneId ?? null,
     postalCode: branch.postalCode ?? "",
     neighborhoodFullCode: branch.neighborhoodFullCode ?? "-1",
     neighborhoodName: branch.neighborhoodName ?? "",
@@ -184,6 +208,8 @@ function branchToFormValues(branch: Branch): BranchFormValues {
 
 type BranchSubmitPayload = {
   name: string;
+  businessSegmentId?: number | null;
+  zoneId?: number | null;
   postalCode?: string;
   neighborhoodFullCode?: string;
   neighborhoodName?: string;
@@ -199,6 +225,8 @@ type BranchSubmitPayload = {
 function valuesToPayload(value: BranchFormValues): BranchSubmitPayload {
   return {
     name: value.name.trim(),
+    businessSegmentId: value.businessSegmentId ?? null,
+    zoneId: value.zoneId ?? null,
     postalCode: value.postalCode || undefined,
     neighborhoodFullCode:
       value.neighborhoodFullCode && value.neighborhoodFullCode !== "-1"
@@ -278,6 +306,14 @@ export function BranchCreateModal({
     { validateOn: "blur" },
   );
 
+  const businessSegmentId = useStore(
+    form.store,
+    (s) => (s.values as BranchFormValues).businessSegmentId,
+  );
+  const zoneId = useStore(
+    form.store,
+    (s) => (s.values as BranchFormValues).zoneId,
+  );
   const postalCode = useStore(
     form.store,
     (s) => (s.values as BranchFormValues).postalCode,
@@ -318,6 +354,65 @@ export function BranchCreateModal({
     form.store,
     (s) => (s.values as BranchFormValues).longitude,
   );
+
+  const businessSegmentsQuery = useQuery({
+    queryKey: ["available-business-segments", branch?.id],
+    queryFn: () => getAvailableBusinessSegments(branch?.id),
+    enabled: open,
+  });
+
+  const businessSegments = useMemo(
+    () => businessSegmentsQuery.data ?? [],
+    [businessSegmentsQuery.data],
+  );
+  const businessSegmentsLoading = businessSegmentsQuery.isFetching;
+
+  const businessSegmentOptions = useMemo(() => {
+    return businessSegments.map((s) => ({
+      id: s.id,
+      label: s.codigo ? `${s.codigo} - ${s.nombre}` : s.nombre,
+    }));
+  }, [businessSegments]);
+
+  const selectedBusinessSegmentOption = useMemo(() => {
+    if (businessSegmentId == null) return null;
+    const found = businessSegmentOptions.find((opt) => opt.id === businessSegmentId);
+    if (found) return found;
+    if (branch?.businessSegment && branch.businessSegment.id === businessSegmentId) {
+      const bs = branch.businessSegment;
+      return {
+        id: bs.id,
+        label: bs.codigo ? `${bs.codigo} - ${bs.nombre}` : bs.nombre,
+      };
+    }
+    return { id: businessSegmentId, label: `Segmento #${businessSegmentId}` };
+  }, [businessSegmentId, businessSegmentOptions, branch?.businessSegment]);
+
+  const zonesQuery = useQuery({
+    queryKey: ["catalog", "zones", "branch-form"],
+    queryFn: () => getZonesCatalog(),
+    enabled: open,
+  });
+
+  const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
+  const zonesLoading = zonesQuery.isFetching;
+
+  const zoneOptions = useMemo(() => {
+    return zones.map((z) => ({
+      id: z.id,
+      label: z.name,
+    }));
+  }, [zones]);
+
+  const selectedZoneOption = useMemo(() => {
+    if (zoneId == null) return null;
+    const found = zoneOptions.find((opt) => opt.id === zoneId);
+    if (found) return found;
+    if (branch?.zoneName) {
+      return { id: zoneId, label: branch.zoneName };
+    }
+    return { id: zoneId, label: `Zona #${zoneId}` };
+  }, [zoneId, zoneOptions, branch?.zoneName]);
 
   const trimmedPostalCode = postalCode.trim();
   const postalReady = isValidMxPostalCode(trimmedPostalCode);
@@ -467,14 +562,64 @@ export function BranchCreateModal({
         disableClose={isSubmitting}>
         <FormContent asForm skipFieldBody>
           <Stack spacing={3} sx={{ pt: 1 }}>
-            <FormField
-              form={form}
-              name="name"
-              label="Nombre de la sucursal"
-              type="text"
-              placeholder="Ej. Foly Muebles Centro"
-              required
-            />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <FormField
+                  form={form}
+                  name="name"
+                  label="Nombre de la sucursal"
+                  type="text"
+                  placeholder="Ej. Foly Muebles Centro"
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <Autocomplete<{ id: number; label: string }, false, false, false>
+                  options={zoneOptions}
+                  value={selectedZoneOption}
+                  loading={zonesLoading}
+                  getOptionLabel={(opt) => opt.label}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  onChange={(_, newValue) => {
+                    form.setFieldValue(
+                      "zoneId",
+                      newValue ? newValue.id : null,
+                    );
+                  }}
+                  noOptionsText="Sin zonas disponibles"
+                  renderInput={(params) => (
+                    <FormTextField
+                      {...params}
+                      label="Zona"
+                      placeholder="Seleccionar zona"
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <Autocomplete<{ id: number; label: string }, false, false, false>
+                  options={businessSegmentOptions}
+                  value={selectedBusinessSegmentOption}
+                  loading={businessSegmentsLoading}
+                  getOptionLabel={(opt) => opt.label}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  onChange={(_, newValue) => {
+                    form.setFieldValue(
+                      "businessSegmentId",
+                      newValue ? newValue.id : null,
+                    );
+                  }}
+                  noOptionsText="Sin segmentos disponibles"
+                  renderInput={(params) => (
+                    <FormTextField
+                      {...params}
+                      label="Segmento de negocio"
+                      placeholder="Buscar segmento de negocio"
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
 
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
@@ -600,6 +745,16 @@ interface MapSectionProps {
   errorMessage: string | null;
 }
 
+function safeDistanceToMouse(
+  markerPos?: { x: number; y: number },
+  mousePos?: { x: number; y: number },
+): number {
+  if (!markerPos || !mousePos || typeof markerPos.x !== "number" || typeof mousePos.x !== "number") {
+    return Infinity;
+  }
+  return Math.sqrt((markerPos.x - mousePos.x) ** 2 + (markerPos.y - mousePos.y) ** 2);
+}
+
 function MapSection({
   latitude,
   longitude,
@@ -607,9 +762,16 @@ function MapSection({
   isLoading,
   errorMessage,
 }: MapSectionProps) {
-  const hasCoordinates = latitude != null && longitude != null;
+  const numLat = latitude != null ? Number(latitude) : null;
+  const numLng = longitude != null ? Number(longitude) : null;
+  const hasCoordinates =
+    numLat != null &&
+    numLng != null &&
+    Number.isFinite(numLat) &&
+    Number.isFinite(numLng);
+
   const center = hasCoordinates
-    ? { lat: latitude, lng: longitude }
+    ? { lat: numLat, lng: numLng }
     : DEFAULT_MAP_CENTER;
   const zoom = hasCoordinates ? 16 : 13;
 
@@ -648,6 +810,7 @@ function MapSection({
             defaultCenter={DEFAULT_MAP_CENTER}
             defaultZoom={13}
             zoom={zoom}
+            distanceToMouse={safeDistanceToMouse}
             options={{
               fullscreenControl: false,
               mapTypeControl: false,
@@ -655,7 +818,7 @@ function MapSection({
             }}
           >
             {hasCoordinates ? (
-              <MapMarker lat={latitude} lng={longitude} />
+              <MapMarker lat={numLat} lng={numLng} />
             ) : null}
           </GoogleMapReact>
         ) : (

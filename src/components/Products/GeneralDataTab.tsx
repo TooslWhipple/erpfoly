@@ -1,5 +1,6 @@
 import { Grid, Typography, Stack, Divider, Button } from "@mui/material";
 import { FormTextField, FormSelect, Plus, Minus, RadioButton } from "@/components";
+import { SatCatalogSearchField } from "@/components/SatCatalogSearchField";
 import { FormCard } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
 import NumberSpinner from "../NumberSpinner";
@@ -142,6 +143,38 @@ export function GeneralDataTab({
                         }}
                         error={Boolean(errors.shortName)}
                         helperText={errors.shortName}
+                        required
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <SatCatalogSearchField
+                        type="product-service-key"
+                        label="Clave de producto/servicio SAT"
+                        placeholder="Buscar clave SAT"
+                        value={formState.satProductServiceKey}
+                        onChange={(value) => {
+                            onFieldChange("satProductServiceKey", value);
+                            onErrorClear("satProductServiceKey");
+                        }}
+                        onBlur={() => onErrorClear("satProductServiceKey")}
+                        error={Boolean(errors.satProductServiceKey)}
+                        helperText={errors.satProductServiceKey}
+                        required
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <SatCatalogSearchField
+                        type="unit-of-measure"
+                        label="Clave de unidad de medida SAT"
+                        placeholder="Buscar unidad SAT"
+                        value={formState.satUnitOfMeasureKey}
+                        onChange={(value) => {
+                            onFieldChange("satUnitOfMeasureKey", value);
+                            onErrorClear("satUnitOfMeasureKey");
+                        }}
+                        onBlur={() => onErrorClear("satUnitOfMeasureKey")}
+                        error={Boolean(errors.satUnitOfMeasureKey)}
+                        helperText={errors.satUnitOfMeasureKey}
                         required
                     />
                 </Grid>

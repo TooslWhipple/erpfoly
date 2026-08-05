@@ -146,6 +146,8 @@ export function buildCreateProductRequest(
         shortName: generalData.shortName.trim(),
         description: generalData.description.trim(),
         pieceCount: Number.isFinite(pieceCount) ? pieceCount : 1,
+        satProductServiceKey: generalData.satProductServiceKey.trim(),
+        satUnitOfMeasureKey: generalData.satUnitOfMeasureKey.trim(),
         listCost: Number(priceData.listCost),
         currency: priceData.currency,
         exchangeRate: Number(priceData.exchangeRate),
@@ -313,6 +315,8 @@ export type ProductDetailDto = {
     shortName: string;
     description: string;
     pieceCount: number;
+    satProductServiceKey?: string | null;
+    satUnitOfMeasureKey?: string | null;
     suppliers: ProductDetailSupplierDto[];
     images: ProductGalleryImage[];
     branches: ProductDetailBranchDto[];
@@ -433,6 +437,8 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         piecesCount: String(
             Number.isFinite(detail.pieceCount) && detail.pieceCount >= 1 ? detail.pieceCount : 1
         ),
+        satProductServiceKey: detail.satProductServiceKey ?? "",
+        satUnitOfMeasureKey: detail.satUnitOfMeasureKey ?? "",
         warrantyType: warrantyIsAnnex ? "policy" : "months",
         warrantyMonths: warrantyIsAnnex
             ? "0"

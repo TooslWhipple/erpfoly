@@ -15,6 +15,7 @@ export type SupplierFormState = Pick<
     paymentTerm: string;
     freight: Supplier["freight"];
     observations: string;
+    accountingAccount: string;
     creditAttention: string;
     creditJobTitleId: number | null;
     creditPhone: string;
@@ -64,6 +65,7 @@ export function getDefaultFormState(): SupplierFormState {
         paymentTerm: "60",
         freight: "pagado",
         observations: "",
+        accountingAccount: "",
         contacts: [...DEFAULT_CONTACTS],
         creditAttention: "",
         creditJobTitleId: null,
@@ -84,6 +86,7 @@ export function supplierDetailToFormState(d: SupplierDetail): SupplierFormState 
         paymentTerm: String(d.paymentTerm ?? 60),
         freight: apiFreightToForm(d.freight),
         observations: d.observations ?? "",
+        accountingAccount: d.accountingAccount ?? "",
         contacts:
             d.contacts.length > 0
                 ? d.contacts.map((c) => ({
@@ -275,6 +278,7 @@ export function formStateToPayload(
         paymentTerm: Number(state.paymentTerm),
         freight: formFreightToApi(state.freight),
         observations: state.observations.trim() || undefined,
+        accountingAccount: state.accountingAccount.trim() || undefined,
         contacts: contactsPayload,
         creditData: {
             attention: state.creditAttention.trim(),

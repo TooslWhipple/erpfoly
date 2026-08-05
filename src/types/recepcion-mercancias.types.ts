@@ -11,14 +11,6 @@ export interface SupplierWithPendingOrders {
     orderIds: number[];
 }
 
-export interface ReceptionDetailInvoice {
-    id: number;
-    externalId: string;
-    date: string;
-    amount: number;
-    type: string;
-}
-
 export interface MerchandiseReception {
     id: number;
     warehouse: string;
@@ -60,6 +52,15 @@ export interface ReceptionArticle {
     branchName?: string;
     branchId?: number;
     scheduledDeliveryDate?: string | null;
+}
+
+export interface ReceptionDetailInvoice {
+    id: number;
+    externalId: string;
+    date: string;
+    paymentType: "PUE" | "PPD";
+    origin: "providers" | "administration";
+    amount: number;
 }
 
 export interface ReceptionInvoice {

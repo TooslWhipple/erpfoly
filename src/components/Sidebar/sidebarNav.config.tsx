@@ -45,6 +45,10 @@ import {
   INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  PAYABLE_INVOICES_READ,
+  INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
+  SUPPLIER_PAYABLES_READ,
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
@@ -135,6 +139,41 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/atencion-cliente",
     icon: <HeartHandshake size={ICON_SIZE} />,
     requirement: { permission: CUSTOMER_SUPPORT_READ },
+  },
+  {
+    label: "Facturas",
+    path: "/facturas",
+    icon: <Receipt size={ICON_SIZE} />,
+    requirement: {
+      anyPermissions: [
+        PAYABLE_INVOICES_READ,
+        INVOICE_REQUESTS_READ,
+        GENERAL_EXPENSES_READ,
+        SUPPLIER_PAYABLES_READ,
+      ],
+    },
+    subItems: [
+      {
+        label: "Facturas",
+        path: "/facturas",
+        requirement: { permission: PAYABLE_INVOICES_READ },
+      },
+      {
+        label: "Solicitudes",
+        path: "/facturas/solicitudes",
+        requirement: { permission: INVOICE_REQUESTS_READ },
+      },
+      {
+        label: "Interno",
+        path: "/facturas/gastos-generales",
+        requirement: { permission: GENERAL_EXPENSES_READ },
+      },
+      {
+        label: "Proveedores",
+        path: "/facturas/proveedores",
+        requirement: { permission: SUPPLIER_PAYABLES_READ },
+      },
+    ],
   },
   { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} />, requirement: { permission: ROUTES_READ } },
   {

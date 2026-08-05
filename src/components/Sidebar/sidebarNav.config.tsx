@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown, Calculator } from "lucide-react";
+import { BanknoteArrowDown, Calculator, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,

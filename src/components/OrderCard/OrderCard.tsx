@@ -17,7 +17,7 @@ export interface OrderCardData {
     supplier: string;
     supplierDate: string | Date;
     destination: string;
-    deliveryDate: string | Date;
+    deliveryDate: string | Date | null;
     itemCount: number;
     status: OrderStatus;
     progress: number;
@@ -31,6 +31,7 @@ interface OrderCardProps {
 function getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
         pending: "Solicitado",
+        scheduled: "Programado",
         in_progress: "En curso",
         received: "Recibido",
     };
@@ -40,6 +41,7 @@ function getStatusLabel(status: OrderStatus): string {
 function getStatusVariant(status: OrderStatus): StatusChipVariant {
     const variants: Record<OrderStatus, string> = {
         pending: "pending",
+        scheduled: "infoAlt",
         in_progress: "info",
         received: "success",
     };
@@ -53,6 +55,8 @@ function getProgressColor(status: OrderStatus): string {
             return "#16a34a";
         case "in_progress":
             return "#16a34a";
+        case "scheduled":
+            return "#7c3aed";
         case "pending":
             return "#ea580c";
         default:
@@ -86,7 +90,11 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
                             <ArrowForwardIcon sx={{ fontSize: 20 }} />
                             <Stack spacing={0.5} width="100%" flex={3}>
                                 <Typography variant="body1" fontWeight={500}>{order.destination}</Typography>
-                                <Typography variant="body2" color="text.secondary">Entrega: {formatDateOnly(order.deliveryDate, "dateLong")}</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {order.deliveryDate
+                                        ? `Entrega: ${formatDateOnly(order.deliveryDate, "dateLong")}`
+                                        : "Entrega: pendiente de confirmar"}
+                                </Typography>
                             </Stack>
                         </Stack>
                         <Stack direction="row" alignItems="center" justifyContent={{ xs: "flex-start", md: "flex-end" }} spacing={2} flex={2}>

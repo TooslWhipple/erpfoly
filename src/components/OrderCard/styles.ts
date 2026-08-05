@@ -2,7 +2,7 @@ import { styled } from "@mui/material/styles";
 import { Chip, Typography } from "@mui/material";
 import { theme } from "@/styles/theme";
 
-export type OrderStatus = "pending" | "in_progress" | "received";
+export type OrderStatus = "pending" | "scheduled" | "in_progress" | "received";
 
 export const Card = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -52,6 +52,7 @@ export const StatusChip = styled(Chip, {
   const statusStyles: Record<OrderStatus, { bg: string; text: string }> = {
     received: { bg: "#dcfce7", text: "#16a34a" },
     in_progress: { bg: "#dbeafe", text: "#2563eb" },
+    scheduled: { bg: "#ede9fe", text: "#7c3aed" },
     pending: { bg: "#ffedd5", text: "#ea580c" },
   };
   const style = statusStyles[statusType];

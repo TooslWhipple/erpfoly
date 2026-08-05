@@ -1,6 +1,7 @@
 import { Grid, Radio } from "@mui/material";
 import { FormTextField } from "@/components";
 import { AccountingAccountSearchField } from "@/components/AccountingAccountSearchField";
+import { PortalAccessStatus } from "./PortalAccessStatus";
 import {
     FormCard,
     RadioGroupContainer,
@@ -10,14 +11,25 @@ import {
 } from "@/styles/catalogos/proveedores.styles";
 import { SUPPLIER_TEXT_MAX_LENGTH } from "@/hooks/proveedores/supplierForm.constants";
 import type { GeneralFormValues } from "@/types/proveedores.types";
+import type { SupplierPortalStatus } from "@/services/suppliers.service";
 
 export interface GeneralTabProps {
     values: GeneralFormValues;
     errors: Record<string, string>;
     onFieldChange: (field: keyof GeneralFormValues, value: string) => void;
+    portalStatus?: SupplierPortalStatus;
+    inviteUrl?: string | null;
+    inviteExpiresAt?: string | null;
 }
 
-export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
+export function GeneralTab({
+    values,
+    errors,
+    onFieldChange,
+    portalStatus = "NONE",
+    inviteUrl = null,
+    inviteExpiresAt = null,
+}: GeneralTabProps) {
     const handleChange = (field: keyof GeneralFormValues) => (value: string) => {
         onFieldChange(field, value);
     };
@@ -25,6 +37,15 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
     return (
         <FormCard>
             <Grid container spacing={2}>
+                {portalStatus !== "NONE" && (
+                    <Grid size={{ xs: 12 }}>
+                        <PortalAccessStatus
+                            portalStatus={portalStatus}
+                            inviteUrl={inviteUrl}
+                            inviteExpiresAt={inviteExpiresAt}
+                        />
+                    </Grid>
+                )}
                 <Grid size={{ xs: 12 }}>
                     <FormTextField
                         label="Nombre"
@@ -81,6 +102,7 @@ export function GeneralTab({ values, errors, onFieldChange }: GeneralTabProps) {
                         onChange={(e) => handleChange("email")(e.target.value)}
                         error={Boolean(errors.email)}
                         helperText={errors.email}
+                        required
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>

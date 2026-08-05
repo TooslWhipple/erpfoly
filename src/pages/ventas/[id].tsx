@@ -132,11 +132,13 @@ export default function VentaDetalle() {
   useEffect(() => {
     if (isNew && saleId && sale && !autoPrinted) {
       setAutoPrinted(true);
-      printSaleInvoicePdfOnly(saleId).catch((err) => {
-        console.warn("No se pudo desplegar la impresión de la factura en automático:", err);
-      });
+      if (isFacturacionConfirmacionEncendida) {
+        printSaleInvoicePdfOnly(saleId).catch((err) => {
+          console.warn("No se pudo desplegar la impresión de la factura en automático:", err);
+        });
+      }
     }
-  }, [isNew, saleId, sale, autoPrinted]);
+  }, [isNew, saleId, sale, autoPrinted, isFacturacionConfirmacionEncendida]);
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {

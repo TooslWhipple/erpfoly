@@ -31,6 +31,8 @@ import type { UploadedFileItem } from "@/components/FileUpload";
 import {
   RutasPageLayout,
   RoutesSidebar,
+  SidebarHeaderRow,
+  NewRouteButton,
   DateHeaderRow,
   DateLabel,
   RoutesList,
@@ -835,29 +837,30 @@ export default function RutaPage() {
         divider={<Divider orientation="vertical" flexItem />}
       >
         <RoutesSidebar>
-          <DateHeaderRow>
-            <IconButton size="small" onClick={handlePrevDay}>
-              <ChevronLeft size={20} />
-            </IconButton>
-            <IconButton size="small" onClick={handleNextDay}>
-              <ChevronRight size={20} />
-            </IconButton>
-            <DateLabel variant="body1">
-              {dayjs(selectedDate).format("dddd DD [de] MMMM")}
-            </DateLabel>
-            <Button
-              size="small"
-              variant="text"
-              onClick={handleToday}>Hoy</Button>
-          </DateHeaderRow>
-          <Button
-            fullWidth
-            variant="option"
-            color="primary"
-            startIcon={<Plus size={16} strokeWidth={2} />}
-            onClick={() => setNewRouteModalOpen(true)}>
-            Nueva ruta
-          </Button>
+          <SidebarHeaderRow>
+            <DateHeaderRow>
+              <IconButton size="small" onClick={handlePrevDay}>
+                <ChevronLeft size={20} />
+              </IconButton>
+              <IconButton size="small" onClick={handleNextDay}>
+                <ChevronRight size={20} />
+              </IconButton>
+              <DateLabel variant="body1">
+                {dayjs(selectedDate).format("dddd DD [de] MMMM")}
+              </DateLabel>
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleToday}>Hoy</Button>
+            </DateHeaderRow>
+            <NewRouteButton
+              variant="option"
+              color="primary"
+              startIcon={<Plus size={16} strokeWidth={2} />}
+              onClick={() => setNewRouteModalOpen(true)}>
+              Nueva ruta
+            </NewRouteButton>
+          </SidebarHeaderRow>
 
           <RoutesList>
             {

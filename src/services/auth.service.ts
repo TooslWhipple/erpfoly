@@ -101,6 +101,10 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"inventario-liquidaciones": "inventario.liquidaciones",
 	"recepcion-mercancias": "recepcion_mercancias",
 	"costeos": "costeos",
+	"facturas": "facturas",
+	"facturas-solicitudes": "facturas.solicitudes",
+	"facturas-gastos-generales": "facturas.gastos_generales",
+	"facturas-proveedores": "facturas.proveedores",
 	"atencion-cliente": "atencion_cliente",
 	"atencion-cliente-facturas": "atencion_cliente.facturas",
 	"atencion-cliente-reparaciones": "atencion_cliente.reparaciones",
@@ -110,6 +114,9 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"catalogos-productos": "catalogos.productos",
 	"catalogos-departamentos": "catalogos.departamentos",
 	"catalogos-promociones": "catalogos.promociones",
+	"catalogos-zonas": "catalogos.zonas",
+	"catalogos-prorrateos": "catalogos.prorrateos",
+	"apportionments": "catalogos.prorrateos",
 	"catalogos-sucursales": "catalogos.sucursales",
 	"catalogos-cajas": "catalogos.cajas",
 	"catalogos-proveedores": "catalogos.proveedores",
@@ -122,6 +129,9 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"catalogos-costos-envio": "catalogos.costos_envio",
 	"catalogos-folypuntos": "catalogos.folypuntos",
 	"catalogos-tasa-mora": "catalogos.tasa_mora",
+	"catalogos-tipos-transaccion": "catalogos.tipos-transaccion",
+	"catalogos-polizas-sistema": "catalogos.polizas-sistema",
+	"catalogos-polizas": "catalogos.polizas",
 };
 
 const DERIVED_SCREEN_SUFFIXES = ["-nuevo", "-detalle"] as const;

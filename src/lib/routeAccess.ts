@@ -12,6 +12,9 @@ import {
   CATALOG_GOALS_READ,
   CATALOG_MESSAGES_READ,
   CATALOG_MORATORY_RATE_READ,
+  CATALOG_TRANSACTION_TYPES_READ,
+  CATALOG_SYSTEM_POLICIES_READ,
+  CATALOG_GENERATED_POLICIES_READ,
   CATALOG_POINTS_READ,
   CATALOG_PRODUCTS_CREATE,
   CATALOG_PRODUCTS_READ,
@@ -31,6 +34,8 @@ import {
   CATALOG_USERS_CREATE,
   CATALOG_USERS_READ,
   CATALOG_USERS_UPDATE,
+  CATALOG_ZONES_READ,
+  CATALOG_APPORTIONMENTS_READ,
   CREDIT_APPLICATIONS_READ,
   CREDIT_APPLICATIONS_UPDATE,
   CUSTOMER_COLLECTION_READ,
@@ -47,6 +52,10 @@ import {
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  PAYABLE_INVOICES_READ,
+  INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
+  SUPPLIER_PAYABLES_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -126,6 +135,11 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
+  { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+  { pattern: /^\/facturas\/gastos-generales(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
+  { pattern: /^\/facturas\/proveedores(\/.*)?$/, permission: SUPPLIER_PAYABLES_READ },
+  { pattern: /^\/facturas(\/.*)?$/, permission: PAYABLE_INVOICES_READ },
+
   { pattern: /^\/atencion-cliente(\/.*)?$/, permission: CUSTOMER_SUPPORT_READ },
   { pattern: /^\/rutas(\/.*)?$/, permission: ROUTES_READ },
 
@@ -138,6 +152,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/promociones\/nuevo$/, permission: CATALOG_PROMOTIONS_CREATE },
   { pattern: /^\/catalogos\/promociones\/[^/]+$/, permission: CATALOG_PROMOTIONS_UPDATE },
   { pattern: /^\/catalogos\/promociones(\/.*)?$/, permission: CATALOG_PROMOTIONS_READ },
+  { pattern: /^\/catalogos\/zonas(\/.*)?$/, permission: CATALOG_ZONES_READ },
+  { pattern: /^\/catalogos\/prorrateos(\/.*)?$/, permission: CATALOG_APPORTIONMENTS_READ },
   { pattern: /^\/catalogos\/sucursales\/nuevo$/, permission: CATALOG_BRANCHES_CREATE },
   { pattern: /^\/catalogos\/sucursales\/[^/]+$/, permission: CATALOG_BRANCHES_READ },
   { pattern: /^\/catalogos\/sucursales(\/.*)?$/, permission: CATALOG_BRANCHES_READ },
@@ -159,6 +175,9 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/costos-envio(\/.*)?$/, permission: CATALOG_SHIPPING_COSTS_READ },
   { pattern: /^\/catalogos\/folypuntos(\/.*)?$/, permission: CATALOG_POINTS_READ },
   { pattern: /^\/catalogos\/tasa-mora(\/.*)?$/, permission: CATALOG_MORATORY_RATE_READ },
+  { pattern: /^\/catalogos\/tipos-transaccion(\/.*)?$/, permission: CATALOG_TRANSACTION_TYPES_READ },
+  { pattern: /^\/catalogos\/polizas-sistema(\/.*)?$/, permission: CATALOG_SYSTEM_POLICIES_READ },
+  { pattern: /^\/catalogos\/polizas(\/.*)?$/, permission: CATALOG_GENERATED_POLICIES_READ },
 ];
 
 export const authorizedHomeOptions: Array<{ path: string; requirement: AccessRequirement }> = [
@@ -171,6 +190,10 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/inventario", requirement: { permission: INVENTORY_READ } },
   { path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
   { path: "/costeos", requirement: { permission: COSTEOS_READ } },
+  { path: "/facturas", requirement: { permission: PAYABLE_INVOICES_READ } },
+  { path: "/facturas/solicitudes", requirement: { permission: INVOICE_REQUESTS_READ } },
+  { path: "/facturas/gastos-generales", requirement: { permission: GENERAL_EXPENSES_READ } },
+  { path: "/facturas/proveedores", requirement: { permission: SUPPLIER_PAYABLES_READ } },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },

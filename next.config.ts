@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",")
   .map((origin) => origin.trim())
@@ -6,6 +7,8 @@ const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",")
 
 const nextConfig: NextConfig = {
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
+  outputFileTracingRoot: path.resolve(__dirname),
+  transpilePackages: ["@mui/x-date-pickers"],
   reactCompiler: true,
   reactStrictMode: true,
   env: {

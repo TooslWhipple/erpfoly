@@ -1,4 +1,4 @@
-import { get, post, patch, del } from "@/lib/axios";
+import { api, get, post, patch, del } from "@/lib/axios";
 import { unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
@@ -375,6 +375,145 @@ export async function removeDeliveryDate(saleId: number): Promise<void> {
   );
 }
 
+export interface SaleInvoiceStatusInfo {
+  hasInvoice: boolean;
+  uuid: string | null;
+  hasXml: boolean;
+  hasPdf: boolean;
+  status: string;
+}
+
+export async function getSaleInvoiceStatus(
+  saleId: number,
+): Promise<SaleInvoiceStatusInfo> {
+  const res = await get<SaleInvoiceStatusInfo>(`${BASE}/sales/${saleId}/invoice/status`);
+  if (res.error || !res.data) {
+    return { hasInvoice: false, uuid: null, hasXml: false, hasPdf: false, status: "NOT_FOUND" };
+  }
+  return res.data;
+}
+
+export async function downloadSaleInvoiceFile(
+  saleId: number,
+  type: "xml" | "pdf" | "zip",
+): Promise<void> {
+  const statusInfo = await getSaleInvoiceStatus(saleId);
+  const defaultUuid = statusInfo?.uuid || String(saleId);
+
+  const response = await api.get(`${BASE}/sales/${saleId}/invoice/${type}`, {
+    responseType: "blob",
+  });
+
+  const contentType = (response.headers["content-type"] as string | undefined) ?? undefined;
+  const contentDisposition = (response.headers["content-disposition"] as string | undefined) ?? undefined;
+  let filename = `${defaultUuid}.${type}`;
+
+  if (contentDisposition && typeof contentDisposition === "string") {
+    const match = contentDisposition.match(/filename="?([^";]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blob = new Blob([response.data], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function printAndDownloadSaleInvoicePdf(
+  saleId: number,
+): Promise<void> {
+  const statusInfo = await getSaleInvoiceStatus(saleId);
+  const defaultUuid = statusInfo?.uuid || String(saleId);
+
+  const response = await api.get(`${BASE}/sales/${saleId}/invoice/pdf`, {
+    responseType: "blob",
+  });
+
+  const contentType =
+    (response.headers["content-type"] as string | undefined) ?? "application/pdf";
+  const contentDisposition =
+    (response.headers["content-disposition"] as string | undefined) ?? undefined;
+  let filename = `${defaultUuid}.pdf`;
+
+  if (contentDisposition && typeof contentDisposition === "string") {
+    const match = contentDisposition.match(/filename="?([^";]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blob = new Blob([response.data], { type: contentType });
+  const blobUrl = window.URL.createObjectURL(blob);
+
+  // 1. Descargar el archivo PDF
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // 2. Abrir ventana/diálogo de impresión automáticamente
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.src = blobUrl;
+  document.body.appendChild(iframe);
+
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.warn("Impresión de iframe no soportada:", e);
+    }
+  };
+}
+
+export async function printSaleInvoicePdfOnly(
+  saleId: number,
+): Promise<void> {
+  const response = await api.get(`${BASE}/sales/${saleId}/invoice/pdf`, {
+    responseType: "blob",
+  });
+
+  const contentType =
+    (response.headers["content-type"] as string | undefined) ?? "application/pdf";
+
+  const blob = new Blob([response.data], { type: contentType });
+  const blobUrl = window.URL.createObjectURL(blob);
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.src = blobUrl;
+  document.body.appendChild(iframe);
+
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.warn("Impresión de iframe no soportada:", e);
+    }
+  };
+}
+
 export type GetRedDeliveriesResponse = PaginatedRowsResponse<RedDeliveryListItem>;
 
 export async function getRedDeliveries(
@@ -393,4 +532,9 @@ export async function cancelRedDelivery(
     `${BASE}/sales/${saleId}/delivery-review/cancel`,
     payload,
   );
+}
+
+export async function getInvoicingConfig(): Promise<{ facturacionConfirmacionVentaEnabled: boolean }> {
+  const res: ApiResult<{ facturacionConfirmacionVentaEnabled: boolean }> = await get(`${BASE}/invoicing-config`);
+  return unwrapOrThrow(res);
 }

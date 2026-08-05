@@ -195,6 +195,16 @@ export default function Sucursales() {
       size: "md",
     },
     {
+      id: "zoneName",
+      label: "Zona",
+      size: "sm",
+      format: (value) => (
+        <Typography variant="body2" color={value ? "text.primary" : "text.secondary"}>
+          {(value as string | null) ?? "Sin zona"}
+        </Typography>
+      ),
+    },
+    {
       id: "address",
       label: "Domicilio",
       size: "xl",

@@ -21,6 +21,7 @@ import type {
   ReceptionInvoice,
 } from "@/types/recepcion-mercancias.types";
 import { formatDate } from "@/utils/date";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { selectableToReceptionInvoice } from "./receptionInvoiceAdapter";
 import { useReceptionAvailableInvoices } from "./useReceptionAvailableInvoices";
 import {
@@ -118,11 +119,12 @@ function detailInvoiceToReceptionInvoice(
   inv: ReceptionDetailInvoice,
 ): ReceptionInvoice {
   return {
-    id: `costeo-invoice-${inv.id}`,
+    id: `payable-invoice-${inv.id}`,
     fiscalFolio: inv.externalId,
     date: inv.date,
     amount: inv.amount,
-    paymentType: inv.type,
+    paymentType: inv.paymentType,
+    origin: inv.origin,
   };
 }
 
@@ -175,6 +177,10 @@ function getPrimaryActionLabel(
   }
 }
 
+function totalLabelsOf(items: ReceptionDetailItem[]): number {
+  return items.reduce((sum, item) => sum + item.received, 0);
+}
+
 function resolveConfirmVariant(
   status: ReceptionDetailStatus,
   extraLabels: number,
@@ -185,10 +191,13 @@ function resolveConfirmVariant(
   if (status === "pre_captured") {
     return "send_to_costing";
   }
-  if (extraLabels > 0) {
-    return "save_extra_labels";
-  }
   return "save_labels";
+}
+
+function getBaselineLabelsFromDetail(detail: ReceptionDetail): number {
+  return detail.printedLabelsCount > 0
+    ? detail.printedLabelsCount
+    : totalLabelsOf(detail.items);
 }
 
 function mapReceptionDetailStatus(
@@ -215,10 +224,14 @@ export function ReceptionForm({
   onSaved,
 }: ReceptionFormProps) {
   const router = useRouter();
+  const showError = useSnackbarStore((state) => state.showError);
   const [articles, setArticles] = useState<ReceptionArticle[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articlesError, setArticlesError] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<ReceptionInvoice[]>([]);
+  const [originalPayableIds, setOriginalPayableIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [status, setStatus] = useState<ReceptionDetailStatus>("draft");
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -250,8 +263,14 @@ export function ReceptionForm({
     [invoices],
   );
 
-  const { availableInvoices: receptionAvailableInvoices, loading: loadingAvailableInvoices }
-    = useReceptionAvailableInvoices();
+  const {
+    availableInvoices: receptionAvailableInvoices,
+    loading: loadingAvailableInvoices,
+    refetch: refetchAvailableInvoices,
+  } = useReceptionAvailableInvoices(
+    supplierId ?? null,
+    currentReceptionId ?? undefined,
+  );
 
   const supplierName =
     supplierNameProp ||
@@ -285,11 +304,13 @@ export function ReceptionForm({
           }
           const detail = result.data;
           setArticles(detail.items.map(detailItemToReceptionArticle));
-          setInvoices(detail.invoices.map(detailInvoiceToReceptionInvoice));
-          setStatus(mapReceptionDetailStatus(detail.status));
-          setBaselineLabels(
-            detail.printedLabelsCount > 0 ? detail.printedLabelsCount : totalLabelsOf(detail.items),
+          const loadedInvoices = detail.invoices.map(detailInvoiceToReceptionInvoice);
+          setInvoices(loadedInvoices);
+          setOriginalPayableIds(
+            new Set(detail.invoices.map((inv) => inv.id)),
           );
+          setStatus(mapReceptionDetailStatus(detail.status));
+          setBaselineLabels(getBaselineLabelsFromDetail(detail));
           setSupplierNameFromReception(detail.supplier);
         })
         .catch((err) => {
@@ -371,6 +392,7 @@ export function ReceptionForm({
       quantity: article.quantity,
       received: article.received,
     })),
+    payable_invoice_ids: extractPayableIds(invoices),
   });
 
   const handleConfirmAction = async (_reason?: string) => {
@@ -399,8 +421,9 @@ export function ReceptionForm({
         }
         const detail = result.data;
         setCurrentReceptionId(detail.id);
-        setStatus("pre_captured");
-        setBaselineLabels(detail.printedLabelsCount || totalLabels);
+        setStatus(mapReceptionDetailStatus(detail.status));
+        setBaselineLabels(getBaselineLabelsFromDetail(detail));
+        syncServerInvoiceState(detail.invoices);
         setActivePanel(null);
         await simulatePrintProgress();
         if (mode === "edit" && onSaved) {
@@ -414,15 +437,26 @@ export function ReceptionForm({
           setSubmitError("No se identificó la recepción");
           return;
         }
+
+        if (isInvoiceListDirty()) {
+          const updateResult = await updateReception(
+            currentReceptionId,
+            buildSavePayload(),
+          );
+          if (updateResult.error || !updateResult.data) {
+            setSubmitError(
+              updateResult.error?.message ?? "Error al guardar facturas",
+            );
+            return;
+          }
+          syncServerInvoiceState(updateResult.data.invoices);
+        }
+
         const payload = {
           items: articles.map((article) => ({
             product_id: article.productId ?? 0,
             quantity: article.quantity,
             received: article.received,
-          })),
-          invoices: invoices.map((invoice) => ({
-            supplier_invoice_id: Number(invoice.id.replace(/\D/g, "")) || 0,
-            amount: invoice.amount,
           })),
         };
         const result = await sendReceptionToCosting(currentReceptionId, payload);
@@ -432,9 +466,7 @@ export function ReceptionForm({
         }
         setStatus("in_costing");
         setActivePanel(null);
-        if (result.data?.costeoId) {
-          router.push(`/costeos/${result.data.costeoId}`);
-        }
+        router.push("/recepcion-mercancias");
         return;
       }
     } catch (err) {
@@ -448,14 +480,43 @@ export function ReceptionForm({
     }
   };
 
-  const handleAddInvoices = async (selected: SelectableInvoice[]) => {
-    setInvoices((prev) => [...prev, ...selected.map(selectableToReceptionInvoice)]);
+  const handleAddInvoices = (selected: SelectableInvoice[]) => {
+    if (selected.length === 0) {
+      setActivePanel(null);
+      return;
+    }
+    setInvoices((prev) => {
+      const existing = new Set(prev.map((invoice) => invoice.id));
+      const additions = selected
+        .map(selectableToReceptionInvoice)
+        .filter((invoice) => !existing.has(invoice.id));
+      return [...prev, ...additions];
+    });
     setActivePanel(null);
   };
 
   const handleRemoveInvoice = (invoiceId: string) => {
     if (!canManageInvoices) return;
     setInvoices((prev) => prev.filter((invoice) => invoice.id !== invoiceId));
+  };
+
+  const extractPayableIds = (items: ReceptionInvoice[]): number[] =>
+    items
+      .map((invoice) => Number(invoice.id.replace(/^payable-/, "")))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+  const isInvoiceListDirty = (): boolean => {
+    const current = new Set(extractPayableIds(invoices));
+    if (current.size !== originalPayableIds.size) return true;
+    for (const id of current) {
+      if (!originalPayableIds.has(id)) return true;
+    }
+    return false;
+  };
+
+  const syncServerInvoiceState = (serverInvoices: ReceptionDetailInvoice[]) => {
+    setInvoices(serverInvoices.map(detailInvoiceToReceptionInvoice));
+    setOriginalPayableIds(new Set(serverInvoices.map((inv) => inv.id)));
   };
 
   return (
@@ -675,8 +736,4 @@ export function ReceptionForm({
       />
     </PageContainer>
   );
-}
-
-function totalLabelsOf(items: ReceptionDetailItem[]): number {
-  return items.reduce((sum, item) => sum + item.received, 0);
 }

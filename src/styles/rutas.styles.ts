@@ -1,4 +1,4 @@
-import { Skeleton, Stack, Typography } from "@mui/material";
+import { Button, Skeleton, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { theme } from "@/styles/theme";
 
@@ -21,6 +21,27 @@ export const RoutesSidebar = styled(Stack)(({ theme }) => ({
   },
 }));
 
+export const SidebarHeaderRow = styled(Stack)(({ theme }) => ({
+  flexDirection: "column",
+  gap: theme.spacing(1),
+  flexShrink: 0,
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1.5),
+  },
+}));
+
+export const NewRouteButton = styled(Button)(({ theme }) => ({
+  width: "100%",
+  [theme.breakpoints.down("md")]: {
+    width: "auto",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+  },
+}));
+
 export const DateHeaderRow = styled(Stack)(({ theme }) => ({
   flexDirection: "row",
   alignItems: "center",
@@ -28,6 +49,10 @@ export const DateHeaderRow = styled(Stack)(({ theme }) => ({
   minWidth: 260,
   gap: theme.spacing(1),
   flexShrink: 0,
+  [theme.breakpoints.down("md")]: {
+    flex: 1,
+    minWidth: 0,
+  },
 }));
 
 export const DateLabel = styled(Typography)({
@@ -35,6 +60,7 @@ export const DateLabel = styled(Typography)({
   textOverflow: "ellipsis",
   overflow: "hidden",
   whiteSpace: "nowrap",
+  flex: 1,
 });
 
 export const RoutesList = styled(Stack)(({ theme }) => ({
@@ -42,6 +68,13 @@ export const RoutesList = styled(Stack)(({ theme }) => ({
   minHeight: 0,
   overflowY: "auto",
   gap: theme.spacing(1),
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "row",
+    overflowX: "auto",
+    overflowY: "hidden",
+    alignItems: "stretch",
+    paddingBottom: theme.spacing(1),
+  },
 }));
 
 export const RouteDetailPanel = styled(Stack)({
@@ -67,6 +100,10 @@ export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selecte
   cursor: "pointer",
   overflow: "hidden",
   transition: "border-color 0.2s, background-color 0.2s",
+  [theme.breakpoints.down("md")]: {
+    width: 280,
+    minWidth: 280,
+  },
   "&:hover": {
     borderColor: selected ? theme.palette.primary.main : theme.palette.text.secondary,
   },

@@ -26,6 +26,10 @@ export type PermissionModule =
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
+  | "facturas"
+  | "facturas.solicitudes"
+  | "facturas.gastos_generales"
+  | "facturas.proveedores"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
@@ -33,6 +37,8 @@ export type PermissionModule =
   | "catalogos.productos"
   | "catalogos.departamentos"
   | "catalogos.promociones"
+  | "catalogos.zonas"
+  | "catalogos.prorrateos"
   | "catalogos.sucursales"
   | "catalogos.cajas"
   | "catalogos.proveedores"
@@ -45,6 +51,9 @@ export type PermissionModule =
   | "catalogos.costos_envio"
   | "catalogos.folypuntos"
   | "catalogos.tasa_mora"
+  | "catalogos.tipos-transaccion"
+  | "catalogos.polizas-sistema"
+  | "catalogos.polizas"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -154,6 +163,34 @@ export const COSTEOS_READ = COSTEOS_PERMISSIONS.read;
 export const COSTEOS_UPDATE = COSTEOS_PERMISSIONS.update;
 export const COSTEOS_DELETE = COSTEOS_PERMISSIONS.delete;
 
+// Payable invoices (Facturas)
+export const PAYABLE_INVOICES_PERMISSIONS = createCrudPermissions("facturas");
+export const PAYABLE_INVOICES_CREATE = PAYABLE_INVOICES_PERMISSIONS.create;
+export const PAYABLE_INVOICES_READ = PAYABLE_INVOICES_PERMISSIONS.read;
+export const PAYABLE_INVOICES_UPDATE = PAYABLE_INVOICES_PERMISSIONS.update;
+export const PAYABLE_INVOICES_DELETE = PAYABLE_INVOICES_PERMISSIONS.delete;
+
+// Invoice requests
+export const INVOICE_REQUESTS_PERMISSIONS = createCrudPermissions("facturas.solicitudes");
+export const INVOICE_REQUESTS_CREATE = INVOICE_REQUESTS_PERMISSIONS.create;
+export const INVOICE_REQUESTS_READ = INVOICE_REQUESTS_PERMISSIONS.read;
+export const INVOICE_REQUESTS_UPDATE = INVOICE_REQUESTS_PERMISSIONS.update;
+export const INVOICE_REQUESTS_DELETE = INVOICE_REQUESTS_PERMISSIONS.delete;
+
+// General expenses
+export const GENERAL_EXPENSES_PERMISSIONS = createCrudPermissions("facturas.gastos_generales");
+export const GENERAL_EXPENSES_CREATE = GENERAL_EXPENSES_PERMISSIONS.create;
+export const GENERAL_EXPENSES_READ = GENERAL_EXPENSES_PERMISSIONS.read;
+export const GENERAL_EXPENSES_UPDATE = GENERAL_EXPENSES_PERMISSIONS.update;
+export const GENERAL_EXPENSES_DELETE = GENERAL_EXPENSES_PERMISSIONS.delete;
+
+// Supplier payables (Proveedores - Cuentas por pagar)
+export const SUPPLIER_PAYABLES_PERMISSIONS = createCrudPermissions("facturas.proveedores");
+export const SUPPLIER_PAYABLES_CREATE = SUPPLIER_PAYABLES_PERMISSIONS.create;
+export const SUPPLIER_PAYABLES_READ = SUPPLIER_PAYABLES_PERMISSIONS.read;
+export const SUPPLIER_PAYABLES_UPDATE = SUPPLIER_PAYABLES_PERMISSIONS.update;
+export const SUPPLIER_PAYABLES_DELETE = SUPPLIER_PAYABLES_PERMISSIONS.delete;
+
 // Customer support
 export const CUSTOMER_SUPPORT_PERMISSIONS = createCrudPermissions("atencion_cliente");
 export const CUSTOMER_SUPPORT_CREATE = CUSTOMER_SUPPORT_PERMISSIONS.create;
@@ -198,6 +235,15 @@ export const CATALOG_PROMOTIONS_CREATE = CATALOG_PROMOTIONS_PERMISSIONS.create;
 export const CATALOG_PROMOTIONS_READ = CATALOG_PROMOTIONS_PERMISSIONS.read;
 export const CATALOG_PROMOTIONS_UPDATE = CATALOG_PROMOTIONS_PERMISSIONS.update;
 export const CATALOG_PROMOTIONS_DELETE = CATALOG_PROMOTIONS_PERMISSIONS.delete;
+
+export const CATALOG_ZONES_PERMISSIONS = createCrudPermissions("catalogos.zonas");
+export const CATALOG_ZONES_CREATE = CATALOG_ZONES_PERMISSIONS.create;
+export const CATALOG_ZONES_READ = CATALOG_ZONES_PERMISSIONS.read;
+export const CATALOG_ZONES_UPDATE = CATALOG_ZONES_PERMISSIONS.update;
+export const CATALOG_ZONES_DELETE = CATALOG_ZONES_PERMISSIONS.delete;
+
+export const CATALOG_APPORTIONMENTS_PERMISSIONS = createCrudPermissions("catalogos.prorrateos");
+export const CATALOG_APPORTIONMENTS_READ = CATALOG_APPORTIONMENTS_PERMISSIONS.read;
 
 export const CATALOG_BRANCHES_PERMISSIONS = createCrudPermissions("catalogos.sucursales");
 export const CATALOG_BRANCHES_CREATE = CATALOG_BRANCHES_PERMISSIONS.create;
@@ -271,6 +317,24 @@ export const CATALOG_MORATORY_RATE_READ = CATALOG_MORATORY_RATE_PERMISSIONS.read
 export const CATALOG_MORATORY_RATE_UPDATE = CATALOG_MORATORY_RATE_PERMISSIONS.update;
 export const CATALOG_MORATORY_RATE_DELETE = CATALOG_MORATORY_RATE_PERMISSIONS.delete;
 
+export const CATALOG_TRANSACTION_TYPES_PERMISSIONS = createCrudPermissions("catalogos.tipos-transaccion");
+export const CATALOG_TRANSACTION_TYPES_CREATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.create;
+export const CATALOG_TRANSACTION_TYPES_READ = CATALOG_TRANSACTION_TYPES_PERMISSIONS.read;
+export const CATALOG_TRANSACTION_TYPES_UPDATE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.update;
+export const CATALOG_TRANSACTION_TYPES_DELETE = CATALOG_TRANSACTION_TYPES_PERMISSIONS.delete;
+
+export const CATALOG_SYSTEM_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas-sistema");
+export const CATALOG_SYSTEM_POLICIES_CREATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.create;
+export const CATALOG_SYSTEM_POLICIES_READ = CATALOG_SYSTEM_POLICIES_PERMISSIONS.read;
+export const CATALOG_SYSTEM_POLICIES_UPDATE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.update;
+export const CATALOG_SYSTEM_POLICIES_DELETE = CATALOG_SYSTEM_POLICIES_PERMISSIONS.delete;
+
+export const CATALOG_GENERATED_POLICIES_PERMISSIONS = createCrudPermissions("catalogos.polizas");
+export const CATALOG_GENERATED_POLICIES_CREATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.create;
+export const CATALOG_GENERATED_POLICIES_READ = CATALOG_GENERATED_POLICIES_PERMISSIONS.read;
+export const CATALOG_GENERATED_POLICIES_UPDATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.update;
+export const CATALOG_GENERATED_POLICIES_DELETE = CATALOG_GENERATED_POLICIES_PERMISSIONS.delete;
+
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");
 export const SALES_CREATE = SALES_PERMISSIONS.create;
@@ -312,6 +376,12 @@ export const PERMISSIONS_BY_MODULE = {
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),
   costeos: Object.values(COSTEOS_PERMISSIONS),
+  invoices: {
+    payableInvoices: Object.values(PAYABLE_INVOICES_PERMISSIONS),
+    invoiceRequests: Object.values(INVOICE_REQUESTS_PERMISSIONS),
+    generalExpenses: Object.values(GENERAL_EXPENSES_PERMISSIONS),
+    supplierPayables: Object.values(SUPPLIER_PAYABLES_PERMISSIONS),
+  },
   customerSupport: {
     customerSupport: Object.values(CUSTOMER_SUPPORT_PERMISSIONS),
     invoices: Object.values(CUSTOMER_SUPPORT_INVOICES_PERMISSIONS),
@@ -322,6 +392,7 @@ export const PERMISSIONS_BY_MODULE = {
     products: Object.values(CATALOG_PRODUCTS_PERMISSIONS),
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),
     promotions: Object.values(CATALOG_PROMOTIONS_PERMISSIONS),
+    zones: Object.values(CATALOG_ZONES_PERMISSIONS),
     branches: Object.values(CATALOG_BRANCHES_PERMISSIONS),
     cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),
     suppliers: Object.values(CATALOG_SUPPLIERS_PERMISSIONS),

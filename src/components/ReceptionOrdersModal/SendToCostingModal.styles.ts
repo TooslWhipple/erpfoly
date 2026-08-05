@@ -1,5 +1,48 @@
 import { styled } from "@mui/material/styles";
-import { Box, Button, LinearProgress, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  DialogContent as MuiDialogContent,
+  IconButton,
+  LinearProgress,
+  TextField,
+  Typography,
+} from "@mui/material";
+
+export const StyledDialogContent = styled(MuiDialogContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(2),
+  "&:first-of-type": {
+    paddingTop: theme.spacing(3),
+  },
+}));
+
+export const ModalHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: theme.spacing(2),
+}));
+
+export const ModalTitle = styled(Typography)(({ theme }) => ({
+  fontSize: "1.25rem",
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  lineHeight: 1.3,
+  flex: 1,
+  minWidth: 0,
+}));
+
+export const CloseButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  marginTop: theme.spacing(-0.5),
+  marginRight: theme.spacing(-0.5),
+  "&:hover": {
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
 
 export const ModalContent = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -47,7 +90,7 @@ export const MismatchBanner = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
   padding: theme.spacing(2),
   borderRadius: 12,
-  backgroundColor: theme.palette.app.chip.variants.info.background,
+  backgroundColor: theme.palette.background.lowerGray,
 }));
 
 export const MismatchText = styled(Typography)(({ theme }) => ({

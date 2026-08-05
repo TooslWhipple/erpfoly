@@ -1,20 +1,21 @@
-import type { CosteoAvailableInvoice, CosteoInvoiceType } from "@/types/costeos.types";
+import type { AvailablePayableInvoice } from "@/services/recepcion-mercancias.service";
 import type { SelectableInvoice } from "@/types/invoice-selector.types";
 
-export const COSTEO_INVOICE_TYPE_LABELS: Record<CosteoInvoiceType, string> = {
+export const COSTEO_INVOICE_TYPE_LABELS: Record<string, string> = {
     PUE: "PUE",
     PPD: "PPD",
     CREDIT_NOTE: "Nota de Crédito",
 };
 
-export function costeoInvoiceToSelectable(
-    invoice: CosteoAvailableInvoice,
+export function payableToSelectableForCosteo(
+    invoice: AvailablePayableInvoice,
 ): SelectableInvoice {
     return {
-        id: String(invoice.id),
-        externalId: invoice.externalId,
-        date: invoice.date,
-        amount: invoice.amount,
-        paymentType: COSTEO_INVOICE_TYPE_LABELS[invoice.type],
+        id: `payable-${invoice.id}`,
+        externalId: invoice.invoiceNumber,
+        date: invoice.issuedAt,
+        amount: invoice.total,
+        paymentType: invoice.paymentType,
+        origin: invoice.origin,
     };
 }

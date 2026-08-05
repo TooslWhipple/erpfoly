@@ -7,7 +7,7 @@ import { AUTH_GENERIC_ERROR, mapApiErrorToUserMessage } from "@/utils/auth-feedb
 
 export const api = axios.create({
 	baseURL: apiBaseUrl,
-	timeout: 10000,
+	timeout: 60000,
 	headers: {
 		"Content-Type": "application/json",
 	},

@@ -1,5 +1,5 @@
 import { Button, IconButton, Stack, TextField, Typography } from "@mui/material";
-import { PencilLine } from "lucide-react";
+import { ArrowRight, PencilLine } from "lucide-react";
 import { Breadcrumbs, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { StatusChipVariant } from "@/components/StatusChip";
@@ -146,11 +146,12 @@ export function CosteoDetailHeader({
             justifyContent="space-between"
             alignItems={{ xs: "flex-start", md: "center" }}
             spacing={2}>
-            <Stack spacing={0.5} flex={1}>
+            <Stack spacing={0.5}>
               <Typography variant="body1" fontWeight={500}>{supplier}</Typography>
               <Typography variant="body2" color="text.secondary">{formatDateOnly(supplierDate, "dateLong")}</Typography>
             </Stack>
-            <Stack spacing={0.5} flex={1} alignItems={{ xs: "flex-start", md: "flex-end" }}>
+            <ArrowRight size={16} color={theme.palette.text.secondary} />
+            <Stack spacing={0.5} alignItems={{ xs: "flex-start", md: "flex-end" }}>
               <Typography variant="body1" fontWeight={500}>{branchName}</Typography>
               {
                 receptionDate &&

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import {
   IconButton,
   Menu,
@@ -12,6 +13,7 @@ import numeral from "numeral";
 import { ConfirmModal, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import { cancelInvoiceArticle } from "@/data/atencion-cliente.mockData";
+import { getMockRecoverySheetIdByInvoiceId } from "@/data/recovery-sheets.mockData";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type {
   ArticleStatus,
@@ -69,6 +71,7 @@ export function InvoiceArticlesTab({
   onRefresh,
   onRequestCancelInvoice,
 }: InvoiceArticlesTabProps) {
+  const router = useRouter();
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
 
@@ -158,6 +161,11 @@ export function InvoiceArticlesTab({
   };
 
   const handleRecoverySheet = () => {
+    const recoverySheetId = getMockRecoverySheetIdByInvoiceId(invoice.id);
+    if (recoverySheetId) {
+      void router.push(`/inventario/hojas-recuperacion/${recoverySheetId}`);
+      return;
+    }
     showSuccess("La hoja de recuperación estará disponible próximamente.");
   };
 

@@ -23,6 +23,7 @@ export type PermissionModule =
   | "solicitudes_descuento"
   | "inventario"
   | "inventario.mercancia_danada"
+  | "inventario.hojas_recuperacion"
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
@@ -138,6 +139,12 @@ export const DAMAGED_INVENTORY_CREATE = DAMAGED_INVENTORY_PERMISSIONS.create;
 export const DAMAGED_INVENTORY_READ = DAMAGED_INVENTORY_PERMISSIONS.read;
 export const DAMAGED_INVENTORY_UPDATE = DAMAGED_INVENTORY_PERMISSIONS.update;
 export const DAMAGED_INVENTORY_DELETE = DAMAGED_INVENTORY_PERMISSIONS.delete;
+
+export const RECOVERY_SHEETS_PERMISSIONS = createCrudPermissions("inventario.hojas_recuperacion");
+export const RECOVERY_SHEETS_CREATE = RECOVERY_SHEETS_PERMISSIONS.create;
+export const RECOVERY_SHEETS_READ = RECOVERY_SHEETS_PERMISSIONS.read;
+export const RECOVERY_SHEETS_UPDATE = RECOVERY_SHEETS_PERMISSIONS.update;
+export const RECOVERY_SHEETS_DELETE = RECOVERY_SHEETS_PERMISSIONS.delete;
 
 export const INVENTORY_LIQUIDATIONS_PERMISSIONS = createCrudPermissions("inventario.liquidaciones");
 export const INVENTORY_LIQUIDATIONS_CREATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.create;
@@ -353,6 +360,7 @@ export const PERMISSIONS_BY_MODULE = {
   inventory: {
     inventory: Object.values(INVENTORY_PERMISSIONS),
     damagedInventory: Object.values(DAMAGED_INVENTORY_PERMISSIONS),
+    recoverySheets: Object.values(RECOVERY_SHEETS_PERMISSIONS),
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),

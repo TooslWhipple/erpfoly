@@ -40,6 +40,7 @@ import {
   DISCOUNT_REQUESTS_READ,
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
+  RECOVERY_SHEETS_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
   PAYABLE_INVOICES_READ,
@@ -125,6 +126,7 @@ export const NAV_ITEMS: NavItem[] = [
     subItems: [
       { label: "Inventario", path: "/inventario", requirement: { permission: INVENTORY_READ } },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada", requirement: { permission: DAMAGED_INVENTORY_READ } },
+      { label: "Hojas de recuperación", path: "/inventario/hojas-recuperacion", requirement: { permission: RECOVERY_SHEETS_READ } },
       { label: "Liquidaciones", path: "/inventario/liquidaciones", requirement: { permission: INVENTORY_LIQUIDATIONS_READ } },
       { label: "Recepción de mercancía", path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
       { label: "Costeos", path: "/costeos", requirement: { permission: COSTEOS_READ } },

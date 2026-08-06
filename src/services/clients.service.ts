@@ -23,6 +23,8 @@ export type ClientInformationSection =
 
 export interface ClientAddressItem {
   id: number;
+  /** Addresses.id — use this for SaleDelivery.address_id */
+  addressId: number;
   addressType: string;
   isPrimary: boolean;
   street: string;

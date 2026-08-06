@@ -26,7 +26,7 @@ export function ensureNavigatorMediaDevices(): void {
     nav.mediaDevices = {} as MediaDevices;
   }
 
-  if (nav.mediaDevices.getUserMedia) return;
+  if (typeof nav.mediaDevices.getUserMedia === "function") return;
 
   const legacyGetUserMedia =
     nav.getUserMedia ?? nav.webkitGetUserMedia ?? nav.mozGetUserMedia;
@@ -35,7 +35,7 @@ export function ensureNavigatorMediaDevices(): void {
 
   nav.mediaDevices.getUserMedia = (constraints) =>
     new Promise((resolve, reject) => {
-      legacyGetUserMedia.call(nav, constraints, resolve, reject);
+      legacyGetUserMedia.call(nav, constraints ?? {}, resolve, reject);
     });
 }
 

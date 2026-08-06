@@ -16,6 +16,12 @@ export interface Department {
   name: string;
   margin: number;
   groups: ProductGroup[];
+  accountingAccountInventory?: string | null;
+  accountingAccountInventoryName?: string | null;
+  accountingAccountResults?: string | null;
+  accountingAccountResultsName?: string | null;
+  accountingAccount?: string | null;
+  accountingAccountName?: string | null;
 }
 
 export interface GetDepartmentsParams {
@@ -30,12 +36,18 @@ export interface CreateDepartmentPayload {
   name: string;
   margin?: number;
   code?: string;
+  accountingAccountInventory?: string | null;
+  accountingAccountResults?: string | null;
+  accountingAccount?: string | null;
 }
 
 export interface UpdateDepartmentPayload {
   name?: string;
   margin?: number;
   code?: string;
+  accountingAccountInventory?: string | null;
+  accountingAccountResults?: string | null;
+  accountingAccount?: string | null;
 }
 
 // ============================================================================

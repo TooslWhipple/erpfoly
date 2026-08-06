@@ -6,6 +6,8 @@ import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractIdCaptureImages,
+  getCameraAccessErrorMessage,
+  getNubariumCameraOptions,
   NUBARIUM_ID_CAPTURE_CONFIG,
   safeClearNubariumCapture,
   translateNubariumError,
@@ -49,12 +51,19 @@ export function NubariumIdCapture({
     const mountCapture = () => {
       if (cancelled) return;
 
+      const cameraAccessError = getCameraAccessErrorMessage();
+      if (cameraAccessError) {
+        setErrorMessage(cameraAccessError);
+        return;
+      }
+
       try {
         const capture = new IdCapture();
         captureRef.current = capture;
 
         capture.init({
           ...NUBARIUM_ID_CAPTURE_CONFIG,
+          cameras: getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
 
@@ -90,10 +99,11 @@ export function NubariumIdCapture({
           capture.start();
         });
       } catch (mountError) {
+        const rawMessage = mountError instanceof Error ? mountError.message : "";
         setErrorMessage(
-          mountError instanceof Error
-            ? mountError.message
-            : "No fue posible iniciar la captura de la INE.",
+          rawMessage.toLowerCase().includes("getusermedia")
+            ? (getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.")
+            : (rawMessage || "No fue posible iniciar la captura de la INE."),
         );
       }
     };

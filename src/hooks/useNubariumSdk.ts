@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateSdkToken } from "@/services/nubarium.service";
+import { ensureNavigatorMediaDevices } from "@/utils/nubariumSdk";
 
 const NUBARIUM_SCRIPT_URLS = [
   "https://cdn.nubarium.com/nubSdk/nubSdk@latest/nubSdk-third.min.js",
@@ -40,6 +41,7 @@ function loadScript(src: string): Promise<void> {
 
 async function loadNubariumScripts(): Promise<void> {
   if (typeof window === "undefined") return;
+  ensureNavigatorMediaDevices();
   if (typeof IdCapture !== "undefined" && typeof FaceCapture !== "undefined") return;
 
   if (!scriptsLoadPromise) {

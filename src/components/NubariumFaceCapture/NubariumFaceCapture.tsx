@@ -6,6 +6,7 @@ import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureViewport, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
   extractFaceCaptureImage,
+  getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   NUBARIUM_FACE_CAPTURE_CONFIG,
   safeClearNubariumCapture,
@@ -49,6 +50,12 @@ export function NubariumFaceCapture({
     const mountCapture = () => {
       if (cancelled) return;
 
+      const cameraAccessError = getCameraAccessErrorMessage();
+      if (cameraAccessError) {
+        setErrorMessage(cameraAccessError);
+        return;
+      }
+
       try {
         const capture = new FaceCapture();
         captureRef.current = capture;
@@ -90,10 +97,11 @@ export function NubariumFaceCapture({
           capture.start();
         });
       } catch (mountError) {
+        const rawMessage = mountError instanceof Error ? mountError.message : "";
         setErrorMessage(
-          mountError instanceof Error
-            ? mountError.message
-            : "No fue posible iniciar la prueba de vida.",
+          rawMessage.toLowerCase().includes("getusermedia")
+            ? (getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.")
+            : (rawMessage || "No fue posible iniciar la prueba de vida."),
         );
       }
     };

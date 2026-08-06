@@ -1,5 +1,72 @@
 export type NubariumCameraOption = "back" | "front" | "default";
 
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  success: (stream: MediaStream) => void,
+  error: (error: unknown) => void,
+) => void;
+
+type NavigatorWithLegacyMedia = Navigator & {
+  mediaDevices?: MediaDevices;
+  getUserMedia?: LegacyGetUserMedia;
+  webkitGetUserMedia?: LegacyGetUserMedia;
+  mozGetUserMedia?: LegacyGetUserMedia;
+};
+
+/**
+ * Polyfill mínimo para navegadores que exponen getUserMedia legacy pero no mediaDevices.
+ * ponytail: no sustituye HTTPS; en contexto inseguro la API sigue bloqueada.
+ */
+export function ensureNavigatorMediaDevices(): void {
+  if (typeof navigator === "undefined") return;
+
+  const nav = navigator as NavigatorWithLegacyMedia;
+
+  if (!nav.mediaDevices) {
+    nav.mediaDevices = {} as MediaDevices;
+  }
+
+  if (nav.mediaDevices.getUserMedia) return;
+
+  const legacyGetUserMedia =
+    nav.getUserMedia ?? nav.webkitGetUserMedia ?? nav.mozGetUserMedia;
+
+  if (!legacyGetUserMedia) return;
+
+  nav.mediaDevices.getUserMedia = (constraints) =>
+    new Promise((resolve, reject) => {
+      legacyGetUserMedia.call(nav, constraints, resolve, reject);
+    });
+}
+
+/** Mensaje en español si el navegador no puede usar la cámara; null si parece disponible. */
+export function getCameraAccessErrorMessage(): string | null {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return null;
+  }
+
+  ensureNavigatorMediaDevices();
+
+  if (!window.isSecureContext) {
+    return "La cámara solo funciona con conexión segura (HTTPS). Abre la aplicación con https:// e intenta de nuevo.";
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return "Tu navegador no permite acceder a la cámara. Usa Chrome o Safari actualizado.";
+  }
+
+  return null;
+}
+
+function isCameraAccessErrorMessage(message: string): boolean {
+  const normalized = message.trim().toLowerCase();
+  return (
+    normalized.includes("getusermedia")
+    || normalized.includes("mediadevices")
+    || normalized.includes("undefined (reading 'getusermedia')")
+  );
+}
+
 /**
  * Preferencia de cámara según el dispositivo.
  * En móvil: trasera primero (documentos / captura preferida), frontal como alternativa.
@@ -181,7 +248,12 @@ export function translateNubariumFailReason(reason: string | undefined): string 
 
 export function translateNubariumError(error: { code?: string | number; msg?: string; message?: string }): string {
   const message = error.msg ?? error.message;
-  if (message?.trim()) return message.trim();
+  if (message?.trim()) {
+    if (isCameraAccessErrorMessage(message)) {
+      return getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.";
+    }
+    return message.trim();
+  }
   if (error.code !== undefined && `${error.code}`.trim()) {
     return `Error del SDK (${error.code}).`;
   }

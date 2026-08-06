@@ -38,6 +38,8 @@ export interface Supplier {
     paymentTerm: number;
     freight: "pagado" | "cobrar";
     observations?: string;
+    accountingAccount?: string | null;
+    accountingAccountName?: string | null;
     contacts: SupplierContact[];
     creditData: CreditData;
     bankAccounts: BankAccount[];
@@ -55,4 +57,5 @@ export interface GeneralFormValues {
     paymentTerm: string;
     freight: "pagado" | "cobrar";
     observations: string;
+    accountingAccount: string;
 }

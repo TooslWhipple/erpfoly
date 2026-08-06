@@ -1,4 +1,4 @@
-import { get, post, patch } from "@/lib/axios";
+import { get, post, patch, del } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 
@@ -44,8 +44,9 @@ export interface ReceptionDetailInvoice {
   id: number;
   externalId: string;
   date: string;
+  paymentType: string;
+  origin: string;
   amount: number;
-  type: string;
 }
 
 export interface ReceptionDetail extends ReceptionListItem {
@@ -108,6 +109,7 @@ export interface CreateReceptionPayload {
   printed_labels_count?: number;
   notes?: string;
   items: CreateReceptionItemPayload[];
+  payable_invoice_ids?: number[];
 }
 
 export interface UpdateReceptionPayload {
@@ -117,6 +119,7 @@ export interface UpdateReceptionPayload {
   printed_labels_count?: number;
   notes?: string;
   items?: CreateReceptionItemPayload[];
+  payable_invoice_ids?: number[];
 }
 
 export interface SendToCostingItemPayload {
@@ -126,19 +129,27 @@ export interface SendToCostingItemPayload {
   unit_cost?: number;
 }
 
-export interface SendToCostingInvoicePayload {
-  supplier_invoice_id: number;
-  amount: number;
-}
-
 export interface SendToCostingApiPayload {
   items: SendToCostingItemPayload[];
-  invoices?: SendToCostingInvoicePayload[];
 }
 
 export interface SendToCostingApiResponse {
   receptionId: number;
   costeoId: number;
+}
+
+export interface AvailablePayableInvoice {
+  id: number;
+  invoiceNumber: string;
+  issuedAt: string;
+  paymentType: "PUE" | "PPD";
+  origin: "providers" | "administration";
+  subtotal: number;
+  iva: number;
+  total: number;
+  concept: string;
+  supplierId: number | null;
+  merchandiseReceptionId: number | null;
 }
 
 function serializeListParams(
@@ -209,5 +220,36 @@ export async function sendReceptionToCosting(
   return post<SendToCostingApiResponse>(
     `${BASE}/${receptionId}/send-to-costing`,
     payload,
+  );
+}
+
+export async function getAvailablePayableInvoices(
+  supplierId: number,
+  receptionId?: number,
+): Promise<ApiResult<AvailablePayableInvoice[]>> {
+  return get<AvailablePayableInvoice[]>("/payable-invoices/available-for-reception", {
+    params: {
+      supplierId,
+      ...(receptionId != null ? { receptionId } : {}),
+    },
+  });
+}
+
+export async function assignReceptionInvoices(
+  receptionId: number,
+  payableInvoiceIds: number[],
+): Promise<ApiResult<AvailablePayableInvoice[]>> {
+  return post<AvailablePayableInvoice[]>(
+    `/payable-invoices/receptions/${receptionId}/assign`,
+    { payable_invoice_ids: payableInvoiceIds },
+  );
+}
+
+export async function unassignReceptionInvoice(
+  receptionId: number,
+  payableInvoiceId: number,
+): Promise<ApiResult<{ success: boolean }>> {
+  return del<{ success: boolean }>(
+    `/payable-invoices/receptions/${receptionId}/${payableInvoiceId}`,
   );
 }

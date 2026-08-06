@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown } from "lucide-react";
+import { BanknoteArrowDown, Calculator, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
@@ -22,6 +22,9 @@ import {
   CATALOG_GOALS_READ,
   CATALOG_MESSAGES_READ,
   CATALOG_MORATORY_RATE_READ,
+  CATALOG_TRANSACTION_TYPES_READ,
+  CATALOG_SYSTEM_POLICIES_READ,
+  CATALOG_GENERATED_POLICIES_READ,
   CATALOG_POINTS_READ,
   CATALOG_PRODUCTS_READ,
   CATALOG_PROMOTIONS_READ,
@@ -42,8 +45,14 @@ import {
   INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
+  PAYABLE_INVOICES_READ,
+  INVOICE_REQUESTS_READ,
+  GENERAL_EXPENSES_READ,
+  SUPPLIER_PAYABLES_READ,
   ORDERS_READ,
   ROUTES_READ,
+  CATALOG_ZONES_READ,
+  CATALOG_APPORTIONMENTS_READ,
 } from "@/lib/permissions";
 import type { AccessRequirement } from "@/lib/routeAccess";
 import { ROLE_CODES } from "@/constants/role-codes";
@@ -131,7 +140,53 @@ export const NAV_ITEMS: NavItem[] = [
     icon: <HeartHandshake size={ICON_SIZE} />,
     requirement: { permission: CUSTOMER_SUPPORT_READ },
   },
+  {
+    label: "Facturas",
+    path: "/facturas",
+    icon: <Receipt size={ICON_SIZE} />,
+    requirement: {
+      anyPermissions: [
+        PAYABLE_INVOICES_READ,
+        INVOICE_REQUESTS_READ,
+        GENERAL_EXPENSES_READ,
+        SUPPLIER_PAYABLES_READ,
+      ],
+    },
+    subItems: [
+      {
+        label: "Facturas",
+        path: "/facturas",
+        requirement: { permission: PAYABLE_INVOICES_READ },
+      },
+      {
+        label: "Solicitudes",
+        path: "/facturas/solicitudes",
+        requirement: { permission: INVOICE_REQUESTS_READ },
+      },
+      {
+        label: "Interno",
+        path: "/facturas/gastos-generales",
+        requirement: { permission: GENERAL_EXPENSES_READ },
+      },
+      {
+        label: "Proveedores",
+        path: "/facturas/proveedores",
+        requirement: { permission: SUPPLIER_PAYABLES_READ },
+      },
+    ],
+  },
   { label: "Rutas", path: "/rutas", icon: <Route size={ICON_SIZE} />, requirement: { permission: ROUTES_READ } },
+  {
+    label: "Opciones contables",
+    path: "/catalogos/opciones-contables",
+    icon: <Calculator size={ICON_SIZE} />,
+    subItems: [
+      { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
+      { label: "Tipos de Transacción", path: "/catalogos/tipos-transaccion", requirement: { permission: CATALOG_TRANSACTION_TYPES_READ } },
+      { label: "Pólizas Sistema", path: "/catalogos/polizas-sistema", requirement: { permission: CATALOG_SYSTEM_POLICIES_READ } },
+      { label: "Pólizas Generadas", path: "/catalogos/polizas", requirement: { permission: CATALOG_GENERATED_POLICIES_READ } },
+    ],
+  },
   {
     label: "Catálogos",
     path: "/catalogos",
@@ -141,6 +196,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Departamentos", path: "/catalogos/departamentos", requirement: { permission: CATALOG_DEPARTMENTS_READ } },
       { label: "Promociones", path: "/catalogos/promociones", requirement: { permission: CATALOG_PROMOTIONS_READ } },
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },
+      { label: "Zonas", path: "/catalogos/zonas", requirement: { permission: CATALOG_ZONES_READ } },
       { label: "Sucursales", path: "/catalogos/sucursales", requirement: { permission: CATALOG_BRANCHES_READ } },
       { label: "Cajas", path: "/catalogos/cajas", requirement: { permission: CATALOG_CASH_REGISTERS_READ } },
       { label: "Proveedores", path: "/catalogos/proveedores", requirement: { permission: CATALOG_SUPPLIERS_READ } },

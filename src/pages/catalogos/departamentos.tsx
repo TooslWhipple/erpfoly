@@ -27,6 +27,8 @@ import {
   type SchemaOutputFromFields,
 } from "@/forms";
 import { messages } from "@/forms/validation/messages";
+import { AccountingAccountSearchField } from "@/components/AccountingAccountSearchField";
+import { FormField } from "@/forms";
 import { z } from "zod";
 
 export type { Department } from "@/services/departments.service";
@@ -38,6 +40,8 @@ type DepartmentFormShape = {
   id: string;
   name: string;
   margin: string;
+  accountingAccountInventory: string | null;
+  accountingAccountResults: string | null;
 };
 
 const departmentFormFields = defineFormFields<DepartmentFormShape>()([
@@ -73,6 +77,18 @@ const departmentFormFields = defineFormFields<DepartmentFormShape>()([
     placeholder: "32",
     helperText: "Porcentaje de margen (0-100)",
   },
+  {
+    name: "accountingAccountInventory",
+    schema: z.string().nullable(),
+    label: "Cuenta contable inventario",
+    when: () => false,
+  },
+  {
+    name: "accountingAccountResults",
+    schema: z.string().nullable(),
+    label: "Cuenta contable resultados",
+    when: () => false,
+  },
 ] as const);
 
 type DepartmentFormOutput = SchemaOutputFromFields<typeof departmentFormFields>;
@@ -86,12 +102,16 @@ function buildDepartmentFormDefaultValues(
       id: String(editing.id).padStart(2, "0"),
       name: editing.name,
       margin: String(editing.margin),
+      accountingAccountInventory: editing.accountingAccountInventory ?? editing.accountingAccount ?? null,
+      accountingAccountResults: editing.accountingAccountResults ?? null,
     };
   }
   return {
     id: nextId,
     name: "",
     margin: "",
+    accountingAccountInventory: null,
+    accountingAccountResults: null,
   };
 }
 
@@ -160,6 +180,8 @@ export default function Departamentos() {
       const result = await updateDepartment(editingDepartment.id, {
         name: data.name,
         margin: data.margin,
+        accountingAccountInventory: data.accountingAccountInventory ?? null,
+        accountingAccountResults: data.accountingAccountResults ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -171,6 +193,8 @@ export default function Departamentos() {
       const result = await createDepartment({
         name: data.name,
         margin: data.margin,
+        accountingAccountInventory: data.accountingAccountInventory ?? null,
+        accountingAccountResults: data.accountingAccountResults ?? null,
       });
       if (result.error) {
         setSaving(false);
@@ -237,6 +261,24 @@ export default function Departamentos() {
       size: "xs",
       type: "percentage",
       align: "left",
+    },
+    {
+      id: "accountingAccountInventory",
+      label: "Cuenta Inventario",
+      size: "md",
+      format: (val, row) => {
+        if (!val) return "Sin asignar";
+        return row.accountingAccountInventoryName ? `${val} - ${row.accountingAccountInventoryName}` : (val as string);
+      },
+    },
+    {
+      id: "accountingAccountResults",
+      label: "Cuenta Resultados",
+      size: "md",
+      format: (val, row) => {
+        if (!val) return "Sin asignar";
+        return row.accountingAccountResultsName ? `${val} - ${row.accountingAccountResultsName}` : (val as string);
+      },
     },
     {
       id: "groups",
@@ -324,8 +366,51 @@ export default function Departamentos() {
         confirmLabel={editingDepartment ? "Guardar" : "Crear"}
         maxWidth="sm"
         fullWidth
+        customFieldLayout
         validateOn="change"
-      />
+      >
+        {({ form }) => (
+          <Stack spacing={3}>
+            <FormField form={form} name="id" label="ID" disabled />
+            <FormField
+              form={form}
+              name="name"
+              label="Nombre de la categoría"
+              placeholder="Ej. Línea blanca"
+              required
+            />
+            <FormField
+              form={form}
+              name="margin"
+              label="Margen"
+              type="number"
+              placeholder="32"
+              helperText="Porcentaje de margen (0-100)"
+              required
+            />
+            <form.Field name="accountingAccountInventory">
+              {(field) => (
+                <AccountingAccountSearchField
+                  label="Cuenta contable inventario"
+                  placeholder="Buscar cuenta contable inventario..."
+                  value={(field.state.value as string | null) ?? ""}
+                  onChange={(val) => field.handleChange((val || null) as any)}
+                />
+              )}
+            </form.Field>
+            <form.Field name="accountingAccountResults">
+              {(field) => (
+                <AccountingAccountSearchField
+                  label="Cuenta contable resultados"
+                  placeholder="Buscar cuenta contable resultados..."
+                  value={(field.state.value as string | null) ?? ""}
+                  onChange={(val) => field.handleChange((val || null) as any)}
+                />
+              )}
+            </form.Field>
+          </Stack>
+        )}
+      </ModalFormZod>
     </>
   );
 }

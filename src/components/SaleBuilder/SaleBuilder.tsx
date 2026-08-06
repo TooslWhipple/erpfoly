@@ -1409,7 +1409,8 @@ export function SaleBuilder({
                 <Box
                   component="img"
                   src={
-                    productDetail.images[selectedImageIndex]?.imageUrl ??
+                    productDetail.images?.[selectedImageIndex]?.imageUrl ??
+                    productDetail.imageUrl ??
                     "/placeholder-product.png"
                   }
                   alt={productDetail.name}
@@ -1420,7 +1421,7 @@ export function SaleBuilder({
                   }}
                 />
               </Box>
-              {productDetail.images.length > 1 && (
+              {(productDetail.images?.length ?? 0) > 1 && (
                 <Box
                   sx={{
                     display: "flex",
@@ -1430,7 +1431,7 @@ export function SaleBuilder({
                     pb: 0.5,
                   }}
                 >
-                  {productDetail.images.map((image, index) => (
+                  {productDetail.images?.map((image, index) => (
                     <Box
                       key={image.imageUrl}
                       component="img"

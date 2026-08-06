@@ -98,6 +98,17 @@ export default function Proveedores() {
         size: "sm",
         format: (val, row) => typeLabel(row.type),
       },
+      {
+        id: "accountingAccount",
+        label: "Cuenta Contable",
+        size: "md",
+        format: (val, row) => {
+          if (!row.accountingAccount) return "Sin asignar";
+          return row.accountingAccountName
+            ? `${row.accountingAccount} - ${row.accountingAccountName}`
+            : row.accountingAccount;
+        },
+      },
     ],
     [],
   );

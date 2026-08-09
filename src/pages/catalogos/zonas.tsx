@@ -1,23 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
-import { Stack, Typography } from "@mui/material";
-import { Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
-import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import { BranchCreateModal } from "@/components/BranchCreateModal/BranchCreateModal";
-
+import { Stack } from "@mui/material";
 import {
-  getBranches as fetchBranchesApi,
-  updateBranch,
-  type Branch,
-} from "@/services/branches.service";
+  Title,
+  TableCrud,
+  TabFilters,
+  ConfirmModal,
+  ModalFormZod,
+} from "@/components";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import { FormField } from "@/forms";
+import {
+  defineFormFields,
+  messages,
+  schemas,
+  type SchemaInputFromFields,
+  type SchemaOutputFromFields,
+} from "@/forms";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { formatStreetAddressLine } from "@/utils/address";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
-  CATALOG_BRANCHES_CREATE,
-  CATALOG_BRANCHES_READ,
-  CATALOG_BRANCHES_UPDATE,
+  createZone,
+  getZones,
+  updateZone,
+} from "@/services/zones-catalog.service";
+import type { ZoneListItem } from "@/types/zones.types";
+import {
+  CATALOG_ZONES_CREATE,
+  CATALOG_ZONES_UPDATE,
 } from "@/lib/permissions";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -26,49 +36,56 @@ const ESTATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
   INACTIVE: "Inactivo",
 };
+
 const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   ACTIVE: "success",
   INACTIVE: "error",
 };
 
-type BranchStatusTab = "all" | "active" | "inactive";
+type ZoneStatusTab = "all" | "active" | "inactive";
 
-const STATUS_TABS: { value: BranchStatusTab; label: string }[] = [
+const STATUS_TABS: { value: ZoneStatusTab; label: string }[] = [
   { value: "all", label: "Todos" },
   { value: "active", label: "Activas" },
   { value: "inactive", label: "Inactivas" },
 ];
 
-function formatBranchAddress(branch: Branch) {
-  const streetLine = formatStreetAddressLine({
-    street: branch.street,
-    externalNumber: branch.externalNumber,
-    internalNumber: branch.internalNumber,
-  });
-  const localityLine = [branch.neighborhoodName, branch.municipality]
-    .map((value) => value?.trim() ?? "")
-    .filter((value) => value.length > 0)
-    .join(", ");
-  const regionLine = [branch.state, branch.postalCode]
-    .map((value) => value?.trim() ?? "")
-    .filter((value) => value.length > 0)
-    .join(", ");
+type ZoneFormShape = {
+  name: string;
+};
 
-  const lines = [streetLine, localityLine, regionLine].filter((line) => line.length > 0);
+const zoneFormFieldsBase = defineFormFields<ZoneFormShape>()([
+  {
+    name: "name",
+    schema: schemas
+      .requiredString(2, "El nombre es requerido")
+      .max(64, messages.string.max(64)),
+    label: "Nombre",
+    type: "text",
+    placeholder: "Ej. Zona Centro",
+  },
+] as const);
 
-  if (lines.length === 0) {
-    return <Typography variant="body2" color="text.secondary">Sin domicilio</Typography>
+type ZoneFormOutput = SchemaOutputFromFields<typeof zoneFormFieldsBase>;
+
+function buildDefaultValues(
+  editing: ZoneListItem | null,
+): SchemaInputFromFields<typeof zoneFormFieldsBase> {
+  if (editing) {
+    return {
+      name: editing.name,
+    };
   }
-
-  return <Typography variant="body1">{lines.join(", ")}</Typography>
+  return {
+    name: "",
+  };
 }
 
-export default function Sucursales() {
-  const router = useRouter();
+export default function ZonasCatalogPage() {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
-  const [activeTab, setActiveTab] = useState<BranchStatusTab>("all");
+  const [activeTab, setActiveTab] = useState<ZoneStatusTab>("all");
 
   const listExtraParams = useMemo(() => {
     if (activeTab === "active") return { status: "ACTIVE" as const };
@@ -77,7 +94,7 @@ export default function Sucursales() {
   }, [activeTab]);
 
   const {
-    data: branches,
+    data: rows,
     total: totalRows,
     page,
     rowsPerPage,
@@ -87,9 +104,9 @@ export default function Sucursales() {
     setSearch,
     isLoading: loading,
     refetch,
-  } = usePaginatedList<Branch>({
-    queryKey: ["branches"],
-    queryFn: fetchBranchesApi,
+  } = usePaginatedList<ZoneListItem>({
+    queryKey: ["zones"],
+    queryFn: getZones,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
@@ -109,45 +126,64 @@ export default function Sucursales() {
     handlePageChange(0);
   }, [activeTab, handlePageChange]);
 
-  const handleSearchChange = (value: string) => {
-    setSearchInput(value);
-  };
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as BranchStatusTab);
-  };
-
   const [modalState, setModalState] = useState<
-    { open: false } | { open: true; branch?: Branch }
+    { open: false } | { open: true; zone?: ZoneListItem }
   >({ open: false });
+  const [saving, setSaving] = useState(false);
+
+  const [confirmState, setConfirmState] = useState<
+    | { open: false }
+    | {
+        open: true;
+        zone: ZoneListItem;
+        target: "ACTIVE" | "INACTIVE";
+      }
+  >({ open: false });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const handleOpenCreateModal = () => {
     setModalState({ open: true });
   };
 
-  const handleOpenEditModal = (branch: Branch) => {
-    setModalState({ open: true, branch });
+  const handleOpenEditModal = (zone: ZoneListItem) => {
+    setModalState({ open: true, zone });
   };
 
   const handleCloseModal = () => {
+    if (saving) return;
     setModalState({ open: false });
   };
 
-  const handleModalSuccess = () => {
+  const handleSave = async (value: ZoneFormOutput) => {
+    setSaving(true);
+    const payload = {
+      name: value.name.trim(),
+    };
+
+    const editing = modalState.open ? modalState.zone : undefined;
+    const result = editing
+      ? await updateZone(editing.id, payload)
+      : await createZone(payload);
+
+    setSaving(false);
+
+    if (result.error) {
+      showError(result.error.message);
+      return;
+    }
+
+    setModalState({ open: false });
+    showSuccess(
+      editing ? "Zona actualizada correctamente" : "Zona creada correctamente",
+    );
     refetch();
   };
 
-  const [confirmState, setConfirmState] = useState<
-    | { open: false }
-    | { open: true; branch: Branch; target: "ACTIVE" | "INACTIVE" }
-  >({ open: false });
-  const [confirmLoading, setConfirmLoading] = useState(false);
-
-  const openConfirm = (branch: Branch) => {
-    const isActive = branch.status === "ACTIVE";
+  const openConfirm = (zone: ZoneListItem) => {
+    const isActive = zone.status === "ACTIVE";
     setConfirmState({
       open: true,
-      branch,
+      zone,
       target: isActive ? "INACTIVE" : "ACTIVE",
     });
   };
@@ -159,9 +195,9 @@ export default function Sucursales() {
 
   const handleConfirmAction = async () => {
     if (!confirmState.open) return;
-    const { branch, target } = confirmState;
+    const { zone, target } = confirmState;
     setConfirmLoading(true);
-    const result = await updateBranch(branch.id, { status: target });
+    const result = await updateZone(zone.id, { status: target });
     setConfirmLoading(false);
     if (result.error) {
       showError(result.error.message);
@@ -170,45 +206,24 @@ export default function Sucursales() {
     setConfirmState({ open: false });
     showSuccess(
       target === "ACTIVE"
-        ? "Sucursal activada correctamente"
-        : "Sucursal desactivada correctamente",
+        ? "Zona activada correctamente"
+        : "Zona desactivada correctamente",
     );
     refetch();
   };
 
-  const handleViewDetail = (branch: Branch) => {
-    router.push(`/catalogos/sucursales/${branch.id}`);
-  };
-
-  const columns: Column<Branch>[] = [
+  const columns: Column<ZoneListItem>[] = [
     {
       id: "id",
       label: "ID",
       type: "id",
       size: "xs",
-      maxSize: "xs",
       idPadding: 2,
     },
     {
       id: "name",
       label: "Nombre",
-      size: "md",
-    },
-    {
-      id: "zoneName",
-      label: "Zona",
-      size: "sm",
-      format: (value) => (
-        <Typography variant="body2" color={value ? "text.primary" : "text.secondary"}>
-          {(value as string | null) ?? "Sin zona"}
-        </Typography>
-      ),
-    },
-    {
-      id: "address",
-      label: "Domicilio",
-      size: "xl",
-      format: (_value, row) => formatBranchAddress(row),
+      size: "lg",
     },
     {
       id: "status",
@@ -218,66 +233,50 @@ export default function Sucursales() {
       chipLabelMap: ESTATUS_CHIP_LABELS,
       chipVariantMap: ESTATUS_CHIP_VARIANTS,
     },
-    {
-      id: "createdAt",
-      label: "Fecha registro",
-      type: "date",
-      size: "sm",
-    },
-    {
-      id: "updatedAt",
-      label: "Últ. actualización",
-      type: "date",
-      size: "sm",
-    },
   ];
 
-  const actions: RowAction<Branch>[] = [
-    {
-      id: "view",
-      label: "Ver detalle",
-      onClick: handleViewDetail,
-      permission: CATALOG_BRANCHES_READ,
-    },
+  const actions: RowAction<ZoneListItem>[] = [
     {
       id: "edit",
       label: "Editar",
       onClick: handleOpenEditModal,
-      permission: CATALOG_BRANCHES_UPDATE,
+      permission: CATALOG_ZONES_UPDATE,
     },
     {
       id: "toggle-status",
       label: (row) => (row.status === "ACTIVE" ? "Desactivar" : "Activar"),
       onClick: openConfirm,
       color: (row) => (row.status === "ACTIVE" ? "error" : "primary"),
-      permission: CATALOG_BRANCHES_UPDATE,
+      permission: CATALOG_ZONES_UPDATE,
     },
   ];
+
+  const editingZone = modalState.open ? modalState.zone : undefined;
 
   return (
     <>
       <Stack direction="column" spacing={3}>
-        <Title title="Sucursales" />
+        <Title title="Zonas" />
         <TabFilters
           tabs={STATUS_TABS}
           activeTab={activeTab}
-          onTabChange={handleTabChange}
+          onTabChange={(value) => setActiveTab(value as ZoneStatusTab)}
           showSearch
           searchValue={searchInput}
-          onSearchChange={handleSearchChange}
+          onSearchChange={setSearchInput}
           actions={[
             {
               label: "Nuevo",
               onClick: handleOpenCreateModal,
               variant: "contained",
-              permission: CATALOG_BRANCHES_CREATE,
-            }
+              permission: CATALOG_ZONES_CREATE,
+            },
           ]}
         />
 
         <TableCrud
           columns={columns}
-          rows={branches}
+          rows={rows}
           actions={actions}
           loading={loading}
           rowKey="id"
@@ -286,30 +285,50 @@ export default function Sucursales() {
           totalRows={totalRows}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
-          onRowClick={handleViewDetail}
           emptyMessage={
             activeTab === "inactive"
-              ? "No hay sucursales inactivas"
+              ? "No hay zonas inactivas"
               : activeTab === "active"
-                ? "No hay sucursales activas"
-                : "No hay sucursales registradas"
+                ? "No hay zonas activas"
+                : "No hay zonas registradas"
           }
         />
       </Stack>
 
-      <BranchCreateModal
+      <ModalFormZod
         key={
           modalState.open
-            ? modalState.branch
-              ? `edit-${modalState.branch.id}`
+            ? editingZone
+              ? `edit-${editingZone.id}`
               : "new"
             : "closed"
         }
         open={modalState.open}
         onClose={handleCloseModal}
-        onSuccess={handleModalSuccess}
-        branch={modalState.open ? modalState.branch : undefined}
-      />
+        title={editingZone ? "Editar zona" : "Nueva zona"}
+        fields={zoneFormFieldsBase}
+        defaultValues={buildDefaultValues(editingZone ?? null)}
+        onSubmit={handleSave}
+        loading={saving}
+        confirmLabel={editingZone ? "Guardar" : "Crear"}
+        maxWidth="sm"
+        fullWidth
+        validateOn="submit"
+        allowInvalidSubmit
+        customFieldLayout
+      >
+        {({ form }) => (
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <FormField
+              form={form}
+              name="name"
+              label="Nombre"
+              type="text"
+              placeholder="Ej. Zona Centro"
+            />
+          </Stack>
+        )}
+      </ModalFormZod>
 
       <ConfirmModal
         open={confirmState.open}
@@ -317,15 +336,15 @@ export default function Sucursales() {
         onConfirm={handleConfirmAction}
         title={
           confirmState.open && confirmState.target === "ACTIVE"
-            ? "Activar sucursal"
-            : "Desactivar sucursal"
+            ? "Activar zona"
+            : "Desactivar zona"
         }
         description={
           confirmState.open ? (
             <>
-              ¿Estás seguro de {confirmState.target === "ACTIVE" ? "activar" : "desactivar"} la
-              sucursal{" "}
-              <strong>{confirmState.branch.name}</strong>?
+              ¿Estás seguro de{" "}
+              {confirmState.target === "ACTIVE" ? "activar" : "desactivar"} la zona{" "}
+              <strong>{confirmState.zone.name}</strong>?
             </>
           ) : null
         }

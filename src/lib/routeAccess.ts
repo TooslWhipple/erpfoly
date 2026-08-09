@@ -12,6 +12,9 @@ import {
   CATALOG_GOALS_READ,
   CATALOG_MESSAGES_READ,
   CATALOG_MORATORY_RATE_READ,
+  CATALOG_TRANSACTION_TYPES_READ,
+  CATALOG_SYSTEM_POLICIES_READ,
+  CATALOG_GENERATED_POLICIES_READ,
   CATALOG_POINTS_READ,
   CATALOG_PRODUCTS_CREATE,
   CATALOG_PRODUCTS_READ,
@@ -31,6 +34,8 @@ import {
   CATALOG_USERS_CREATE,
   CATALOG_USERS_READ,
   CATALOG_USERS_UPDATE,
+  CATALOG_ZONES_READ,
+  CATALOG_APPORTIONMENTS_READ,
   CREDIT_APPLICATIONS_READ,
   CREDIT_APPLICATIONS_UPDATE,
   CUSTOMER_COLLECTION_READ,
@@ -152,6 +157,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/promociones\/nuevo$/, permission: CATALOG_PROMOTIONS_CREATE },
   { pattern: /^\/catalogos\/promociones\/[^/]+$/, permission: CATALOG_PROMOTIONS_UPDATE },
   { pattern: /^\/catalogos\/promociones(\/.*)?$/, permission: CATALOG_PROMOTIONS_READ },
+  { pattern: /^\/catalogos\/zonas(\/.*)?$/, permission: CATALOG_ZONES_READ },
+  { pattern: /^\/catalogos\/prorrateos(\/.*)?$/, permission: CATALOG_APPORTIONMENTS_READ },
   { pattern: /^\/catalogos\/sucursales\/nuevo$/, permission: CATALOG_BRANCHES_CREATE },
   { pattern: /^\/catalogos\/sucursales\/[^/]+$/, permission: CATALOG_BRANCHES_READ },
   { pattern: /^\/catalogos\/sucursales(\/.*)?$/, permission: CATALOG_BRANCHES_READ },
@@ -173,6 +180,9 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/costos-envio(\/.*)?$/, permission: CATALOG_SHIPPING_COSTS_READ },
   { pattern: /^\/catalogos\/folypuntos(\/.*)?$/, permission: CATALOG_POINTS_READ },
   { pattern: /^\/catalogos\/tasa-mora(\/.*)?$/, permission: CATALOG_MORATORY_RATE_READ },
+  { pattern: /^\/catalogos\/tipos-transaccion(\/.*)?$/, permission: CATALOG_TRANSACTION_TYPES_READ },
+  { pattern: /^\/catalogos\/polizas-sistema(\/.*)?$/, permission: CATALOG_SYSTEM_POLICIES_READ },
+  { pattern: /^\/catalogos\/polizas(\/.*)?$/, permission: CATALOG_GENERATED_POLICIES_READ },
 ];
 
 export const authorizedHomeOptions: Array<{ path: string; requirement: AccessRequirement }> = [

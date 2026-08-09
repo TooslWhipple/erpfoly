@@ -14,6 +14,8 @@ export interface SupplierListItem {
   type: SupplierTypeApi | null;
   paymentTerm: number | null;
   freight: FreightTypeApi | null;
+  accountingAccount?: string | null;
+  accountingAccountName?: string | null;
 }
 
 export interface SupplierContactItem {
@@ -86,6 +88,7 @@ export interface CreateSupplierPayload {
   paymentTerm: number;
   freight: FreightTypeApi;
   observations?: string;
+  accountingAccount?: string;
   contacts: Array<{
     id?: number;
     jobTitleId?: number | null;

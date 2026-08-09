@@ -18,6 +18,9 @@ import {
   ProductThumb,
 } from "@/styles/costeos/detail.styles";
 
+/** Hidden until received-qty editing is needed again (already handled in reception). */
+const SHOW_RECEIVED_COLUMN = false;
+
 interface CosteoArticlesTabProps {
   articles: CosteoArticle[];
   onReceivedChange: (articleId: number, received: number) => void;
@@ -53,12 +56,12 @@ export function CosteoArticlesTab({
               </TableCell>
               <TableCell>SKU</TableCell>
               <TableCell>Pedido</TableCell>
-              <TableCell align="right">Costo Neto</TableCell>
-              <TableCell align="right">Importe Neto</TableCell>
               <TableCell align="right">Costo Unitario</TableCell>
               <TableCell align="right">Costo Total</TableCell>
               <TableCell align="right">Cantidad</TableCell>
-              <TableCell align="center">Recibidos</TableCell>
+              {SHOW_RECEIVED_COLUMN && (
+                <TableCell align="center">Recibidos</TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -80,32 +83,28 @@ export function CosteoArticlesTab({
                   <TableCell>{article.sku}</TableCell>
                   <TableCell>{article.orderNumber}</TableCell>
                   <TableCell align="right">
-                    {formatCurrency(article.netCost)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(article.netAmount)}
-                  </TableCell>
-                  <TableCell align="right">
                     {formatCurrency(article.unitCost)}
                   </TableCell>
                   <TableCell align="right">
                     {formatCurrency(article.totalCost)}
                   </TableCell>
                   <TableCell align="right">{article.quantity}</TableCell>
-                  <TableCell align="center">
-                    <Stack alignItems="center">
-                      <NumberInput
-                        value={article.received}
-                        min={0}
-                        max={article.quantity}
-                        size="small"
-                        width={96}
-                        onChange={(value) =>
-                          onReceivedChange(article.id, value)
-                        }
-                      />
-                    </Stack>
-                  </TableCell>
+                  {SHOW_RECEIVED_COLUMN && (
+                    <TableCell align="center">
+                      <Stack alignItems="center">
+                        <NumberInput
+                          value={article.received}
+                          min={0}
+                          max={article.quantity}
+                          size="small"
+                          width={96}
+                          onChange={(value) =>
+                            onReceivedChange(article.id, value)
+                          }
+                        />
+                      </Stack>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             }

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { allocateArticlesForDisplay } from "@/lib/costeo/allocateExpenses";
 import {
-  addCosteoExpense,
   getCosteoById,
-  removeCosteoExpense,
   saveCosteoDetail,
 } from "@/services/costeos.service";
 import {
@@ -13,10 +12,13 @@ import {
   unassignReceptionInvoice,
   type AvailablePayableInvoice,
 } from "@/services/recepcion-mercancias.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type {
   AddCosteoExpensePayload,
   CosteoDetail,
   CosteoDetailTab,
+  CosteoExpense,
+  CosteoExpenseSummary,
 } from "@/types/costeos.types";
 
 const DETAIL_TABS: Array<{ value: CosteoDetailTab; label: string }> = [
@@ -26,13 +28,47 @@ const DETAIL_TABS: Array<{ value: CosteoDetailTab; label: string }> = [
   { value: "invoices", label: "Facturas" },
 ];
 
+const VAT_RATE = 0.16;
+
+let localExpenseSeq = -1;
+
+function nextLocalExpenseId(): number {
+  localExpenseSeq -= 1;
+  return localExpenseSeq;
+}
+
+function buildExpenseSummary(expenses: CosteoExpense[]): CosteoExpenseSummary {
+  const subtotal = expenses.reduce((sum, expense) => sum + expense.subtotal, 0);
+  const vat = expenses.reduce((sum, expense) => sum + expense.vat, 0);
+  return { subtotal, vat, total: subtotal + vat };
+}
+
+function buildLocalExpense(payload: AddCosteoExpensePayload): CosteoExpense {
+  const rate = payload.currency === "USD" ? payload.exchange_rate : 1;
+  const subtotal = payload.amount * rate;
+  const vat = subtotal * VAT_RATE;
+  return {
+    id: nextLocalExpenseId(),
+    name: payload.name,
+    currency: payload.currency,
+    exchangeRate: payload.exchange_rate,
+    amount: payload.amount,
+    subtotal,
+    vat,
+    total: subtotal + vat,
+    includedInInvoice: payload.included_in_invoice,
+  };
+}
+
 export function useCosteoDetail() {
   const router = useRouter();
   const costeoId = Number(router.query.id);
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
   const [detail, setDetail] = useState<CosteoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingCosteo, setSavingCosteo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<CosteoDetailTab>("articles");
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -74,6 +110,27 @@ export function useCosteoDetail() {
     ];
   }, [detail]);
 
+  const effectiveExchangeRate = useMemo(() => {
+    if (!detail) return 1;
+    if (isEditingExchangeRate) {
+      const draftRate = Number.parseFloat(exchangeRateDraft.replace(",", "."));
+      if (Number.isFinite(draftRate) && draftRate > 0) {
+        return draftRate;
+      }
+    }
+    return detail.exchangeRate;
+  }, [detail, isEditingExchangeRate, exchangeRateDraft]);
+
+  const costingArticles = useMemo(() => {
+    if (!detail) return [];
+    return allocateArticlesForDisplay(
+      detail.articles,
+      detail.expenses,
+      detail.affectArticlePrices,
+      effectiveExchangeRate,
+    );
+  }, [detail, effectiveExchangeRate]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value as CosteoDetailTab);
   };
@@ -95,12 +152,14 @@ export function useCosteoDetail() {
   };
 
   const handleAffectPricesChange = (checked: boolean) => {
-    setDetail((prev) => (prev ? { ...prev, affectArticlePrices: checked } : prev));
+    setDetail((prev) =>
+      prev ? { ...prev, affectArticlePrices: checked } : prev,
+    );
   };
 
   const handleSave = async () => {
-    if (!detail) return;
-    setSaving(true);
+    if (!detail || savingCosteo) return;
+    setSavingCosteo(true);
     setError(null);
     try {
       const result = await saveCosteoDetail(detail.id, {
@@ -110,13 +169,21 @@ export function useCosteoDetail() {
           id: article.id,
           received: article.received,
         })),
+        expenses: detail.expenses.map((expense) => ({
+          ...(expense.id > 0 ? { id: expense.id } : {}),
+          name: expense.name,
+          currency: expense.currency,
+          exchange_rate: expense.exchangeRate,
+          amount: expense.amount,
+          included_in_invoice: expense.includedInInvoice,
+        })),
       });
-      const saved = unwrapOrThrow(result);
-      setDetail(saved);
+      unwrapOrThrow(result);
+      showSuccess("El costeo se guardó correctamente.");
+      void router.push("/costeos");
     } catch (err) {
       setError(getApiErrorMessage(err));
-    } finally {
-      setSaving(false);
+      setSavingCosteo(false);
     }
   };
 
@@ -142,33 +209,30 @@ export function useCosteoDetail() {
 
   const handleAddExpense = async (payload: AddCosteoExpensePayload) => {
     if (!detail) return false;
-    setSaving(true);
-    try {
-      const result = await addCosteoExpense(detail.id, payload);
-      const updated = unwrapOrThrow(result);
-      setDetail(updated);
-      setExpenseModalOpen(false);
-      return true;
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-      return false;
-    } finally {
-      setSaving(false);
-    }
+    const expense = buildLocalExpense(payload);
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const expenses = [...prev.expenses, expense];
+      return {
+        ...prev,
+        expenses,
+        expenseSummary: buildExpenseSummary(expenses),
+      };
+    });
+    setExpenseModalOpen(false);
+    return true;
   };
 
-  const handleRemoveExpense = async (expenseId: number) => {
-    if (!detail) return;
-    setSaving(true);
-    try {
-      const result = await removeCosteoExpense(detail.id, expenseId);
-      const updated = unwrapOrThrow(result);
-      setDetail(updated);
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+  const handleRemoveExpense = (expenseId: number) => {
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const expenses = prev.expenses.filter((expense) => expense.id !== expenseId);
+      return {
+        ...prev,
+        expenses,
+        expenseSummary: buildExpenseSummary(expenses),
+      };
+    });
   };
 
   const loadAvailableInvoices = useCallback(async () => {
@@ -205,7 +269,18 @@ export function useCosteoDetail() {
       await assignReceptionInvoices(detail.receptionId, payableInvoiceIds);
       const refreshed = await getCosteoById(detail.id);
       const updated = unwrapOrThrow(refreshed);
-      setDetail(updated);
+      setDetail((prev) =>
+        prev
+          ? {
+              ...updated,
+              // Keep local draft expenses / switch / TC across invoice refresh.
+              expenses: prev.expenses,
+              expenseSummary: prev.expenseSummary,
+              affectArticlePrices: prev.affectArticlePrices,
+              exchangeRate: prev.exchangeRate,
+            }
+          : updated,
+      );
       setInvoiceModalOpen(false);
       void loadAvailableInvoices();
       return true;
@@ -224,7 +299,17 @@ export function useCosteoDetail() {
       await unassignReceptionInvoice(detail.receptionId, payableInvoiceId);
       const refreshed = await getCosteoById(detail.id);
       const updated = unwrapOrThrow(refreshed);
-      setDetail(updated);
+      setDetail((prev) =>
+        prev
+          ? {
+              ...updated,
+              expenses: prev.expenses,
+              expenseSummary: prev.expenseSummary,
+              affectArticlePrices: prev.affectArticlePrices,
+              exchangeRate: prev.exchangeRate,
+            }
+          : updated,
+      );
       void loadAvailableInvoices();
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -237,8 +322,11 @@ export function useCosteoDetail() {
     routerReady: router.isReady,
     costeoId,
     detail,
+    costingArticles,
+    effectiveExchangeRate,
     loading,
     saving,
+    savingCosteo,
     error,
     activeTab,
     tabs: DETAIL_TABS,

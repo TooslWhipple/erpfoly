@@ -1,4 +1,11 @@
-import { Button, IconButton, Stack, TextField, Typography } from "@mui/material";
+import {
+  Button,
+  CircularProgress,
+  IconButton,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { ArrowRight, PencilLine } from "lucide-react";
 import { Breadcrumbs, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -127,8 +134,11 @@ export function CosteoDetailHeader({
             color="primary"
             onClick={onSave}
             disabled={saving}
+            startIcon={
+              saving ? <CircularProgress size={16} color="inherit" /> : undefined
+            }
           >
-            Guardar
+            {saving ? "Guardando..." : "Guardar"}
           </Button>
         </Stack>
       </Stack>

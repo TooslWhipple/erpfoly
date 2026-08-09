@@ -47,6 +47,7 @@ export interface CosteoArticle {
   amountUsd: number;
   costMxn: number;
   amountMxn: number;
+  expensesUsd: number;
   expensesMxn: number;
   finalUnitCost: number;
 }
@@ -133,8 +134,18 @@ export interface AddCosteoExpensePayload {
   included_in_invoice: boolean;
 }
 
+export interface SaveCosteoExpensePayload {
+  id?: number;
+  name: string;
+  currency: CosteoCurrency;
+  exchange_rate: number;
+  amount: number;
+  included_in_invoice?: boolean;
+}
+
 export interface SaveCosteoDetailPayload {
   exchange_rate: number;
   affect_article_prices: boolean;
   items: Array<{ id?: number; received?: number }>;
+  expenses: SaveCosteoExpensePayload[];
 }

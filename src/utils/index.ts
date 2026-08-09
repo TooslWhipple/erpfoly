@@ -8,3 +8,4 @@ export {
   dateFormatPresets,
 } from "./date";
 export type { DateFormatPreset, DateFormatArg, DateInput, FormatDateOptions } from "./date";
+export { roundToCents } from "./number";

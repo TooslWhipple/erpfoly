@@ -36,7 +36,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.logout);
   const showError = useSnackbarStore((state) => state.showError);

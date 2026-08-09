@@ -24,15 +24,9 @@ import {
   TextField,
 } from "@mui/material";
 import {
-  Trash2,
   ScanLine,
   Pencil,
-  DollarSign,
-  CreditCard,
-  PlusCircle,
   AlertTriangle,
-} from "lucide-react";
-import {
   X,
   Search,
   ArrowLeft,
@@ -42,8 +36,40 @@ import {
   Truck,
   Package,
   Calendar,
-} from "@/components/Icons";
+  CreditCard,
+} from "lucide-react";
 import NumberSpinner from "@/components/NumberSpinner";
+import { useTheme } from "@mui/material/styles";
+import { InlineMobileMenuButton } from "@/components/Layout";
+import { SaleBuilderHeader } from "./SaleBuilderHeader";
+import { SaleCartItemRow } from "./SaleCartItem";
+import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
+import {
+  Card,
+  EmptyCartBox,
+  MainGrid,
+  PageContent,
+  PageHeader,
+  PageShell,
+  PaymentTypeRow,
+  PaymentTypeButton,
+  ProductDetailLayout,
+  ProductDetailPanel,
+  ProductGallery,
+  InventorySourceCard,
+  InventorySourceRow,
+  InventorySourceMeta,
+  InventorySourceActions,
+  SearchHeader,
+  SearchInputWrap,
+  SidebarCard,
+  StickySidebar,
+  TermPill,
+  TermPillsRow,
+  TotalBar,
+  TouchButton,
+  CheckoutGrid,
+} from "./styles";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getProductDetail,
@@ -110,6 +136,11 @@ import {
 
 const SEARCH_DEBOUNCE_MS = 350;
 
+/** Max cash payment allowed for cash (contado) sales. */
+const MAX_CASH_SALE_PAYMENT = 100_000;
+const MAX_CASH_SALE_PAYMENT_MESSAGE =
+  "No es posible realizar ventas de contado y pago en efectivo mayor a $100,000.00";
+
 const GOOGLE_MAPS_API_KEY = googleMapsBrowserApiKey;
 
 // TODO: Obtener branch real de la sesion de caja activa
@@ -120,16 +151,6 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "MXN",
   }).format(value);
-}
-
-function formatNumberInput(raw: string): string {
-  if (!raw) return "";
-  const parts = raw.split(".");
-  const intPart = Number(parts[0] || "0").toLocaleString("es-MX");
-  if (parts.length > 1) {
-    return `${intPart}.${parts[1]}`;
-  }
-  return intPart;
 }
 
 export interface SaleBuilderProps {
@@ -153,6 +174,7 @@ export function SaleBuilder({
   mode = "vendedor",
 }: SaleBuilderProps) {
   const isCajeroMode = mode === "cajero";
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [discountRequestModalOpen, setDiscountRequestModalOpen] =
@@ -612,6 +634,14 @@ export function SaleBuilder({
     mutationFn: async () => {
       if (isCardPayment && !selectedTerminal) {
         throw new Error("Selecciona una terminal para el pago con tarjeta");
+      }
+      const cashPaymentAmount =
+        parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
+      if (
+        paymentType === "CASH" &&
+        cashPaymentAmount >= MAX_CASH_SALE_PAYMENT
+      ) {
+        throw new Error(MAX_CASH_SALE_PAYMENT_MESSAGE);
       }
 
       const { id: saleId } = await ensureSaleSynced();
@@ -1214,6 +1244,8 @@ export function SaleBuilder({
   const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
+  const exceedsCashLimit =
+    paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
   const totalPaid = Math.round(cashAmtNum + cardAmtNum);
   const ENGANCHE_PCT = 0.1;
   const enganche = Math.round(totalFinal * ENGANCHE_PCT);
@@ -1236,47 +1268,34 @@ export function SaleBuilder({
 
   if (view === "search") {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            px: 3,
-            py: 2,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <IconButton size="small" onClick={() => setView("form")}>
-            <X size={18} />
+      <PageShell>
+        <SearchHeader>
+          <InlineMobileMenuButton />
+          <IconButton size="medium" onClick={() => setView("form")} aria-label="Cerrar">
+            <X size={20} />
           </IconButton>
-          <OutlinedInput
-            autoFocus
-            fullWidth
-            size="small"
-            placeholder="Búsqueda de artículos..."
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-            startAdornment={
-              <InputAdornment position="start">
-                <Search size={16} />
-              </InputAdornment>
-            }
-            sx={{ bgcolor: "background.paper" }}
-          />
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<ScanLine size={16} />}
-            sx={{ whiteSpace: "nowrap", px: 3 }}
-          >
+          <SearchInputWrap>
+            <OutlinedInput
+              autoFocus
+              fullWidth
+              size="small"
+              placeholder="Búsqueda de artículos..."
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search size={16} color={theme.palette.text.secondary} />
+                </InputAdornment>
+              }
+              sx={{ bgcolor: "background.paper" }}
+            />
+          </SearchInputWrap>
+          <TouchButton variant="outlined" startIcon={<ScanLine size={16} />}>
             Escanear artículos
-          </Button>
-        </Box>
+          </TouchButton>
+        </SearchHeader>
 
-        <Box sx={{ p: 3 }}>
+        <PageContent>
           <TableCrud<ProductSearchResult>
             columns={[
               {
@@ -1322,8 +1341,8 @@ export function SaleBuilder({
             onRowsPerPageChange={setProductLimit}
             onRowClick={handleSelectProduct}
           />
-        </Box>
-      </Box>
+        </PageContent>
+      </PageShell>
     );
   }
 
@@ -1331,63 +1350,45 @@ export function SaleBuilder({
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
 
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 3,
-            py: 2,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
+      <PageShell>
+        <PageHeader>
+          <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
+            <InlineMobileMenuButton />
             <IconButton
-              size="small"
+              size="medium"
               onClick={() => {
                 setShowOtherBranches(false);
                 setView("search");
               }}
+              aria-label="Volver"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={20} />
             </IconButton>
-            <Typography variant="subtitle1" fontWeight={600}>
+            <Typography variant="subtitle1" fontWeight={600} noWrap>
               {productDetail?.name ?? "Cargando…"}
             </Typography>
           </Stack>
-          <Button
+          <TouchButton
             variant="contained"
-            size="small"
             disabled={totalQty === 0 || !productDetail}
             onClick={handleAddToCart}
           >
             Continuar
-          </Button>
-        </Box>
+          </TouchButton>
+        </PageHeader>
 
         {detailLoading || !productDetail ? (
           <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box
-            sx={{
-              p: 3,
-              display: "flex",
-              gap: 2,
-              alignItems: "flex-start",
-            }}
-          >
-            {/* Box imagen — separado */}
+          <ProductDetailLayout>
+            <ProductGallery>
             <Paper
               variant="outlined"
               sx={{
-                width: 380,
-                flexShrink: 0,
-                borderRadius: 3,
+                width: "100%",
+                borderRadius: 2,
                 bgcolor: "background.paper",
                 display: "flex",
                 flexDirection: "column",
@@ -1457,15 +1458,16 @@ export function SaleBuilder({
                 </Box>
               )}
             </Paper>
+            </ProductGallery>
 
-            {/* Box detalle — separado */}
+            <ProductDetailPanel>
             <Paper
               variant="outlined"
               sx={{
-                flex: 1,
-                borderRadius: 3,
+                width: "100%",
+                borderRadius: 2,
                 bgcolor: "background.paper",
-                p: 4,
+                p: { xs: 2.5, md: 4 },
               }}
             >
               <Typography variant="caption" color="text.secondary">
@@ -1480,8 +1482,15 @@ export function SaleBuilder({
                 </Typography>
               )}
 
-              <Stack direction="row" spacing={4} mb={3} mt={1.5}>
-                <Box>
+              <Stack
+                direction="row"
+                spacing={{ xs: 2, md: 4 }}
+                mb={3}
+                mt={1.5}
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Box minWidth={100}>
                   <Typography variant="caption" color="text.secondary">
                     Precio original
                   </Typography>
@@ -1489,7 +1498,7 @@ export function SaleBuilder({
                     {formatCurrency(productDetail.originalPrice)}
                   </Typography>
                 </Box>
-                <Box>
+                <Box minWidth={100}>
                   <Typography variant="caption" color="text.secondary">
                     Descuento
                   </Typography>
@@ -1497,7 +1506,7 @@ export function SaleBuilder({
                     -{formatCurrency(productDetail.discountAmount)}
                   </Typography>
                 </Box>
-                <Box>
+                <Box minWidth={100}>
                   <Typography variant="caption" color="text.secondary">
                     Total
                   </Typography>
@@ -1555,155 +1564,127 @@ export function SaleBuilder({
                     const branchLocked = isBranchSourceLocked(src);
 
                     return (
-                      <Box
+                      <InventorySourceCard
                         key={src.sourceKey}
-                        sx={{
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 2,
-                          px: 2,
-                          py: 1.75,
-                          opacity: branchLocked ? 0.6 : 1,
-                        }}
+                        sx={{ opacity: branchLocked ? 0.6 : 1 }}
                       >
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          justifyContent="space-between"
-                        >
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={1.5}
-                          >
+                        <InventorySourceRow>
+                          <InventorySourceMeta>
                             <Box
-                              sx={{ color: "text.secondary", display: "flex" }}
+                              sx={{
+                                color: "text.secondary",
+                                display: "flex",
+                                flexShrink: 0,
+                              }}
                             >
                               <SourceIcon size={16} />
                             </Box>
-                            <Typography variant="body2">
+                            <Typography
+                              variant="body2"
+                              sx={{ minWidth: 0, wordBreak: "break-word" }}
+                            >
                               {sourceLabel}
                             </Typography>
-                          </Stack>
+                          </InventorySourceMeta>
 
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={2.5}
-                          >
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              spacing={2}
-                            >
-                              {isWarehouse && (
-                                <>
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={0.75}
-                                  >
-                                    <Box
-                                      sx={{
-                                        color: "text.disabled",
-                                        display: "flex",
-                                      }}
-                                    >
-                                      <Truck size={13} />
-                                    </Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      En tránsito: {src.inTransit ?? 0}
-                                    </Typography>
-                                  </Stack>
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={0.75}
-                                  >
-                                    <Box
-                                      sx={{
-                                        color: "text.disabled",
-                                        display: "flex",
-                                      }}
-                                    >
-                                      <Package size={13} />
-                                    </Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      Existencia: {src.available}
-                                    </Typography>
-                                  </Stack>
-                                  {(src.pendingOrdered ?? 0) > 0 && (
-                                    <Stack
-                                      direction="row"
-                                      alignItems="center"
-                                      spacing={0.75}
-                                    >
-                                      <Box
-                                        sx={{
-                                          color: "text.disabled",
-                                          display: "flex",
-                                        }}
-                                      >
-                                        <Package size={13} />
-                                      </Box>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        Por surtir: {src.pendingOrdered}
-                                      </Typography>
-                                    </Stack>
-                                  )}
-                                </>
-                              )}
-                              {isCurrentBranch && (
+                          <InventorySourceActions>
+                            {isWarehouse && (
+                              <>
                                 <Stack
                                   direction="row"
                                   alignItems="center"
                                   spacing={0.75}
+                                  flexShrink={0}
                                 >
-                                  <Box
-                                    sx={{
-                                      color: "text.disabled",
-                                      display: "flex",
-                                    }}
-                                  >
-                                    <Package size={13} />
-                                  </Box>
+                                  <Truck
+                                    size={13}
+                                    color={theme.palette.text.disabled}
+                                  />
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
+                                    noWrap
+                                  >
+                                    En tránsito: {src.inTransit ?? 0}
+                                  </Typography>
+                                </Stack>
+                                <Stack
+                                  direction="row"
+                                  alignItems="center"
+                                  spacing={0.75}
+                                  flexShrink={0}
+                                >
+                                  <Package
+                                    size={13}
+                                    color={theme.palette.text.disabled}
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    noWrap
                                   >
                                     Existencia: {src.available}
                                   </Typography>
                                 </Stack>
-                              )}
-                            </Stack>
-
-                            <NumberSpinner
-                              value={src.quantity}
-                              onChange={(val: number) =>
-                                handleQtyChange(
-                                  src.sourceKey,
-                                  val - src.quantity,
-                                )
-                              }
-                              min={0}
-                              // Sin `max`: se permite pedir más de lo
-                              // disponible — el excedente queda en
-                              // backorder (ver sale.service.ts addItem).
-                              disabled={branchLocked}
-                              size="small"
-                              iconSize={13}
-                            />
-                          </Stack>
-                        </Stack>
+                                {(src.pendingOrdered ?? 0) > 0 && (
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={0.75}
+                                    flexShrink={0}
+                                  >
+                                    <Package
+                                      size={13}
+                                      color={theme.palette.text.disabled}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      noWrap
+                                    >
+                                      Por surtir: {src.pendingOrdered}
+                                    </Typography>
+                                  </Stack>
+                                )}
+                              </>
+                            )}
+                            {isCurrentBranch && (
+                              <Stack
+                                direction="row"
+                                alignItems="center"
+                                spacing={0.75}
+                                flexShrink={0}
+                              >
+                                <Package
+                                  size={13}
+                                  color={theme.palette.text.disabled}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  noWrap
+                                >
+                                  Existencia: {src.available}
+                                </Typography>
+                              </Stack>
+                            )}
+                            <Box sx={{ flexShrink: 0 }}>
+                              <NumberSpinner
+                                value={src.quantity}
+                                onChange={(val: number) =>
+                                  handleQtyChange(
+                                    src.sourceKey,
+                                    val - src.quantity,
+                                  )
+                                }
+                                min={0}
+                                disabled={branchLocked}
+                                size="medium"
+                                iconSize={14}
+                              />
+                            </Box>
+                          </InventorySourceActions>
+                        </InventorySourceRow>
                         {branchLocked && lockedBranch && (
                           <Typography
                             variant="caption"
@@ -1715,7 +1696,7 @@ export function SaleBuilder({
                             {lockedBranch.label}&quot; en este ticket.
                           </Typography>
                         )}
-                      </Box>
+                      </InventorySourceCard>
                     );
                   })}
               </Stack>
@@ -1725,7 +1706,7 @@ export function SaleBuilder({
                   variant="text"
                   size="small"
                   onClick={() => setShowOtherBranches(true)}
-                  sx={{ mt: 1.5, textTransform: "none", px: 0 }}
+                  sx={{ mt: 1.5, px: 0 }}
                 >
                   Consultar existencia en otras sucursales
                 </Button>
@@ -1746,84 +1727,64 @@ export function SaleBuilder({
                       .map((src) => {
                         const branchLocked = isBranchSourceLocked(src);
                         return (
-                          <Box
+                          <InventorySourceCard
                             key={src.sourceKey}
-                            sx={{
-                              border: "1px solid",
-                              borderColor: "divider",
-                              borderRadius: 2,
-                              px: 2,
-                              py: 1.75,
-                              opacity: branchLocked ? 0.6 : 1,
-                            }}
+                            sx={{ opacity: branchLocked ? 0.6 : 1 }}
                           >
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                            >
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={1.5}
-                              >
+                            <InventorySourceRow>
+                              <InventorySourceMeta>
                                 <Box
                                   sx={{
                                     color: "text.secondary",
                                     display: "flex",
+                                    flexShrink: 0,
                                   }}
                                 >
                                   <Store size={16} />
                                 </Box>
-                                <Typography variant="body2">
+                                <Typography
+                                  variant="body2"
+                                  sx={{ minWidth: 0, wordBreak: "break-word" }}
+                                >
                                   {src.label}
                                 </Typography>
-                              </Stack>
-
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={2.5}
-                              >
+                              </InventorySourceMeta>
+                              <InventorySourceActions>
                                 <Stack
                                   direction="row"
                                   alignItems="center"
                                   spacing={0.75}
+                                  flexShrink={0}
                                 >
-                                  <Box
-                                    sx={{
-                                      color: "text.disabled",
-                                      display: "flex",
-                                    }}
-                                  >
-                                    <Package size={13} />
-                                  </Box>
+                                  <Package
+                                    size={13}
+                                    color={theme.palette.text.disabled}
+                                  />
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
+                                    noWrap
                                   >
                                     Existencia: {src.available}
                                   </Typography>
                                 </Stack>
-
-                                <NumberSpinner
-                                  value={src.quantity}
-                                  onChange={(val: number) =>
-                                    handleQtyChange(
-                                      src.sourceKey,
-                                      val - src.quantity,
-                                    )
-                                  }
-                                  min={0}
-                                  // Sin `max`: se permite pedir más de lo
-                                  // disponible — el excedente queda en
-                                  // backorder (ver sale.service.ts addItem).
-                                  disabled={branchLocked}
-                                  size="small"
-                                  iconSize={13}
-                                />
-                              </Stack>
-                            </Stack>
+                                <Box sx={{ flexShrink: 0 }}>
+                                  <NumberSpinner
+                                    value={src.quantity}
+                                    onChange={(val: number) =>
+                                      handleQtyChange(
+                                        src.sourceKey,
+                                        val - src.quantity,
+                                      )
+                                    }
+                                    min={0}
+                                    disabled={branchLocked}
+                                    size="medium"
+                                    iconSize={14}
+                                  />
+                                </Box>
+                              </InventorySourceActions>
+                            </InventorySourceRow>
                             {branchLocked && lockedBranch && (
                               <Typography
                                 variant="caption"
@@ -1835,54 +1796,41 @@ export function SaleBuilder({
                                 {lockedBranch.label}&quot; en este ticket.
                               </Typography>
                             )}
-                          </Box>
+                          </InventorySourceCard>
                         );
                       })}
                   </Stack>
                 </>
               )}
             </Paper>
-          </Box>
+            </ProductDetailPanel>
+          </ProductDetailLayout>
         )}
-      </Box>
+      </PageShell>
     );
   }
 
   if (view === "checkout") {
-    const canRegister = !cobrarMutation.isPending && totalPaid >= amountToPay;
+    const canRegister =
+      !cobrarMutation.isPending &&
+      totalPaid >= amountToPay &&
+      !exceedsCashLimit;
 
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            px: 3,
-            py: 2,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton size="small" onClick={() => setView("form")}>
-              <X size={18} />
+      <PageShell>
+        <PageHeader>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <InlineMobileMenuButton />
+            <IconButton size="medium" onClick={() => setView("form")} aria-label="Volver">
+              <X size={20} />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
               Confirmar venta
             </Typography>
           </Stack>
-        </Box>
+        </PageHeader>
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "1fr 320px",
-            gap: 3,
-            p: 3,
-            alignItems: "start",
-          }}
-        >
+        <CheckoutGrid>
           <Stack spacing={3}>
             <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
@@ -2212,295 +2160,33 @@ export function SaleBuilder({
               </Stack>
             </Paper>
 
-            <Box
-              sx={{
-                bgcolor: "rgba(25, 118, 210, 0.06)",
-                borderRadius: 2,
-                p: 2.5,
+            <SaleCheckoutPaymentPanel
+              cashAmount={cashAmount}
+              cardAmount={cardAmount}
+              onCashAmountChange={setCashAmount}
+              onCardAmountChange={setCardAmount}
+              isCardPayment={isCardPayment}
+              exceedsCashLimit={exceedsCashLimit}
+              cashLimitErrorMessage={MAX_CASH_SALE_PAYMENT_MESSAGE}
+              selectedTerminal={selectedTerminal}
+              onTerminalChange={setSelectedTerminal}
+              terminals={paymentTerminalsQuery.data ?? []}
+              terminalsLoading={paymentTerminalsQuery.isLoading}
+              showChange={paymentType !== "LAYAWAY"}
+              change={change}
+              canRegister={canRegister}
+              isPending={cobrarMutation.isPending}
+              amountToPay={amountToPay}
+              onRegister={() => {
+                if (showCheckoutDeliveryDateField && !checkoutDeliveryDate) {
+                  setDeliveryDateWarningOpen(true);
+                } else {
+                  cobrarMutation.mutate();
+                }
               }}
-            >
-              <Typography variant="body2" fontWeight={600} mb={3}>
-                Ingresa el cobro realizado a el cliente:
-              </Typography>
-
-              <Stack spacing={1.5} mb={3}>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    pb: 1.5,
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <Box
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        bgcolor: "rgba(0,0,0,0.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <DollarSign size={16} color="#666" />
-                    </Box>
-                    <Typography variant="body1" fontWeight={400}>
-                      Efectivo
-                    </Typography>
-                  </Stack>
-                  <OutlinedInput
-                    value={cashAmount ? formatNumberInput(cashAmount) : ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9.]/g, "");
-                      const parts = val.split(".");
-                      const sanitized =
-                        parts.length > 2
-                          ? parts[0] + "." + parts.slice(1).join("")
-                          : val;
-                      setCashAmount(sanitized);
-                    }}
-                    placeholder="0.00"
-                    startAdornment={
-                      <InputAdornment position="start">
-                        <Typography
-                          variant="h6"
-                          color="text.primary"
-                          sx={{ fontWeight: 400 }}
-                        >
-                          $
-                        </Typography>
-                      </InputAdornment>
-                    }
-                    sx={{
-                      width: 180,
-                      bgcolor: "transparent",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(0,0,0,0.15)",
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(0,0,0,0.25)",
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(0,0,0,0.3)",
-                      },
-                      "& input": {
-                        textAlign: "right",
-                        fontSize: "1.15rem",
-                        fontWeight: 400,
-                        py: 1.25,
-                      },
-                    }}
-                  />
-                </Stack>
-
-                <Stack
-                  spacing={1.5}
-                  sx={{
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    pb: 1.5,
-                  }}
-                >
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
-                      <Box
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: "50%",
-                          bgcolor: "rgba(0,0,0,0.08)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <CreditCard size={16} color="#666" />
-                      </Box>
-                      <Typography variant="body1" fontWeight={400}>
-                        Tarjeta
-                      </Typography>
-                    </Stack>
-                    <OutlinedInput
-                      value={cardAmount ? formatNumberInput(cardAmount) : ""}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9.]/g, "");
-                        const parts = val.split(".");
-                        const sanitized =
-                          parts.length > 2
-                            ? parts[0] + "." + parts.slice(1).join("")
-                            : val;
-                        setCardAmount(sanitized);
-                      }}
-                      placeholder="0.0"
-                      startAdornment={
-                        <InputAdornment position="start">
-                          <Typography
-                            variant="h6"
-                            color="text.primary"
-                            sx={{ fontWeight: 400 }}
-                          >
-                            $
-                          </Typography>
-                        </InputAdornment>
-                      }
-                      sx={{
-                        width: 180,
-                        bgcolor: "transparent",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(0,0,0,0.15)",
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(0,0,0,0.25)",
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(0,0,0,0.3)",
-                        },
-                        "& input": {
-                          textAlign: "right",
-                          fontSize: "1.15rem",
-                          fontWeight: 400,
-                          py: 1.25,
-                        },
-                      }}
-                    />
-                  </Stack>
-                  {isCardPayment && (
-                    <Box sx={{ pl: 5.5 }}>
-                      <Select
-                        value={selectedTerminal ?? ""}
-                        onChange={(e) =>
-                          setSelectedTerminal(Number(e.target.value) || null)
-                        }
-                        displayEmpty
-                        fullWidth
-                        disabled={paymentTerminalsQuery.isLoading}
-                        sx={{
-                          fontSize: "0.875rem",
-                          bgcolor: "rgba(0,0,0,0.02)",
-                          borderRadius: 1.5,
-                          "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "rgba(0,0,0,0.08)",
-                          },
-                          "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "rgba(0,0,0,0.15)",
-                          },
-                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "primary.main",
-                            borderWidth: 1,
-                          },
-                          "& .MuiSelect-select": {
-                            py: 1.25,
-                            px: 1.5,
-                          },
-                        }}
-                      >
-                        <MenuItem value="" disabled>
-                          {paymentTerminalsQuery.isLoading
-                            ? "Cargando terminales..."
-                            : "Selecciona una terminal"}
-                        </MenuItem>
-                        {(paymentTerminalsQuery.data ?? []).map((terminal) => (
-                          <MenuItem key={terminal.id} value={terminal.id}>
-                            <Stack
-                              direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              width="100%"
-                            >
-                              <Typography
-                                sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                              >
-                                {terminal.name}
-                              </Typography>
-                              <Chip
-                                label={terminal.bank}
-                                size="small"
-                                sx={{
-                                  height: 20,
-                                  fontSize: "0.6875rem",
-                                  fontWeight: 600,
-                                  "& .MuiChip-label": { px: 1 },
-                                }}
-                              />
-                            </Stack>
-                          </MenuItem>
-                        ))}
-                        {paymentTerminalsQuery.data?.length === 0 && (
-                          <MenuItem value="" disabled>
-                            Esta sucursal no tiene terminales activas
-                          </MenuItem>
-                        )}
-                      </Select>
-                    </Box>
-                  )}
-                </Stack>
-              </Stack>
-
-              <Button
-                variant="text"
-                size="small"
-                startIcon={<PlusCircle size={16} />}
-                sx={{
-                  textTransform: "none",
-                  color: "primary.main",
-                  mb: 3,
-                  px: 0,
-                }}
-              >
-                Agregar otra tarjeta
-              </Button>
-
-              {paymentType !== "LAYAWAY" && (
-                <Box
-                  sx={{
-                    bgcolor: "rgba(0,0,0,0.06)",
-                    borderRadius: 1.5,
-                    px: 2,
-                    py: 1.5,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 2,
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Cambio:
-                  </Typography>
-                  <Typography variant="h6" fontWeight={600}>
-                    {formatCurrency(change)}
-                  </Typography>
-                </Box>
-              )}
-
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={!canRegister}
-                onClick={() => {
-                  if (showCheckoutDeliveryDateField && !checkoutDeliveryDate) {
-                    setDeliveryDateWarningOpen(true);
-                  } else {
-                    cobrarMutation.mutate();
-                  }
-                }}
-                sx={{ borderRadius: 1.5, textTransform: "none", py: 1.5 }}
-              >
-                {cobrarMutation.isPending
-                  ? "Registrando..."
-                  : `Registrar cobro  ${formatCurrency(amountToPay)}`}
-              </Button>
-            </Box>
+            />
           </Stack>
-        </Box>
+        </CheckoutGrid>
 
         <ConfirmModal
           open={deliveryDateWarningOpen}
@@ -2566,112 +2252,47 @@ export function SaleBuilder({
             </Button>
           </Stack>
         </SideModal>
-      </Box>
+      </PageShell>
     );
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: 3,
-          py: 2,
-          bgcolor: "background.paper",
-          borderBottom: "1px solid",
-          borderColor: "divider",
+    <PageShell>
+      <SaleBuilderHeader
+        title={
+          resumeSaleId !== null && activeSaleFolio
+            ? `Cotización ${activeSaleFolio}`
+            : "Nueva venta"
+        }
+        onExit={onExit}
+        isCajeroMode={isCajeroMode}
+        isLayaway={paymentType === "LAYAWAY"}
+        canProceed={canProceed}
+        showDiscountButton={resumeSaleId !== null}
+        discountDisabled={
+          resumeSaleData?.discountRequest != null &&
+          resumeSaleData.discountRequest.status !== "INVALIDATED"
+        }
+        savePending={guardarCotizacionMutation.isPending}
+        saveDisabled={cart.length === 0}
+        registerPending={registerSaleMutation.isPending}
+        saveLabel={
+          resumeSaleId !== null ? "Actualizar cotización" : "Guardar cotización"
+        }
+        onSave={() => guardarCotizacionMutation.mutate()}
+        onDiscount={() => setDiscountRequestModalOpen(true)}
+        onRegisterSale={() => registerSaleMutation.mutate()}
+        onProceedToCheckout={() => {
+          if (paymentType === "CREDIT") {
+            setIdentityCaptureResult(null);
+            setIdentityVerificationModalOpen(true);
+          } else {
+            setView("checkout");
+          }
         }}
-      >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <IconButton size="small" onClick={onExit}>
-            <X size={18} />
-          </IconButton>
-          <Typography variant="h6" fontWeight={700}>
-            {resumeSaleId !== null && activeSaleFolio
-              ? `Cotización ${activeSaleFolio}`
-              : "Nueva venta"}
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1.5}>
-          {!isCajeroMode && (
-            <>
-              <Button
-                variant="outlined"
-                sx={{ borderRadius: 2, textTransform: "none" }}
-                disabled={
-                  cart.length === 0 || guardarCotizacionMutation.isPending
-                }
-                onClick={() => guardarCotizacionMutation.mutate()}
-              >
-                {guardarCotizacionMutation.isPending ? (
-                  <CircularProgress size={16} />
-                ) : resumeSaleId !== null ? (
-                  "Actualizar cotización"
-                ) : (
-                  "Guardar cotización"
-                )}
-              </Button>
-              {resumeSaleId !== null && (
-                <Button
-                  variant="outlined"
-                  sx={{ borderRadius: 2, textTransform: "none" }}
-                  disabled={
-                    resumeSaleData?.discountRequest != null &&
-                    resumeSaleData.discountRequest.status !== "INVALIDATED"
-                  }
-                  onClick={() => setDiscountRequestModalOpen(true)}
-                >
-                  Solicitar descuento
-                </Button>
-              )}
-            </>
-          )}
-          {/* Apartado es la excepción: sigue el flujo de cobro completo tal
-          cual hoy incluso en modo vendedor — ver SaleBuilderProps.mode. */}
-          {!isCajeroMode && paymentType !== "LAYAWAY" ? (
-            <Button
-              variant="contained"
-              disabled={!canProceed || registerSaleMutation.isPending}
-              sx={{ borderRadius: 2, textTransform: "none" }}
-              onClick={() => registerSaleMutation.mutate()}
-            >
-              {registerSaleMutation.isPending ? (
-                <CircularProgress size={16} />
-              ) : (
-                "Registrar venta (pendiente de cobro)"
-              )}
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              disabled={!canProceed}
-              sx={{ borderRadius: 2, textTransform: "none" }}
-              onClick={() => {
-                if (paymentType === "CREDIT") {
-                  setIdentityCaptureResult(null);
-                  setIdentityVerificationModalOpen(true);
-                } else {
-                  setView("checkout");
-                }
-              }}
-            >
-              Proceder al cobro
-            </Button>
-          )}
-        </Stack>
-      </Box>
+      />
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "1fr 300px",
-          gap: 3,
-          p: 3,
-          alignItems: "start",
-        }}
-      >
+      <MainGrid>
         <Stack spacing={2}>
           {resumeSaleData?.discountRequest != null && (
             <DiscountRequestStatusBanner
@@ -2689,14 +2310,16 @@ export function SaleBuilder({
               }
             />
           )}
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
+          <Card>
             <Stack
               direction="row"
               alignItems="flex-start"
               justifyContent="space-between"
-              mb={2}
+              spacing={1.5}
+              flexWrap="wrap"
+              useFlexGap
             >
-              <Box>
+              <Box minWidth={0} flex="1 1 160px">
                 <Typography variant="subtitle1" fontWeight={700}>
                   Artículos
                 </Typography>
@@ -2705,246 +2328,50 @@ export function SaleBuilder({
                 </Typography>
               </Box>
               {!isCajeroMode && (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="outlined"
-                    size="small"
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexShrink={0}
+                  sx={{ "& .MuiButton-root": { flexShrink: 0 } }}
+                >
+                  <TouchButton
+                    variant="option"
+                    color="inherit"
                     startIcon={<ScanLine size={16} />}
-                    sx={{ textTransform: "none" }}
                   >
                     Escanear artículos
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
+                  </TouchButton>
+                  <TouchButton
+                    variant="option"
+                    color="inherit"
                     startIcon={<Search size={16} />}
-                    sx={{ textTransform: "none" }}
                     onClick={() => setView("search")}
                   >
                     Buscar
-                  </Button>
+                  </TouchButton>
                 </Stack>
               )}
             </Stack>
 
             {cart.length === 0 ? (
-              <Box
-                sx={{
-                  bgcolor: "grey.100",
-                  borderRadius: 1.5,
-                  py: 5,
-                  textAlign: "center",
-                }}
-              >
+              <EmptyCartBox>
                 <Typography variant="body2" color="text.disabled">
                   No tienes artículos agregados a esta venta
                 </Typography>
-              </Box>
+              </EmptyCartBox>
             ) : (
               <>
                 <Stack spacing={1.5}>
                   {cart.map((item) => (
-                    <Paper
+                    <SaleCartItemRow
                       key={item.productId}
-                      variant="outlined"
-                      sx={{ borderRadius: 1.5, p: 2 }}
-                    >
-                      <Stack
-                        direction="row"
-                        alignItems="flex-start"
-                        spacing={1.5}
-                      >
-                        <Box
-                          component="img"
-                          src={item.imageUrl ?? "/placeholder-product.png"}
-                          alt={item.productName}
-                          sx={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 1,
-                            objectFit: "cover",
-                            flexShrink: 0,
-                            bgcolor: "grey.100",
-                          }}
-                        />
-                        <Box flex={1} minWidth={0}>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                          >
-                            Código: {item.sku}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            noWrap
-                            title={item.productName}
-                          >
-                            {item.productName}
-                          </Typography>
-                          {item.brandName && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {item.brandName}
-                            </Typography>
-                          )}
-                          {(() => {
-                            const branchSrc = item.sources.find(
-                              (s) =>
-                                s.sourceType === "branch" && s.quantity > 0,
-                            );
-                            if (
-                              !branchSrc ||
-                              branchSrc.branchId === CURRENT_BRANCH_ID
-                            )
-                              return null;
-                            return (
-                              <Chip
-                                label={branchSrc.label}
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  mt: 0.5,
-                                  height: 20,
-                                  fontSize: "0.6875rem",
-                                }}
-                              />
-                            );
-                          })()}
-                        </Box>
-                        <IconButton
-                          size="small"
-                          disabled={isCajeroMode}
-                          onClick={() => handleRemoveFromCart(item.productId)}
-                          sx={{ color: "text.secondary", flexShrink: 0 }}
-                        >
-                          <Trash2 size={16} />
-                        </IconButton>
-                      </Stack>
-
-                      {paymentType === "LAYAWAY" ? (
-                        <Stack
-                          direction="row"
-                          alignItems="flex-end"
-                          spacing={3}
-                          mt={1.5}
-                        >
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Cantidad
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.quantity}
-                            </Typography>
-                          </Box>
-                          <Box ml="auto">
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Total
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {formatCurrency(item.unitPrice * item.quantity)}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      ) : (
-                        <Stack
-                          direction="row"
-                          alignItems="flex-end"
-                          spacing={3}
-                          mt={1.5}
-                        >
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Cantidad
-                            </Typography>
-                            <NumberSpinner
-                              value={item.quantity}
-                              onChange={(val: number) =>
-                                handleCartQtyChange(
-                                  item.productId,
-                                  val - item.quantity,
-                                )
-                              }
-                              min={1}
-                              size="small"
-                              iconSize={13}
-                              disabled={isCajeroMode}
-                            />
-                          </Box>
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Precio original
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              {formatCurrency(item.originalPrice)}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Descuento
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              fontWeight={500}
-                              color="error.main"
-                            >
-                              -{formatCurrency(item.discountAmount)}
-                            </Typography>
-                          </Box>
-                          <Box ml="auto">
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                              mb={0.5}
-                            >
-                              Total
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {formatCurrency(item.unitPrice * item.quantity)}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      )}
-                      {item.backorderedQuantity > 0 && (
-                        <Chip
-                          icon={<AlertTriangle size={12} />}
-                          label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                          sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
-                        />
-                      )}
-                    </Paper>
+                      item={item}
+                      isLayaway={paymentType === "LAYAWAY"}
+                      isCajeroMode={isCajeroMode}
+                      currentBranchId={CURRENT_BRANCH_ID}
+                      onRemove={handleRemoveFromCart}
+                      onQtyChange={handleCartQtyChange}
+                    />
                   ))}
                 </Stack>
 
@@ -2983,24 +2410,14 @@ export function SaleBuilder({
                     </Stack>
                   )}
 
-                  <Box
-                    sx={{
-                      bgcolor: "grey.100",
-                      borderRadius: 1,
-                      px: 1.5,
-                      py: 1.25,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
+                  <TotalBar>
                     <Typography variant="body2" fontWeight={600}>
                       Total
                     </Typography>
                     <Typography variant="body2" fontWeight={700}>
                       {formatCurrency(totalFinal)}
                     </Typography>
-                  </Box>
+                  </TotalBar>
 
                   {paymentType === "CREDIT" && (
                     <Stack
@@ -3052,77 +2469,46 @@ export function SaleBuilder({
                           Plazo disponible:
                         </Typography>
 
-                        <Stack direction="row" spacing={1}>
+                        <TermPillsRow>
                           {layawayTerms.map((term) => (
-                            <Button
+                            <TermPill
                               key={term.id}
-                              size="small"
-                              variant={
-                                selectedLayawayTermId === term.id
-                                  ? "contained"
-                                  : "outlined"
-                              }
+                              active={selectedLayawayTermId === term.id}
                               onClick={() => setSelectedLayawayTermId(term.id)}
-                              sx={{
-                                borderRadius: 2,
-                                textTransform: "none",
-                                px: 2,
-                                py: 0.75,
-                                minWidth: 80,
-                                fontSize: "0.875rem",
-                                fontWeight:
-                                  selectedLayawayTermId === term.id ? 600 : 400,
-                                ...(selectedLayawayTermId === term.id && {
-                                  bgcolor: "primary.main",
-                                  color: "white",
-                                  "&:hover": {
-                                    bgcolor: "primary.dark",
-                                  },
-                                }),
-                              }}
                             >
                               {term.name}
-                            </Button>
+                            </TermPill>
                           ))}
-                        </Stack>
+                        </TermPillsRow>
                       </Box>
                     </>
                   )}
                 </Box>
               </>
             )}
-          </Paper>
+          </Card>
         </Stack>
 
-        <Stack spacing={2}>
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
+        <StickySidebar>
+          <SidebarCard>
             <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Tipo de venta
             </Typography>
-            <Stack direction="row" spacing={0}>
-              {PAYMENT_OPTIONS.map((opt, idx) => (
-                <Button
+            <PaymentTypeRow>
+              {PAYMENT_OPTIONS.map((opt) => (
+                <PaymentTypeButton
                   key={opt.value}
-                  size="small"
-                  variant={paymentType === opt.value ? "contained" : "outlined"}
+                  active={paymentType === opt.value}
+                  disabled={isCajeroMode}
                   onClick={() => setPaymentType(opt.value)}
-                  sx={{
-                    borderRadius: 0,
-                    flex: 1,
-                    textTransform: "none",
-                    ...(idx === 0 && { borderRadius: "4px 0 0 4px" }),
-                    ...(idx === PAYMENT_OPTIONS.length - 1 && {
-                      borderRadius: "0 4px 4px 0",
-                    }),
-                  }}
                 >
                   {opt.label}
-                </Button>
+                </PaymentTypeButton>
               ))}
-            </Stack>
-          </Paper>
+            </PaymentTypeRow>
+          </SidebarCard>
 
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
+          <SidebarCard>
             {selectedClient ? (
               <>
                 <Stack
@@ -3213,7 +2599,7 @@ export function SaleBuilder({
                 {paymentType === "CREDIT" && isClientMoroso && (
                   <Box
                     sx={{
-                      bgcolor: "rgba(211, 47, 47, 0.08)",
+                      bgcolor: theme.palette.app.chip.variants.error.background,
                       border: "1px solid",
                       borderColor: "error.main",
                       borderRadius: 1,
@@ -3240,9 +2626,9 @@ export function SaleBuilder({
                       size="small"
                       startIcon={<CreditCard size={16} />}
                       sx={{
-                        textTransform: "none",
                         justifyContent: "flex-start",
                         mt: 1.5,
+                        minHeight: 44,
                       }}
                       onClick={() => setCreditIntakeModalOpen(true)}
                     >
@@ -3282,7 +2668,7 @@ export function SaleBuilder({
                     variant="outlined"
                     size="small"
                     startIcon={<Plus size={16} />}
-                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                    sx={{ justifyContent: "flex-start", minHeight: 44 }}
                     onClick={() => setCreateClientModalOpen(true)}
                   >
                     Registrar nuevo cliente
@@ -3290,10 +2676,10 @@ export function SaleBuilder({
                 )}
               </>
             )}
-          </Paper>
+          </SidebarCard>
 
           {selectedClient && (
-            <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
+            <SidebarCard>
               <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
                 Entrega
               </Typography>
@@ -3352,10 +2738,43 @@ export function SaleBuilder({
                     (e.target.value || null) as "delivery" | "pickup" | null,
                   )
                 }
-                sx={{ mb: 1.5 }}
+                sx={{
+                  mb: 1.5,
+                  minHeight: 44,
+                  borderRadius: 1,
+                  bgcolor: "background.paper",
+                  "& .MuiSelect-select": {
+                    py: 1.25,
+                    display: "flex",
+                    alignItems: "center",
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "divider",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "text.secondary",
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "primary.main",
+                    borderWidth: 1,
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      borderRadius: 2,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      mt: 0.5,
+                      boxShadow: 2,
+                    },
+                  },
+                }}
               >
-                <MenuItem value="">
-                  <em>Selecciona un tipo de entrega</em>
+                <MenuItem value="" disabled>
+                  <Typography variant="body2" color="text.secondary">
+                    Selecciona un tipo de entrega
+                  </Typography>
                 </MenuItem>
                 <MenuItem value="delivery">A domicilio</MenuItem>
                 <MenuItem value="pickup">En tienda o bodega</MenuItem>
@@ -3522,7 +2941,7 @@ export function SaleBuilder({
                   )}
                 </>
               )}
-            </Paper>
+            </SidebarCard>
           )}
 
           <DeliveryDatePicker
@@ -3754,6 +3173,7 @@ export function SaleBuilder({
             title="Buscar cliente"
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
+            fullScreenBreakpoint="lg"
             headerActions={
               <Button
                 variant="outlined"
@@ -3831,16 +3251,17 @@ export function SaleBuilder({
                           : "Sin crédito";
                     const color =
                       status === "MOROSO"
-                        ? "#dc2626"
+                        ? theme.palette.error.main
                         : status === "ACTIVE"
-                          ? "#16a34a"
-                          : "#6b7280";
+                          ? theme.palette.success.main
+                          : theme.palette.text.secondary;
                     return (
-                      <span
-                        style={{ color, fontWeight: 600, fontSize: "0.8rem" }}
+                      <Box
+                        component="span"
+                        sx={{ color, fontWeight: 600, fontSize: "0.8rem" }}
                       >
                         {label}
-                      </span>
+                      </Box>
                     );
                   },
                 },
@@ -3930,8 +3351,8 @@ export function SaleBuilder({
               }}
             />
           )}
-        </Stack>
-      </Box>
-    </Box>
+        </StickySidebar>
+      </MainGrid>
+    </PageShell>
   );
 }

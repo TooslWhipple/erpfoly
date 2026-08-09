@@ -1,4 +1,11 @@
-import { Alert, Button, Skeleton, Stack } from "@mui/material";
+import {
+  Alert,
+  Backdrop,
+  Button,
+  CircularProgress,
+  Skeleton,
+  Stack,
+} from "@mui/material";
 import { InvoiceSelectorModal, TabFilters } from "@/components";
 import type { ActionButtonConfig } from "@/components/TabFilters";
 import { CosteoDetailHeader } from "@/components/CosteoDetail";
@@ -18,8 +25,11 @@ export default function CosteoDetailPage() {
   const {
     routerReady,
     detail,
+    costingArticles,
+    effectiveExchangeRate,
     loading,
     saving,
+    savingCosteo,
     error,
     activeTab,
     tabs,
@@ -58,6 +68,7 @@ export default function CosteoDetailPage() {
           variant: "option",
           color: "inherit",
           showIcon: true,
+          disabled: savingCosteo,
         },
       ]
       : activeTab === "invoices"
@@ -68,6 +79,7 @@ export default function CosteoDetailPage() {
             variant: "option",
             color: "inherit",
             showIcon: true,
+            disabled: savingCosteo,
           },
         ]
         : undefined;
@@ -134,86 +146,102 @@ export default function CosteoDetailPage() {
   }
 
   return (
-    <Stack spacing={3}>
-      <CosteoDetailHeader
-        breadcrumbItems={breadcrumbItems}
-        supplier={detail.supplier}
-        supplierDate={detail.supplierDate}
-        branchName={detail.branch.name}
-        deliveryDate={detail.deliveryDate}
-        receptionDate={detail.receptionDate}
-        status={detail.status}
-        exchangeRate={detail.exchangeRate}
-        isEditingExchangeRate={isEditingExchangeRate}
-        exchangeRateDraft={exchangeRateDraft}
-        saving={saving}
-        onBack={handleBack}
-        onSave={() => void handleSave()}
-        onStartEditExchangeRate={handleStartEditExchangeRate}
-        onExchangeRateDraftChange={setExchangeRateDraft}
-        onConfirmExchangeRate={handleConfirmExchangeRate}
-        onCancelExchangeRate={handleCancelExchangeRate}
-      />
-
-      {
-        error && <Alert severity="warning">{error}</Alert>
-      }
-
-      <TabFilters
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        actions={tabActions}
-      />
-
-      {
-        activeTab === "articles" &&
-        <CosteoArticlesTab
-          articles={detail.articles}
-          onReceivedChange={handleReceivedChange}
+    <>
+      <Stack
+        spacing={3}
+        sx={savingCosteo ? { pointerEvents: "none", opacity: 0.7 } : undefined}
+      >
+        <CosteoDetailHeader
+          breadcrumbItems={breadcrumbItems}
+          supplier={detail.supplier}
+          supplierDate={detail.supplierDate}
+          branchName={detail.branch.name}
+          deliveryDate={detail.deliveryDate}
+          receptionDate={detail.receptionDate}
+          status={detail.status}
+          exchangeRate={detail.exchangeRate}
+          isEditingExchangeRate={isEditingExchangeRate}
+          exchangeRateDraft={exchangeRateDraft}
+          saving={savingCosteo}
+          onBack={handleBack}
+          onSave={() => void handleSave()}
+          onStartEditExchangeRate={handleStartEditExchangeRate}
+          onExchangeRateDraftChange={setExchangeRateDraft}
+          onConfirmExchangeRate={handleConfirmExchangeRate}
+          onCancelExchangeRate={handleCancelExchangeRate}
         />
-      }
 
-      {
-        activeTab === "expenses" &&
-        <CosteoExpensesTab
-          expenses={detail.expenses}
-          summary={detail.expenseSummary}
-          affectArticlePrices={detail.affectArticlePrices}
-          onAffectPricesChange={handleAffectPricesChange}
-          onRemoveExpense={(expenseId) => void handleRemoveExpense(expenseId)}
+        {
+          error && <Alert severity="warning">{error}</Alert>
+        }
+
+        <TabFilters
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          actions={tabActions}
+          disabled={savingCosteo}
         />
-      }
 
-      {
-        activeTab === "costing" &&
-        <CosteoCostingTab articles={detail.articles} />
-      }
+        {
+          activeTab === "articles" &&
+          <CosteoArticlesTab
+            articles={detail.articles}
+            onReceivedChange={handleReceivedChange}
+          />
+        }
 
-      {
-        activeTab === "invoices" &&
-        <CosteoInvoicesTab
-          invoices={detail.invoices}
-          summary={detail.billingSummary}
+        {
+          activeTab === "expenses" &&
+          <CosteoExpensesTab
+            expenses={detail.expenses}
+            summary={detail.expenseSummary}
+            affectArticlePrices={detail.affectArticlePrices}
+            onAffectPricesChange={handleAffectPricesChange}
+            onRemoveExpense={handleRemoveExpense}
+          />
+        }
+
+        {
+          activeTab === "costing" &&
+          <CosteoCostingTab
+            articles={costingArticles}
+            exchangeRate={effectiveExchangeRate}
+          />
+        }
+
+        {
+          activeTab === "invoices" &&
+          <CosteoInvoicesTab
+            invoices={detail.invoices}
+            summary={detail.billingSummary}
+          />
+        }
+
+        <AddCosteoExpenseModal
+          open={expenseModalOpen && !savingCosteo}
+          onClose={() => setExpenseModalOpen(false)}
+          defaultExchangeRate={detail.exchangeRate}
+          saving={saving}
+          onSubmit={handleAddExpense}
         />
-      }
 
-      <AddCosteoExpenseModal
-        open={expenseModalOpen}
-        onClose={() => setExpenseModalOpen(false)}
-        defaultExchangeRate={detail.exchangeRate}
-        saving={saving}
-        onSubmit={handleAddExpense}
-      />
+        <InvoiceSelectorModal
+          open={invoiceModalOpen && !savingCosteo}
+          onClose={() => setInvoiceModalOpen(false)}
+          availableInvoices={selectableAvailableInvoices}
+          linkedInvoiceIds={linkedInvoiceIds}
+          loading={loadingAvailableInvoices}
+          onConfirm={handleConfirmInvoices}
+        />
+      </Stack>
 
-      <InvoiceSelectorModal
-        open={invoiceModalOpen}
-        onClose={() => setInvoiceModalOpen(false)}
-        availableInvoices={selectableAvailableInvoices}
-        linkedInvoiceIds={linkedInvoiceIds}
-        loading={loadingAvailableInvoices}
-        onConfirm={handleConfirmInvoices}
-      />
-    </Stack>
+      <Backdrop
+        open={savingCosteo}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 1 }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </>
   );
 }

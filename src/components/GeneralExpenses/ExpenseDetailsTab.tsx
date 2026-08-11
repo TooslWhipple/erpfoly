@@ -23,6 +23,7 @@ export interface ExpenseDetailsFormState {
   assignToSupplier: boolean;
   supplierId: string;
   supplierName: string;
+  paymentDetails: string;
   dueDate: string;
   category: string;
   isLocalPurchase: boolean;
@@ -58,6 +59,17 @@ export function ExpenseDetailsTab({
 
   return (
     <Stack spacing={2.5}>
+      {!values.assignToSupplier && (
+        <Stack spacing={0.5}>
+          <Typography variant="body2" color="text.secondary">
+            Área que solicita
+          </Typography>
+          <Typography variant="body1" fontWeight={600}>
+            Administración
+          </Typography>
+        </Stack>
+      )}
+
       <SwitchRow>
         <Typography variant="body2" fontWeight={500}>
           Asignar a proveedor
@@ -104,6 +116,18 @@ export function ExpenseDetailsTab({
             </MenuItem>
           ))}
         </FormTextField>
+      )}
+
+      {!values.assignToSupplier && (
+        <FormTextField
+          label="Detalles del pago"
+          value={values.paymentDetails}
+          onChange={(event) => onChange("paymentDetails", event.target.value)}
+          error={Boolean(errors.paymentDetails)}
+          helperText={errors.paymentDetails}
+          disabled={disabled}
+          placeholder="Pago a cuenta de servicios externos"
+        />
       )}
 
       <FormDatePicker

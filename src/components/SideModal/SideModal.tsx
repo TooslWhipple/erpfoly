@@ -26,6 +26,8 @@ export interface SideModalProps {
   disableClose?: boolean;
   contentSx?: SxProps<Theme>;
   paperSx?: SxProps<Theme>;
+  /** Breakpoint below which the modal goes fullscreen. Default: `md`. */
+  fullScreenBreakpoint?: "sm" | "md" | "lg";
 }
 
 export function SideModal({
@@ -43,9 +45,12 @@ export function SideModal({
   disableClose = false,
   contentSx,
   paperSx,
+  fullScreenBreakpoint = "md",
 }: SideModalProps) {
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const fullScreen = useMediaQuery(
+    theme.breakpoints.down(fullScreenBreakpoint),
+  );
   const panelWidth = PANEL_WIDTHS[maxWidth] ?? PANEL_WIDTHS.sm;
 
   const handleClose = (_event: object, reason: string) => {

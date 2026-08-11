@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Stack } from "@mui/material";
 import { Visibility as VisibilityIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
@@ -37,7 +37,6 @@ export type { ProductGroup } from "@/services/departments.service";
 const SEARCH_DEBOUNCE_MS = 300;
 
 type DepartmentFormShape = {
-  id: string;
   name: string;
   margin: string;
   accountingAccountInventory: string | null;
@@ -45,13 +44,6 @@ type DepartmentFormShape = {
 };
 
 const departmentFormFields = defineFormFields<DepartmentFormShape>()([
-  {
-    name: "id",
-    schema: z.string(),
-    label: "ID",
-    type: "text",
-    disabled: true,
-  },
   {
     name: "name",
     schema: schemas
@@ -95,11 +87,9 @@ type DepartmentFormOutput = SchemaOutputFromFields<typeof departmentFormFields>;
 
 function buildDepartmentFormDefaultValues(
   editing: Department | null,
-  nextId: string,
 ): SchemaInputFromFields<typeof departmentFormFields> {
   if (editing) {
     return {
-      id: String(editing.id).padStart(2, "0"),
       name: editing.name,
       margin: String(editing.margin),
       accountingAccountInventory: editing.accountingAccountInventory ?? editing.accountingAccount ?? null,
@@ -107,7 +97,6 @@ function buildDepartmentFormDefaultValues(
     };
   }
   return {
-    id: nextId,
     name: "",
     margin: "",
     accountingAccountInventory: null,
@@ -153,15 +142,9 @@ export default function Departamentos() {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const getNextId = useCallback(() => {
-    if (departments.length === 0) return "01";
-    const maxId = Math.max(...departments.map((d) => d.id));
-    return String(maxId + 1).padStart(2, "0");
-  }, [departments]);
-
   const departmentModalDefaultValues = useMemo(
-    () => buildDepartmentFormDefaultValues(editingDepartment, getNextId()),
-    [editingDepartment, getNextId],
+    () => buildDepartmentFormDefaultValues(editingDepartment),
+    [editingDepartment],
   );
 
   const handleOpenCreateModal = () => {
@@ -189,6 +172,7 @@ export default function Departamentos() {
         showError(result.error.message);
         return;
       }
+      showSnackbar("Departamento actualizado correctamente.");
     } else {
       const result = await createDepartment({
         name: data.name,
@@ -202,6 +186,7 @@ export default function Departamentos() {
         showError(result.error.message);
         return;
       }
+      showSnackbar("Departamento creado correctamente.");
     }
     setSaving(false);
     handleCloseModal();
@@ -371,7 +356,6 @@ export default function Departamentos() {
       >
         {({ form }) => (
           <Stack spacing={3}>
-            <FormField form={form} name="id" label="ID" disabled />
             <FormField
               form={form}
               name="name"

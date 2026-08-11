@@ -56,6 +56,8 @@ import {
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
+  GENERAL_EXPENSES_CREATE,
+  GENERAL_EXPENSES_UPDATE,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   ORDERS_CREATE,
@@ -142,6 +144,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
   { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+  { pattern: /^\/facturas\/gastos-generales\/nuevo$/, permission: GENERAL_EXPENSES_CREATE },
+  { pattern: /^\/facturas\/gastos-generales\/[^/]+$/, permission: GENERAL_EXPENSES_UPDATE },
   { pattern: /^\/facturas\/gastos-generales(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
   { pattern: /^\/facturas\/proveedores(\/.*)?$/, permission: SUPPLIER_PAYABLES_READ },
   {

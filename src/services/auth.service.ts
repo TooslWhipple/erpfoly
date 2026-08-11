@@ -98,6 +98,7 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"clientes-morosidad": "clientes.morosidad",
 	"clientes-cobranza": "clientes.cobranza",
 	"inventario-mercancia-danada": "inventario.mercancia_danada",
+	"inventario-hojas-recuperacion": "inventario.hojas_recuperacion",
 	"inventario-liquidaciones": "inventario.liquidaciones",
 	"recepcion-mercancias": "recepcion_mercancias",
 	"costeos": "costeos",

@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Button,
-  CircularProgress,
-  Stack,
-} from "@mui/material";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/router";
+import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { SideModal } from "@/components/SideModal";
-import { TabFilters } from "@/components/TabFilters";
+import { Breadcrumbs, TabFilters } from "@/components";
 import type { SelectOption } from "@/components/Form";
 import { sanitizeDecimal } from "@/forms/validation/schemas";
 import { buildBranchShares } from "@/data/general-expenses.mockData";
@@ -24,6 +20,7 @@ import type {
   GeneralExpenseBranchShare,
   GeneralExpenseInvoice,
   GeneralExpenseListItem,
+  GeneralExpensePayment,
 } from "@/types/general-expenses.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { ExpenseApportionmentTab } from "./ExpenseApportionmentTab";
@@ -31,13 +28,22 @@ import { ExpenseDetailsTab } from "./ExpenseDetailsTab";
 import type { ExpenseDetailsFormState } from "./ExpenseDetailsTab";
 import { ExpenseInvoicesTab } from "./ExpenseInvoicesTab";
 import { ExpensePaymentsTab } from "./ExpensePaymentsTab";
-import { ExpenseProgressBars } from "./ExpenseProgressBars";
+import { ExpenseSummaryPanel } from "./ExpenseSummaryPanel";
+import { RegisterExpensePaymentModal } from "./RegisterExpensePaymentModal";
+import {
+  ContentLayout,
+  FormCard,
+  HeaderActions,
+  MainPanel,
+  PageContainer,
+  PageHeaderRow,
+  SaveButton,
+  TabsSection,
+} from "@/styles/facturas/registerExpense.styles";
 
-type ExpenseModalTab = "details" | "invoices" | "payments" | "apportionment";
+type ExpenseFormTab = "details" | "invoices" | "payments" | "apportionment";
 
-export interface RegisterExpenseModalProps {
-  open: boolean;
-  onClose: () => void;
+export interface RegisterExpenseFormProps {
   expense?: GeneralExpenseListItem | null;
   initialSupplierName?: string;
   initialAmount?: number;
@@ -56,6 +62,7 @@ const EMPTY_DETAILS: ExpenseDetailsFormState = {
   assignToSupplier: true,
   supplierId: "",
   supplierName: "",
+  paymentDetails: "",
   dueDate: "",
   category: "",
   isLocalPurchase: false,
@@ -94,6 +101,9 @@ function validateDetails(
   if (values.assignToSupplier && !values.supplierId) {
     errors.supplierId = "Selecciona un proveedor";
   }
+  if (!values.assignToSupplier && !values.paymentDetails.trim()) {
+    errors.paymentDetails = "Ingresa los detalles del pago";
+  }
   if (!values.dueDate) {
     errors.dueDate = "Selecciona la fecha de pago";
   }
@@ -108,25 +118,26 @@ function validateDetails(
   return errors;
 }
 
-export function RegisterExpenseModal({
-  open,
-  onClose,
+export function RegisterExpenseForm({
   expense = null,
   initialSupplierName,
   initialAmount,
   initialInvoices,
   onSuccess,
-}: RegisterExpenseModalProps) {
+}: RegisterExpenseFormProps) {
+  const router = useRouter();
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const initializedRef = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<ExpenseModalTab>("details");
+  const [activeTab, setActiveTab] = useState<ExpenseFormTab>("details");
   const [details, setDetails] = useState<ExpenseDetailsFormState>(EMPTY_DETAILS);
   const [errors, setErrors] = useState<
     Partial<Record<keyof ExpenseDetailsFormState, string>>
   >({});
   const [requiresInvoice, setRequiresInvoice] = useState(true);
   const [invoices, setInvoices] = useState<GeneralExpenseInvoice[]>([]);
+  const [payments, setPayments] = useState<GeneralExpensePayment[]>([]);
   const [searchMessage, setSearchMessage] = useState<string | undefined>();
   const [apportionEnabled, setApportionEnabled] = useState(false);
   const [apportionmentType, setApportionmentType] =
@@ -139,6 +150,7 @@ export function RegisterExpenseModal({
   const [singleBranchName, setSingleBranchName] = useState("Ejercito");
   const [saving, setSaving] = useState(false);
   const [searchingInvoices, setSearchingInvoices] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const isEdit = Boolean(expense);
 
@@ -152,7 +164,6 @@ export function RegisterExpenseModal({
         label: item.label,
       })) satisfies SelectOption[];
     },
-    enabled: open,
   });
 
   const { data: categoryOptions = [] } = useQuery({
@@ -165,7 +176,6 @@ export function RegisterExpenseModal({
         label: item.label,
       })) satisfies SelectOption[];
     },
-    enabled: open,
   });
 
   const { data: responsibleOptions = [] } = useQuery({
@@ -178,32 +188,29 @@ export function RegisterExpenseModal({
         label: item.label,
       })) satisfies SelectOption[];
     },
-    enabled: open,
   });
 
   useEffect(() => {
-    if (!open) return;
-
-    setActiveTab("details");
-    setErrors({});
-    setSaving(false);
-    setSearchMessage(undefined);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     if (expense) {
       setDetails({
         assignToSupplier: expense.assignToSupplier,
         supplierId: expense.supplierId ?? "",
         supplierName: expense.supplierName,
+        paymentDetails: expense.assignToSupplier ? "" : expense.description,
         dueDate: expense.dueDate,
         category: expense.category,
         isLocalPurchase: expense.isLocalPurchase,
         responsibleId: expense.responsibleId ?? "",
         responsibleName: expense.responsibleName ?? "",
-        description: expense.description,
+        description: expense.assignToSupplier ? expense.description : "",
         amount: formatAmountInput(expense.amount),
       });
       setRequiresInvoice(expense.requiresInvoice);
       setInvoices(expense.invoices);
+      setPayments(expense.payments);
       setApportionEnabled(expense.apportionEnabled);
       setApportionmentType(expense.apportionmentType);
       setApplyToForeignBranches(expense.applyToForeignBranches);
@@ -230,16 +237,17 @@ export function RegisterExpenseModal({
     });
     setRequiresInvoice(true);
     setInvoices(initialInvoices ?? []);
+    setPayments([]);
     setApportionEnabled(false);
     setApportionmentType("sales_participation");
     setApplyToForeignBranches(true);
     setBranchShares(buildBranchShares(initialAmount ?? 0));
     setSingleBranchId("b1");
     setSingleBranchName("Ejercito");
-  }, [expense, initialAmount, initialInvoices, initialSupplierName, open]);
+  }, [expense, initialAmount, initialInvoices, initialSupplierName]);
 
   useEffect(() => {
-    if (!open || expense || !initialSupplierName || supplierOptions.length === 0) {
+    if (expense || !initialSupplierName || supplierOptions.length === 0) {
       return;
     }
     const matchedSupplier = supplierOptions.find(
@@ -251,10 +259,10 @@ export function RegisterExpenseModal({
       supplierId: String(matchedSupplier.value),
       supplierName: matchedSupplier.label,
     }));
-  }, [expense, initialSupplierName, open, supplierOptions]);
+  }, [expense, initialSupplierName, supplierOptions]);
 
   const amountNumber = parseAmount(details.amount);
-  const paidAmount = expense?.paidAmount ?? 0;
+  const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const invoicesAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
 
   useEffect(() => {
@@ -311,16 +319,10 @@ export function RegisterExpenseModal({
   }, [showError]);
 
   useEffect(() => {
-    if (!open || !requiresInvoice || isEdit) return;
+    if (!requiresInvoice || isEdit) return;
     if (!details.supplierId) return;
     void loadSupplierInvoices(details.supplierId);
-  }, [
-    details.supplierId,
-    isEdit,
-    loadSupplierInvoices,
-    open,
-    requiresInvoice,
-  ]);
+  }, [details.supplierId, isEdit, loadSupplierInvoices, requiresInvoice]);
 
   const handleBranchPercentageChange = (branchId: string, percentage: number) => {
     setBranchShares((prev) =>
@@ -351,6 +353,18 @@ export function RegisterExpenseModal({
     );
   };
 
+  const buildDescription = (): string => {
+    if (details.assignToSupplier) {
+      return details.description.trim();
+    }
+    const paymentDetails = details.paymentDetails.trim();
+    const extraDescription = details.description.trim();
+    if (paymentDetails && extraDescription) {
+      return `${paymentDetails}. ${extraDescription}`;
+    }
+    return paymentDetails || extraDescription;
+  };
+
   const buildPayload = (): CreateGeneralExpensePayload => ({
     assignToSupplier: details.assignToSupplier,
     supplierId: details.assignToSupplier ? details.supplierId || null : null,
@@ -362,7 +376,7 @@ export function RegisterExpenseModal({
     isLocalPurchase: details.isLocalPurchase,
     responsibleId: details.responsibleId || null,
     responsibleName: details.responsibleName || null,
-    description: details.description.trim(),
+    description: buildDescription(),
     amount: amountNumber,
     requiresInvoice,
     invoices: requiresInvoice ? invoices : [],
@@ -403,105 +417,147 @@ export function RegisterExpenseModal({
         expense ? "Gasto actualizado correctamente" : "Gasto registrado correctamente",
       );
       onSuccess?.(result.data);
-      onClose();
+      void router.push("/facturas/gastos-generales");
     } finally {
       setSaving(false);
     }
   };
 
-  const headerActions = useMemo(
-    () => (
-      <Button
-        variant="contained"
-        color="primary"
-        disabled={saving}
-        onClick={() => void handleSubmit()}
-        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
-      >
-        Registrar
-      </Button>
-    ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [saving, details, invoices, requiresInvoice, apportionEnabled, branchShares],
+  const handleBack = () => {
+    void router.push("/facturas/gastos-generales");
+  };
+
+  const handleRegisterPayment = (payment: Omit<GeneralExpensePayment, "id">) => {
+    setPayments((prev) => [
+      ...prev,
+      {
+        ...payment,
+        id: `payment-${Date.now()}`,
+      },
+    ]);
+    setPaymentModalOpen(false);
+    showSuccess("Pago registrado correctamente");
+  };
+
+  const breadcrumbItems = useMemo(
+    () => [
+      {
+        label: "Interno - Cuentas por pagar",
+        href: "/facturas/gastos-generales",
+      },
+      { label: isEdit ? "Editar gasto" : "Registrar gasto" },
+    ],
+    [isEdit],
   );
 
   return (
-    <SideModal
-      open={open}
-      onClose={onClose}
-      title="Registrar gasto"
-      description="Completa la información para registrar el nuevo gasto."
-      maxWidth="md"
-      disableClose={saving}
-      headerContent={
-        <ExpenseProgressBars
+    <PageContainer>
+      <Breadcrumbs
+        items={breadcrumbItems}
+        showBackButton
+        onBack={handleBack}
+      />
+
+      <PageHeaderRow>
+        <Typography variant="h2">
+          {isEdit ? "Editar gasto" : "Registrar gasto"}
+        </Typography>
+        <HeaderActions>
+          <SaveButton
+            variant="contained"
+            color="primary"
+            disabled={saving}
+            onClick={() => void handleSubmit()}
+            startIcon={
+              saving ? <CircularProgress size={16} color="inherit" /> : undefined
+            }
+          >
+            Guardar
+          </SaveButton>
+        </HeaderActions>
+      </PageHeaderRow>
+
+      <TabsSection>
+        <TabFilters
+          tabs={TAB_ITEMS}
+          activeTab={activeTab}
+          onTabChange={(value) => setActiveTab(value as ExpenseFormTab)}
+          disabled={saving}
+        />
+      </TabsSection>
+
+      <ContentLayout>
+        <MainPanel>
+          <FormCard>
+            {activeTab === "details" && (
+              <ExpenseDetailsTab
+                values={details}
+                supplierOptions={supplierOptions}
+                categoryOptions={categoryOptions}
+                responsibleOptions={responsibleOptions}
+                errors={errors}
+                onChange={handleDetailsChange}
+                disabled={saving}
+              />
+            )}
+
+            {activeTab === "invoices" && (
+              <ExpenseInvoicesTab
+                requiresInvoice={requiresInvoice}
+                onRequiresInvoiceChange={setRequiresInvoice}
+                invoices={invoices}
+                searching={searchingInvoices}
+                searchMessage={searchMessage}
+                onRemoveInvoice={(invoiceId) =>
+                  setInvoices((prev) => prev.filter((item) => item.id !== invoiceId))
+                }
+                onUploadFiles={handleUploadFiles}
+                disabled={saving}
+              />
+            )}
+
+            {activeTab === "payments" && (
+              <ExpensePaymentsTab
+                payments={payments}
+                onAddPayment={() => setPaymentModalOpen(true)}
+                disabled={saving}
+              />
+            )}
+
+            {activeTab === "apportionment" && (
+              <ExpenseApportionmentTab
+                apportionEnabled={apportionEnabled}
+                onApportionEnabledChange={setApportionEnabled}
+                apportionmentType={apportionmentType}
+                onApportionmentTypeChange={setApportionmentType}
+                applyToForeignBranches={applyToForeignBranches}
+                onApplyToForeignBranchesChange={setApplyToForeignBranches}
+                branchShares={branchShares}
+                onBranchPercentageChange={handleBranchPercentageChange}
+                singleBranchId={singleBranchId}
+                singleBranchName={singleBranchName}
+                onSingleBranchChange={(branchId, branchName) => {
+                  setSingleBranchId(branchId);
+                  setSingleBranchName(branchName);
+                }}
+                disabled={saving}
+              />
+            )}
+          </FormCard>
+        </MainPanel>
+
+        <ExpenseSummaryPanel
           paidAmount={paidAmount}
           invoicesAmount={invoicesAmount}
           totalAmount={amountNumber}
         />
-      }
-      headerActions={headerActions}
-      headerActionsPosition="top"
-    >
-      <Stack spacing={2}>
-        <TabFilters
-          tabs={TAB_ITEMS}
-          activeTab={activeTab}
-          onTabChange={(value) => setActiveTab(value as ExpenseModalTab)}
-          disabled={saving}
-        />
+      </ContentLayout>
 
-        {activeTab === "details" && (
-          <ExpenseDetailsTab
-            values={details}
-            supplierOptions={supplierOptions}
-            categoryOptions={categoryOptions}
-            responsibleOptions={responsibleOptions}
-            errors={errors}
-            onChange={handleDetailsChange}
-            disabled={saving}
-          />
-        )}
-
-        {activeTab === "invoices" && (
-          <ExpenseInvoicesTab
-            requiresInvoice={requiresInvoice}
-            onRequiresInvoiceChange={setRequiresInvoice}
-            invoices={invoices}
-            searching={searchingInvoices}
-            searchMessage={searchMessage}
-            onRemoveInvoice={(invoiceId) =>
-              setInvoices((prev) => prev.filter((item) => item.id !== invoiceId))
-            }
-            onUploadFiles={handleUploadFiles}
-            disabled={saving}
-          />
-        )}
-
-        {activeTab === "payments" && (
-          <ExpensePaymentsTab payments={expense?.payments ?? []} />
-        )}
-
-        {activeTab === "apportionment" && (
-          <ExpenseApportionmentTab
-            apportionEnabled={apportionEnabled}
-            onApportionEnabledChange={setApportionEnabled}
-            apportionmentType={apportionmentType}
-            onApportionmentTypeChange={setApportionmentType}
-            applyToForeignBranches={applyToForeignBranches}
-            onApplyToForeignBranchesChange={setApplyToForeignBranches}
-            branchShares={branchShares}
-            onBranchPercentageChange={handleBranchPercentageChange}
-            singleBranchId={singleBranchId}
-            singleBranchName={singleBranchName}
-            onSingleBranchChange={(branchId, branchName) => {
-              setSingleBranchId(branchId);
-              setSingleBranchName(branchName);
-            }}
-            disabled={saving}
-          />
-        )}
-      </Stack>
-    </SideModal>
+      <RegisterExpensePaymentModal
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSubmit={handleRegisterPayment}
+      />
+    </PageContainer>
   );
 }

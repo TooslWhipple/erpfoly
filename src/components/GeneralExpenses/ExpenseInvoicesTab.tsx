@@ -51,9 +51,7 @@ export function ExpenseInvoicesTab({
     <Stack spacing={2.5}>
       <SwitchRow>
         <Typography variant="body2" fontWeight={500}>
-          {requiresInvoice
-            ? "Este gasto sí requiere factura"
-            : "Este gasto no requiere factura"}
+          Este gasto es deducible
         </Typography>
         <Switch
           checked={requiresInvoice}

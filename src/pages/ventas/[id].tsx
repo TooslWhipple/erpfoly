@@ -8,7 +8,6 @@ import {
   CardContent,
   Chip,
   Divider,
-  Grid,
   IconButton,
   MenuItem,
   Skeleton,
@@ -16,8 +15,29 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { CheckCircle, Truck, Store, Clock, XCircle, FileCode, FileText, Archive, AlertTriangle } from "lucide-react";
-import { X, Calendar } from "@/components/Icons";
+import { useTheme } from "@mui/material/styles";
+import {
+  Archive,
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  FileCode,
+  FileText,
+  Store,
+  Truck,
+  X,
+  XCircle,
+} from "lucide-react";
+import { StatusChip } from "@/components";
+import { InlineMobileMenuButton } from "@/components/Layout";
+import type { StatusChipVariant } from "@/components/StatusChip/styles";
+import {
+  DetailGrid,
+  DetailHeader,
+  DetailPageShell,
+  InvoiceActionsGrid,
+} from "@/styles/ventas/detalle.styles";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -42,18 +62,21 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder } from "@/components/SaleBuilder";
 
-function layawayStatusMeta(status: string) {
+function layawayStatusMeta(status: string): {
+  label: string;
+  variant: StatusChipVariant;
+} {
   switch (status) {
     case "ACTIVE":
-      return { label: "Activo", color: "#2563EB", bg: "#EFF6FF" };
+      return { label: "Activo", variant: "info" };
     case "COMPLETED":
-      return { label: "Completado", color: "#16A34A", bg: "#DCFCE7" };
+      return { label: "Completado", variant: "success" };
     case "EXPIRED":
-      return { label: "Vencido", color: "#DC2626", bg: "#FEE2E2" };
+      return { label: "Vencido", variant: "error" };
     case "CANCELLED":
-      return { label: "Cancelado", color: "#6B7280", bg: "#F4F4F5" };
+      return { label: "Cancelado", variant: "disabled" };
     default:
-      return { label: status, color: "#6B7280", bg: "#F4F4F5" };
+      return { label: status, variant: "default" };
   }
 }
 
@@ -82,6 +105,7 @@ function formatCurrency(value: number) {
 }
 
 export default function VentaDetalle() {
+  const theme = useTheme();
   const router = useRouter();
   const { id, nuevo } = router.query;
   const saleId = id ? Number(id) : null;
@@ -314,20 +338,16 @@ export default function VentaDetalle() {
 
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <DetailPageShell sx={{ p: 3 }}>
         <Stack direction="row" spacing={2} mb={3}>
           <Skeleton variant="circular" width={32} height={32} />
           <Skeleton variant="text" width={220} height={36} />
         </Stack>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Skeleton variant="rounded" height={200} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Skeleton variant="rounded" height={300} />
-          </Grid>
-        </Grid>
-      </Box>
+        <DetailGrid>
+          <Skeleton variant="rounded" height={200} />
+          <Skeleton variant="rounded" height={300} />
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
 
@@ -371,60 +391,47 @@ export default function VentaDetalle() {
   const isDraftSale = sale.status === "DRAFT";
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#fafafa", minHeight: "100vh" }}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
-      >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <IconButton
-            size="small"
-            onClick={() => router.push("/ventas")}
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 1.5,
-              bgcolor: "#fff",
-            }}
-          >
-            <X size={16} />
-          </IconButton>
-          <Typography variant="h5" fontWeight={700}>
-            Detalle de la venta
-          </Typography>
-          {isSaleCancelled && (
-            <Chip
-              label="Cancelada"
-              size="small"
-              sx={{
-                bgcolor: "#FEF2F2",
-                color: "#DC2626",
-                fontWeight: 600,
-              }}
-            />
-          )}
-        </Stack>
-      </Stack>
+    <DetailPageShell sx={{ p: { xs: 2, md: 3 } }}>
+      <DetailHeader>
+        <InlineMobileMenuButton />
+        <IconButton
+          size="medium"
+          onClick={() => router.push("/ventas")}
+          aria-label="Volver a ventas"
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1.5,
+            bgcolor: "background.paper",
+          }}
+        >
+          <X size={18} />
+        </IconButton>
+        <Typography variant="h5" fontWeight={700}>
+          Detalle de la venta
+        </Typography>
+        {isSaleCancelled && (
+          <StatusChip label="Cancelada" size="small" variant="error" />
+        )}
+      </DetailHeader>
 
-      <Divider sx={{ mb: 3, mx: -3, borderColor: "#E4E4E7" }} />
+      <Divider sx={{ mb: 3, borderColor: "divider" }} />
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 7 }}>
+      <DetailGrid>
+        <Box>
           {isNew && (
             <Alert
-              icon={<CheckCircle size={18} />}
+              icon={<CheckCircle size={18} color={theme.palette.success.main} />}
               severity="success"
               sx={{
                 mb: 3,
                 fontWeight: 500,
-                bgcolor: "#BBF7D0",
+                bgcolor: "success.light",
                 borderRadius: 2,
                 py: 1,
                 px: 1.5,
                 color: "text.primary",
-                "& .MuiAlert-icon": { color: "#16a34a", mr: 1 },
+                "& .MuiAlert-icon": { color: "success.main", mr: 1 },
               }}
             >
               Venta registrada con éxito
@@ -433,9 +440,9 @@ export default function VentaDetalle() {
           <Card
             elevation={0}
             sx={{
-              borderRadius: 4,
-              bgcolor: "#fff",
-              border: "1px solid rgba(0,0,0,0.05)",
+              borderRadius: 2,
+              bgcolor: "background.paper",
+              border: "1px solid", borderColor: "divider",
             }}
           >
             <CardContent sx={{ p: 3 }}>
@@ -443,7 +450,7 @@ export default function VentaDetalle() {
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
                   <Box
                     sx={{
-                      bgcolor: "#FEF2F2",
+                      bgcolor: theme.palette.app.chip.variants.error.background,
                       borderRadius: 2,
                       p: 1,
                       display: "flex",
@@ -452,7 +459,7 @@ export default function VentaDetalle() {
                       flexShrink: 0,
                     }}
                   >
-                    <XCircle size={20} color="#DC2626" />
+                    <XCircle size={20} color={theme.palette.error.main} />
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
@@ -467,7 +474,7 @@ export default function VentaDetalle() {
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
                   <Box
                     sx={{
-                      bgcolor: "#FFFBEB",
+                      bgcolor: theme.palette.app.chip.variants.infoAlt.background,
                       borderRadius: 2,
                       p: 1,
                       display: "flex",
@@ -476,7 +483,7 @@ export default function VentaDetalle() {
                       flexShrink: 0,
                     }}
                   >
-                    <Clock size={20} color="#D97706" />
+                    <Clock size={20} color={theme.palette.warning.main} />
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
@@ -491,7 +498,7 @@ export default function VentaDetalle() {
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={3}>
                   <Box
                     sx={{
-                      bgcolor: "#EFF6FF",
+                      bgcolor: theme.palette.app.background.lowerBlue,
                       borderRadius: 2,
                       p: 1,
                       display: "flex",
@@ -500,7 +507,7 @@ export default function VentaDetalle() {
                       flexShrink: 0,
                     }}
                   >
-                    <Truck size={20} color="#1976d2" />
+                    <Truck size={20} color={theme.palette.primary.main} />
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
@@ -516,7 +523,7 @@ export default function VentaDetalle() {
                 <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
                   <Box
                     sx={{
-                      bgcolor: "#EFF6FF",
+                      bgcolor: theme.palette.app.background.lowerBlue,
                       borderRadius: 2,
                       p: 1,
                       display: "flex",
@@ -526,9 +533,9 @@ export default function VentaDetalle() {
                     }}
                   >
                     {sale.deliveryType === 'BRANCH' ? (
-                      <Store size={20} color="#1976d2" />
+                      <Store size={20} color={theme.palette.primary.main} />
                     ) : (
-                      <Truck size={20} color="#1976d2" />
+                      <Truck size={20} color={theme.palette.primary.main} />
                     )}
                   </Box>
                   <Box>
@@ -655,9 +662,9 @@ export default function VentaDetalle() {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Box>
           <Typography variant="h6" fontWeight={700} mb={2}>
             Resumen de la venta
           </Typography>
@@ -667,9 +674,9 @@ export default function VentaDetalle() {
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                bgcolor: "#fff",
-                border: "1px solid #E4E4E7",
+                borderRadius: 2,
+                bgcolor: "background.paper",
+                border: "1px solid", borderColor: "divider",
                 mb: 2,
               }}
             >
@@ -681,71 +688,44 @@ export default function VentaDetalle() {
                   Descarga de archivos fiscales almacenados en el sistema
                 </Typography>
 
-                <Grid container spacing={1}>
-                  <Grid size={{ xs: 4 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      startIcon={<FileCode size={15} />}
-                      disabled={downloadingType === "xml"}
-                      onClick={() => handleDownloadInvoice("xml")}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderColor: "#D1D5DB",
-                        color: "#374151",
-                        "&:hover": { borderColor: "#9CA3AF", bgcolor: "#F9FAFB" },
-                      }}
-                    >
-                      XML
-                    </Button>
-                  </Grid>
-
-                  <Grid size={{ xs: 4 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      startIcon={<FileText size={15} />}
-                      disabled={downloadingType === "pdf"}
-                      onClick={() => handleDownloadInvoice("pdf")}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderColor: "#FCA5A5",
-                        color: "#DC2626",
-                        bgcolor: "#FEF2F2",
-                        "&:hover": { borderColor: "#F87171", bgcolor: "#FEE2E2" },
-                      }}
-                    >
-                      PDF
-                    </Button>
-                  </Grid>
-
-                  <Grid size={{ xs: 4 }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="small"
-                      startIcon={<Archive size={15} />}
-                      disabled={downloadingType === "zip"}
-                      onClick={() => handleDownloadInvoice("zip")}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        bgcolor: "#1E293B",
-                        color: "#fff",
-                        "&:hover": { bgcolor: "#0F172A" },
-                      }}
-                    >
-                      ZIP
-                    </Button>
-                  </Grid>
-                </Grid>
+                <InvoiceActionsGrid>
+                  <Button
+                    fullWidth
+                    variant="option"
+                    color="inherit"
+                    size="small"
+                    startIcon={<FileCode size={15} />}
+                    disabled={downloadingType === "xml"}
+                    onClick={() => handleDownloadInvoice("xml")}
+                    sx={{ minHeight: 44 }}
+                  >
+                    XML
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    startIcon={<FileText size={15} />}
+                    disabled={downloadingType === "pdf"}
+                    onClick={() => handleDownloadInvoice("pdf")}
+                    sx={{ minHeight: 44 }}
+                  >
+                    PDF
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    startIcon={<Archive size={15} />}
+                    disabled={downloadingType === "zip"}
+                    onClick={() => handleDownloadInvoice("zip")}
+                    sx={{ minHeight: 44 }}
+                  >
+                    ZIP
+                  </Button>
+                </InvoiceActionsGrid>
               </CardContent>
             </Card>
           )}
@@ -754,8 +734,8 @@ export default function VentaDetalle() {
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                bgcolor: "#F4F4F5",
+                borderRadius: 2,
+                bgcolor: "background.lowerGray",
               }}
             >
               <CardContent sx={{ p: 2 }}>
@@ -828,8 +808,8 @@ export default function VentaDetalle() {
             <Card
               elevation={0}
               sx={{
-                borderRadius: 4,
-                bgcolor: "#F4F4F5",
+                borderRadius: 2,
+                bgcolor: "background.lowerGray",
               }}
             >
               <CardContent sx={{ p: 2 }}>
@@ -911,8 +891,8 @@ export default function VentaDetalle() {
               <Card
                 elevation={0}
                 sx={{
-                  borderRadius: 4,
-                  bgcolor: "#F4F4F5",
+                  borderRadius: 2,
+                  bgcolor: "background.lowerGray",
                 }}
               >
                 <CardContent sx={{ p: 2 }}>
@@ -923,19 +903,11 @@ export default function VentaDetalle() {
                     {(() => {
                       const meta = layawayStatusMeta(sale.layaway.status);
                       return (
-                        <Box
-                          sx={{
-                            bgcolor: meta.bg,
-                            color: meta.color,
-                            borderRadius: 1,
-                            px: 1,
-                            py: 0.25,
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {meta.label}
-                        </Box>
+                        <StatusChip
+                          label={meta.label}
+                          size="small"
+                          variant={meta.variant}
+                        />
                       );
                     })()}
                   </Stack>
@@ -1128,8 +1100,8 @@ export default function VentaDetalle() {
               <Card
                 elevation={0}
                 sx={{
-                  borderRadius: 4,
-                  bgcolor: "#F4F4F5",
+                  borderRadius: 2,
+                  bgcolor: "background.lowerGray",
                 }}
               >
                 <CardContent sx={{ p: 2 }}>
@@ -1212,8 +1184,8 @@ export default function VentaDetalle() {
               </Card>
             )}
           </Stack>
-        </Grid>
-      </Grid>
+        </Box>
+      </DetailGrid>
 
       <DeliveryDatePicker
         open={deliveryModalOpen}
@@ -1254,6 +1226,6 @@ export default function VentaDetalle() {
         cancelLabel="Volver"
         confirmColor="error"
       />
-    </Box>
+    </DetailPageShell>
   );
 }

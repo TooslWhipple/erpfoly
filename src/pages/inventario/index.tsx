@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   GridView as GridViewIcon,
@@ -8,7 +8,7 @@ import {
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import { Box, Grid, Skeleton, Stack } from "@mui/material";
+import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -18,266 +18,103 @@ import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { INVENTORY_COLORS } from "@/styles/inventario/styles";
 import { INVENTORY_READ } from "@/lib/permissions";
-interface InventoryItem {
-  id: number;
-  code: string;
-  status: "active" | "inactive";
-  name: string;
-  department: string;
-  line: string;
-  inStock: number;
-  inTransit: number;
-  damaged: number;
-}
-interface GetInventoryParams {
-  page: number;
-  limit: number;
-  search?: string;
-  status?: "all" | "active" | "inactive";
-}
-interface GetInventoryResponse {
-  data: InventoryItem[];
-  total: number;
-  page: number;
-  limit: number;
-}
-interface InventoryStats {
-  totalItems: number;
-  inStock: number;
-  inTransit: number;
-  damaged: number;
-}
-const DUMMY_INVENTORY: InventoryItem[] = [
-  {
-    id: 1,
-    code: "04ET 12345",
-    status: "active",
-    name: "Lavadora Mabe 22kg LMH72205WBAB0",
-    department: "04 - Línea Blanca",
-    line: "LV - Lavadora",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 2,
-    code: "04ET 12345",
-    status: "inactive",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 3,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 4,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 5,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 6,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 7,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 8,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 9,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-  {
-    id: 10,
-    code: "04ET 12345",
-    status: "active",
-    name: 'Estufa Mabe 30" de Piso EM7654BFIS2',
-    department: "04 - Línea Blanca",
-    line: "ET - Estufas",
-    inStock: 32,
-    inTransit: 15,
-    damaged: 5,
-  },
-];
-async function getInventoryStats(): Promise<InventoryStats> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return {
-    totalItems: 512,
-    inStock: 493,
-    inTransit: 63,
-    damaged: 190,
-  };
-}
-async function getInventory(
-  params: GetInventoryParams,
-): Promise<GetInventoryResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  let filteredData = [...DUMMY_INVENTORY];
-  if (params.status && params.status !== "all") {
-    filteredData = filteredData.filter((item) => item.status === params.status);
-  }
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter(
-      (item) =>
-        item.code.toLowerCase().includes(searchLower) ||
-        item.name.toLowerCase().includes(searchLower) ||
-        item.department.toLowerCase().includes(searchLower) ||
-        item.line.toLowerCase().includes(searchLower),
-    );
-  }
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
-  return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
-  };
-}
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import {
+  getInventoryList,
+  getInventoryStats,
+  type InventoryListItem,
+  type InventoryStats,
+} from "@/services/inventory.service";
+
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function Inventario() {
   const router = useRouter();
   const [stats, setStats] = useState<InventoryStats | null>(null);
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchValue, setSearchValue] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
-  const tabs: TabOption[] = [
-    {
-      label: "Todos",
-      value: "all",
-    },
-    {
-      label: "Activos",
-      value: "active",
-    },
-    {
-      label: "Inactivos",
-      value: "inactive",
-    },
-  ];
-  const getStatusFilter = useCallback((): "all" | "active" | "inactive" => {
-    return activeTab as "all" | "active" | "inactive";
+
+  const listExtraParams = useMemo(() => {
+    if (activeTab === "all") {
+      return {};
+    }
+    return { status: activeTab };
   }, [activeTab]);
+
+  const {
+    data: items,
+    total: totalRows,
+    page,
+    rowsPerPage,
+    search: searchValue,
+    setPage,
+    setRowsPerPage: handleRowsPerPageChange,
+    setSearch,
+    isLoading: loading,
+  } = usePaginatedList<InventoryListItem>({
+    queryKey: ["inventory", "list"],
+    queryFn: getInventoryList,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    extraParams: listExtraParams,
+  });
+
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, setPage]);
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    searchValue,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
   useEffect(() => {
     async function loadStats() {
       try {
-        const data = await getInventoryStats();
-        setStats(data);
+        const result = await getInventoryStats();
+        if (result.data) {
+          setStats(result.data);
+        }
       } catch (err) {
         console.error("[Inventario] Error loading stats:", err);
       }
     }
     loadStats();
   }, []);
-  const fetchInventory = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getInventory({
-        page,
-        limit: rowsPerPage,
-        search: searchValue,
-        status: getStatusFilter(),
-      });
-      setItems(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error("[Inventario] Error fetching:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, searchValue, getStatusFilter]);
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
-  useEffect(() => {
-    setPage(0);
-  }, [searchValue, activeTab]);
-  const handleTabChange = (value: string) => {
+
+  const tabs: TabOption[] = useMemo(
+    () => [
+      { label: "Todos", value: "all" },
+      { label: "Activos", value: "active" },
+      { label: "Inactivos", value: "inactive" },
+    ],
+    [],
+  );
+
+  const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
-  };
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-  };
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-  };
-  const handleViewDetail = (item: InventoryItem) => {
-    const sku = item.code.replace(/\s+/g, "");
-    router.push(`/inventario/${sku}`);
-  };
-  const handleRowClick = (item: InventoryItem) => {
-    handleViewDetail(item);
-  };
+  }, []);
+
+  const handleViewDetail = useCallback(
+    (item: InventoryListItem) => {
+      const sku = item.code.replace(/\s+/g, "");
+      router.push(`/inventario/${encodeURIComponent(sku)}`);
+    },
+    [router],
+  );
+
+  const handleRowClick = useCallback(
+    (item: InventoryListItem) => {
+      handleViewDetail(item);
+    },
+    [handleViewDetail],
+  );
+
   const statsCards: StatsCardData[] = stats
     ? [
         {
@@ -306,7 +143,8 @@ export default function Inventario() {
         },
       ]
     : [];
-  const columns: Column<InventoryItem>[] = [
+
+  const columns: Column<InventoryListItem>[] = [
     {
       id: "code",
       label: "Código",
@@ -395,7 +233,8 @@ export default function Inventario() {
       ),
     },
   ];
-  const rowActions: RowAction<InventoryItem>[] = [
+
+  const rowActions: RowAction<InventoryListItem>[] = [
     {
       id: "view-detail",
       label: "Ver detalle",
@@ -404,6 +243,7 @@ export default function Inventario() {
       permission: INVENTORY_READ,
     },
   ];
+
   return (
     <Stack direction="column" spacing={3}>
       <Title title="Inventario" />
@@ -440,8 +280,8 @@ export default function Inventario() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         showSearch
-        searchValue={searchValue}
-        onSearchChange={handleSearchChange}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
       />
 
       <TableCrud
@@ -452,7 +292,7 @@ export default function Inventario() {
         page={page}
         rowsPerPage={rowsPerPage}
         totalRows={totalRows}
-        onPageChange={handlePageChange}
+        onPageChange={setPage}
         onRowsPerPageChange={handleRowsPerPageChange}
         onRowClick={handleRowClick}
         actions={rowActions}

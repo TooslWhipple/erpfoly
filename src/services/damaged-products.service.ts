@@ -111,6 +111,24 @@ export async function getDamagedProductsCatalog(): Promise<
     return get<DamagedProductsCatalogData>(`${DAMAGED_PRODUCTS_BASE}/catalog`);
 }
 
+export interface DamagedProductBranchOption {
+    id: number;
+    label: string;
+}
+
+/**
+ * GET /damaged-products/branches-with-stock?productId=
+ * Active branches where the product has existence > 0.
+ */
+export async function getDamagedProductBranchesWithStock(
+    productId: number,
+): Promise<ApiResult<DamagedProductBranchOption[]>> {
+    return get<DamagedProductBranchOption[]>(
+        `${DAMAGED_PRODUCTS_BASE}/branches-with-stock`,
+        { params: { productId } },
+    );
+}
+
 export const PRODUCT_SEARCH_DEFAULT_LIMIT = 100;
 
 export interface ProductSearchItem {

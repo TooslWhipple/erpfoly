@@ -1,5 +1,7 @@
 import { Inventory2 as BoxIcon } from "@mui/icons-material";
 import { Grid, Typography } from "@mui/material";
+import { useRouter } from "next/router";
+import { useCallback } from "react";
 import { ProductInfoCard } from "@/components/InventoryDetail";
 import { TableCrud } from "@/components/TableCrud";
 import type { Column, StatusChipVariant } from "@/components/TableCrud";
@@ -11,7 +13,6 @@ import {
     PackageIcon,
     PackageInfo,
     PackagePrice,
-    PricingGrid,
     PricingItem,
 } from "@/styles/inventario/detalle.styles";
 import type {
@@ -23,7 +24,15 @@ import type {
 } from "@/types/inventario.types";
 import numeral from "numeral";
 
+export type ProductFormEditTab =
+    | "general"
+    | "suppliers"
+    | "price"
+    | "gallery"
+    | "packages";
+
 export interface TechnicalTabProps {
+    productId: string | number;
     inventoryDetail: InventoryDetail;
     suppliers: ProductSupplier[];
     pricingStrategy: PricingStrategy;
@@ -37,8 +46,8 @@ const SUPPLIERS_CHIP_LABELS: Record<string, string> = {
   secondary: "Secundario",
 };
 const SUPPLIERS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
-  principal: "warning",
-  secondary: "default",
+    principal: "warning",
+    secondary: "default",
 };
 
 const suppliersColumns: Column<ProductSupplier>[] = [
@@ -63,6 +72,7 @@ const suppliersColumns: Column<ProductSupplier>[] = [
 ];
 
 export function TechnicalTab({
+    productId,
     inventoryDetail,
     suppliers,
     pricingStrategy,
@@ -70,6 +80,17 @@ export function TechnicalTab({
     gallery,
     loading,
 }: TechnicalTabProps) {
+    const router = useRouter();
+
+    const handleEdit = useCallback(
+        (tab: ProductFormEditTab) => {
+            void router.push(
+                `/catalogos/productos/${productId}?tab=${tab}`,
+            );
+        },
+        [productId, router],
+    );
+
     const generalInfoFields = [
         { label: "Nombre corto", value: inventoryDetail.shortName },
         { label: "Descripción del artículo", value: inventoryDetail.description },
@@ -84,11 +105,13 @@ export function TechnicalTab({
                 title="Información general"
                 subtitle="Detalles completos del artículo"
                 fields={generalInfoFields}
+                onEdit={() => handleEdit("general")}
             />
 
             <ProductInfoCard
                 title="Proveedores"
                 subtitle="Proveedores autorizados para este artículo"
+                onEdit={() => handleEdit("suppliers")}
             >
                 <TableCrud
                     columns={suppliersColumns}
@@ -102,6 +125,7 @@ export function TechnicalTab({
             <ProductInfoCard
                 title="Estrategia de Precios"
                 subtitle="Configuración de precios y márgenes"
+                onEdit={() => handleEdit("price")}
             >
                 <Grid container spacing={3}>
                     <Grid size={{ xs: 12, sm: 4 }}>
@@ -128,6 +152,7 @@ export function TechnicalTab({
             <ProductInfoCard
                 title="Galería"
                 subtitle="Imágenes del artículo"
+                onEdit={() => handleEdit("gallery")}
             >
                 <GalleryContainer>
                     {gallery.images.map((image, index) => (
@@ -141,6 +166,7 @@ export function TechnicalTab({
             <ProductInfoCard
                 title="Paquetes"
                 subtitle="Paquetes especiales"
+                onEdit={() => handleEdit("packages")}
             >
                 <PackagesList>
                     {packages.map((pkg) => (

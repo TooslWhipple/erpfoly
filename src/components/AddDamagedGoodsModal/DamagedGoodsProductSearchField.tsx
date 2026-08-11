@@ -168,7 +168,7 @@ function DamagedGoodsProductSearchFieldInner({
                 return (
                     <FormTextField
                         {...rest}
-                        label="Producto"
+                        label="Artículo"
                         placeholder="Buscar"
                         required
                         error={showError}

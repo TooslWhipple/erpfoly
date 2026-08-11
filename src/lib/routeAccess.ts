@@ -49,6 +49,7 @@ import {
   DISCOUNT_REQUESTS_READ,
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
+  RECOVERY_SHEETS_READ,
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
@@ -130,6 +131,10 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes-descuento$/, permission: DISCOUNT_REQUESTS_READ },
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
+  {
+    pattern: /^\/inventario\/hojas-recuperacion(\/.*)?$/,
+    permission: RECOVERY_SHEETS_READ,
+  },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },
   { pattern: /^\/inventario(\/.*)?$/, permission: INVENTORY_READ },
 

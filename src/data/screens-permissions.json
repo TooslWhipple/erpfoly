@@ -160,6 +160,12 @@
       ]
     },
     {
+      "code": "inventario-hojas-recuperacion",
+      "name": "Hojas de recuperación",
+      "path": "/inventario/hojas-recuperacion",
+      "actions": ["view", "edit"]
+    },
+    {
       "code": "inventario-liquidaciones",
       "name": "Liquidaciones",
       "path": "/inventario/liquidaciones",

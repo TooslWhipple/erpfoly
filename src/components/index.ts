@@ -74,6 +74,19 @@ export type {
   DiscrepancyDetailHeaderProps,
   DiscrepancyInvoicesSectionProps,
 } from "./MerchandiseReceptionDiscrepancies";
+export {
+  RecoverySheetDetailHeader,
+  RecoverySheetRouteCard,
+  RecoverySheetServiceOrderCard,
+  RecoverySheetWarehouseCard,
+  RecoverySheetDocumentPanel,
+  ReceiveRecoveryItemModal,
+} from "./RecoverySheets";
+export type {
+  RecoverySheetDetailHeaderProps,
+  RecoverySheetDocumentPanelProps,
+  ReceiveRecoveryItemModalProps,
+} from "./RecoverySheets";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";

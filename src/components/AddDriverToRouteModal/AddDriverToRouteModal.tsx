@@ -103,6 +103,8 @@ export function AddDriverToRouteModal({
     try {
       await onConfirm(driverId);
       onClose();
+    } catch {
+      // Error already shown by the mutation snackbar
     } finally {
       setSubmitting(false);
       setPendingId(null);

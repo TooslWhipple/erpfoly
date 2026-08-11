@@ -11,6 +11,7 @@ import type {
   RouteAssistantCandidate,
   RouteDetail,
   RouteDriverCandidate,
+  RouteItemAddedBy,
   RouteOrder,
   RouteOrderItem,
   RouteOrderItemStatus,
@@ -30,11 +31,24 @@ function mapStopType(stopType: string): RouteStopType {
   return stopType === "recovery" ? "recovery" : "delivery";
 }
 
+function mapAddedBy(
+  addedBy: RouteOrderItemApi["added_by"],
+): RouteItemAddedBy {
+  if (!addedBy) {
+    return { type: "system", name: null };
+  }
+  if (addedBy.type === "user") {
+    return { type: "user", name: addedBy.name };
+  }
+  return { type: "system", name: null };
+}
+
 function mapOrderItem(item: RouteOrderItemApi): RouteOrderItem {
   return {
     id: item.id,
     articleName: item.article_name,
     status: mapOrderItemStatus(item.status),
+    addedBy: mapAddedBy(item.added_by),
   };
 }
 
@@ -47,6 +61,7 @@ function mapOrder(order: RouteOrderApi): RouteOrder {
     address: order.address,
     zone: order.zone,
     destinationBranch: order.destination_branch,
+    destinationBranchId: order.destination_branch_id ?? null,
     stopType: mapStopType(order.stop_type),
     items: order.items.map(mapOrderItem),
   };
@@ -59,15 +74,20 @@ export function mapRouteListRowToSummary(row: RouteListRowApi): RouteSummary {
     status: row.status as RouteStatus,
     routeType: row.route_type,
     location: row.location,
+    originBranch: row.origin_branch
+      ? {
+          id: row.origin_branch.id,
+          name: row.origin_branch.name,
+          municipality: row.origin_branch.municipality ?? null,
+        }
+      : null,
     articleCount: row.article_count,
     pointCount: row.point_count,
-    miniMapUrl: row.mini_map_url ?? undefined,
     driverName: row.driver_name,
   };
 }
 
 export interface RouteDetailView extends RouteDetail {
-  miniMapUrl?: string;
   map?: RouteDetailApi["map"];
   cartaPorteRemoteFiles: UploadedFileItem[];
 }
@@ -105,7 +125,21 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     status: data.status as RouteStatus,
     location: data.location,
     scheduledDate: data.scheduled_date ?? null,
-    originBranch: data.origin_branch ?? null,
+    originBranch: data.origin_branch
+      ? {
+          id: data.origin_branch.id,
+          name: data.origin_branch.name,
+          municipality: data.origin_branch.municipality ?? null,
+        }
+      : null,
+    scheduledStops: [...(data.scheduled_stops ?? [])]
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((stop) => ({
+        id: stop.id,
+        branchId: stop.branch_id,
+        name: stop.name,
+        sequence: stop.sequence,
+      })),
     articleCount: data.article_count,
     pointCount: data.point_count,
     driverName: data.driver_name,
@@ -115,7 +149,6 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     orders,
     driver,
     assistants,
-    miniMapUrl: data.mini_map_url ?? undefined,
     map: data.map,
     cartaPorteRemoteFiles,
   };

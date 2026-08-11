@@ -59,15 +59,14 @@ export function mapRouteListRowToSummary(row: RouteListRowApi): RouteSummary {
     status: row.status as RouteStatus,
     routeType: row.route_type,
     location: row.location,
+    originBranch: row.origin_branch ?? null,
     articleCount: row.article_count,
     pointCount: row.point_count,
-    miniMapUrl: row.mini_map_url ?? undefined,
     driverName: row.driver_name,
   };
 }
 
 export interface RouteDetailView extends RouteDetail {
-  miniMapUrl?: string;
   map?: RouteDetailApi["map"];
   cartaPorteRemoteFiles: UploadedFileItem[];
 }
@@ -115,7 +114,6 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     orders,
     driver,
     assistants,
-    miniMapUrl: data.mini_map_url ?? undefined,
     map: data.map,
     cartaPorteRemoteFiles,
   };

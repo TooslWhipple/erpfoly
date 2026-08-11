@@ -168,9 +168,11 @@ export function fetchAvailableAssistants(
 }
 
 export function assignDriverToRoute(routeId: number, userId: number) {
-  return patch<RouteDetailApi>(`/routes/${routeId}/driver`, {
-    user_id: userId,
-  });
+  return patch<RouteDetailApi>(
+    `/routes/${routeId}/driver`,
+    { user_id: userId },
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export function removeDriverFromRoute(routeId: number) {

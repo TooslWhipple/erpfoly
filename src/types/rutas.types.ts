@@ -7,10 +7,9 @@ export interface RouteSummary {
   status: RouteStatus;
   routeType?: RouteType;
   location: string;
+  originBranch: { id: number; name: string } | null;
   articleCount: number;
   pointCount: number;
-  /** Static Google Maps preview URL when configured server-side */
-  miniMapUrl?: string;
   driverName?: string;
 }
 

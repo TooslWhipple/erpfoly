@@ -5,10 +5,10 @@ export interface RouteListRowApi {
   status: string;
   route_type?: "deliveries" | "scheduled";
   location: string;
+  origin_branch: { id: number; name: string } | null;
   article_count: number;
   point_count: number;
   driver_name: string;
-  mini_map_url: string | null;
 }
 
 /** Map payload from GET /routes/:id */
@@ -100,7 +100,6 @@ export interface RouteDetailApi {
   orders: RouteOrderApi[];
   driver: RoutePersonApi | null;
   assistants: RoutePersonApi[];
-  mini_map_url: string | null;
   map: RouteMapPayloadApi;
   carta_porte_files: CartaPorteFileApi[];
 }

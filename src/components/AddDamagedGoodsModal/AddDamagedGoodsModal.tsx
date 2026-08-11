@@ -22,6 +22,7 @@ import { defineFormFields, messages, FormField, type SchemaOutputFromFields } fr
 import type { SelectOption } from "@/components/Form";
 import {
     getDamagedProductsCatalog,
+    getDamagedProductBranchesWithStock,
     createDamagedProduct,
     type CreateDamagedProductPayload,
     type DamagedProductCatalogItem,
@@ -61,7 +62,7 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
     {
         name: "productId",
         schema: z.number().int().positive({ message: messages.required }),
-        label: "Producto",
+        label: "Artículo",
     },
     {
         name: "branchId",
@@ -108,7 +109,7 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
     {
         name: "damagedProductDisposition",
         schema: z.string().min(1, messages.required),
-        label: "Disposición del producto",
+        label: "Disposición del artículo",
     },
     {
         name: "assignedToId",
@@ -188,7 +189,7 @@ function catalogItemIdString(item: DamagedProductCatalogItem): string {
 function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): AddDamagedGoodsFormShape {
     return {
         productId: 0,
-        branchId: catalog.branches[0]?.id ? String(catalog.branches[0].id) : "",
+        branchId: "",
         damageOrigin:
             catalog.damageOrigins[0] != null
                 ? catalogItemIdString(catalog.damageOrigins[0])
@@ -234,6 +235,100 @@ export interface AddDamagedGoodsModalProps {
     onClose: () => void;
     onSubmit?: (values: AddDamagedGoodsFormValues) => Promise<void>;
     onSuccess?: () => void;
+}
+
+type BranchFormApi = {
+    setFieldValue: (name: "branchId", value: string) => void;
+};
+
+function DamagedGoodsBranchField({
+    form,
+    productId,
+    fetchEnabled,
+    disabled = false,
+}: {
+    form: BranchFormApi & Parameters<typeof FormField>[0]["form"];
+    productId: number;
+    fetchEnabled: boolean;
+    disabled?: boolean;
+}) {
+    const branchesQuery = useQuery({
+        queryKey: ["damaged-products", "branches-with-stock", productId],
+        queryFn: async () => {
+            const result = await getDamagedProductBranchesWithStock(productId);
+            if (result.error != null) {
+                throw new Error(result.error.message);
+            }
+            return result.data ?? [];
+        },
+        enabled: fetchEnabled && productId > 0,
+        staleTime: 30_000,
+    });
+
+    const branchOptions: SelectOption[] = useMemo(
+        () =>
+            (branchesQuery.data ?? []).map((item) => ({
+                value: String(item.id),
+                label: item.label,
+            })),
+        [branchesQuery.data],
+    );
+
+    const prevProductIdRef = useRef<number>(0);
+
+    useEffect(() => {
+        if (productId !== prevProductIdRef.current) {
+            prevProductIdRef.current = productId;
+            form.setFieldValue("branchId", "");
+        }
+    }, [productId, form]);
+
+    useEffect(() => {
+        if (productId <= 0 || branchesQuery.isFetching) {
+            return;
+        }
+        if (!branchesQuery.isSuccess || branchesQuery.data == null) {
+            return;
+        }
+        if (branchesQuery.data.length === 1) {
+            form.setFieldValue("branchId", String(branchesQuery.data[0].id));
+        }
+    }, [
+        productId,
+        branchesQuery.isFetching,
+        branchesQuery.isSuccess,
+        branchesQuery.data,
+        form,
+    ]);
+
+    const hasProduct = productId > 0;
+    const isLoading = hasProduct && branchesQuery.isFetching;
+    const noStock =
+        hasProduct &&
+        branchesQuery.isSuccess &&
+        !branchesQuery.isFetching &&
+        branchOptions.length === 0;
+
+    let placeholder = "Seleccione";
+    if (!hasProduct) {
+        placeholder = "Seleccione un artículo";
+    } else if (isLoading) {
+        placeholder = "Cargando...";
+    } else if (noStock) {
+        placeholder = "Sin existencia en sucursales";
+    }
+
+    return (
+        <FormField
+            form={form}
+            name="branchId"
+            label="Sucursal"
+            placeholder={placeholder}
+            type="select"
+            options={branchOptions}
+            disabled={disabled || !hasProduct || isLoading || noStock}
+        />
+    );
 }
 
 export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: AddDamagedGoodsModalProps) {
@@ -328,14 +423,6 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
         if (catalog == null) return [];
         return catalog.damageTypes.map((item) => ({
             value: catalogItemIdString(item),
-            label: item.label,
-        }));
-    }, [catalog]);
-
-    const branchOptions: SelectOption[] = useMemo(() => {
-        if (catalog == null) return [];
-        return catalog.branches.map((item) => ({
-            value: String(item.id),
             label: item.label,
         }));
     }, [catalog]);
@@ -496,30 +583,135 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
 
                     {catalog != null && !catalogQuery.isPending && (
                         <>
-                            {activeTab === "report" && (
-                                <Stack spacing={2}>
-                                    <DamagedGoodsProductSearchField
-                                        form={form}
-                                        fetchEnabled={open && activeTab === "report"}
-                                        disabled={submitting}
-                                    />
+                            <Stack
+                                spacing={2}
+                                sx={{ display: activeTab === "report" ? "block" : "none" }}
+                            >
+                                <DamagedGoodsProductSearchField
+                                    form={form}
+                                    fetchEnabled={open && activeTab === "report"}
+                                    disabled={submitting}
+                                />
 
-                                    <FormField
-                                        form={form}
-                                        name="branchId"
-                                        label="Sucursal"
-                                        placeholder="Seleccione"
-                                        type="select"
-                                        options={branchOptions}
-                                    />
+                                <form.Subscribe
+                                    selector={(state) =>
+                                        Number(
+                                            (
+                                                state as {
+                                                    values?: { productId?: number };
+                                                }
+                                            ).values?.productId ?? 0,
+                                        )
+                                    }
+                                >
+                                    {(productId) => (
+                                        <DamagedGoodsBranchField
+                                            form={form}
+                                            productId={productId}
+                                            fetchEnabled={open && productId > 0}
+                                            disabled={submitting}
+                                        />
+                                    )}
+                                </form.Subscribe>
 
-                                    <form.Field name="damageOrigin">
-                                        {(field) => {
-                                            const errorMessage = formatFieldErrors(
-                                                field.state.meta.errors,
-                                            );
-                                            const showError = !field.state.meta.isValid;
-                                            return (
+                                <form.Field name="damageOrigin">
+                                    {(field) => {
+                                        const errorMessage = formatFieldErrors(
+                                            field.state.meta.errors,
+                                        );
+                                        const showError = !field.state.meta.isValid;
+                                        return (
+                                            <FormControl
+                                                component="fieldset"
+                                                variant="standard"
+                                                error={showError}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    sx={{ mb: 1 }}
+                                                >
+                                                    Selecciona el origen del daño
+                                                </Typography>
+                                                <RadioButtonGroup sx={{ flexWrap: "wrap" }}>
+                                                    {catalog.damageOrigins.map((opt) => {
+                                                        const idStr = catalogItemIdString(opt);
+                                                        return (
+                                                            <RadioButton
+                                                                key={idStr}
+                                                                value={idStr}
+                                                                label={opt.label}
+                                                                checked={field.state.value === idStr}
+                                                                onChange={(e) => {
+                                                                    field.handleChange(e.target.value);
+                                                                    field.handleBlur();
+                                                                }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </RadioButtonGroup>
+                                                {showError && errorMessage != null && (
+                                                    <FormHelperText>{errorMessage}</FormHelperText>
+                                                )}
+                                            </FormControl>
+                                        );
+                                    }}
+                                </form.Field>
+
+                                <FormField
+                                    form={form}
+                                    name="damageType"
+                                    label="Tipo de daño"
+                                    placeholder="Seleccione"
+                                    type="select"
+                                    options={damageTypeOptions}
+                                />
+
+                                <FormField
+                                    form={form}
+                                    name="serialNumber"
+                                    label="Número de serie"
+                                    placeholder="Ingrese"
+                                    type="text"
+                                />
+
+                                <FormField
+                                    form={form}
+                                    name="damageDetected"
+                                    label="Daño detectado"
+                                    placeholder="Ingrese"
+                                    type="textarea"
+                                    rows={2}
+                                />
+
+                                <FormField
+                                    form={form}
+                                    name="observations"
+                                    label="Observaciones"
+                                    placeholder="Ingrese"
+                                    type="textarea"
+                                    rows={2}
+                                />
+                            </Stack>
+
+                            <Stack
+                                spacing={2}
+                                sx={{ display: activeTab === "instructions" ? "block" : "none" }}
+                            >
+                                <form.Field name="damagedProductDisposition">
+                                    {(field) => {
+                                        const dispositionValue = field.state.value as string;
+                                        const isRepair = dispositionValue === DISPOSITION_CODES.INTERNAL_REPAIR ||
+                                            dispositionValue === DISPOSITION_CODES.SUPPLIER_REPAIR;
+                                        const isAuction = dispositionValue === DISPOSITION_CODES.AUCTION_SALE;
+                                        const isReturn = dispositionValue === DISPOSITION_CODES.RETURN_TO_SUPPLIER;
+
+                                        const errorMessage = formatFieldErrors(
+                                            field.state.meta.errors,
+                                        );
+                                        const showError = !field.state.meta.isValid;
+                                        return (
+                                            <>
                                                 <FormControl
                                                     component="fieldset"
                                                     variant="standard"
@@ -530,17 +722,26 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
                                                         color="text.secondary"
                                                         sx={{ mb: 1 }}
                                                     >
-                                                        Selecciona el origen del daño
+                                                        ¿Qué se hará con el artículo?
                                                     </Typography>
-                                                    <RadioButtonGroup sx={{ flexWrap: "wrap" }}>
-                                                        {catalog.damageOrigins.map((opt) => {
-                                                            const idStr = catalogItemIdString(opt);
+                                                    <RadioButtonGroup
+                                                        sx={{
+                                                            display: "grid",
+                                                            gridTemplateColumns: {
+                                                                xs: "1fr",
+                                                                sm: "1fr 1fr",
+                                                            },
+                                                            gap: 1,
+                                                        }}
+                                                    >
+                                                        {catalog.dispositions.map((opt) => {
+                                                            const codeStr = opt.code ?? catalogItemIdString(opt);
                                                             return (
                                                                 <RadioButton
-                                                                    key={idStr}
-                                                                    value={idStr}
+                                                                    key={codeStr}
+                                                                    value={codeStr}
                                                                     label={opt.label}
-                                                                    checked={field.state.value === idStr}
+                                                                    checked={field.state.value === codeStr}
                                                                     onChange={(e) => {
                                                                         field.handleChange(e.target.value);
                                                                         field.handleBlur();
@@ -553,241 +754,141 @@ export function AddDamagedGoodsModal({ open, onClose, onSubmit, onSuccess }: Add
                                                         <FormHelperText>{errorMessage}</FormHelperText>
                                                     )}
                                                 </FormControl>
-                                            );
-                                        }}
-                                    </form.Field>
 
-                                    <FormField
-                                        form={form}
-                                        name="damageType"
-                                        label="Tipo de daño"
-                                        placeholder="Seleccione"
-                                        type="select"
-                                        options={damageTypeOptions}
-                                    />
+                                                {isRepair && (
+                                                    <Stack spacing={2} sx={{ mt: 1 }}>
+                                                        <FormField
+                                                            form={form}
+                                                            name="assignedToId"
+                                                            label="Trabajo asignado a"
+                                                            placeholder="Seleccione proveedor"
+                                                            type="select"
+                                                            options={repairSupplierOptions}
+                                                        />
 
-                                    <FormField
-                                        form={form}
-                                        name="serialNumber"
-                                        label="Número de serie"
-                                        placeholder="Ingrese"
-                                        type="text"
-                                    />
+                                                        <FormField
+                                                            form={form}
+                                                            name="responsibleId"
+                                                            label="Responsable"
+                                                            placeholder="Seleccione responsable"
+                                                            type="select"
+                                                            options={repairResponsibleOptions}
+                                                        />
 
-                                    <FormField
-                                        form={form}
-                                        name="damageDetected"
-                                        label="Daño detectado"
-                                        placeholder="Ingrese"
-                                        type="textarea"
-                                        rows={2}
-                                    />
+                                                        <FormField
+                                                            form={form}
+                                                            name="solutionId"
+                                                            label="Solución"
+                                                            placeholder="Seleccione solución"
+                                                            type="select"
+                                                            options={solutionOptions}
+                                                        />
 
-                                    <FormField
-                                        form={form}
-                                        name="observations"
-                                        label="Observaciones"
-                                        placeholder="Ingrese"
-                                        type="textarea"
-                                        rows={2}
-                                    />
-                                </Stack>
-                            )}
+                                                        <FormField
+                                                            form={form}
+                                                            name="endDate"
+                                                            label="Fecha de finalización"
+                                                            placeholder="Seleccione"
+                                                            type="date"
+                                                        />
 
-                            {activeTab === "instructions" && (
-                                <Stack spacing={2}>
-                                    <form.Field name="damagedProductDisposition">
-                                        {(field) => {
-                                            const dispositionValue = field.state.value as string;
-                                            const isRepair = dispositionValue === DISPOSITION_CODES.INTERNAL_REPAIR ||
-                                                dispositionValue === DISPOSITION_CODES.SUPPLIER_REPAIR;
-                                            const isAuction = dispositionValue === DISPOSITION_CODES.AUCTION_SALE;
-                                            const isReturn = dispositionValue === DISPOSITION_CODES.RETURN_TO_SUPPLIER;
-
-                                            const errorMessage = formatFieldErrors(
-                                                field.state.meta.errors,
-                                            );
-                                            const showError = !field.state.meta.isValid;
-                                            return (
-                                                <>
-                                                    <FormControl
-                                                        component="fieldset"
-                                                        variant="standard"
-                                                        error={showError}
-                                                    >
-                                                        <Typography
-                                                            variant="body2"
-                                                            color="text.secondary"
-                                                            sx={{ mb: 1 }}
-                                                        >
-                                                            ¿Qué se hará con el producto?
-                                                        </Typography>
-                                                        <RadioButtonGroup
-                                                            sx={{
-                                                                display: "grid",
-                                                                gridTemplateColumns: {
-                                                                    xs: "1fr",
-                                                                    sm: "1fr 1fr",
-                                                                },
-                                                                gap: 1,
-                                                            }}
-                                                        >
-                                                            {catalog.dispositions.map((opt) => {
-                                                                const codeStr = opt.code ?? catalogItemIdString(opt);
-                                                                return (
-                                                                    <RadioButton
-                                                                        key={codeStr}
-                                                                        value={codeStr}
-                                                                        label={opt.label}
-                                                                        checked={field.state.value === codeStr}
-                                                                        onChange={(e) => {
-                                                                            field.handleChange(e.target.value);
-                                                                            field.handleBlur();
-                                                                        }}
-                                                                    />
-                                                                );
-                                                            })}
-                                                        </RadioButtonGroup>
-                                                        {showError && errorMessage != null && (
-                                                            <FormHelperText>{errorMessage}</FormHelperText>
-                                                        )}
-                                                    </FormControl>
-
-                                                    {isRepair && (
-                                                        <Stack spacing={2} sx={{ mt: 1 }}>
-                                                            <FormField
-                                                                form={form}
-                                                                name="assignedToId"
-                                                                label="Trabajo asignado a"
-                                                                placeholder="Seleccione proveedor"
-                                                                type="select"
-                                                                options={repairSupplierOptions}
-                                                            />
-
-                                                            <FormField
-                                                                form={form}
-                                                                name="responsibleId"
-                                                                label="Responsable"
-                                                                placeholder="Seleccione responsable"
-                                                                type="select"
-                                                                options={repairResponsibleOptions}
-                                                            />
-
-                                                            <FormField
-                                                                form={form}
-                                                                name="solutionId"
-                                                                label="Solución"
-                                                                placeholder="Seleccione solución"
-                                                                type="select"
-                                                                options={solutionOptions}
-                                                            />
-
-                                                            <FormField
-                                                                form={form}
-                                                                name="endDate"
-                                                                label="Fecha de finalización"
-                                                                placeholder="Seleccione"
-                                                                type="date"
-                                                            />
-
-                                                            <form.Field name="includeCost">
-                                                                {(costField) => (
-                                                                    <FormControlLabel
-                                                                        control={
-                                                                            <Switch
-                                                                                checked={Boolean(costField.state.value)}
-                                                                                onChange={(e) => {
-                                                                                    costField.handleChange(e.target.checked);
-                                                                                }}
-                                                                            />
-                                                                        }
-                                                                        label="¿Agregar costo?"
-                                                                    />
-                                                                )}
-                                                            </form.Field>
-
-                                                            <form.Subscribe
-                                                                selector={(state) =>
-                                                                    Boolean(
-                                                                        (
-                                                                            state as {
-                                                                                values?: { includeCost?: boolean };
-                                                                            }
-                                                                        ).values?.includeCost,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {(showCost) =>
-                                                                    showCost && (
-                                                                        <FormField
-                                                                            form={form}
-                                                                            name="repairCost"
-                                                                            label="Costo de reparación"
-                                                                            placeholder="0.00"
-                                                                            type="number"
+                                                        <form.Field name="includeCost">
+                                                            {(costField) => (
+                                                                <FormControlLabel
+                                                                    control={
+                                                                        <Switch
+                                                                            checked={Boolean(costField.state.value)}
+                                                                            onChange={(e) => {
+                                                                                costField.handleChange(e.target.checked);
+                                                                            }}
                                                                         />
-                                                                    )
-                                                                }
-                                                            </form.Subscribe>
-                                                        </Stack>
-                                                    )}
-
-                                                    {isAuction && (
-                                                        <Stack spacing={2} sx={{ mt: 1 }}>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                Costo de lista: $0.00
-                                                            </Typography>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                Último precio: $0.00
-                                                            </Typography>
-                                                            <FormField
-                                                                form={form}
-                                                                name="auctionPrice"
-                                                                label="Precio de remate"
-                                                                placeholder="Ingrese precio"
-                                                                type="number"
-                                                            />
-                                                        </Stack>
-                                                    )}
-
-                                                    {isReturn && (
-                                                        <Stack spacing={2} sx={{ mt: 1 }}>
-                                                            <FormField
-                                                                form={form}
-                                                                name="assignedToId"
-                                                                label="Regresar al proveedor"
-                                                                placeholder="Seleccione proveedor"
-                                                                type="select"
-                                                                options={repairSupplierOptions}
-                                                            />
-
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                Próxima visita del proveedor: --/--/----
-                                                            </Typography>
-
-                                                            <FormControl component="fieldset" variant="standard">
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    color="text.secondary"
-                                                                    sx={{ mb: 1 }}
-                                                                >
-                                                                    Carta de aceptación
-                                                                </Typography>
-                                                                <FileUpload
-                                                                    value={acceptanceLetter}
-                                                                    onChange={setAcceptanceLetter}
-                                                                    accept={["image/*", "application/pdf"]}
-                                                                    placeholder="Subir carta de aceptación"
+                                                                    }
+                                                                    label="¿Agregar costo?"
                                                                 />
-                                                            </FormControl>
-                                                        </Stack>
-                                                    )}
-                                                </>
-                                            );
-                                        }}
-                                    </form.Field>
-                                </Stack>
-                            )}
+                                                            )}
+                                                        </form.Field>
+
+                                                        <form.Subscribe
+                                                            selector={(state) =>
+                                                                Boolean(
+                                                                    (
+                                                                        state as {
+                                                                            values?: { includeCost?: boolean };
+                                                                        }
+                                                                    ).values?.includeCost,
+                                                                )
+                                                            }
+                                                        >
+                                                            {(showCost) =>
+                                                                showCost && (
+                                                                    <FormField
+                                                                        form={form}
+                                                                        name="repairCost"
+                                                                        label="Costo de reparación"
+                                                                        placeholder="0.00"
+                                                                        type="number"
+                                                                    />
+                                                                )
+                                                            }
+                                                        </form.Subscribe>
+                                                    </Stack>
+                                                )}
+
+                                                {isAuction && (
+                                                    <Stack spacing={2} sx={{ mt: 1 }}>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Costo de lista: $0.00
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Último precio: $0.00
+                                                        </Typography>
+                                                        <FormField
+                                                            form={form}
+                                                            name="auctionPrice"
+                                                            label="Precio de remate"
+                                                            placeholder="Ingrese precio"
+                                                            type="number"
+                                                        />
+                                                    </Stack>
+                                                )}
+
+                                                {isReturn && (
+                                                    <Stack spacing={2} sx={{ mt: 1 }}>
+                                                        <FormField
+                                                            form={form}
+                                                            name="assignedToId"
+                                                            label="Regresar al proveedor"
+                                                            placeholder="Seleccione proveedor"
+                                                            type="select"
+                                                            options={repairSupplierOptions}
+                                                        />
+
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Próxima visita del proveedor: --/--/----
+                                                        </Typography>
+
+                                                        <FormControl component="fieldset" variant="standard">
+                                                            <Typography
+                                                                variant="body2"
+                                                                color="text.secondary"
+                                                                sx={{ mb: 1 }}
+                                                            >
+                                                                Carta de aceptación
+                                                            </Typography>
+                                                            <FileUpload
+                                                                value={acceptanceLetter}
+                                                                onChange={setAcceptanceLetter}
+                                                                accept={["image/*", "application/pdf"]}
+                                                                placeholder="Subir carta de aceptación"
+                                                            />
+                                                        </FormControl>
+                                                    </Stack>
+                                                )}
+                                            </>
+                                        );
+                                    }}
+                                </form.Field>
+                            </Stack>
                         </>
                     )}
                 </Stack>

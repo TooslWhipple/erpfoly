@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Button, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Button, Stack, Typography, useTheme } from "@mui/material";
 import { Logout as LogoutIcon } from "@mui/icons-material";
 import { Plus } from "@/components/Icons";
+import { useAppNav } from "@/components/Layout";
 import {
   StyledDrawer,
   SidebarHeader,
@@ -36,7 +37,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+  const { isDrawerNav } = useAppNav();
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.logout);
   const showError = useSnackbarStore((state) => state.showError);
@@ -62,7 +63,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const handleNavigation = (path: string) => {
     router.push(path);
-    if (isMobile) {
+    if (isDrawerNav) {
       onClose();
     }
   };
@@ -75,7 +76,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const handleOpenNewCreditApplicationIntake = () => {
-    if (isMobile) {
+    if (isDrawerNav) {
       onClose();
     }
     setIntakeModalOpen(true);
@@ -100,10 +101,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <>
       <StyledDrawer
-        variant={isMobile ? "temporary" : "permanent"}
-        open={isMobile ? open : true}
+        variant={isDrawerNav ? "temporary" : "permanent"}
+        open={isDrawerNav ? open : true}
         onClose={onClose}
-        isMobile={isMobile}>
+        isMobile={isDrawerNav}>
         <SidebarHeader>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Stack direction="row" alignItems="center" spacing={1}>

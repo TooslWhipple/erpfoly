@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useMediaQuery, useTheme } from "@mui/material";
 import { Sidebar } from "@/components/Sidebar";
+import {
+  NAV_COMPACT_BREAKPOINT,
+  SALES_POS_BREAKPOINT,
+} from "@/lib/layoutBreakpoints";
+import { isSalesFlowRoute } from "@/lib/salesFlowRoutes";
 import { AppNavProvider } from "./AppNavContext";
 import {
   LayoutContainer,
@@ -16,44 +21,37 @@ interface AppLayoutShellProps {
 }
 
 /**
- * Sales flow pages that have an in-header close/back control — the hamburger
- * is rendered next to that control instead of floating above the page.
- */
-function shouldEmbedMobileMenu(pathname: string): boolean {
-  // Next.js `pathname` uses route patterns (`/ventas/[id]`), not resolved URLs.
-  return (
-    pathname === "/ventas/nueva" ||
-    pathname === "/ventas/[id]" ||
-    pathname === "/cotizaciones/[id]"
-  );
-}
-
-/**
  * Persistent app chrome (sidebar + main area). Mounted once per authenticated session
  * so sidebar scroll and expand state survive client-side route changes.
  */
 export function AppLayoutShell({ children }: AppLayoutShellProps) {
   const theme = useTheme();
   const router = useRouter();
-  // Tablets (incl. ~1024 landscape) use a temporary drawer so POS screens
-  // get full width; permanent sidebar only from `lg` (1200px) up.
-  const isCompactNav = useMediaQuery(theme.breakpoints.down("lg"));
+  const isBelowNavBreakpoint = useMediaQuery(
+    theme.breakpoints.down(NAV_COMPACT_BREAKPOINT),
+  );
+  const isBelowSalesPosBreakpoint = useMediaQuery(
+    theme.breakpoints.down(SALES_POS_BREAKPOINT),
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isSalesFlowChrome = shouldEmbedMobileMenu(router.pathname);
-  // POS chrome (flush + inline menu) only when the sidebar is a drawer.
-  // On desktop the permanent sidebar + flush bar looks cramped/odd.
-  const embedMobileMenu = isCompactNav && isSalesFlowChrome;
-  const flushPadding = isCompactNav && isSalesFlowChrome;
+  const isSalesFlowChrome = isSalesFlowRoute(router.pathname);
+  const isDrawerNav = isSalesFlowChrome
+    ? isBelowSalesPosBreakpoint
+    : isBelowNavBreakpoint;
+  const isSalesPosLayout = isSalesFlowChrome && isBelowSalesPosBreakpoint;
+  const embedMobileMenu = isDrawerNav && isSalesFlowChrome;
+  const flushPadding = isSalesPosLayout;
 
   const navValue = useMemo(
     () => ({
-      isCompactNav,
+      isDrawerNav,
+      isSalesPosLayout,
       embedMobileMenu,
       openMobileNav: () => setMobileOpen(true),
       toggleMobileNav: () => setMobileOpen((prev) => !prev),
     }),
-    [isCompactNav, embedMobileMenu],
+    [isDrawerNav, isSalesPosLayout, embedMobileMenu],
   );
 
   return (
@@ -65,7 +63,7 @@ export function AppLayoutShell({ children }: AppLayoutShellProps) {
             embedNavMenu={embedMobileMenu}
             flushPadding={flushPadding}
           >
-            {isCompactNav && !embedMobileMenu && (
+            {isDrawerNav && !embedMobileMenu && (
               <MobileMenuButton
                 onClick={() => setMobileOpen((prev) => !prev)}
                 aria-label="Abrir menú"

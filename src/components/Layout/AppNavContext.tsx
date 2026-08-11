@@ -1,9 +1,11 @@
 import { createContext, useContext } from "react";
 
 export interface AppNavContextValue {
-  /** Temporary drawer mode (tablet / mobile). */
-  isCompactNav: boolean;
-  /** When true, chrome pages should render the menu toggle inline (sales flow). */
+  /** Sidebar is a temporary drawer (breakpoint depends on the current route). */
+  isDrawerNav: boolean;
+  /** Compact POS layout for sales / quotes routes (below `lg`). */
+  isSalesPosLayout: boolean;
+  /** When true, sales chrome renders the menu toggle inline instead of floating. */
   embedMobileMenu: boolean;
   openMobileNav: () => void;
   toggleMobileNav: () => void;
@@ -27,7 +29,8 @@ export function useAppNav(): AppNavContextValue {
   const ctx = useContext(AppNavContext);
   if (!ctx) {
     return {
-      isCompactNav: false,
+      isDrawerNav: false,
+      isSalesPosLayout: false,
       embedMobileMenu: false,
       openMobileNav: () => undefined,
       toggleMobileNav: () => undefined,

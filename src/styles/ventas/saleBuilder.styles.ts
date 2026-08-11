@@ -1,5 +1,6 @@
 import { Box, Button, OutlinedInput, Stack } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
+import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 
 export const PageShell = styled(Box)(({ theme }) => ({
   minHeight: "100%",
@@ -19,12 +20,12 @@ export const PageHeader = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.app.border}`,
   // Desktop: ContentWrapper already pads — avoid a double-inset “floating” bar.
-  [theme.breakpoints.up("lg")]: {
+  [theme.breakpoints.up(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(0, 0, 2),
     backgroundColor: "transparent",
     borderBottom: "none",
   },
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(1.5, 2),
     gap: theme.spacing(1),
   },
@@ -39,7 +40,7 @@ export const HeaderActions = styled(Stack)(({ theme }) => ({
   flexWrap: "nowrap",
   flexShrink: 0,
   gap: theme.spacing(1.5),
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     gap: theme.spacing(1),
     "& .MuiButton-root": {
       minHeight: 40,
@@ -57,12 +58,12 @@ export const SearchHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2, 3),
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.app.border}`,
-  [theme.breakpoints.up("lg")]: {
+  [theme.breakpoints.up(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(0, 0, 2),
     backgroundColor: "transparent",
     borderBottom: "none",
   },
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(1.5, 2),
     flexWrap: "nowrap",
   },
@@ -97,7 +98,7 @@ export const MainGrid = styled(Box)(({ theme }) => ({
   [theme.breakpoints.up("lg")]: {
     gridTemplateColumns: "minmax(0, 1fr) 360px",
   },
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(2),
     gap: theme.spacing(2),
   },
@@ -118,7 +119,7 @@ export const CheckoutGrid = styled(Box)(({ theme }) => ({
   [theme.breakpoints.up("lg")]: {
     gridTemplateColumns: "minmax(0, 1fr) 380px",
   },
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(2),
     gap: theme.spacing(2),
   },
@@ -129,7 +130,7 @@ export const CheckoutGrid = styled(Box)(({ theme }) => ({
 
 export const StickySidebar = styled(Stack)(({ theme }) => ({
   gap: theme.spacing(2),
-  [theme.breakpoints.up("lg")]: {
+  [theme.breakpoints.up(SALES_POS_BREAKPOINT)]: {
     position: "sticky",
     top: theme.spacing(2),
     alignSelf: "start",
@@ -282,11 +283,11 @@ export const ProductDetailLayout = styled(Box)(({ theme }) => ({
   gap: theme.spacing(3),
   padding: theme.spacing(3),
   alignItems: "flex-start",
-  [theme.breakpoints.down("lg")]: {
+  [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(2),
     gap: theme.spacing(2),
   },
-  // Stack gallery above details when the content column is narrow (tablet).
+  // Stack gallery above details when the content column is narrow (tablet POS).
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
   },

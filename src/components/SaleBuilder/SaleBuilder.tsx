@@ -127,6 +127,7 @@ import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
+import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
 import {
@@ -3173,7 +3174,7 @@ export function SaleBuilder({
             title="Buscar cliente"
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
-            fullScreenBreakpoint="lg"
+            fullScreenBreakpoint={SALES_POS_BREAKPOINT}
             headerActions={
               <Button
                 variant="outlined"

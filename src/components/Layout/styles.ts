@@ -1,6 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { Box, IconButton } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
+import { NAV_COMPACT_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { CONTENT_PADDING } from "@/styles/theme";
 
 export const LayoutContainer = styled(Box)({
@@ -32,12 +33,12 @@ export const ContentWrapper = styled(Box, {
     position: "relative",
     overflowY: "auto",
     overflowX: "hidden",
-    // Tablet + mobile: reserve space for the floating menu unless the page
-    // embeds the toggle inline (sales flow chrome).
+    // Mobile: reserve space for the floating menu unless the page embeds the
+    // toggle inline (sales flow chrome).
     // `paddingTop` must come AFTER shorthand `padding` or it gets overwritten.
     ...(!flushPadding
       ? {
-          [theme.breakpoints.down("lg")]: {
+          [theme.breakpoints.down(NAV_COMPACT_BREAKPOINT)]: {
             padding: 16,
             paddingTop: embedNavMenu ? 16 : 72,
           },

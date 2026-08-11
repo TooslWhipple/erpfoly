@@ -95,7 +95,8 @@ export default function RutaPage() {
                   r.removeAssistantMutation.isPending
                 }
                 onSaveCartaPorte={() => void r.handleSaveCartaPorte()}
-                onAddOrders={() => r.setAddOrdersModalOpen(true)}
+                onAddOrders={r.handleOpenAddOrders}
+                onAddOrdersForBranch={r.handleOpenAddOrdersForBranch}
                 onPendingLocalFile={r.setPendingCartaLocalFile}
                 onRemoveServerDocument={r.handleRemoveCartaServerDocument}
                 onRequestRemoveOrder={r.handleRequestRemoveRouteOrder}
@@ -124,8 +125,9 @@ export default function RutaPage() {
         }}
         creatingRoute={r.createRouteMutation.isPending}
         addOrdersModalOpen={r.addOrdersModalOpen}
-        onCloseAddOrders={() => r.setAddOrdersModalOpen(false)}
+        onCloseAddOrders={r.handleCloseAddOrders}
         onConfirmAddOrders={r.handleConfirmAddOrders}
+        addOrdersBranchId={r.addOrdersBranchId}
         fetchAvailableOrders={r.fetchOrdersForModal}
         addDriverModalOpen={r.addDriverModalOpen}
         onCloseAddDriver={() => r.setAddDriverModalOpen(false)}

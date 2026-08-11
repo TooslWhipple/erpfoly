@@ -30,8 +30,10 @@ import {
 import {
   TAB_ARTICLES,
   TAB_ROUTE,
+  getDefaultTabForRouteType,
   type PendingRemoval,
 } from "@/pages/rutas/components/constants";
+import type { RouteType } from "@/types/rutas.types";
 
 export function useRutasPage() {
   const { hasPermission } = usePermissions();
@@ -91,6 +93,9 @@ export function useRutasPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
   const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
+  const [addOrdersBranchId, setAddOrdersBranchId] = useState<number | null>(
+    null,
+  );
   const [addDriverModalOpen, setAddDriverModalOpen] = useState(false);
   const [addAssistantModalOpen, setAddAssistantModalOpen] = useState(false);
   const [newRouteModalOpen, setNewRouteModalOpen] = useState(false);
@@ -172,8 +177,9 @@ export function useRutasPage() {
     async (
       routeId: number,
       search?: string,
+      branchId?: number,
     ): Promise<AvailableOrdersResponse> => {
-      const res = await fetchAvailableOrders(routeId, search);
+      const res = await fetchAvailableOrders(routeId, search, branchId);
       const data = unwrapOrThrow(res) as AvailableOrdersApi;
       const mapRow = (row: AvailableOrdersApi["suggested"][number]) => ({
         id: row.id,
@@ -216,9 +222,23 @@ export function useRutasPage() {
 
   const resetRouteTabIfNeeded = useCallback(() => {
     if (activeTab === TAB_ROUTE) {
-      setActiveTab(TAB_ARTICLES);
+      setActiveTab(
+        getDefaultTabForRouteType(routeDetail?.routeType as RouteType | undefined),
+      );
     }
-  }, [activeTab]);
+  }, [activeTab, routeDetail?.routeType]);
+
+  useEffect(() => {
+    if (!routeDetail?.routeType) return;
+    const allowed = new Set(
+      routeDetail.routeType === "scheduled"
+        ? ["ida", "vuelta", "route", "carta_porte", "driver"]
+        : ["articles", "route", "carta_porte", "driver"],
+    );
+    if (!allowed.has(activeTab)) {
+      setActiveTab(getDefaultTabForRouteType(routeDetail.routeType));
+    }
+  }, [routeDetail?.routeType, activeTab]);
 
   const handlePrevDay = () => {
     const d = new Date(selectedDate);
@@ -241,7 +261,23 @@ export function useRutasPage() {
 
   const handleSelectRoute = (routeId: number) => {
     setSelectedRouteId(routeId);
-    setActiveTab(TAB_ARTICLES);
+    const summary = routes.find((r) => r.id === routeId);
+    setActiveTab(getDefaultTabForRouteType(summary?.routeType));
+  };
+
+  const handleOpenAddOrders = () => {
+    setAddOrdersBranchId(null);
+    setAddOrdersModalOpen(true);
+  };
+
+  const handleOpenAddOrdersForBranch = (branchId: number) => {
+    setAddOrdersBranchId(branchId);
+    setAddOrdersModalOpen(true);
+  };
+
+  const handleCloseAddOrders = () => {
+    setAddOrdersModalOpen(false);
+    setAddOrdersBranchId(null);
   };
 
   const handleConfirmAddOrders = async (payload: {
@@ -379,6 +415,10 @@ export function useRutasPage() {
     setPendingRemoval,
     addOrdersModalOpen,
     setAddOrdersModalOpen,
+    addOrdersBranchId,
+    handleOpenAddOrders,
+    handleOpenAddOrdersForBranch,
+    handleCloseAddOrders,
     addDriverModalOpen,
     setAddDriverModalOpen,
     addAssistantModalOpen,

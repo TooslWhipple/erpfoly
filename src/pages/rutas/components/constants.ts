@@ -1,16 +1,38 @@
 import type { TabItem } from "@/components/Tabs";
+import type { RouteType } from "@/types/rutas.types";
 
 export const TAB_ARTICLES = "articles";
+export const TAB_IDA = "ida";
+export const TAB_VUELTA = "vuelta";
 export const TAB_ROUTE = "route";
 export const TAB_CARTA_PORTE = "carta_porte";
 export const TAB_DRIVER = "driver";
 
-export const TABS: TabItem[] = [
-  { value: TAB_ARTICLES, label: "Artículos" },
+const SHARED_TABS: TabItem[] = [
   { value: TAB_ROUTE, label: "Ruta" },
   { value: TAB_CARTA_PORTE, label: "Carta porte" },
   { value: TAB_DRIVER, label: "Chofer y ayudantes" },
 ];
+
+export const TABS: TabItem[] = [
+  { value: TAB_ARTICLES, label: "Artículos" },
+  ...SHARED_TABS,
+];
+
+export function getTabsForRouteType(routeType?: RouteType): TabItem[] {
+  if (routeType === "scheduled") {
+    return [
+      { value: TAB_IDA, label: "Ida" },
+      { value: TAB_VUELTA, label: "Vuelta" },
+      ...SHARED_TABS,
+    ];
+  }
+  return TABS;
+}
+
+export function getDefaultTabForRouteType(routeType?: RouteType): string {
+  return routeType === "scheduled" ? TAB_IDA : TAB_ARTICLES;
+}
 
 export const STATUS_LABEL: Record<string, string> = {
   scheduled: "Agendada",

@@ -60,10 +60,14 @@ export async function fetchRouteDetail(routeId: number) {
 export async function fetchAvailableOrders(
   routeId: number,
   search?: string,
+  branchId?: number,
 ) {
   const searchParams = new URLSearchParams();
   if (search?.trim()) {
     searchParams.set("search", search.trim());
+  }
+  if (branchId != null) {
+    searchParams.set("branch_id", String(branchId));
   }
   const query = searchParams.toString();
   return get<AvailableOrdersApi>(

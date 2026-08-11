@@ -30,9 +30,11 @@ interface RoutePageModalsProps {
   onConfirmAddOrders: (payload: {
     points: AddRoutePointPayload[];
   }) => Promise<void>;
+  addOrdersBranchId?: number | null;
   fetchAvailableOrders: (
     routeId: number,
     search?: string,
+    branchId?: number,
   ) => Promise<AvailableOrdersResponse>;
   addDriverModalOpen: boolean;
   onCloseAddDriver: () => void;
@@ -62,6 +64,7 @@ export function RoutePageModals({
   addOrdersModalOpen,
   onCloseAddOrders,
   onConfirmAddOrders,
+  addOrdersBranchId = null,
   fetchAvailableOrders,
   addDriverModalOpen,
   onCloseAddDriver,
@@ -93,6 +96,7 @@ export function RoutePageModals({
             onClose={onCloseAddOrders}
             routeId={resolvedRouteId}
             routeType={routeType ?? "deliveries"}
+            branchId={addOrdersBranchId}
             fetchAvailableOrders={fetchAvailableOrders}
             onConfirm={onConfirmAddOrders}
           />

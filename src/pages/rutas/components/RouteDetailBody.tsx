@@ -2,14 +2,22 @@ import { Button, Stack } from "@mui/material";
 import { PlusCircle, Save } from "lucide-react";
 
 import { TabFilters } from "@/components";
-import { ArticlesTab, DriverTab, RouteTab } from "@/components/RouteTabs";
+import {
+  ArticlesTab,
+  DriverTab,
+  IdaTab,
+  RouteTab,
+  VueltaTab,
+} from "@/components/RouteTabs";
 import type { RouteDetailView } from "@/utils/rutas-api.mapper";
 import {
   TAB_ARTICLES,
   TAB_CARTA_PORTE,
   TAB_DRIVER,
+  TAB_IDA,
   TAB_ROUTE,
-  TABS,
+  TAB_VUELTA,
+  getTabsForRouteType,
 } from "./constants";
 import { RouteCartaUploadSection } from "./RouteCartaUploadSection";
 
@@ -27,6 +35,7 @@ interface RouteDetailBodyProps {
   loadingAssistant: boolean;
   onSaveCartaPorte: () => void;
   onAddOrders: () => void;
+  onAddOrdersForBranch: (branchId: number) => void;
   onPendingLocalFile: (file: File | undefined) => void;
   onRemoveServerDocument: (documentId: number) => void;
   onRequestRemoveOrder: (
@@ -60,6 +69,7 @@ export function RouteDetailBody({
   loadingAssistant,
   onSaveCartaPorte,
   onAddOrders,
+  onAddOrdersForBranch,
   onPendingLocalFile,
   onRemoveServerDocument,
   onRequestRemoveOrder,
@@ -69,6 +79,16 @@ export function RouteDetailBody({
   onRemoveDriver,
   onRemoveAssistant,
 }: RouteDetailBodyProps) {
+  const routeType = routeDetail.routeType ?? "deliveries";
+  const isScheduled = routeType === "scheduled";
+  const tabs = getTabsForRouteType(routeType);
+
+  const municipality =
+    routeDetail.originBranch?.municipality?.trim() ||
+    routeDetail.location ||
+    routeDetail.originBranch?.name ||
+    "esta ruta";
+
   const renderTabActionButton = () => {
     if (activeTab === TAB_DRIVER) {
       return null;
@@ -86,16 +106,19 @@ export function RouteDetailBody({
         </Button>
       );
     }
-    return (
-      <Button
-        variant="option"
-        color="primary"
-        startIcon={<PlusCircle size={16} />}
-        onClick={onAddOrders}
-      >
-        Agregar
-      </Button>
-    );
+    if (!isScheduled) {
+      return (
+        <Button
+          variant="option"
+          color="primary"
+          startIcon={<PlusCircle size={16} />}
+          onClick={onAddOrders}
+        >
+          Agregar
+        </Button>
+      );
+    }
+    return null;
   };
 
   return (
@@ -107,14 +130,14 @@ export function RouteDetailBody({
         alignItems="center"
       >
         <TabFilters
-          tabs={TABS}
+          tabs={tabs}
           activeTab={activeTab}
           onTabChange={onTabChange}
         />
         {renderTabActionButton()}
       </Stack>
 
-      {activeTab === TAB_ARTICLES && (
+      {activeTab === TAB_ARTICLES && !isScheduled && (
         <ArticlesTab
           orders={routeDetail.orders}
           canEdit={canEditArticles}
@@ -122,6 +145,19 @@ export function RouteDetailBody({
           onRequestRemoveItem={onRequestRemoveItem}
         />
       )}
+
+      {activeTab === TAB_IDA && isScheduled && (
+        <IdaTab
+          municipality={municipality}
+          scheduledStops={routeDetail.scheduledStops}
+          orders={routeDetail.orders}
+          canEdit={canEditArticles}
+          onAddOrdersForBranch={onAddOrdersForBranch}
+          onRequestRemoveItem={onRequestRemoveItem}
+        />
+      )}
+
+      {activeTab === TAB_VUELTA && isScheduled && <VueltaTab />}
 
       {activeTab === TAB_ROUTE && (
         <RouteTab map={routeDetail.map ?? null} />

@@ -17,7 +17,7 @@ import {
 } from "@/services/rutas.service";
 import type { RouteDetailApi } from "@/types/rutas-api.types";
 import type { AddRoutePointPayload } from "@/types/rutas.types";
-import { TAB_ARTICLES } from "@/pages/rutas/components/constants";
+import { getDefaultTabForRouteType } from "@/pages/rutas/components/constants";
 
 interface UseRouteMutationsParams {
   queryClient: QueryClient;
@@ -51,7 +51,7 @@ export function useRouteMutations({
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
       queryClient.setQueryData<RouteDetailApi>(["route-detail", data.id], data);
       setSelectedRouteId(data.id);
-      setActiveTab(TAB_ARTICLES);
+      setActiveTab(getDefaultTabForRouteType(data.route_type));
       showSuccess("Ruta creada correctamente.");
       setNewRouteModalOpen(false);
     },

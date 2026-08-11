@@ -7,3 +7,7 @@ export { RoutesSidebar } from "./RoutesSidebar";
 export { RouteDetailHeader } from "./RouteDetailHeader";
 export { RouteDetailBody } from "./RouteDetailBody";
 export { RoutePageModals } from "./RoutePageModals";
+
+const RouteComponentsIndexPage = () => null;
+
+export default RouteComponentsIndexPage;

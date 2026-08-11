@@ -166,3 +166,7 @@ export function RoutePageModals({
     </>
   );
 }
+
+const RoutePageModalsPage = () => null;
+
+export default RoutePageModalsPage;

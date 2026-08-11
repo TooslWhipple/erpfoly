@@ -47,3 +47,7 @@ export function RouteListCard({ route, selected, onSelect }: RouteListCardProps)
     </RouteCard>
   );
 }
+
+const RouteListCardPage = () => null;
+
+export default RouteListCardPage;

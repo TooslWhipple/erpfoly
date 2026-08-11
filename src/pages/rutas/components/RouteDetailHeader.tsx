@@ -75,3 +75,7 @@ export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
     </DetailHeader>
   );
 }
+
+const RouteDetailHeaderPage = () => null;
+
+export default RouteDetailHeaderPage;

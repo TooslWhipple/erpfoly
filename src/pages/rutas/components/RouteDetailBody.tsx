@@ -187,3 +187,7 @@ export function RouteDetailBody({
     </>
   );
 }
+
+const RouteDetailBodyPage = () => null;
+
+export default RouteDetailBodyPage;

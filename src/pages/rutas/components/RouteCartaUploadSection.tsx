@@ -47,3 +47,7 @@ export function RouteCartaUploadSection({
 
   return <CartaPorteTab value={merged} onChange={handleChange} />;
 }
+
+const RouteCartaUploadSectionPage = () => null;
+
+export default RouteCartaUploadSectionPage;

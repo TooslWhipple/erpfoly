@@ -91,3 +91,7 @@ export function RoutesSidebar({
     </RoutesSidebarLayout>
   );
 }
+
+const RoutesSidebarPage = () => null;
+
+export default RoutesSidebarPage;

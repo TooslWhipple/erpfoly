@@ -63,3 +63,7 @@ export type PendingRemoval =
       articleName: string;
     }
   | null;
+
+const RouteConstantsPage = () => null;
+
+export default RouteConstantsPage;

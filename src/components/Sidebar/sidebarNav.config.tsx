@@ -49,6 +49,7 @@ import {
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
   SUPPLIER_PAYABLES_READ,
+  MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
@@ -150,6 +151,7 @@ export const NAV_ITEMS: NavItem[] = [
         INVOICE_REQUESTS_READ,
         GENERAL_EXPENSES_READ,
         SUPPLIER_PAYABLES_READ,
+        MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
       ],
     },
     subItems: [
@@ -172,6 +174,11 @@ export const NAV_ITEMS: NavItem[] = [
         label: "Proveedores",
         path: "/facturas/proveedores",
         requirement: { permission: SUPPLIER_PAYABLES_READ },
+      },
+      {
+        label: "Discrepancias",
+        path: "/facturas/discrepancias",
+        requirement: { permission: MERCHANDISE_RECEPTION_DISCREPANCIES_READ },
       },
     ],
   },

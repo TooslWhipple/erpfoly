@@ -69,7 +69,6 @@ export function CosteoExpensesTab({
                       <TableCell style={{ width: "96px" }}>Moneda</TableCell>
                       <TableCell style={{ width: "176px" }} align="right">Tipo de cambio</TableCell>
                       <TableCell style={{ width: "176px" }} align="right">Monto</TableCell>
-                      <TableCell style={{ width: "176px" }} align="right">Subtotal</TableCell>
                       <TableCell style={{ width: "176px" }} align="right" > IVA</TableCell>
                       <TableCell style={{ width: "176px" }} align="right">Total</TableCell>
                       <TableCell style={{ width: "48px" }} />
@@ -86,7 +85,6 @@ export function CosteoExpensesTab({
                         <TableCell>{expense.currency}</TableCell>
                         <TableCell align="right">{formatCurrency(expense.exchangeRate)}</TableCell>
                         <TableCell align="right">{formatCurrency(expense.amount)}</TableCell>
-                        <TableCell align="right">{formatCurrency(expense.subtotal)}</TableCell>
                         <TableCell align="right">{formatCurrency(expense.vat)}</TableCell>
                         <TableCell align="right">{formatCurrency(expense.total)}</TableCell>
                         <TableCell>

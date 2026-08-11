@@ -7,7 +7,7 @@ import {
   CATALOG_SUPPLIERS_CREATE,
   CATALOG_SUPPLIERS_UPDATE,
 } from "@/lib/permissions";
-import { Mail, PencilIcon } from "lucide-react";
+import { Mail } from "lucide-react";
 export default function SupplierEditPage() {
   const {
     isNew,
@@ -33,7 +33,6 @@ export default function SupplierEditPage() {
     handleAddBankAccount,
     handleRemoveBankAccount,
     handleBankAccountChange,
-    handleEdit,
     handleInvite,
     portalStatus,
     inviteUrl,
@@ -77,14 +76,6 @@ export default function SupplierEditPage() {
             permission: isNew
               ? CATALOG_SUPPLIERS_CREATE
               : CATALOG_SUPPLIERS_UPDATE,
-          },
-          {
-            id: "edit",
-            label: "Editar",
-            icon: <PencilIcon size={16} />,
-            onClick: handleEdit,
-            variant: "outlined",
-            permission: CATALOG_SUPPLIERS_UPDATE,
           },
           {
             id: "invite",

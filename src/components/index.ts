@@ -41,13 +41,13 @@ export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
 export type { ReviewInvoiceRequestModalProps } from "./ReviewInvoiceRequestModal";
 export {
-  RegisterExpenseModal,
+  RegisterExpenseForm,
   UnassignedInvoicesAlert,
   UnassignedInvoicesModal,
   ExpenseProgressBars,
 } from "./GeneralExpenses";
 export type {
-  RegisterExpenseModalProps,
+  RegisterExpenseFormProps,
   UnassignedInvoicesAlertProps,
   UnassignedInvoicesModalProps,
   ExpenseProgressBarsProps,

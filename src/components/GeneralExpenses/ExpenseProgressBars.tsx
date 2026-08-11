@@ -6,6 +6,7 @@ export interface ExpenseProgressBarsProps {
   paidAmount: number;
   invoicesAmount: number;
   totalAmount: number;
+  stacked?: boolean;
 }
 
 function clampPercent(value: number, total: number): number {
@@ -17,13 +18,14 @@ export function ExpenseProgressBars({
   paidAmount,
   invoicesAmount,
   totalAmount,
+  stacked = false,
 }: ExpenseProgressBarsProps) {
   const paidPercent = clampPercent(paidAmount, totalAmount);
   const invoicesPercent = clampPercent(invoicesAmount, totalAmount);
 
   return (
     <Stack
-      direction={{ xs: "column", sm: "row" }}
+      direction={stacked ? "column" : { xs: "column", sm: "row" }}
       spacing={2}
       width="100%"
     >

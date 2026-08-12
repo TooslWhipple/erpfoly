@@ -5,10 +5,10 @@ export interface RouteListRowApi {
   status: string;
   route_type?: "deliveries" | "scheduled";
   location: string;
+  origin_branch: { id: number; name: string; municipality?: string | null } | null;
   article_count: number;
   point_count: number;
   driver_name: string;
-  mini_map_url: string | null;
 }
 
 /** Map payload from GET /routes/:id */
@@ -19,10 +19,16 @@ export interface RouteMapPayloadApi {
   stops: { sequence: number; lat: number; lng: number }[];
 }
 
+export interface RouteItemAddedByApi {
+  type: "system" | "user";
+  name: string | null;
+}
+
 export interface RouteOrderItemApi {
   id: string;
   article_name: string;
   status: string;
+  added_by?: RouteItemAddedByApi;
 }
 
 export interface RouteOrderApi {
@@ -33,8 +39,16 @@ export interface RouteOrderApi {
   address: string;
   zone: string;
   destination_branch: string | null;
+  destination_branch_id?: number | null;
   stop_type: string;
   items: RouteOrderItemApi[];
+}
+
+export interface RouteScheduledStopApi {
+  id: number;
+  branch_id: number;
+  name: string;
+  sequence: number;
 }
 
 export interface SuggestedItemToAddApi {
@@ -92,7 +106,12 @@ export interface RouteDetailApi {
   status: string;
   location: string;
   scheduled_date: string | null;
-  origin_branch: { id: number; name: string } | null;
+  origin_branch: {
+    id: number;
+    name: string;
+    municipality?: string | null;
+  } | null;
+  scheduled_stops?: RouteScheduledStopApi[];
   article_count: number;
   point_count: number;
   driver_name: string;
@@ -100,7 +119,6 @@ export interface RouteDetailApi {
   orders: RouteOrderApi[];
   driver: RoutePersonApi | null;
   assistants: RoutePersonApi[];
-  mini_map_url: string | null;
   map: RouteMapPayloadApi;
   carta_porte_files: CartaPorteFileApi[];
 }

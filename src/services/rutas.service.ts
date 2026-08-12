@@ -60,10 +60,14 @@ export async function fetchRouteDetail(routeId: number) {
 export async function fetchAvailableOrders(
   routeId: number,
   search?: string,
+  branchId?: number,
 ) {
   const searchParams = new URLSearchParams();
   if (search?.trim()) {
     searchParams.set("search", search.trim());
+  }
+  if (branchId != null) {
+    searchParams.set("branch_id", String(branchId));
   }
   const query = searchParams.toString();
   return get<AvailableOrdersApi>(
@@ -168,9 +172,11 @@ export function fetchAvailableAssistants(
 }
 
 export function assignDriverToRoute(routeId: number, userId: number) {
-  return patch<RouteDetailApi>(`/routes/${routeId}/driver`, {
-    user_id: userId,
-  });
+  return patch<RouteDetailApi>(
+    `/routes/${routeId}/driver`,
+    { user_id: userId },
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export function removeDriverFromRoute(routeId: number) {

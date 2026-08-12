@@ -119,19 +119,26 @@ export default function MercanciaDanada() {
     ],
     [],
   );
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        const result = await getDamagedProductStats();
-        if (result.data != null) {
-          setStats(result.data);
-        }
-      } catch (err) {
-        console.error("[MercanciaDanada] Error loading stats:", err);
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await getDamagedProductStats();
+      if (result.data != null) {
+        setStats(result.data);
       }
+    } catch (err) {
+      console.error("[MercanciaDanada] Error loading stats:", err);
     }
-    loadStats();
   }, []);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
+
+  const handleAddSuccess = useCallback(() => {
+    void refetch();
+    void loadStats();
+  }, [refetch, loadStats]);
+
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchInput(value);
@@ -348,7 +355,7 @@ export default function MercanciaDanada() {
       <AddDamagedGoodsModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={() => refetch()}
+        onSuccess={handleAddSuccess}
       />
     </Stack>
   );

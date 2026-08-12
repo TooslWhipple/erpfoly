@@ -41,13 +41,13 @@ export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
 export type { ReviewInvoiceRequestModalProps } from "./ReviewInvoiceRequestModal";
 export {
-  RegisterExpenseModal,
+  RegisterExpenseForm,
   UnassignedInvoicesAlert,
   UnassignedInvoicesModal,
   ExpenseProgressBars,
 } from "./GeneralExpenses";
 export type {
-  RegisterExpenseModalProps,
+  RegisterExpenseFormProps,
   UnassignedInvoicesAlertProps,
   UnassignedInvoicesModalProps,
   ExpenseProgressBarsProps,
@@ -74,6 +74,19 @@ export type {
   DiscrepancyDetailHeaderProps,
   DiscrepancyInvoicesSectionProps,
 } from "./MerchandiseReceptionDiscrepancies";
+export {
+  RecoverySheetDetailHeader,
+  RecoverySheetRouteCard,
+  RecoverySheetServiceOrderCard,
+  RecoverySheetWarehouseCard,
+  RecoverySheetDocumentPanel,
+  ReceiveRecoveryItemModal,
+} from "./RecoverySheets";
+export type {
+  RecoverySheetDetailHeaderProps,
+  RecoverySheetDocumentPanelProps,
+  ReceiveRecoveryItemModalProps,
+} from "./RecoverySheets";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";
@@ -98,6 +111,16 @@ export {
 } from "./CosteoDetailTabs";
 export { FilterMenu } from "./FilterMenu";
 export type { FilterMenuProps, FilterOption } from "./FilterMenu";
+export { OptionFilterButton } from "./OptionFilterButton";
+export type {
+  OptionFilterButtonProps,
+  OptionFilterOption,
+} from "./OptionFilterButton";
+export { InlineBranchSelect } from "./InlineBranchSelect";
+export type {
+  InlineBranchSelectProps,
+  InlineBranchOption,
+} from "./InlineBranchSelect";
 export { SuggestionsCard } from "./SuggestionsCard";
 export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";

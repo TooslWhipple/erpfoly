@@ -1,5 +1,5 @@
-import { get } from "@/lib/axios";
-import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import { get, patch } from "@/lib/axios";
+import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type { SellerDetail, SellerListItem } from "@/types/sellers.types";
 
@@ -23,4 +23,13 @@ export async function getSellerDetail(
   sellerId: number
 ): Promise<ApiResult<SellerDetail>> {
   return get<SellerDetail>(`${SELLERS_BASE}/${sellerId}`);
+}
+
+export async function updateSellerBranch(
+  sellerId: number,
+  branchId: number
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return patch<ApiSuccessPayload>(`${SELLERS_BASE}/${sellerId}/branch`, {
+    branchId,
+  });
 }

@@ -28,6 +28,7 @@ import {
 import { getActiveSaleCredits } from "@/services/sale-credit.service";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { isCreditClient as checkIsCreditClient } from "@/utils/client";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -125,9 +126,10 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const showWarning = useSnackbarStore((s) => s.showWarning);
   const { id } = router.query;
   const [activeTab, setActiveTab] = useState("actividad");
-
+  const [validatingPayment, setValidatingPayment] = useState(false);
   const numericClientId =
     typeof id === "string" && Number.isFinite(Number(id)) ? Number(id) : null;
 
@@ -152,13 +154,6 @@ export default function ClientDetailPage() {
       return unwrapOrThrow(result);
     },
   });
-
-  const canAddPayment =
-    isCreditClient &&
-    !activeCreditsQuery.isLoading &&
-    (activeCreditsQuery.data?.rows ?? []).some(
-      (credit) => credit.outstanding_balance > 0,
-    );
 
   const activityListQuery = useQuery({
     queryKey: ["clients", "collection-activities", numericClientId],
@@ -275,6 +270,36 @@ export default function ClientDetailPage() {
   const creditAvailable = header.creditLine.available ?? 0;
   const creditUsed = Math.max(creditAuthorized - creditAvailable, 0);
 
+  const handleAddPaymentClick = async () => {
+    if (!isCreditClient) {
+      showWarning(
+        "Este cliente es de contado y no puede registrar abonos.",
+      );
+      return;
+    }
+
+    setValidatingPayment(true);
+    try {
+      const result = await activeCreditsQuery.refetch();
+      const hasPayableCredit = (result.data?.rows ?? []).some(
+        (credit) => credit.outstanding_balance > 0,
+      );
+
+      if (!hasPayableCredit) {
+        showWarning(
+          "El cliente no tiene compras a crédito vigentes con parcialidades pendientes.",
+        );
+        return;
+      }
+
+      await router.push(`/clientes/${header.id}/abonos`);
+    } catch (error) {
+      showWarning(getApiErrorMessage(error));
+    } finally {
+      setValidatingPayment(false);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "actividad":
@@ -364,21 +389,22 @@ export default function ClientDetailPage() {
           onTabChange={(value: string) => setActiveTab(value)}
         />
 
-        {canAddPayment && (
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{
-              minWidth: {
-                xs: "100%",
-                sm: "144px",
-              },
-            }}
-            onClick={() => router.push(`/clientes/${header.id}/abonos`)}
-          >
-            Agregar abono
-          </Button>
-        )}
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={validatingPayment}
+          sx={{
+            minWidth: {
+              xs: "100%",
+              sm: "144px",
+            },
+          }}
+          onClick={() => {
+            void handleAddPaymentClick();
+          }}
+        >
+          Agregar abono
+        </Button>
       </Stack>
 
       {renderTabContent()}

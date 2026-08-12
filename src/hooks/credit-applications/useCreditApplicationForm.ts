@@ -81,9 +81,11 @@ const EMPTY_ADDRESS_VALUES: AddressTabValues = {
   internalNumber: "",
   betweenStreets: "",
   housingType: "",
-  residenceTime: "",
+  residenceTimeValue: "",
+  residenceTimeUnit: "",
   previousAddress: "",
-  previousResidenceTime: "",
+  previousResidenceTimeValue: "",
+  previousResidenceTimeUnit: "",
 };
 
 const EMPTY_EMPLOYMENT_VALUES: EmploymentTabValues = {
@@ -239,9 +241,17 @@ function mapCreditApplicationToFormValues(
       creditApplication.address.housingType.id != null
         ? String(creditApplication.address.housingType.id)
         : "",
-    residenceTime: creditApplication.address.residenceTime ?? "",
+    residenceTimeValue:
+      creditApplication.address.residenceTimeValue != null
+        ? String(creditApplication.address.residenceTimeValue)
+        : "",
+    residenceTimeUnit: creditApplication.address.residenceTimeUnit ?? "",
     previousAddress: creditApplication.address.previousAddress ?? "",
-    previousResidenceTime: creditApplication.address.previousAddressDuration ?? "",
+    previousResidenceTimeValue:
+      creditApplication.address.previousResidenceTimeValue != null
+        ? String(creditApplication.address.previousResidenceTimeValue)
+        : "",
+    previousResidenceTimeUnit: creditApplication.address.previousResidenceTimeUnit ?? "",
   };
 
   const spouseEmployment = creditApplication.employment.spouse;

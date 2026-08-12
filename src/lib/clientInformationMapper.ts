@@ -107,9 +107,11 @@ export function mapClientAddressToFormValues(data: {
   internalNumber?: string;
   betweenStreets?: string;
   housingType?: CatalogItem;
-  residenceTime?: string;
+  residenceTimeValue?: number | null;
+  residenceTimeUnit?: "months" | "years" | null;
   previousAddress?: string;
-  previousAddressDuration?: string;
+  previousResidenceTimeValue?: number | null;
+  previousResidenceTimeUnit?: "months" | "years" | null;
 }): AddressTabValues {
   const fullCode =
     data.neighborhood?.fullCode?.trim() ||
@@ -127,9 +129,15 @@ export function mapClientAddressToFormValues(data: {
     betweenStreets: data.betweenStreets ?? "",
     housingType:
       data.housingType?.id != null ? String(data.housingType.id) : "",
-    residenceTime: data.residenceTime ?? "",
+    residenceTimeValue:
+      data.residenceTimeValue != null ? String(data.residenceTimeValue) : "",
+    residenceTimeUnit: data.residenceTimeUnit ?? "",
     previousAddress: data.previousAddress ?? "",
-    previousResidenceTime: data.previousAddressDuration ?? "",
+    previousResidenceTimeValue:
+      data.previousResidenceTimeValue != null
+        ? String(data.previousResidenceTimeValue)
+        : "",
+    previousResidenceTimeUnit: data.previousResidenceTimeUnit ?? "",
   };
 }
 

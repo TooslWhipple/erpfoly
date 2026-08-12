@@ -5,7 +5,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
-import { AuthGuard, GlobalSnackbar } from "@/components";
+import { AuthGuard, BackendIndicator, GlobalSnackbar } from "@/components";
 import { AppLayoutGate } from "@/components/Layout";
 import "@/lib/dayjs";
 import { theme } from "@/styles/theme";
@@ -24,6 +24,8 @@ export default function App({ Component, pageProps }: AppProps) {
             </AppLayoutGate>
           </AuthGuard>
           <GlobalSnackbar />
+          {/* Outside AuthGuard so it also shows on the login screen. */}
+          <BackendIndicator />
         </LocalizationProvider>
       </ThemeProvider>
 

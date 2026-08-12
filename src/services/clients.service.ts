@@ -176,6 +176,11 @@ export function buildClientSectionPayload(
       };
     case "address": {
       const housingTypeId = Number.parseInt(payload.address.housingType, 10);
+      const residenceTimeValue = Number.parseInt(payload.address.residenceTimeValue, 10);
+      const previousResidenceTimeValue = Number.parseInt(
+        payload.address.previousResidenceTimeValue,
+        10
+      );
       return {
         address: {
           postalCode: payload.address.postalCode.trim(),
@@ -187,9 +192,13 @@ export function buildClientSectionPayload(
           internalNumber: payload.address.internalNumber.trim(),
           betweenStreets: payload.address.betweenStreets.trim(),
           housingTypeId: Number.isFinite(housingTypeId) ? housingTypeId : null,
-          residenceTime: payload.address.residenceTime.trim(),
+          residenceTimeValue: Number.isFinite(residenceTimeValue) ? residenceTimeValue : null,
+          residenceTimeUnit: payload.address.residenceTimeUnit || null,
           previousAddress: payload.address.previousAddress.trim(),
-          previousResidenceTime: payload.address.previousResidenceTime.trim(),
+          previousResidenceTimeValue: Number.isFinite(previousResidenceTimeValue)
+            ? previousResidenceTimeValue
+            : null,
+          previousResidenceTimeUnit: payload.address.previousResidenceTimeUnit || null,
         },
       };
     }

@@ -65,9 +65,11 @@ const EMPTY_ADDRESS: AddressTabValues = {
   internalNumber: "",
   betweenStreets: "",
   housingType: "",
-  residenceTime: "",
+  residenceTimeValue: "",
+  residenceTimeUnit: "",
   previousAddress: "",
-  previousResidenceTime: "",
+  previousResidenceTimeValue: "",
+  previousResidenceTimeUnit: "",
 };
 
 const EMPTY_EMPLOYMENT: EmploymentTabValues = {

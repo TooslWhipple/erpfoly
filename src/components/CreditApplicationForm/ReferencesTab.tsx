@@ -84,7 +84,7 @@ export function ReferencesTab({
           <FormTextField
             fullWidth
             required
-            label="Puesto del cliente"
+            label="Puesto"
             placeholder="Ingresa"
             value={values.clientPosition}
             onChange={(event) => onFieldChange("clientPosition", event.target.value)}

@@ -111,6 +111,16 @@ export {
 } from "./CosteoDetailTabs";
 export { FilterMenu } from "./FilterMenu";
 export type { FilterMenuProps, FilterOption } from "./FilterMenu";
+export { OptionFilterButton } from "./OptionFilterButton";
+export type {
+  OptionFilterButtonProps,
+  OptionFilterOption,
+} from "./OptionFilterButton";
+export { InlineBranchSelect } from "./InlineBranchSelect";
+export type {
+  InlineBranchSelectProps,
+  InlineBranchOption,
+} from "./InlineBranchSelect";
 export { SuggestionsCard } from "./SuggestionsCard";
 export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";
@@ -142,6 +152,7 @@ export type {
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";
+export { BackendIndicator } from "./BackendIndicator";
 export { CreditLimitBar } from "./CreditLimitBar";
 export type { CreditLimitBarProps } from "./CreditLimitBar";
 export { DepartmentCard } from "./DepartmentCard";

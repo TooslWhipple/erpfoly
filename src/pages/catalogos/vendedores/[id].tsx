@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/router";
 import {
   Alert,
@@ -12,15 +12,18 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import numeral from "numeral";
 import {
-  ArrowDownFromLine,
   ArrowUpNarrowWide,
   BadgeDollarSign,
-  Filter,
   LayoutList,
-  ListFilter,
   ScanSearch,
 } from "lucide-react";
-import { Breadcrumbs, TableCrud, StatusChip } from "@/components";
+import {
+  Breadcrumbs,
+  TableCrud,
+  StatusChip,
+  OptionFilterButton,
+  InlineBranchSelect,
+} from "@/components";
 import {
   SalesMonthGoalCard,
   MonthlySalesComposedChartCard,
@@ -29,17 +32,33 @@ import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column } from "@/components/TableCrud";
 import { MonthlySalesGoalsModal } from "@/components/Sellers";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
-import { getSellerDetail } from "@/services/sellers.service";
-import type { SellerDetail, SellerSaleHistoryRow } from "@/types/sellers.types";
+import {
+  getSellerDetail,
+  updateSellerBranch,
+} from "@/services/sellers.service";
+import {
+  getBranchesCatalog,
+  type BranchCatalogItem,
+} from "@/services/branches.service";
+import type {
+  SellerDetail,
+  SellerSaleHistoryRow,
+  SellerSaleType,
+} from "@/types/sellers.types";
 import {
   ChartCard,
-  MetricCard,
-  SectionCard,
-  SectionCardHeader,
 } from "@/styles/catalogos/vendedores.styles";
 import { theme } from "@/styles/theme";
 import { formatDate } from "@/utils/date";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+
 const CHART_PRIMARY = "#2663EB";
+
+const SALE_TYPE_OPTIONS = [
+  { id: "cash", label: "Contado" },
+  { id: "credit", label: "Crédito" },
+];
+
 const historyColumns: Column<SellerSaleHistoryRow>[] = [
   {
     id: "code",
@@ -90,9 +109,7 @@ const historyColumns: Column<SellerSaleHistoryRow>[] = [
     size: "sm",
   },
 ];
-function formatCurrencyShort(value: number): string {
-  return numeral(value).format("$0,0.00");
-}
+
 export default function VendedorDetailPage() {
   const router = useRouter();
   const rawId = router.query.id;
@@ -101,10 +118,22 @@ export default function VendedorDetailPage() {
       ? Number.parseInt(rawId, 10)
       : null;
   const validId = sellerId != null && !Number.isNaN(sellerId) ? sellerId : null;
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
+
   const [detail, setDetail] = useState<SellerDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [typeFilterIds, setTypeFilterIds] = useState<(string | number)[]>([]);
+  const [branches, setBranches] = useState<BranchCatalogItem[]>([]);
+  const [branchSaving, setBranchSaving] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const reloadDetail = useCallback(() => {
+    setReloadToken((token) => token + 1);
+  }, []);
+
   useAsyncEffect(
     async (isCancelled) => {
       await Promise.resolve();
@@ -115,6 +144,7 @@ export default function VendedorDetailPage() {
         setLoading(false);
         return;
       }
+      setDetail(null);
       setLoading(true);
       setError(null);
       const result = await getSellerDetail(validId);
@@ -129,8 +159,40 @@ export default function VendedorDetailPage() {
         setLoading(false);
       }
     },
-    [validId],
+    [validId, reloadToken],
   );
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      await Promise.resolve();
+      if (isCancelled()) return;
+      try {
+        const catalog = await getBranchesCatalog();
+        if (!isCancelled()) {
+          setBranches(catalog.filter((b) => !b.is_main_warehouse));
+        }
+      } catch {
+        if (!isCancelled()) {
+          setBranches([]);
+        }
+      }
+    },
+    [],
+  );
+
+  const handleBranchChange = async (branchId: number) => {
+    if (validId === null || branchSaving) return;
+    setBranchSaving(true);
+    const result = await updateSellerBranch(validId, branchId);
+    setBranchSaving(false);
+    if (result.error) {
+      showError(result.error.message || "No se pudo actualizar la sucursal");
+      return;
+    }
+    showSuccess("Sucursal del vendedor actualizada correctamente.");
+    reloadDetail();
+  };
+
   const breadcrumbItems: BreadcrumbItem[] =
     detail != null
       ? [
@@ -151,6 +213,7 @@ export default function VendedorDetailPage() {
             label: "Detalle",
           },
         ];
+
   if (!router.isReady) {
     return (
       <Stack alignItems="center" py={6}>
@@ -158,6 +221,7 @@ export default function VendedorDetailPage() {
       </Stack>
     );
   }
+
   if (validId === null) {
     return (
       <Stack spacing={2}>
@@ -166,7 +230,9 @@ export default function VendedorDetailPage() {
       </Stack>
     );
   }
+
   const showLoading = loading || (detail == null && !error);
+
   const donutData =
     detail != null
       ? [
@@ -180,12 +246,31 @@ export default function VendedorDetailPage() {
           },
         ]
       : [];
+
   const monthlyComposedData =
     detail?.monthlyChart.map((point) => ({
       month: point.monthLabel,
       sales: point.sales,
       goal: point.goal,
     })) ?? [];
+
+  const selectedTypes = typeFilterIds.filter(
+    (id): id is SellerSaleType => id === "cash" || id === "credit",
+  );
+  const filteredHistory =
+    detail == null
+      ? []
+      : selectedTypes.length === 0 || selectedTypes.length === SALE_TYPE_OPTIONS.length
+        ? detail.salesHistory
+        : detail.salesHistory.filter((row) => selectedTypes.includes(row.type));
+
+  const branchOptions =
+    branches.length > 0
+      ? branches
+      : detail?.branchId != null && detail.branchName
+        ? [{ id: detail.branchId, name: detail.branchName, is_main_warehouse: false }]
+        : [];
+
   return (
     <Stack spacing={3}>
       <Stack
@@ -215,42 +300,20 @@ export default function VendedorDetailPage() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      {detail != null && (
+      {detail != null && detail.id === validId && (
         <Stack spacing={3}>
-          <Typography variant="h2">{detail.fullName}</Typography>
-          <Divider />
-          <Stack
-            direction={{
-              xs: "column",
-              md: "row",
-            }}
-            justifyContent={{
-              xs: "flex-start",
-              md: "space-between",
-            }}
-            alignItems="center"
-            spacing={2}
-          >
-            <Typography variant="subtitle1">Dashboard de ventas</Typography>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ListFilter size={16} />}
-                onClick={() => {}}
-              >
-                Mes actual · {detail.currentMonthLabel}
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ArrowDownFromLine size={16} />}
-                onClick={() => {}}
-              >
-                Descargar reporte
-              </Button>
-            </Stack>
+          <Stack spacing={0.5}>
+            <Typography variant="h2">{detail.fullName}</Typography>
+            <InlineBranchSelect
+              value={detail.branchId}
+              options={branchOptions}
+              onChange={handleBranchChange}
+              loading={branchSaving}
+              disabled={branchOptions.length === 0}
+            />
           </Stack>
+          <Divider />
+          <Typography variant="subtitle1">Dashboard de ventas</Typography>
 
           <Grid container spacing={2} alignItems="stretch">
             <Grid
@@ -370,18 +433,18 @@ export default function VendedorDetailPage() {
             flexWrap="nowrap"
           >
             <Typography variant="h6">Historial de ventas</Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<ScanSearch size={16} />}
-              onClick={() => {}}
-            >
-              Tipo
-            </Button>
+            <OptionFilterButton
+              label="Tipo"
+              title="Tipo de venta"
+              options={SALE_TYPE_OPTIONS}
+              selectedIds={typeFilterIds}
+              onChange={setTypeFilterIds}
+              icon={<ScanSearch size={16} />}
+            />
           </Stack>
           <TableCrud
             columns={historyColumns}
-            rows={detail.salesHistory}
+            rows={filteredHistory}
             rowKey="id"
             emptyMessage="No hay ventas registradas"
           />

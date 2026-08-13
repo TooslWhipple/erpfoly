@@ -47,7 +47,15 @@ export function useAddressTab(initialValues: AddressTabValues) {
     if (!values.city.trim()) nextErrors.city = "Ciudad es requerida";
     if (!values.street.trim()) nextErrors.street = "Calle es requerida";
     if (!values.externalNumber.trim()) nextErrors.externalNumber = "Número exterior es requerido";
-    if (!values.residenceTime.trim()) nextErrors.residenceTime = "Tiempo en el domicilio es requerido";
+    if (!values.residenceTimeValue.trim()) {
+      nextErrors.residenceTimeValue = "Tiempo en el domicilio es requerido";
+    } else {
+      const residenceTimeValue = Number.parseInt(values.residenceTimeValue, 10);
+      if (!Number.isInteger(residenceTimeValue) || residenceTimeValue < 1 || residenceTimeValue > 99) {
+        nextErrors.residenceTimeValue = "El tiempo en el domicilio debe ser un número entero entre 1 y 99";
+      }
+    }
+    if (!values.residenceTimeUnit.trim()) nextErrors.residenceTimeUnit = "Selecciona una unidad";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";
 

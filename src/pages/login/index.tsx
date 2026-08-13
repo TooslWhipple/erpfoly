@@ -35,6 +35,7 @@ export default function LoginPage() {
 	useEffect(() => {
 		if (!router.isReady) return;
 		if (router.query.passwordChanged === "1") {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setPasswordChangedMessage("Contraseña actualizada. Inicia sesión con tu nueva contraseña.");
 			const { passwordChanged: _removed, ...rest } = router.query;
 			void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });

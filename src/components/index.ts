@@ -129,6 +129,8 @@ export { BranchSelectionModal } from "./BranchSelectionModal";
 export type { BranchSelectionModalProps, BranchSelectionResult } from "./BranchSelectionModal";
 export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
+export { SuggestionsCarousel } from "./SuggestionsCarousel";
+export type { SuggestionsCarouselProps } from "./SuggestionsCarousel";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";
 export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
 export { OrderItemCard } from "./OrderItemCard";

@@ -107,6 +107,7 @@ interface TableCrudProps<T> {
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   rowsPerPageOptions?: number[];
   onRowClick?: (row: T) => void;
+  hidePagination?: boolean;
 }
 
 export function TableCrud<T>({
@@ -123,6 +124,7 @@ export function TableCrud<T>({
   onRowsPerPageChange,
   rowsPerPageOptions = [10, 25, 50],
   onRowClick,
+  hidePagination = false,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -426,7 +428,7 @@ export function TableCrud<T>({
         </Table>
       </StyledTableContainer>
 
-      {total > 0 && (
+      {!hidePagination && total > 0 && (
         <StyledTablePagination
           slots={{ root: "div" }}
           rowsPerPageOptions={rowsPerPageOptions}

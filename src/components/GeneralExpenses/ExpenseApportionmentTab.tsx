@@ -1,17 +1,12 @@
-import {
-  Checkbox,
-  FormControlLabel,
-  MenuItem,
-  Stack,
-  Switch,
-  Typography,
-} from "@mui/material";
+import { MenuItem, Stack, Switch, Typography } from "@mui/material";
 import numeral from "numeral";
-import { FormSelect, FormTextField } from "@/components/Form";
-import { APPORTIONMENT_TYPE_OPTIONS } from "@/data/general-expenses.mockData";
-import type {
-  ApportionmentType,
-  GeneralExpenseBranchShare,
+import { FormAutocomplete, FormTextField } from "@/components/Form";
+import type { SelectOption } from "@/components/Form";
+import {
+  APPORTIONMENT_TYPE_HELP,
+  APPORTIONMENT_TYPE_OPTIONS,
+  type ApportionmentType,
+  type GeneralExpenseBranchShare,
 } from "@/types/general-expenses.types";
 import {
   BranchShareList,
@@ -25,13 +20,13 @@ export interface ExpenseApportionmentTabProps {
   onApportionEnabledChange: (value: boolean) => void;
   apportionmentType: ApportionmentType;
   onApportionmentTypeChange: (value: ApportionmentType) => void;
-  applyToForeignBranches: boolean;
-  onApplyToForeignBranchesChange: (value: boolean) => void;
   branchShares: GeneralExpenseBranchShare[];
   onBranchPercentageChange: (branchId: string, percentage: number) => void;
   singleBranchId: string;
-  singleBranchName: string;
   onSingleBranchChange: (branchId: string, branchName: string) => void;
+  branchOptions: SelectOption[];
+  branchError?: string;
+  loadingPreview?: boolean;
   disabled?: boolean;
 }
 
@@ -40,24 +35,15 @@ export function ExpenseApportionmentTab({
   onApportionEnabledChange,
   apportionmentType,
   onApportionmentTypeChange,
-  applyToForeignBranches,
-  onApplyToForeignBranchesChange,
   branchShares,
   onBranchPercentageChange,
   singleBranchId,
-  singleBranchName,
   onSingleBranchChange,
+  branchOptions,
+  branchError,
+  loadingPreview = false,
   disabled = false,
 }: ExpenseApportionmentTabProps) {
-  const visibleBranches = applyToForeignBranches
-    ? branchShares
-    : branchShares.filter((branch) => !branch.isForeign);
-
-  const branchOptions = branchShares.map((branch) => ({
-    value: branch.branchId,
-    label: branch.branchName,
-  }));
-
   const isFree = apportionmentType === "free";
 
   return (
@@ -75,17 +61,18 @@ export function ExpenseApportionmentTab({
       </SwitchRow>
 
       {!apportionEnabled ? (
-        <FormSelect
+        <FormAutocomplete
           label="Sucursal"
           options={branchOptions}
           value={singleBranchId}
-          onChange={(event) => {
-            const branchId = String(event.target.value);
+          onChange={(branchId) => {
             const option = branchOptions.find(
               (item) => String(item.value) === branchId,
             );
-            onSingleBranchChange(branchId, option?.label ?? singleBranchName);
+            onSingleBranchChange(branchId, option?.label ?? "");
           }}
+          error={Boolean(branchError)}
+          helperText={branchError}
           disabled={disabled}
           placeholder="Selecciona una sucursal"
         />
@@ -110,27 +97,14 @@ export function ExpenseApportionmentTab({
           <Stack spacing={0.75}>
             <Typography variant="subtitle2">Prorrateo por sucursal</Typography>
             <Typography variant="body2" color="text.secondary">
-              El cálculo de porcentaje de prorrateo es directamente proporcional
-              al neto de ventas del mes anterior.
+              {loadingPreview
+                ? "Calculando prorrateo del mes anterior..."
+                : APPORTIONMENT_TYPE_HELP[apportionmentType]}
             </Typography>
           </Stack>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={applyToForeignBranches}
-                onChange={(_, checked) =>
-                  onApplyToForeignBranchesChange(checked)
-                }
-                disabled={disabled}
-                color="primary"
-              />
-            }
-            label={<Typography variant="body2">Aplicar a foraneas</Typography>}
-          />
-
           <BranchShareList>
-            {visibleBranches.map((branch) => (
+            {branchShares.map((branch) => (
               <BranchShareRow key={branch.branchId}>
                 <Typography variant="body2">{branch.branchName}</Typography>
                 {isFree ? (

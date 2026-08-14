@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { CircularProgress, Stack, Typography } from "@mui/material";
 import { Breadcrumbs, TabFilters } from "@/components";
-import type { SelectOption } from "@/components/Form";
 import { sanitizeDecimal } from "@/forms/validation/schemas";
-import { buildBranchShares } from "@/data/general-expenses.mockData";
+import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
+import { useInternalPayableCategoriesSelect } from "@/hooks/internal-payables/useInternalPayableCategoriesSelect";
+import { useSuppliersSelect } from "@/hooks/suppliers/useSuppliersSelect";
+import { useUsersSelect } from "@/hooks/users/useUsersSelect";
 import {
+  createExpensePayment,
   createGeneralExpense,
-  getExpenseCategories,
-  getExpenseResponsibles,
-  searchExpenseSuppliers,
-  searchSupplierInvoices,
+  getApportionmentPreview,
+  getUnassignedInvoices,
   updateGeneralExpense,
+  uploadExpensePaymentReceipt,
 } from "@/services/general-expenses.service";
 import type {
   ApportionmentType,
@@ -21,6 +22,7 @@ import type {
   GeneralExpenseInvoice,
   GeneralExpenseListItem,
   GeneralExpensePayment,
+  UnassignedInvoice,
 } from "@/types/general-expenses.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { ExpenseApportionmentTab } from "./ExpenseApportionmentTab";
@@ -29,7 +31,10 @@ import type { ExpenseDetailsFormState } from "./ExpenseDetailsTab";
 import { ExpenseInvoicesTab } from "./ExpenseInvoicesTab";
 import { ExpensePaymentsTab } from "./ExpensePaymentsTab";
 import { ExpenseSummaryPanel } from "./ExpenseSummaryPanel";
-import { RegisterExpensePaymentModal } from "./RegisterExpensePaymentModal";
+import {
+  RegisterExpensePaymentModal,
+  type RegisterExpensePaymentInput,
+} from "./RegisterExpensePaymentModal";
 import {
   ContentLayout,
   FormCard,
@@ -135,60 +140,34 @@ export function RegisterExpenseForm({
   const [errors, setErrors] = useState<
     Partial<Record<keyof ExpenseDetailsFormState, string>>
   >({});
-  const [requiresInvoice, setRequiresInvoice] = useState(true);
+  const [branchError, setBranchError] = useState<string | undefined>();
+  const [requiresInvoice, setRequiresInvoice] = useState(false);
   const [invoices, setInvoices] = useState<GeneralExpenseInvoice[]>([]);
+  const [availableInvoices, setAvailableInvoices] = useState<UnassignedInvoice[]>(
+    [],
+  );
   const [payments, setPayments] = useState<GeneralExpensePayment[]>([]);
   const [searchMessage, setSearchMessage] = useState<string | undefined>();
   const [apportionEnabled, setApportionEnabled] = useState(false);
   const [apportionmentType, setApportionmentType] =
     useState<ApportionmentType>("sales_participation");
-  const [applyToForeignBranches, setApplyToForeignBranches] = useState(true);
   const [branchShares, setBranchShares] = useState<GeneralExpenseBranchShare[]>(
-    () => buildBranchShares(0),
+    [],
   );
-  const [singleBranchId, setSingleBranchId] = useState("b1");
-  const [singleBranchName, setSingleBranchName] = useState("Ejercito");
+  const [singleBranchId, setSingleBranchId] = useState("");
   const [saving, setSaving] = useState(false);
   const [searchingInvoices, setSearchingInvoices] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const skipPreviewRef = useRef(Boolean(expense?.branchShares.length));
 
   const isEdit = Boolean(expense);
 
-  const { data: supplierOptions = [] } = useQuery({
-    queryKey: ["general-expense-suppliers"],
-    queryFn: async () => {
-      const result = await searchExpenseSuppliers("");
-      if (result.error) throw new Error(result.error.message);
-      return (result.data ?? []).map((item) => ({
-        value: item.id,
-        label: item.label,
-      })) satisfies SelectOption[];
-    },
-  });
-
-  const { data: categoryOptions = [] } = useQuery({
-    queryKey: ["general-expense-categories"],
-    queryFn: async () => {
-      const result = await getExpenseCategories();
-      if (result.error) throw new Error(result.error.message);
-      return (result.data ?? []).map((item) => ({
-        value: item.label,
-        label: item.label,
-      })) satisfies SelectOption[];
-    },
-  });
-
-  const { data: responsibleOptions = [] } = useQuery({
-    queryKey: ["general-expense-responsibles"],
-    queryFn: async () => {
-      const result = await getExpenseResponsibles();
-      if (result.error) throw new Error(result.error.message);
-      return (result.data ?? []).map((item) => ({
-        value: item.id,
-        label: item.label,
-      })) satisfies SelectOption[];
-    },
-  });
+  const { selectOptions: supplierOptions } = useSuppliersSelect();
+  const { selectOptions: categoryOptions } =
+    useInternalPayableCategoriesSelect();
+  const { selectOptions: responsibleOptions } = useUsersSelect();
+  const { selectOptions: branchOptions } = useBranchesSelect();
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -199,13 +178,13 @@ export function RegisterExpenseForm({
         assignToSupplier: expense.assignToSupplier,
         supplierId: expense.supplierId ?? "",
         supplierName: expense.supplierName,
-        paymentDetails: expense.assignToSupplier ? "" : expense.description,
+        paymentDetails: expense.assignToSupplier ? "" : (expense.detail ?? ""),
         dueDate: expense.dueDate,
-        category: expense.category,
+        category: expense.categoryId,
         isLocalPurchase: expense.isLocalPurchase,
         responsibleId: expense.responsibleId ?? "",
         responsibleName: expense.responsibleName ?? "",
-        description: expense.assignToSupplier ? expense.description : "",
+        description: expense.description,
         amount: formatAmountInput(expense.amount),
       });
       setRequiresInvoice(expense.requiresInvoice);
@@ -213,38 +192,22 @@ export function RegisterExpenseForm({
       setPayments(expense.payments);
       setApportionEnabled(expense.apportionEnabled);
       setApportionmentType(expense.apportionmentType);
-      setApplyToForeignBranches(expense.applyToForeignBranches);
-      setBranchShares(
-        expense.branchShares.length
-          ? expense.branchShares
-          : buildBranchShares(expense.amount),
-      );
-      setSingleBranchId(expense.singleBranchId ?? "b1");
-      setSingleBranchName(expense.singleBranchName ?? "Ejercito");
+      setBranchShares(expense.branchShares);
+      setSingleBranchId(expense.singleBranchId ?? "");
       return;
     }
 
     setDetails({
       ...EMPTY_DETAILS,
-      supplierId: initialSupplierName ? "" : "sup-1",
-      supplierName: initialSupplierName ?? "Papelería del Bajío",
       amount: initialAmount ? formatAmountInput(initialAmount) : "",
-      dueDate: "2026-05-20",
-      category: "Papelería y Art. de Oficina",
-      isLocalPurchase: true,
-      responsibleId: "user-1",
-      responsibleName: "Julio Inzunza",
     });
-    setRequiresInvoice(true);
+    setRequiresInvoice(Boolean(initialInvoices?.length));
     setInvoices(initialInvoices ?? []);
     setPayments([]);
     setApportionEnabled(false);
     setApportionmentType("sales_participation");
-    setApplyToForeignBranches(true);
-    setBranchShares(buildBranchShares(initialAmount ?? 0));
-    setSingleBranchId("b1");
-    setSingleBranchName("Ejercito");
-  }, [expense, initialAmount, initialInvoices, initialSupplierName]);
+    setBranchShares([]);
+  }, [expense, initialAmount, initialInvoices]);
 
   useEffect(() => {
     if (expense || !initialSupplierName || supplierOptions.length === 0) {
@@ -263,11 +226,60 @@ export function RegisterExpenseForm({
 
   const amountNumber = parseAmount(details.amount);
   const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const invoicesAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const invoicesAmount = invoices.reduce(
+    (sum, invoice) => sum + invoice.amount,
+    0,
+  );
+  const balance = Number((amountNumber - paidAmount).toFixed(2));
 
   useEffect(() => {
     setBranchShares((prev) => recalculateShares(prev, amountNumber));
   }, [amountNumber]);
+
+  const loadApportionmentPreview = useCallback(
+    async (type: ApportionmentType, amount: number) => {
+      if (type === "free") {
+        const result = await getApportionmentPreview(type, amount);
+        if (result.error) {
+          showError(result.error.message);
+          return;
+        }
+        const preview = result.data?.branchShares ?? [];
+        setBranchShares((prev) => {
+          if (prev.length > 0) return recalculateShares(prev, amount);
+          return preview;
+        });
+        return;
+      }
+
+      setLoadingPreview(true);
+      try {
+        const result = await getApportionmentPreview(type, amount);
+        if (result.error) {
+          showError(result.error.message);
+          return;
+        }
+        setBranchShares(result.data?.branchShares ?? []);
+      } finally {
+        setLoadingPreview(false);
+      }
+    },
+    [showError],
+  );
+
+  useEffect(() => {
+    if (!apportionEnabled) return;
+    if (skipPreviewRef.current) {
+      skipPreviewRef.current = false;
+      return;
+    }
+    void loadApportionmentPreview(apportionmentType, amountNumber);
+  }, [
+    amountNumber,
+    apportionEnabled,
+    apportionmentType,
+    loadApportionmentPreview,
+  ]);
 
   const handleDetailsChange = useCallback(
     <K extends keyof ExpenseDetailsFormState>(
@@ -291,38 +303,49 @@ export function RegisterExpenseForm({
     [],
   );
 
-  const loadSupplierInvoices = useCallback(async (supplierId: string) => {
-    if (!supplierId) {
-      setInvoices([]);
+  const loadAvailableInvoices = useCallback(
+    async (supplierId: string | null) => {
+      setSearchingInvoices(true);
+      setSearchMessage(undefined);
+      try {
+        const result = await getUnassignedInvoices(
+          details.assignToSupplier ? supplierId : null,
+        );
+        if (result.error) {
+          showError(result.error.message);
+          return;
+        }
+        const found = result.data ?? [];
+        setAvailableInvoices(found);
+        setSearchMessage(
+          found.length > 0
+            ? `Hay ${found.length} factura${found.length === 1 ? "" : "s"} disponible${found.length === 1 ? "" : "s"} para vincular`
+            : "No se encontraron facturas disponibles",
+        );
+      } finally {
+        setSearchingInvoices(false);
+      }
+    },
+    [details.assignToSupplier, showError],
+  );
+
+  useEffect(() => {
+    if (!requiresInvoice) {
+      setAvailableInvoices([]);
       setSearchMessage(undefined);
       return;
     }
-
-    setSearchingInvoices(true);
-    setSearchMessage(undefined);
-    try {
-      const result = await searchSupplierInvoices(supplierId);
-      if (result.error) {
-        showError(result.error.message);
-        return;
-      }
-      const found = result.data ?? [];
-      setInvoices(found);
-      setSearchMessage(
-        found.length > 0
-          ? `Se agregaron ${found.length} facturas encontradas de este proveedor`
-          : "No se encontraron facturas de este proveedor",
-      );
-    } finally {
-      setSearchingInvoices(false);
+    if (details.assignToSupplier && !details.supplierId) {
+      setAvailableInvoices([]);
+      return;
     }
-  }, [showError]);
-
-  useEffect(() => {
-    if (!requiresInvoice || isEdit) return;
-    if (!details.supplierId) return;
-    void loadSupplierInvoices(details.supplierId);
-  }, [details.supplierId, isEdit, loadSupplierInvoices, requiresInvoice]);
+    void loadAvailableInvoices(details.supplierId || null);
+  }, [
+    details.assignToSupplier,
+    details.supplierId,
+    loadAvailableInvoices,
+    requiresInvoice,
+  ]);
 
   const handleBranchPercentageChange = (branchId: string, percentage: number) => {
     setBranchShares((prev) =>
@@ -338,58 +361,27 @@ export function RegisterExpenseForm({
     );
   };
 
-  const handleUploadFiles = (files: File[]) => {
-    const uploaded = files.map((file, index) => ({
-      id: `upload-${Date.now()}-${index}`,
-      externalId: file.name.replace(/\.[^.]+$/, "").toUpperCase(),
-      date: new Date().toLocaleDateString("es-MX"),
-      paymentType: "PUE",
-      amount: amountNumber || 0,
-      fileName: file.name,
-    }));
-    setInvoices((prev) => [...prev, ...uploaded]);
-    setSearchMessage(
-      `Se cargaron ${uploaded.length} archivo${uploaded.length === 1 ? "" : "s"}`,
-    );
-  };
-
-  const buildDescription = (): string => {
-    if (details.assignToSupplier) {
-      return details.description.trim();
-    }
-    const paymentDetails = details.paymentDetails.trim();
-    const extraDescription = details.description.trim();
-    if (paymentDetails && extraDescription) {
-      return `${paymentDetails}. ${extraDescription}`;
-    }
-    return paymentDetails || extraDescription;
-  };
-
   const buildPayload = (): CreateGeneralExpensePayload => ({
     assignToSupplier: details.assignToSupplier,
     supplierId: details.assignToSupplier ? details.supplierId || null : null,
-    supplierName: details.assignToSupplier
-      ? details.supplierName || "Sin proveedor"
-      : "Gasto interno",
+    detail: details.assignToSupplier ? undefined : details.paymentDetails.trim(),
     dueDate: details.dueDate,
-    category: details.category,
+    categoryId: details.category,
     isLocalPurchase: details.isLocalPurchase,
     responsibleId: details.responsibleId || null,
-    responsibleName: details.responsibleName || null,
-    description: buildDescription(),
+    description: details.description.trim(),
     amount: amountNumber,
     requiresInvoice,
-    invoices: requiresInvoice ? invoices : [],
+    payableInvoiceIds: requiresInvoice ? invoices.map((invoice) => invoice.id) : [],
     apportionEnabled,
     apportionmentType,
-    applyToForeignBranches,
     branchShares: apportionEnabled
-      ? applyToForeignBranches
-        ? branchShares
-        : branchShares.filter((branch) => !branch.isForeign)
+      ? branchShares.map((share) => ({
+          branchId: share.branchId,
+          percentage: share.percentage,
+        }))
       : [],
-    singleBranchId: apportionEnabled ? null : singleBranchId,
-    singleBranchName: apportionEnabled ? null : singleBranchName,
+    singleBranchId: apportionEnabled ? null : singleBranchId || null,
   });
 
   const handleSubmit = async () => {
@@ -400,6 +392,26 @@ export function RegisterExpenseForm({
       showError("Completa los campos obligatorios del gasto");
       return;
     }
+
+    if (apportionEnabled && apportionmentType === "free") {
+      const percentageSum = branchShares.reduce(
+        (sum, share) => sum + share.percentage,
+        0,
+      );
+      if (Math.abs(percentageSum - 100) > 0.05) {
+        setActiveTab("apportionment");
+        showError("La suma de porcentajes debe ser 100%");
+        return;
+      }
+    }
+
+    if (!apportionEnabled && !singleBranchId) {
+      setBranchError("Selecciona una sucursal");
+      setActiveTab("apportionment");
+      showError("Selecciona una sucursal");
+      return;
+    }
+    setBranchError(undefined);
 
     setSaving(true);
     try {
@@ -427,16 +439,49 @@ export function RegisterExpenseForm({
     void router.push("/facturas/gastos-generales");
   };
 
-  const handleRegisterPayment = (payment: Omit<GeneralExpensePayment, "id">) => {
-    setPayments((prev) => [
-      ...prev,
-      {
-        ...payment,
-        id: `payment-${Date.now()}`,
-      },
-    ]);
+  const handleRegisterPayment = async (payment: RegisterExpensePaymentInput) => {
+    if (!expense) {
+      showError("Guarda el gasto antes de registrar un pago");
+      return;
+    }
+
+    const result = await createExpensePayment(expense.id, {
+      amount: payment.amount,
+      paymentDate: payment.date,
+      notes: payment.notes,
+    });
+    if (result.error || !result.data) {
+      showError(result.error?.message ?? "No se pudo registrar el pago");
+      return;
+    }
+
+    let nextExpense = result.data;
+    const createdPayment = nextExpense.payments.find(
+      (item) =>
+        !payments.some((current) => current.id === item.id) &&
+        item.amount === payment.amount,
+    );
+
+    if (payment.receipt && createdPayment) {
+      const uploadResult = await uploadExpensePaymentReceipt(
+        expense.id,
+        createdPayment.id,
+        payment.receipt,
+      );
+      if (uploadResult.error || !uploadResult.data) {
+        showError(
+          uploadResult.error?.message ??
+            "El pago se registró pero no se pudo subir el comprobante",
+        );
+      } else {
+        nextExpense = uploadResult.data;
+      }
+    }
+
+    setPayments(nextExpense.payments);
     setPaymentModalOpen(false);
     showSuccess("Pago registrado correctamente");
+    onSuccess?.(nextExpense);
   };
 
   const breadcrumbItems = useMemo(
@@ -504,24 +549,50 @@ export function RegisterExpenseForm({
             {activeTab === "invoices" && (
               <ExpenseInvoicesTab
                 requiresInvoice={requiresInvoice}
-                onRequiresInvoiceChange={setRequiresInvoice}
+                onRequiresInvoiceChange={(value) => {
+                  setRequiresInvoice(value);
+                  if (!value) setInvoices([]);
+                }}
                 invoices={invoices}
+                availableInvoices={availableInvoices}
                 searching={searchingInvoices}
                 searchMessage={searchMessage}
                 onRemoveInvoice={(invoiceId) =>
-                  setInvoices((prev) => prev.filter((item) => item.id !== invoiceId))
+                  setInvoices((prev) =>
+                    prev.filter((item) => item.id !== invoiceId),
+                  )
                 }
-                onUploadFiles={handleUploadFiles}
+                onAddInvoice={(invoice) => {
+                  setInvoices((prev) => [
+                    ...prev,
+                    {
+                      id: invoice.id,
+                      externalId: invoice.invoiceNumber ?? invoice.id,
+                      date: invoice.date,
+                      paymentType: invoice.paymentType,
+                      amount: invoice.amount,
+                    },
+                  ]);
+                }}
                 disabled={saving}
               />
             )}
 
             {activeTab === "payments" && (
-              <ExpensePaymentsTab
-                payments={payments}
-                onAddPayment={() => setPaymentModalOpen(true)}
-                disabled={saving}
-              />
+              <Stack spacing={2}>
+                {!isEdit && (
+                  <Typography variant="body2" color="text.secondary">
+                    Guarda el gasto para registrar abonos y comprobantes.
+                  </Typography>
+                )}
+                <ExpensePaymentsTab
+                  payments={payments}
+                  onAddPayment={
+                    isEdit ? () => setPaymentModalOpen(true) : undefined
+                  }
+                  disabled={saving || !isEdit}
+                />
+              </Stack>
             )}
 
             {activeTab === "apportionment" && (
@@ -530,16 +601,16 @@ export function RegisterExpenseForm({
                 onApportionEnabledChange={setApportionEnabled}
                 apportionmentType={apportionmentType}
                 onApportionmentTypeChange={setApportionmentType}
-                applyToForeignBranches={applyToForeignBranches}
-                onApplyToForeignBranchesChange={setApplyToForeignBranches}
                 branchShares={branchShares}
                 onBranchPercentageChange={handleBranchPercentageChange}
                 singleBranchId={singleBranchId}
-                singleBranchName={singleBranchName}
-                onSingleBranchChange={(branchId, branchName) => {
+                onSingleBranchChange={(branchId) => {
                   setSingleBranchId(branchId);
-                  setSingleBranchName(branchName);
+                  if (branchId) setBranchError(undefined);
                 }}
+                branchOptions={branchOptions}
+                branchError={branchError}
+                loadingPreview={loadingPreview}
                 disabled={saving}
               />
             )}
@@ -557,6 +628,7 @@ export function RegisterExpenseForm({
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
         onSubmit={handleRegisterPayment}
+        maxAmount={Math.max(balance, 0)}
       />
     </PageContainer>
   );

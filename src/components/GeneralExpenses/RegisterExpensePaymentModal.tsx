@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   CircularProgress,
@@ -10,13 +10,20 @@ import { Upload } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { FormDatePicker, FormTextField } from "@/components/Form";
 import { sanitizeDecimal } from "@/forms/validation/schemas";
-import type { GeneralExpensePayment } from "@/types/general-expenses.types";
 import { UploadDashedButton } from "./styles";
+
+export interface RegisterExpensePaymentInput {
+  amount: number;
+  date: string;
+  notes?: string;
+  receipt?: File;
+}
 
 export interface RegisterExpensePaymentModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (payment: Omit<GeneralExpensePayment, "id">) => void;
+  onSubmit: (payment: RegisterExpensePaymentInput) => Promise<void> | void;
+  maxAmount?: number;
 }
 
 function parseAmount(value: string): number {
@@ -29,11 +36,14 @@ export function RegisterExpensePaymentModal({
   open,
   onClose,
   onSubmit,
+  maxAmount,
 }: RegisterExpensePaymentModalProps) {
   const theme = useTheme();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
   const [amountError, setAmountError] = useState<string | undefined>();
   const [dateError, setDateError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
@@ -43,17 +53,20 @@ export function RegisterExpensePaymentModal({
     setAmount("");
     setNotes("");
     setDate(new Date().toISOString().slice(0, 10));
+    setReceipt(null);
     setAmountError(undefined);
     setDateError(undefined);
     setSubmitting(false);
   }, [open]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const parsedAmount = parseAmount(amount);
-    const nextAmountError =
-      !amount.trim() || parsedAmount <= 0
-        ? "El monto debe ser mayor a 0"
-        : undefined;
+    let nextAmountError: string | undefined;
+    if (!amount.trim() || parsedAmount <= 0) {
+      nextAmountError = "El monto debe ser mayor a 0";
+    } else if (maxAmount != null && parsedAmount > maxAmount) {
+      nextAmountError = "El abono no puede ser mayor al saldo pendiente";
+    }
     const nextDateError = !date ? "Selecciona la fecha del pago" : undefined;
 
     setAmountError(nextAmountError);
@@ -61,12 +74,16 @@ export function RegisterExpensePaymentModal({
     if (nextAmountError || nextDateError) return;
 
     setSubmitting(true);
-    onSubmit({
-      date,
-      registeredBy: "Usuario actual",
-      amount: parsedAmount,
-    });
-    setSubmitting(false);
+    try {
+      await onSubmit({
+        amount: parsedAmount,
+        date,
+        notes: notes.trim() || undefined,
+        receipt: receipt ?? undefined,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const headerActions = (
@@ -74,7 +91,7 @@ export function RegisterExpensePaymentModal({
       variant="contained"
       color="primary"
       disabled={submitting}
-      onClick={handleSubmit}
+      onClick={() => void handleSubmit()}
       startIcon={
         submitting ? <CircularProgress size={16} color="inherit" /> : undefined
       }
@@ -127,12 +144,25 @@ export function RegisterExpensePaymentModal({
           helperText={dateError}
         />
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0] ?? null;
+            setReceipt(file);
+            event.target.value = "";
+          }}
+        />
+
         <UploadDashedButton
           fullWidth
           variant="outlined"
           startIcon={<Upload size={18} color={theme.palette.primary.main} />}
+          onClick={() => fileInputRef.current?.click()}
         >
-          Adjuntar comprobante
+          {receipt ? receipt.name : "Adjuntar comprobante"}
         </UploadDashedButton>
 
         {notes.trim() && (

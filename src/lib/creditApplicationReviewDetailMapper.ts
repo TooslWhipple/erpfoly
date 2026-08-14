@@ -187,9 +187,11 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       internalNumber: address.internalNumber ?? "",
       betweenStreets: address.betweenStreets ?? "",
       housingOwnership: mapHousingTypeToOwnership(address.housingType?.name),
-      timeAtAddress: address.residenceTime ?? "",
+      timeAtAddressValue: address.residenceTimeValue ?? null,
+      timeAtAddressUnit: address.residenceTimeUnit ?? null,
       previousAddress: address.previousAddress ?? "",
-      previousTime: address.previousAddressDuration ?? "",
+      previousTimeValue: address.previousResidenceTimeValue ?? null,
+      previousTimeUnit: address.previousResidenceTimeUnit ?? null,
     },
     family: {
       hasSpouse: Boolean(family.hasSpouse),

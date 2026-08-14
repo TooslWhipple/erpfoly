@@ -563,7 +563,7 @@ export function BranchCreateModal({
         <FormContent asForm skipFieldBody>
           <Stack spacing={3} sx={{ pt: 1 }}>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12 }}>
                 <FormField
                   form={form}
                   name="name"
@@ -573,7 +573,7 @@ export function BranchCreateModal({
                   required
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Autocomplete<{ id: number; label: string }, false, false, false>
                   options={zoneOptions}
                   value={selectedZoneOption}
@@ -596,7 +596,7 @@ export function BranchCreateModal({
                   )}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Autocomplete<{ id: number; label: string }, false, false, false>
                   options={businessSegmentOptions}
                   value={selectedBusinessSegmentOption}

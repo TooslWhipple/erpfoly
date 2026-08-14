@@ -1,26 +1,37 @@
 export type RouteStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RouteType = "deliveries" | "scheduled";
 
+export interface RouteOriginBranch {
+  id: number;
+  name: string;
+  municipality?: string | null;
+}
+
 export interface RouteSummary {
   id: number;
   name: string;
   status: RouteStatus;
   routeType?: RouteType;
   location: string;
+  originBranch: RouteOriginBranch | null;
   articleCount: number;
   pointCount: number;
-  /** Static Google Maps preview URL when configured server-side */
-  miniMapUrl?: string;
   driverName?: string;
 }
 
 export type RouteOrderItemStatus = "pending" | "delivered" | "not_delivered";
 export type RouteStopType = "delivery" | "recovery";
 
+export interface RouteItemAddedBy {
+  type: "system" | "user";
+  name: string | null;
+}
+
 export interface RouteOrderItem {
   id: string;
   articleName: string;
   status: RouteOrderItemStatus;
+  addedBy: RouteItemAddedBy;
 }
 
 export interface RouteOrder {
@@ -31,8 +42,16 @@ export interface RouteOrder {
   address: string;
   zone: string;
   destinationBranch: string | null;
+  destinationBranchId: number | null;
   stopType: RouteStopType;
   items: RouteOrderItem[];
+}
+
+export interface RouteScheduledStop {
+  id: number;
+  branchId: number;
+  name: string;
+  sequence: number;
 }
 
 export interface SuggestedItemToAdd {
@@ -85,7 +104,8 @@ export interface RoutePerson {
 export interface RouteDetail extends RouteSummary {
   routeType?: RouteType;
   scheduledDate: string | null;
-  originBranch: { id: number; name: string } | null;
+  originBranch: RouteOriginBranch | null;
+  scheduledStops: RouteScheduledStop[];
   driverName: string;
   vehicleInfo: string;
   orders: RouteOrder[];

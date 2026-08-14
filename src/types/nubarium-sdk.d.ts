@@ -52,9 +52,26 @@ export interface NubariumSdkErrorData {
   message?: string;
 }
 
+/** Preferencia / opciones de cámara del SDK web de Nubarium. */
+export type NubariumCameraFacing = "front" | "back" | "default";
+
+export interface NubariumIdCaptureInitConfig {
+  rootElement: string;
+  /** Orden de preferencia y opciones mostradas al usuario (FaceCapture / IdCapture). */
+  cameras?: NubariumCameraFacing[] | NubariumCameraFacing;
+  [key: string]: unknown;
+}
+
+export interface NubariumFaceCaptureInitConfig {
+  rootElement: string;
+  /** Orden de preferencia y opciones mostradas al usuario. */
+  cameras?: NubariumCameraFacing[] | NubariumCameraFacing;
+  [key: string]: unknown;
+}
+
 declare global {
   class IdCapture {
-    init(config: Record<string, unknown>): void;
+    init(config: NubariumIdCaptureInitConfig): void;
     setToken(token: string): void;
     load(onLoaded?: () => void): void;
     start(): void;
@@ -67,7 +84,7 @@ declare global {
   }
 
   class FaceCapture {
-    init(config: Record<string, unknown>): void;
+    init(config: NubariumFaceCaptureInitConfig): void;
     setToken(token: string): void;
     load(onLoaded?: () => void): void;
     start(): void;

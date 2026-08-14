@@ -26,9 +26,11 @@ export interface CreditApplicationAddress {
   internalNumber: string;
   betweenStreets: string;
   housingOwnership: "own" | "rented" | "paying" | "relatives" | null;
-  timeAtAddress: string;
+  timeAtAddressValue: number | null;
+  timeAtAddressUnit: "months" | "years" | null;
   previousAddress: string;
-  previousTime: string;
+  previousTimeValue: number | null;
+  previousTimeUnit: "months" | "years" | null;
 }
 
 export interface CreditApplicationFamily {

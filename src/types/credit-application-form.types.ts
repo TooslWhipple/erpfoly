@@ -66,9 +66,11 @@ export interface AddressTabValues {
   betweenStreets: string;
   /** Housing type catalog id as string (empty until selected). */
   housingType: string;
-  residenceTime: string;
+  residenceTimeValue: string;
+  residenceTimeUnit: "months" | "years" | "";
   previousAddress: string;
-  previousResidenceTime: string;
+  previousResidenceTimeValue: string;
+  previousResidenceTimeUnit: "months" | "years" | "";
 }
 
 export interface AddressTabErrors {
@@ -79,9 +81,9 @@ export interface AddressTabErrors {
   street?: string;
   externalNumber?: string;
   internalNumber?: string;
-  residenceTime?: string;
+  residenceTimeValue?: string;
+  residenceTimeUnit?: string;
   previousAddress?: string;
-  previousResidenceTime?: string;
   betweenStreets?: string;
   housingType?: string;
 }

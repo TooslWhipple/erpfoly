@@ -91,7 +91,7 @@ export const RoundedSkeleton = styled(Skeleton)({
 export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selected }) => ({
   display: "flex",
   flexShrink: 0,
-  minHeight: 96,
+  minHeight: 64,
   backgroundColor: theme.palette.background.paper,
   border: (selected) ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.app.border}`,
   borderRadius: "12px",
@@ -111,42 +111,6 @@ export const RouteCard = styled("div")<{ selected?: boolean }>(({ theme, selecte
     backgroundColor: `${theme.palette.primary.main}08`,
   }),
 }));
-
-export const MapPlaceholder = styled("div")(({ theme }) => ({
-  width: "88px",
-  height: 88,
-  minHeight: 72,
-  flexShrink: 0,
-  alignSelf: "flex-start",
-  backgroundColor: "#E4E4E7",
-  borderRadius: "12px",
-  [theme.breakpoints.down("sm")]: {
-    width: 64,
-    height: 64,
-  },
-}));
-
-export const RouteMiniMapThumb = styled("img")({
-  width: "88px",
-  height: 88,
-  minHeight: 72,
-  maxHeight: 120,
-  objectFit: "contain",
-  backgroundColor: theme.palette.grey[100],
-  borderRadius: "12px",
-  border: `1px solid ${theme.palette.app.border}`,
-  flexShrink: 0,
-  alignSelf: "flex-start",
-  display: "block",
-});
-
-export const DetailMiniMap = styled("img")({
-  width: 96,
-  height: 96,
-  objectFit: "cover",
-  borderRadius: 12,
-  border: `1px solid ${theme.palette.app.border}`,
-});
 
 export const MapPlaceholderLarge = styled("div")(({ theme }) => ({
   width: "100%",

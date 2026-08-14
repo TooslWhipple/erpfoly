@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { CalendarDays } from "lucide-react";
 import { Grid, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +7,6 @@ import {
   Title,
   TabFilters,
   TableCrud,
-  RegisterExpenseModal,
   UnassignedInvoicesAlert,
   UnassignedInvoicesModal,
 } from "@/components";
@@ -62,16 +62,13 @@ function formatCurrency(value: number): string {
 }
 
 export default function GeneralExpensesPage() {
+  const router = useRouter();
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [registerOpen, setRegisterOpen] = useState(false);
   const [unassignedOpen, setUnassignedOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] =
-    useState<GeneralExpenseListItem | null>(null);
-  const [seedInvoice, setSeedInvoice] = useState<UnassignedInvoice | null>(null);
   const [registeringUnassignedId, setRegisteringUnassignedId] = useState<
     string | null
   >(null);
@@ -188,16 +185,12 @@ export default function GeneralExpensesPage() {
     setPage(0);
   };
 
-  const openCreateModal = () => {
-    setSelectedExpense(null);
-    setSeedInvoice(null);
-    setRegisterOpen(true);
+  const openCreatePage = () => {
+    void router.push("/facturas/gastos-generales/nuevo");
   };
 
-  const openEditModal = (row: GeneralExpenseListItem) => {
-    setSelectedExpense(row);
-    setSeedInvoice(null);
-    setRegisterOpen(true);
+  const openEditPage = (row: GeneralExpenseListItem) => {
+    void router.push(`/facturas/gastos-generales/${row.id}`);
   };
 
   const handleRegisterFromUnassigned = async (invoice: UnassignedInvoice) => {
@@ -211,10 +204,8 @@ export default function GeneralExpensesPage() {
 
       showSuccess("Gasto registrado desde la factura");
       setUnassignedOpen(false);
-      setSelectedExpense(result.data);
-      setSeedInvoice(null);
-      setRegisterOpen(true);
       await invalidateExpenseQueries();
+      void router.push(`/facturas/gastos-generales/${result.data.id}`);
     } finally {
       setRegisteringUnassignedId(null);
     }
@@ -315,7 +306,7 @@ export default function GeneralExpensesPage() {
         actions={[
           {
             label: "Nuevo",
-            onClick: openCreateModal,
+            onClick: openCreatePage,
             variant: "contained",
             permission: GENERAL_EXPENSES_CREATE,
           },
@@ -332,7 +323,7 @@ export default function GeneralExpensesPage() {
         totalRows={totalRows}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
-        onRowClick={openEditModal}
+        onRowClick={openEditPage}
         emptyMessage="No hay gastos generales"
       />
 
@@ -347,33 +338,6 @@ export default function GeneralExpensesPage() {
         }}
       />
 
-      <RegisterExpenseModal
-        open={registerOpen}
-        onClose={() => {
-          setRegisterOpen(false);
-          setSelectedExpense(null);
-          setSeedInvoice(null);
-        }}
-        expense={selectedExpense}
-        initialSupplierName={seedInvoice?.supplierName}
-        initialAmount={seedInvoice?.amount}
-        initialInvoices={
-          seedInvoice
-            ? [
-                {
-                  id: seedInvoice.id,
-                  externalId: seedInvoice.id.toUpperCase(),
-                  date: seedInvoice.date,
-                  paymentType: seedInvoice.paymentType,
-                  amount: seedInvoice.amount,
-                },
-              ]
-            : undefined
-        }
-        onSuccess={() => {
-          void invalidateExpenseQueries();
-        }}
-      />
     </Stack>
   );
 }

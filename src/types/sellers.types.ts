@@ -46,6 +46,7 @@ export interface SellerDetail {
   id: number;
   fullName: string;
   cellphone: string;
+  branchId: number | null;
   branchName: string;
   status: SellerStatus;
   currentMonthLabel: string;

@@ -1,4 +1,5 @@
 import type { ClientCreditAccount } from "@/types/clientPayment.types";
+import { roundToCents } from "@/utils/number";
 
 export interface CascadeInstallmentPreview {
   purchaseId: string;
@@ -35,10 +36,6 @@ function flattenPendingInstallments(
         new Date(a.installment.dueDateRaw).getTime() -
         new Date(b.installment.dueDateRaw).getTime(),
     );
-}
-
-function roundToCents(amount: number): number {
-  return Math.round(amount * 100) / 100;
 }
 
 export function calculateCascadePreview(

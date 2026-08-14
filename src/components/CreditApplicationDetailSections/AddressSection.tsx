@@ -17,6 +17,18 @@ const DEFAULT_MAP_CENTER = {
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
+const RESIDENCE_TIME_UNIT_LABELS: Record<"months" | "years", string> = {
+  months: "Meses",
+  years: "Años",
+};
+
+function formatResidenceTime(value: number | null, unit: "months" | "years" | null): string {
+  if (value === null || unit === null) {
+    return "";
+  }
+  return `${value} ${RESIDENCE_TIME_UNIT_LABELS[unit]}`;
+}
+
 interface MapCoordinates {
   lat: number;
   lng: number;
@@ -275,7 +287,7 @@ export function AddressSection({ detail }: AddressSectionProps) {
         <Grid size={{ xs: 12 }}>
           <FormTextField
             label="Tiempo en el domicilio"
-            value={address.timeAtAddress}
+            value={formatResidenceTime(address.timeAtAddressValue, address.timeAtAddressUnit)}
             readOnly
             fullWidth
           />
@@ -289,7 +301,12 @@ export function AddressSection({ detail }: AddressSectionProps) {
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <FormTextField label="Tiempo" value={address.previousTime} readOnly fullWidth />
+          <FormTextField
+            label="Tiempo"
+            value={formatResidenceTime(address.previousTimeValue, address.previousTimeUnit)}
+            readOnly
+            fullWidth
+          />
         </Grid>
       </Grid>
     </Stack>

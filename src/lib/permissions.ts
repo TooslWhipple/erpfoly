@@ -23,6 +23,7 @@ export type PermissionModule =
   | "solicitudes_descuento"
   | "inventario"
   | "inventario.mercancia_danada"
+  | "inventario.hojas_recuperacion"
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
@@ -30,6 +31,7 @@ export type PermissionModule =
   | "facturas.solicitudes"
   | "facturas.gastos_generales"
   | "facturas.proveedores"
+  | "facturas.discrepancias"
   | "atencion_cliente"
   | "atencion_cliente.facturas"
   | "atencion_cliente.reparaciones"
@@ -143,6 +145,12 @@ export const DAMAGED_INVENTORY_READ = DAMAGED_INVENTORY_PERMISSIONS.read;
 export const DAMAGED_INVENTORY_UPDATE = DAMAGED_INVENTORY_PERMISSIONS.update;
 export const DAMAGED_INVENTORY_DELETE = DAMAGED_INVENTORY_PERMISSIONS.delete;
 
+export const RECOVERY_SHEETS_PERMISSIONS = createCrudPermissions("inventario.hojas_recuperacion");
+export const RECOVERY_SHEETS_CREATE = RECOVERY_SHEETS_PERMISSIONS.create;
+export const RECOVERY_SHEETS_READ = RECOVERY_SHEETS_PERMISSIONS.read;
+export const RECOVERY_SHEETS_UPDATE = RECOVERY_SHEETS_PERMISSIONS.update;
+export const RECOVERY_SHEETS_DELETE = RECOVERY_SHEETS_PERMISSIONS.delete;
+
 export const INVENTORY_LIQUIDATIONS_PERMISSIONS = createCrudPermissions("inventario.liquidaciones");
 export const INVENTORY_LIQUIDATIONS_CREATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.create;
 export const INVENTORY_LIQUIDATIONS_READ = INVENTORY_LIQUIDATIONS_PERMISSIONS.read;
@@ -190,6 +198,18 @@ export const SUPPLIER_PAYABLES_CREATE = SUPPLIER_PAYABLES_PERMISSIONS.create;
 export const SUPPLIER_PAYABLES_READ = SUPPLIER_PAYABLES_PERMISSIONS.read;
 export const SUPPLIER_PAYABLES_UPDATE = SUPPLIER_PAYABLES_PERMISSIONS.update;
 export const SUPPLIER_PAYABLES_DELETE = SUPPLIER_PAYABLES_PERMISSIONS.delete;
+
+// Merchandise reception discrepancies
+export const MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS =
+  createCrudPermissions("facturas.discrepancias");
+export const MERCHANDISE_RECEPTION_DISCREPANCIES_CREATE =
+  MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS.create;
+export const MERCHANDISE_RECEPTION_DISCREPANCIES_READ =
+  MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS.read;
+export const MERCHANDISE_RECEPTION_DISCREPANCIES_UPDATE =
+  MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS.update;
+export const MERCHANDISE_RECEPTION_DISCREPANCIES_DELETE =
+  MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS.delete;
 
 // Customer support
 export const CUSTOMER_SUPPORT_PERMISSIONS = createCrudPermissions("atencion_cliente");
@@ -372,6 +392,7 @@ export const PERMISSIONS_BY_MODULE = {
   inventory: {
     inventory: Object.values(INVENTORY_PERMISSIONS),
     damagedInventory: Object.values(DAMAGED_INVENTORY_PERMISSIONS),
+    recoverySheets: Object.values(RECOVERY_SHEETS_PERMISSIONS),
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),
@@ -381,6 +402,9 @@ export const PERMISSIONS_BY_MODULE = {
     invoiceRequests: Object.values(INVOICE_REQUESTS_PERMISSIONS),
     generalExpenses: Object.values(GENERAL_EXPENSES_PERMISSIONS),
     supplierPayables: Object.values(SUPPLIER_PAYABLES_PERMISSIONS),
+    merchandiseReceptionDiscrepancies: Object.values(
+      MERCHANDISE_RECEPTION_DISCREPANCIES_PERMISSIONS,
+    ),
   },
   customerSupport: {
     customerSupport: Object.values(CUSTOMER_SUPPORT_PERMISSIONS),

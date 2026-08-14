@@ -1,15 +1,11 @@
 import { useRef } from "react";
-import {
-  CircularProgress,
-  IconButton,
-  Stack,
-  Switch,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Button, CircularProgress, IconButton, Stack, Switch, Typography, useTheme } from "@mui/material";
 import { Minus, Upload } from "lucide-react";
 import numeral from "numeral";
-import type { GeneralExpenseInvoice } from "@/types/general-expenses.types";
+import type {
+  GeneralExpenseInvoice,
+  UnassignedInvoice,
+} from "@/types/general-expenses.types";
 import {
   InvoiceCard,
   InvoiceMetaRow,
@@ -21,10 +17,11 @@ export interface ExpenseInvoicesTabProps {
   requiresInvoice: boolean;
   onRequiresInvoiceChange: (value: boolean) => void;
   invoices: GeneralExpenseInvoice[];
+  availableInvoices?: UnassignedInvoice[];
   searching?: boolean;
   searchMessage?: string;
   onRemoveInvoice: (invoiceId: string) => void;
-  onUploadFiles: (files: File[]) => void;
+  onAddInvoice?: (invoice: UnassignedInvoice) => void;
   disabled?: boolean;
 }
 
@@ -32,28 +29,25 @@ export function ExpenseInvoicesTab({
   requiresInvoice,
   onRequiresInvoiceChange,
   invoices,
+  availableInvoices = [],
   searching = false,
   searchMessage,
   onRemoveInvoice,
-  onUploadFiles,
+  onAddInvoice,
   disabled = false,
 }: ExpenseInvoicesTabProps) {
   const theme = useTheme();
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files ? Array.from(event.target.files) : [];
-    if (files.length) onUploadFiles(files);
-    event.target.value = "";
-  };
+  const selectedIds = new Set(invoices.map((invoice) => invoice.id));
+  const addable = availableInvoices.filter(
+    (invoice) => !selectedIds.has(invoice.id),
+  );
 
   return (
     <Stack spacing={2.5}>
       <SwitchRow>
         <Typography variant="body2" fontWeight={500}>
-          {requiresInvoice
-            ? "Este gasto sí requiere factura"
-            : "Este gasto no requiere factura"}
+          Este gasto es deducible
         </Typography>
         <Switch
           checked={requiresInvoice}
@@ -74,7 +68,7 @@ export function ExpenseInvoicesTab({
               {searching && <CircularProgress size={16} />}
               <Typography variant="body2" color="text.secondary">
                 {searching
-                  ? "Buscando facturas generadas de este proveedor"
+                  ? "Buscando facturas disponibles"
                   : searchMessage}
               </Typography>
             </Stack>
@@ -113,13 +107,51 @@ export function ExpenseInvoicesTab({
             </InvoiceCard>
           ))}
 
+          {addable.length > 0 && (
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Facturas disponibles</Typography>
+              {addable.map((invoice) => (
+                <InvoiceCard key={invoice.id}>
+                  <Stack spacing={0.75} flex={1} minWidth={0}>
+                    <InvoiceMetaRow>
+                      <Typography variant="body2" fontWeight={600}>
+                        {invoice.invoiceNumber ?? invoice.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {invoice.date}
+                      </Typography>
+                    </InvoiceMetaRow>
+                    <InvoiceMetaRow>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {invoice.supplierName}
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle2">
+                          {numeral(invoice.amount).format("$0,0.00")}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={disabled || !onAddInvoice}
+                          onClick={() => onAddInvoice?.(invoice)}
+                        >
+                          Vincular
+                        </Button>
+                      </Stack>
+                    </InvoiceMetaRow>
+                  </Stack>
+                </InvoiceCard>
+              ))}
+            </Stack>
+          )}
+
+          {/* ponytail: upload UI kept as visual reference; CFDI parse is out of scope */}
           <input
             ref={inputRef}
             type="file"
             accept=".xml,.pdf,application/xml,application/pdf,text/xml"
             hidden
             multiple
-            onChange={handleFileChange}
           />
 
           <UploadDashedButton

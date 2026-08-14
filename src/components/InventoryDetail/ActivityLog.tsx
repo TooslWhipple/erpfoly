@@ -6,20 +6,13 @@ import {
     ActivityList,
     ActivityItem,
     ActivityDot,
-    ActivityContent,
+    ActivityTimeLine
 } from "./styles";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
+import { StatusChip } from "../StatusChip";
 
 export interface ActivityLogProps {
     activities: ActivityLogEntry[];
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function getActivityTypeLabel(type: ActivityLogEntry["type"]): string {
     const labels: Record<ActivityLogEntry["type"], string> = {
@@ -42,10 +35,6 @@ function getActivityTypeColor(type: ActivityLogEntry["type"]): {
     return colors[type];
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function ActivityLog({ activities }: ActivityLogProps) {
     return (
         <ActivityLogContainer>
@@ -59,40 +48,30 @@ export function ActivityLog({ activities }: ActivityLogProps) {
             </ActivityLogHeader>
 
             <ActivityList>
-                {activities.map((activity, index) => {
-                    const typeColor = getActivityTypeColor(activity.type);
-                    const isLast = index === activities.length - 1;
+                <ActivityTimeLine />
+                {
+                    activities.map((activity, index) => {
+                        const typeColor = getActivityTypeColor(activity.type);
 
-                    return (
-                        <ActivityItem key={activity.id}>
-                            <ActivityDot isLast={isLast} />
-                            <ActivityContent>
-                                <Stack direction="row" spacing={1} mb={1} alignItems="center">
-                                    <Chip
-                                        label={getActivityTypeLabel(activity.type)}
-                                        size="small"
-                                        sx={{
-                                            backgroundColor: typeColor.bg,
-                                            color: typeColor.text,
-                                            fontWeight: 500,
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                        Por: {activity.performedBy}
-                                    </Typography>
+                        return (
+                            <ActivityItem key={activity.id}>
+                                <ActivityDot />
+                                <Stack direction="column" spacing={0.5}>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <StatusChip
+                                            size="small"
+                                            variant="info"
+                                            label={getActivityTypeLabel(activity.type)}
+                                        />
+                                        <Typography variant="body2" color="text.secondary">Por: {activity.performedBy}</Typography>
+                                    </Stack>
+                                    <Typography variant="body1">{activity.description}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{activity.date} | {activity.time}</Typography>
                                 </Stack>
-                                <Typography variant="body1" sx={{ mb: 1 }}>
-                                    {activity.description}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {activity.date} | {activity.time}
-                                </Typography>
-                            </ActivityContent>
-                        </ActivityItem>
-                    );
-                })}
+                            </ActivityItem>
+                        );
+                    })}
             </ActivityList>
-        </ActivityLogContainer>
+        </ActivityLogContainer >
     );
 }

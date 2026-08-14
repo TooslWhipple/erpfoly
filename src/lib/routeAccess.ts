@@ -49,13 +49,17 @@ import {
   DISCOUNT_REQUESTS_READ,
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
+  RECOVERY_SHEETS_READ,
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
+  GENERAL_EXPENSES_CREATE,
+  GENERAL_EXPENSES_UPDATE,
   SUPPLIER_PAYABLES_READ,
+  MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -127,6 +131,10 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/solicitudes-descuento$/, permission: DISCOUNT_REQUESTS_READ },
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
+  {
+    pattern: /^\/inventario\/hojas-recuperacion(\/.*)?$/,
+    permission: RECOVERY_SHEETS_READ,
+  },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },
   { pattern: /^\/inventario(\/.*)?$/, permission: INVENTORY_READ },
 
@@ -136,8 +144,14 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/costeos(\/.*)?$/, permission: COSTEOS_READ },
 
   { pattern: /^\/facturas\/solicitudes(\/.*)?$/, permission: INVOICE_REQUESTS_READ },
+  { pattern: /^\/facturas\/gastos-generales\/nuevo$/, permission: GENERAL_EXPENSES_CREATE },
+  { pattern: /^\/facturas\/gastos-generales\/[^/]+$/, permission: GENERAL_EXPENSES_UPDATE },
   { pattern: /^\/facturas\/gastos-generales(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
   { pattern: /^\/facturas\/proveedores(\/.*)?$/, permission: SUPPLIER_PAYABLES_READ },
+  {
+    pattern: /^\/facturas\/discrepancias(\/.*)?$/,
+    permission: MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
+  },
   { pattern: /^\/facturas(\/.*)?$/, permission: PAYABLE_INVOICES_READ },
 
   { pattern: /^\/atencion-cliente(\/.*)?$/, permission: CUSTOMER_SUPPORT_READ },
@@ -194,6 +208,10 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/facturas/solicitudes", requirement: { permission: INVOICE_REQUESTS_READ } },
   { path: "/facturas/gastos-generales", requirement: { permission: GENERAL_EXPENSES_READ } },
   { path: "/facturas/proveedores", requirement: { permission: SUPPLIER_PAYABLES_READ } },
+  {
+    path: "/facturas/discrepancias",
+    requirement: { permission: MERCHANDISE_RECEPTION_DISCREPANCIES_READ },
+  },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },

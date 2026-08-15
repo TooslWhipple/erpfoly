@@ -1,5 +1,12 @@
 import { useState, useCallback, useRef } from "react";
-import { Typography, CircularProgress, Stack, Button } from "@mui/material";
+import {
+  Typography,
+  CircularProgress,
+  Stack,
+  Button,
+  MenuItem,
+  TextField,
+} from "@mui/material";
 import { Copy } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { theme } from "@/styles/theme";
@@ -9,15 +16,18 @@ import {
   VariableChip,
   ContentTextarea,
   MessageNameInput,
-  FormContent
+  FormContent,
 } from "@/styles/catalogos/mensajes.styles";
 import { MessageVariablesProvider } from "./MessageVariablesContext";
 import HighlightedContentInput from "./HighlightedContentInput";
 import { StatusChip } from "../StatusChip";
+import type { MessageChannel } from "@/services/collection-messages.service";
 
 export interface MessageFormData {
   name: string;
   content: string;
+  channel: MessageChannel;
+  subject?: string;
   status: "active" | "inactive";
 }
 
@@ -49,15 +59,22 @@ export function MessageFormModal({
 }: MessageFormModalProps) {
   const [name, setName] = useState(initialValues?.name ?? "");
   const [content, setContent] = useState(initialValues?.content ?? "");
+  const [channel, setChannel] = useState<MessageChannel>(
+    initialValues?.channel ?? "WHATSAPP",
+  );
+  const [subject, setSubject] = useState(initialValues?.subject ?? "");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleInsertVariable = useCallback(
     (variable: string) => {
       const ta = textareaRef.current;
-      const start = ta && document.activeElement === ta ? ta.selectionStart : content.length;
-      const end = ta && document.activeElement === ta ? ta.selectionEnd : content.length;
-      const newContent = content.substring(0, start) + variable + content.substring(end);
+      const start =
+        ta && document.activeElement === ta ? ta.selectionStart : content.length;
+      const end =
+        ta && document.activeElement === ta ? ta.selectionEnd : content.length;
+      const newContent =
+        content.substring(0, start) + variable + content.substring(end);
 
       setContent(newContent);
 
@@ -75,15 +92,22 @@ export function MessageFormModal({
   const handleSave = useCallback(async () => {
     const trimmedName = name.trim();
     const trimmedContent = content.trim();
+    const trimmedSubject = subject.trim();
     if (!trimmedName || !trimmedContent) return;
+    if (channel === "EMAIL" && !trimmedSubject) return;
     await onConfirm({
       name: trimmedName,
       content: trimmedContent,
+      channel,
+      subject: channel === "EMAIL" ? trimmedSubject : undefined,
       status: initialValues?.status ?? "active",
     });
-  }, [name, content, initialValues?.status, onConfirm]);
+  }, [name, content, channel, subject, initialValues?.status, onConfirm]);
 
-  const canSave = name.trim().length > 0 && content.trim().length > 0;
+  const canSave =
+    name.trim().length > 0 &&
+    content.trim().length > 0 &&
+    (channel !== "EMAIL" || subject.trim().length > 0);
   const isEditing = inUse !== undefined;
   const title = isEditing ? name.trim() || "Nuevo mensaje" : "Nuevo mensaje";
 
@@ -100,31 +124,36 @@ export function MessageFormModal({
           width="100%"
           spacing={2}
           justifyContent="space-between"
-          alignItems="center">
+          alignItems="center"
+        >
           <Stack spacing={1} alignItems="flex-start">
-            {
-              isEditing &&
+            {isEditing && (
               <StatusChip
                 size="small"
                 label={inUse ? "En uso" : "Sin uso"}
                 variant={inUse ? "success" : "default"}
               />
-            }
+            )}
             <Typography variant="h6">{title}</Typography>
           </Stack>
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!canSave || loading}>
-            {
-              (loading) ? <CircularProgress size={24} color="inherit" /> : "Guardar"
-            }
+            disabled={!canSave || loading}
+          >
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Guardar"
+            )}
           </Button>
         </Stack>
       }
     >
       <FormContent>
-        <Typography variant="body2" color="text.secondary">Nombre del mensaje</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Nombre del mensaje
+        </Typography>
         <MessageNameInput
           fullWidth
           size="small"
@@ -133,11 +162,55 @@ export function MessageFormModal({
           onChange={(e) => setName(e.target.value)}
           name="message-name"
           slotProps={{
-            input: { style: { backgroundColor: theme.palette.background.content } },
+            input: {
+              style: { backgroundColor: theme.palette.background.content },
+            },
           }}
         />
 
-        <Typography variant="body2" color="text.secondary">Contenido del mensaje.</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Canal
+        </Typography>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          value={channel}
+          onChange={(e) => setChannel(e.target.value as MessageChannel)}
+          slotProps={{
+            input: {
+              style: { backgroundColor: theme.palette.background.content },
+            },
+          }}
+        >
+          <MenuItem value="WHATSAPP">WhatsApp</MenuItem>
+          <MenuItem value="EMAIL">Correo electrónico</MenuItem>
+        </TextField>
+
+        {channel === "EMAIL" && (
+          <>
+            <Typography variant="body2" color="text.secondary">
+              Asunto del correo
+            </Typography>
+            <MessageNameInput
+              fullWidth
+              size="small"
+              placeholder="Asunto del correo"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              name="message-subject"
+              slotProps={{
+                input: {
+                  style: { backgroundColor: theme.palette.background.content },
+                },
+              }}
+            />
+          </>
+        )}
+
+        <Typography variant="body2" color="text.secondary">
+          Contenido del mensaje.
+        </Typography>
         <MessageVariablesProvider value={messageVariables.map((v) => v.value)}>
           <ContentTextarea
             fullWidth
@@ -151,29 +224,34 @@ export function MessageFormModal({
               if (el) textareaRef.current = el;
             }}
             slotProps={{
-              input: { inputComponent: HighlightedContentInput, style: { backgroundColor: theme.palette.background.content } },
+              input: {
+                inputComponent: HighlightedContentInput,
+                style: { backgroundColor: theme.palette.background.content },
+              },
             }}
           />
         </MessageVariablesProvider>
 
         <VariablesSection>
-          <Typography variant="body2" color="text.secondary">Puedes incrustar datos variables del cliente en tu mensaje como:</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Puedes incrustar datos variables del cliente en tu mensaje como:
+          </Typography>
           <VariablesContainer>
-            {
-              messageVariables.map((variable) => (
-                <VariableChip
-                  key={variable.key}
-                  label={
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography variant="caption" component="span">{variable.value}</Typography>
-                      <Copy size={12} />
-                    </Stack>
-                  }
-                  onClick={() => handleInsertVariable(variable.value)}
-                  clickable
-                />
-              ))
-            }
+            {messageVariables.map((variable) => (
+              <VariableChip
+                key={variable.key}
+                label={
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography variant="caption" component="span">
+                      {variable.value}
+                    </Typography>
+                    <Copy size={12} />
+                  </Stack>
+                }
+                onClick={() => handleInsertVariable(variable.value)}
+                clickable
+              />
+            ))}
           </VariablesContainer>
         </VariablesSection>
       </FormContent>

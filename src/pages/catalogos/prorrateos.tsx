@@ -74,7 +74,7 @@ type GroupingViewTab = "branches" | "zones";
 
 const GROUPING_TABS: { value: GroupingViewTab; label: string }[] = [
   { value: "branches", label: "Sucursales" },
-  { value: "zones", label: "Zonas (sus sucursales)" },
+  { value: "zones", label: "Agrupamientos sucursales" },
 ];
 
 function formatCurrency(amount: number): string {
@@ -377,7 +377,7 @@ export default function ProrrateosPage() {
               <Stack direction="row" alignItems="center" spacing={1}>
                 <MapPin size={16} color={theme.palette.secondary.main} />
                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  ZONA LÍDER
+                  AGRUPAMIENTO LÍDER
                 </Typography>
               </Stack>
               <Typography variant="h6" fontWeight={700} noWrap>
@@ -554,7 +554,7 @@ export default function ProrrateosPage() {
         </Stack>
       </Card>
 
-      {/* Main View Tabs (Sucursales / Zonas) */}
+      {/* Main View Tabs (Sucursales / Agrupamientos) */}
       <Stack spacing={2}>
         <TabFilters
           tabs={GROUPING_TABS}
@@ -585,7 +585,7 @@ export default function ProrrateosPage() {
                 <TableRow>
                   <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Sucursal</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Zona</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Agrupamiento</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
                     Monto Base ($)
                   </TableCell>
@@ -608,7 +608,7 @@ export default function ProrrateosPage() {
                       <TableCell sx={{ fontWeight: 600 }}>{b.branchName}</TableCell>
                       <TableCell>
                         <Chip
-                          label={b.zoneName ?? "Sin zona"}
+                          label={b.zoneName ?? "Sin agrupamiento"}
                           size="small"
                           variant={b.zoneName ? "filled" : "outlined"}
                           color={b.zoneName ? "primary" : "default"}
@@ -647,11 +647,11 @@ export default function ProrrateosPage() {
             </Table>
           </TableContainer>
         ) : (
-          /* TAB 2: ZONAS (SUS SUCURSALES) */
+          /* TAB 2: AGRUPAMIENTOS (SUS SUCURSALES) */
           <Stack spacing={2}>
             {zones.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: "center" }}>
-                <Typography color="text.secondary">No hay zonas configuradas o datos disponibles.</Typography>
+                <Typography color="text.secondary">No hay agrupamientos configurados o datos disponibles.</Typography>
               </Paper>
             ) : (
               zones.map((z) => (
@@ -696,7 +696,7 @@ export default function ProrrateosPage() {
                       <Stack direction="row" alignItems="center" spacing={3}>
                         <Box textAlign="right">
                           <Typography variant="caption" color="text.secondary">
-                            Total Zona Base
+                            Total Agrupamiento Base
                           </Typography>
                           <Typography variant="subtitle1" fontWeight={700} color="primary.main">
                             {formatCurrency(z.totalBaseAmount)}
@@ -725,7 +725,7 @@ export default function ProrrateosPage() {
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>% Global</TableCell>
                             <TableCell sx={{ fontWeight: 700, minWidth: 200 }}>
-                              % Relativo en Zona
+                              % Relativo en Agrupamiento
                             </TableCell>
                           </TableRow>
                         </TableHead>

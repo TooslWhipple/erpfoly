@@ -37,7 +37,7 @@ import {
   type Branch,
   type BusinessSegmentItem,
 } from "@/services/branches.service";
-import { getZonesCatalog } from "@/services/zones-catalog.service";
+
 import { theme } from "@/styles/theme";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 
@@ -50,7 +50,7 @@ const DEFAULT_MAP_CENTER = { lat: 19.432608, lng: -99.133209 };
 interface BranchFormShape extends Record<string, unknown> {
   name: string;
   businessSegmentId: number | null;
-  zoneId: number | null;
+
   postalCode: string;
   neighborhoodFullCode: string;
   neighborhoodName: string;
@@ -80,12 +80,7 @@ const branchFormFields = defineFormFields<BranchFormShape>()([
     label: "Segmento de negocio",
     when: () => false,
   },
-  {
-    name: "zoneId",
-    schema: z.number().nullable(),
-    label: "Zona",
-    when: () => false,
-  },
+
   {
     name: "postalCode",
     schema: z
@@ -175,7 +170,6 @@ type BranchFormValues = SchemaOutputFromFields<typeof branchFormFields>;
 const EMPTY_DEFAULTS: BranchFormValues = {
   name: "",
   businessSegmentId: null,
-  zoneId: null,
   postalCode: "",
   neighborhoodFullCode: "-1",
   neighborhoodName: "",
@@ -192,7 +186,6 @@ function branchToFormValues(branch: Branch): BranchFormValues {
   return {
     name: branch.name ?? "",
     businessSegmentId: branch.businessSegmentId ?? null,
-    zoneId: branch.zoneId ?? null,
     postalCode: branch.postalCode ?? "",
     neighborhoodFullCode: branch.neighborhoodFullCode ?? "-1",
     neighborhoodName: branch.neighborhoodName ?? "",
@@ -209,7 +202,7 @@ function branchToFormValues(branch: Branch): BranchFormValues {
 type BranchSubmitPayload = {
   name: string;
   businessSegmentId?: number | null;
-  zoneId?: number | null;
+
   postalCode?: string;
   neighborhoodFullCode?: string;
   neighborhoodName?: string;
@@ -226,7 +219,6 @@ function valuesToPayload(value: BranchFormValues): BranchSubmitPayload {
   return {
     name: value.name.trim(),
     businessSegmentId: value.businessSegmentId ?? null,
-    zoneId: value.zoneId ?? null,
     postalCode: value.postalCode || undefined,
     neighborhoodFullCode:
       value.neighborhoodFullCode && value.neighborhoodFullCode !== "-1"
@@ -310,10 +302,7 @@ export function BranchCreateModal({
     form.store,
     (s) => (s.values as BranchFormValues).businessSegmentId,
   );
-  const zoneId = useStore(
-    form.store,
-    (s) => (s.values as BranchFormValues).zoneId,
-  );
+
   const postalCode = useStore(
     form.store,
     (s) => (s.values as BranchFormValues).postalCode,
@@ -388,31 +377,7 @@ export function BranchCreateModal({
     return { id: businessSegmentId, label: `Segmento #${businessSegmentId}` };
   }, [businessSegmentId, businessSegmentOptions, branch?.businessSegment]);
 
-  const zonesQuery = useQuery({
-    queryKey: ["catalog", "zones", "branch-form"],
-    queryFn: () => getZonesCatalog(),
-    enabled: open,
-  });
 
-  const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
-  const zonesLoading = zonesQuery.isFetching;
-
-  const zoneOptions = useMemo(() => {
-    return zones.map((z) => ({
-      id: z.id,
-      label: z.name,
-    }));
-  }, [zones]);
-
-  const selectedZoneOption = useMemo(() => {
-    if (zoneId == null) return null;
-    const found = zoneOptions.find((opt) => opt.id === zoneId);
-    if (found) return found;
-    if (branch?.zoneName) {
-      return { id: zoneId, label: branch.zoneName };
-    }
-    return { id: zoneId, label: `Zona #${zoneId}` };
-  }, [zoneId, zoneOptions, branch?.zoneName]);
 
   const trimmedPostalCode = postalCode.trim();
   const postalReady = isValidMxPostalCode(trimmedPostalCode);
@@ -573,30 +538,7 @@ export function BranchCreateModal({
                   required
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <Autocomplete<{ id: number; label: string }, false, false, false>
-                  options={zoneOptions}
-                  value={selectedZoneOption}
-                  loading={zonesLoading}
-                  getOptionLabel={(opt) => opt.label}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                  onChange={(_, newValue) => {
-                    form.setFieldValue(
-                      "zoneId",
-                      newValue ? newValue.id : null,
-                    );
-                  }}
-                  noOptionsText="Sin zonas disponibles"
-                  renderInput={(params) => (
-                    <FormTextField
-                      {...params}
-                      label="Zona"
-                      placeholder="Seleccionar zona"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <Autocomplete<{ id: number; label: string }, false, false, false>
                   options={businessSegmentOptions}
                   value={selectedBusinessSegmentOption}

@@ -54,6 +54,32 @@ import {
   CATALOG_TRANSACTION_TYPES_UPDATE,
 } from "@/lib/permissions";
 
+function formatearCuenta(codigo: string, mascara: string = "0000-0000-0000"): string {
+  if (!codigo) return "";
+  const codigoLimpio = codigo.replace(/[-.\s]/g, "");
+  if (!/^\d+$/.test(codigoLimpio)) return codigo;
+
+  const soloDigitos = codigo.replace(/\D/g, "");
+  let resultado = "";
+  let idx = 0;
+  for (let i = 0; i < mascara.length; i++) {
+    const m = mascara[i];
+    if (m === "0") {
+      if (idx < soloDigitos.length) {
+        resultado += soloDigitos[idx++];
+      } else {
+        break;
+      }
+    } else {
+      resultado += m;
+    }
+  }
+  while (idx < soloDigitos.length) {
+    resultado += soloDigitos[idx++];
+  }
+  return resultado || codigo;
+}
+
 export default function TiposTransaccionPage() {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
@@ -147,25 +173,62 @@ export default function TiposTransaccionPage() {
     setViewMode("form");
   };
 
-  const handleOpenEdit = (item: TipoTransaccion) => {
-    setEditingItem(item);
-    setClave(item.clave);
-    setDescripcion(item.descripcion);
+  const handleOpenEdit = async (item: TipoTransaccion) => {
+    setLoading(true);
+    try {
+      setEditingItem(item);
+      setClave(item.clave);
+      setDescripcion(item.descripcion);
 
-    const mappedAsientos: AsientoContableConfig[] = (item.asientosContables || []).map((ac) => ({
-      idpolizasistema: ac.idpolizasistema,
-      afectacion: ac.afectacion,
-      signo: ac.signo,
-      idtipocuenta: ac.idtipocuenta || 1,
-      cuenta: ac.cuenta || "",
-      calculoconfiguracion: ac.calculoconfiguracion || "TOTAL",
-      porcentaje: ac.porcentaje ?? 100,
-      detallado: ac.detallado ?? false,
-    }));
+      const mappedAsientos: AsientoContableConfig[] = (item.asientosContables || []).map((ac) => ({
+        idpolizasistema: ac.idpolizasistema,
+        afectacion: ac.afectacion,
+        signo: ac.signo,
+        idtipocuenta: ac.idtipocuenta || 1,
+        cuenta: ac.cuenta || "",
+        calculoconfiguracion: ac.calculoconfiguracion || "TOTAL",
+        porcentaje: ac.porcentaje ?? 100,
+        detallado: ac.detallado ?? false,
+      }));
 
-    setAsientos(mappedAsientos);
-    setAccountOptions({});
-    setViewMode("form");
+      setAsientos(mappedAsientos);
+      setAccountOptions({});
+
+      // Consultar en paralelo todos los nombres de las cuentas existentes
+      const fetchPromises = mappedAsientos.map(async (asiento, idx) => {
+        if (asiento.cuenta && asiento.idtipocuenta === 1) {
+          try {
+            const res = await searchAccountingAccounts({ q: asiento.cuenta, limit: 1 });
+            if (res.data && res.data.length > 0) {
+              const match = res.data.find((opt) => opt.code === asiento.cuenta);
+              if (match) {
+                return { idx, match };
+              }
+            }
+          } catch (e) {
+            console.error("Error al cargar descripción de cuenta", e);
+          }
+        }
+        return null;
+      });
+
+      const resolved = await Promise.all(fetchPromises);
+
+      // Poblar opciones
+      const newOptions: Record<number, AccountingAccountItem[]> = {};
+      resolved.forEach((itemOpt) => {
+        if (itemOpt) {
+          newOptions[itemOpt.idx] = [itemOpt.match];
+        }
+      });
+      setAccountOptions(newOptions);
+      setViewMode("form");
+    } catch (e) {
+      console.error("Error al abrir edición", e);
+      showError("Error al cargar el formulario de edición.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCloseForm = () => {
@@ -638,15 +701,21 @@ export default function TiposTransaccionPage() {
                                       size="small"
                                       options={accountOptions[idx] || []}
                                       loading={loadingAccounts[idx] || false}
+                                      filterOptions={(x) => x}
                                       getOptionLabel={(opt) =>
                                         typeof opt === "string"
                                           ? opt
-                                          : `${opt.code || opt.codigo || ""} - ${opt.name || opt.nombre || ""}`
+                                          : opt.label || `${opt.code || opt.codigo || ""} - ${opt.name || opt.nombre || ""}`
                                       }
-                                      inputValue={asiento.cuenta || ""}
+                                      value={
+                                        (accountOptions[idx] || []).find((opt) => opt.code === asiento.cuenta) ||
+                                        (asiento.cuenta ? ({ id: 0, code: asiento.cuenta, name: "", label: formatearCuenta(asiento.cuenta) } as AccountingAccountItem) : null)
+                                      }
                                       onInputChange={(_, newValue) => {
-                                        handleAsientoChange(idx, "cuenta", newValue);
-                                        handleSearchAccounts(idx, newValue);
+                                        if (!newValue.includes(" - ")) {
+                                          handleAsientoChange(idx, "cuenta", newValue);
+                                          handleSearchAccounts(idx, newValue);
+                                        }
                                       }}
                                       onChange={(_, selectedOption) => {
                                         if (typeof selectedOption === "string") {
@@ -657,6 +726,10 @@ export default function TiposTransaccionPage() {
                                             "cuenta",
                                             selectedOption.code || selectedOption.codigo || ""
                                           );
+                                          setAccountOptions((prev) => ({
+                                            ...prev,
+                                            [idx]: [selectedOption],
+                                          }));
                                         }
                                       }}
                                       renderInput={(params) => (

@@ -166,7 +166,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/catalogos\/promociones\/nuevo$/, permission: CATALOG_PROMOTIONS_CREATE },
   { pattern: /^\/catalogos\/promociones\/[^/]+$/, permission: CATALOG_PROMOTIONS_UPDATE },
   { pattern: /^\/catalogos\/promociones(\/.*)?$/, permission: CATALOG_PROMOTIONS_READ },
-  { pattern: /^\/catalogos\/zonas(\/.*)?$/, permission: CATALOG_ZONES_READ },
+  { pattern: /^\/catalogos\/agrupamientos-sucursales(\/.*)?$/, permission: CATALOG_ZONES_READ },
   { pattern: /^\/catalogos\/prorrateos(\/.*)?$/, permission: CATALOG_APPORTIONMENTS_READ },
   { pattern: /^\/catalogos\/sucursales\/nuevo$/, permission: CATALOG_BRANCHES_CREATE },
   { pattern: /^\/catalogos\/sucursales\/[^/]+$/, permission: CATALOG_BRANCHES_READ },

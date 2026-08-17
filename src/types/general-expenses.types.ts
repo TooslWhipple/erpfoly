@@ -8,12 +8,31 @@ export type ApportionmentType =
   | "cash_sales"
   | "free";
 
+export const APPORTIONMENT_TYPE_OPTIONS: Array<{
+  value: ApportionmentType;
+  label: string;
+}> = [
+  { value: "sales_participation", label: "Por participación de venta" },
+  { value: "credit_card_sales", label: "Ventas de tarjeta de crédito" },
+  { value: "cash_sales", label: "Ventas de contado" },
+  { value: "free", label: "Libre" },
+];
+
+export const APPORTIONMENT_TYPE_HELP: Record<ApportionmentType, string> = {
+  sales_participation:
+    "El porcentaje es proporcional al neto de ventas de cada sucursal en el mes anterior.",
+  credit_card_sales:
+    "El porcentaje es proporcional a las ventas con tarjeta de crédito de cada sucursal en el mes anterior.",
+  cash_sales:
+    "El porcentaje es proporcional a las ventas de contado de cada sucursal en el mes anterior.",
+  free: "Captura el porcentaje de cada sucursal. La suma debe ser 100%.",
+};
+
 export interface GeneralExpenseBranchShare {
   branchId: string;
   branchName: string;
   percentage: number;
   amount: number;
-  isForeign: boolean;
 }
 
 export interface GeneralExpenseInvoice {
@@ -22,7 +41,6 @@ export interface GeneralExpenseInvoice {
   date: string;
   paymentType: string;
   amount: number;
-  fileName?: string;
 }
 
 export interface GeneralExpensePayment {
@@ -30,6 +48,8 @@ export interface GeneralExpensePayment {
   date: string;
   registeredBy: string;
   amount: number;
+  notes?: string | null;
+  receiptUrl?: string | null;
 }
 
 export interface GeneralExpenseListItem {
@@ -43,7 +63,9 @@ export interface GeneralExpenseListItem {
   balance: number;
   status: GeneralExpenseStatus;
   category: string;
+  categoryId: string;
   description: string;
+  detail: string | null;
   assignToSupplier: boolean;
   isLocalPurchase: boolean;
   responsibleId: string | null;
@@ -53,7 +75,6 @@ export interface GeneralExpenseListItem {
   payments: GeneralExpensePayment[];
   apportionEnabled: boolean;
   apportionmentType: ApportionmentType;
-  applyToForeignBranches: boolean;
   branchShares: GeneralExpenseBranchShare[];
   singleBranchId: string | null;
   singleBranchName: string | null;
@@ -73,6 +94,8 @@ export interface UnassignedInvoice {
   date: string;
   paymentType: string;
   amount: number;
+  invoiceNumber?: string;
+  supplierId?: string | null;
 }
 
 export interface GeneralExpenseCatalogOption {
@@ -81,28 +104,38 @@ export interface GeneralExpenseCatalogOption {
   secondaryLabel?: string;
 }
 
+export interface ApportionmentPreview {
+  type: string;
+  startDate: string;
+  endDate: string;
+  branchShares: GeneralExpenseBranchShare[];
+}
+
 export interface CreateGeneralExpensePayload {
   assignToSupplier: boolean;
   supplierId: string | null;
-  supplierName: string;
+  detail?: string;
   dueDate: string;
-  category: string;
+  categoryId: string;
   isLocalPurchase: boolean;
   responsibleId: string | null;
-  responsibleName: string | null;
   description: string;
   amount: number;
   requiresInvoice: boolean;
-  invoices: GeneralExpenseInvoice[];
+  payableInvoiceIds: string[];
   apportionEnabled: boolean;
   apportionmentType: ApportionmentType;
-  applyToForeignBranches: boolean;
-  branchShares: GeneralExpenseBranchShare[];
+  branchShares: Array<{ branchId: string; percentage: number }>;
   singleBranchId: string | null;
-  singleBranchName: string | null;
 }
 
 export interface UpdateGeneralExpensePayload
   extends Partial<CreateGeneralExpensePayload> {
   id: string;
+}
+
+export interface CreateExpensePaymentPayload {
+  amount: number;
+  paymentDate: string;
+  notes?: string;
 }

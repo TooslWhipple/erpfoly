@@ -156,6 +156,7 @@ export type {
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";
+export { BackendIndicator } from "./BackendIndicator";
 export { CreditLimitBar } from "./CreditLimitBar";
 export type { CreditLimitBarProps } from "./CreditLimitBar";
 export { DepartmentCard } from "./DepartmentCard";

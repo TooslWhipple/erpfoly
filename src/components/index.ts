@@ -101,6 +101,8 @@ export { OrderCard, OrderList } from "./OrderCard";
 export type { OrderCardData, OrderStatus as OrderCardStatus } from "./OrderCard";
 export { CosteoCard, CosteoList } from "./CosteoCard";
 export type { CosteoCardData } from "./CosteoCard";
+export { CardListPagination } from "./CardListPagination";
+export type { CardListPaginationProps } from "./CardListPagination";
 export { CosteoDetailHeader } from "./CosteoDetail";
 export {
   CosteoArticlesTab,

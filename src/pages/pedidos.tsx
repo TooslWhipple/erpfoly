@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Divider, Stack } from "@mui/material";
-import { Title, OrderList, SuggestionsCard, SupplierSelectionModal, TabFilters } from "@/components";
+import {
+    Title,
+    OrderList,
+    SuggestionsCard,
+    SupplierSelectionModal,
+    TabFilters,
+    CardListPagination,
+} from "@/components";
 import type { TitleAction } from "@/components/Title";
 import type { TabItem } from "@/components/Tabs";
 import type { OrderCardData } from "@/components/OrderCard";
@@ -9,6 +16,7 @@ import type { ProductSuggestion } from "@/types/suggestions.types";
 import type { Supplier } from "@/types/pedidos.types";
 import type { OrderListItem } from "@/types/orders.types";
 import { getOrders, getSuggestions } from "@/services/orders.service";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { SidebarPanel } from "@/styles/pedidos.styles";
 import { ORDERS_CREATE } from "@/lib/permissions";
 import dayjs from "@/lib/dayjs";
@@ -51,8 +59,6 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
 export default function Pedidos() {
     const router = useRouter();
 
-    const [orders, setOrders] = useState<OrderCardData[]>([]);
-    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("all");
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(true);
@@ -73,24 +79,24 @@ export default function Pedidos() {
         return undefined;
     }, [activeTab]);
 
-    const fetchOrders = useCallback(async () => {
-        setLoading(true);
-        try {
-            const result = await getOrders({
-                page: 1,
-                limit: 50,
-                status: statusFilter,
-            });
-            if (result.data) {
-                const mappedOrders = result.data.rows.map(mapBackendOrderToCardData);
-                setOrders(mappedOrders);
-            }
-        } catch (err) {
-            console.error("[Pedidos] Error fetching orders:", err);
-        } finally {
-            setLoading(false);
-        }
-    }, [statusFilter]);
+    const {
+        data: orderRows,
+        total,
+        page,
+        setPage,
+        isLoading: loading,
+    } = usePaginatedList<OrderListItem>({
+        queryKey: ["orders", activeTab],
+        queryFn: getOrders,
+        initialPage: 0,
+        initialRowsPerPage: 10,
+        extraParams: statusFilter ? { status: statusFilter } : undefined,
+    });
+
+    const orders = useMemo(
+        () => orderRows.map(mapBackendOrderToCardData),
+        [orderRows]
+    );
 
     const fetchSuggestions = useCallback(async () => {
         setSuggestionsLoading(true);
@@ -107,12 +113,12 @@ export default function Pedidos() {
     }, []);
 
     useEffect(() => {
-        fetchOrders();
         fetchSuggestions();
-    }, [fetchOrders, fetchSuggestions]);
+    }, [fetchSuggestions]);
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
+        setPage(0);
     };
 
     const handleCreateOrder = () => {
@@ -165,6 +171,12 @@ export default function Pedidos() {
                         onOrderClick={handleOrderClick}
                         loading={loading}
                         emptyMessage="No hay pedidos"
+                    />
+
+                    <CardListPagination
+                        page={page}
+                        total={total}
+                        onPageChange={setPage}
                     />
                 </Stack>
 

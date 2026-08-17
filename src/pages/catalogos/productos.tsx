@@ -21,12 +21,10 @@ import {
 const SEARCH_DEBOUNCE_MS = 300;
 const PRODUCT_STATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
-  DRAFT: "Borrador",
   INACTIVE: "Inactivo",
 };
 const PRODUCT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   ACTIVE: "success",
-  DRAFT: "default",
   INACTIVE: "default",
 };
 export default function Productos() {
@@ -36,11 +34,6 @@ export default function Productos() {
     if (activeTab === "active") {
       return {
         status: "ACTIVE",
-      };
-    }
-    if (activeTab === "draft") {
-      return {
-        status: "DRAFT",
       };
     }
     return {};
@@ -166,10 +159,6 @@ export default function Productos() {
       {
         value: "active",
         label: "Activos",
-      },
-      {
-        value: "draft",
-        label: "Borradores",
       },
     ],
     [],

@@ -426,6 +426,38 @@ export async function downloadSaleInvoiceFile(
   window.URL.revokeObjectURL(url);
 }
 
+export async function downloadInvoiceFileById(
+  invoiceId: number,
+  type: "xml" | "pdf" | "zip",
+  uuid?: string | null,
+): Promise<void> {
+  const filenameDefault = uuid || `${invoiceId}`;
+  const response = await api.get(`${BASE}/invoices/${invoiceId}/${type}`, {
+    responseType: "blob",
+  });
+
+  const contentType = (response.headers["content-type"] as string | undefined) ?? undefined;
+  const contentDisposition = (response.headers["content-disposition"] as string | undefined) ?? undefined;
+  let filename = `${filenameDefault}.${type}`;
+
+  if (contentDisposition && typeof contentDisposition === "string") {
+    const match = contentDisposition.match(/filename="?([^";]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const blob = new Blob([response.data], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export async function printAndDownloadSaleInvoicePdf(
   saleId: number,
 ): Promise<void> {

@@ -48,6 +48,7 @@ import {
   completeLayaway,
   cancelLayaway,
   downloadSaleInvoiceFile,
+  downloadInvoiceFileById,
   printSaleInvoicePdfOnly,
   getInvoicingConfig,
 } from "@/services/ventas.service";
@@ -138,6 +139,24 @@ export default function VentaDetalle() {
       snackbar.showError(msg);
     } finally {
       setDownloadingType(null);
+    }
+  };
+
+  const [downloadingSpecificId, setDownloadingSpecificId] = useState<string | null>(null);
+
+  const handleDownloadSpecificInvoice = async (invoiceId: number, type: "xml" | "pdf" | "zip", uuid?: string | null) => {
+    const key = `${invoiceId}-${type}`;
+    setDownloadingSpecificId(key);
+    try {
+      await downloadInvoiceFileById(invoiceId, type, uuid);
+      snackbar.showSuccess(`Archivo ${type.toUpperCase()} descargado con éxito`);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        `No se pudo descargar el archivo ${type.toUpperCase()} de la factura`;
+      snackbar.showError(msg);
+    } finally {
+      setDownloadingSpecificId(null);
     }
   };
 
@@ -688,44 +707,80 @@ export default function VentaDetalle() {
                   Descarga de archivos fiscales almacenados en el sistema
                 </Typography>
 
-                <InvoiceActionsGrid>
-                  <Button
-                    fullWidth
-                    variant="option"
-                    color="inherit"
-                    size="small"
-                    startIcon={<FileCode size={15} />}
-                    disabled={downloadingType === "xml"}
-                    onClick={() => handleDownloadInvoice("xml")}
-                    sx={{ minHeight: 44 }}
-                  >
-                    XML
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<FileText size={15} />}
-                    disabled={downloadingType === "pdf"}
-                    onClick={() => handleDownloadInvoice("pdf")}
-                    sx={{ minHeight: 44 }}
-                  >
-                    PDF
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    startIcon={<Archive size={15} />}
-                    disabled={downloadingType === "zip"}
-                    onClick={() => handleDownloadInvoice("zip")}
-                    sx={{ minHeight: 44 }}
-                  >
-                    ZIP
-                  </Button>
-                </InvoiceActionsGrid>
+                {sale?.invoices && sale.invoices.length > 0 ? (
+                  sale.invoices.map((invoice: any) => (
+                    <Box
+                      key={invoice.id}
+                      sx={{
+                        p: 1.5,
+                        mb: 1.5,
+                        borderRadius: 1.5,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "background.lowerGray",
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                        <Typography variant="body2" fontWeight={700}>
+                          {invoice.invoiceType === "VENTA" ? "Factura de Venta" : "Complemento de Pago (Abono)"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                          {invoice.documento ? `${invoice.documento}` : `ID: ${invoice.id}`}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+                        <Typography variant="caption" color="text.secondary">
+                          Monto: ${Number(invoice.amount ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Estado: {invoice.status === "GENERATED" ? "GENERADA" : invoice.status}
+                        </Typography>
+                      </Box>
+                      <InvoiceActionsGrid>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="inherit"
+                          size="small"
+                          startIcon={<FileCode size={15} />}
+                          disabled={downloadingSpecificId === `${invoice.id}-xml`}
+                          onClick={() => handleDownloadSpecificInvoice(invoice.id, "xml", invoice.uuid)}
+                          sx={{ minHeight: 36, fontSize: "0.75rem" }}
+                        >
+                          XML
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          startIcon={<FileText size={15} />}
+                          disabled={downloadingSpecificId === `${invoice.id}-pdf`}
+                          onClick={() => handleDownloadSpecificInvoice(invoice.id, "pdf", invoice.uuid)}
+                          sx={{ minHeight: 36, fontSize: "0.75rem" }}
+                        >
+                          PDF
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          startIcon={<Archive size={15} />}
+                          disabled={downloadingSpecificId === `${invoice.id}-zip`}
+                          onClick={() => handleDownloadSpecificInvoice(invoice.id, "zip", invoice.uuid)}
+                          sx={{ minHeight: 36, fontSize: "0.75rem", color: "#fff" }}
+                        >
+                          ZIP
+                        </Button>
+                      </InvoiceActionsGrid>
+                    </Box>
+                  ))
+                ) : (
+                  <Typography variant="caption" color="text.secondary" display="block" align="center" py={2}>
+                    No hay facturas registradas para esta venta.
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           )}

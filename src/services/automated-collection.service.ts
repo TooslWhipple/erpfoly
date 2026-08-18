@@ -14,7 +14,7 @@ export interface AutomatedCollectionRule {
     quantity: number;
     unit: { id: number; code: string; name: string };
   };
-  message: { id: number; name: string };
+  message: { id: number; name: string; channel?: string };
   message_type: { id: number; code: string; name: string };
 }
 
@@ -26,14 +26,14 @@ export interface AutomatedCollectionCatalogs {
     quantity: number;
     unit: { id: number; code: string; name: string };
   }[];
-  messages: { id: number; name: string }[];
+  messages: { id: number; name: string; channel: string }[];
   messageTypes: { id: number; code: string; name: string }[];
 }
 
 export interface CreateAutomatedCollectionPayload {
   name: string;
   message_id: number;
-  message_type_id: number;
+  message_type_id?: number;
   condition_type_id: number;
   comparison_operator_id: number;
   time_period_id: number;
@@ -94,7 +94,9 @@ export type AutomatedCollectionMessageDeliveryStatus =
 export interface AutomatedCollectionMessageLogItem {
   id: number;
   sentAt: string;
-  phone: string;
+  phone: string | null;
+  email?: string | null;
+  channel?: string | null;
   clientName: string;
   status: AutomatedCollectionMessageDeliveryStatus;
 }

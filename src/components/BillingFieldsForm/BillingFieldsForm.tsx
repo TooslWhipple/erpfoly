@@ -51,6 +51,7 @@ interface BillingFieldsFormProps {
   onChange: (field: keyof BillingFormValues, value: string | boolean) => void;
   whatsappFallbackNumber?: string;
   lockedFields?: Partial<Record<keyof BillingFormValues, boolean>>;
+  errors?: Partial<Record<keyof BillingFormValues, string | undefined>>;
   beforeFields?: ReactNode;
 }
 
@@ -59,6 +60,7 @@ export function BillingFieldsForm({
   onChange,
   whatsappFallbackNumber,
   lockedFields,
+  errors,
   beforeFields,
 }: BillingFieldsFormProps) {
   const { data: neighborhoods = [], isPending: neighborhoodsLoading } =
@@ -94,6 +96,8 @@ export function BillingFieldsForm({
             onChange={(e) => onChange("rfc", e.target.value)}
             inputProps={{ maxLength: 13 }}
             disabled={isLocked("rfc")}
+            error={Boolean(errors?.rfc)}
+            helperText={errors?.rfc}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -104,6 +108,8 @@ export function BillingFieldsForm({
             value={values.businessName}
             onChange={(e) => onChange("businessName", e.target.value)}
             disabled={isLocked("businessName")}
+            error={Boolean(errors?.businessName)}
+            helperText={errors?.businessName}
           />
         </Grid>
       </Grid>
@@ -116,6 +122,8 @@ export function BillingFieldsForm({
             label="Régimen fiscal"
             value={values.taxRegimeId}
             onChange={(e) => onChange("taxRegimeId", e.target.value)}
+            error={Boolean(errors?.taxRegimeId)}
+            helperText={errors?.taxRegimeId}
           >
             <MenuItem value="">
               <em>Seleccione</em>
@@ -134,6 +142,8 @@ export function BillingFieldsForm({
             label="Uso de CFDI"
             value={values.cfdiUseId}
             onChange={(e) => onChange("cfdiUseId", e.target.value)}
+            error={Boolean(errors?.cfdiUseId)}
+            helperText={errors?.cfdiUseId}
           >
             <MenuItem value="">
               <em>Seleccione</em>
@@ -154,6 +164,8 @@ export function BillingFieldsForm({
           neighborhoods={neighborhoods}
           neighborhoodsLoading={neighborhoodsLoading}
           disabled={isLocked("fiscalPostalCode")}
+          postalCodeError={errors?.fiscalPostalCode}
+          neighborhoodError={errors?.fiscalNeighborhoodFullCode}
           fieldKeys={{
             postalCode: "fiscalPostalCode",
             neighborhoodFullCode: "fiscalNeighborhoodFullCode",
@@ -182,6 +194,8 @@ export function BillingFieldsForm({
             value={values.fiscalStreet}
             onChange={(e) => onChange("fiscalStreet", e.target.value)}
             disabled={isLocked("fiscalStreet")}
+            error={Boolean(errors?.fiscalStreet)}
+            helperText={errors?.fiscalStreet}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -192,6 +206,8 @@ export function BillingFieldsForm({
             value={values.fiscalExternalNumber}
             onChange={(e) => onChange("fiscalExternalNumber", e.target.value)}
             disabled={isLocked("fiscalExternalNumber")}
+            error={Boolean(errors?.fiscalExternalNumber)}
+            helperText={errors?.fiscalExternalNumber}
           />
         </Grid>
       </Grid>
@@ -212,6 +228,8 @@ export function BillingFieldsForm({
           value={values.invoiceEmail}
           onChange={(e) => onChange("invoiceEmail", e.target.value)}
           disabled={!values.sendInvoiceByEmail}
+          error={Boolean(errors?.invoiceEmail)}
+          helperText={errors?.invoiceEmail}
         />
       </Box>
 
@@ -230,6 +248,8 @@ export function BillingFieldsForm({
           onChange={(e) => onChange("invoiceWhatsappNumber", e.target.value)}
           disabled={!values.sendInvoiceByWhatsapp}
           inputProps={{ maxLength: 10 }}
+          error={Boolean(errors?.invoiceWhatsappNumber)}
+          helperText={errors?.invoiceWhatsappNumber}
         />
       </Box>
     </Stack>

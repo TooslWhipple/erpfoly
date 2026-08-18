@@ -234,6 +234,11 @@ export type {
 } from "./NewRouteModal";
 export { AutomatedCollectionActivityModal } from "./AutomatedCollectionActivityModal";
 export type { AutomatedCollectionActivityModalProps } from "./AutomatedCollectionActivityModal";
+export { AutomatedCollectionRuleFormModal } from "./AutomatedCollectionRuleFormModal";
+export type {
+  AutomatedCollectionRuleFormModalProps,
+  AutomatedCollectionRuleFormValues,
+} from "./AutomatedCollectionRuleFormModal";
 export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 export { MapMarker } from "./MapMarker";

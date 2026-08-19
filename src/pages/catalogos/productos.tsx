@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Stack } from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
-import { Title, TableCrud, TabFilters } from "@/components";
+import { Alert, Stack } from "@mui/material";
+import {
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Restore as RestoreIcon,
+  Visibility as VisibilityIcon,
+} from "@mui/icons-material";
+import { Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
 import type {
   Column,
   RowAction,
@@ -10,33 +15,53 @@ import type {
 } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
+  deleteProduct,
+  restoreProduct,
   getProducts,
   type ProductListItem,
 } from "@/services/productos.service";
 import {
   CATALOG_PRODUCTS_CREATE,
+  CATALOG_PRODUCTS_DELETE,
+  CATALOG_PRODUCTS_READ,
   CATALOG_PRODUCTS_UPDATE,
 } from "@/lib/permissions";
+
 const SEARCH_DEBOUNCE_MS = 300;
+
 const PRODUCT_STATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
   INACTIVE: "Inactivo",
 };
+
 const PRODUCT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   ACTIVE: "success",
-  INACTIVE: "default",
+  INACTIVE: "error",
 };
+
+type ProductStatusTab = "all" | "active" | "inactive";
+
+const STATUS_TABS: { value: ProductStatusTab; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "active", label: "Activos" },
+  { value: "inactive", label: "Inactivos" },
+];
+
 export default function Productos() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("all");
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
+  const [activeTab, setActiveTab] = useState<ProductStatusTab>("all");
   const listExtraParams = useMemo(() => {
     if (activeTab === "active") {
-      return {
-        status: "ACTIVE",
-      };
+      return { status: "ACTIVE" as const };
     }
-    return {};
+    if (activeTab === "inactive") {
+      return { status: "INACTIVE" as const };
+    }
+    return { includeInactive: true };
   }, [activeTab]);
   const {
     data: products,
@@ -48,6 +73,9 @@ export default function Productos() {
     setRowsPerPage: handleRowsPerPageChange,
     setSearch,
     isLoading: loading,
+    isError,
+    error,
+    refetch,
   } = usePaginatedList<ProductListItem>({
     queryKey: ["products", "list"],
     queryFn: getProducts,
@@ -66,6 +94,11 @@ export default function Productos() {
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
+  const [confirmState, setConfirmState] = useState<
+    | { open: false }
+    | { open: true; product: ProductListItem; action: "delete" | "restore" }
+  >({ open: false });
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchInput(value);
@@ -73,12 +106,12 @@ export default function Productos() {
     [setSearchInput],
   );
   const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value);
+    setActiveTab(value as ProductStatusTab);
   }, []);
   const handleCreateProduct = useCallback(() => {
     router.push("/catalogos/productos/nuevo");
   }, [router]);
-  const handleEditProduct = useCallback(
+  const handleOpenProduct = useCallback(
     (product: ProductListItem) => {
       router.push(`/catalogos/productos/${product.id}`);
     },
@@ -90,6 +123,37 @@ export default function Productos() {
     },
     [setPage],
   );
+  const openConfirm = useCallback(
+    (product: ProductListItem, action: "delete" | "restore") => {
+      setConfirmState({ open: true, product, action });
+    },
+    [],
+  );
+  const closeConfirm = useCallback(() => {
+    if (confirmLoading) return;
+    setConfirmState({ open: false });
+  }, [confirmLoading]);
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmState.open) return;
+    const { product, action } = confirmState;
+    setConfirmLoading(true);
+    const result =
+      action === "delete"
+        ? await deleteProduct(product.id)
+        : await restoreProduct(product.id);
+    setConfirmLoading(false);
+    if (result.error) {
+      showError(result.error.message);
+      return;
+    }
+    setConfirmState({ open: false });
+    showSuccess(
+      action === "delete"
+        ? "Artículo desactivado correctamente."
+        : "Artículo reactivado correctamente.",
+    );
+    refetch();
+  }, [confirmState, refetch, showError, showSuccess]);
   const columns = useMemo<Column<ProductListItem>[]>(
     () => [
       {
@@ -141,33 +205,46 @@ export default function Productos() {
   const actions = useMemo<RowAction<ProductListItem>[]>(
     () => [
       {
+        id: "view",
+        label: "Ver detalle",
+        icon: <VisibilityIcon fontSize="small" />,
+        onClick: handleOpenProduct,
+        permission: CATALOG_PRODUCTS_READ,
+        hidden: (row) => row.status === "INACTIVE",
+      },
+      {
         id: "edit",
         label: "Editar",
         icon: <EditIcon fontSize="small" />,
-        onClick: handleEditProduct,
+        onClick: handleOpenProduct,
         permission: CATALOG_PRODUCTS_UPDATE,
-      },
-    ],
-    [handleEditProduct],
-  );
-  const tabs = useMemo(
-    () => [
-      {
-        value: "all",
-        label: "Todas",
+        hidden: (row) => row.status === "INACTIVE",
       },
       {
-        value: "active",
-        label: "Activos",
+        id: "delete",
+        label: "Desactivar",
+        icon: <DeleteIcon fontSize="small" />,
+        onClick: (row) => openConfirm(row, "delete"),
+        color: "error",
+        permission: CATALOG_PRODUCTS_DELETE,
+        hidden: (row) => row.status === "INACTIVE",
+      },
+      {
+        id: "restore",
+        label: "Reactivar",
+        icon: <RestoreIcon fontSize="small" />,
+        onClick: (row) => openConfirm(row, "restore"),
+        permission: CATALOG_PRODUCTS_DELETE,
+        hidden: (row) => row.status !== "INACTIVE",
       },
     ],
-    [],
+    [handleOpenProduct, openConfirm],
   );
   return (
     <Stack direction="column" spacing={3}>
       <Title title="Catálogo de artículos" />
       <TabFilters
-        tabs={tabs}
+        tabs={STATUS_TABS}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         showSearch
@@ -185,6 +262,12 @@ export default function Productos() {
         ]}
       />
 
+      {isError && (
+        <Alert severity="error">
+          {error?.message || "No se pudo cargar el catálogo de artículos."}
+        </Alert>
+      )}
+
       <TableCrud
         columns={columns}
         rows={products}
@@ -196,8 +279,47 @@ export default function Productos() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={handleEditProduct}
-        emptyMessage="No hay artículos registrados"
+        onRowClick={(product) => {
+          if (product.status === "INACTIVE") return;
+          handleOpenProduct(product);
+        }}
+        emptyMessage={
+          activeTab === "inactive"
+            ? "No hay artículos inactivos"
+            : activeTab === "active"
+              ? "No hay artículos activos"
+              : "No hay artículos registrados"
+        }
+      />
+
+      <ConfirmModal
+        open={confirmState.open}
+        onClose={closeConfirm}
+        onConfirm={handleConfirmAction}
+        loading={confirmLoading}
+        title={
+          confirmState.open && confirmState.action === "restore"
+            ? "Reactivar artículo"
+            : "Desactivar artículo"
+        }
+        description={
+          confirmState.open
+            ? confirmState.action === "restore"
+              ? `¿Deseas reactivar el artículo "${confirmState.product.name}"?`
+              : `¿Deseas desactivar el artículo "${confirmState.product.name}"? Dejará de aparecer en el catálogo activo.`
+            : ""
+        }
+        confirmLabel={
+          confirmState.open && confirmState.action === "restore"
+            ? "Reactivar"
+            : "Desactivar"
+        }
+        cancelLabel="Cancelar"
+        type={
+          confirmState.open && confirmState.action === "restore"
+            ? "primary"
+            : "error"
+        }
       />
     </Stack>
   );

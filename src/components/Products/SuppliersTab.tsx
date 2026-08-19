@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { Button, Stack, Typography, Table, TableBody, TableHead, TableRow } from "@mui/material";
+import { FormTextField } from "@/components";
 import {
     EmptyStateContainer,
     FormCard,
@@ -13,7 +14,6 @@ import {
 import { AddSupplierModal } from "./AddSupplierModal";
 import type { ProductSupplier } from "@/types/productos.types";
 import type { SupplierCatalogItem } from "@/services/suppliers.service";
-import { theme } from "@/styles/theme";
 import { Minus, Plus } from "lucide-react";
 
 function formatSupplierTableId(supplierId: number): string {
@@ -41,7 +41,11 @@ interface SuppliersTabProps {
     availableSuppliers: SupplierCatalogItem[];
     onAddSupplier: (supplierId: number) => Promise<void>;
     onRemoveSupplier: (supplierRowId: string) => void;
+    onSetPrimarySupplier?: (supplierRowId: string) => void;
+    onSupplierProductCodeChange?: (supplierRowId: string, supplierProductCode: string) => void;
     onNewSupplier?: () => void;
+    error?: string;
+    readOnly?: boolean;
 }
 
 export function SuppliersTab({
@@ -49,7 +53,11 @@ export function SuppliersTab({
     availableSuppliers,
     onAddSupplier,
     onRemoveSupplier,
+    onSetPrimarySupplier,
+    onSupplierProductCodeChange,
     onNewSupplier,
+    error,
+    readOnly = false,
 }: SuppliersTabProps) {
     const router = useRouter();
     const [modalOpen, setModalOpen] = useState(false);
@@ -93,17 +101,25 @@ export function SuppliersTab({
                             Agrega los proveedores para este artículo
                         </Typography>
                     </Stack>
-                    <Button
-                        sx={{
-                            minWidth: { xs: "100%", sm: "176px" },
-                        }}
-                        variant="outlined"
-                        startIcon={<Plus size={14} strokeWidth={2} />}
-                        onClick={handleOpenModal}
-                    >
-                        Agregar proveedor
-                    </Button>
+                    {!readOnly && (
+                        <Button
+                            sx={{
+                                minWidth: { xs: "100%", sm: "176px" },
+                            }}
+                            variant="outlined"
+                            startIcon={<Plus size={14} strokeWidth={2} />}
+                            onClick={handleOpenModal}
+                        >
+                            Agregar proveedor
+                        </Button>
+                    )}
                 </Stack>
+
+                {error && (
+                    <Typography variant="body2" color="error">
+                        {error}
+                    </Typography>
+                )}
 
                 {suppliers.length === 0 ? (
                     <EmptyStateContainer>
@@ -116,20 +132,25 @@ export function SuppliersTab({
                         <Table size="medium" sx={{ tableLayout: "fixed" }}>
                             <TableHead>
                                 <TableRow>
-                                    <SupplierAssignedHeaderCell sx={{ width: "12%" }}>
+                                    <SupplierAssignedHeaderCell sx={{ width: "10%" }}>
                                         ID
                                     </SupplierAssignedHeaderCell>
-                                    <SupplierAssignedHeaderCell sx={{ width: "58%" }}>
+                                    <SupplierAssignedHeaderCell sx={{ width: "32%" }}>
                                         Proveedor
                                     </SupplierAssignedHeaderCell>
-                                    <SupplierAssignedHeaderCell sx={{ width: "20%" }}>
+                                    <SupplierAssignedHeaderCell sx={{ width: "22%" }}>
+                                        Código proveedor
+                                    </SupplierAssignedHeaderCell>
+                                    <SupplierAssignedHeaderCell sx={{ width: "22%" }}>
                                         Estatus
                                     </SupplierAssignedHeaderCell>
-                                    <SupplierAssignedHeaderCell
-                                        align="right"
-                                        sx={{ width: "10%" }}
-                                        aria-label="Acciones"
-                                    />
+                                    {!readOnly && (
+                                        <SupplierAssignedHeaderCell
+                                            align="right"
+                                            sx={{ width: "14%" }}
+                                            aria-label="Acciones"
+                                        />
+                                    )}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -142,23 +163,45 @@ export function SuppliersTab({
                                             {assignedSupplierDisplayName(row, availableSuppliers)}
                                         </SupplierAssignedBodyCell>
                                         <SupplierAssignedBodyCell>
+                                            <FormTextField
+                                                placeholder="SKU proveedor"
+                                                value={row.supplierProductCode ?? ""}
+                                                onChange={(e) =>
+                                                    onSupplierProductCodeChange?.(row.id, e.target.value)
+                                                }
+                                                disabled={readOnly}
+                                                inputProps={{ maxLength: 128 }}
+                                            />
+                                        </SupplierAssignedBodyCell>
+                                        <SupplierAssignedBodyCell>
                                             {row.isDefault ? (
                                                 <SupplierPrimaryBadge>Principal</SupplierPrimaryBadge>
-                                            ) : (
+                                            ) : readOnly ? (
                                                 <Typography variant="body2" color="text.secondary">
                                                     —
                                                 </Typography>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    variant="text"
+                                                    size="small"
+                                                    onClick={() => onSetPrimarySupplier?.(row.id)}
+                                                >
+                                                    Marcar principal
+                                                </Button>
                                             )}
                                         </SupplierAssignedBodyCell>
-                                        <SupplierAssignedBodyCell align="right">
-                                            <SupplierRemoveIconButton
-                                                size="small"
-                                                aria-label="Quitar proveedor"
-                                                onClick={() => onRemoveSupplier(row.id)}
-                                            >
-                                                <Minus size={16} strokeWidth={2} />
-                                            </SupplierRemoveIconButton>
-                                        </SupplierAssignedBodyCell>
+                                        {!readOnly && (
+                                            <SupplierAssignedBodyCell align="right">
+                                                <SupplierRemoveIconButton
+                                                    size="small"
+                                                    aria-label="Quitar proveedor"
+                                                    onClick={() => onRemoveSupplier(row.id)}
+                                                >
+                                                    <Minus size={16} strokeWidth={2} />
+                                                </SupplierRemoveIconButton>
+                                            </SupplierAssignedBodyCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>

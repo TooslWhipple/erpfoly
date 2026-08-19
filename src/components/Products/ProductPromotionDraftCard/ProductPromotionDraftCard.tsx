@@ -36,12 +36,14 @@ export interface ProductPromotionDraftCardProps {
   draft: ProductPromotionDraft;
   handleEdit: () => void;
   handleDelete: () => void;
+  readOnly?: boolean;
 }
 
 export function ProductPromotionDraftCard({
   draft,
   handleEdit,
   handleDelete,
+  readOnly = false,
 }: ProductPromotionDraftCardProps) {
   const theme = useTheme();
 
@@ -107,6 +109,7 @@ export function ProductPromotionDraftCard({
           ) : null
         }
 
+        {!readOnly && (
         <Stack direction="row" spacing={1}>
           <Button
             variant="text"
@@ -116,6 +119,7 @@ export function ProductPromotionDraftCard({
             color="error"
             onClick={handleDelete}>Eliminar</Button>
         </Stack>
+        )}
       </Stack>
     </DraftCardRoot>
   );

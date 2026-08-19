@@ -20,6 +20,7 @@ interface PackagesTabProps {
     excludeProductId?: number;
     onAddPackage: (data: PackageFormData) => Promise<void>;
     onRemovePackage: (packageId: string) => void;
+    readOnly?: boolean;
 }
 
 function getPackageDisplayTitle(pkg: ProductPackage): string {
@@ -49,6 +50,7 @@ export function PackagesTab({
     excludeProductId,
     onAddPackage,
     onRemovePackage,
+    readOnly = false,
 }: PackagesTabProps) {
     const [modalOpen, setModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -87,6 +89,7 @@ export function PackagesTab({
                             Configura los artículos que se podrán vender como paquete junto con este artículo
                         </Typography>
                     </Stack>
+                    {!readOnly && (
                     <Button
                         variant="outlined"
                         color="primary"
@@ -96,6 +99,7 @@ export function PackagesTab({
                     >
                         Agregar paquete
                     </Button>
+                    )}
                 </Stack>
                 <Divider />
                 {packages.length === 0 ? (
@@ -126,11 +130,13 @@ export function PackagesTab({
                                             </Typography>
                                         </PackageStatusBadge>
                                     }
+                                    {!readOnly && (
                                     <PackageDeleteButton
                                         type="button"
                                         onClick={() => onRemovePackage(item.id)}>
                                         <Trash2 size={16} strokeWidth={2} />
                                     </PackageDeleteButton>
+                                    )}
                                 </PackageRowCard>
                             ))
                         }

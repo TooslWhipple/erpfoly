@@ -18,7 +18,6 @@ import type {
     FormErrors,
 } from "@/types/productos.types";
 import { CostHistoryModal } from "./CostHistoryModal";
-import { AddBasePriceModal } from "./AddBasePriceModal";
 import { ProductPromotionDraftCard } from "./ProductPromotionDraftCard";
 import { formatDate } from "@/utils/date";
 import { costBasisLabel, resolveEffectiveCost } from "@/utils/product-cost";
@@ -40,10 +39,15 @@ function computeEstimatedPromotionalPrice(
 interface BasePriceRowProps {
     row: ProductBasePrice;
     referenceCost: number;
+    ivaPercent?: number;
 }
 
-function BasePriceRow({ row, referenceCost }: BasePriceRowProps) {
-    const { subtotal, price, isLoading, isError } = useProductPricePreview(referenceCost, row.marginPercent);
+function BasePriceRow({ row, referenceCost, ivaPercent }: BasePriceRowProps) {
+    const { subtotal, price, isLoading, isError } = useProductPricePreview(
+        referenceCost,
+        row.marginPercent,
+        { iva: ivaPercent },
+    );
 
     return (
         <Card backgroundColor="#CBD5E1">
@@ -84,7 +88,6 @@ interface PriceTabProps {
     currencies: Array<{ value: string; label: string }>;
     costBasisOptions: Array<{ value: string; label: string }>;
     basePrices: ProductBasePrice[];
-    onAddBasePrice: (entry: Omit<ProductBasePrice, "id">) => void;
     costHistoryOpen: boolean;
     onCostHistoryOpen: () => void;
     onCostHistoryClose: () => void;
@@ -96,6 +99,7 @@ interface PriceTabProps {
     exchangeRateLoading?: boolean;
     /** Repeats the Banxico lookup for an existing USD product without changing currency. */
     onRefreshExchangeRate?: () => void;
+    readOnly?: boolean;
 }
 
 export function PriceTab({
@@ -105,7 +109,6 @@ export function PriceTab({
     currencies,
     costBasisOptions,
     basePrices,
-    onAddBasePrice,
     costHistoryOpen,
     onCostHistoryOpen,
     onCostHistoryClose,
@@ -114,9 +117,9 @@ export function PriceTab({
     onPromotionDraftsChange,
     exchangeRateLoading = false,
     onRefreshExchangeRate,
+    readOnly = false,
 }: PriceTabProps) {
     const theme = useTheme();
-    const [addBasePriceOpen, setAddBasePriceOpen] = useState(false);
     const [promotionModalOpen, setPromotionModalOpen] = useState(false);
     const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
     const [activePurchaseTypeTab, setActivePurchaseTypeTab] = useState("");
@@ -184,12 +187,15 @@ export function PriceTab({
         formState.costBasisForCalculation as CostBasisForCalculation,
     );
     const firstBaseMarginPercent = basePrices[0]?.marginPercent ?? 0;
+    const ivaPercent = Number(formState.iva);
+    const resolvedIvaPercent = Number.isFinite(ivaPercent) ? ivaPercent : undefined;
     const {
         price: firstBasePrice,
         isLoading: firstBasePriceLoading,
         isError: firstBasePriceError,
     } = useProductPricePreview(referenceCost, firstBaseMarginPercent, {
         enabled: promotionDrafts.length > 0,
+        iva: resolvedIvaPercent,
     });
 
     const editingPromotionDraft = editingPromotionId != null
@@ -300,6 +306,7 @@ export function PriceTab({
                                         onChange={(e) => onFieldChange("listCost", e.target.value)}
                                         error={Boolean(errors.listCost)}
                                         helperText={errors.listCost}
+                                        disabled={readOnly}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
@@ -308,6 +315,7 @@ export function PriceTab({
                                         value={formState.currency}
                                         onChange={(e) => onFieldChange("currency", String(e.target.value))}
                                         options={currencies}
+                                        disabled={readOnly}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, md: 6 }}>
@@ -333,6 +341,9 @@ export function PriceTab({
                                         type="number"
                                         value={formState.iva}
                                         onChange={(e) => onFieldChange("iva", e.target.value)}
+                                        error={Boolean(errors.iva)}
+                                        helperText={errors.iva}
+                                        disabled={readOnly}
                                     />
                                 </Grid>
                                 {
@@ -342,7 +353,7 @@ export function PriceTab({
                                             variant="outlined"
                                             size="small"
                                             onClick={onRefreshExchangeRate}
-                                            disabled={exchangeRateLoading}
+                                            disabled={exchangeRateLoading || readOnly}
                                             sx={{ alignSelf: "flex-start" }}>
                                             Actualizar tipo de cambio
                                         </Button>
@@ -381,6 +392,7 @@ export function PriceTab({
                                         checked={formState.liquidation}
                                         onChange={(e) => onFieldChange("liquidation", e.target.checked)}
                                         color="primary"
+                                        disabled={readOnly}
                                     />
                                     <Typography variant="body1">Liquidación</Typography>
                                 </Stack>
@@ -402,11 +414,13 @@ export function PriceTab({
                                                 draft={row}
                                                 handleEdit={() => openEditPromotionModal(row.id)}
                                                 handleDelete={() => handleRemovePromotionDraft(row.id)}
+                                                readOnly={readOnly}
                                             />
                                         ))
                                     )
                                 }
                             </Stack>
+                            {!readOnly && (
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -414,6 +428,7 @@ export function PriceTab({
                                 sx={{ alignSelf: "flex-start" }}>
                                 Agregar promoción
                             </Button>
+                            )}
                         </FormCard>
                     </FormCard>
                 </Grid>
@@ -429,6 +444,7 @@ export function PriceTab({
                                     }
                                     options={costBasisOptions}
                                     sx={{ backgroundColor: "transparent" }}
+                                    disabled={readOnly}
                                 />
                             </Stack>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
@@ -441,13 +457,18 @@ export function PriceTab({
                                 {
                                     basePrices.length === 0 && (
                                         <Typography variant="body2" color="text.secondary">
-                                            No hay precios base. Usa Agregar para crear uno.
+                                            No hay precios base. El margen se toma del departamento.
                                         </Typography>
                                     )
                                 }
                                 {
                                     basePrices.map((row) => (
-                                        <BasePriceRow key={row.id} row={row} referenceCost={referenceCost} />
+                                        <BasePriceRow
+                                            key={row.id}
+                                            row={row}
+                                            referenceCost={referenceCost}
+                                            ivaPercent={resolvedIvaPercent}
+                                        />
                                     ))
                                 }
                             </Stack>
@@ -536,13 +557,6 @@ export function PriceTab({
                 loading={costHistoryLoading}
                 errorMessage={costHistoryError}
                 emptyMessage={costHistoryEmptyMessage}
-            />
-
-            <AddBasePriceModal
-                open={addBasePriceOpen}
-                onClose={() => setAddBasePriceOpen(false)}
-                referenceCost={referenceCost}
-                onAdd={onAddBasePrice}
             />
 
             <ProductPromotionModal

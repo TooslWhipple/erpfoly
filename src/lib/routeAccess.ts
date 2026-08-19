@@ -158,7 +158,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/rutas(\/.*)?$/, permission: ROUTES_READ },
 
   { pattern: /^\/catalogos\/productos\/nuevo$/, permission: CATALOG_PRODUCTS_CREATE },
-  { pattern: /^\/catalogos\/productos\/[^/]+$/, permission: CATALOG_PRODUCTS_UPDATE },
+  { pattern: /^\/catalogos\/productos\/[^/]+$/, anyPermissions: [CATALOG_PRODUCTS_READ, CATALOG_PRODUCTS_UPDATE] },
   { pattern: /^\/catalogos\/productos(\/.*)?$/, permission: CATALOG_PRODUCTS_READ },
   { pattern: /^\/catalogos\/departamentos\/nuevo$/, permission: CATALOG_DEPARTMENTS_CREATE },
   { pattern: /^\/catalogos\/departamentos\/[^/]+$/, anyPermissions: [CATALOG_DEPARTMENTS_READ, CATALOG_DEPARTMENTS_UPDATE] },

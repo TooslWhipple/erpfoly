@@ -32,6 +32,7 @@ export interface ImageGalleryUploadProps<T extends ImageGalleryUploadItem = Imag
     addButtonLabel?: string;
     accept?: string;
     multiple?: boolean;
+    disabled?: boolean;
 }
 
 function defaultGetImageSrc(image: ImageGalleryUploadItem): string | undefined {
@@ -51,6 +52,7 @@ export function ImageGalleryUpload<T extends ImageGalleryUploadItem>({
     addButtonLabel = "Agregar imagen",
     accept = "image/*",
     multiple = true,
+    disabled = false,
 }: ImageGalleryUploadProps<T>) {
     const theme = useTheme();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +60,7 @@ export function ImageGalleryUpload<T extends ImageGalleryUploadItem>({
     const dragDepthRef = useRef(0);
     const [dropHighlight, setDropHighlight] = useState(false);
 
-    const canAddMore = images.length < maxImages;
+    const canAddMore = !disabled && images.length < maxImages;
 
     const handleAddClick = () => {
         fileInputRef.current?.click();
@@ -183,6 +185,7 @@ export function ImageGalleryUpload<T extends ImageGalleryUploadItem>({
                                 {getSlotLabel(index, images.length)}
                             </Typography>
                         )}
+                        {!disabled && (
                         <GalleryOverlay data-gallery-overlay>
                             <GalleryIconButton onClick={(e) => handleEditClick(e, index)}>
                                 <EditIcon />
@@ -193,6 +196,7 @@ export function ImageGalleryUpload<T extends ImageGalleryUploadItem>({
                                 </GalleryIconButton>
                             )}
                         </GalleryOverlay>
+                        )}
                         <HiddenFileInput
                             ref={(el) => setEditInputRef(index, el)}
                             type="file"

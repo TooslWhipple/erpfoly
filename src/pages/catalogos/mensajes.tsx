@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Stack } from "@mui/material";
+import { useRouter } from "next/router";
 import { Title, TableCrud, TabFilters } from "@/components";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 
@@ -12,11 +13,16 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
   getCollectionMessages,
+  getCollectionMessageById,
+  getCollectionMessageVariables,
   createCollectionMessage,
   updateCollectionMessage,
   deleteCollectionMessage,
 } from "@/services/collection-messages.service";
-import type { CollectionMessage } from "@/services/collection-messages.service";
+import type {
+  CollectionMessage,
+  MessageChannel,
+} from "@/services/collection-messages.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   CATALOG_MESSAGES_CREATE,
@@ -28,6 +34,8 @@ interface Message {
   id: number;
   name: string;
   content: string;
+  subject: string | null;
+  channel: MessageChannel;
   status: "active" | "inactive";
   inUse: boolean;
 }
@@ -37,28 +45,25 @@ function apiToMessage(row: CollectionMessage): Message {
     id: row.id,
     name: row.name,
     content: row.content,
+    subject: row.subject,
+    channel: row.channel,
     status: row.status === "ACTIVE" ? "active" : "inactive",
     inUse: row.inUse,
   };
 }
 
-const MESSAGE_VARIABLES_CATALOG: MessageVariableItem[] = [
-  { key: "fecha_limite", label: "Fecha límite", value: "*fecha_limite*" },
-  { key: "num_factura", label: "Número de factura", value: "*num_factura*" },
-  {
-    key: "descripcion_factura",
-    label: "Descripción de factura",
-    value: "*descripcion_factura*",
-  },
-  { key: "total_adeudo", label: "Total adeudo", value: "*total_adeudo*" },
-  { key: "proximo_pag", label: "Próximo pago", value: "*proximo_pag*" },
-];
+const CHANNEL_LABEL: Record<MessageChannel, string> = {
+  WHATSAPP: "WhatsApp",
+  EMAIL: "Correo",
+};
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Mensajes() {
+  const router = useRouter();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
+  const openedDeepLinkRef = useRef<number | null>(null);
 
   const {
     data: apiMessages,
@@ -88,11 +93,82 @@ export default function Mensajes() {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
 
-  const messages = useMemo(() => (apiMessages ?? []).map(apiToMessage), [apiMessages]);
+  const [messageVariables, setMessageVariables] = useState<MessageVariableItem[]>(
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await getCollectionMessageVariables();
+      if (cancelled || result.error || !result.data) return;
+      setMessageVariables(
+        result.data.map((row) => ({
+          key: row.code,
+          label: row.label,
+          value: row.token,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const messages = useMemo(
+    () => (apiMessages ?? []).map(apiToMessage),
+    [apiMessages],
+  );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const raw = router.query.messageId;
+    const messageId =
+      typeof raw === "string"
+        ? Number(raw)
+        : Array.isArray(raw)
+          ? Number(raw[0])
+          : NaN;
+
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      openedDeepLinkRef.current = null;
+      return;
+    }
+    if (openedDeepLinkRef.current === messageId) return;
+    openedDeepLinkRef.current = messageId;
+
+    let cancelled = false;
+    void (async () => {
+      const result = await getCollectionMessageById(messageId);
+      if (cancelled) return;
+
+      if (result.error || !result.data) {
+        showError(
+          result.error?.message ?? "No se pudo abrir el mensaje solicitado.",
+        );
+      } else {
+        setEditingMessage(apiToMessage(result.data));
+        setModalOpen(true);
+      }
+
+      const nextQuery = { ...router.query };
+      delete nextQuery.messageId;
+      void router.replace(
+        { pathname: router.pathname, query: nextQuery },
+        undefined,
+        { shallow: true },
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.messageId, router, showError]);
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
@@ -121,6 +197,8 @@ export default function Mensajes() {
         const result = await updateCollectionMessage(editingMessage.id, {
           name: data.name,
           content: data.content,
+          channel: data.channel,
+          subject: data.subject,
           status,
         });
         if (result.error) {
@@ -132,6 +210,8 @@ export default function Mensajes() {
         const result = await createCollectionMessage({
           name: data.name,
           content: data.content,
+          channel: data.channel,
+          subject: data.subject,
           status,
         });
         if (result.error) {
@@ -191,6 +271,12 @@ export default function Mensajes() {
       truncate: true,
     },
     {
+      id: "channel",
+      label: "Canal",
+      size: "sm",
+      format: (value) => CHANNEL_LABEL[value as MessageChannel] ?? String(value),
+    },
+    {
       id: "content",
       label: "Mensaje",
       size: "xl",
@@ -233,7 +319,7 @@ export default function Mensajes() {
         <TabFilters
           tabs={[]}
           activeTab=""
-          onTabChange={() => { }}
+          onTabChange={() => {}}
           showSearch
           searchValue={searchInput}
           onSearchChange={handleSearchChange}
@@ -244,7 +330,7 @@ export default function Mensajes() {
               variant: "contained",
               color: "primary",
               permission: CATALOG_MESSAGES_CREATE,
-            }
+            },
           ]}
         />
 
@@ -269,14 +355,16 @@ export default function Mensajes() {
         open={modalOpen}
         onClose={handleCloseModal}
         onConfirm={handleSaveMessage}
-        messageVariables={MESSAGE_VARIABLES_CATALOG}
+        messageVariables={messageVariables}
         initialValues={
           editingMessage
             ? {
-              name: editingMessage.name,
-              content: editingMessage.content,
-              status: editingMessage.status,
-            }
+                name: editingMessage.name,
+                content: editingMessage.content,
+                channel: editingMessage.channel,
+                subject: editingMessage.subject ?? undefined,
+                status: editingMessage.status,
+              }
             : undefined
         }
         inUse={editingMessage ? editingMessage.inUse : undefined}

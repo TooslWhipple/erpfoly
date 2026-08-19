@@ -1,4 +1,6 @@
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { useRouter } from "next/router";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { SideModal } from "@/components/SideModal";
 import { DataTable } from "@/components/TableCrud";
@@ -23,6 +25,7 @@ export interface AutomatedCollectionActivityModalProps {
   open: boolean;
   onClose: () => void;
   ruleId: number | null;
+  messageId: number | null;
   messageName: string;
   isActive: boolean;
 }
@@ -35,7 +38,18 @@ const ACTIVITY_COLUMNS: DataTableColumn<AutomatedCollectionMessageLogItem>[] = [
     format: (value) =>
       formatAutomatedCollectionActivityDate(String(value ?? "")),
   },
-  { id: "phone", label: "Teléfono", type: "text" },
+  {
+    id: "email",
+    label: "Destinatario",
+    type: "text",
+    format: (_value, row) => {
+      const email = row.email?.trim();
+      const phone = row.phone?.trim();
+      if (email) return email;
+      if (phone) return phone;
+      return "—";
+    },
+  },
   { id: "clientName", label: "Cliente", type: "text" },
   {
     id: "status",
@@ -58,9 +72,12 @@ export function AutomatedCollectionActivityModal({
   open,
   onClose,
   ruleId,
+  messageId,
   messageName,
   isActive,
 }: AutomatedCollectionActivityModalProps) {
+  const router = useRouter();
+  const theme = useTheme();
   const {
     data: history,
     isLoading,
@@ -72,6 +89,14 @@ export function AutomatedCollectionActivityModal({
   const formattedCount = messagesSentLastMonth.toLocaleString("es-MX");
   const rows = history?.items ?? [];
   const showEmpty = !isLoading && !isError && rows.length === 0;
+
+  const handleOpenMessage = () => {
+    if (messageId == null) return;
+    void router.push({
+      pathname: "/catalogos/mensajes",
+      query: { messageId: String(messageId) },
+    });
+  };
 
   return (
     <SideModal
@@ -90,7 +115,22 @@ export function AutomatedCollectionActivityModal({
           <ActivityModalHeader>
             <ActivityModalTitleRow>
               <Typography variant="h6">{messageName}</Typography>
-              <SquareArrowOutUpRight size={18} />
+              <IconButton
+                size="small"
+                onClick={handleOpenMessage}
+                disabled={messageId == null}
+                aria-label="Abrir mensaje en catálogo"
+                title="Ver mensaje"
+              >
+                <SquareArrowOutUpRight
+                  size={18}
+                  color={
+                    messageId == null
+                      ? theme.palette.text.disabled
+                      : theme.palette.text.secondary
+                  }
+                />
+              </IconButton>
             </ActivityModalTitleRow>
             <Typography variant="body2" color="text.secondary">
               {formattedCount} mensajes enviados en el último mes

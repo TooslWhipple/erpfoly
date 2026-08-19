@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
 import {
   TrendingUp as TrendingUpIcon,
   Edit as EditIcon,
+  LocalShipping as LocalShippingIcon,
 } from "@mui/icons-material";
 import {
   Title,
@@ -10,6 +10,7 @@ import {
   StatsCardGroup,
   TabFilters,
   AddDamagedGoodsModal,
+  ConfirmModal,
 } from "@/components";
 import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
@@ -24,39 +25,54 @@ import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
   getDamagedProducts,
   getDamagedProductStats,
+  updateDamagedProductStatus,
   type DamagedProductListItem,
   type DamagedProductStats,
+  type DamagedProductTransitionStatus,
 } from "@/services/damaged-products.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   DAMAGED_INVENTORY_CREATE,
   DAMAGED_INVENTORY_UPDATE,
 } from "@/lib/permissions";
 const SEARCH_DEBOUNCE_MS = 300;
+/** Only supplier returns are closed from this screen: the folio ends when the supplier collects. */
+const RETURN_TO_SUPPLIER_CODE = "RETURN_TO_SUPPLIER";
 const DAMAGE_STATUS_CHIP_LABELS: Record<string, string> = {
   pending: "Por realizar",
-  in_progress: "Realizando",
   completed: "Finalizada",
   cancelled: "Cancelada",
   PENDING: "Por realizar",
-  IN_PROGRESS: "Realizando",
   COMPLETED: "Finalizada",
   CANCELLED: "Cancelada",
 };
 const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   pending: "pending",
-  in_progress: "pending",
   completed: "success",
   cancelled: "error",
   PENDING: "pending",
-  IN_PROGRESS: "pending",
   COMPLETED: "success",
   CANCELLED: "error",
 };
+function isFolioCompleted(row: DamagedProductListItem): boolean {
+  return row.status.toLowerCase() === "completed";
+}
 export default function MercanciaDanada() {
-  const router = useRouter();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
   const [stats, setStats] = useState<DamagedProductStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmState, setConfirmState] = useState<
+    | { open: false }
+    | {
+        open: true;
+        item: DamagedProductListItem;
+        target: DamagedProductTransitionStatus;
+      }
+  >({ open: false });
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const listExtraParams = useMemo(() => {
     if (activeTab === "all") {
       return {};
@@ -105,10 +121,6 @@ export default function MercanciaDanada() {
         value: "pending",
       },
       {
-        label: "Realizando",
-        value: "in_progress",
-      },
-      {
         label: "Finalizadas",
         value: "completed",
       },
@@ -151,21 +163,52 @@ export default function MercanciaDanada() {
   const handleCreate = useCallback(() => {
     setAddModalOpen(true);
   }, []);
-  const handleEdit = useCallback(
-    (item: DamagedProductListItem) => {
-      if (item.id == null) {
-        return;
-      }
-      router.push(`/inventario/mercancia-danada/${item.id}`);
-    },
-    [router],
-  );
+  const handleEdit = useCallback((item: DamagedProductListItem) => {
+    if (item.id == null) {
+      return;
+    }
+    setEditingId(item.id);
+    setAddModalOpen(true);
+  }, []);
   const handlePageChange = useCallback(
     (newPage: number) => {
       setPage(newPage);
     },
     [setPage],
   );
+  const openStatusConfirm = useCallback((item: DamagedProductListItem) => {
+    setConfirmState({
+      open: true,
+      item,
+      target: isFolioCompleted(item) ? "pending" : "completed",
+    });
+  }, []);
+  const closeStatusConfirm = useCallback(() => {
+    if (confirmLoading) {
+      return;
+    }
+    setConfirmState({ open: false });
+  }, [confirmLoading]);
+  const handleConfirmStatusChange = useCallback(async () => {
+    if (!confirmState.open) {
+      return;
+    }
+    const { item, target } = confirmState;
+    setConfirmLoading(true);
+    const result = await updateDamagedProductStatus(item.id, target);
+    setConfirmLoading(false);
+    if (result.error) {
+      showError(result.error.message);
+      return;
+    }
+    setConfirmState({ open: false });
+    showSuccess(
+      target === "completed"
+        ? "Folio marcado como recolectado"
+        : "Folio reabierto correctamente",
+    );
+    void refetch();
+  }, [confirmState, showError, showSuccess, refetch]);
   const statsCards: StatsCardData[] = stats
     ? [
         {
@@ -274,19 +317,20 @@ export default function MercanciaDanada() {
         label: "Editar",
         icon: <EditIcon fontSize="small" />,
         onClick: handleEdit,
-        disabled: (row) => row.id == null,
+        disabled: (row) => row.id == null || isFolioCompleted(row),
+        permission: DAMAGED_INVENTORY_UPDATE,
+      },
+      {
+        id: "toggle-collected",
+        label: (row) =>
+          isFolioCompleted(row) ? "Reabrir folio" : "Marcar como recolectado",
+        icon: <LocalShippingIcon fontSize="small" />,
+        onClick: openStatusConfirm,
+        hidden: (row) => row.dispositionCode !== RETURN_TO_SUPPLIER_CODE,
         permission: DAMAGED_INVENTORY_UPDATE,
       },
     ],
-    [handleEdit],
-  );
-  const handleRowClick = useCallback(
-    (row: DamagedProductListItem) => {
-      if (row.id != null) {
-        handleEdit(row);
-      }
-    },
-    [handleEdit],
+    [handleEdit, openStatusConfirm],
   );
   return (
     <Stack direction="column" spacing={3}>
@@ -348,14 +392,58 @@ export default function MercanciaDanada() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={handleRowClick}
         emptyMessage="No hay mercancía dañada registrada"
       />
 
       <AddDamagedGoodsModal
         open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
+        onClose={() => {
+          setAddModalOpen(false);
+          setEditingId(null);
+        }}
         onSuccess={handleAddSuccess}
+        damagedProductId={editingId}
+      />
+
+      <ConfirmModal
+        open={confirmState.open}
+        onClose={closeStatusConfirm}
+        onConfirm={handleConfirmStatusChange}
+        title={
+          confirmState.open && confirmState.target === "pending"
+            ? "Reabrir folio"
+            : "Marcar como recolectado"
+        }
+        description={
+          confirmState.open ? (
+            confirmState.target === "completed" ? (
+              <>
+                ¿Confirmas que el proveedor recolectó{" "}
+                <strong>{confirmState.item.productName}</strong> (
+                {confirmState.item.productCode})? El folio pasará a
+                &quot;Finalizadas&quot;.
+              </>
+            ) : (
+              <>
+                ¿Reabrir el folio de{" "}
+                <strong>{confirmState.item.productName}</strong> (
+                {confirmState.item.productCode})? Volverá a &quot;Por
+                realizar&quot;.
+              </>
+            )
+          ) : null
+        }
+        confirmLabel={
+          confirmState.open && confirmState.target === "pending"
+            ? "Reabrir"
+            : "Marcar como recolectado"
+        }
+        confirmColor={
+          confirmState.open && confirmState.target === "pending"
+            ? "primary"
+            : "success"
+        }
+        loading={confirmLoading}
       />
     </Stack>
   );

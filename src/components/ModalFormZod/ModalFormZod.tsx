@@ -36,6 +36,13 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
   allowInvalidSubmit?: boolean;
   /** When true, fields are not auto-rendered; use a function child to render `FormField` / `form.Field` manually. */
   customFieldLayout?: boolean;
+  /**
+   * For callers whose `defaultValues` arrive asynchronously (fetched entity, catalog).
+   * While the modal is open, any change of this token re-initializes the form with the
+   * current `defaultValues` **without remounting**, so the dialog is never destroyed and
+   * recreated mid-transition. Leave it undefined when defaults are available synchronously.
+   */
+  defaultValuesKey?: string | number;
   children?: React.ReactNode | ModalFormZodRenderFn<T>;
   headerContent?: React.ReactNode;
   /** Emitted when any field value changes while the modal is open (for dependent UI such as conditional sections). */
@@ -62,6 +69,7 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
   headerContent,
   onValuesChange,
   schemaSuperRefine,
+  defaultValuesKey,
 }: ModalFormZodProps<T>) {
   const { form, FormContent } = useFormFromFields(fields, defaultValues, onSubmit, {
     validateOn,
@@ -69,14 +77,20 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
   });
 
   const prevOpenRef = useRef(false);
+  const prevDefaultsKeyRef = useRef(defaultValuesKey);
   useEffect(() => {
-    if (open && !prevOpenRef.current) {
+    const justOpened = open && !prevOpenRef.current;
+    const defaultsArrived = open && defaultValuesKey !== prevDefaultsKeyRef.current;
+    if (justOpened || defaultsArrived) {
       form.reset(defaultValues);
     }
     prevOpenRef.current = open;
-    // Reset sync on open transition only; defaultValues alignment relies on `key` remounting when switching entities.
+    prevDefaultsKeyRef.current = defaultValuesKey;
+    // Reset sync on the open transition, plus on `defaultValuesKey` changes for callers that
+    // declare one (async defaults). Callers that leave it undefined keep the previous behaviour:
+    // defaultValues alignment relies on `key` remounting when switching entities.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid resetting on every defaultValues render
-  }, [open]);
+  }, [open, defaultValuesKey]);
 
   useEffect(() => {
     if (!open || !onValuesChange) {

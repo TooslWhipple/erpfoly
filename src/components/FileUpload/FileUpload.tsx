@@ -1,9 +1,12 @@
 import { useCallback, useId, useState } from "react";
 import { Stack, Typography, IconButton, Button, useTheme } from "@mui/material";
-import { Upload, Trash2, Download, Image as ImageIcon, Clock9 } from "lucide-react";
+import { Upload, Trash2, Download, Eye, Image as ImageIcon, Clock9 } from "lucide-react";
+import { ImageViewerModal } from "@/components/ImageViewerModal";
 import {
   DropZoneRoot,
   FileItemRow,
+  FileItemInfo,
+  FileItemActions,
   FileIconContainer
 } from "./styles";
 
@@ -12,6 +15,13 @@ export interface UploadedFileItem {
   name: string;
   file?: File;
   url?: string;
+  /**
+   * URL del archivo servida **en línea**, para mostrarlo dentro de la
+   * aplicación. Solo hace falta cuando `url` se sirve con
+   * `Content-Disposition: attachment` (ver `urlForcesDownload`), porque esa
+   * cabecera hace que el visor descargue el archivo en vez de mostrarlo.
+   */
+  previewUrl?: string;
   uploadedAt?: string;
 }
 
@@ -30,6 +40,35 @@ export interface FileUploadProps {
   error?: string;
   /** Makes the upload area fill the full height of its parent container. */
   fullHeight?: boolean;
+  /**
+   * Shows the delete icon on each file card. Defaults to `true`. Set it to
+   * `false` where the attachment is mandatory and removing it would leave the
+   * record in an invalid state.
+   */
+  allowRemove?: boolean;
+  /**
+   * Shows a "Reemplazar" action on each file card, which reopens the file
+   * picker. Defaults to `false`; only useful with `maxFiles = 1`, where the
+   * drop zone disappears as soon as there is a file.
+   */
+  allowReplace?: boolean;
+  /**
+   * Declara que las `url` de los archivos ya subidos se sirven con
+   * `Content-Disposition: attachment`. Con `true`, "Descargar" guarda el
+   * archivo a disco sin abrir pestaña ni navegar. Por defecto `false`, que
+   * abre la URL en otra pestaña: es lo único seguro si el servidor devuelve
+   * el archivo en línea, porque entonces un enlace directo se llevaría la
+   * página actual.
+   */
+  urlForcesDownload?: boolean;
+  /**
+   * Muestra una acción "Ver" en cada card, que abre el archivo dentro de la
+   * aplicación (imagen o PDF) sin descargarlo ni abrir pestaña. Por defecto
+   * `false`. La acción se oculta en los archivos que no se pueden previsualizar:
+   * los ya almacenados necesitan una `previewUrl`, o una `url` que no fuerce la
+   * descarga.
+   */
+  allowPreview?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -72,6 +111,26 @@ function isAccepted(file: File, accept: string[]): boolean {
   return false;
 }
 
+type PreviewState = {
+  url: string;
+  name: string;
+  /** Los object URL de un archivo local hay que revocarlos al cerrar el visor. */
+  isObjectUrl: boolean;
+};
+
+/**
+ * URL con la que se puede mostrar el archivo embebido, o `undefined` si no hay
+ * ninguna. Un archivo ya almacenado solo es previsualizable si el servidor lo
+ * sirve en línea: con `Content-Disposition: attachment` el visor lo bajaría a
+ * disco en vez de pintarlo, así que ahí hace falta una `previewUrl` aparte.
+ */
+function resolveRemotePreviewUrl(
+  item: UploadedFileItem,
+  urlForcesDownload: boolean,
+): string | undefined {
+  return item.previewUrl ?? (urlForcesDownload ? undefined : item.url);
+}
+
 function toUploadedItem(file: File): UploadedFileItem {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -93,6 +152,10 @@ export function FileUpload({
   disabled = false,
   error,
   fullHeight = false,
+  allowRemove = true,
+  allowReplace = false,
+  urlForcesDownload = false,
+  allowPreview = false,
   style,
 }: FileUploadProps) {
   const theme = useTheme();
@@ -103,6 +166,7 @@ export function FileUpload({
 
   const [isDragActive, setIsDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PreviewState | null>(null);
 
   const validateFiles = useCallback(
     (files: File[]): { valid: File[]; error?: string } => {
@@ -197,6 +261,11 @@ export function FileUpload({
     [addFiles]
   );
 
+  const openFilePicker = useCallback(() => {
+    if (disabled) return;
+    document.getElementById(inputId)?.click();
+  }, [disabled, inputId]);
+
   const removeFile = useCallback(
     (id: string) => {
       onChange(value.filter((f) => f.id !== id));
@@ -213,12 +282,58 @@ export function FileUpload({
         a.download = item.name;
         a.click();
         URL.revokeObjectURL(url);
-      } else if (item.url) {
-        window.open(item.url, "_blank");
+        return;
       }
+      if (!item.url) return;
+
+      if (!urlForcesDownload) {
+        window.open(item.url, "_blank");
+        return;
+      }
+
+      // Sin `target` y sin `download`: quien decide que esto baja a disco en
+      // vez de navegar es la cabecera `Content-Disposition: attachment` de la
+      // respuesta. El atributo `download` no sirve aquí —el navegador lo
+      // ignora en enlaces de otro origen, y las URLs firmadas de GCS lo son—
+      // y `target="_blank"` abre una pestaña aunque la respuesta sea attachment.
+      const a = document.createElement("a");
+      a.href = item.url;
+      a.rel = "noopener";
+      a.click();
     },
-    []
+    [urlForcesDownload]
   );
+
+  const canPreview = useCallback(
+    (item: UploadedFileItem) =>
+      item.file != null ||
+      resolveRemotePreviewUrl(item, urlForcesDownload) != null,
+    [urlForcesDownload]
+  );
+
+  const openPreview = useCallback(
+    (item: UploadedFileItem) => {
+      if (item.file) {
+        setPreview({
+          url: URL.createObjectURL(item.file),
+          name: item.name,
+          isObjectUrl: true,
+        });
+        return;
+      }
+      const url = resolveRemotePreviewUrl(item, urlForcesDownload);
+      if (!url) return;
+      setPreview({ url, name: item.name, isObjectUrl: false });
+    },
+    [urlForcesDownload]
+  );
+
+  const closePreview = useCallback(() => {
+    if (preview?.isObjectUrl) {
+      URL.revokeObjectURL(preview.url);
+    }
+    setPreview(null);
+  }, [preview]);
 
   const displayError = error ?? validationError;
   const hasFile = value.length > 0;
@@ -235,6 +350,21 @@ export function FileUpload({
           : undefined
       }
     >
+      {/*
+        El input vive fuera del `DropZoneRoot`: la zona de arrastre deja de
+        renderizarse en cuanto hay archivo (con `maxFiles = 1`), y anidarlo ahí
+        dejaba a «Reemplazar» sin nada que abrir.
+      */}
+      <input
+        id={inputId}
+        type="file"
+        accept={accept.join(",")}
+        multiple={allowMultiple}
+        onChange={handleInputChange}
+        disabled={disabled}
+        style={{ display: "none" }}
+      />
+
       {showDropZone && (
         <DropZoneRoot
           isDragActive={isDragActive}
@@ -243,17 +373,8 @@ export function FileUpload({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onClick={() => !disabled && document.getElementById(inputId)?.click()}
+          onClick={openFilePicker}
         >
-          <input
-            id={inputId}
-            type="file"
-            accept={accept.join(",")}
-            multiple={allowMultiple}
-            onChange={handleInputChange}
-            disabled={disabled}
-            style={{ display: "none" }}
-          />
           <Stack alignItems="center" spacing={0.5}>
             <Upload size={16} color={theme.palette.primary.main} strokeWidth={2} />
             <Typography variant="body1" fontWeight={500} color="primary.main">{placeholder}</Typography>
@@ -264,33 +385,60 @@ export function FileUpload({
 
       {value.map((item, index) => (
         <FileItemRow key={item.id}>
-          <Stack direction="row" alignItems="center" gap="12px">
+          <FileItemInfo>
             <FileIconContainer>
               <ImageIcon size={20} />
             </FileIconContainer>
-            <Stack spacing={0.5}>
-              <Stack minWidth={0}>
-                <Typography variant="subtitle2">
-                  {index === 0 ? (fileLabel ?? item.name) : item.name}
-                </Typography>
-                {
-                  item.uploadedAt &&
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <Clock9 size={14} color={theme.palette.text.secondary} />
-                    <Typography variant="caption">{item.uploadedAt}</Typography>
-                  </Stack>
-                }
-              </Stack>
+            <Stack minWidth={0}>
+              <Typography variant="subtitle2" noWrap title={item.name}>
+                {index === 0 ? (fileLabel ?? item.name) : item.name}
+              </Typography>
+              {
+                item.uploadedAt &&
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Clock9 size={14} color={theme.palette.text.secondary} />
+                  <Typography variant="caption">{item.uploadedAt}</Typography>
+                </Stack>
+              }
             </Stack>
-          </Stack>
-          <Stack direction="row" alignItems="center" gap="12px">
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                removeFile(item.id);
-              }}>
-              <Trash2 size={16} color={theme.palette.text.secondary} />
-            </IconButton>
+          </FileItemInfo>
+          <FileItemActions>
+            {allowRemove && (
+              <IconButton
+                disabled={disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile(item.id);
+                }}>
+                <Trash2 size={16} color={theme.palette.text.secondary} />
+              </IconButton>
+            )}
+            {allowReplace && (
+              <Button
+                variant="text"
+                color="primary"
+                size="small"
+                disabled={disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openFilePicker();
+                }}>
+                Reemplazar
+              </Button>
+            )}
+            {allowPreview && canPreview(item) && (
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<Eye size={16} color={theme.palette.text.secondary} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openPreview(item);
+                }}>
+                Ver
+              </Button>
+            )}
             <Button
               variant="outlined"
               color="primary"
@@ -302,7 +450,7 @@ export function FileUpload({
               }}>
               Descargar
             </Button>
-          </Stack>
+          </FileItemActions>
         </FileItemRow>
       ))}
 
@@ -310,6 +458,17 @@ export function FileUpload({
         <Typography variant="caption" sx={{ color: theme.palette.app.chip.variants.error.color }}>
           {displayError}
         </Typography>
+      )}
+
+      {preview && (
+        <ImageViewerModal
+          open
+          onClose={closePreview}
+          title={preview.name}
+          imageUrl={preview.url}
+          imageAlt={preview.name}
+          fileName={preview.name}
+        />
       )}
     </Stack>
   );

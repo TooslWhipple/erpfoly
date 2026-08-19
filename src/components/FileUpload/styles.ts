@@ -42,6 +42,8 @@ export const FileIconContainer = styled("div")({
   borderRadius: "4px",
   backgroundColor: "#EFF6FF",
   padding: "8px",
+  // Sin esto el icono se comprime cuando el nombre del archivo es largo.
+  flexShrink: 0,
   '& svg': {
     stroke: '#2563EB'
   }
@@ -56,5 +58,33 @@ export const FileItemRow = styled("div")(({ theme }) => ({
   padding: "12px",
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: "12px"
+  borderRadius: "12px",
+  // El card no puede crecer más que su contenedor: sin esto un nombre de
+  // archivo largo empuja las acciones fuera del borde derecho.
+  boxSizing: "border-box",
+  maxWidth: "100%",
+  overflow: "hidden"
 }));
+
+/**
+ * Bloque izquierdo del card (icono + nombre). `minWidth: 0` es lo que permite
+ * que el nombre se trunque en vez de estirar la fila: un item de flex no baja
+ * de su tamaño de contenido mientras conserve el `min-width: auto` por defecto.
+ */
+export const FileItemInfo = styled("div")({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "12px",
+  minWidth: 0,
+  flex: 1
+});
+
+/** Bloque derecho del card (acciones). Nunca se comprime ni se desborda. */
+export const FileItemActions = styled("div")({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "12px",
+  flexShrink: 0
+});

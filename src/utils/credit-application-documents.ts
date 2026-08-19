@@ -1,15 +1,5 @@
 import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
-
-const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png|gif|webp)(\?|#|$)/i;
-const PDF_EXTENSION_PATTERN = /\.pdf(\?|#|$)/i;
-
-function hasImageExtension(value: string): boolean {
-  return IMAGE_EXTENSION_PATTERN.test(value);
-}
-
-function hasPdfExtension(value: string): boolean {
-  return PDF_EXTENSION_PATTERN.test(value);
-}
+import { hasImageExtension, hasPdfExtension } from "@/utils/file-types";
 
 export function resolveDocumentPreviewUrl(
   file: CreditApplicationDocumentFile | undefined,

@@ -5,7 +5,9 @@ import type {
   ClientCollectionActivity,
   ClientCollectionActivityType,
   ClientDetailHeader,
+  ClientDeactivationReason,
   CreateClientCollectionActivityPayload,
+  DeactivateClientPayload,
 } from "@/types/clientes.types";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
@@ -316,4 +318,17 @@ export async function createClientCollectionActivity(
     `${BASE}/${clientId}/collection-activities`,
     payload
   );
+}
+
+export async function getClientDeactivationReasons(): Promise<
+  ApiResult<ClientDeactivationReason[]>
+> {
+  return get<ClientDeactivationReason[]>(`${BASE}/deactivation-reasons`);
+}
+
+export async function deactivateClient(
+  clientId: number,
+  payload: DeactivateClientPayload
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return post<ApiSuccessPayload>(`${BASE}/${clientId}/deactivate`, payload);
 }

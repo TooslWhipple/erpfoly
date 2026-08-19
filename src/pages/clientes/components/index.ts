@@ -1,3 +1,7 @@
+export { ClientDetailActions } from "./ClientDetailActions";
+export type { ClientDetailActionsProps } from "./ClientDetailActions";
+export { DeactivateClientModal } from "./DeactivateClientModal";
+export type { DeactivateClientModalProps } from "./DeactivateClientModal";
 export { ActivityTab } from "./ActivityTab";
 export type { ActivityTabProps } from "./ActivityTab";
 export { MovementsTab } from "./MovementsTab";

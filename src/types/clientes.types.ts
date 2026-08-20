@@ -45,6 +45,7 @@ export interface ClientDetailHeader {
   fullName: string;
   curp: string;
   status: ClientStatus | null;
+  creditBalance: number;
   creditApplicationId: number | null;
   creditLine: {
     authorized: number;

@@ -13,7 +13,7 @@ import {
   PaymentsTab,
   InformationTab,
 } from "../components";
-import { Card, ErrorState } from "@/styles/clientes/detalle.styles";
+import { Card, CreditBalanceBox, ErrorState } from "@/styles/clientes/detalle.styles";
 import { useTheme } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -276,6 +276,8 @@ export default function ClientDetailPage() {
   const creditAuthorized = header.creditLine.authorized;
   const creditAvailable = header.creditLine.available ?? 0;
   const creditUsed = Math.max(creditAuthorized - creditAvailable, 0);
+  const creditBalance = header.creditBalance ?? 0;
+  const hasCreditBalance = creditBalance > 0;
   const clientStatus = (header.status ?? "active") as ClientStatus;
   const isClientActive = clientStatus === "active";
   const canDeactivateClient = hasPermission(CUSTOMERS_DELETE);
@@ -392,12 +394,32 @@ export default function ClientDetailPage() {
             deactivateDisabled={!isClientActive}
             onDeactivateClick={() => setDeactivateModalOpen(true)}
           />
-          {isCreditClient && (
-            <CreditLimitBar
-              creditLimit={creditAuthorized}
-              creditUsed={creditUsed}
-              creditAvailable={creditAvailable}
-            />
+          {(isCreditClient || hasCreditBalance) && (
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="flex-end"
+              flexWrap="wrap"
+              useFlexGap
+            >
+              {isCreditClient && (
+                <CreditLimitBar
+                  creditLimit={creditAuthorized}
+                  creditUsed={creditUsed}
+                  creditAvailable={creditAvailable}
+                />
+              )}
+              {hasCreditBalance && (
+                <CreditBalanceBox>
+                  <Typography variant="body2" fontWeight={600}>
+                    {formatCurrency(creditBalance)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Saldo a favor
+                  </Typography>
+                </CreditBalanceBox>
+              )}
+            </Stack>
           )}
         </Stack>
       </Stack>

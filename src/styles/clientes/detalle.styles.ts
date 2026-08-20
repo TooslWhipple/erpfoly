@@ -134,3 +134,13 @@ export const ErrorState = styled('div')(({ theme }) => ({
   fontSize: 14,
   gap: theme.spacing(1),
 }));
+
+export const CreditBalanceBox = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(0.25),
+  padding: theme.spacing(1.5, 2),
+  borderRadius: 12,
+  backgroundColor: theme.palette.background.lowGray,
+  minWidth: 148,
+}));

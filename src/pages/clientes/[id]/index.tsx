@@ -6,12 +6,14 @@ import { Breadcrumbs, CreditLimitBar, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   ActivityTab,
+  ClientDetailActions,
+  DeactivateClientModal,
   MovementsTab,
   PurchasesTab,
   PaymentsTab,
   InformationTab,
 } from "../components";
-import { Card, ErrorState } from "@/styles/clientes/detalle.styles";
+import { Card, CreditBalanceBox, ErrorState } from "@/styles/clientes/detalle.styles";
 import { useTheme } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +31,9 @@ import { getActiveSaleCredits } from "@/services/sale-credit.service";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { isCreditClient as checkIsCreditClient } from "@/utils/client";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CUSTOMERS_DELETE } from "@/lib/permissions";
+import type { ClientStatus } from "@/types/clientes.types";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -127,9 +132,11 @@ export default function ClientDetailPage() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const showWarning = useSnackbarStore((s) => s.showWarning);
+  const { hasPermission } = usePermissions();
   const { id } = router.query;
   const [activeTab, setActiveTab] = useState("actividad");
   const [validatingPayment, setValidatingPayment] = useState(false);
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
   const numericClientId =
     typeof id === "string" && Number.isFinite(Number(id)) ? Number(id) : null;
 
@@ -269,8 +276,17 @@ export default function ClientDetailPage() {
   const creditAuthorized = header.creditLine.authorized;
   const creditAvailable = header.creditLine.available ?? 0;
   const creditUsed = Math.max(creditAuthorized - creditAvailable, 0);
+  const creditBalance = header.creditBalance ?? 0;
+  const hasCreditBalance = creditBalance > 0;
+  const clientStatus = (header.status ?? "active") as ClientStatus;
+  const isClientActive = clientStatus === "active";
+  const canDeactivateClient = hasPermission(CUSTOMERS_DELETE);
 
   const handleAddPaymentClick = async () => {
+    if (!isClientActive) {
+      return;
+    }
+
     if (!isCreditClient) {
       showWarning(
         "Este cliente es de contado y no puede registrar abonos.",
@@ -367,14 +383,64 @@ export default function ClientDetailPage() {
             </Typography>
           )}
         </Stack>
-        {isCreditClient && (
-          <CreditLimitBar
-            creditLimit={creditAuthorized}
-            creditUsed={creditUsed}
-            creditAvailable={creditAvailable}
+        <Stack
+          spacing={1.5}
+          alignItems={{ xs: "flex-start", sm: "flex-end" }}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
+        >
+          <ClientDetailActions
+            status={clientStatus}
+            showDeactivateAction={canDeactivateClient}
+            deactivateDisabled={!isClientActive}
+            onDeactivateClick={() => setDeactivateModalOpen(true)}
           />
-        )}
+          {(isCreditClient || hasCreditBalance) && (
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="flex-end"
+              flexWrap="wrap"
+              useFlexGap
+            >
+              {isCreditClient && (
+                <CreditLimitBar
+                  creditLimit={creditAuthorized}
+                  creditUsed={creditUsed}
+                  creditAvailable={creditAvailable}
+                />
+              )}
+              {hasCreditBalance && (
+                <CreditBalanceBox>
+                  <Typography variant="body2" fontWeight={600}>
+                    {formatCurrency(creditBalance)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Saldo a favor
+                  </Typography>
+                </CreditBalanceBox>
+              )}
+            </Stack>
+          )}
+        </Stack>
       </Stack>
+      <DeactivateClientModal
+        open={deactivateModalOpen}
+        clientId={header.id}
+        onClose={() => setDeactivateModalOpen(false)}
+        onSuccess={async () => {
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: ["clients", "detail", numericClientId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["clients", "collection-activities", numericClientId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["sale-credits", "active", numericClientId],
+            }),
+          ]);
+        }}
+      />
       <Divider />
       <Stack
         direction={{ xs: "column", sm: "row" }}
@@ -392,7 +458,7 @@ export default function ClientDetailPage() {
         <Button
           variant="contained"
           color="primary"
-          disabled={validatingPayment}
+          disabled={validatingPayment || !isClientActive}
           sx={{
             minWidth: {
               xs: "100%",

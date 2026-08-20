@@ -44,12 +44,29 @@ export interface ClientDetailHeader {
   id: number;
   fullName: string;
   curp: string;
+  status: ClientStatus | null;
+  creditBalance: number;
   creditApplicationId: number | null;
   creditLine: {
     authorized: number;
     available: number | null;
     availablePercentage: number | null;
   };
+}
+
+export type ClientStatus = "active" | "inactive" | "blocked";
+
+export interface ClientDeactivationReason {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  allowsCustomText: boolean;
+}
+
+export interface DeactivateClientPayload {
+  reasonId: number;
+  notes?: string;
 }
 
 export type ActivityType = "call" | "message" | "email" | "visit" | "note";

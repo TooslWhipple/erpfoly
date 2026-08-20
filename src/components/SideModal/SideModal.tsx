@@ -28,6 +28,8 @@ export interface SideModalProps {
   paperSx?: SxProps<Theme>;
   /** Breakpoint below which the modal goes fullscreen. Default: `md`. */
   fullScreenBreakpoint?: "sm" | "md" | "lg";
+  /** When true, always fullscreen regardless of breakpoint (tablets / camera capture). */
+  forceFullScreen?: boolean;
 }
 
 export function SideModal({
@@ -46,11 +48,13 @@ export function SideModal({
   contentSx,
   paperSx,
   fullScreenBreakpoint = "md",
+  forceFullScreen = false,
 }: SideModalProps) {
   const theme = useTheme();
-  const fullScreen = useMediaQuery(
+  const matchesBreakpoint = useMediaQuery(
     theme.breakpoints.down(fullScreenBreakpoint),
   );
+  const fullScreen = forceFullScreen || matchesBreakpoint;
   const panelWidth = PANEL_WIDTHS[maxWidth] ?? PANEL_WIDTHS.sm;
 
   const handleClose = (_event: object, reason: string) => {

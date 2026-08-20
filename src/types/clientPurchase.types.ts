@@ -1,9 +1,12 @@
+import type { SaleCancelBlockReason } from "./cancelPurchase.types";
+
 export type ClientPurchaseStatus =
   | "AL_CORRIENTE"
   | "ENTREGA_PROGRAMADA"
-  | "ENTREGA_PENDIENTE";
+  | "ENTREGA_PENDIENTE"
+  | "CANCELADA";
 
-export type ClientPurchasePaymentStatus = "PAID" | "PENDING";
+export type ClientPurchasePaymentStatus = "PAID" | "PENDING" | "CANCELLED";
 
 export interface ClientPurchasePayment {
   id: string;
@@ -18,6 +21,40 @@ export interface ClientPurchaseInfo {
   deliveryDate: string;
   purchaseBranch: string;
   deliveryBranch: string;
+}
+
+export interface ClientPurchaseDetailApi {
+  id: number;
+  reference: string;
+  productSku: string;
+  productImageUrl: string | null;
+  clientId: number;
+  clientName: string;
+  productName: string;
+  purchaseDate: string;
+  status: ClientPurchaseStatus;
+  initialCost: number;
+  totalPaid: number;
+  remaining: number;
+  paymentDueDate: string | null;
+  nextPaymentAmount: number;
+  paidInstallments: number;
+  totalInstallments: number;
+  canCancel: boolean;
+  cancelBlockReason: SaleCancelBlockReason | null;
+  payments: Array<{
+    id: number;
+    status: ClientPurchasePaymentStatus;
+    installmentLabel: string;
+    dueDate: string;
+    amount: number;
+  }>;
+  purchaseInfo: {
+    purchaseDate: string;
+    deliveryDate: string | null;
+    purchaseBranch: string;
+    deliveryBranch: string | null;
+  };
 }
 
 export interface ClientPurchaseDetail {
@@ -38,6 +75,8 @@ export interface ClientPurchaseDetail {
   nextPaymentAmount: number;
   paidInstallments: number;
   totalInstallments: number;
+  canCancel: boolean;
+  cancelBlockReason: SaleCancelBlockReason | null;
   payments: ClientPurchasePayment[];
   purchaseInfo: ClientPurchaseInfo;
 }

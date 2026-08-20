@@ -5,7 +5,9 @@ import { Camera } from "lucide-react";
 import { FormSelect } from "@/components/Form";
 import type { CameraDeviceOption } from "@/utils/cameraDevices";
 import {
+  CAMERA_MENU_PROPS,
   CameraIconBadge,
+  CameraSelectField,
   CameraSetupCard,
   CameraSetupRoot,
 } from "./styles";
@@ -45,20 +47,23 @@ export function CameraDeviceSelect({
   startLabel = "Iniciar captura",
 }: CameraDeviceSelectProps) {
   const selectField = (
-    <FormSelect
-      label="Cámara"
-      placeholder="Selecciona una cámara"
-      options={devices.map((device) => ({
-        value: device.deviceId,
-        label: device.label,
-      }))}
-      value={devices.some((device) => device.deviceId === value) ? value : ""}
-      onChange={(event) => {
-        const nextValue = event.target.value;
-        if (typeof nextValue === "string" && nextValue) onChange(nextValue);
-      }}
-      disabled={disabled || loading || devices.length === 0}
-    />
+    <CameraSelectField>
+      <FormSelect
+        label="Cámara"
+        placeholder="Selecciona una cámara"
+        options={devices.map((device) => ({
+          value: device.deviceId,
+          label: device.label,
+        }))}
+        value={devices.some((device) => device.deviceId === value) ? value : ""}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          if (typeof nextValue === "string" && nextValue) onChange(nextValue);
+        }}
+        disabled={disabled || loading || devices.length === 0}
+        MenuProps={CAMERA_MENU_PROPS}
+      />
+    </CameraSelectField>
   );
 
   if (loading && devices.length === 0 && !errorMessage) {

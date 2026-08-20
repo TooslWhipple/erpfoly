@@ -33,7 +33,14 @@ export const StepProgressRow = styled("div")(({ theme }) => ({
 export const StepProgress = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
   minWidth: 0,
-  flex: 1,
+  flex: "1 1 160px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  [theme.breakpoints.down("sm")]: {
+    flex: "1 1 100%",
+    whiteSpace: "normal",
+  },
 }));
 
 export const SdkBootstrapState = styled(Stack)(({ theme }) => ({

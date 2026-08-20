@@ -3,7 +3,7 @@
 import { FormControl, InputAdornment, MenuItem, Select, type SelectChangeEvent } from "@mui/material";
 import { Camera } from "lucide-react";
 import type { CameraDeviceOption } from "@/utils/cameraDevices";
-import { CameraHeaderSelectControl } from "./styles";
+import { CAMERA_MENU_PROPS, CameraHeaderSelectControl } from "./styles";
 
 interface CameraSwitchControlProps {
   devices: CameraDeviceOption[];
@@ -45,6 +45,7 @@ export function CameraSwitchControl({
             if (typeof selected !== "string" || !selected) return "Cámara";
             return devices.find((device) => device.deviceId === selected)?.label ?? "Cámara";
           }}
+          MenuProps={CAMERA_MENU_PROPS}
         >
           {devices.map((device) => (
             <MenuItem key={device.deviceId} value={device.deviceId}>

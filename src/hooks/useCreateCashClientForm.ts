@@ -3,32 +3,21 @@ import {
   INITIAL_BILLING_FORM_VALUES,
   type BillingFormValues,
 } from "@/hooks/useBillingFieldsForm";
+import {
+  type AddressFormErrors,
+  type AddressFormValues,
+  type BasicInfoFormErrors,
+  type BasicInfoFormValues,
+  type BillingFormErrors,
+  validateAddressInfo,
+  validateBasicInfo,
+  validateBillingInfo,
+} from "@/utils/createCashClientValidation";
+
+export type { AddressFormValues, BasicInfoFormValues };
 
 export type { BillingFormValues };
 export type CreateCashClientTab = "basic" | "address" | "billing";
-
-export interface BasicInfoFormValues {
-  firstName: string;
-  lastSurname: string;
-  secondSurname: string;
-  email: string;
-  phoneNumber: string;
-  securityCode: string;
-}
-
-export interface AddressFormValues {
-  postalCode: string;
-  neighborhoodFullCode: string;
-  state: string;
-  city: string;
-  street: string;
-  externalNumber: string;
-  internalNumber: string;
-  betweenStreets: string;
-  receiverPhone: string;
-  receiverName: string;
-  useClientPhone: boolean;
-}
 
 export interface CreateCashClientFormValues {
   basic: BasicInfoFormValues;
@@ -68,6 +57,9 @@ export function useCreateCashClientForm() {
     address: initialAddress,
     billing: initialBilling,
   });
+  const [basicErrors, setBasicErrors] = useState<BasicInfoFormErrors>({});
+  const [addressErrors, setAddressErrors] = useState<AddressFormErrors>({});
+  const [billingErrors, setBillingErrors] = useState<BillingFormErrors>({});
 
   const setBasicValue = useCallback(
     (field: keyof BasicInfoFormValues, value: string) => {
@@ -78,8 +70,9 @@ export function useCreateCashClientForm() {
           [field]: value,
         },
       }));
+      setBasicErrors((prev) => ({ ...prev, [field]: undefined }));
     },
-    []
+    [],
   );
 
   const setAddressValue = useCallback(
@@ -91,8 +84,9 @@ export function useCreateCashClientForm() {
           [field]: value,
         },
       }));
+      setAddressErrors((prev) => ({ ...prev, [field]: undefined }));
     },
-    []
+    [],
   );
 
   const setBillingValue = useCallback(
@@ -104,8 +98,9 @@ export function useCreateCashClientForm() {
           [field]: value,
         },
       }));
+      setBillingErrors((prev) => ({ ...prev, [field]: undefined }));
     },
-    []
+    [],
   );
 
   const resetForm = useCallback(() => {
@@ -114,40 +109,60 @@ export function useCreateCashClientForm() {
       address: initialAddress,
       billing: initialBilling,
     });
+    setBasicErrors({});
+    setAddressErrors({});
+    setBillingErrors({});
     setActiveTab("basic");
   }, []);
 
-  const canContinueBasic = useCallback(
-    (isSecurityCodeValid: boolean | null) => {
-      const hasRequiredFields =
-        values.basic.firstName.trim().length > 0 &&
-        values.basic.lastSurname.trim().length > 0;
-
-      if (!hasRequiredFields) return false;
-
-      const hasPhoneNumber = values.basic.phoneNumber.trim().length === 10;
-      if (hasPhoneNumber && isSecurityCodeValid !== true) {
-        return false;
+  const validateBasicTab = useCallback(
+    (isSecurityCodeValid: boolean | null, silent = false) => {
+      const nextErrors = validateBasicInfo(values.basic, isSecurityCodeValid);
+      if (!silent) {
+        setBasicErrors(nextErrors);
       }
-
-      return true;
+      return Object.keys(nextErrors).length === 0;
     },
-    [values.basic]
+    [values.basic],
   );
 
-  const canContinueAddress = useCallback(() => {
-    return true; // La dirección es opcional
-  }, []);
+  const validateAddressTab = useCallback((silent = false) => {
+    const nextErrors = validateAddressInfo(values.address);
+    if (!silent) {
+      setAddressErrors(nextErrors);
+    }
+    return Object.keys(nextErrors).length === 0;
+  }, [values.address]);
+
+  const validateBillingTab = useCallback((silent = false) => {
+    const nextErrors = validateBillingInfo(values.billing);
+    if (!silent) {
+      setBillingErrors(nextErrors);
+    }
+    return Object.keys(nextErrors).length === 0;
+  }, [values.billing]);
+
+  const setBasicFieldError = useCallback(
+    (field: keyof BasicInfoFormValues, message?: string) => {
+      setBasicErrors((prev) => ({ ...prev, [field]: message }));
+    },
+    [],
+  );
 
   return {
     activeTab,
     setActiveTab,
     values,
+    basicErrors,
+    addressErrors,
+    billingErrors,
     setBasicValue,
     setAddressValue,
     setBillingValue,
+    setBasicFieldError,
     resetForm,
-    canContinueBasic,
-    canContinueAddress,
+    validateBasicTab,
+    validateAddressTab,
+    validateBillingTab,
   };
 }

@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Card, ActivityItemCard } from "@/styles/clientes/detalle.styles";
-import { FileText, Mail, Phone, User } from "lucide-react";
+import { FileText, Mail, Phone, User, Ban } from "lucide-react";
 import { theme } from "@/styles/theme";
 import type {
   ClientCollectionActivity,
@@ -31,6 +31,8 @@ function getActivityIcon(code: string) {
       return <User size={16} color={theme.palette.text.secondary} />;
     case "NOTE":
       return <FileText size={16} color={theme.palette.text.secondary} />;
+    case "DEACTIVATION":
+      return <Ban size={16} color={theme.palette.text.secondary} />;
     default:
       return <Phone size={16} color={theme.palette.text.secondary} />;
   }
@@ -56,6 +58,17 @@ export function ActivityTab({
   const [activityNotes, setActivityNotes] = useState("");
   const [activitySaving, setActivitySaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const selectableActivityTypes = activityTypes.filter(
+    (type) => type.code !== "DEACTIVATION",
+  );
+
+  const getActivityHeading = (activity: ClientCollectionActivity) => {
+    if (activity.activityType.code === "DEACTIVATION") {
+      return `Baja registrada del cliente por ${activity.createdBy.name}`;
+    }
+    return `${activity.activityType.name} realizada por ${activity.createdBy.name}`;
+  };
 
   const handleSave = async () => {
     const comment = activityNotes.trim();
@@ -126,7 +139,7 @@ export function ActivityTab({
               );
             }}
           >
-            {activityTypes.map((type) => (
+            {selectableActivityTypes.map((type) => (
               <MenuItem key={type.id} value={type.id}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   {getActivityIcon(type.code)}
@@ -198,7 +211,7 @@ export function ActivityTab({
                   color="text.secondary"
                   fontWeight={500}
                 >
-                  {`${activity.activityType.name} realizada por ${activity.createdBy.name}`}
+                  {getActivityHeading(activity)}
                 </Typography>
               </Stack>
               <Stack>

@@ -7,8 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import { CircleCheck, X as CloseIcon } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import numeral from "numeral";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   DialogContent,
   ModalHeader,
@@ -18,10 +17,10 @@ import {
 } from "@/components/ModalForm/styles";
 import { FormTextField } from "@/components/Form";
 import {
-  cancelClientPurchase,
-  getSaleCancelReasons,
+  deactivateClient,
+  getClientDeactivationReasons,
 } from "@/services/clients.service";
-import type { SaleCancelBlockReason, SaleCancelReason } from "@/types/cancelPurchase.types";
+import type { ClientDeactivationReason } from "@/types/clientes.types";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
@@ -30,50 +29,30 @@ import {
   ReasonCheckIcon,
 } from "@/components/DiscountRequestModal/styles";
 
-const BLOCK_MESSAGES: Record<Exclude<SaleCancelBlockReason, "ALREADY_CANCELLED">, string> = {
-  IN_ROUTE:
-    "No es posible realizar la cancelación del artículo ya que se encuentra en reparto",
-  DELIVERED: "No es posible cancelar el artículo porque ya fue entregado",
-};
-
-export interface CancelPurchaseModalProps {
+export interface DeactivateClientModalProps {
   open: boolean;
   clientId: number;
-  saleId: number;
-  totalPaid: number;
-  blockReason: SaleCancelBlockReason | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-function formatCurrency(value: number): string {
-  return numeral(value).format("$0,0.00");
-}
-
-export function CancelPurchaseModal({
+export function DeactivateClientModal({
   open,
   clientId,
-  saleId,
-  totalPaid,
-  blockReason,
   onClose,
   onSuccess,
-}: CancelPurchaseModalProps) {
-  const queryClient = useQueryClient();
+}: DeactivateClientModalProps) {
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
 
   const [selectedReasonId, setSelectedReasonId] = useState<number | null>(null);
   const [customReason, setCustomReason] = useState("");
 
-  const isBlocked =
-    blockReason === "IN_ROUTE" || blockReason === "DELIVERED";
-
   const reasonsQuery = useQuery({
-    queryKey: ["clients", "sale-cancel-reasons"],
-    enabled: open && !isBlocked,
+    queryKey: ["clients", "deactivation-reasons"],
+    enabled: open,
     queryFn: async () => {
-      const result = await getSaleCancelReasons();
+      const result = await getClientDeactivationReasons();
       return unwrapOrThrow(result);
     },
     staleTime: 6 * 60 * 60 * 1000,
@@ -91,7 +70,6 @@ export function CancelPurchaseModal({
   const isOtherSelected = selectedReason?.allowsCustomText ?? false;
   const trimmedCustomReason = customReason.trim();
   const canSubmit =
-    !isBlocked &&
     selectedReasonId !== null &&
     (!isOtherSelected || trimmedCustomReason.length > 0) &&
     !reasonsQuery.isLoading;
@@ -99,9 +77,9 @@ export function CancelPurchaseModal({
   const mutation = useMutation({
     mutationFn: async () => {
       if (selectedReasonId === null) {
-        throw new Error("Selecciona un motivo de cancelación.");
+        throw new Error("Selecciona un motivo de baja.");
       }
-      const result = await cancelClientPurchase(clientId, saleId, {
+      const result = await deactivateClient(clientId, {
         reasonId: selectedReasonId,
         notes: isOtherSelected ? trimmedCustomReason : undefined,
       });
@@ -110,24 +88,10 @@ export function CancelPurchaseModal({
       }
       return result.data;
     },
-    onSuccess: async (data) => {
-      showSuccess(data?.message ?? "La venta se canceló correctamente.");
+    onSuccess: (data) => {
+      showSuccess(data?.message ?? "El cliente se dio de baja correctamente.");
       resetForm();
       onClose();
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["clients", "purchase-detail", clientId, saleId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["clients", "detail", clientId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["clients", "purchases", clientId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["sale-credits", "active", clientId],
-        }),
-      ]);
       onSuccess?.();
     },
     onError: (error: Error) => showError(getApiErrorMessage(error)),
@@ -139,7 +103,7 @@ export function CancelPurchaseModal({
     onClose();
   };
 
-  const renderReasonCard = (reason: SaleCancelReason) => {
+  const renderReasonCard = (reason: ClientDeactivationReason) => {
     const selected = selectedReasonId === reason.id;
 
     return (
@@ -189,9 +153,6 @@ export function CancelPurchaseModal({
     );
   };
 
-  const submitLabel =
-    totalPaid > 0 ? "Cancelar venta y abonar pagos" : "Cancelar venta";
-
   return (
     <Dialog
       open={open}
@@ -208,12 +169,11 @@ export function CancelPurchaseModal({
       <DialogContent sx={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
         <ModalHeader>
           <div>
-            <ModalTitle>Cancelar venta</ModalTitle>
-            {!isBlocked && (
-              <ModalDescription>
-                Selecciona el motivo de cancelación de la venta
-              </ModalDescription>
-            )}
+            <ModalTitle>Dar de baja al cliente</ModalTitle>
+            <ModalDescription>
+              Al dar de baja al cliente se cancelará su línea de crédito y letras
+              abiertas.
+            </ModalDescription>
           </div>
           <CloseButton
             onClick={handleClose}
@@ -224,76 +184,54 @@ export function CancelPurchaseModal({
           </CloseButton>
         </ModalHeader>
 
-        {isBlocked ? (
-          <>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {BLOCK_MESSAGES[blockReason]}
-            </Typography>
-            <FooterActions>
-              <Button variant="contained" color="primary" onClick={handleClose}>
-                Entendido
-              </Button>
-            </FooterActions>
-          </>
-        ) : (
-          <>
-            <Typography variant="subtitle2" color="text.secondary">
-              Selecciona el motivo de cancelación
-            </Typography>
+        <Typography variant="subtitle2" color="text.secondary">
+          Selecciona el motivo de baja
+        </Typography>
 
-            <Stack
-              spacing={1.5}
-              sx={{ flex: 1, overflow: "auto", minHeight: 0, pb: 1, mt: 1.5 }}
-            >
-              {reasonsQuery.isLoading ? (
-                <Typography variant="body2" color="text.secondary">
-                  Cargando motivos...
-                </Typography>
-              ) : reasonsQuery.isError ? (
-                <Typography variant="body2" color="error">
-                  {getApiErrorMessage(reasonsQuery.error)}
-                </Typography>
-              ) : (
-                reasons.map(renderReasonCard)
-              )}
-            </Stack>
+        <Stack
+          spacing={1.5}
+          sx={{ flex: 1, overflow: "auto", minHeight: 0, pb: 1, mt: 1.5 }}
+        >
+          {reasonsQuery.isLoading ? (
+            <Typography variant="body2" color="text.secondary">
+              Cargando motivos...
+            </Typography>
+          ) : reasonsQuery.isError ? (
+            <Typography variant="body2" color="error">
+              {getApiErrorMessage(reasonsQuery.error)}
+            </Typography>
+          ) : (
+            reasons.map(renderReasonCard)
+          )}
+        </Stack>
 
-            {totalPaid > 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                El monto pagado del artículo [{formatCurrency(totalPaid)}] se
-                abonará como saldo a favor del cliente
-              </Typography>
+        <FooterActions>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={!canSubmit || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Dar de baja"
             )}
-
-            <FooterActions>
-              <Button
-                variant="contained"
-                color="error"
-                disabled={!canSubmit || mutation.isPending}
-                onClick={() => mutation.mutate()}
-              >
-                {mutation.isPending ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  submitLabel
-                )}
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                disabled={mutation.isPending}
-                onClick={handleClose}
-              >
-                Cancelar
-              </Button>
-            </FooterActions>
-          </>
-        )}
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            disabled={mutation.isPending}
+            onClick={handleClose}
+          >
+            Cancelar
+          </Button>
+        </FooterActions>
       </DialogContent>
     </Dialog>
   );
 }
 
-const CancelPurchaseModalPage = () => null;
+const DeactivateClientModalPage = () => null;
 
-export default CancelPurchaseModalPage;
+export default DeactivateClientModalPage;

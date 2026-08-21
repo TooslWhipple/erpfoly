@@ -1,12 +1,14 @@
-import { useState, useCallback } from "react";
-import { Button, Stack, Tab, Tabs, Switch, FormControlLabel, Grid, Typography, MenuItem } from "@mui/material";
+import { useState, useCallback, useMemo } from "react";
+import { Button, Stack, Switch, FormControlLabel, Grid, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, CircleAlert, ShieldCheck } from "lucide-react";
 import { SideModal } from "@/components/SideModal/SideModal";
+import { TabFilters } from "@/components/TabFilters";
+import type { TabOption } from "@/components/TabFilters";
 import { FormTextField } from "@/components/Form";
+import { PostalCodeSettlementFields } from "@/components/CreditApplicationForm/PostalCodeSettlementFields";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
-import { sanitizeMxPostalCodeInput } from "@/forms/validation/schemas";
 import { useCreateCashClientForm } from "@/hooks/useCreateCashClientForm";
 import { createCashClient } from "@/services/cashClients.service";
 import type { CreateCashClientTab } from "@/hooks/useCreateCashClientForm";
@@ -15,7 +17,14 @@ import { getApiErrorMessage } from "@/lib/axios";
 import { sendClientOtp, verifyClientOtp } from "@/services/clientOtp.service";
 import { useOtpCooldown } from "@/hooks/common/useOtpCooldown";
 import { geocodeAddress } from "@/utils/geocodeAddress";
+import { theme } from "@/styles/theme";
 import type { Client } from "@/services/clients.service";
+
+const CREATE_CLIENT_TABS: TabOption[] = [
+  { label: "Información básica", value: "basic" },
+  { label: "Dirección", value: "address" },
+  { label: "Facturación", value: "billing" },
+];
 
 interface CreateCashClientModalProps {
   open: boolean;
@@ -34,11 +43,15 @@ export function CreateCashClientModal({
     activeTab,
     setActiveTab,
     values,
+    basicErrors,
+    addressErrors,
+    billingErrors,
     setBasicValue,
     setAddressValue,
     setBillingValue,
+    setBasicFieldError,
     resetForm,
-    canContinueBasic,
+    validateBasicTab,
   } = useCreateCashClientForm();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -82,19 +95,25 @@ export function CreateCashClientModal({
   };
 
   const handleContinueBasic = () => {
-    if (canContinueBasic(isSecurityCodeValid)) {
-      setActiveTab("address");
+    if (!validateBasicTab(isSecurityCodeValid)) {
+      showError("Completa la información básica requerida.");
+      return;
     }
+    setActiveTab("address");
   };
 
   const validateSecurityCode = useCallback(async (): Promise<boolean> => {
     const phoneNumber = values.basic.phoneNumber.trim();
     if (phoneNumber.length !== 10) {
-      showError("El número de WhatsApp debe tener 10 dígitos");
+      setBasicFieldError(
+        "phoneNumber",
+        "El número de WhatsApp debe tener 10 dígitos",
+      );
       return false;
     }
 
     if (isSecurityCodeValid) {
+      setBasicFieldError("securityCode", undefined);
       return true;
     }
 
@@ -108,17 +127,21 @@ export function CreateCashClientModal({
         const response = await sendClientOtp(phoneNumber);
         otpCooldown.syncFromTimestamp(response.cooldownUntil);
         setIsSecurityCodeValid(response.verified ? true : null);
+        setBasicFieldError("securityCode", undefined);
         return true;
       }
 
       if (!values.basic.securityCode.trim()) {
-        showError("Código de seguridad es requerido");
+        setBasicFieldError("securityCode", "Código de seguridad es requerido");
         setIsSecurityCodeValid(false);
         return false;
       }
 
       if (values.basic.securityCode.trim().length < 6) {
-        showError("El código de seguridad debe tener 6 dígitos");
+        setBasicFieldError(
+          "securityCode",
+          "El código de seguridad debe tener 6 dígitos",
+        );
         setIsSecurityCodeValid(false);
         return false;
       }
@@ -133,11 +156,17 @@ export function CreateCashClientModal({
 
       otpCooldown.syncFromTimestamp(response.cooldownUntil);
       setIsSecurityCodeValid(response.verified);
+      if (response.verified) {
+        setBasicFieldError("securityCode", undefined);
+      } else {
+        setBasicFieldError("securityCode", "Código de seguridad inválido");
+      }
       return response.verified;
     } catch (error) {
       const errorMessage = getApiErrorMessage(error);
       showError(errorMessage);
       setIsSecurityCodeValid(false);
+      setBasicFieldError("securityCode", errorMessage);
       return false;
     } finally {
       setValidatingSecurityCode(false);
@@ -147,11 +176,16 @@ export function CreateCashClientModal({
     values.basic.securityCode,
     isSecurityCodeValid,
     otpCooldown,
+    setBasicFieldError,
     showError,
   ]);
 
   const handleContinueAddress = () => {
     setActiveTab("billing");
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as CreateCashClientTab);
   };
 
   const handleUseClientPhoneToggle = (checked: boolean) => {
@@ -165,8 +199,9 @@ export function CreateCashClientModal({
   };
 
   const handleSave = async () => {
-    if (!canContinueBasic(isSecurityCodeValid)) {
-      showError("Por favor completa todos los campos requeridos");
+    if (!validateBasicTab(isSecurityCodeValid)) {
+      setActiveTab("basic");
+      showError("Completa la información básica requerida.");
       return;
     }
 
@@ -250,11 +285,41 @@ export function CreateCashClientModal({
     (!otpCooldown.hasStarted && values.basic.securityCode.trim().length === 0) ||
     isSecurityCodeValid === true;
 
+  const tabsWithValidationState = useMemo(() => {
+    const tabsWithErrors = new Set<CreateCashClientTab>();
+
+    if (Object.values(basicErrors).some(Boolean)) {
+      tabsWithErrors.add("basic");
+    }
+    if (Object.values(addressErrors).some(Boolean)) {
+      tabsWithErrors.add("address");
+    }
+    if (Object.values(billingErrors).some(Boolean)) {
+      tabsWithErrors.add("billing");
+    }
+
+    return CREATE_CLIENT_TABS.map((tab) => {
+      const hasError = tabsWithErrors.has(tab.value as CreateCashClientTab);
+      return {
+        ...tab,
+        label: hasError ? (
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <CircleAlert size={14} />
+            <span>{tab.label}</span>
+          </Stack>
+        ) : (
+          tab.label
+        ),
+        textColor: hasError ? theme.palette.app.chip.variants.error.color : undefined,
+      };
+    });
+  }, [addressErrors, basicErrors, billingErrors]);
+
   const headerActions = (
     <Button
       variant="contained"
       onClick={handleSave}
-      disabled={!canContinueBasic(isSecurityCodeValid) || isSaving}
+      disabled={isSaving}
       sx={{ whiteSpace: "nowrap" }}
     >
       Guardar cliente
@@ -271,15 +336,12 @@ export function CreateCashClientModal({
       maxWidth="lg"
       disableClose={isSaving}
     >
-      <Tabs
-        value={activeTab}
-        onChange={(_, newValue) => setActiveTab(newValue as CreateCashClientTab)}
-        sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}
-      >
-        <Tab label="Información básica" value="basic" />
-        <Tab label="Dirección" value="address" />
-        <Tab label="Facturación" value="billing" />
-      </Tabs>
+      <Stack spacing={3}>
+        <TabFilters
+          tabs={tabsWithValidationState}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
 
       {activeTab === "basic" && (
         <Stack spacing={3}>
@@ -290,6 +352,8 @@ export function CreateCashClientModal({
             placeholder="Jose Antonio"
             value={values.basic.firstName}
             onChange={(e) => setBasicValue("firstName", e.target.value)}
+            error={Boolean(basicErrors.firstName)}
+            helperText={basicErrors.firstName}
           />
 
           <Grid container spacing={2}>
@@ -301,6 +365,8 @@ export function CreateCashClientModal({
                 placeholder="Montes"
                 value={values.basic.lastSurname}
                 onChange={(e) => setBasicValue("lastSurname", e.target.value)}
+                error={Boolean(basicErrors.lastSurname)}
+                helperText={basicErrors.lastSurname}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -322,13 +388,14 @@ export function CreateCashClientModal({
               placeholder="Ingresa"
               value={values.basic.email}
               onChange={(e) => setBasicValue("email", e.target.value)}
+              error={Boolean(basicErrors.email)}
+              helperText={basicErrors.email}
             />
 
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormTextField
                   fullWidth
-                  required={isSecurityCodeValid !== true}
                   label="Número de Whatsapp"
                   placeholder="Ingresa"
                   value={values.basic.phoneNumber}
@@ -340,6 +407,8 @@ export function CreateCashClientModal({
                   }
                   disabled={isSecurityCodeValid === true}
                   inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+                  error={Boolean(basicErrors.phoneNumber)}
+                  helperText={basicErrors.phoneNumber}
                 />
               </Grid>
               <Grid container size={{ xs: "grow" }}>
@@ -350,9 +419,16 @@ export function CreateCashClientModal({
                     label="Código de seguridad"
                     placeholder="Ingresa"
                     value={values.basic.securityCode}
-                    onChange={(e) => setBasicValue("securityCode", e.target.value)}
+                    onChange={(e) =>
+                      setBasicValue(
+                        "securityCode",
+                        e.target.value.replace(/\D/g, "").slice(0, 6)
+                      )
+                    }
                     disabled={isSecurityCodeFieldDisabled}
                     inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
+                    error={Boolean(basicErrors.securityCode)}
+                    helperText={basicErrors.securityCode}
                   />
                 </Grid>
                 <Grid size={{ xs: "auto" }} alignSelf="flex-start" style={{ marginTop: 24 }}>
@@ -385,7 +461,6 @@ export function CreateCashClientModal({
             fullWidth
             variant="contained"
             onClick={handleContinueBasic}
-            disabled={!canContinueBasic(isSecurityCodeValid)}
           >
             Continuar
           </Button>
@@ -395,56 +470,30 @@ export function CreateCashClientModal({
       {activeTab === "address" && (
         <Stack spacing={3}>
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                Código Postal
-              </Typography>
-              <FormTextField
-                fullWidth
-                required
-                label=""
-                placeholder="Ingresa"
-                value={values.address.postalCode}
-                onChange={(e) => {
-                  const sanitized = sanitizeMxPostalCodeInput(e.target.value);
-                  setAddressValue("postalCode", sanitized);
-                  setAddressValue("neighborhoodFullCode", "-1");
-                  setAddressValue("state", "");
-                  setAddressValue("city", "");
-                }}
-                inputProps={{ inputMode: "numeric", maxLength: 5 }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                Colonia
-              </Typography>
-              <FormTextField
-                fullWidth
-                required
-                select
-                defaultValue="-1"
-                label=""
-                value={values.address.neighborhoodFullCode}
-                onChange={(e) => {
-                  const fullCode = e.target.value;
-                  const row = addressNeighborhoods.find((item) => item.full_code === fullCode);
-                  setAddressValue("neighborhoodFullCode", fullCode);
-                  setAddressValue("state", row?.state_name ?? "");
-                  setAddressValue("city", row?.municipality_name ?? "");
-                }}
-                disabled={values.address.postalCode.trim().length !== 5 || addressNeighborhoodsLoading}
-              >
-                <MenuItem value="-1">
-                  {addressNeighborhoodsLoading ? "Cargando..." : values.address.postalCode.trim().length === 5 ? "Selecciona una colonia" : "Ingresa el código postal"}
-                </MenuItem>
-                {addressNeighborhoods.map((row) => (
-                  <MenuItem key={row.full_code} value={row.full_code}>
-                    {row.name}
-                  </MenuItem>
-                ))}
-              </FormTextField>
-            </Grid>
+            <PostalCodeSettlementFields
+              postalCode={values.address.postalCode}
+              neighborhoodFullCode={values.address.neighborhoodFullCode}
+              state={values.address.state}
+              city={values.address.city}
+              postalCodeError={addressErrors.postalCode}
+              neighborhoodError={addressErrors.neighborhoodFullCode}
+              neighborhoods={addressNeighborhoods}
+              neighborhoodsLoading={addressNeighborhoodsLoading}
+              fieldKeys={{
+                postalCode: "postalCode",
+                neighborhoodFullCode: "neighborhoodFullCode",
+                state: "state",
+                city: "city",
+              }}
+              mergePatch={(patch) => {
+                Object.entries(patch).forEach(([field, value]) => {
+                  setAddressValue(
+                    field as keyof typeof values.address,
+                    value,
+                  );
+                });
+              }}
+            />
           </Grid>
 
           <Grid container spacing={2}>
@@ -531,7 +580,11 @@ export function CreateCashClientModal({
             label="Utilizar número del cliente"
           />
 
-          <Button fullWidth variant="contained" onClick={handleContinueAddress}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleContinueAddress}
+          >
             Continuar
           </Button>
         </Stack>
@@ -559,15 +612,22 @@ export function CreateCashClientModal({
                 values={values.billing}
                 onChange={setBillingValue}
                 whatsappFallbackNumber={values.basic.phoneNumber}
+                errors={billingErrors}
               />
 
-              <Button fullWidth variant="contained" onClick={handleSave}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleSave}
+                disabled={isSaving}
+              >
                 Guardar cliente
               </Button>
             </Stack>
           )}
         </Stack>
       )}
+      </Stack>
     </SideModal>
   );
 }

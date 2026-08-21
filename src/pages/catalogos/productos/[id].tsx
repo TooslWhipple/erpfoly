@@ -67,6 +67,32 @@ import { PriceTab } from "@/components/Products/PriceTab";
 import { PackagesTab } from "@/components/Products/PackagesTab";
 import { GalleryTab } from "@/components/Products/GalleryTab";
 import { BranchesTab } from "@/components/Products/BranchesTab";
+
+const PRODUCT_FORM_TAB_VALUES = [
+  "general",
+  "branches",
+  "suppliers",
+  "price",
+  "gallery",
+  "packages",
+] as const;
+
+type ProductFormTabValue = (typeof PRODUCT_FORM_TAB_VALUES)[number];
+
+function isProductFormTabValue(value: string): value is ProductFormTabValue {
+  return (PRODUCT_FORM_TAB_VALUES as readonly string[]).includes(value);
+}
+
+function resolveProductFormTab(value: unknown): ProductFormTabValue {
+  if (typeof value === "string" && isProductFormTabValue(value)) {
+    return value;
+  }
+  if (Array.isArray(value) && typeof value[0] === "string" && isProductFormTabValue(value[0])) {
+    return value[0];
+  }
+  return "general";
+}
+
 const inFlightProductDetailRequests = new Map<
   number,
   ReturnType<typeof getProductById>
@@ -216,7 +242,39 @@ export default function ProductFormPage() {
   }, [editProductIdStr]);
   const [productLoading, setProductLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const tabFromQuery = resolveProductFormTab(router.query.tab);
+  const [activeTab, setActiveTab] = useState<ProductFormTabValue>(tabFromQuery);
+
+  const syncTabToUrl = useCallback(
+    (tab: ProductFormTabValue) => {
+      if (!router.isReady) return;
+      const current = resolveProductFormTab(router.query.tab);
+      if (current === tab) return;
+      void router.replace(
+        {
+          pathname: router.pathname,
+          query: { ...router.query, tab },
+        },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const tab = resolveProductFormTab(value);
+      setActiveTab(tab);
+      syncTabToUrl(tab);
+    },
+    [syncTabToUrl],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    setActiveTab(tabFromQuery);
+  }, [router.isReady, tabFromQuery]);
   const [generalData, setGeneralData] = useState<GeneralDataFormState>({
     departmentId: "",
     lineId: "",
@@ -507,7 +565,11 @@ export default function ProductFormPage() {
     );
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      setActiveTab(firstTabWithValidationErrors(validationErrors));
+      const tab = resolveProductFormTab(
+        firstTabWithValidationErrors(validationErrors),
+      );
+      setActiveTab(tab);
+      syncTabToUrl(tab);
       return;
     }
     setErrors({});
@@ -971,7 +1033,7 @@ export default function ProductFormPage() {
             <VerticalSidebarTabs
               tabs={tabs}
               value={activeTab}
-              onChange={setActiveTab}
+              onChange={handleTabChange}
             />
           </Grid>
           <Grid
@@ -990,7 +1052,7 @@ export default function ProductFormPage() {
               <TabFilters
                 tabs={tabs}
                 activeTab={activeTab}
-                onTabChange={setActiveTab}
+                onTabChange={handleTabChange}
               />
             </Box>
             {activeTab === "general" && (

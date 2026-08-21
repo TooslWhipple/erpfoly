@@ -19,10 +19,12 @@ import {
   CaptureCardActions,
   CaptureAmountInput,
   CaptureCardChangeRow,
+  InstallmentsControl,
+  InstallmentsControlDivider,
   PaymentMethodButton,
 } from "@/styles/clientes/abonos.styles";
 import { RadioButton } from "@/components";
-import { CircleDollarSign, CreditCard, Minus, Plus } from "lucide-react";
+import { CircleDollarSign, CreditCard, Minus, Pencil, Plus } from "lucide-react";
 
 export interface PaymentCapturePanelProps {
   paymentAmount: number;
@@ -53,6 +55,18 @@ function formatCurrency(value: number): string {
 function formatAmountForInput(amount: number): string {
   return amount > 0 ? String(Math.round(amount * 100) / 100) : "";
 }
+
+// InstallmentsControl fija el color de fondo/texto vía CSS `color` heredado,
+// pero IconButton/Button de MUI aplican su propio color por defecto con más
+// especificidad que la herencia — hay que forzarlo explícitamente a "inherit"
+// (y de nuevo en el estado disabled, que también trae color propio).
+const installmentsControlActionSx = {
+  color: "inherit",
+  "&.Mui-disabled": {
+    color: "inherit",
+    opacity: 0.4,
+  },
+} as const;
 
 export function PaymentCapturePanel({
   paymentAmount,
@@ -133,8 +147,8 @@ export function PaymentCapturePanel({
         Ingresa el cobro realizado al cliente:
       </Typography>
 
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-        <Typography variant="body2" color="text.secondary">
+      <InstallmentsControl>
+        <Typography variant="body2" textAlign="center">
           Parcialidades a cubrir
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -142,6 +156,7 @@ export function PaymentCapturePanel({
             size="small"
             onClick={handleDecrementInstallments}
             disabled={displayedInstallmentCount <= 1 || totalPendingInstallmentsCount === 0}
+            sx={installmentsControlActionSx}
           >
             <Minus size={16} />
           </IconButton>
@@ -152,20 +167,22 @@ export function PaymentCapturePanel({
             size="small"
             onClick={handleIncrementInstallments}
             disabled={displayedInstallmentCount >= totalPendingInstallmentsCount}
+            sx={installmentsControlActionSx}
           >
             <Plus size={16} />
           </IconButton>
         </Stack>
-      </Stack>
-
-      <Button
-        size="small"
-        variant="text"
-        onClick={handleSelectAllInstallments}
-        disabled={totalPendingInstallmentsCount === 0}
-      >
-        Seleccionar todas ({totalPendingInstallmentsCount})
-      </Button>
+        <InstallmentsControlDivider />
+        <Button
+          size="small"
+          variant="text"
+          onClick={handleSelectAllInstallments}
+          disabled={totalPendingInstallmentsCount === 0}
+          sx={{ ...installmentsControlActionSx, textTransform: "none", fontWeight: 600 }}
+        >
+          Seleccionar todas ({totalPendingInstallmentsCount})
+        </Button>
+      </InstallmentsControl>
 
       <CaptureAmountInput
         value={displayValue}
@@ -173,6 +190,11 @@ export function PaymentCapturePanel({
         startAdornment={
           <InputAdornment position="start">
             <Typography variant="h4" color="text.secondary">$</Typography>
+          </InputAdornment>
+        }
+        endAdornment={
+          <InputAdornment position="end" sx={{ color: "text.secondary" }}>
+            <Pencil size={18} />
           </InputAdornment>
         }
         onChange={(event) => handleInputChange(event.target.value)}

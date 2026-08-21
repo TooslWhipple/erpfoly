@@ -40,18 +40,12 @@ export interface ClientMovement {
   amount: number;
 }
 
-export interface ActiveCase {
-  id: string;
-  status: string;
-  statusLabel: string;
-  description: string;
-  orderType: string;
-}
-
 export interface ClientDetailHeader {
   id: number;
   fullName: string;
   curp: string;
+  status: ClientStatus | null;
+  creditBalance: number;
   creditApplicationId: number | null;
   creditLine: {
     authorized: number;
@@ -60,12 +54,19 @@ export interface ClientDetailHeader {
   };
 }
 
-export interface ClientDetailView {
-  header: ClientDetailHeader;
-  movements: ClientMovement[];
-  purchases: ClientMovement[];
-  payments: ClientMovement[];
-  activeCases: ActiveCase[];
+export type ClientStatus = "active" | "inactive" | "blocked";
+
+export interface ClientDeactivationReason {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  allowsCustomText: boolean;
+}
+
+export interface DeactivateClientPayload {
+  reasonId: number;
+  notes?: string;
 }
 
 export type ActivityType = "call" | "message" | "email" | "visit" | "note";
@@ -80,6 +81,7 @@ export interface ClientActivity {
   toolName?: string;
 }
 
+/** Legacy list shape used by `clientes.service` / `useClientes`. */
 export interface ClientDetail {
   id: string;
   clientId: string;
@@ -94,7 +96,6 @@ export interface ClientDetail {
   movements: ClientMovement[];
   purchases: ClientMovement[];
   payments: ClientMovement[];
-  activeCases: ActiveCase[];
 }
 
 export type GetClientesResponse = ClientDetail[];

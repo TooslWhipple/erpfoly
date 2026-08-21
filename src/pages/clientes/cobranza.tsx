@@ -1,9 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CircularProgress, Box, Stack } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
-import { Title, RulesList, AutomatedCollectionActivityModal, ConfirmModal } from "@/components";
+import { Plus as AddIcon } from "lucide-react";
+import {
+  Title,
+  RulesList,
+  AutomatedCollectionActivityModal,
+  AutomatedCollectionRuleFormModal,
+  ConfirmModal,
+} from "@/components";
 import type { TitleAction } from "@/components";
 import type { CollectionRuleData, SelectOption } from "@/components/RuleCard";
+import type { AutomatedCollectionRuleFormValues } from "@/components/AutomatedCollectionRuleFormModal";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   CUSTOMER_COLLECTION_CREATE,
@@ -21,6 +28,7 @@ import type {
   AutomatedCollectionRule,
   AutomatedCollectionCatalogs,
 } from "@/services/automated-collection.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 function ruleToCollectionRule(rule: AutomatedCollectionRule): CollectionRuleData {
   return {
@@ -37,19 +45,29 @@ function sortRulesByNewest(rules: CollectionRuleData[]): CollectionRuleData[] {
   return [...rules].sort((a, b) => Number(b.id) - Number(a.id));
 }
 
+function channelLabel(channel?: string): string {
+  if (channel === "EMAIL") return "Correo";
+  if (channel === "WHATSAPP") return "WhatsApp";
+  return "";
+}
+
 export default function CobranzaAutomatica() {
   const { hasPermission } = usePermissions();
   const canUpdateRule = hasPermission(CUSTOMER_COLLECTION_UPDATE);
   const canDeleteRule = hasPermission(CUSTOMER_COLLECTION_DELETE);
+  const showError = useSnackbarStore((s) => s.showError);
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
   const [rules, setRules] = useState<CollectionRuleData[]>([]);
-  const [catalogs, setCatalogs] = useState<AutomatedCollectionCatalogs | null>(null);
+  const [catalogs, setCatalogs] = useState<AutomatedCollectionCatalogs | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [activityRuleId, setActivityRuleId] = useState<string | null>(null);
-  const [rulePendingDelete, setRulePendingDelete] = useState<CollectionRuleData | null>(
-    null
-  );
+  const [rulePendingDelete, setRulePendingDelete] =
+    useState<CollectionRuleData | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -61,7 +79,7 @@ export default function CobranzaAutomatica() {
       ]);
       if (rulesRes.data) {
         setRules(
-          sortRulesByNewest(rulesRes.data.data.map(ruleToCollectionRule))
+          sortRulesByNewest(rulesRes.data.data.map(ruleToCollectionRule)),
         );
       }
       if (catalogsRes.data) {
@@ -84,7 +102,7 @@ export default function CobranzaAutomatica() {
         value: String(ct.id),
         label: ct.name,
       })) ?? [],
-    [catalogs]
+    [catalogs],
   );
 
   const operatorOptions: SelectOption[] = useMemo(
@@ -93,7 +111,7 @@ export default function CobranzaAutomatica() {
         value: String(co.id),
         label: co.name,
       })) ?? [],
-    [catalogs]
+    [catalogs],
   );
 
   const periodOptions: SelectOption[] = useMemo(
@@ -102,47 +120,58 @@ export default function CobranzaAutomatica() {
         value: String(tp.id),
         label: `${tp.quantity} ${tp.unit.name}${tp.quantity > 1 ? "s" : ""}`,
       })) ?? [],
-    [catalogs]
+    [catalogs],
   );
 
   const messageOptions: SelectOption[] = useMemo(
     () =>
-      catalogs?.messages.map((m) => ({
-        value: String(m.id),
-        label: m.name,
-      })) ?? [],
-    [catalogs]
+      catalogs?.messages.map((m) => {
+        const channel = channelLabel(m.channel);
+        return {
+          value: String(m.id),
+          label: channel ? `${m.name} (${channel})` : m.name,
+        };
+      }) ?? [],
+    [catalogs],
   );
 
-  const handleCreateRule = async () => {
-    if (!catalogs || createLoading) return;
-    const firstCondition = catalogs.conditionTypes[0];
-    const firstOperator = catalogs.comparisonOperators[0];
-    const firstPeriod = catalogs.timePeriods[0];
-    const firstMessage = catalogs.messages[0];
-    const firstMessageType = catalogs.messageTypes[0];
+  const handleOpenCreateModal = () => {
+    if (!catalogs) return;
+    setCreateModalOpen(true);
+  };
 
-    if (!firstCondition || !firstOperator || !firstPeriod || !firstMessage || !firstMessageType) return;
+  const handleCloseCreateModal = () => {
+    if (!createLoading) {
+      setCreateModalOpen(false);
+    }
+  };
 
+  const handleCreateRule = async (values: AutomatedCollectionRuleFormValues) => {
     setCreateLoading(true);
     try {
       const result = await createAutomatedCollectionRule({
-        name: `Nueva regla ${Date.now()}`,
-        condition_type_id: firstCondition.id,
-        comparison_operator_id: firstOperator.id,
-        time_period_id: firstPeriod.id,
-        message_id: firstMessage.id,
-        message_type_id: firstMessageType.id,
-        status: false,
+        name: values.name.trim(),
+        condition_type_id: Number(values.conditionTypeId),
+        comparison_operator_id: Number(values.comparisonOperatorId),
+        time_period_id: Number(values.timePeriodId),
+        message_id: Number(values.messageId),
+        status: values.status,
       });
+      if (result.error) {
+        showError(result.error.message);
+        return;
+      }
       if (result.data) {
         setRules((prev) => [
           ruleToCollectionRule(result.data!),
           ...prev,
         ]);
+        showSuccess("Regla de cobranza creada correctamente");
+        setCreateModalOpen(false);
       }
     } catch (err) {
       console.error("[CobranzaAutomatica] Error creating rule:", err);
+      showError("No se pudo crear la regla de cobranza");
     } finally {
       setCreateLoading(false);
     }
@@ -158,13 +187,13 @@ export default function CobranzaAutomatica() {
   const handleFieldChange = async (
     ruleId: string,
     field: "trigger" | "operator" | "period" | "message",
-    value: string
+    value: string,
   ) => {
     const previousRules = rules;
     setRules((prev) =>
       prev.map((rule) =>
-        rule.id === ruleId ? { ...rule, [field]: value } : rule
-      )
+        rule.id === ruleId ? { ...rule, [field]: value } : rule,
+      ),
     );
 
     try {
@@ -194,7 +223,7 @@ export default function CobranzaAutomatica() {
 
     const updatedRule = { ...rule, isActive: !rule.isActive };
     setRules((prev) =>
-      prev.map((r) => (r.id === ruleId ? updatedRule : r))
+      prev.map((r) => (r.id === ruleId ? updatedRule : r)),
     );
 
     try {
@@ -202,14 +231,10 @@ export default function CobranzaAutomatica() {
         status: updatedRule.isActive,
       });
       if (result.error) {
-        setRules((prev) =>
-          prev.map((r) => (r.id === ruleId ? rule : r))
-        );
+        setRules((prev) => prev.map((r) => (r.id === ruleId ? rule : r)));
       }
     } catch {
-      setRules((prev) =>
-        prev.map((r) => (r.id === ruleId ? rule : r))
-      );
+      setRules((prev) => prev.map((r) => (r.id === ruleId ? rule : r)));
     }
   };
 
@@ -261,14 +286,14 @@ export default function CobranzaAutomatica() {
 
   const selectedActivityRule = useMemo(
     () => rules.find((rule) => rule.id === activityRuleId) ?? null,
-    [rules, activityRuleId]
+    [rules, activityRuleId],
   );
 
   const getRuleMessageName = useCallback(
     (rule: CollectionRuleData) =>
       messageOptions.find((option) => option.value === rule.message)?.label ??
       "Regla de cobranza",
-    [messageOptions]
+    [messageOptions],
   );
 
   const selectedMessageName = useMemo(() => {
@@ -285,12 +310,11 @@ export default function CobranzaAutomatica() {
     {
       id: "create",
       label: "Crear nueva",
-      icon: <AddIcon />,
-      onClick: handleCreateRule,
+      icon: <AddIcon size={18} />,
+      onClick: handleOpenCreateModal,
       variant: "contained",
       color: "primary",
       permission: CUSTOMER_COLLECTION_CREATE,
-      loading: createLoading,
       disabled: loading || !catalogs,
     },
   ];
@@ -336,10 +360,26 @@ export default function CobranzaAutomatica() {
         )}
       </Stack>
 
+      <AutomatedCollectionRuleFormModal
+        open={createModalOpen}
+        onClose={handleCloseCreateModal}
+        onSubmit={handleCreateRule}
+        loading={createLoading}
+        triggerOptions={triggerOptions}
+        operatorOptions={operatorOptions}
+        periodOptions={periodOptions}
+        messageOptions={messageOptions}
+      />
+
       <AutomatedCollectionActivityModal
         open={activityRuleId !== null}
         onClose={handleCloseActivityModal}
         ruleId={activityRuleId ? Number(activityRuleId) : null}
+        messageId={
+          selectedActivityRule?.message
+            ? Number(selectedActivityRule.message)
+            : null
+        }
         messageName={selectedMessageName}
         isActive={selectedActivityRule?.isActive ?? true}
       />

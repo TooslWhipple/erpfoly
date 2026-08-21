@@ -41,13 +41,13 @@ export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
 export type { ReviewInvoiceRequestModalProps } from "./ReviewInvoiceRequestModal";
 export {
-  RegisterExpenseModal,
+  RegisterExpenseForm,
   UnassignedInvoicesAlert,
   UnassignedInvoicesModal,
   ExpenseProgressBars,
 } from "./GeneralExpenses";
 export type {
-  RegisterExpenseModalProps,
+  RegisterExpenseFormProps,
   UnassignedInvoicesAlertProps,
   UnassignedInvoicesModalProps,
   ExpenseProgressBarsProps,
@@ -74,6 +74,19 @@ export type {
   DiscrepancyDetailHeaderProps,
   DiscrepancyInvoicesSectionProps,
 } from "./MerchandiseReceptionDiscrepancies";
+export {
+  RecoverySheetDetailHeader,
+  RecoverySheetRouteCard,
+  RecoverySheetServiceOrderCard,
+  RecoverySheetWarehouseCard,
+  RecoverySheetDocumentPanel,
+  ReceiveRecoveryItemModal,
+} from "./RecoverySheets";
+export type {
+  RecoverySheetDetailHeaderProps,
+  RecoverySheetDocumentPanelProps,
+  ReceiveRecoveryItemModalProps,
+} from "./RecoverySheets";
 export { ConfirmPriceChangeModal } from "./ConfirmPriceChangeModal";
 export type { ConfirmPriceChangeModalProps } from "./ConfirmPriceChangeModal";
 export { ConfirmModal, ItemNameHighlight } from "./ConfirmModal";
@@ -98,6 +111,16 @@ export {
 } from "./CosteoDetailTabs";
 export { FilterMenu } from "./FilterMenu";
 export type { FilterMenuProps, FilterOption } from "./FilterMenu";
+export { OptionFilterButton } from "./OptionFilterButton";
+export type {
+  OptionFilterButtonProps,
+  OptionFilterOption,
+} from "./OptionFilterButton";
+export { InlineBranchSelect } from "./InlineBranchSelect";
+export type {
+  InlineBranchSelectProps,
+  InlineBranchOption,
+} from "./InlineBranchSelect";
 export { SuggestionsCard } from "./SuggestionsCard";
 export type { SuggestionsCardProps } from "./SuggestionsCard";
 export { SupplierSelectionModal } from "./SupplierSelectionModal";
@@ -131,6 +154,7 @@ export type {
 export { DiscountRequestItemCard } from "./DiscountRequestItemCard";
 export type { DiscountRequestItemCardProps } from "./DiscountRequestItemCard";
 export { GlobalSnackbar } from "./GlobalSnackbar";
+export { BackendIndicator } from "./BackendIndicator";
 export { CreditLimitBar } from "./CreditLimitBar";
 export type { CreditLimitBarProps } from "./CreditLimitBar";
 export { DepartmentCard } from "./DepartmentCard";
@@ -212,6 +236,11 @@ export type {
 } from "./NewRouteModal";
 export { AutomatedCollectionActivityModal } from "./AutomatedCollectionActivityModal";
 export type { AutomatedCollectionActivityModalProps } from "./AutomatedCollectionActivityModal";
+export { AutomatedCollectionRuleFormModal } from "./AutomatedCollectionRuleFormModal";
+export type {
+  AutomatedCollectionRuleFormModalProps,
+  AutomatedCollectionRuleFormValues,
+} from "./AutomatedCollectionRuleFormModal";
 export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 export { MapMarker } from "./MapMarker";

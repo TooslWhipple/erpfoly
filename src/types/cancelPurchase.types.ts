@@ -1,14 +1,17 @@
-export type CancelPurchaseReasonId = "REASON_1" | "REASON_2" | "REASON_3" | "OTHER";
+export type SaleCancelBlockReason =
+  | "IN_ROUTE"
+  | "DELIVERED"
+  | "ALREADY_CANCELLED";
 
-export interface CancelPurchaseReason {
-  id: CancelPurchaseReasonId;
-  title: string;
-  description: string;
-  allowsCustomText?: boolean;
+export interface SaleCancelReason {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  allowsCustomText: boolean;
 }
 
-export interface CancelPurchasePayload {
-  purchaseId: string;
-  reasonId: CancelPurchaseReasonId;
-  customReason?: string;
+export interface CancelClientPurchasePayload {
+  reasonId: number;
+  notes?: string;
 }

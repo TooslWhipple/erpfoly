@@ -1,5 +1,4 @@
 import { styled } from "@mui/material/styles";
-import { Box } from "@mui/material";
 import { theme } from "@/styles/theme";
 
 export const SalesChartContainer = styled('div')({
@@ -9,7 +8,12 @@ export const SalesChartContainer = styled('div')({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "8px",
-    padding: "16px"
+    padding: "16px",
+    [theme.breakpoints.down("md")]: {
+        flexDirection: "column",
+        alignItems: "stretch",
+        gap: "16px",
+    },
 });
 
 export const SalesIcon = styled('div')({
@@ -26,55 +30,46 @@ export const SalesIcon = styled('div')({
     },
 });
 
-export const ActivityLogContainer = styled(Box)(({ theme }) => ({
+export const ActivityLogContainer = styled('div')(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(3),
 }));
 
-export const ActivityLogHeader = styled(Box)({
+export const ActivityLogHeader = styled('div')({
     marginBottom: 24,
 });
 
 
-export const ActivityList = styled(Box)({
+export const ActivityList = styled('div')({
     display: "flex",
     flexDirection: "column",
-    gap: 0,
-});
-
-export const ActivityItem = styled(Box)({
-    display: "flex",
-    gap: 16,
+    gap: "24px",
     position: "relative",
-    paddingBottom: 24,
 });
 
-export const ActivityDot = styled(Box)<{ isLast?: boolean }>(({ isLast }) => ({
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
+export const ActivityTimeLine = styled('div')({
+    position: "absolute",
+    top: "8px",
+    left: "4px",
+    bottom: "56px",
+    width: "1px",
     backgroundColor: theme.palette.app.border,
-    marginTop: 6,
-    flexShrink: 0,
-    position: "relative",
-    "&::after": isLast
-        ? {}
-        : {
-            content: '""',
-            position: "absolute",
-            top: 8,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 1,
-            height: "calc(100% + 16px)",
-            backgroundColor: theme.palette.app.border,
-        },
-}));
+});
 
-export const ActivityContent = styled(Box)({
-    flex: 1,
+export const ActivityItem = styled('div')({
+    display: "flex",
+    gap: "8px",
+    position: "relative"
+});
+
+export const ActivityDot = styled('div')({
+    width: "9px",
+    height: "9px",
+    marginTop: "8px",
+    borderRadius: "50%",
+    backgroundColor: theme.palette.app.border
 });
 
 export const CardContainer = styled('div')({

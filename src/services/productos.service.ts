@@ -571,6 +571,30 @@ export async function updateProduct(
     }
     return patch<ProductDetailDto>(`${PRODUCTS_BASE}/${id}`, payload);
 }
+
+export interface ProductBranchAvailabilityItem {
+    branchId: number;
+    isAvailable: boolean;
+}
+
+export interface ProductBranchAvailabilityRow {
+    id: number;
+    branchId: number;
+    minStock: number;
+    maxStock: number | null;
+    isAvailable: boolean;
+}
+
+export async function updateProductBranchesAvailability(
+    productId: number,
+    branches: ProductBranchAvailabilityItem[],
+): Promise<ApiResult<ProductBranchAvailabilityRow[]>> {
+    return patch<ProductBranchAvailabilityRow[]>(
+        `${PRODUCTS_BASE}/${productId}/branches`,
+        { branches },
+    );
+}
+
 export interface ProductListItem {
     id: number;
     code: string;

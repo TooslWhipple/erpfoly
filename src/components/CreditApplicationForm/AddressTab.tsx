@@ -1,5 +1,6 @@
 import { Button, CircularProgress, Grid, Stack, Typography } from "@mui/material";
-import { FormTextField } from "@/components/Form";
+import { FormTextField, FormSelect } from "@/components/Form";
+import type { SelectOption } from "@/components/Form/FormSelect";
 import type { HousingTypeCatalogItem } from "@/services/address.service";
 import type { AddressTabErrors, AddressTabValues } from "@/types/credit-application-form.types";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
@@ -7,6 +8,11 @@ import { RadioButton } from "@/components";
 import { Card } from "./styles";
 import { PostalCodeSettlementFields } from "./PostalCodeSettlementFields";
 import { StreetAddressFields } from "./StreetAddressFields";
+
+const RESIDENCE_TIME_UNIT_OPTIONS: SelectOption[] = [
+  { value: "months", label: "Meses" },
+  { value: "years", label: "Años" },
+];
 
 interface AddressTabProps {
   values: AddressTabValues;
@@ -134,22 +140,35 @@ export function AddressTab({
           </Stack>
         </Grid>
 
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             required
             label="Tiempo en el domicilio"
             placeholder="Ingresa"
-            value={values.residenceTime}
-            onChange={(event) => onFieldChange("residenceTime", event.target.value)}
-            error={Boolean(errors.residenceTime)}
-            helperText={errors.residenceTime}
+            value={values.residenceTimeValue}
+            onChange={(event) => onFieldChange("residenceTimeValue", event.target.value)}
+            error={Boolean(errors.residenceTimeValue)}
+            helperText={errors.residenceTimeValue}
             disabled={saving}
-            inputProps={{ maxLength: 32 }}
+            inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: 2 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormSelect
+            label="Meses / años"
+            placeholder="Selecciona"
+            required
+            value={values.residenceTimeUnit}
+            onChange={(event) => onFieldChange("residenceTimeUnit", event.target.value as AddressTabValues["residenceTimeUnit"])}
+            options={RESIDENCE_TIME_UNIT_OPTIONS}
+            error={Boolean(errors.residenceTimeUnit)}
+            helperText={errors.residenceTimeUnit}
+            disabled={saving}
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 9 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <FormTextField
             fullWidth
             label="Domicilio anterior"
@@ -165,10 +184,20 @@ export function AddressTab({
             fullWidth
             label="Tiempo"
             placeholder="Ingresa"
-            value={values.previousResidenceTime}
-            onChange={(event) => onFieldChange("previousResidenceTime", event.target.value)}
+            value={values.previousResidenceTimeValue}
+            onChange={(event) => onFieldChange("previousResidenceTimeValue", event.target.value)}
             disabled={saving}
-            inputProps={{ maxLength: 32 }}
+            inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: 2 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 3 }}>
+          <FormSelect
+            label="Meses / años"
+            placeholder="Selecciona"
+            value={values.previousResidenceTimeUnit}
+            onChange={(event) => onFieldChange("previousResidenceTimeUnit", event.target.value as AddressTabValues["previousResidenceTimeUnit"])}
+            options={RESIDENCE_TIME_UNIT_OPTIONS}
+            disabled={saving}
           />
         </Grid>
 

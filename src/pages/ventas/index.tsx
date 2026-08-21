@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Stack } from "@mui/material";
-import { Title, TabFilters, TableCrud } from "@/components";
+import { Title, TabFilters, TableCrud, StatusChip } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction } from "@/components/TableCrud";
+import type { StatusChipVariant } from "@/components/StatusChip/styles";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales, cancelSale } from "@/services/ventas.service";
@@ -20,6 +21,7 @@ import {
   SALE_STATUS_CHIP_VARIANTS,
 } from "@/utils/saleStatus";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+
 const SEARCH_DEBOUNCE_MS = 300;
 const STATUS_TABS: TabOption[] = [
   {
@@ -39,15 +41,15 @@ const STATUS_TABS: TabOption[] = [
     value: "pending",
   },
 ];
-const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
-  CREDIT: "#a855f7",
-  CASH: "#10b981",
-  LAYAWAY: "#f59e0b",
-};
 const PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
   CREDIT: "Crédito",
   CASH: "Contado",
   LAYAWAY: "Apartado",
+};
+const PAYMENT_TYPE_CHIP_VARIANTS: Record<SalePaymentType, StatusChipVariant> = {
+  CREDIT: "warning",
+  CASH: "success",
+  LAYAWAY: "infoAlt",
 };
 function formatRelativeDate(value: unknown): string {
   const d = value == null ? dayjs() : dayjs(value as string | number | Date);
@@ -174,26 +176,13 @@ export default function Ventas() {
       size: "sm",
       format: (value) => {
         const type = value as SalePaymentType;
-        const color = PAYMENT_TYPE_COLORS[type] ?? "#6b7280";
         const label = PAYMENT_TYPE_LABELS[type] ?? String(value);
         return (
-          <Box
-            component="span"
-            sx={{
-              display: "inline-block",
-              px: 1,
-              py: 0.25,
-              borderRadius: "4px",
-              border: `1px solid ${color}`,
-              color,
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              lineHeight: 1.6,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {label}
-          </Box>
+          <StatusChip
+            label={label}
+            size="small"
+            variant={PAYMENT_TYPE_CHIP_VARIANTS[type] ?? "default"}
+          />
         );
       },
     },

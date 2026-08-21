@@ -102,6 +102,7 @@ export const NUBARIUM_ID_CAPTURE_CONFIG = {
     front: { enabled: true },
     back: { enabled: true, until: 10000 },
   },
+  // Nubarium: rotates the captured JPEG to landscape for OCR, not the on-screen guide.
   autorotate: true,
   antispoofing: {
     enabled: true,
@@ -153,6 +154,16 @@ export function extractSdkImageDataUrl(...candidates: unknown[]): string {
       continue;
     }
 
+    if (typeof Blob !== "undefined" && candidate instanceof Blob) {
+      return URL.createObjectURL(candidate);
+    }
+
+    if (Array.isArray(candidate)) {
+      const dataUrl = extractSdkImageDataUrl(...candidate);
+      if (dataUrl) return dataUrl;
+      continue;
+    }
+
     if (!candidate || typeof candidate !== "object") continue;
 
     const record = candidate as Record<string, unknown>;
@@ -166,6 +177,12 @@ export function extractSdkImageDataUrl(...candidates: unknown[]): string {
       record.front,
       record.back,
       record.face,
+      record.anverso,
+      record.reverso,
+      record.jpeg,
+      record.jpg,
+      record.png,
+      record.file,
     ]) {
       const dataUrl = extractSdkImageDataUrl(nested);
       if (dataUrl) return dataUrl;
@@ -175,25 +192,56 @@ export function extractSdkImageDataUrl(...candidates: unknown[]): string {
   return "";
 }
 
+export function extractNubariumExecutionId(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const record = data as Record<string, unknown>;
+  for (const key of ["id", "executionId", "execution_id", "uuid", "transactionId"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
 export function extractIdCaptureImages(data: {
   front?: unknown;
   back?: unknown;
-  resources?: Record<string, unknown> | { front?: unknown; back?: unknown; id?: { front?: unknown; back?: unknown } };
+  anverso?: unknown;
+  reverso?: unknown;
+  images?: { front?: unknown; back?: unknown };
+  resources?: Record<string, unknown> | {
+    front?: unknown;
+    back?: unknown;
+    images?: { front?: unknown; back?: unknown };
+    id?: { front?: unknown; back?: unknown };
+  };
 }): { frontDataUrl: string; backDataUrl: string } {
   const resources = data.resources;
+  const resourceRecord = resources && typeof resources === "object"
+    ? resources as Record<string, unknown>
+    : undefined;
   const idResources =
-    resources && typeof resources === "object" && "id" in resources
-      ? (resources as { id?: { front?: unknown; back?: unknown } }).id
+    resourceRecord && "id" in resourceRecord
+      ? (resourceRecord.id as { front?: unknown; back?: unknown } | undefined)
+      : undefined;
+  const resourceImages =
+    resourceRecord && "images" in resourceRecord
+      ? (resourceRecord.images as { front?: unknown; back?: unknown } | undefined)
       : undefined;
 
   const frontDataUrl = extractSdkImageDataUrl(
     data.front,
-    resources && typeof resources === "object" ? resources.front : undefined,
+    data.anverso,
+    data.images?.front,
+    resourceRecord?.front,
+    resourceImages?.front,
     idResources?.front,
   );
   const backDataUrl = extractSdkImageDataUrl(
     data.back,
-    resources && typeof resources === "object" ? resources.back : undefined,
+    data.reverso,
+    data.images?.back,
+    resourceRecord?.back,
+    resourceImages?.back,
     idResources?.back,
   );
 
@@ -264,20 +312,16 @@ interface NubariumClearable {
   clear(): void;
 }
 
-/** Evita errores del SDK cuando React ya desmontó el contenedor root. */
+/** Evita errores del SDK cuando React ya desmontó el contenedor root. Always try clear() — skipping it leaks the camera. */
 export function safeClearNubariumCapture(
   capture: NubariumClearable | null | undefined,
-  rootElementId?: string,
+  _rootElementId?: string,
 ): void {
   if (!capture) return;
-
-  if (rootElementId && !document.getElementById(rootElementId)) {
-    return;
-  }
 
   try {
     capture.clear();
   } catch {
-    // El SDK puede fallar si el DOM fue removido antes del cleanup.
+    // The SDK may throw if the DOM was removed before cleanup.
   }
 }

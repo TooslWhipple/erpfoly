@@ -124,10 +124,10 @@ export const CaptureCardChangeRow = styled("div")(({ theme }) => ({
 
 export const CaptureAmountInput = styled(OutlinedInput)(({ theme }) => ({
   width: "100%",
-  backgroundColor: "transparent",
+  backgroundColor: theme.palette.background.paper,
   borderRadius: 12,
   "& .MuiOutlinedInput-notchedOutline": {
-    border: "none",
+    border: `1px solid ${theme.palette.app.border}`,
   },
   "& .MuiOutlinedInput-input": {
     padding: theme.spacing(1.5),
@@ -136,6 +136,26 @@ export const CaptureAmountInput = styled(OutlinedInput)(({ theme }) => ({
     textAlign: "center",
     color: theme.palette.text.primary,
   },
+}));
+
+export const InstallmentsControl = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: theme.spacing(0.75),
+  width: "100%",
+  padding: theme.spacing(1.5, 2),
+  minHeight: 44,
+  borderRadius: 12,
+  backgroundColor: theme.palette.app.chip.variants.info.background,
+  color: theme.palette.app.chip.variants.info.color,
+}));
+
+export const InstallmentsControlDivider = styled("div")(({ theme }) => ({
+  height: 1,
+  width: "100%",
+  backgroundColor: theme.palette.app.chip.variants.info.color,
+  opacity: 0.25,
 }));
 
 export const PaymentMethodButton = styled(Button, {

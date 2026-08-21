@@ -122,6 +122,8 @@ export { InvoiceSelectorModal } from "./InvoiceSelector";
 export type { InvoiceSelectorModalProps } from "./InvoiceSelector";
 export { ReceptionForm } from "./ReceptionForm";
 export type { ReceptionFormProps } from "./ReceptionForm";
+export { PrinterSetupDialog } from "./printing";
+export type { PrinterSetupDialogProps } from "./printing";
 export type {
   ReceptionConfirmVariant,
   SendToCostingModalProps,

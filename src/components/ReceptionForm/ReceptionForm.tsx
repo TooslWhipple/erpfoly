@@ -14,6 +14,8 @@ import type { StatusChipVariant } from "@/components/StatusChip";
 import { NumberInput } from "@/components/Folypuntos";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
 import type { ReceptionConfirmVariant } from "@/components/ReceptionOrdersModal/SendToCostingModal";
+import { PrinterSetupDialog } from "@/components/printing";
+import { useLabelPrinter } from "@/hooks/printing/useLabelPrinter";
 import type { SelectableInvoice } from "@/types/invoice-selector.types";
 import type {
   ReceptionArticle,
@@ -225,6 +227,13 @@ export function ReceptionForm({
 }: ReceptionFormProps) {
   const router = useRouter();
   const showError = useSnackbarStore((state) => state.showError);
+  const {
+    progress: printProgress,
+    isConfigured,
+    printerProfile,
+    acknowledgePrinterSetup,
+    printReceptionLabels,
+  } = useLabelPrinter();
   const [articles, setArticles] = useState<ReceptionArticle[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articlesError, setArticlesError] = useState<string | null>(null);
@@ -235,7 +244,7 @@ export function ReceptionForm({
   const [status, setStatus] = useState<ReceptionDetailStatus>("draft");
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [printProgress, setPrintProgress] = useState<number | null>(null);
+  const [printerSetupOpen, setPrinterSetupOpen] = useState(false);
   const [baselineLabels, setBaselineLabels] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [currentReceptionId, setCurrentReceptionId] = useState<number | null>(
@@ -368,16 +377,19 @@ export function ReceptionForm({
 
   const handleOpenPrimaryAction = () => {
     if (status === "in_costing" || status === "costed") return;
+    const willPrintLabels =
+      status === "draft" || (status === "pre_captured" && extraLabels > 0);
+    if (willPrintLabels && !isConfigured) {
+      setPrinterSetupOpen(true);
+      return;
+    }
     setActivePanel("confirm");
   };
 
-  const simulatePrintProgress = async () => {
-    setPrintProgress(0);
-    for (let value = 8; value <= 100; value += 12) {
-      await new Promise((resolve) => setTimeout(resolve, 120));
-      setPrintProgress(Math.min(value, 100));
-    }
-    setPrintProgress(null);
+  const handlePrinterSetupConfirm = () => {
+    acknowledgePrinterSetup();
+    setPrinterSetupOpen(false);
+    setActivePanel("confirm");
   };
 
   const buildSavePayload = () => ({
@@ -405,6 +417,9 @@ export function ReceptionForm({
     setSubmitError(null);
     try {
       if (status === "draft" || (status === "pre_captured" && extraLabels > 0)) {
+        const printMode =
+          status === "pre_captured" && extraLabels > 0 ? "extra" : "all";
+        const skip = printMode === "extra" ? baselineLabels : 0;
         const payload = buildSavePayload();
         const result =
           currentReceptionId != null
@@ -424,8 +439,17 @@ export function ReceptionForm({
         setStatus(mapReceptionDetailStatus(detail.status));
         setBaselineLabels(getBaselineLabelsFromDetail(detail));
         syncServerInvoiceState(detail.invoices);
+        try {
+          await printReceptionLabels(detail.id, { mode: printMode, skip });
+        } catch (printErr) {
+          const message =
+            printErr instanceof Error
+              ? printErr.message
+              : "La recepción se guardó, pero no se pudieron imprimir las etiquetas";
+          showError(message);
+          setSubmitError(message);
+        }
         setActivePanel(null);
-        await simulatePrintProgress();
         if (mode === "edit" && onSaved) {
           onSaved(detail.id);
         }
@@ -476,7 +500,6 @@ export function ReceptionForm({
       );
     } finally {
       setConfirmLoading(false);
-      setPrintProgress(null);
     }
   };
 
@@ -733,6 +756,14 @@ export function ReceptionForm({
         hasQuantityMismatch={quantityMismatch}
         loading={confirmLoading && printProgress == null}
         printProgress={printProgress}
+        printerName={printerProfile.displayName}
+      />
+
+      <PrinterSetupDialog
+        open={printerSetupOpen}
+        onClose={() => setPrinterSetupOpen(false)}
+        onConfirm={handlePrinterSetupConfirm}
+        printerProfile={printerProfile}
       />
     </PageContainer>
   );

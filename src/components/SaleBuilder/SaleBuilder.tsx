@@ -154,6 +154,20 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function chosenSourcesAvailable(
+  sources: { quantity: number; available: number }[],
+): number | undefined {
+  if (sources.length === 0) return undefined;
+  return sources
+    .filter((src) => src.quantity > 0)
+    .reduce((sum, src) => sum + src.available, 0);
+}
+
+function toCheckoutDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.slice(0, 10);
+}
+
 const DELIVERY_TYPE_LABELS: Record<"delivery" | "pickup", string> = {
   delivery: "A domicilio",
   pickup: "En tienda o bodega",
@@ -544,6 +558,11 @@ export function SaleBuilder({
         setDeliveryBranchOverridden(true);
       }
     }
+
+    const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
+    if (hydratedDeliveryDate) {
+      setCheckoutDeliveryDate(hydratedDeliveryDate);
+    }
   }
 
   if (
@@ -556,6 +575,11 @@ export function SaleBuilder({
   }
 
   const syncDeliverySelection = async (saleId: number) => {
+    const deliveryDate =
+      deliveryType === "pickup"
+        ? effectivePickupDate || checkoutDeliveryDate || undefined
+        : checkoutDeliveryDate ?? undefined;
+
     if (deliveryType === "delivery") {
       const clientPrimaryAddress =
         selectedClient?.addresses?.find((a) => a.isPrimary) ??
@@ -567,12 +591,14 @@ export function SaleBuilder({
         await setDeliveryDate(saleId, {
           delivery_type: "ADDRESS",
           address_id: addressId,
+          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
       await setDeliveryDate(saleId, {
         delivery_type: "BRANCH",
         branch_id: effectiveDeliveryBranch.id,
+        ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
       });
     }
   };
@@ -967,6 +993,7 @@ export function SaleBuilder({
   const lockedBranch = cartBranch ?? selectionBranch;
 
   const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
+  const isCheckoutView = view === "checkout";
 
   // La sucursal desde la que se está cobrando en este momento (caja activa
   // del cajero), no la sucursal del carrito/venta — el backend valida la
@@ -974,16 +1001,31 @@ export function SaleBuilder({
   const activeSessionQuery = useQuery({
     queryKey: ["cash-register-session-summary"],
     queryFn: () => getSessionSummary(),
-    enabled: isCardPayment,
+    enabled: isCheckoutView,
     staleTime: 60_000,
   });
   const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
   const paymentTerminalsQuery = useQuery({
     queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
     queryFn: () => getPaymentTerminalsCatalog(paymentTerminalBranchId!),
-    enabled: isCardPayment && paymentTerminalBranchId != null,
+    enabled: isCheckoutView && paymentTerminalBranchId != null,
     staleTime: 60_000,
   });
+  const paymentTerminals = paymentTerminalsQuery.data ?? [];
+  const paymentTerminalsLoading =
+    isCheckoutView &&
+    (activeSessionQuery.isLoading || paymentTerminalsQuery.isLoading);
+  const hasPaymentTerminals = paymentTerminals.length > 0;
+
+  if (
+    isCheckoutView &&
+    !paymentTerminalsLoading &&
+    !hasPaymentTerminals &&
+    (cardAmount !== "" || selectedTerminal != null)
+  ) {
+    setCardAmount("");
+    setSelectedTerminal(null);
+  }
 
   const isBranchSourceLocked = (src: {
     sourceType: string;
@@ -1142,9 +1184,8 @@ export function SaleBuilder({
     // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
     // solo se miraba la fuente "branch", así que elegir desde "Bodega"
     // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
-    const availableFromChosenSources = productSources
-      .filter((src) => src.quantity > 0)
-      .reduce((sum, src) => sum + src.available, 0);
+    const availableFromChosenSources =
+      chosenSourcesAvailable(productSources) ?? 0;
     const backorderedQuantity = Math.max(
       0,
       totalQty - availableFromChosenSources,
@@ -1214,17 +1255,16 @@ export function SaleBuilder({
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          const quantity = Math.max(0, item.quantity + delta);
+          const uncapped = Math.max(0, item.quantity + delta);
+          const maxQty = chosenSourcesAvailable(item.sources);
+          const quantity =
+            maxQty === undefined ? uncapped : Math.min(uncapped, maxQty);
           // Sin `sources` (línea hidratada de una venta retomada) no hay
           // existencia de sucursal a mano para recalcular — se conserva el
           // último valor que confirmó el backend hasta el próximo sync.
           if (item.sources.length === 0) return { ...item, quantity };
-          // Misma lógica que handleAddToCart: suma la existencia de todas
-          // las fuentes que se usaron para cubrir este item (sucursal y/o
-          // bodega), no solo la de "esta sucursal".
-          const availableFromChosenSources = item.sources
-            .filter((src) => src.quantity > 0)
-            .reduce((sum, src) => sum + src.available, 0);
+          const availableFromChosenSources =
+            chosenSourcesAvailable(item.sources) ?? 0;
           return {
             ...item,
             quantity,
@@ -1259,9 +1299,15 @@ export function SaleBuilder({
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
+    const available =
+      productDetail?.inventorySources.find((s) => s.sourceKey === sourceKey)
+        ?.available ?? 0;
     setQuantityMap((prev) => ({
       ...prev,
-      [sourceKey]: Math.max(0, (prev[sourceKey] ?? 0) + delta),
+      [sourceKey]: Math.max(
+        0,
+        Math.min(available, (prev[sourceKey] ?? 0) + delta),
+      ),
     }));
   };
 
@@ -1750,6 +1796,7 @@ export function SaleBuilder({
                                   )
                                 }
                                 min={0}
+                                max={src.available}
                                 disabled={branchLocked}
                                 size="medium"
                                 iconSize={14}
@@ -1850,6 +1897,7 @@ export function SaleBuilder({
                                       )
                                     }
                                     min={0}
+                                    max={src.available}
                                     disabled={branchLocked}
                                     size="medium"
                                     iconSize={14}
@@ -1886,7 +1934,9 @@ export function SaleBuilder({
     const canRegister =
       !cobrarMutation.isPending &&
       totalPaid >= amountToPay &&
-      !exceedsCashLimit;
+      !exceedsCashLimit &&
+      (!isCardPayment ||
+        (hasPaymentTerminals && selectedTerminal != null));
 
     return (
       <PageShell>
@@ -2242,8 +2292,14 @@ export function SaleBuilder({
               cashLimitErrorMessage={MAX_CASH_SALE_PAYMENT_MESSAGE}
               selectedTerminal={selectedTerminal}
               onTerminalChange={setSelectedTerminal}
-              terminals={paymentTerminalsQuery.data ?? []}
-              terminalsLoading={paymentTerminalsQuery.isLoading}
+              terminals={paymentTerminals}
+              terminalsLoading={paymentTerminalsLoading}
+              cardPaymentDisabled={
+                paymentTerminalsLoading || !hasPaymentTerminals
+              }
+              showNoTerminalsWarning={
+                !paymentTerminalsLoading && !hasPaymentTerminals
+              }
               showChange={paymentType !== "LAYAWAY"}
               change={change}
               canRegister={canRegister}
@@ -2443,6 +2499,7 @@ export function SaleBuilder({
                       currentBranchId={CURRENT_BRANCH_ID}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
+                      qtyMax={chosenSourcesAvailable(item.sources)}
                     />
                   ))}
                 </Stack>

@@ -42,6 +42,7 @@ export interface SendToCostingModalProps {
   loading?: boolean;
   /** When set (0–100), shows print progress instead of action buttons. */
   printProgress?: number | null;
+  printerName?: string;
 }
 
 const VARIANT_COPY: Record<
@@ -79,6 +80,7 @@ export function SendToCostingModal({
   hasQuantityMismatch = false,
   loading = false,
   printProgress = null,
+  printerName,
 }: SendToCostingModalProps) {
   const [reason, setReason] = useState("");
   const copy = VARIANT_COPY[variant];
@@ -178,6 +180,12 @@ export function SendToCostingModal({
                   <StatValue>{totalLabels}</StatValue>
                 </StatRow>
               )}
+              {printerName ? (
+                <StatRow>
+                  <StatLabel>Impresora:</StatLabel>
+                  <StatValue>{printerName}</StatValue>
+                </StatRow>
+              ) : null}
             </StatsContainer>
           )}
 

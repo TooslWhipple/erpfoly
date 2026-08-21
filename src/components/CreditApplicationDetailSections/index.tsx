@@ -20,6 +20,8 @@ export interface SectionContentProps {
     url: string,
     backgroundColor?: string,
   ) => void;
+  onConsultBuro?: () => void | Promise<void>;
+  isConsultingBuro?: boolean;
 }
 
 const SECTION_MAP: Record<
@@ -35,7 +37,12 @@ const SECTION_MAP: Record<
     <DocumentationSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
   ),
   "credit-bureau": (props) => (
-    <CreditBureauSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
+    <CreditBureauSection
+      detail={props.detail}
+      onOpenImageViewer={props.onOpenImageViewer}
+      onConsultBuro={props.onConsultBuro}
+      isConsultingBuro={props.isConsultingBuro}
+    />
   ),
   biometrics: (props) => (
     <BiometricsSection detail={props.detail} onOpenImageViewer={props.onOpenImageViewer} />
@@ -43,8 +50,24 @@ const SECTION_MAP: Record<
   "purchase-intention": (props) => <PurchaseIntentionSection detail={props.detail} />,
 };
 
-export function SectionContent({ detail, activeSection, onOpenImageViewer }: SectionContentProps) {
+export function SectionContent({
+  detail,
+  activeSection,
+  onOpenImageViewer,
+  onConsultBuro,
+  isConsultingBuro,
+}: SectionContentProps) {
   const RenderSection = SECTION_MAP[activeSection];
   if (!RenderSection) return null;
-  return <>{RenderSection({ detail, activeSection, onOpenImageViewer })}</>;
+  return (
+    <>
+      {RenderSection({
+        detail,
+        activeSection,
+        onOpenImageViewer,
+        onConsultBuro,
+        isConsultingBuro,
+      })}
+    </>
+  );
 }

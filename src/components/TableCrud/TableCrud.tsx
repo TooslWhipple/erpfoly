@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Skeleton, Table, TableBody, Typography } from "@mui/material";
+import { Button, Checkbox, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import { formatDate, formatDateOnly } from "@/utils/date";
@@ -118,6 +118,10 @@ interface TableCrudProps<T> {
   onRowsPerPageChange?: (rowsPerPage: number) => void;
   rowsPerPageOptions?: number[];
   onRowClick?: (row: T) => void;
+  hidePagination?: boolean;
+  selectable?: boolean;
+  selectedRowKeys?: Set<string | number>;
+  onSelectedRowKeysChange?: (keys: Set<string | number>) => void;
 }
 
 export function TableCrud<T>({
@@ -134,6 +138,10 @@ export function TableCrud<T>({
   onRowsPerPageChange,
   rowsPerPageOptions = [10, 25, 50],
   onRowClick,
+  hidePagination = false,
+  selectable = false,
+  selectedRowKeys,
+  onSelectedRowKeysChange,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -325,12 +333,59 @@ export function TableCrud<T>({
 
   const total = totalRows ?? rows?.length ?? 0;
   const hasActions = visibleActions && visibleActions.length > 0;
+  const selectionEnabled = selectable && selectedRowKeys != null && onSelectedRowKeysChange != null;
+
+  const getRowKeyValue = (row: T): string | number => {
+    const value = row[rowKey];
+    if (typeof value === "string" || typeof value === "number") {
+      return value;
+    }
+    return String(value);
+  };
+
+  const visibleRowKeys = rows?.map(getRowKeyValue) ?? [];
+  const allVisibleSelected =
+    selectionEnabled &&
+    visibleRowKeys.length > 0 &&
+    visibleRowKeys.every((key) => selectedRowKeys.has(key));
+  const someVisibleSelected =
+    selectionEnabled &&
+    visibleRowKeys.some((key) => selectedRowKeys.has(key)) &&
+    !allVisibleSelected;
+
+  const handleToggleRow = (row: T) => {
+    if (!selectionEnabled) return;
+    const key = getRowKeyValue(row);
+    const next = new Set(selectedRowKeys);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    onSelectedRowKeysChange(next);
+  };
+
+  const handleToggleAllVisible = () => {
+    if (!selectionEnabled) return;
+    const next = new Set(selectedRowKeys);
+    if (allVisibleSelected) {
+      visibleRowKeys.forEach((key) => next.delete(key));
+    } else {
+      visibleRowKeys.forEach((key) => next.add(key));
+    }
+    onSelectedRowKeysChange(next);
+  };
 
   const renderSkeletonRows = () => {
     const skeletonRows = Array.from({ length: rowsPerPage }, (_, index) => index);
 
     return skeletonRows.map((index) => (
       <StyledTableRow key={`skeleton-${index}`}>
+        {selectionEnabled && (
+          <StyledTableCell align="center" style={{ minWidth: 48, width: 48 }}>
+            <Skeleton variant="circular" width={20} height={20} animation="wave" />
+          </StyledTableCell>
+        )}
         {columns.map((column) => {
           const width = getColumnWidth(column);
           const maxWidth = getColumnMaxWidth(column);
@@ -367,6 +422,17 @@ export function TableCrud<T>({
   const renderTableHeader = () => (
     <StyledTableHead>
       <StyledTableRow>
+        {selectionEnabled && (
+          <StyledHeaderCell align="center" style={{ minWidth: 48, width: 48 }}>
+            <Checkbox
+              size="small"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
+              onChange={handleToggleAllVisible}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </StyledHeaderCell>
+        )}
         {columns.map((column) => {
           const width = getColumnWidth(column);
           const maxWidth = getColumnMaxWidth(column);
@@ -404,7 +470,11 @@ export function TableCrud<T>({
               renderSkeletonRows()
             ) : !rows?.length ? (
               <StyledTableRow>
-                <StyledTableCell colSpan={columns.length + (hasActions ? 1 : 0)}>
+                <StyledTableCell
+                  colSpan={
+                    columns.length + (hasActions ? 1 : 0) + (selectionEnabled ? 1 : 0)
+                  }
+                >
                   <EmptyStateContainer>
                     <Typography variant="body2" color="text.secondary">
                       {emptyMessage}
@@ -421,6 +491,19 @@ export function TableCrud<T>({
                   onClick={() => onRowClick?.(row)}
                   sx={onRowClick ? { cursor: "pointer" } : undefined}
                 >
+                  {selectionEnabled && (
+                    <StyledTableCell
+                      align="center"
+                      style={{ minWidth: 48, width: 48 }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={selectedRowKeys.has(getRowKeyValue(row))}
+                        onChange={() => handleToggleRow(row)}
+                      />
+                    </StyledTableCell>
+                  )}
                   {columns.map((column) => {
                     const value = getValue(row, column.id);
                     return renderCell(value, column, row);
@@ -446,7 +529,7 @@ export function TableCrud<T>({
         </Table>
       </StyledTableContainer>
 
-      {total > 0 && (
+      {!hidePagination && total > 0 && (
         <StyledTablePagination
           slots={{ root: "div" }}
           rowsPerPageOptions={rowsPerPageOptions}

@@ -15,8 +15,9 @@ import { SectionContent } from "@/components/CreditApplicationDetailSections";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { VerticalSidebarTabItem } from "@/components/VerticalSidebarTabs";
 import type { CreditApplicationDetailSection } from "@/types/solicitud-credito-detail.types";
-import { getCreditApplicationById } from "@/services/creditApplications.service";
+import { getCreditApplicationById, consultCreditBureau } from "@/services/creditApplications.service";
 import { mapCreditApplicationDetailResponseToReviewDetail } from "@/lib/creditApplicationReviewDetailMapper";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   DetailLayout,
   SidebarColumn,
@@ -87,6 +88,9 @@ export default function CreditApplicationReviewPage() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [requestAdditionalInfoOpen, setRequestAdditionalInfoOpen] =
     useState(false);
+  const [isConsultingBuro, setIsConsultingBuro] = useState(false);
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
   const idString = typeof id === "string" ? id : undefined;
   const numericId = idString !== undefined ? Number(idString) : NaN;
   const idIsValid = idString !== undefined && Number.isFinite(numericId);
@@ -105,6 +109,27 @@ export default function CreditApplicationReviewPage() {
         : null,
     [detailQuery.data, idIsValid, numericId],
   );
+  const handleConsultBuro = useCallback(async () => {
+    if (!idString) return;
+    setIsConsultingBuro(true);
+    try {
+      const result = await consultCreditBureau(idString);
+      await detailQuery.refetch();
+      if (!result) {
+        showError("No se pudo consultar Buró de Crédito.");
+        return;
+      }
+      if (result.success || result.consultStatus === "SUCCESS") {
+        showSuccess(result.message || "Consulta a Buró realizada correctamente.");
+        return;
+      }
+      showError(result.message || "La consulta a Buró falló.");
+    } catch {
+      showError("No se pudo consultar Buró de Crédito.");
+    } finally {
+      setIsConsultingBuro(false);
+    }
+  }, [detailQuery, idString, showError, showSuccess]);
   const breadcrumbs: BreadcrumbItem[] = [
     {
       label: "Solicitudes de crédito",
@@ -331,6 +356,8 @@ export default function CreditApplicationReviewPage() {
                 detail={detail}
                 activeSection={activeSection}
                 onOpenImageViewer={handleOpenImageViewer}
+                onConsultBuro={handleConsultBuro}
+                isConsultingBuro={isConsultingBuro}
               />
             </RevisionContentWrapper>
           </ContentColumn>

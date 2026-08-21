@@ -3,6 +3,7 @@ import { unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
+import { downloadBlob, printPdfBlob } from "@/lib/printing";
 import type {
   SaleListItem,
   GetSalesParams,
@@ -450,35 +451,9 @@ export async function printAndDownloadSaleInvoicePdf(
   }
 
   const blob = new Blob([response.data], { type: contentType });
-  const blobUrl = window.URL.createObjectURL(blob);
 
-  // 1. Descargar el archivo PDF
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  // 2. Abrir ventana/diálogo de impresión automáticamente
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.src = blobUrl;
-  document.body.appendChild(iframe);
-
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (e) {
-      console.warn("Impresión de iframe no soportada:", e);
-    }
-  };
+  downloadBlob(blob, filename);
+  await printPdfBlob(blob);
 }
 
 export async function printSaleInvoicePdfOnly(
@@ -492,26 +467,7 @@ export async function printSaleInvoicePdfOnly(
     (response.headers["content-type"] as string | undefined) ?? "application/pdf";
 
   const blob = new Blob([response.data], { type: contentType });
-  const blobUrl = window.URL.createObjectURL(blob);
-
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.src = blobUrl;
-  document.body.appendChild(iframe);
-
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (e) {
-      console.warn("Impresión de iframe no soportada:", e);
-    }
-  };
+  await printPdfBlob(blob);
 }
 
 export type GetRedDeliveriesResponse = PaginatedRowsResponse<RedDeliveryListItem>;

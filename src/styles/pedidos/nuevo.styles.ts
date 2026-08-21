@@ -36,22 +36,8 @@ export const StickySidebarGrid = styled(Grid)(({ theme }) => ({
 export const SuggestionsList = styled('div')(({ theme }) => ({
     display: "flex",
     gap: theme.spacing(2),
-    overflowX: "auto",
+    overflowX: "hidden",
     paddingBottom: theme.spacing(1),
-    "&::-webkit-scrollbar": {
-        height: 6,
-    },
-    "&::-webkit-scrollbar-track": {
-        backgroundColor: theme.palette.background.default,
-        borderRadius: 3,
-    },
-    "&::-webkit-scrollbar-thumb": {
-        backgroundColor: theme.palette.app.border,
-        borderRadius: 3,
-        "&:hover": {
-            backgroundColor: "#D4D4D8",
-        },
-    },
 }));
 
 export const StockCell = styled('div')<{ isLow: boolean }>(({ theme, isLow }) => ({

@@ -168,6 +168,14 @@ function toCheckoutDate(value: string | null | undefined): string | null {
   return value.slice(0, 10);
 }
 
+const CHANGE_LINK_SX = {
+  textTransform: "none" as const,
+  fontWeight: 600,
+  px: 1,
+  py: 0.25,
+  minWidth: "auto",
+};
+
 const DELIVERY_TYPE_LABELS: Record<"delivery" | "pickup", string> = {
   delivery: "A domicilio",
   pickup: "En tienda o bodega",
@@ -1825,7 +1833,7 @@ export function SaleBuilder({
                   variant="text"
                   size="small"
                   onClick={() => setShowOtherBranches(true)}
-                  sx={{ mt: 1.5, px: 0 }}
+                  sx={{ mt: 1.5, px: 1 }}
                 >
                   Consultar existencia en otras sucursales
                 </Button>
@@ -2660,10 +2668,7 @@ export function SaleBuilder({
                     variant="text"
                     disabled={isCajeroMode}
                     sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      p: 0,
-                      minWidth: 0,
+                      ...CHANGE_LINK_SX,
                       fontSize: "0.875rem",
                     }}
                     onClick={() => {
@@ -2764,6 +2769,9 @@ export function SaleBuilder({
                         justifyContent: "flex-start",
                         mt: 1.5,
                         minHeight: 44,
+                        height: 44,
+                        maxHeight: 44,
+                        px: 1.5,
                       }}
                       onClick={() => setCreditIntakeModalOpen(true)}
                     >
@@ -2803,7 +2811,13 @@ export function SaleBuilder({
                     variant="outlined"
                     size="small"
                     startIcon={<Plus size={16} />}
-                    sx={{ justifyContent: "flex-start", minHeight: 44 }}
+                    sx={{
+                      justifyContent: "flex-start",
+                      minHeight: 44,
+                      height: 44,
+                      maxHeight: 44,
+                      px: 1.5,
+                    }}
                     onClick={() => setCreateClientModalOpen(true)}
                   >
                     Registrar nuevo cliente
@@ -2890,8 +2904,8 @@ export function SaleBuilder({
                       border: "1px solid",
                       borderColor: "divider",
                       borderRadius: 1.5,
-                      px: 1.5,
-                      py: 0.75,
+                      px: 2,
+                      py: 1,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -2983,10 +2997,7 @@ export function SaleBuilder({
                       size="small"
                       variant="text"
                       sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                       }}
                       onClick={() => setDeliveryAddressModalOpen(true)}
@@ -3006,9 +3017,7 @@ export function SaleBuilder({
                       size="small"
                       variant="text"
                       sx={{
-                        textTransform: "none",
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                         mb: 1,
                       }}
@@ -3059,10 +3068,7 @@ export function SaleBuilder({
                       size="small"
                       variant="text"
                       sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                       }}
                       onClick={() => setBranchPickerOpen(true)}

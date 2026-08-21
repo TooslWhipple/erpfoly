@@ -37,6 +37,7 @@ import {
   DetailHeader,
   DetailPageShell,
   InvoiceActionsGrid,
+  invoiceDownloadButtonSx,
 } from "@/styles/ventas/detalle.styles";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -639,11 +640,11 @@ export default function VentaDetalle() {
                               border: "1px solid",
                               borderColor: "primary.main",
                               borderRadius: 1.5,
-                              px: 1.5,
-                              py: 0.75,
+                              px: 2,
+                              py: 1,
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: 1.25,
                               cursor: "pointer",
                               color: "primary.main",
                               fontWeight: 500,
@@ -697,7 +698,7 @@ export default function VentaDetalle() {
                     startIcon={<FileCode size={15} />}
                     disabled={downloadingType === "xml"}
                     onClick={() => handleDownloadInvoice("xml")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     XML
                   </Button>
@@ -709,7 +710,7 @@ export default function VentaDetalle() {
                     startIcon={<FileText size={15} />}
                     disabled={downloadingType === "pdf"}
                     onClick={() => handleDownloadInvoice("pdf")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     PDF
                   </Button>
@@ -721,7 +722,7 @@ export default function VentaDetalle() {
                     startIcon={<Archive size={15} />}
                     disabled={downloadingType === "zip"}
                     onClick={() => handleDownloadInvoice("zip")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     ZIP
                   </Button>
@@ -1164,7 +1165,13 @@ export default function VentaDetalle() {
                         </Typography>
                         <Button
                           size="small"
-                          sx={{ textTransform: "none", minWidth: 0, p: 0, fontWeight: 500 }}
+                          sx={{
+                            textTransform: "none",
+                            minWidth: "auto",
+                            px: 1,
+                            py: 0.25,
+                            fontWeight: 500,
+                          }}
                           onClick={() => setAddressModalOpen(true)}
                         >
                           Cambiar

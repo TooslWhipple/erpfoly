@@ -431,6 +431,14 @@ export const ChangeRow = styled(Box)(({ theme }) => ({
   alignItems: "center",
 }));
 
-export const TouchButton = styled(Button)({
+export const TouchButton = styled(Button)(({ theme }) => ({
   minHeight: 44,
-});
+  height: 44,
+  maxHeight: 44,
+  paddingLeft: theme.spacing(2),
+  paddingRight: theme.spacing(2),
+  "& .MuiButton-startIcon": {
+    marginLeft: 0,
+    marginRight: theme.spacing(1),
+  },
+}));

@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   Chip,
   CircularProgress,
@@ -254,17 +255,17 @@ export function SaleCheckoutPaymentPanel({
             : "El cobro con varias tarjetas aún no está disponible"
         }
       >
-        <span>
+        <Box component="span" sx={{ alignSelf: "flex-start", display: "inline-flex" }}>
           <Button
             variant="text"
             size="small"
             startIcon={<PlusCircle size={16} />}
             disabled
-            sx={{ px: 0, alignSelf: "flex-start" }}
+            sx={{ px: 1.5 }}
           >
             Agregar otra tarjeta
           </Button>
-        </span>
+        </Box>
       </Tooltip>
 
       {exceedsCashLimit && (

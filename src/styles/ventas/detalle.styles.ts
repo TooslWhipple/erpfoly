@@ -58,9 +58,20 @@ export const InvoiceActionsGrid = styled(Box)(({ theme }) => ({
   gridTemplateColumns: "1fr",
   gap: theme.spacing(1),
   [theme.breakpoints.up("sm")]: {
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   },
 }));
+
+export const invoiceDownloadButtonSx = {
+  minHeight: 44,
+  height: 44,
+  maxHeight: 44,
+  px: 1.5,
+  "& .MuiButton-startIcon": {
+    marginLeft: 0,
+    marginRight: 1,
+  },
+} as const;
 
 export const DatePickerBox = styled(Box)(({ theme }) => ({
   display: "flex",

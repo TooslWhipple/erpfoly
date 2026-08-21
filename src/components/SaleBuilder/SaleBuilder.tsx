@@ -154,6 +154,77 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+const DELIVERY_TYPE_LABELS: Record<"delivery" | "pickup", string> = {
+  delivery: "A domicilio",
+  pickup: "En tienda o bodega",
+};
+
+function formatCheckoutDeliveryDate(date: string | null): string {
+  if (!date) return "Sin fecha";
+  return dayjs(date)
+    .format("dddd D [de] MMMM, YYYY")
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function ReadOnlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <Box sx={{ mb: 1.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        display="block"
+        mb={0.5}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2">{value?.trim() ? value : "—"}</Typography>
+    </Box>
+  );
+}
+
+function DeliveryMapPreview({
+  coords,
+  apiKey,
+}: {
+  coords: { lat: number; lng: number } | null;
+  apiKey: string;
+}) {
+  if (coords && apiKey) {
+    return (
+      <Box sx={{ mb: 1.5 }}>
+        <StaticLocationMap coords={coords} apiKey={apiKey} height={130} />
+      </Box>
+    );
+  }
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: 130,
+        bgcolor: "grey.200",
+        borderRadius: 1,
+        mb: 1.5,
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Typography variant="caption" color="text.disabled">
+        {coords
+          ? "Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa"
+          : "Sin coordenadas registradas"}
+      </Typography>
+    </Box>
+  );
+}
+
 export interface SaleBuilderProps {
   resumeSaleId: number | null;
   onExit: () => void;
@@ -2495,18 +2566,24 @@ export function SaleBuilder({
             <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Tipo de venta
             </Typography>
-            <PaymentTypeRow>
-              {PAYMENT_OPTIONS.map((opt) => (
-                <PaymentTypeButton
-                  key={opt.value}
-                  active={paymentType === opt.value}
-                  disabled={isCajeroMode}
-                  onClick={() => setPaymentType(opt.value)}
-                >
-                  {opt.label}
-                </PaymentTypeButton>
-              ))}
-            </PaymentTypeRow>
+            {isCajeroMode ? (
+              <Typography variant="body2">
+                {PAYMENT_OPTIONS.find((opt) => opt.value === paymentType)
+                  ?.label ?? "—"}
+              </Typography>
+            ) : (
+              <PaymentTypeRow>
+                {PAYMENT_OPTIONS.map((opt) => (
+                  <PaymentTypeButton
+                    key={opt.value}
+                    active={paymentType === opt.value}
+                    onClick={() => setPaymentType(opt.value)}
+                  >
+                    {opt.label}
+                  </PaymentTypeButton>
+                ))}
+              </PaymentTypeRow>
+            )}
           </SidebarCard>
 
           <SidebarCard>
@@ -2685,6 +2762,61 @@ export function SaleBuilder({
                 Entrega
               </Typography>
 
+              {isCajeroMode ? (
+                <>
+                  <ReadOnlyField
+                    label="Fecha de entrega"
+                    value={formatCheckoutDeliveryDate(checkoutDeliveryDate)}
+                  />
+                  <ReadOnlyField
+                    label="Tipo de entrega"
+                    value={
+                      deliveryType
+                        ? DELIVERY_TYPE_LABELS[deliveryType]
+                        : "Sin tipo de entrega"
+                    }
+                  />
+                  {deliveryType === "delivery" && (
+                    <>
+                      <DeliveryMapPreview
+                        coords={primaryCoords}
+                        apiKey={GOOGLE_MAPS_API_KEY}
+                      />
+                      <ReadOnlyField
+                        label="Dirección de entrega"
+                        value={
+                          useCustomDeliveryAddress
+                            ? customDeliveryAddress?.formatted
+                            : selectedClient.primaryAddressFormatted
+                        }
+                      />
+                      <ReadOnlyField
+                        label="Email"
+                        value={selectedClient.email}
+                      />
+                      <ReadOnlyField
+                        label="Teléfono de quién recibe"
+                        value={selectedClient.phoneNumber}
+                      />
+                    </>
+                  )}
+                  {deliveryType === "pickup" && (
+                    <ReadOnlyField
+                      label="Sucursal de entrega"
+                      value={
+                        effectiveDeliveryBranch
+                          ? `${effectiveDeliveryBranch.label}${
+                              effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                                ? " [Actual]"
+                                : ""
+                            }`
+                          : undefined
+                      }
+                    />
+                  )}
+                </>
+              ) : (
+                <>
               {showCheckoutDeliveryDateField && (
                 <Box sx={{ mb: 1.5 }}>
                   <Typography
@@ -2696,9 +2828,7 @@ export function SaleBuilder({
                     Fecha de entrega (opcional)
                   </Typography>
                   <Box
-                    onClick={() =>
-                      !isCajeroMode && setCheckoutDeliveryDateModalOpen(true)
-                    }
+                    onClick={() => setCheckoutDeliveryDateModalOpen(true)}
                     sx={{
                       border: "1px solid",
                       borderColor: "divider",
@@ -2708,20 +2838,16 @@ export function SaleBuilder({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      cursor: isCajeroMode ? "default" : "pointer",
-                      color: isCajeroMode
-                        ? "text.disabled"
-                        : checkoutDeliveryDate
-                          ? "text.primary"
-                          : "primary.main",
+                      cursor: "pointer",
+                      color: checkoutDeliveryDate
+                        ? "text.primary"
+                        : "primary.main",
                       fontWeight: 500,
                       fontSize: "0.85rem",
                     }}
                   >
                     {checkoutDeliveryDate
-                      ? dayjs(checkoutDeliveryDate)
-                          .format("dddd D [de] MMMM, YYYY")
-                          .replace(/^\w/, (c) => c.toUpperCase())
+                      ? formatCheckoutDeliveryDate(checkoutDeliveryDate)
                       : "Asignar fecha de entrega"}
                     <Calendar size={16} />
                   </Box>
@@ -2732,7 +2858,6 @@ export function SaleBuilder({
                 fullWidth
                 size="small"
                 displayEmpty
-                disabled={isCajeroMode}
                 value={deliveryType ?? ""}
                 onChange={(e) =>
                   setDeliveryType(
@@ -2783,35 +2908,10 @@ export function SaleBuilder({
 
               {deliveryType === "delivery" && (
                 <>
-                  {primaryCoords && GOOGLE_MAPS_API_KEY ? (
-                    <Box sx={{ mb: 1.5 }}>
-                      <StaticLocationMap
-                        coords={primaryCoords}
-                        apiKey={GOOGLE_MAPS_API_KEY}
-                        height={130}
-                      />
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 130,
-                        bgcolor: "grey.200",
-                        borderRadius: 1,
-                        mb: 1.5,
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography variant="caption" color="text.disabled">
-                        {primaryCoords
-                          ? "Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa"
-                          : "Sin coordenadas registradas"}
-                      </Typography>
-                    </Box>
-                  )}
+                  <DeliveryMapPreview
+                    coords={primaryCoords}
+                    apiKey={GOOGLE_MAPS_API_KEY}
+                  />
 
                   <Stack
                     direction="row"
@@ -2825,7 +2925,6 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,
@@ -2849,7 +2948,6 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         p: 0,
@@ -2903,7 +3001,6 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,
@@ -2940,6 +3037,8 @@ export function SaleBuilder({
                       Entrega hoy mismo en tienda.
                     </Alert>
                   )}
+                </>
+              )}
                 </>
               )}
             </SidebarCard>

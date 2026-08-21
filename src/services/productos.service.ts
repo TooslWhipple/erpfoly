@@ -1,4 +1,4 @@
-import { get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
+import { del, get, patch, post, unwrapOrThrow, type ApiResult, type PaginatedRowsResponse } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import {
     normalizeSavePromotionPayload,
@@ -243,11 +243,24 @@ export async function getProductPreviewCode(
 
 export async function getProductPricePreview(
     costo: number,
-    margenPercent: number
+    margenPercent: number,
+    iva?: number,
 ): Promise<ApiResult<ProductPricePreviewResponse>> {
     return get<ProductPricePreviewResponse>(`${PRODUCTS_BASE}/price-preview`, {
-        params: { costo, margenPercent },
+        params: {
+            costo,
+            margenPercent,
+            ...(iva != null && Number.isFinite(iva) ? { iva } : {}),
+        },
     });
+}
+
+export async function deleteProduct(id: number): Promise<ApiResult<{ message: string }>> {
+    return del<{ message: string }>(`${PRODUCTS_BASE}/${id}`);
+}
+
+export async function restoreProduct(id: number): Promise<ApiResult<{ message: string }>> {
+    return patch<{ message: string }>(`${PRODUCTS_BASE}/${id}/restore`);
 }
 
 export async function getCurrentExchangeRate(): Promise<ApiResult<ExchangeRateResponse>> {

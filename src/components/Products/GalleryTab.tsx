@@ -9,6 +9,7 @@ interface GalleryTabProps {
     onAddImage: (files: FileList | readonly File[]) => void;
     onReplaceImage: (index: number, file: File) => void;
     onRemoveImage?: (index: number) => void;
+    readOnly?: boolean;
 }
 
 function productSlotLabel(index: number): string {
@@ -21,6 +22,7 @@ export function GalleryTab({
     onAddImage,
     onReplaceImage,
     onRemoveImage,
+    readOnly = false,
 }: GalleryTabProps) {
     return (
         <FormCard>
@@ -39,6 +41,7 @@ export function GalleryTab({
                 onRemoveImage={onRemoveImage}
                 getImageAlt={(_image, index) => `Product image ${index + 1}`}
                 getSlotLabel={(index) => productSlotLabel(index)}
+                disabled={readOnly}
             />
         </FormCard>
     );

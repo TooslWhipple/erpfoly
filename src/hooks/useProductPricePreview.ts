@@ -8,10 +8,12 @@ const DEBOUNCE_MS = 400;
 export function useProductPricePreview(
   costo: number,
   marginPercent: number,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; iva?: number },
 ) {
   const debouncedCosto = useDebouncedValue(costo, DEBOUNCE_MS);
   const debouncedMarginPercent = useDebouncedValue(marginPercent, DEBOUNCE_MS);
+  const iva = options?.iva;
+  const debouncedIva = useDebouncedValue(iva ?? null, DEBOUNCE_MS);
   const enabled =
     (options?.enabled ?? true) &&
     debouncedCosto > 0 &&
@@ -23,11 +25,13 @@ export function useProductPricePreview(
       "price-preview",
       debouncedCosto,
       debouncedMarginPercent,
+      debouncedIva,
     ],
     queryFn: async () => {
       const result = await getProductPricePreview(
         debouncedCosto,
         debouncedMarginPercent,
+        debouncedIva ?? undefined,
       );
       if (result.error) {
         throw new Error(result.error.message);

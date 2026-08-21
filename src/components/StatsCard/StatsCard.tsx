@@ -64,9 +64,11 @@ export function StatsCard({
       <Typography variant="subtitle1">{label}</Typography>
       <Stack direction="row" spacing={0.5} alignItems="center">
         <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>
-        {
-          comparison?.type === "increase" ? <ArrowUp size={16} color='#DC2626' /> : <ArrowDown size={16} color="#4ADE80" />
-        }
+        {comparison?.type === "increase" ? (
+          <ArrowUp size={16} color='#DC2626' />
+        ) : comparison?.type === "decrease" ? (
+          <ArrowDown size={16} color="#4ADE80" />
+        ) : null}
       </Stack>
       {
         comparison && <Typography variant="body2" color="text.secondary">{getComparisonText()}</Typography>

@@ -1,6 +1,6 @@
-import { Alert, Button, Stack } from "@mui/material";
+import { Stack } from "@mui/material";
 import { useRouter } from "next/router";
-import { Title, TabFilters, CosteoList } from "@/components";
+import { Title, TabFilters, CosteoList, CardListPagination } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { CosteoCardData } from "@/components/CosteoCard";
 import { useCosteosList } from "@/hooks/costeos/useCosteosList";
@@ -19,7 +19,10 @@ export default function CosteosPage() {
     loading,
     activeTab,
     isEmpty,
-    handleTabChange
+    page,
+    total,
+    setPage,
+    handleTabChange,
   } = useCosteosList();
 
   const navigateToDetail = (costeo: CosteoCardData) => {
@@ -44,6 +47,12 @@ export default function CosteosPage() {
         emptyMessage={
           isEmpty ? "No hay costeos para este filtro" : "No hay costeos"
         }
+      />
+
+      <CardListPagination
+        page={page}
+        total={total}
+        onPageChange={setPage}
       />
     </Stack>
   );

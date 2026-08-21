@@ -1,5 +1,7 @@
-type RouterUrl = string | { pathname?: string; query?: unknown };
-type RouterAs = string | { pathname?: string } | undefined;
+import type { NextRouter } from "next/router";
+
+type RouterUrl = Parameters<NextRouter["push"]>[0];
+type RouterAs = Parameters<NextRouter["push"]>[1];
 
 function resolveAsPath(url: RouterUrl, as?: RouterAs): string {
   if (typeof as === "string") {
@@ -11,7 +13,7 @@ function resolveAsPath(url: RouterUrl, as?: RouterAs): string {
   if (typeof url === "string") {
     return url;
   }
-  if (url && typeof url === "object" && url.pathname) {
+  if (url && typeof url === "object" && "pathname" in url && url.pathname) {
     return String(url.pathname);
   }
   return "";
@@ -37,7 +39,7 @@ export function isSameRouteNavigation(
   url: RouterUrl,
   as?: RouterAs
 ): boolean {
-  if (url && typeof url === "object" && url.pathname) {
+  if (url && typeof url === "object" && "pathname" in url && url.pathname) {
     if (String(url.pathname) !== currentPathname) return false;
     const nextId = queryId(url.query);
     const currentId = queryId(currentQuery);

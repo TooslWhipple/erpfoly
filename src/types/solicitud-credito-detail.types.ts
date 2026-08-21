@@ -96,9 +96,14 @@ export interface CreditApplicationDocumentation {
 
 export interface CreditApplicationCreditBureau {
   clientAuthorized: boolean;
+  queryStatus: "NOT_QUERIED" | "SUCCESS" | "FAILED";
+  score: number | null;
   scoreLabel: string;
   scoreLevel: "excellent" | "good" | "fair" | "poor";
+  queriedAt: string | null;
   signatureUrl?: string;
+  canQueryNow: boolean;
+  missingFields: string[];
 }
 
 export interface BiometricItem {

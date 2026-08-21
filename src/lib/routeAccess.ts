@@ -226,7 +226,20 @@ export function normalizePathname(pathname: string): string {
 
 export function isPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
+  if (normalizedPath.startsWith("/compartido/morosidad/")) {
+    return true;
+  }
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
+}
+
+/** Login/recovery routes that authenticated users should leave. */
+export function isAuthEntryPublicRoute(pathname: string): boolean {
+  const normalizedPath = normalizePathname(pathname);
+  return PUBLIC_ROUTES.some((route) => normalizedPath === route);
+}
+
+export function isStandalonePublicRoute(pathname: string): boolean {
+  return normalizePathname(pathname).startsWith("/compartido/morosidad/");
 }
 
 /**
@@ -239,6 +252,10 @@ export function shouldUseAppLayout(pathname: string, token: string | null): bool
   }
 
   const normalizedPath = normalizePathname(pathname);
+
+  if (isStandalonePublicRoute(normalizedPath)) {
+    return false;
+  }
 
   if (isPublicRoute(normalizedPath) && !token) {
     return false;

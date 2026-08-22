@@ -339,11 +339,11 @@ export default function VentaDetalle() {
 
   if (isLoading) {
     return (
-      <DetailPageShell sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} mb={3}>
+      <DetailPageShell>
+        <DetailHeader>
           <Skeleton variant="circular" width={32} height={32} />
           <Skeleton variant="text" width={220} height={36} />
-        </Stack>
+        </DetailHeader>
         <DetailGrid>
           <Skeleton variant="rounded" height={200} />
           <Skeleton variant="rounded" height={300} />
@@ -354,9 +354,17 @@ export default function VentaDetalle() {
 
   if (isError || !sale) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">No se pudo cargar la venta.</Alert>
-      </Box>
+      <DetailPageShell>
+        <DetailHeader>
+          <InlineMobileMenuButton />
+          <Typography variant="h6" fontWeight={700}>
+            Detalle de la venta
+          </Typography>
+        </DetailHeader>
+        <DetailGrid>
+          <Alert severity="error">No se pudo cargar la venta.</Alert>
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
 
@@ -392,31 +400,23 @@ export default function VentaDetalle() {
   const isDraftSale = sale.status === "DRAFT";
 
   return (
-    <DetailPageShell sx={{ p: { xs: 2, md: 3 } }}>
+    <DetailPageShell>
       <DetailHeader>
         <InlineMobileMenuButton />
         <IconButton
-          size="medium"
+          size="small"
           onClick={() => router.push("/ventas")}
           aria-label="Volver a ventas"
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1.5,
-            bgcolor: "background.paper",
-          }}
         >
           <X size={18} />
         </IconButton>
-        <Typography variant="h5" fontWeight={700}>
+        <Typography variant="h6" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
           Detalle de la venta
         </Typography>
         {isSaleCancelled && (
           <StatusChip label="Cancelada" size="small" variant="error" />
         )}
       </DetailHeader>
-
-      <Divider sx={{ mb: 3, borderColor: "divider" }} />
 
       <DetailGrid>
         <Box>

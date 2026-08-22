@@ -25,6 +25,8 @@ export interface SaleListItem {
   clientName: string | null;
   productName: string | null;
   productImageUrl: string | null;
+  itemCount: number;
+  totalAmount: number;
   createdAt: string;
 }
 

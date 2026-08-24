@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { securityHeaders } from "./src/lib/securityHeaders";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -27,6 +28,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@mui/x-date-pickers"],
   reactCompiler: true,
   reactStrictMode: true,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   env: {
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
   },

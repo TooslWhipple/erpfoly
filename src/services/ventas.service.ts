@@ -570,3 +570,9 @@ export async function getInvoicingConfig(): Promise<{ facturacionConfirmacionVen
   const res: ApiResult<{ facturacionConfirmacionVentaEnabled: boolean }> = await get(`${BASE}/invoicing-config`);
   return unwrapOrThrow(res);
 }
+
+export async function retryInvoiceBilling(
+  invoiceId: number,
+): Promise<ApiResult<unknown>> {
+  return post<unknown>(`${BASE}/invoices/${invoiceId}/retry`);
+}

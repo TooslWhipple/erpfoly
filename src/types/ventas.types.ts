@@ -205,6 +205,7 @@ export interface SaleDetail {
   credit: SaleDetailCredit | null;
   layaway: SaleDetailLayaway | null;
   discountRequest: SaleDiscountRequest | null;
+  invoices?: any[];
 }
 
 export type DeliveryAvailability = "available" | "low" | "none";

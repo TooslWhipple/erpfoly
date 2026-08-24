@@ -51,6 +51,7 @@ import {
   downloadInvoiceFileById,
   printSaleInvoicePdfOnly,
   getInvoicingConfig,
+  retryInvoiceBilling,
 } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
@@ -182,6 +183,22 @@ export default function VentaDetalle() {
       }
     }
   }, [isNew, saleId, sale, autoPrinted, isFacturacionConfirmacionEncendida]);
+
+  const retryMutation = useMutation({
+    mutationFn: (invoiceId: number) => retryInvoiceBilling(invoiceId),
+    onSuccess: (res) => {
+      if (res.error) {
+        snackbar.showError(res.error.message || "No se pudo reintentar el timbrado");
+      } else {
+        snackbar.showSuccess("Reintento de timbrado iniciado con éxito");
+        queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      }
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || "Ocurrió un error al reintentar el timbrado";
+      snackbar.showError(msg);
+    },
+  });
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {
@@ -732,10 +749,38 @@ export default function VentaDetalle() {
                         <Typography variant="caption" color="text.secondary">
                           Monto: ${Number(invoice.amount ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Estado: {invoice.status === "GENERATED" ? "GENERADA" : invoice.status}
+                        <Typography
+                          variant="caption"
+                          color={invoice.status === "FAILED" ? "error" : "text.secondary"}
+                          fontWeight={invoice.status === "FAILED" ? 700 : 400}
+                        >
+                          Estado: {
+                            invoice.status === "GENERATED" ? "GENERADA" :
+                            invoice.status === "FAILED" ? "ERROR EN TIMBRADO" :
+                            invoice.status === "PENDING" ? "PENDIENTE" : invoice.status
+                          }
                         </Typography>
                       </Box>
+                      {invoice.status === "FAILED" && (
+                        <Alert
+                          severity="error"
+                          sx={{ mt: 0.5, mb: 1.5, p: 0.75, fontSize: "0.725rem", borderRadius: 1, display: "flex", alignItems: "center" }}
+                          action={
+                            <Button
+                              color="error"
+                              size="small"
+                              variant="contained"
+                              onClick={() => retryMutation.mutate(invoice.id)}
+                              disabled={retryMutation.isPending}
+                              sx={{ fontSize: "0.65rem", py: 0.25, px: 1, minHeight: 24, minWidth: 60, color: "#fff", textTransform: "none" }}
+                            >
+                              {retryMutation.isPending ? "Reintentando..." : "Reintentar"}
+                            </Button>
+                          }
+                        >
+                          <strong>Error:</strong> {invoice.errorMessage || "Error desconocido al timbrar."}
+                        </Alert>
+                      )}
                       <InvoiceActionsGrid>
                         <Button
                           fullWidth
@@ -743,7 +788,11 @@ export default function VentaDetalle() {
                           color="inherit"
                           size="small"
                           startIcon={<FileCode size={15} />}
-                          disabled={downloadingSpecificId === `${invoice.id}-xml`}
+                          disabled={
+                            invoice.status === "PENDING" ||
+                            invoice.status === "FAILED" ||
+                            downloadingSpecificId === `${invoice.id}-xml`
+                          }
                           onClick={() => handleDownloadSpecificInvoice(invoice.id, "xml", invoice.uuid)}
                           sx={{ minHeight: 36, fontSize: "0.75rem" }}
                         >
@@ -767,7 +816,11 @@ export default function VentaDetalle() {
                           color="primary"
                           size="small"
                           startIcon={<Archive size={15} />}
-                          disabled={downloadingSpecificId === `${invoice.id}-zip`}
+                          disabled={
+                            invoice.status === "PENDING" ||
+                            invoice.status === "FAILED" ||
+                            downloadingSpecificId === `${invoice.id}-zip`
+                          }
                           onClick={() => handleDownloadSpecificInvoice(invoice.id, "zip", invoice.uuid)}
                           sx={{ minHeight: 36, fontSize: "0.75rem", color: "#fff" }}
                         >

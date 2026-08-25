@@ -207,6 +207,8 @@ export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
 export { MonthlySalesGoalsModal } from "./Sellers";
 export type { MonthlySalesGoalsModalProps } from "./Sellers";
 export { CreditApplicationIntakeModal } from "./CreditApplicationIntakeModal";
+export { ProductCodeScannerDialog } from "./ProductCodeScannerDialog";
+export type { ProductCodeScannerDialogProps } from "./ProductCodeScannerDialog";
 export {
   CreditApplicationFormPage,
   BasicInformationTab,

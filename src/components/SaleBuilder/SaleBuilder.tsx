@@ -78,6 +78,7 @@ import {
   getLayawayTerms,
   createSaleDraft,
   updateSaleClient,
+  updateSalePurchaseType,
   updateSaleLayawayTerm,
   addSaleItem,
   updateSaleItem,
@@ -129,6 +130,7 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
+import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
 import {
   getDiscountRequestReasonLabel,
@@ -366,6 +368,7 @@ export function SaleBuilder({
   const todayIsoDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
   const [productSearch, setProductSearch] = useState("");
+  const [productScannerOpen, setProductScannerOpen] = useState(false);
   const [productPage, setProductPage] = useState(0);
   const [productLimit, setProductLimit] = useState(10);
   const debouncedProductSearch = useDebouncedValue(
@@ -669,6 +672,9 @@ export function SaleBuilder({
           if (clientRes.error) throw new Error(clientRes.error.message);
         }
 
+        const purchaseTypeRes = await updateSalePurchaseType(saleId, pt.id);
+        if (purchaseTypeRes.error) throw new Error(purchaseTypeRes.error.message);
+
         const currentIds = new Set(
           cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
         );
@@ -724,6 +730,7 @@ export function SaleBuilder({
         void queryClient.invalidateQueries({
           queryKey: ["resume-sale-draft", resumeSaleId],
         });
+        void queryClient.invalidateQueries({ queryKey: ["sale-drafts"] });
       } else {
         showSuccess(
           "Cotización guardada. Puedes retomarla desde Cotizaciones guardadas.",
@@ -1158,6 +1165,13 @@ export function SaleBuilder({
     setView("product-detail");
   };
 
+  const handleProductCodeScanned = (code: string) => {
+    setProductScannerOpen(false);
+    setProductSearch(code);
+    setProductPage(0);
+    setView("search");
+  };
+
   const handleAddToCart = useCallback(() => {
     if (!productDetail) return;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
@@ -1394,6 +1408,7 @@ export function SaleBuilder({
 
   if (view === "search") {
     return (
+      <>
       <PageShell>
         <SearchHeader>
           <InlineMobileMenuButton />
@@ -1416,9 +1431,15 @@ export function SaleBuilder({
               sx={{ bgcolor: "background.paper" }}
             />
           </SearchInputWrap>
-          <TouchButton variant="outlined" startIcon={<ScanLine size={16} />}>
-            Escanear artículos
-          </TouchButton>
+          {!isCajeroMode && (
+            <TouchButton
+              variant="outlined"
+              startIcon={<ScanLine size={16} />}
+              onClick={() => setProductScannerOpen(true)}
+            >
+              Escanear artículos
+            </TouchButton>
+          )}
         </SearchHeader>
 
         <PageContent>
@@ -1469,6 +1490,12 @@ export function SaleBuilder({
           />
         </PageContent>
       </PageShell>
+      <ProductCodeScannerDialog
+        open={productScannerOpen}
+        onClose={() => setProductScannerOpen(false)}
+        onCodeScanned={handleProductCodeScanned}
+      />
+      </>
     );
   }
 
@@ -2474,6 +2501,7 @@ export function SaleBuilder({
                     variant="option"
                     color="inherit"
                     startIcon={<ScanLine size={16} />}
+                    onClick={() => setProductScannerOpen(true)}
                   >
                     Escanear artículos
                   </TouchButton>
@@ -3494,6 +3522,12 @@ export function SaleBuilder({
             open={creditIntakeModalOpen}
             onClose={() => setCreditIntakeModalOpen(false)}
             onFinalize={handleCreditIntakeFinalize}
+          />
+
+          <ProductCodeScannerDialog
+            open={productScannerOpen}
+            onClose={() => setProductScannerOpen(false)}
+            onCodeScanned={handleProductCodeScanned}
           />
 
           {resumeSaleId !== null && (

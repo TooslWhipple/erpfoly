@@ -155,6 +155,15 @@ export async function updateSaleClient(
   });
 }
 
+export async function updateSalePurchaseType(
+  saleId: number,
+  purchaseTypeId: number,
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/purchase-type`, {
+    purchase_type_id: purchaseTypeId,
+  });
+}
+
 export async function updateSaleLayawayTerm(
   saleId: number,
   layawayTermId: number,

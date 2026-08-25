@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Button, CircularProgress, Typography } from "@mui/material";
+import { Button, CircularProgress, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { PenSquare } from "lucide-react";
+import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
 import { SideModal } from "@/components/SideModal";
+import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
+import { CaptureStepRoot } from "@/components/NubariumCapturePreview/styles";
+import { useCameraDevices } from "@/hooks/useCameraDevices";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import { releaseCameraHardware } from "@/utils/cameraDevices";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import {
   FooterActions,
@@ -17,6 +22,7 @@ import {
   StepContainer,
   StepContent,
   StepProgress,
+  StepProgressRow,
 } from "./styles";
 
 interface CreditApplicationIntakeModalProps {
@@ -58,6 +64,7 @@ export function CreditApplicationIntakeModal({
   onFinalize,
 }: CreditApplicationIntakeModalProps) {
   const theme = useTheme();
+  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
@@ -68,6 +75,8 @@ export function CreditApplicationIntakeModal({
   const [saving, setSaving] = useState(false);
   const [ineCaptureSessionKey, setIneCaptureSessionKey] = useState(0);
   const [livenessCaptureSessionKey, setLivenessCaptureSessionKey] = useState(0);
+  const [ineCaptureStarted, setIneCaptureStarted] = useState(false);
+  const [livenessCaptureStarted, setLivenessCaptureStarted] = useState(false);
 
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -82,6 +91,32 @@ export function CreditApplicationIntakeModal({
 
   const { isReady: sdkReady, isLoading: sdkLoading, token: sdkToken, error: sdkError, reloadToken } =
     useNubariumSdk({ enabled: open });
+
+  const preferFacing = activeStep === "liveness" ? "user" : "environment";
+  const cameras = useCameraDevices({
+    enabled: open && activeStep !== "signature",
+    preferFacing,
+  });
+
+  const ineCompleted = Boolean(ineFrontImage && ineBackImage);
+  const livenessCompleted = Boolean(selfieImage);
+  const canAutoStartCapture =
+    cameras.preferenceHydrated
+    && cameras.permissionGranted
+    && Boolean(cameras.selectedDeviceId)
+    && Boolean(sdkReady && sdkToken)
+    && (cameras.hasRememberedPreference || cameras.devices.length === 1);
+
+  const ineCaptureLive =
+    open
+    && activeStep === "ine-capture"
+    && !ineCompleted
+    && (ineCaptureStarted || canAutoStartCapture);
+  const livenessCaptureLive =
+    open
+    && activeStep === "liveness"
+    && !livenessCompleted
+    && (livenessCaptureStarted || canAutoStartCapture);
 
   const currentStepIndex = STEP_ORDER.indexOf(activeStep);
   const isLastStep = currentStepIndex === STEP_ORDER.length - 1;
@@ -100,6 +135,7 @@ export function CreditApplicationIntakeModal({
   ]);
 
   const resetModalState = useCallback(() => {
+    releaseCameraHardware();
     setActiveStep("ine-capture");
     setIneExecutionId(null);
     setIneFrontImage(null);
@@ -109,11 +145,14 @@ export function CreditApplicationIntakeModal({
     setSignatureDrawn(false);
     setIneCaptureSessionKey(0);
     setLivenessCaptureSessionKey(0);
+    setIneCaptureStarted(false);
+    setLivenessCaptureStarted(false);
     clearSignatureCanvas();
   }, []);
 
   const handleCloseModal = () => {
     if (saving) return;
+    releaseCameraHardware();
     onClose();
     resetModalState();
   };
@@ -244,10 +283,50 @@ export function CreditApplicationIntakeModal({
     </SdkBootstrapState>
   );
 
+  const captureLive = ineCaptureLive || livenessCaptureLive;
+
+  const startIneCapture = () => {
+    cameras.commitPreferredDevice();
+    setIneCaptureStarted(true);
+  };
+
+  const startLivenessCapture = () => {
+    cameras.commitPreferredDevice();
+    setLivenessCaptureStarted(true);
+  };
+
   const stepProgressHeader = (
-    <StepProgress variant="body2">
-      {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
-    </StepProgress>
+    <StepProgressRow>
+      <StepProgress variant="body2">
+        {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
+      </StepProgress>
+      {captureLive ? (
+        <CameraSwitchControl
+          devices={cameras.devices}
+          value={cameras.selectedDeviceId}
+          onChange={cameras.selectAndRemember}
+          disabled={saving}
+        />
+      ) : null}
+    </StepProgressRow>
+  );
+
+  const renderCameraSelect = (onStart: () => void, helperText: string, startLabel: string) => (
+    <CameraDeviceSelect
+      devices={cameras.devices}
+      value={cameras.selectedDeviceId}
+      onChange={cameras.selectDevice}
+      helperText={helperText}
+      loading={cameras.isLoading}
+      errorMessage={cameras.errorMessage}
+      needsPermission={
+        !cameras.isLoading && (cameras.needsUserGesture || !cameras.permissionGranted)
+      }
+      onRequestPermission={() => void cameras.requestPermission()}
+      onStart={onStart}
+      startLabel={startLabel}
+      disabled={saving}
+    />
   );
 
   return (
@@ -258,8 +337,10 @@ export function CreditApplicationIntakeModal({
       description={stepContent.subtitle}
       headerContent={stepProgressHeader}
       disableClose={saving}
-      maxWidth="md"
+      maxWidth="lg"
       fullWidth
+      fullScreenBreakpoint={SALES_POS_BREAKPOINT}
+      forceFullScreen={isCoarsePointer}
       contentSx={{
         flex: 1,
         minHeight: 0,
@@ -268,29 +349,48 @@ export function CreditApplicationIntakeModal({
         flexDirection: "column",
       }}
     >
-      <StepContainer sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      <StepContainer
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: activeStep === "signature" ? "auto" : "hidden",
+        }}
+      >
         {activeStep === "ine-capture" && (
           <StepContent>
             {!sdkReady || !sdkToken ? (
               renderSdkBootstrapState()
             ) : (
-              <NubariumIdCapture
-                key={ineCaptureSessionKey}
-                token={sdkToken}
-                active={open && activeStep === "ine-capture"}
-                completed={Boolean(ineFrontImage && ineBackImage)}
-                completedResult={
-                  ineFrontImage && ineBackImage
-                    ? {
-                        executionId: ineExecutionId ?? "",
-                        frontDataUrl: ineFrontImage,
-                        backDataUrl: ineBackImage,
-                      }
-                    : null
-                }
-                onSuccess={handleIneCaptureSuccess}
-                onReset={handleIneCaptureReset}
-              />
+              <CaptureStepRoot>
+                {!ineCompleted && !ineCaptureLive
+                  ? renderCameraSelect(
+                      startIneCapture,
+                      "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
+                      "Iniciar captura de INE",
+                    )
+                  : null}
+                {ineCaptureLive || ineCompleted ? (
+                  <NubariumIdCapture
+                    key={`${ineCaptureSessionKey}-${cameras.selectedDeviceId}`}
+                    token={sdkToken}
+                    active={ineCaptureLive}
+                    completed={ineCompleted}
+                    completedResult={
+                      ineFrontImage && ineBackImage
+                        ? {
+                            executionId: ineExecutionId ?? "",
+                            frontDataUrl: ineFrontImage,
+                            backDataUrl: ineBackImage,
+                          }
+                        : null
+                    }
+                    videoDeviceId={cameras.selectedDeviceId}
+                    cameraFacing={cameras.selectedDevice?.facing}
+                    onSuccess={handleIneCaptureSuccess}
+                    onReset={handleIneCaptureReset}
+                  />
+                ) : null}
+              </CaptureStepRoot>
             )}
           </StepContent>
         )}
@@ -300,22 +400,35 @@ export function CreditApplicationIntakeModal({
             {!sdkReady || !sdkToken ? (
               renderSdkBootstrapState()
             ) : (
-              <NubariumFaceCapture
-                key={livenessCaptureSessionKey}
-                token={sdkToken}
-                active={open && activeStep === "liveness"}
-                completed={Boolean(selfieImage)}
-                completedResult={
-                  selfieImage
-                    ? {
-                        executionId: livenessExecutionId ?? "",
-                        faceDataUrl: selfieImage,
-                      }
-                    : null
-                }
-                onSuccess={handleLivenessSuccess}
-                onReset={handleLivenessReset}
-              />
+              <CaptureStepRoot>
+                {!livenessCompleted && !livenessCaptureLive
+                  ? renderCameraSelect(
+                      startLivenessCapture,
+                      "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
+                      "Iniciar prueba de vida",
+                    )
+                  : null}
+                {livenessCaptureLive || livenessCompleted ? (
+                  <NubariumFaceCapture
+                    key={`${livenessCaptureSessionKey}-${cameras.selectedDeviceId}`}
+                    token={sdkToken}
+                    active={livenessCaptureLive}
+                    completed={livenessCompleted}
+                    completedResult={
+                      selfieImage
+                        ? {
+                            executionId: livenessExecutionId ?? "",
+                            faceDataUrl: selfieImage,
+                          }
+                        : null
+                    }
+                    videoDeviceId={cameras.selectedDeviceId}
+                    cameraFacing={cameras.selectedDevice?.facing}
+                    onSuccess={handleLivenessSuccess}
+                    onReset={handleLivenessReset}
+                  />
+                ) : null}
+              </CaptureStepRoot>
             )}
           </StepContent>
         )}

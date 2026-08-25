@@ -6,11 +6,13 @@ import type { ClientPurchasePayment } from "@/types/clientPurchase.types";
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PAID: "Pagado",
   PENDING: "Pendiente",
+  CANCELLED: "Cancelado",
 };
 
 const PAYMENT_STATUS_VARIANTS: Record<string, StatusChipVariant> = {
   PAID: "success",
   PENDING: "default",
+  CANCELLED: "error",
 };
 
 const COLUMNS: DataTableColumn<ClientPurchasePayment>[] = [

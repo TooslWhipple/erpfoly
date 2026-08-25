@@ -5,8 +5,15 @@ import type {
   ClientCollectionActivity,
   ClientCollectionActivityType,
   ClientDetailHeader,
+  ClientDeactivationReason,
   CreateClientCollectionActivityPayload,
+  DeactivateClientPayload,
 } from "@/types/clientes.types";
+import type {
+  CancelClientPurchasePayload,
+  SaleCancelReason,
+} from "@/types/cancelPurchase.types";
+import type { ClientPurchaseDetailApi } from "@/types/clientPurchase.types";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
 export type ClientStatus = "active" | "inactive" | "blocked";
@@ -314,6 +321,43 @@ export async function createClientCollectionActivity(
 ): Promise<ApiResult<ClientCollectionActivity>> {
   return post<ClientCollectionActivity>(
     `${BASE}/${clientId}/collection-activities`,
+    payload
+  );
+}
+
+export async function getClientDeactivationReasons(): Promise<
+  ApiResult<ClientDeactivationReason[]>
+> {
+  return get<ClientDeactivationReason[]>(`${BASE}/deactivation-reasons`);
+}
+
+export async function deactivateClient(
+  clientId: number,
+  payload: DeactivateClientPayload
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return post<ApiSuccessPayload>(`${BASE}/${clientId}/deactivate`, payload);
+}
+
+export async function getSaleCancelReasons(): Promise<
+  ApiResult<SaleCancelReason[]>
+> {
+  return get<SaleCancelReason[]>(`${BASE}/sale-cancel-reasons`);
+}
+
+export async function getClientPurchaseDetail(
+  clientId: number,
+  saleId: number
+): Promise<ApiResult<ClientPurchaseDetailApi>> {
+  return get<ClientPurchaseDetailApi>(`${BASE}/${clientId}/purchases/${saleId}`);
+}
+
+export async function cancelClientPurchase(
+  clientId: number,
+  saleId: number,
+  payload: CancelClientPurchasePayload
+): Promise<ApiResult<ApiSuccessPayload>> {
+  return post<ApiSuccessPayload>(
+    `${BASE}/${clientId}/purchases/${saleId}/cancel`,
     payload
   );
 }

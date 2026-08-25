@@ -17,6 +17,11 @@ export const SideModalHeader = styled(Box)(({ theme }) => ({
   borderTopLeftRadius: 24,
   borderTopRightRadius: 24,
   zIndex: 1,
+  "@media (orientation: landscape) and (max-height: 560px)": {
+    padding: theme.spacing(1, 2),
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
 }));
 
 export const SideModalContent = styled(Stack)(({ theme }) => ({
@@ -29,6 +34,11 @@ export const SideModalContent = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(2, 3, 3),
   borderBottomLeftRadius: 24,
   borderBottomRightRadius: 24,
+  "@media (orientation: landscape) and (max-height: 560px)": {
+    padding: theme.spacing(1, 2, 2),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
 }));
 
 export const PANEL_WIDTHS: Record<string, number> = {

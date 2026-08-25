@@ -101,6 +101,8 @@ export { OrderCard, OrderList } from "./OrderCard";
 export type { OrderCardData, OrderStatus as OrderCardStatus } from "./OrderCard";
 export { CosteoCard, CosteoList } from "./CosteoCard";
 export type { CosteoCardData } from "./CosteoCard";
+export { CardListPagination } from "./CardListPagination";
+export type { CardListPaginationProps } from "./CardListPagination";
 export { CosteoDetailHeader } from "./CosteoDetail";
 export {
   CosteoArticlesTab,
@@ -129,6 +131,8 @@ export { BranchSelectionModal } from "./BranchSelectionModal";
 export type { BranchSelectionModalProps, BranchSelectionResult } from "./BranchSelectionModal";
 export { ProductSuggestionCard } from "./ProductSuggestionCard";
 export type { ProductSuggestionCardProps } from "./ProductSuggestionCard";
+export { SuggestionsCarousel } from "./SuggestionsCarousel";
+export type { SuggestionsCarouselProps } from "./SuggestionsCarousel";
 export { OrderSummarySidebar } from "./OrderSummarySidebar";
 export type { OrderSummarySidebarProps } from "./OrderSummarySidebar";
 export { OrderItemCard } from "./OrderItemCard";
@@ -145,6 +149,8 @@ export { InvoiceSelectorModal } from "./InvoiceSelector";
 export type { InvoiceSelectorModalProps } from "./InvoiceSelector";
 export { ReceptionForm } from "./ReceptionForm";
 export type { ReceptionFormProps } from "./ReceptionForm";
+export { PrinterSetupDialog } from "./printing";
+export type { PrinterSetupDialogProps } from "./printing";
 export type {
   ReceptionConfirmVariant,
   SendToCostingModalProps,

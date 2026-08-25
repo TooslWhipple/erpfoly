@@ -1,5 +1,5 @@
 import { Grid, Typography, Stack, Divider, Button } from "@mui/material";
-import { FormTextField, FormSelect, Plus, Minus, RadioButton } from "@/components";
+import { FormTextField, FormSelect, Plus, RadioButton } from "@/components";
 import { SatCatalogSearchField } from "@/components/SatCatalogSearchField";
 import { FormCard } from "@/styles/catalogos/productos.styles";
 import type { GeneralDataFormState, WarrantyType, FormErrors } from "@/types/productos.types";
@@ -24,6 +24,7 @@ interface GeneralDataTabProps {
     warrantyOptions?: Array<{ value: WarrantyType; label: string }>;
     onOpenNewDepartmentModal?: () => void;
     onOpenNewLineModal?: () => void;
+    readOnly?: boolean;
 }
 
 export function GeneralDataTab({
@@ -37,6 +38,7 @@ export function GeneralDataTab({
     warrantyOptions,
     onOpenNewDepartmentModal,
     onOpenNewLineModal,
+    readOnly = false,
 }: GeneralDataTabProps) {
     const warrantyChoices =
         warrantyOptions && warrantyOptions.length > 0 ? warrantyOptions : DEFAULT_WARRANTY_OPTIONS;
@@ -61,7 +63,9 @@ export function GeneralDataTab({
                         error={Boolean(errors.departmentId)}
                         helperText={errors.departmentId}
                         required
+                        disabled={readOnly}
                     />
+                    {!readOnly && (
                     <Button
                         type="button"
                         variant="text"
@@ -74,6 +78,7 @@ export function GeneralDataTab({
                             Nuevo departamento
                         </span>
                     </Button>
+                    )}
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <FormSelect
@@ -89,9 +94,10 @@ export function GeneralDataTab({
                         helperText={
                             linesLoading ? "Cargando líneas…" : errors.lineId
                         }
-                        disabled={!formState.departmentId || linesLoading}
+                        disabled={!formState.departmentId || linesLoading || readOnly}
                         required
                     />
+                    {!readOnly && (
                     <Button
                         type="button"
                         variant="text"
@@ -105,6 +111,7 @@ export function GeneralDataTab({
                             Nueva línea
                         </span>
                     </Button>
+                    )}
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <FormTextField
@@ -129,7 +136,8 @@ export function GeneralDataTab({
                         error={Boolean(errors.description)}
                         helperText={errors.description}
                         required
-                        autoFocus
+                        autoFocus={!readOnly}
+                        disabled={readOnly}
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -144,6 +152,7 @@ export function GeneralDataTab({
                         error={Boolean(errors.shortName)}
                         helperText={errors.shortName}
                         required
+                        disabled={readOnly}
                     />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -160,6 +169,7 @@ export function GeneralDataTab({
                         error={Boolean(errors.satProductServiceKey)}
                         helperText={errors.satProductServiceKey}
                         required
+                        disabled={readOnly}
                     />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -176,6 +186,7 @@ export function GeneralDataTab({
                         error={Boolean(errors.satUnitOfMeasureKey)}
                         helperText={errors.satUnitOfMeasureKey}
                         required
+                        disabled={readOnly}
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -185,9 +196,13 @@ export function GeneralDataTab({
                         </Typography>
                         <NumberSpinner
                             value={parseInt(formState.piecesCount, 10)}
-                            onChange={(value) => onFieldChange("piecesCount", String(value))}
+                            onChange={(value) => {
+                                onFieldChange("piecesCount", String(value));
+                                onErrorClear("piecesCount");
+                            }}
                             min={MIN_PIECES}
                             max={MAX_PIECES}
+                            disabled={readOnly}
                         />
                     </Stack>
                 </Grid>
@@ -207,7 +222,7 @@ export function GeneralDataTab({
                                 label={opt.label}
                                 checked={formState.warrantyType === opt.value}
                                 onChange={() => onFieldChange("warrantyType", opt.value)}
-
+                                disabled={readOnly}
                             />
                         ))}
                 </Stack>
@@ -225,6 +240,7 @@ export function GeneralDataTab({
                         error={Boolean(errors.warrantyMonths)}
                         helperText={errors.warrantyMonths}
                         required
+                        disabled={readOnly}
                     />
                 }
                 {
@@ -242,6 +258,7 @@ export function GeneralDataTab({
                         error={Boolean(errors.warrantyPolicy)}
                         helperText={errors.warrantyPolicy}
                         required
+                        disabled={readOnly}
                     />
                 }
             </Stack>

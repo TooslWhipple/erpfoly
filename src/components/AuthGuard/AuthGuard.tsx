@@ -9,6 +9,7 @@ import {
   FORBIDDEN_ROUTE,
   getFirstAllowedRoute,
   isPublicRoute,
+  isAuthEntryPublicRoute,
   normalizePathname,
   shouldUseAppLayout,
 } from "@/lib/routeAccess";
@@ -80,6 +81,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     const currentPath = normalizePathname(router.asPath);
     const publicRoute = isPublicRoute(currentPath);
+    const authEntryRoute = isAuthEntryPublicRoute(currentPath);
 
     if (!token) {
       if (!publicRoute) {
@@ -90,7 +92,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     if (validatedToken === token && user) {
-      if (publicRoute || currentPath === "/") {
+      if (authEntryRoute || currentPath === "/") {
         void router.replace(getFirstAllowedRoute(user));
         return;
       }
@@ -121,7 +123,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       setUser(nextUser);
       setValidatedToken(token);
 
-      if (publicRoute || currentPath === "/") {
+      if (authEntryRoute || currentPath === "/") {
         void router.replace(getFirstAllowedRoute(nextUser));
         return;
       }

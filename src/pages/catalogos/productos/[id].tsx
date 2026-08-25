@@ -45,6 +45,7 @@ import {
   productDetailDtoToFormSnapshot,
   type ProductDetailBranchDto,
 } from "@/services/productos.service";
+import { getApiErrorMessage } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useProductFormCatalogs } from "@/hooks/useProductFormCatalogs";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
@@ -147,10 +148,14 @@ function serializeProductFormDirtyState(input: {
       .length,
   });
 }
+const MAX_WARRANTY_MONTHS = 600;
+
 function getProductFormValidationErrors(
   generalData: GeneralDataFormState,
   priceData: PriceFormState,
   isNew: boolean,
+  suppliers: ProductSupplier[],
+  branches: ProductBranch[],
 ): FormErrors {
   const newErrors: FormErrors = {};
   if (!generalData.departmentId) {
@@ -176,11 +181,13 @@ function getProductFormValidationErrors(
   if (!generalData.satUnitOfMeasureKey?.trim()) {
     newErrors.satUnitOfMeasureKey = "La clave de unidad de medida SAT es requerida";
   }
-  if (
-    generalData.warrantyType === "months" &&
-    (!generalData.warrantyMonths || Number(generalData.warrantyMonths) <= 0)
-  ) {
-    newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
+  if (generalData.warrantyType === "months") {
+    const warrantyMonths = Number(generalData.warrantyMonths);
+    if (!generalData.warrantyMonths || warrantyMonths <= 0) {
+      newErrors.warrantyMonths = "Los meses de garantía deben ser mayor a 0";
+    } else if (warrantyMonths > MAX_WARRANTY_MONTHS) {
+      newErrors.warrantyMonths = `Los meses de garantía no pueden ser mayor a ${MAX_WARRANTY_MONTHS}`;
+    }
   }
   if (
     generalData.warrantyType === "policy" &&
@@ -197,6 +204,13 @@ function getProductFormValidationErrors(
     newErrors.piecesCount = "El número de piezas debe ser al menos 1";
   } else if (piecesNum > 9999) {
     newErrors.piecesCount = "El número de piezas no puede ser mayor a 9999";
+  }
+  if (suppliers.length < 1) {
+    newErrors.suppliers = "Debe asignar al menos un proveedor";
+  }
+  if (branches.some((branch) => branch.maxInventory < branch.minInventory)) {
+    newErrors.branches =
+      "El inventario máximo no puede ser menor al mínimo en ninguna sucursal";
   }
   if (isNew) {
     const listCost = Number(priceData.listCost);
@@ -218,7 +232,22 @@ function getProductFormValidationErrors(
       newErrors.exchangeRate = "El tipo de cambio debe ser mayor a 0";
     }
   }
+  if (priceData.iva.trim()) {
+    const iva = Number(priceData.iva);
+    if (!Number.isFinite(iva) || iva < 0 || iva > 100) {
+      newErrors.iva = "El IVA debe estar entre 0 y 100";
+    }
+  }
   return newErrors;
+}
+
+function markFirstGalleryImagePrimary(
+  images: ProductGalleryImage[],
+): ProductGalleryImage[] {
+  return images.map((image, index) => ({
+    ...image,
+    isPrimary: index === 0,
+  }));
 }
 export default function ProductFormPage() {
   const router = useRouter();
@@ -233,6 +262,7 @@ export default function ProductFormPage() {
   const canSaveProduct = hasPermission(
     isNew ? CATALOG_PRODUCTS_CREATE : CATALOG_PRODUCTS_UPDATE,
   );
+  const isViewOnly = !isNew && !canSaveProduct;
   /** Numeric id segment for edit mode; only defined once the router is ready. */
   const editProductIdStr =
     router.isReady && routeIdParam != null && !isNew ? routeIdParam : null;
@@ -408,11 +438,11 @@ export default function ProductFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formReadyKey]);
   const isDirty = useMemo(() => {
-    if (baselineSnapshot === null) {
+    if (isViewOnly || baselineSnapshot === null) {
       return false;
     }
     return baselineSnapshot !== currentFormSnapshot;
-  }, [baselineSnapshot, currentFormSnapshot]);
+  }, [isViewOnly, baselineSnapshot, currentFormSnapshot]);
   const resolveConfirmLeave = useCallback(
     (allow: boolean) => {
       setConfirmLeaveOpen(false);
@@ -536,24 +566,43 @@ export default function ProductFormPage() {
   const isNewFormComplete = useMemo(
     () =>
       !isNew ||
-      Object.keys(getProductFormValidationErrors(generalData, priceData, isNew))
-        .length === 0,
-    [isNew, generalData, priceData],
+      Object.keys(
+        getProductFormValidationErrors(
+          generalData,
+          priceData,
+          isNew,
+          suppliers,
+          branches,
+        ),
+      ).length === 0,
+    [isNew, generalData, priceData, suppliers, branches],
   );
   const firstTabWithValidationErrors = (
     validationErrors: FormErrors,
-  ): string => {
-    const generalFields = new Set([
-      "departmentId",
-      "lineId",
-      "description",
-      "shortName",
-      "warrantyMonths",
-      "warrantyPolicy",
-      "piecesCount",
-    ]);
-    if (Object.keys(validationErrors).some((key) => generalFields.has(key))) {
-      return "general";
+  ): ProductFormTabValue => {
+    const tabFields: Array<{ tab: ProductFormTabValue; fields: string[] }> = [
+      {
+        tab: "general",
+        fields: [
+          "departmentId",
+          "lineId",
+          "description",
+          "shortName",
+          "warrantyMonths",
+          "warrantyPolicy",
+          "piecesCount",
+          "satProductServiceKey",
+          "satUnitOfMeasureKey",
+        ],
+      },
+      { tab: "branches", fields: ["branches"] },
+      { tab: "suppliers", fields: ["suppliers"] },
+      { tab: "price", fields: ["listCost", "exchangeRate", "iva"] },
+    ];
+    for (const { tab, fields } of tabFields) {
+      if (fields.some((field) => field in validationErrors)) {
+        return tab;
+      }
     }
     return "price";
   };
@@ -562,6 +611,8 @@ export default function ProductFormPage() {
       generalData,
       priceData,
       isNew,
+      suppliers,
+      branches,
     );
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -627,6 +678,7 @@ export default function ProductFormPage() {
       navigateWithoutGuard("/catalogos/productos");
     } catch (err) {
       console.error("[ProductForm] Error saving:", err);
+      showError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -742,6 +794,9 @@ export default function ProductFormPage() {
     if (field === "listCost" && errors.listCost) {
       handleErrorClear("listCost");
     }
+    if (field === "iva" && errors.iva) {
+      handleErrorClear("iva");
+    }
     if (field === "currency") {
       if (value === "USD") {
         setPriceData((prev) => ({ ...prev, currency: "USD" }));
@@ -763,15 +818,6 @@ export default function ProductFormPage() {
   };
   const handleRefreshExchangeRate = () => {
     void fetchAndApplyExchangeRate();
-  };
-  const handleAddBasePrice = (entry: Omit<ProductBasePrice, "id">) => {
-    setBasePrices((prev) => [
-      ...prev,
-      {
-        ...entry,
-        id: `bp-${Date.now()}`,
-      },
-    ]);
   };
   const handleBranchToggle = (branchId: string) => {
     setBranches(
@@ -812,6 +858,7 @@ export default function ProductFormPage() {
         return branch;
       }),
     );
+    handleErrorClear("branches");
   };
   const handleInventoryInputChange = (
     branchId: string,
@@ -829,6 +876,7 @@ export default function ProductFormPage() {
           : branch,
       ),
     );
+    handleErrorClear("branches");
   };
   const handleAddSupplier = async (supplierId: number) => {
     const supplier = suppliersCatalog.find((s) => s.id === supplierId);
@@ -838,8 +886,10 @@ export default function ProductFormPage() {
         supplierId: supplier.id,
         supplierName: supplier.businessName?.trim() || supplier.name,
         isDefault: suppliers.length === 0,
+        supplierProductCode: "",
       };
       setSuppliers([...suppliers, newSupplier]);
+      handleErrorClear("suppliers");
     }
   };
   const handleRemoveSupplier = (supplierRowId: string) => {
@@ -856,6 +906,26 @@ export default function ProductFormPage() {
       }
       return next;
     });
+  };
+  const handleSetPrimarySupplier = (supplierRowId: string) => {
+    setSuppliers((prev) =>
+      prev.map((supplier) => ({
+        ...supplier,
+        isDefault: supplier.id === supplierRowId,
+      })),
+    );
+  };
+  const handleSupplierProductCodeChange = (
+    supplierRowId: string,
+    supplierProductCode: string,
+  ) => {
+    setSuppliers((prev) =>
+      prev.map((supplier) =>
+        supplier.id === supplierRowId
+          ? { ...supplier, supplierProductCode }
+          : supplier,
+      ),
+    );
   };
   const handleAddPackage = async (data: PackageFormData) => {
     const resolvedArticlePrice =
@@ -889,12 +959,12 @@ export default function ProductFormPage() {
           id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
           previewUrl: URL.createObjectURL(file),
           file,
-          isPrimary: false,
+          isPrimary: prev.length + additions.length === 0,
           imageUrl: "",
           sortOrder: prev.length + additions.length,
         });
       }
-      return [...prev, ...additions];
+      return markFirstGalleryImagePrimary([...prev, ...additions]);
     });
   };
   const handleReplaceImage = (index: number, file: File) => {
@@ -913,7 +983,7 @@ export default function ProductFormPage() {
         imageUrl: "",
         file,
       };
-      return next;
+      return markFirstGalleryImagePrimary(next);
     });
   };
   const handleRemoveImage = (index: number) => {
@@ -922,7 +992,7 @@ export default function ProductFormPage() {
       if (removed?.previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(removed.previewUrl);
       }
-      return prev.filter((_, i) => i !== index);
+      return markFirstGalleryImagePrimary(prev.filter((_, i) => i !== index));
     });
   };
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -931,7 +1001,7 @@ export default function ProductFormPage() {
       href: "/catalogos/productos",
     },
     {
-      label: isNew ? "Nuevo" : "Editar",
+      label: isNew ? "Nuevo" : isViewOnly ? "Ver" : "Editar",
     },
   ];
   const tabs = [
@@ -990,6 +1060,7 @@ export default function ProductFormPage() {
           spacing={2}
         >
           <Breadcrumbs items={breadcrumbItems} />
+          {!isViewOnly && (
           <Stack direction="row" spacing={2} alignItems="center">
             <Button
               variant="option"
@@ -1014,8 +1085,17 @@ export default function ProductFormPage() {
               )}
             </Button>
           </Stack>
+          )}
         </Stack>
-        <Title title={isNew ? "Nuevo artículo" : "Editar artículo"} />
+        <Title
+          title={
+            isNew
+              ? "Nuevo artículo"
+              : isViewOnly
+                ? "Ver artículo"
+                : "Editar artículo"
+          }
+        />
         <Divider />
 
         <Grid container spacing={5} flexWrap="nowrap">
@@ -1067,6 +1147,7 @@ export default function ProductFormPage() {
                 warrantyOptions={warrantyOptions}
                 onOpenNewDepartmentModal={() => setDepartmentModalOpen(true)}
                 onOpenNewLineModal={() => setLineModalOpen(true)}
+                readOnly={isViewOnly}
               />
             )}
 
@@ -1076,6 +1157,10 @@ export default function ProductFormPage() {
                 availableSuppliers={suppliersCatalog}
                 onAddSupplier={handleAddSupplier}
                 onRemoveSupplier={handleRemoveSupplier}
+                onSetPrimarySupplier={handleSetPrimarySupplier}
+                onSupplierProductCodeChange={handleSupplierProductCodeChange}
+                error={errors.suppliers}
+                readOnly={isViewOnly}
               />
             )}
 
@@ -1087,7 +1172,6 @@ export default function ProductFormPage() {
                 currencies={CURRENCIES}
                 costBasisOptions={COST_BASIS_FOR_PRICE_OPTIONS}
                 basePrices={basePrices}
-                onAddBasePrice={handleAddBasePrice}
                 costHistoryOpen={costHistoryOpen}
                 onCostHistoryOpen={() => setCostHistoryOpen(true)}
                 onCostHistoryClose={() => setCostHistoryOpen(false)}
@@ -1102,6 +1186,7 @@ export default function ProductFormPage() {
                 onPromotionDraftsChange={setProductPromotionDrafts}
                 exchangeRateLoading={exchangeRateLoading}
                 onRefreshExchangeRate={handleRefreshExchangeRate}
+                readOnly={isViewOnly}
               />
             )}
 
@@ -1112,6 +1197,7 @@ export default function ProductFormPage() {
                 excludeProductId={editProductId ?? undefined}
                 onAddPackage={handleAddPackage}
                 onRemovePackage={handleRemovePackage}
+                readOnly={isViewOnly}
               />
             )}
 
@@ -1122,6 +1208,7 @@ export default function ProductFormPage() {
                 onAddImage={handleAddImage}
                 onReplaceImage={handleReplaceImage}
                 onRemoveImage={handleRemoveImage}
+                readOnly={isViewOnly}
               />
             )}
 
@@ -1132,6 +1219,8 @@ export default function ProductFormPage() {
                 onToggleAllBranches={handleToggleAllBranches}
                 onInventoryChange={handleInventoryChange}
                 onInventoryInputChange={handleInventoryInputChange}
+                error={errors.branches}
+                readOnly={isViewOnly}
               />
             )}
           </Grid>

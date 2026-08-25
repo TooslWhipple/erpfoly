@@ -1,526 +1,469 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Link, Stack } from "@mui/material";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Avatar, Link, Stack, Typography } from "@mui/material";
+import { Link as LinkIcon } from "@mui/icons-material";
 import { Title, TabFilters, TableCrud } from "@/components";
+import { ShareDelinquencyListModal } from "@/components/Delinquency";
+import { AccessAvatars } from "@/components/Delinquency/AccessAvatars";
 import { StatsCardGroup } from "@/components/StatsCard";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
-import dayjs from "@/lib/dayjs";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { CUSTOMER_DELINQUENCY_CREATE } from "@/lib/permissions";
+import {
+  getDelinquencySummary,
+  getDelinquentCustomers,
+} from "@/services/delinquency.service";
+import { getDelinquencySharedLists } from "@/services/delinquency-shared-list.service";
+import type { DelinquencySharedListSummary } from "@/types/delinquency-shared-list.types";
+import type {
+  DelinquencyPeriod,
+  DelinquencySummary,
+  DelinquentCustomer,
+} from "@/types/delinquency.types";
+import { formatDate, formatDateOnly } from "@/utils/date";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-type DelinquencyPeriod = "1_day" | "1_week" | "1_month" | "2_months";
-interface DelinquentCustomer {
-  id: number;
-  fullName: string;
-  phone: string;
-  lastPaymentDate: string;
-  dueDate: string;
-  delinquencyPeriod: DelinquencyPeriod;
-  debtAmount: number;
-}
-interface DelinquencySummary {
-  oneDay: {
-    count: number;
-    change: number;
-    changeType: "increase" | "decrease";
-  };
-  oneWeek: {
-    count: number;
-    change: number;
-    changeType: "increase" | "decrease";
-  };
-  oneMonth: {
-    count: number;
-    change: number;
-    changeType: "increase" | "decrease";
-  };
-  twoMonths: {
-    count: number;
-    change: number;
-    changeType: "increase" | "decrease";
-  };
-}
-interface GetDelinquentCustomersParams {
-  page: number;
-  limit: number;
-  period?: string;
-  sortField?: string;
-  sortOrder?: "asc" | "desc";
-  search?: string;
-}
-interface GetDelinquentCustomersResponse {
-  data: DelinquentCustomer[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ============================================================================
-// MOCK DATA - Realistic dummy data for e-commerce financial system
-// ============================================================================
-
-const DUMMY_SUMMARY: DelinquencySummary = {
-  oneDay: {
-    count: 2533,
-    change: 32,
-    changeType: "increase",
-  },
-  oneWeek: {
-    count: 1034,
-    change: 12,
-    changeType: "decrease",
-  },
-  oneMonth: {
-    count: 821,
-    change: 12,
-    changeType: "decrease",
-  },
-  twoMonths: {
-    count: 785,
-    change: 150,
-    changeType: "decrease",
-  },
-};
-const DUMMY_CUSTOMERS: DelinquentCustomer[] = [
-  {
-    id: 1,
-    fullName: "María Daniela Montes Ávila",
-    phone: "667 123 4567",
-    lastPaymentDate: "1 de Abril, 2025",
-    dueDate: "17 de Junio, 2025",
-    delinquencyPeriod: "1_day",
-    debtAmount: 4930.0,
-  },
-  {
-    id: 2,
-    fullName: "Carlos Alberto Ramírez Torres",
-    phone: "664 892 3451",
-    lastPaymentDate: "17 de Abril, 2025",
-    dueDate: "17 de Mayo, 2025",
-    delinquencyPeriod: "1_month",
-    debtAmount: 4051.0,
-  },
-  {
-    id: 3,
-    fullName: "Ana Patricia Hernández López",
-    phone: "668 234 5678",
-    lastPaymentDate: "11 de Abril, 2025",
-    dueDate: "11 de Junio, 2025",
-    delinquencyPeriod: "1_week",
-    debtAmount: 3877.0,
-  },
-  {
-    id: 4,
-    fullName: "José Luis García Martínez",
-    phone: "669 876 5432",
-    lastPaymentDate: "13 de Abril, 2025",
-    dueDate: "13 de Junio, 2025",
-    delinquencyPeriod: "1_week",
-    debtAmount: 3500.0,
-  },
-  {
-    id: 5,
-    fullName: "Laura Fernanda Sánchez Ruiz",
-    phone: "662 345 6789",
-    lastPaymentDate: "15 de Abril, 2025",
-    dueDate: "15 de Junio, 2025",
-    delinquencyPeriod: "1_day",
-    debtAmount: 3290.0,
-  },
-  {
-    id: 6,
-    fullName: "Roberto Javier Mendoza Cruz",
-    phone: "665 567 8901",
-    lastPaymentDate: "17 de Abril, 2025",
-    dueDate: "17 de Mayo, 2025",
-    delinquencyPeriod: "1_day",
-    debtAmount: 2300.0,
-  },
-  {
-    id: 7,
-    fullName: "Gabriela Sofía Morales Flores",
-    phone: "663 678 9012",
-    lastPaymentDate: "13 de Abril, 2025",
-    dueDate: "13 de Junio, 2025",
-    delinquencyPeriod: "1_day",
-    debtAmount: 2300.0,
-  },
-  {
-    id: 8,
-    fullName: "Miguel Ángel Castillo Vargas",
-    phone: "667 789 0123",
-    lastPaymentDate: "17 de Abril, 2025",
-    dueDate: "17 de Mayo, 2025",
-    delinquencyPeriod: "1_month",
-    debtAmount: 1432.0,
-  },
-  {
-    id: 9,
-    fullName: "Diana Carolina Ortiz Navarro",
-    phone: "661 890 1234",
-    lastPaymentDate: "20 de Abril, 2025",
-    dueDate: "20 de Junio, 2025",
-    delinquencyPeriod: "2_months",
-    debtAmount: 5200.0,
-  },
-  {
-    id: 10,
-    fullName: "Fernando Antonio Rivera Espinoza",
-    phone: "664 901 2345",
-    lastPaymentDate: "22 de Abril, 2025",
-    dueDate: "22 de Mayo, 2025",
-    delinquencyPeriod: "2_months",
-    debtAmount: 3890.0,
-  },
-  {
-    id: 11,
-    fullName: "Alejandra Beatriz Fuentes Vega",
-    phone: "668 012 3456",
-    lastPaymentDate: "5 de Mayo, 2025",
-    dueDate: "5 de Junio, 2025",
-    delinquencyPeriod: "1_week",
-    debtAmount: 2750.0,
-  },
-  {
-    id: 12,
-    fullName: "Ricardo Ernesto Guzmán Peña",
-    phone: "666 123 4567",
-    lastPaymentDate: "8 de Mayo, 2025",
-    dueDate: "8 de Junio, 2025",
-    delinquencyPeriod: "1_day",
-    debtAmount: 1890.0,
-  },
-];
-
-// ============================================================================
-// MOCK API FUNCTIONS
-// ============================================================================
-
-async function getDelinquencySummary(): Promise<DelinquencySummary> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return DUMMY_SUMMARY;
-}
-async function getDelinquentCustomers(
-  params: GetDelinquentCustomersParams,
-): Promise<GetDelinquentCustomersResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  let filteredData = [...DUMMY_CUSTOMERS];
-
-  // Filter by period
-  if (params.period && params.period !== "all") {
-    filteredData = filteredData.filter(
-      (c) => c.delinquencyPeriod === params.period,
-    );
-  }
-
-  // Filter by search
-  if (params.search) {
-    const searchLower = params.search.toLowerCase();
-    filteredData = filteredData.filter(
-      (c) =>
-        c.fullName.toLowerCase().includes(searchLower) ||
-        c.phone.includes(params.search!),
-    );
-  }
-
-  // Sort by due date if requested
-  if (params.sortField === "dueDate") {
-    filteredData.sort((a, b) => {
-      const dateA = dayjs(
-        a.dueDate,
-        "D [de] MMMM, YYYY",
-        "es-mx",
-        true,
-      ).valueOf();
-      const dateB = dayjs(
-        b.dueDate,
-        "D [de] MMMM, YYYY",
-        "es-mx",
-        true,
-      ).valueOf();
-      return params.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-    });
-  }
-  const total = filteredData.length;
-  const start = params.page * params.limit;
-  const end = start + params.limit;
-  const paginatedData = filteredData.slice(start, end);
-  return {
-    data: paginatedData,
-    total,
-    page: params.page,
-    limit: params.limit,
-  };
-}
-
-// ============================================================================
-// CONFIGURATION CONSTANTS
-// ============================================================================
+const SEARCH_DEBOUNCE_MS = 300;
+const SHARED_LISTS_TAB = "shared_lists";
+const DATE_FORMAT = "D [de] MMMM, YYYY";
 
 const TABS: TabOption[] = [
-  {
-    label: "Todos",
-    value: "all",
-  },
-  {
-    label: "1 día",
-    value: "1_day",
-  },
-  {
-    label: "1 semana",
-    value: "1_week",
-  },
-  {
-    label: "1 mes",
-    value: "1_month",
-  },
-  {
-    label: "2 meses",
-    value: "2_months",
-  },
-  {
-    label: "Listas compartidas",
-    value: "shared_lists",
-  },
+  { label: "Todos", value: "all" },
+  { label: "1 día", value: "1_day" },
+  { label: "1 semana", value: "1_week" },
+  { label: "1 mes", value: "1_month" },
+  { label: "2 meses", value: "2_months" },
+  { label: "Listas compartidas", value: SHARED_LISTS_TAB },
 ];
+
 const DELINQUENCY_CHIP_LABELS: Record<string, string> = {
   "1_day": "1 día",
   "1_week": "1 semana",
   "1_month": "1 mes",
   "2_months": "2 meses",
-  "2_days": "2 días",
-  "5_days": "5 días",
 };
+
 const DELINQUENCY_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   "1_day": "default",
   "1_week": "error",
   "1_month": "error",
   "2_months": "error",
-  "2_days": "default",
-  "5_days": "default",
 };
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+function toComparison(
+  bucket: DelinquencySummary["oneDay"],
+  hasComparison: boolean,
+): StatsCardData["comparison"] {
+  if (!hasComparison || bucket.change === 0) {
+    return undefined;
+  }
+  return {
+    value: bucket.change,
+    type: bucket.changeType,
+    period: "el mes anterior",
+  };
+}
 
 export default function ClientesMorosidad() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
-  // State management
   const [activeTab, setActiveTab] = useState("all");
-  const [searchValue, setSearchValue] = useState("");
-  const [customers, setCustomers] = useState<DelinquentCustomer[]>([]);
-  const [summary, setSummary] = useState<DelinquencySummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [existingListForModal, setExistingListForModal] =
+    useState<DelinquencySharedListSummary | null>(null);
 
-  // Fetch summary data
-  const fetchSummary = useCallback(async () => {
-    try {
-      const data = await getDelinquencySummary();
-      setSummary(data);
-    } catch (err) {
-      console.error("[Morosidad] Error fetching summary:", err);
+  const isSharedLists = activeTab === SHARED_LISTS_TAB;
+
+  const listExtraParams = useMemo(() => {
+    if (activeTab === "all" || isSharedLists) {
+      return {};
     }
+    return { period: activeTab as DelinquencyPeriod };
+  }, [activeTab, isSharedLists]);
+
+  const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+    "",
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  const {
+    data: customers,
+    isLoading: listLoading,
+  } = useQuery({
+    queryKey: [
+      "clients",
+      "delinquency",
+      "list",
+      "all",
+      listExtraParams,
+      debouncedSearch,
+    ],
+    enabled: !isSharedLists,
+    queryFn: async () => {
+      const countResult = await getDelinquentCustomers({
+        page: 1,
+        limit: 1,
+        search: debouncedSearch || undefined,
+        ...listExtraParams,
+      });
+      if (countResult.error) {
+        throw new Error(countResult.error.message);
+      }
+      const total = countResult.data?.total ?? 0;
+      if (total === 0) {
+        return [] as DelinquentCustomer[];
+      }
+
+      const fullResult = await getDelinquentCustomers({
+        page: 1,
+        limit: total,
+        search: debouncedSearch || undefined,
+        ...listExtraParams,
+      });
+      if (fullResult.error) {
+        throw new Error(fullResult.error.message);
+      }
+      return fullResult.data?.rows ?? [];
+    },
+  });
+
+  const {
+    data: sharedLists,
+    total: sharedListsTotal,
+    page: sharedListsPage,
+    rowsPerPage: sharedListsRowsPerPage,
+    setPage: setSharedListsPage,
+    setRowsPerPage: setSharedListsRowsPerPage,
+    setSearch: setSharedListsSearch,
+    isLoading: sharedListsLoading,
+  } = usePaginatedList<DelinquencySharedListSummary>({
+    queryKey: ["clients", "delinquency", "shared-lists"],
+    queryFn: getDelinquencySharedLists,
+    initialPage: 0,
+    initialRowsPerPage: 10,
+    initialSearch: "",
+    enabled: isSharedLists,
+  });
+
+  useEffect(() => {
+    if (isSharedLists) {
+      setSharedListsSearch(debouncedSearch);
+    }
+  }, [debouncedSearch, isSharedLists, setSharedListsSearch]);
+
+  const { data: summary } = useQuery({
+    queryKey: ["clients", "delinquency", "summary"],
+    queryFn: async () => {
+      const result = await getDelinquencySummary();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      if (result.data == null) {
+        throw new Error("No data");
+      }
+      return result.data;
+    },
+  });
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value);
+      setSelectedClientIds(new Set());
+      if (value === SHARED_LISTS_TAB) {
+        setSharedListsPage(0);
+      }
+    },
+    [setSharedListsPage],
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+    },
+    [setSearchInput],
+  );
+
+  const handleViewCustomer = useCallback(
+    (customer: DelinquentCustomer) => {
+      void router.push(`/clientes/${customer.id}`);
+    },
+    [router],
+  );
+
+  const selectedCustomers = useMemo(
+    () => (customers ?? []).filter((customer) => selectedClientIds.has(customer.id)),
+    [customers, selectedClientIds],
+  );
+
+  const handleOpenShareModal = useCallback(() => {
+    setExistingListForModal(null);
+    setShareModalOpen(true);
   }, []);
 
-  // Fetch customers data
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const period = activeTab !== "shared_lists" ? activeTab : "all";
-      const response = await getDelinquentCustomers({
-        page,
-        limit: rowsPerPage,
-        period,
-        search: searchValue,
-      });
-      setCustomers(response.data);
-      setTotalRows(response.total);
-    } catch (err) {
-      console.error("[Morosidad] Error fetching customers:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, activeTab, searchValue]);
+  const handleOpenSharedListModal = useCallback((list: DelinquencySharedListSummary) => {
+    setExistingListForModal(list);
+    setShareModalOpen(true);
+  }, []);
 
-  // Effects
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
-  useEffect(() => {
-    setPage(0);
-  }, [activeTab, searchValue]);
+  const handleCopySharedListLink = useCallback(
+    async (list: DelinquencySharedListSummary) => {
+      try {
+        await navigator.clipboard.writeText(list.shareUrl);
+        showSuccess("Enlace copiado al portapapeles");
+      } catch {
+        showSuccess("No se pudo copiar el enlace");
+      }
+    },
+    [showSuccess],
+  );
 
-  // Event handlers
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-  };
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-  };
-  const handleViewCustomer = (customer: DelinquentCustomer) => {
-    router.push(`/clientes/${customer.id}`);
-  };
-  const handleContactCustomer = (customer: DelinquentCustomer) => {
-    console.log("[Morosidad] Contact customer:", customer.phone);
-    // Open contact modal or initiate call
-  };
-  const handleRegisterPayment = (customer: DelinquentCustomer) => {
-    console.log("[Morosidad] Register payment for:", customer.id);
-    // Open payment registration modal
-  };
+  const handleShareSuccess = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["clients", "delinquency", "shared-lists"] });
+  }, [queryClient]);
 
-  // Build stats cards data
   const statsCards: StatsCardData[] = summary
     ? [
         {
           id: "one_day",
           label: "1 día",
           value: summary.oneDay.count,
-          comparison: {
-            value: summary.oneDay.change,
-            type: summary.oneDay.changeType,
-            period: "el mes anterior",
-          },
+          comparison: toComparison(summary.oneDay, summary.hasComparison),
         },
         {
           id: "one_week",
           label: "1 semana",
           value: summary.oneWeek.count,
-          comparison: {
-            value: summary.oneWeek.change,
-            type: summary.oneWeek.changeType,
-            period: "el mes anterior",
-          },
+          comparison: toComparison(summary.oneWeek, summary.hasComparison),
         },
         {
           id: "one_month",
           label: "1 mes",
           value: summary.oneMonth.count,
-          comparison: {
-            value: summary.oneMonth.change,
-            type: summary.oneMonth.changeType,
-            period: "el mes anterior",
-          },
+          comparison: toComparison(summary.oneMonth, summary.hasComparison),
         },
         {
           id: "two_months",
           label: "2 meses",
           value: summary.twoMonths.count,
-          comparison: {
-            value: summary.twoMonths.change,
-            type: summary.twoMonths.changeType,
-            period: "el mes anterior",
-          },
+          comparison: toComparison(summary.twoMonths, summary.hasComparison),
         },
       ]
     : [];
 
-  // Table columns configuration
-  const columns: Column<DelinquentCustomer>[] = [
-    {
-      id: "fullName",
-      label: "CLIENTE",
-      size: "xl",
-      format: (value, row) => (
-        <Link
-          component="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleViewCustomer(row);
-          }}
-          sx={{
-            color: "text.primary",
-            textDecoration: "underline",
-            textDecorationColor: "text.secondary",
-            fontWeight: 400,
-            cursor: "pointer",
-            "&:hover": {
-              color: "primary.main",
-            },
-          }}
-        >
-          {String(value)}
-        </Link>
-      ),
-    },
-    {
-      id: "phone",
-      label: "TELÉFONO",
-      size: "md",
-    },
-    {
-      id: "lastPaymentDate",
-      label: "ÚLTIMO PAGO",
-      size: "md",
-    },
-    {
-      id: "dueDate",
-      label: "Fecha de vencimiento",
-      size: "lg",
-    },
-    {
-      id: "delinquencyPeriod",
-      label: "MOROSIDAD",
-      size: "sm",
-      type: "chip",
-      align: "center",
-      chipLabelMap: DELINQUENCY_CHIP_LABELS,
-      chipVariantMap: DELINQUENCY_CHIP_VARIANTS,
-    },
-    {
-      id: "debtAmount",
-      label: "DEUDA",
-      type: "currency",
-      size: "md",
-      align: "right",
-    },
-  ];
+  const customerColumns: Column<DelinquentCustomer>[] = useMemo(
+    () => [
+      {
+        id: "fullName",
+        label: "CLIENTE",
+        size: "xl",
+        format: (value, row) => (
+          <Link
+            component="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleViewCustomer(row);
+            }}
+            sx={{
+              color: "text.primary",
+              textDecoration: "underline",
+              textDecorationColor: "text.secondary",
+              fontWeight: 400,
+              cursor: "pointer",
+              "&:hover": {
+                color: "primary.main",
+              },
+            }}
+          >
+            {String(value)}
+          </Link>
+        ),
+      },
+      {
+        id: "phone",
+        label: "TELÉFONO",
+        size: "md",
+        format: (value) => (value ? String(value) : "—"),
+      },
+      {
+        id: "lastPaymentDate",
+        label: "ÚLTIMO PAGO",
+        size: "md",
+        format: (value) =>
+          value ? formatDate(value, DATE_FORMAT) : "—",
+      },
+      {
+        id: "dueDate",
+        label: "Fecha de vencimiento",
+        size: "lg",
+        format: (value) => formatDateOnly(value, DATE_FORMAT),
+      },
+      {
+        id: "delinquencyPeriod",
+        label: "MOROSIDAD",
+        size: "sm",
+        type: "chip",
+        align: "center",
+        chipLabelMap: DELINQUENCY_CHIP_LABELS,
+        chipVariantMap: DELINQUENCY_CHIP_VARIANTS,
+      },
+      {
+        id: "debtAmount",
+        label: "DEUDA",
+        type: "currency",
+        size: "md",
+        align: "right",
+      },
+    ],
+    [handleViewCustomer],
+  );
+
+  const sharedListColumns: Column<DelinquencySharedListSummary>[] = useMemo(
+    () => [
+      {
+        id: "name",
+        label: "NOMBRE",
+        size: "xl",
+        truncate: true,
+        format: (value) => (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Avatar sx={{ width: 32, height: 32, fontSize: 12, bgcolor: "primary.main" }}>
+              {String(value).slice(0, 2).toUpperCase()}
+            </Avatar>
+            <Typography variant="body2" noWrap title={String(value)}>
+              {String(value)}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        id: "accessEmails",
+        label: "EMAIL",
+        size: "lg",
+        truncate: true,
+        format: (value) => {
+          const emails = Array.isArray(value) ? value : [];
+          const first = emails[0];
+          if (!first) return "—";
+          return emails.length > 1 ? `${first} (+${emails.length - 1})` : first;
+        },
+      },
+      {
+        id: "clientCount",
+        label: "CLIENTES COMPARTIDOS",
+        type: "number",
+        size: "md",
+        align: "right",
+      },
+      {
+        id: "shareToken",
+        label: "ACCESO",
+        size: "sm",
+        format: (_value, row) => <AccessAvatars emails={row.accessEmails} />,
+      },
+      {
+        id: "totalDebtAmount",
+        label: "VALOR DE DEUDA",
+        type: "currency",
+        size: "md",
+        align: "right",
+      },
+    ],
+    [],
+  );
+
+  const sharedListActions: RowAction<DelinquencySharedListSummary>[] = useMemo(
+    () => [
+      {
+        id: "manage-access",
+        label: "Ver accesos",
+        onClick: (row) => handleOpenSharedListModal(row),
+      },
+      {
+        id: "copy-link",
+        label: "Copiar link",
+        icon: <LinkIcon fontSize="small" />,
+        onClick: (row) => void handleCopySharedListLink(row),
+      },
+    ],
+    [handleCopySharedListLink, handleOpenSharedListModal],
+  );
+
   return (
     <Stack spacing={3}>
       <Title title="Morosidad" />
 
-      {summary && <StatsCardGroup cards={statsCards} />}
+      {summary && <StatsCardGroup cards={statsCards} columns={4} />}
 
       <TabFilters
         tabs={TABS}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         showSearch
-        searchValue={searchValue}
+        searchValue={searchInput}
         onSearchChange={handleSearchChange}
+        actions={
+          !isSharedLists
+            ? [
+                {
+                  label: "Compartir",
+                  onClick: handleOpenShareModal,
+                  disabled: selectedClientIds.size === 0,
+                  permission: CUSTOMER_DELINQUENCY_CREATE,
+                },
+              ]
+            : undefined
+        }
       />
 
-      <TableCrud
-        columns={columns}
-        rows={customers}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalRows={totalRows}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={(row) => router.push(`/clientes/${row.id}`)}
-        emptyMessage="No hay clientes con morosidad"
+      {isSharedLists ? (
+        <TableCrud
+          columns={sharedListColumns}
+          rows={sharedLists}
+          loading={sharedListsLoading}
+          rowKey="id"
+          page={sharedListsPage}
+          rowsPerPage={sharedListsRowsPerPage}
+          totalRows={sharedListsTotal}
+          onPageChange={setSharedListsPage}
+          onRowsPerPageChange={setSharedListsRowsPerPage}
+          actions={sharedListActions}
+          emptyMessage="No hay listas compartidas"
+        />
+      ) : (
+        <TableCrud
+          columns={customerColumns}
+          rows={customers ?? []}
+          loading={listLoading}
+          rowKey="id"
+          hidePagination
+          selectable
+          selectedRowKeys={selectedClientIds}
+          onSelectedRowKeysChange={(keys) => {
+            setSelectedClientIds(new Set([...keys].map(Number)));
+          }}
+          onRowClick={(row) => {
+            void router.push(`/clientes/${row.id}`);
+          }}
+          emptyMessage="No hay clientes con morosidad"
+        />
+      )}
+
+      <ShareDelinquencyListModal
+        open={shareModalOpen}
+        onClose={() => {
+          setShareModalOpen(false);
+          setExistingListForModal(null);
+        }}
+        selectedCustomers={selectedCustomers}
+        existingList={existingListForModal}
+        onSuccess={handleShareSuccess}
       />
     </Stack>
   );

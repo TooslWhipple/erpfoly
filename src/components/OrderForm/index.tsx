@@ -9,14 +9,13 @@ import {
   Typography,
   useTheme,
   Stack,
-  Skeleton,
   Grid,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import {
   Breadcrumbs,
   TableCrud,
-  ProductSuggestionCard,
+  SuggestionsCarousel,
   AddArticleToOrderModal,
 } from "@/components";
 import SelectedItemsPanel from "@/components/SelectedItemsPanel";
@@ -46,7 +45,6 @@ import {
 import { getMainWarehouse } from "@/services/branches.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
-  SuggestionsList,
   StockCell,
   Card,
   StickySidebarGrid,
@@ -755,29 +753,11 @@ export default function OrderForm({
                 pendiente.
               </Alert>
             )}
-            <SuggestionsList>
-              {suggestionsLoading
-                ? [1, 2, 3, 4].map((i) => (
-                    <Skeleton
-                      key={i}
-                      variant="rectangular"
-                      style={{
-                        borderRadius: "12px",
-                        flex: "1 1 272px",
-                        minWidth: "272px",
-                        maxWidth: "272px",
-                        height: "304px",
-                      }}
-                    />
-                  ))
-                : suggestions.map((suggestion) => (
-                    <ProductSuggestionCard
-                      key={suggestion.id}
-                      product={suggestion}
-                      onAdd={handleAddFromSuggestion}
-                    />
-                  ))}
-            </SuggestionsList>
+            <SuggestionsCarousel
+              suggestions={suggestions}
+              loading={suggestionsLoading}
+              onAdd={handleAddFromSuggestion}
+            />
             <Card>
               <Stack spacing={1}>
                 <Typography variant="h5">Todos los artículos</Typography>
@@ -810,6 +790,7 @@ export default function OrderForm({
               loading={articlesLoading}
               emptyMessage={emptyArticlesMessage}
               rowKey="id"
+              hidePagination
             />
           </Stack>
         </Grid>

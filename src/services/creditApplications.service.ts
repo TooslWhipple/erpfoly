@@ -189,6 +189,17 @@ export interface CreditApplicationDetailResponse {
   documentation?: CreditApplicationDocumentationResponse;
   guarantor?: CreditApplicationGuarantorResponse;
   additionalInformationRequested?: AdditionalInformationRequestedItem[];
+  creditBureau?: {
+    clientAuthorized: boolean;
+    queryStatus: "NOT_QUERIED" | "SUCCESS" | "FAILED";
+    score: number | null;
+    scoreLabel: string;
+    scoreLevel: "excellent" | "good" | "fair" | "poor";
+    queriedAt: string | null;
+    signatureUrl?: string;
+    canQueryNow?: boolean;
+    missingFields?: string[];
+  };
 }
 
 export interface IdentityConflictsResult {
@@ -573,6 +584,25 @@ export async function getCreditApplicationById(
   const result = await get<CreditApplicationDetailResponse>(`${BASE}/${applicationId}`, {
     skipGlobalErrorToast: true,
   });
+  if (result.error) return null;
+  return result.data;
+}
+
+export interface ConsultCreditBureauResponse {
+  success: boolean;
+  message: string;
+  consultStatus: string;
+  reason?: string;
+  creditBureau: NonNullable<CreditApplicationDetailResponse["creditBureau"]>;
+}
+
+export async function consultCreditBureau(
+  applicationId: string | number,
+): Promise<ConsultCreditBureauResponse | null> {
+  const result = await post<ConsultCreditBureauResponse>(
+    `${BASE}/${applicationId}/consult-buro`,
+    {},
+  );
   if (result.error) return null;
   return result.data;
 }

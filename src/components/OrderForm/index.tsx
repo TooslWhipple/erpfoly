@@ -390,6 +390,8 @@ export default function OrderForm({
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
+        currency: item.currency,
+        exchangeRate: item.exchangeRate,
       };
       setSelectedItems([...selectedItems, newSelectedItem]);
     }
@@ -444,6 +446,8 @@ export default function OrderForm({
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,
+            currency: item.currency,
+            exchangeRate: item.exchangeRate,
           })),
           total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
         };
@@ -485,6 +489,8 @@ export default function OrderForm({
           product_id: item.productId,
           requested_quantity: item.quantity,
           unit_price: item.unitPrice,
+          currency: item.currency,
+          exchange_rate: item.exchangeRate,
         })),
       };
       try {

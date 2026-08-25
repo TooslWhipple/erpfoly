@@ -5,9 +5,36 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
 import { AUTH_GENERIC_ERROR, mapApiErrorToUserMessage } from "@/utils/auth-feedback";
 
+/** Timeouts by operation type (FE-B-3). */
+export const API_TIMEOUT_MS = {
+	default: 15_000,
+	upload: 120_000,
+	report: 120_000,
+} as const;
+
+function resolveTimeout(config: AxiosRequestConfig): number {
+	if (typeof config.timeout === "number" && config.timeout !== API_TIMEOUT_MS.default) {
+		return config.timeout;
+	}
+	if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+		return API_TIMEOUT_MS.upload;
+	}
+	const url = config.url ?? "";
+	if (
+		typeof url === "string" &&
+		(/\/(export|report|download|csv|xlsx|pdf)/i.test(url) ||
+			url.includes("/labels/") ||
+			url.includes("/carta-porte"))
+	) {
+		return API_TIMEOUT_MS.report;
+	}
+	return API_TIMEOUT_MS.default;
+}
+
 export const api = axios.create({
 	baseURL: apiBaseUrl,
-	timeout: 60000,
+	timeout: API_TIMEOUT_MS.default,
+	withCredentials: true,
 	headers: {
 		"Content-Type": "application/json",
 	},
@@ -15,24 +42,8 @@ export const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
-		const url = config.url ?? "";
-		const isPublicAuth =
-			typeof url === "string" &&
-			[
-				"/auth/login",
-				"/auth/validate-otp",
-				"/auth/login/otp/resend",
-				"/auth/password/recovery",
-				"/auth/password/recovery/validate",
-				"/auth/password/recovery/reset",
-			].some((path) => url.includes(path));
-
-		if (!isPublicAuth) {
-			const token = useAuthStore.getState().token;
-			if (token) {
-				config.headers.Authorization = `Bearer ${token}`;
-			}
-		}
+		config.timeout = resolveTimeout(config);
+		// Access JWT is httpOnly cookie; Bearer injection from localStorage removed (FE-H-1).
 		return config;
 	},
 	(error) => Promise.reject(error)
@@ -230,9 +241,6 @@ api.interceptors.response.use(
 			useAuthStore.getState().setToken(newToken);
 			processQueue(null, newToken);
 
-			if (originalRequest.headers) {
-				originalRequest.headers.Authorization = `Bearer ${newToken}`;
-			}
 			return api.request(originalRequest);
 		} finally {
 			isRefreshing = false;

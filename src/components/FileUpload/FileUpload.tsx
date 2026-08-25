@@ -287,7 +287,7 @@ export function FileUpload({
       if (!item.url) return;
 
       if (!urlForcesDownload) {
-        window.open(item.url, "_blank");
+        window.open(item.url, "_blank", "noopener,noreferrer");
         return;
       }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import { useRouter } from "next/router";
 import { authService } from "@/services/auth.service";
@@ -23,8 +23,12 @@ interface AuthPersistApi {
   onFinishHydration: (callback: () => void) => () => void;
 }
 
+const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
+
 function getAuthPersistApi(): AuthPersistApi | null {
-  const storeWithPersist = useAuthStore as typeof useAuthStore & { persist?: AuthPersistApi };
+  const storeWithPersist = useAuthStore as typeof useAuthStore & {
+    persist?: AuthPersistApi;
+  };
   return storeWithPersist.persist ?? null;
 }
 
@@ -48,9 +52,10 @@ function buildLoginUrl(pathname: string): string {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const setUser = useAuthStore((state) => state.setUser);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.logout);
 
   const hasHydrated = useSyncExternalStore(
@@ -58,8 +63,45 @@ export function AuthGuard({ children }: AuthGuardProps) {
     getAuthHydrationSnapshot,
     getServerHydrationSnapshot
   );
-  const [validatedToken, setValidatedToken] = useState<string | null>(null);
+  const [sessionValidated, setSessionValidated] = useState(false);
   const [bypassInitialized, setBypassInitialized] = useState(false);
+
+  const validateSession = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      const currentPath = normalizePathname(router.asPath);
+      const publicRoute = isPublicRoute(currentPath);
+      const authEntryRoute = isAuthEntryPublicRoute(currentPath);
+
+      const result = await authService.me();
+
+      if (result.error || !result.data) {
+        clearAuth();
+        setSessionValidated(false);
+        if (!publicRoute && !opts?.quiet) {
+          void router.replace(buildLoginUrl(currentPath));
+        }
+        return false;
+      }
+
+      const nextUser = result.data;
+      setAuth("cookie", nextUser);
+      setSessionValidated(true);
+
+      if (authEntryRoute || currentPath === "/") {
+        void router.replace(getFirstAllowedRoute(nextUser));
+        return true;
+      }
+
+      if (
+        !canAccessPath(currentPath, nextUser) &&
+        currentPath !== FORBIDDEN_ROUTE
+      ) {
+        void router.replace(FORBIDDEN_ROUTE);
+      }
+      return true;
+    },
+    [clearAuth, router, setAuth]
+  );
 
   useEffect(() => {
     if (shouldBypassAccessControl && !bypassInitialized) {
@@ -81,64 +123,51 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     const currentPath = normalizePathname(router.asPath);
     const publicRoute = isPublicRoute(currentPath);
-    const authEntryRoute = isAuthEntryPublicRoute(currentPath);
 
-    if (!token) {
-      if (!publicRoute) {
-        clearAuth();
-        void router.replace(buildLoginUrl(currentPath));
-      }
-      return;
-    }
-
-    if (validatedToken === token && user) {
-      if (authEntryRoute || currentPath === "/") {
-        void router.replace(getFirstAllowedRoute(user));
-        return;
-      }
-
-      if (!canAccessPath(currentPath, user) && currentPath !== FORBIDDEN_ROUTE) {
-        void router.replace(FORBIDDEN_ROUTE);
-      }
+    // Public routes: optional silent revalidation if we think we have a session
+    if (publicRoute && !isAuthenticated && !isAuthEntryPublicRoute(currentPath)) {
       return;
     }
 
     let cancelled = false;
 
-    async function validateSession() {
-      const result = await authService.me();
-
+    void (async () => {
+      const ok = await validateSession({ quiet: publicRoute });
       if (cancelled) return;
-
-      if (result.error || !result.data) {
-        clearAuth();
-        setValidatedToken(null);
-        if (!publicRoute) {
-          void router.replace(buildLoginUrl(currentPath));
-        }
-        return;
+      if (!ok && publicRoute) {
+        setSessionValidated(true);
       }
-
-      const nextUser = result.data;
-      setUser(nextUser);
-      setValidatedToken(token);
-
-      if (authEntryRoute || currentPath === "/") {
-        void router.replace(getFirstAllowedRoute(nextUser));
-        return;
-      }
-
-      if (!canAccessPath(currentPath, nextUser) && currentPath !== FORBIDDEN_ROUTE) {
-        void router.replace(FORBIDDEN_ROUTE);
-      }
-    }
-
-    void validateSession();
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [clearAuth, hasHydrated, router, setUser, token, user, validatedToken, bypassInitialized]);
+  }, [
+    bypassInitialized,
+    hasHydrated,
+    isAuthenticated,
+    router,
+    setUser,
+    validateSession,
+  ]);
+
+  // FE-M-3: revalidate on focus and on an interval so revoked sessions die quickly
+  useEffect(() => {
+    if (shouldBypassAccessControl || !sessionValidated) return;
+
+    const onFocus = () => {
+      void validateSession({ quiet: true });
+    };
+    window.addEventListener("focus", onFocus);
+    const intervalId = window.setInterval(() => {
+      void validateSession({ quiet: true });
+    }, SESSION_REVALIDATE_MS);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(intervalId);
+    };
+  }, [sessionValidated, validateSession]);
 
   if (shouldBypassAccessControl) {
     return <>{children}</>;
@@ -146,7 +175,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (!router.isReady || !hasHydrated) {
     return (
-      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box
+        minHeight="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
         <CircularProgress />
       </Box>
     );
@@ -154,20 +188,25 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   const currentPath = normalizePathname(router.asPath);
   const publicRoute = isPublicRoute(currentPath);
+  const sessionToken = isAuthenticated || sessionValidated ? "cookie" : null;
 
-  if (!shouldUseAppLayout(currentPath, token)) {
+  if (!shouldUseAppLayout(currentPath, sessionToken)) {
     return <>{children}</>;
   }
 
   if (
-    !token ||
+    !sessionValidated ||
     !user ||
-    validatedToken !== token ||
     publicRoute ||
     currentPath === "/"
   ) {
     return (
-      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box
+        minHeight="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
         <CircularProgress />
       </Box>
     );
@@ -175,7 +214,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (!canAccessPath(currentPath, user) && currentPath !== FORBIDDEN_ROUTE) {
     return (
-      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box
+        minHeight="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
         <CircularProgress />
       </Box>
     );

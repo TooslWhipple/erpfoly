@@ -194,6 +194,13 @@ export interface CreateDamagedProductPayload {
     repairCost?: number;
     repairCostAssignedTo?: RepairCostAssignee;
     repairSupplierId?: number;
+    /**
+     * Proveedor al que se le carga el costo de reparación. Solo aplica con
+     * `dispositionCode` de reparación interna y `repairCostAssignedTo`
+     * `"supplier"`; debe ser uno de los proveedores reales del producto
+     * (`ProductSupplier`).
+     */
+    chargedSupplierId?: number;
     assignedToId?: number;
     responsibleId?: number;
     solutionId?: number;

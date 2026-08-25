@@ -29,6 +29,8 @@ export interface ConfirmOrderItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    currency?: string;
+    exchangeRate?: number;
     onlinePrices?: OnlinePriceComparison;
 }
 
@@ -72,6 +74,11 @@ export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false,
                         <Stack direction="column" spacing={0.5}>
                             <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
                             <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
+                            {item.currency && item.currency !== "MXN" && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {item.currency} · TC {item.exchangeRate}
+                                </Typography>
+                            )}
                         </Stack>
                     )}
 

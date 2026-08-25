@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { fetchSupplierDashboard } from "@/services/supplierDashboard.service";
@@ -36,10 +36,10 @@ export function useSupplierDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SupplierDashboardTab>("account_statements");
 
-  useAsyncEffect(
-    async (isCancelled) => {
+  const loadDashboard = useCallback(
+    async (isCancelled?: () => boolean) => {
       await Promise.resolve();
-      if (isCancelled()) return;
+      if (isCancelled?.()) return;
 
       if (validId === null) {
         setDashboard(null);
@@ -53,21 +53,28 @@ export function useSupplierDashboard() {
 
       try {
         const result = await fetchSupplierDashboard(validId);
-        if (isCancelled()) return;
+        if (isCancelled?.()) return;
 
-      if (result.error) {
-        setDashboard(null);
-        setError(result.error.message);
-      } else {
-        setDashboard(result.data ?? null);
-      }
+        if (result.error) {
+          setDashboard(null);
+          setError(result.error.message);
+        } else {
+          setDashboard(result.data ?? null);
+        }
       } finally {
-        if (!isCancelled()) {
+        if (!isCancelled?.()) {
           setLoading(false);
         }
       }
     },
     [validId]
+  );
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      await loadDashboard(isCancelled);
+    },
+    [loadDashboard]
   );
 
   const breadcrumbItems: BreadcrumbItem[] = useMemo(
@@ -102,5 +109,6 @@ export function useSupplierDashboard() {
     breadcrumbItems,
     handleTabChange,
     handleEdit,
+    refetchDashboard: loadDashboard,
   };
 }

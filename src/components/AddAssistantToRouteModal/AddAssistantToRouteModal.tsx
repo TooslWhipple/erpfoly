@@ -84,6 +84,8 @@ export function AddAssistantToRouteModal({
     try {
       await onConfirm(userId);
       onClose();
+    } catch {
+      // Error already shown by the mutation snackbar
     } finally {
       setSubmitting(false);
       setPendingId(null);

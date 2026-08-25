@@ -160,10 +160,9 @@ export function AddDriverToRouteModal({
             <TableHead>
               <TableRow>
                 <StyledTableCell sx={{ minWidth: "160px" }}>Nombre</StyledTableCell>
-                <StyledTableCell sx={{ minWidth: "144px" }}>Licencia</StyledTableCell>
                 <StyledTableCell sx={{ minWidth: "112px" }}>Teléfono</StyledTableCell>
                 <StyledTableCell sx={{ minWidth: "112px" }}>Estado</StyledTableCell>
-                <StyledTableCell align="right">Acción</StyledTableCell>
+                <StyledTableCell>Acción</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -178,7 +177,6 @@ export function AddDriverToRouteModal({
                   return (
                     <StyledTableRow key={driver.id} hover>
                       <StyledTableCell>{fullName}</StyledTableCell>
-                      <StyledTableCell>{driver.licenseNumber}</StyledTableCell>
                       <StyledTableCell>{driver.phone}</StyledTableCell>
                       <StyledTableCell>
                         <StatusChip
@@ -187,7 +185,7 @@ export function AddDriverToRouteModal({
                           label={statusLabel}
                         />
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell>
                         <Button
                           variant="option"
                           color="primary"

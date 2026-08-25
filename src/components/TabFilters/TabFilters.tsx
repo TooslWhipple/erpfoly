@@ -13,6 +13,8 @@ import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TabsWrapper, TabsFadeEdge, StyledTabs, StyledTab } from "./styles";
 import { FormTextField } from "../Form";
+import { DateRangeFilter } from "../DateRangePopover";
+import type { DateRangeValue } from "../DateRangePopover";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface TabOption {
@@ -61,6 +63,12 @@ interface TabFiltersProps {
     options: SelectFilterOption[];
     value: string;
     onChange: (value: string) => void;
+    label?: string;
+  };
+  dateRangeFilter?: {
+    dateFrom: string;
+    dateTo: string;
+    onChange: (range: DateRangeValue) => void;
     label?: string;
   };
   actions?: ActionButtonConfig[];
@@ -216,6 +224,7 @@ export function TabFilters({
   searchValue = "",
   onSearchChange,
   searchPlaceholder = "Buscar",
+  dateRangeFilter,
   actions,
 }: TabFiltersProps) {
   const { hasPermission } = usePermissions();
@@ -230,7 +239,8 @@ export function TabFilters({
   const hasActions = Boolean(visibleActions && visibleActions.length > 0);
   const singleAction = hasActions && visibleActions!.length === 1;
   const isContainedLayout = layout === "contained";
-  const hasToolbarExtras = showSearch || hasActions;
+  const hasDateRangeFilter = Boolean(dateRangeFilter);
+  const hasToolbarExtras = showSearch || hasActions || hasDateRangeFilter;
 
   if (tabs.length > 0 && isContainedLayout && !hasToolbarExtras) {
     return (
@@ -282,6 +292,8 @@ export function TabFilters({
       <Grid
         container
         size={{ xs: 12, md: "auto" }}
+        spacing={1}
+        alignItems="center"
         alignContent={{ xs: "flex-start", md: "flex-end" }}
         sx={{
           minWidth: 0,
@@ -290,10 +302,21 @@ export function TabFilters({
           justifyContent: { xs: "flex-start", md: "flex-end" },
         }}
       >
+        {dateRangeFilter && (
+          <Grid size={{ xs: 12, sm: "auto" }} sx={{ flexShrink: 0 }}>
+            <DateRangeFilter
+              compact
+              dateFrom={dateRangeFilter.dateFrom}
+              dateTo={dateRangeFilter.dateTo}
+              onChange={dateRangeFilter.onChange}
+              label={dateRangeFilter.label}
+            />
+          </Grid>
+        )}
         {showSearch && (
           <Grid
             size={{ xs: 12, sm: 6, md: "auto" }}
-            sx={{ minWidth: 0, maxWidth: "100%" }}
+            sx={{ minWidth: 0, maxWidth: "100%", flex: 1 }}
           >
             <FormTextField
               placeholder={searchPlaceholder}

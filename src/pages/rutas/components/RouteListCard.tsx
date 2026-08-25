@@ -1,10 +1,14 @@
 import { Stack, Typography } from "@mui/material";
-import { Box, Check, Route, Truck } from "lucide-react";
+import { Box, Route, Truck } from "lucide-react";
 
 import { StatusChip } from "@/components";
 import { RouteCard } from "@/styles/rutas.styles";
 import type { RouteSummary } from "@/types/rutas.types";
-import { ROUTE_TYPE_LABEL, STATUS_LABEL } from "./constants";
+import {
+  ROUTE_TYPE_LABEL,
+  getRouteStatusChipConfig,
+  getRouteStatusLabel,
+} from "./constants";
 
 interface RouteListCardProps {
   route: RouteSummary;
@@ -13,6 +17,9 @@ interface RouteListCardProps {
 }
 
 export function RouteListCard({ route, selected, onSelect }: RouteListCardProps) {
+  const statusConfig = getRouteStatusChipConfig(route.status);
+  const StatusIcon = statusConfig.Icon;
+
   return (
     <RouteCard selected={selected} onClick={() => onSelect(route.id)}>
       <Stack flex={1} spacing={0.5} alignItems="flex-start" minWidth={0}>
@@ -37,10 +44,10 @@ export function RouteListCard({ route, selected, onSelect }: RouteListCardProps)
             label={ROUTE_TYPE_LABEL[route.routeType ?? ""]}
           />
           <StatusChip
-            variant={route.status === "scheduled" ? "pending" : "success"}
-            startIcon={route.status === "scheduled" ? <Truck size={16} /> : <Check size={16} />}
+            variant={statusConfig.variant}
+            startIcon={<StatusIcon size={16} />}
             size="small"
-            label={STATUS_LABEL[route.status ?? ""]}
+            label={getRouteStatusLabel(route.status)}
           />
         </Stack>
       </Stack>

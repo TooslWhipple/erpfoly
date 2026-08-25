@@ -272,6 +272,8 @@ export function AddOrdersToRouteModal({
           );
       await onConfirm({ points });
       onClose();
+    } catch {
+      // Error already shown by the mutation snackbar
     } finally {
       setSubmitting(false);
     }

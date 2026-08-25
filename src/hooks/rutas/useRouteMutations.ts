@@ -222,6 +222,14 @@ export function useRouteMutations({
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
       showSuccess("Chofer eliminado correctamente.");
     },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo eliminar el chofer: ${detail}`
+          : "No se pudo eliminar el chofer.",
+      );
+    },
   });
 
   const addAssistantMutation = useMutation({
@@ -243,6 +251,14 @@ export function useRouteMutations({
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
       showSuccess("Ayudante agregado correctamente.");
     },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo agregar el ayudante: ${detail}`
+          : "No se pudo agregar el ayudante.",
+      );
+    },
   });
 
   const removeAssistantMutation = useMutation({
@@ -263,6 +279,14 @@ export function useRouteMutations({
       );
       queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
       showSuccess("Ayudante eliminado correctamente.");
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo eliminar el ayudante: ${detail}`
+          : "No se pudo eliminar el ayudante.",
+      );
     },
   });
 

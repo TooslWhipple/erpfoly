@@ -271,7 +271,10 @@ export default function CreditApplicationReviewPage() {
               disableGoToProfile={!detail.approvedClientId}
             />
           ) : detail.status === "REJECTED" ? (
-            <CreditApplicationStatusCard variant="rejected" />
+            <CreditApplicationStatusCard
+              variant="rejected"
+              rejectionReason={detail.rejectionReason}
+            />
           ) : (
             <Grid container spacing={1} flexWrap="wrap">
               <Grid

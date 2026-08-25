@@ -27,6 +27,8 @@ export interface OrderItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    currency?: string;
+    exchangeRate?: number;
 }
 
 export interface NewOrder {

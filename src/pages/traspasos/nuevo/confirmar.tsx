@@ -175,6 +175,8 @@ export default function ConfirmarTraspasoPage() {
           product_id: item.productId,
           requested_quantity: item.quantity,
           unit_price: item.unitPrice,
+          currency: item.currency,
+          exchange_rate: item.exchangeRate,
         })),
       };
       const result = await createOrderWithItems(payload);

@@ -35,6 +35,7 @@ import {
     type DamagedProductDetail,
     type RepairCostAssignee,
 } from "@/services/damaged-products.service";
+import { getProductById } from "@/services/productos.service";
 import { getApiErrorMessage } from "@/lib/axios";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -67,6 +68,7 @@ interface AddDamagedGoodsFormShape extends Record<string, unknown> {
     includeCost: boolean;
     repairCost: string;
     repairCostAssignedTo: RepairCostAssignee | "";
+    chargedSupplierId: string;
     auctionPrice: string;
     acceptanceLetter: UploadedFileItem[];
 }
@@ -171,6 +173,13 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
         label: "¿Quién absorbe el costo?",
     },
     {
+        name: "chargedSupplierId",
+        schema: z.string(),
+        label: "Proveedor a cargar",
+        placeholder: "Seleccione proveedor",
+        type: "select",
+    },
+    {
         name: "auctionPrice",
         schema: z.string(),
         label: "Precio de remate",
@@ -197,6 +206,7 @@ const EMPTY_DEFAULTS: AddDamagedGoodsFormShape = {
     includeCost: false,
     repairCost: "",
     repairCostAssignedTo: "",
+    chargedSupplierId: "",
     auctionPrice: "",
     acceptanceLetter: [],
 };
@@ -229,6 +239,7 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
         includeCost: false,
         repairCost: "",
         repairCostAssignedTo: "",
+        chargedSupplierId: "",
         auctionPrice: "",
         acceptanceLetter: [],
     };
@@ -238,8 +249,9 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
  * Builds the form's default values from an existing folio (edit mode).
  *
  * `assignedToId` is only recovered from `repairSupplierId` (the only DB-backed
- * counterpart it has); `responsibleId`, `solutionId` and `endDate` have no
- * column at all, so they always start empty in edit mode too.
+ * counterpart it has); `responsibleId`, `solutionId`, `endDate` and
+ * `chargedSupplierId` have no column at all (`chargedSupplierId` is create-only),
+ * so they always start empty in edit mode too.
  */
 function buildDefaultValuesFromFolio(folio: DamagedProductDetail): AddDamagedGoodsFormShape {
     return {
@@ -258,6 +270,7 @@ function buildDefaultValuesFromFolio(folio: DamagedProductDetail): AddDamagedGoo
         includeCost: folio.repairCost != null,
         repairCost: folio.repairCost != null ? String(folio.repairCost) : "",
         repairCostAssignedTo: folio.repairCostAssignedTo ?? "",
+        chargedSupplierId: "",
         auctionPrice: folio.auctionPrice != null ? String(folio.auctionPrice) : "",
         acceptanceLetter: [],
     };
@@ -408,6 +421,100 @@ function DamagedGoodsBranchField({
     );
 }
 
+type ChargedSupplierFormApi = {
+    setFieldValue: (name: "chargedSupplierId", value: string) => void;
+};
+
+function DamagedGoodsChargedSupplierField({
+    form,
+    productId,
+    fetchEnabled,
+    disabled = false,
+}: {
+    form: ChargedSupplierFormApi & Parameters<typeof FormField>[0]["form"];
+    productId: number;
+    fetchEnabled: boolean;
+    disabled?: boolean;
+}) {
+    const suppliersQuery = useQuery({
+        queryKey: ["products", "detail", productId],
+        queryFn: async () => {
+            const result = await getProductById(productId);
+            if (result.error != null) {
+                throw new Error(result.error.message);
+            }
+            return result.data?.suppliers ?? [];
+        },
+        enabled: fetchEnabled && productId > 0,
+        staleTime: 30_000,
+    });
+
+    const supplierOptions: SelectOption[] = useMemo(
+        () =>
+            (suppliersQuery.data ?? []).map((item) => ({
+                value: String(item.supplierId),
+                label: item.supplierName ?? `Proveedor ${item.supplierId}`,
+            })),
+        [suppliersQuery.data],
+    );
+
+    const prevProductIdRef = useRef<number>(0);
+
+    useEffect(() => {
+        if (productId !== prevProductIdRef.current) {
+            prevProductIdRef.current = productId;
+            form.setFieldValue("chargedSupplierId", "");
+        }
+    }, [productId, form]);
+
+    useEffect(() => {
+        if (productId <= 0 || suppliersQuery.isFetching) {
+            return;
+        }
+        if (!suppliersQuery.isSuccess || suppliersQuery.data == null) {
+            return;
+        }
+        if (suppliersQuery.data.length === 1) {
+            form.setFieldValue("chargedSupplierId", String(suppliersQuery.data[0].supplierId));
+        }
+    }, [
+        productId,
+        suppliersQuery.isFetching,
+        suppliersQuery.isSuccess,
+        suppliersQuery.data,
+        form,
+    ]);
+
+    const hasProduct = productId > 0;
+    const isLoading = hasProduct && suppliersQuery.isFetching;
+    const noSuppliers =
+        hasProduct &&
+        suppliersQuery.isSuccess &&
+        !suppliersQuery.isFetching &&
+        supplierOptions.length === 0;
+
+    let placeholder = "Seleccione proveedor";
+    if (!hasProduct) {
+        placeholder = "Seleccione un artículo";
+    } else if (isLoading) {
+        placeholder = "Cargando...";
+    } else if (noSuppliers) {
+        placeholder = "El artículo no tiene proveedores registrados";
+    }
+
+    return (
+        <FormField
+            form={form}
+            name="chargedSupplierId"
+            label="Proveedor a cargar"
+            placeholder={placeholder}
+            type="select"
+            options={supplierOptions}
+            disabled={disabled || !hasProduct || isLoading || noSuppliers}
+        />
+    );
+}
+
 export function AddDamagedGoodsModal({
     open,
     onClose,
@@ -540,6 +647,18 @@ export function AddDamagedGoodsModal({
             }
             if (data.includeCost && !data.repairCostAssignedTo) {
                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["repairCostAssignedTo"] });
+            }
+            // `chargedSupplierId` no tiene columna en edición (igual que assignedToId
+            // et al.): solo se exige al crear, y solo con reparación interna cargada
+            // al proveedor.
+            if (
+                !isEditMode &&
+                data.damagedProductDisposition === DISPOSITION_CODES.INTERNAL_REPAIR &&
+                data.includeCost &&
+                data.repairCostAssignedTo === "supplier" &&
+                !data.chargedSupplierId
+            ) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["chargedSupplierId"] });
             }
         }
 
@@ -725,6 +844,13 @@ export function AddDamagedGoodsModal({
                                 payload.repairCost = parseFloat(values.repairCost);
                                 if (values.repairCostAssignedTo !== "") {
                                     payload.repairCostAssignedTo = values.repairCostAssignedTo;
+                                }
+                                if (
+                                    dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR &&
+                                    values.repairCostAssignedTo === "supplier" &&
+                                    values.chargedSupplierId
+                                ) {
+                                    payload.chargedSupplierId = parseInt(values.chargedSupplierId, 10);
                                 }
                             }
                         }
@@ -1167,6 +1293,42 @@ export function AddDamagedGoodsModal({
                                                                                                 <FormHelperText>
                                                                                                     {assigneeError}
                                                                                                 </FormHelperText>
+                                                                                            )}
+                                                                                        {!isEditMode &&
+                                                                                            dispositionValue ===
+                                                                                                DISPOSITION_CODES.INTERNAL_REPAIR &&
+                                                                                            assigneeField.state
+                                                                                                .value === "supplier" && (
+                                                                                                <form.Subscribe
+                                                                                                    selector={(state) =>
+                                                                                                        Number(
+                                                                                                            (
+                                                                                                                state as {
+                                                                                                                    values?: {
+                                                                                                                        productId?: number;
+                                                                                                                    };
+                                                                                                                }
+                                                                                                            ).values
+                                                                                                                ?.productId ?? 0,
+                                                                                                        )
+                                                                                                    }
+                                                                                                >
+                                                                                                    {(productId) => (
+                                                                                                        <DamagedGoodsChargedSupplierField
+                                                                                                            form={form}
+                                                                                                            productId={
+                                                                                                                productId
+                                                                                                            }
+                                                                                                            fetchEnabled={
+                                                                                                                open &&
+                                                                                                                productId > 0
+                                                                                                            }
+                                                                                                            disabled={
+                                                                                                                submitting
+                                                                                                            }
+                                                                                                        />
+                                                                                                    )}
+                                                                                                </form.Subscribe>
                                                                                             )}
                                                                                     </FormControl>
                                                                                 );

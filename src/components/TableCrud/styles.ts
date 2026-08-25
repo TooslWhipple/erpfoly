@@ -138,6 +138,9 @@ export const StickyCell = styled(StyledTableCell)<{ position?: "left" | "right" 
 export const ActionsButton = styled(IconButton)({
   width: 32,
   height: 32,
+  "&.Mui-disabled": {
+    opacity: 0.38,
+  },
 });
 
 export const StyledMenu = styled(Menu)(({ theme }) => ({

@@ -7,6 +7,7 @@ import { TabFilters } from "@/components/TabFilters";
 import type { TabOption } from "@/components/TabFilters";
 import { FormTextField } from "@/components/Form";
 import { PostalCodeSettlementFields } from "@/components/CreditApplicationForm/PostalCodeSettlementFields";
+import { formControlLabelSpacingSx } from "@/components/CreditApplicationDetailSections/formControlLabelSpacing";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
 import { useCreateCashClientForm } from "@/hooks/useCreateCashClientForm";
@@ -546,6 +547,17 @@ export function CreateCashClientModal({
             onChange={(e) => setAddressValue("betweenStreets", e.target.value)}
           />
 
+          <FormControlLabel
+            sx={formControlLabelSpacingSx}
+            control={
+              <Switch
+                checked={values.address.useClientPhone}
+                onChange={(e) => handleUseClientPhoneToggle(e.target.checked)}
+              />
+            }
+            label="Utilizar número del cliente"
+          />
+
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
               <FormTextField
@@ -569,16 +581,6 @@ export function CreateCashClientModal({
               />
             </Grid>
           </Grid>
-
-          <FormControlLabel
-            control={
-              <Switch
-                checked={values.address.useClientPhone}
-                onChange={(e) => handleUseClientPhoneToggle(e.target.checked)}
-              />
-            }
-            label="Utilizar número del cliente"
-          />
 
           <Button
             fullWidth

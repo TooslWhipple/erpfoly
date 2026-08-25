@@ -45,6 +45,7 @@ export type PermissionModule =
   | "catalogos.cajas"
   | "catalogos.proveedores"
   | "catalogos.proveedores_reparaciones"
+  | "catalogos.vehiculos"
   | "catalogos.usuarios"
   | "catalogos.vendedores"
   | "catalogos.roles"
@@ -289,6 +290,12 @@ export const CATALOG_REPAIR_SUPPLIERS_READ = CATALOG_REPAIR_SUPPLIERS_PERMISSION
 export const CATALOG_REPAIR_SUPPLIERS_UPDATE = CATALOG_REPAIR_SUPPLIERS_PERMISSIONS.update;
 export const CATALOG_REPAIR_SUPPLIERS_DELETE = CATALOG_REPAIR_SUPPLIERS_PERMISSIONS.delete;
 
+export const CATALOG_VEHICLES_PERMISSIONS = createCrudPermissions("catalogos.vehiculos");
+export const CATALOG_VEHICLES_CREATE = CATALOG_VEHICLES_PERMISSIONS.create;
+export const CATALOG_VEHICLES_READ = CATALOG_VEHICLES_PERMISSIONS.read;
+export const CATALOG_VEHICLES_UPDATE = CATALOG_VEHICLES_PERMISSIONS.update;
+export const CATALOG_VEHICLES_DELETE = CATALOG_VEHICLES_PERMISSIONS.delete;
+
 export const CATALOG_USERS_PERMISSIONS = createCrudPermissions("catalogos.usuarios");
 export const CATALOG_USERS_CREATE = CATALOG_USERS_PERMISSIONS.create;
 export const CATALOG_USERS_READ = CATALOG_USERS_PERMISSIONS.read;
@@ -421,6 +428,7 @@ export const PERMISSIONS_BY_MODULE = {
     cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),
     suppliers: Object.values(CATALOG_SUPPLIERS_PERMISSIONS),
     repairSuppliers: Object.values(CATALOG_REPAIR_SUPPLIERS_PERMISSIONS),
+    vehicles: Object.values(CATALOG_VEHICLES_PERMISSIONS),
     users: Object.values(CATALOG_USERS_PERMISSIONS),
     sellers: Object.values(CATALOG_SELLERS_PERMISSIONS),
     roles: Object.values(CATALOG_ROLES_PERMISSIONS),

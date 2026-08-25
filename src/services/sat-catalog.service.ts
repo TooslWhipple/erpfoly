@@ -4,6 +4,8 @@ const BASE = "/sat-catalogs";
 
 export const SAT_PRODUCT_SERVICE_KEY_SEARCH_DEFAULT_LIMIT = 50;
 export const SAT_UNIT_OF_MEASURE_SEARCH_DEFAULT_LIMIT = 50;
+export const SAT_VEHICLE_CONFIG_SEARCH_DEFAULT_LIMIT = 100;
+export const SAT_PERMIT_TYPE_SEARCH_DEFAULT_LIMIT = 50;
 
 export interface SatProductServiceKeyItem {
     key: string;
@@ -17,6 +19,11 @@ export interface SatUnitOfMeasureItem {
     symbol: string | null;
 }
 
+export interface SatCatalogKeyItem {
+    key: string;
+    description: string;
+}
+
 export interface SearchSatProductServiceKeysParams {
     q: string;
     limit?: number;
@@ -24,6 +31,11 @@ export interface SearchSatProductServiceKeysParams {
 
 export interface SearchSatUnitsOfMeasureParams {
     q: string;
+    limit?: number;
+}
+
+export interface SearchSatCatalogKeyParams {
+    q?: string;
     limit?: number;
 }
 
@@ -69,6 +81,44 @@ export async function searchSatUnitsOfMeasure(
 
     return {
         data: normalizeSatSearchResponse<SatUnitOfMeasureItem>(result.data),
+        error: null,
+    };
+}
+
+export async function searchSatVehicleConfigs(
+    params: SearchSatCatalogKeyParams = {},
+): Promise<ApiResult<SatCatalogKeyItem[]>> {
+    const limit = params.limit ?? SAT_VEHICLE_CONFIG_SEARCH_DEFAULT_LIMIT;
+    const q = params.q?.trim();
+    const result = await get<unknown>(`${BASE}/vehicle-configs/search`, {
+        params: q ? { q, limit } : { limit },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeSatSearchResponse<SatCatalogKeyItem>(result.data),
+        error: null,
+    };
+}
+
+export async function searchSatPermitTypes(
+    params: SearchSatCatalogKeyParams = {},
+): Promise<ApiResult<SatCatalogKeyItem[]>> {
+    const limit = params.limit ?? SAT_PERMIT_TYPE_SEARCH_DEFAULT_LIMIT;
+    const q = params.q?.trim();
+    const result = await get<unknown>(`${BASE}/permit-types/search`, {
+        params: q ? { q, limit } : { limit },
+    });
+
+    if (result.error != null) {
+        return { data: null, error: result.error };
+    }
+
+    return {
+        data: normalizeSatSearchResponse<SatCatalogKeyItem>(result.data),
         error: null,
     };
 }

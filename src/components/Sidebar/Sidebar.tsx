@@ -12,7 +12,7 @@ import {
   UserProfileContainer,
   UserAvatar,
   UserInfoContainer,
-  UserEmail,
+  UserRole,
 } from "./styles";
 import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
 import {
@@ -145,9 +145,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <Typography variant="subtitle2" noWrap>
               {user?.name ?? "Usuario"}
             </Typography>
-            <UserEmail variant="caption" noWrap>
-              {user?.email ?? "Sin correo registrado"}
-            </UserEmail>
+            <UserRole variant="caption" noWrap>
+              {user?.roleName?.trim() || user?.role?.trim() || "Sin rol asignado"}
+            </UserRole>
           </UserInfoContainer>
           <Button
             variant="text"

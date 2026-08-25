@@ -1,4 +1,6 @@
 import {
+  Alert,
+  Box,
   Button,
   Chip,
   CircularProgress,
@@ -6,6 +8,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -58,6 +61,8 @@ export interface SaleCheckoutPaymentPanelProps {
   onTerminalChange: (value: number | null) => void;
   terminals: PaymentTerminalCatalogItem[];
   terminalsLoading: boolean;
+  cardPaymentDisabled: boolean;
+  showNoTerminalsWarning: boolean;
   showChange: boolean;
   change: number;
   canRegister: boolean;
@@ -78,6 +83,8 @@ export function SaleCheckoutPaymentPanel({
   onTerminalChange,
   terminals,
   terminalsLoading,
+  cardPaymentDisabled,
+  showNoTerminalsWarning,
   showChange,
   change,
   canRegister,
@@ -143,6 +150,7 @@ export function SaleCheckoutPaymentPanel({
                 onCardAmountChange(sanitizeAmountInput(e.target.value))
               }
               placeholder="0.0"
+              disabled={cardPaymentDisabled}
               startAdornment={
                 <InputAdornment position="start">
                   <Typography
@@ -156,7 +164,12 @@ export function SaleCheckoutPaymentPanel({
               }
             />
           </PaymentMethodRow>
-          {isCardPayment && (
+          {showNoTerminalsWarning && (
+            <Alert severity="warning">
+              Esta sucursal no tiene terminales activas
+            </Alert>
+          )}
+          {isCardPayment && !showNoTerminalsWarning && (
             <Select
               value={selectedTerminal ?? ""}
               onChange={(e) =>
@@ -230,24 +243,30 @@ export function SaleCheckoutPaymentPanel({
                   </Stack>
                 </MenuItem>
               ))}
-              {terminals.length === 0 && (
-                <MenuItem value="" disabled>
-                  Esta sucursal no tiene terminales activas
-                </MenuItem>
-              )}
             </Select>
           )}
         </Stack>
       </Stack>
 
-      <Button
-        variant="text"
-        size="small"
-        startIcon={<PlusCircle size={16} />}
-        sx={{ color: "primary.main", px: 0, alignSelf: "flex-start" }}
+      <Tooltip
+        title={
+          showNoTerminalsWarning
+            ? "Esta sucursal no tiene terminales activas"
+            : "El cobro con varias tarjetas aún no está disponible"
+        }
       >
-        Agregar otra tarjeta
-      </Button>
+        <Box component="span" sx={{ alignSelf: "flex-start", display: "inline-flex" }}>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<PlusCircle size={16} />}
+            disabled
+            sx={{ px: 1.5 }}
+          >
+            Agregar otra tarjeta
+          </Button>
+        </Box>
+      </Tooltip>
 
       {exceedsCashLimit && (
         <PaymentErrorBanner>{cashLimitErrorMessage}</PaymentErrorBanner>

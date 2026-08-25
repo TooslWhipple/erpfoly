@@ -37,6 +37,7 @@ import {
   DetailHeader,
   DetailPageShell,
   InvoiceActionsGrid,
+  invoiceDownloadButtonSx,
 } from "@/styles/ventas/detalle.styles";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -338,11 +339,11 @@ export default function VentaDetalle() {
 
   if (isLoading) {
     return (
-      <DetailPageShell sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} mb={3}>
+      <DetailPageShell>
+        <DetailHeader>
           <Skeleton variant="circular" width={32} height={32} />
           <Skeleton variant="text" width={220} height={36} />
-        </Stack>
+        </DetailHeader>
         <DetailGrid>
           <Skeleton variant="rounded" height={200} />
           <Skeleton variant="rounded" height={300} />
@@ -353,9 +354,17 @@ export default function VentaDetalle() {
 
   if (isError || !sale) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">No se pudo cargar la venta.</Alert>
-      </Box>
+      <DetailPageShell>
+        <DetailHeader>
+          <InlineMobileMenuButton />
+          <Typography variant="h6" fontWeight={700}>
+            Detalle de la venta
+          </Typography>
+        </DetailHeader>
+        <DetailGrid>
+          <Alert severity="error">No se pudo cargar la venta.</Alert>
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
 
@@ -391,31 +400,23 @@ export default function VentaDetalle() {
   const isDraftSale = sale.status === "DRAFT";
 
   return (
-    <DetailPageShell sx={{ p: { xs: 2, md: 3 } }}>
+    <DetailPageShell>
       <DetailHeader>
         <InlineMobileMenuButton />
         <IconButton
-          size="medium"
+          size="small"
           onClick={() => router.push("/ventas")}
           aria-label="Volver a ventas"
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1.5,
-            bgcolor: "background.paper",
-          }}
         >
           <X size={18} />
         </IconButton>
-        <Typography variant="h5" fontWeight={700}>
+        <Typography variant="h6" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
           Detalle de la venta
         </Typography>
         {isSaleCancelled && (
           <StatusChip label="Cancelada" size="small" variant="error" />
         )}
       </DetailHeader>
-
-      <Divider sx={{ mb: 3, borderColor: "divider" }} />
 
       <DetailGrid>
         <Box>
@@ -639,11 +640,11 @@ export default function VentaDetalle() {
                               border: "1px solid",
                               borderColor: "primary.main",
                               borderRadius: 1.5,
-                              px: 1.5,
-                              py: 0.75,
+                              px: 2,
+                              py: 1,
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: 1.25,
                               cursor: "pointer",
                               color: "primary.main",
                               fontWeight: 500,
@@ -697,7 +698,7 @@ export default function VentaDetalle() {
                     startIcon={<FileCode size={15} />}
                     disabled={downloadingType === "xml"}
                     onClick={() => handleDownloadInvoice("xml")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     XML
                   </Button>
@@ -709,7 +710,7 @@ export default function VentaDetalle() {
                     startIcon={<FileText size={15} />}
                     disabled={downloadingType === "pdf"}
                     onClick={() => handleDownloadInvoice("pdf")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     PDF
                   </Button>
@@ -721,7 +722,7 @@ export default function VentaDetalle() {
                     startIcon={<Archive size={15} />}
                     disabled={downloadingType === "zip"}
                     onClick={() => handleDownloadInvoice("zip")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     ZIP
                   </Button>
@@ -1164,7 +1165,13 @@ export default function VentaDetalle() {
                         </Typography>
                         <Button
                           size="small"
-                          sx={{ textTransform: "none", minWidth: 0, p: 0, fontWeight: 500 }}
+                          sx={{
+                            textTransform: "none",
+                            minWidth: "auto",
+                            px: 1,
+                            py: 0.25,
+                            fontWeight: 500,
+                          }}
                           onClick={() => setAddressModalOpen(true)}
                         >
                           Cambiar

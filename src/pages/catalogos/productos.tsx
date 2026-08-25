@@ -157,14 +157,6 @@ export default function Productos() {
   const columns = useMemo<Column<ProductListItem>[]>(
     () => [
       {
-        id: "id",
-        label: "ID",
-        type: "id",
-        size: "sm",
-        maxSize: "xs",
-        idPadding: 5,
-      },
-      {
         id: "code",
         label: "Código",
         type: "text",

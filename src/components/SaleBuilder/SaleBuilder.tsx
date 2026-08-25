@@ -78,6 +78,7 @@ import {
   getLayawayTerms,
   createSaleDraft,
   updateSaleClient,
+  updateSalePurchaseType,
   updateSaleLayawayTerm,
   addSaleItem,
   updateSaleItem,
@@ -129,6 +130,7 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
+import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
 import {
   getDiscountRequestReasonLabel,
@@ -152,6 +154,99 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "MXN",
   }).format(value);
+}
+
+function chosenSourcesAvailable(
+  sources: { quantity: number; available: number }[],
+): number | undefined {
+  if (sources.length === 0) return undefined;
+  return sources
+    .filter((src) => src.quantity > 0)
+    .reduce((sum, src) => sum + src.available, 0);
+}
+
+function toCheckoutDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.slice(0, 10);
+}
+
+const CHANGE_LINK_SX = {
+  textTransform: "none" as const,
+  fontWeight: 600,
+  px: 1,
+  py: 0.25,
+  minWidth: "auto",
+};
+
+const DELIVERY_TYPE_LABELS: Record<"delivery" | "pickup", string> = {
+  delivery: "A domicilio",
+  pickup: "En tienda o bodega",
+};
+
+function formatCheckoutDeliveryDate(date: string | null): string {
+  if (!date) return "Sin fecha";
+  return dayjs(date)
+    .format("dddd D [de] MMMM, YYYY")
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function ReadOnlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <Box sx={{ mb: 1.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        display="block"
+        mb={0.5}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2">{value?.trim() ? value : "—"}</Typography>
+    </Box>
+  );
+}
+
+function DeliveryMapPreview({
+  coords,
+  apiKey,
+}: {
+  coords: { lat: number; lng: number } | null;
+  apiKey: string;
+}) {
+  if (coords && apiKey) {
+    return (
+      <Box sx={{ mb: 1.5 }}>
+        <StaticLocationMap coords={coords} apiKey={apiKey} height={130} />
+      </Box>
+    );
+  }
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: 130,
+        bgcolor: "grey.200",
+        borderRadius: 1,
+        mb: 1.5,
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Typography variant="caption" color="text.disabled">
+        {coords
+          ? "Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa"
+          : "Sin coordenadas registradas"}
+      </Typography>
+    </Box>
+  );
 }
 
 export interface SaleBuilderProps {
@@ -273,6 +368,7 @@ export function SaleBuilder({
   const todayIsoDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
   const [productSearch, setProductSearch] = useState("");
+  const [productScannerOpen, setProductScannerOpen] = useState(false);
   const [productPage, setProductPage] = useState(0);
   const [productLimit, setProductLimit] = useState(10);
   const debouncedProductSearch = useDebouncedValue(
@@ -473,6 +569,11 @@ export function SaleBuilder({
         setDeliveryBranchOverridden(true);
       }
     }
+
+    const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
+    if (hydratedDeliveryDate) {
+      setCheckoutDeliveryDate(hydratedDeliveryDate);
+    }
   }
 
   if (
@@ -485,6 +586,11 @@ export function SaleBuilder({
   }
 
   const syncDeliverySelection = async (saleId: number) => {
+    const deliveryDate =
+      deliveryType === "pickup"
+        ? effectivePickupDate || checkoutDeliveryDate || undefined
+        : checkoutDeliveryDate ?? undefined;
+
     if (deliveryType === "delivery") {
       const clientPrimaryAddress =
         selectedClient?.addresses?.find((a) => a.isPrimary) ??
@@ -496,12 +602,14 @@ export function SaleBuilder({
         await setDeliveryDate(saleId, {
           delivery_type: "ADDRESS",
           address_id: addressId,
+          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
       await setDeliveryDate(saleId, {
         delivery_type: "BRANCH",
         branch_id: effectiveDeliveryBranch.id,
+        ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
       });
     }
   };
@@ -564,6 +672,9 @@ export function SaleBuilder({
           if (clientRes.error) throw new Error(clientRes.error.message);
         }
 
+        const purchaseTypeRes = await updateSalePurchaseType(saleId, pt.id);
+        if (purchaseTypeRes.error) throw new Error(purchaseTypeRes.error.message);
+
         const currentIds = new Set(
           cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
         );
@@ -619,6 +730,7 @@ export function SaleBuilder({
         void queryClient.invalidateQueries({
           queryKey: ["resume-sale-draft", resumeSaleId],
         });
+        void queryClient.invalidateQueries({ queryKey: ["sale-drafts"] });
       } else {
         showSuccess(
           "Cotización guardada. Puedes retomarla desde Cotizaciones guardadas.",
@@ -896,6 +1008,7 @@ export function SaleBuilder({
   const lockedBranch = cartBranch ?? selectionBranch;
 
   const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
+  const isCheckoutView = view === "checkout";
 
   // La sucursal desde la que se está cobrando en este momento (caja activa
   // del cajero), no la sucursal del carrito/venta — el backend valida la
@@ -903,16 +1016,31 @@ export function SaleBuilder({
   const activeSessionQuery = useQuery({
     queryKey: ["cash-register-session-summary"],
     queryFn: () => getSessionSummary(),
-    enabled: isCardPayment,
+    enabled: isCheckoutView,
     staleTime: 60_000,
   });
   const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
   const paymentTerminalsQuery = useQuery({
     queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
     queryFn: () => getPaymentTerminalsCatalog(paymentTerminalBranchId!),
-    enabled: isCardPayment && paymentTerminalBranchId != null,
+    enabled: isCheckoutView && paymentTerminalBranchId != null,
     staleTime: 60_000,
   });
+  const paymentTerminals = paymentTerminalsQuery.data ?? [];
+  const paymentTerminalsLoading =
+    isCheckoutView &&
+    (activeSessionQuery.isLoading || paymentTerminalsQuery.isLoading);
+  const hasPaymentTerminals = paymentTerminals.length > 0;
+
+  if (
+    isCheckoutView &&
+    !paymentTerminalsLoading &&
+    !hasPaymentTerminals &&
+    (cardAmount !== "" || selectedTerminal != null)
+  ) {
+    setCardAmount("");
+    setSelectedTerminal(null);
+  }
 
   const isBranchSourceLocked = (src: {
     sourceType: string;
@@ -1037,6 +1165,13 @@ export function SaleBuilder({
     setView("product-detail");
   };
 
+  const handleProductCodeScanned = (code: string) => {
+    setProductScannerOpen(false);
+    setProductSearch(code);
+    setProductPage(0);
+    setView("search");
+  };
+
   const handleAddToCart = useCallback(() => {
     if (!productDetail) return;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
@@ -1071,9 +1206,8 @@ export function SaleBuilder({
     // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
     // solo se miraba la fuente "branch", así que elegir desde "Bodega"
     // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
-    const availableFromChosenSources = productSources
-      .filter((src) => src.quantity > 0)
-      .reduce((sum, src) => sum + src.available, 0);
+    const availableFromChosenSources =
+      chosenSourcesAvailable(productSources) ?? 0;
     const backorderedQuantity = Math.max(
       0,
       totalQty - availableFromChosenSources,
@@ -1143,17 +1277,16 @@ export function SaleBuilder({
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          const quantity = Math.max(0, item.quantity + delta);
+          const uncapped = Math.max(0, item.quantity + delta);
+          const maxQty = chosenSourcesAvailable(item.sources);
+          const quantity =
+            maxQty === undefined ? uncapped : Math.min(uncapped, maxQty);
           // Sin `sources` (línea hidratada de una venta retomada) no hay
           // existencia de sucursal a mano para recalcular — se conserva el
           // último valor que confirmó el backend hasta el próximo sync.
           if (item.sources.length === 0) return { ...item, quantity };
-          // Misma lógica que handleAddToCart: suma la existencia de todas
-          // las fuentes que se usaron para cubrir este item (sucursal y/o
-          // bodega), no solo la de "esta sucursal".
-          const availableFromChosenSources = item.sources
-            .filter((src) => src.quantity > 0)
-            .reduce((sum, src) => sum + src.available, 0);
+          const availableFromChosenSources =
+            chosenSourcesAvailable(item.sources) ?? 0;
           return {
             ...item,
             quantity,
@@ -1188,9 +1321,15 @@ export function SaleBuilder({
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
+    const available =
+      productDetail?.inventorySources.find((s) => s.sourceKey === sourceKey)
+        ?.available ?? 0;
     setQuantityMap((prev) => ({
       ...prev,
-      [sourceKey]: Math.max(0, (prev[sourceKey] ?? 0) + delta),
+      [sourceKey]: Math.max(
+        0,
+        Math.min(available, (prev[sourceKey] ?? 0) + delta),
+      ),
     }));
   };
 
@@ -1269,6 +1408,7 @@ export function SaleBuilder({
 
   if (view === "search") {
     return (
+      <>
       <PageShell>
         <SearchHeader>
           <InlineMobileMenuButton />
@@ -1291,9 +1431,15 @@ export function SaleBuilder({
               sx={{ bgcolor: "background.paper" }}
             />
           </SearchInputWrap>
-          <TouchButton variant="outlined" startIcon={<ScanLine size={16} />}>
-            Escanear artículos
-          </TouchButton>
+          {!isCajeroMode && (
+            <TouchButton
+              variant="outlined"
+              startIcon={<ScanLine size={16} />}
+              onClick={() => setProductScannerOpen(true)}
+            >
+              Escanear artículos
+            </TouchButton>
+          )}
         </SearchHeader>
 
         <PageContent>
@@ -1344,6 +1490,12 @@ export function SaleBuilder({
           />
         </PageContent>
       </PageShell>
+      <ProductCodeScannerDialog
+        open={productScannerOpen}
+        onClose={() => setProductScannerOpen(false)}
+        onCodeScanned={handleProductCodeScanned}
+      />
+      </>
     );
   }
 
@@ -1679,6 +1831,7 @@ export function SaleBuilder({
                                   )
                                 }
                                 min={0}
+                                max={src.available}
                                 disabled={branchLocked}
                                 size="medium"
                                 iconSize={14}
@@ -1707,7 +1860,7 @@ export function SaleBuilder({
                   variant="text"
                   size="small"
                   onClick={() => setShowOtherBranches(true)}
-                  sx={{ mt: 1.5, px: 0 }}
+                  sx={{ mt: 1.5, px: 1 }}
                 >
                   Consultar existencia en otras sucursales
                 </Button>
@@ -1779,6 +1932,7 @@ export function SaleBuilder({
                                       )
                                     }
                                     min={0}
+                                    max={src.available}
                                     disabled={branchLocked}
                                     size="medium"
                                     iconSize={14}
@@ -1815,7 +1969,9 @@ export function SaleBuilder({
     const canRegister =
       !cobrarMutation.isPending &&
       totalPaid >= amountToPay &&
-      !exceedsCashLimit;
+      !exceedsCashLimit &&
+      (!isCardPayment ||
+        (hasPaymentTerminals && selectedTerminal != null));
 
     return (
       <PageShell>
@@ -2171,8 +2327,14 @@ export function SaleBuilder({
               cashLimitErrorMessage={MAX_CASH_SALE_PAYMENT_MESSAGE}
               selectedTerminal={selectedTerminal}
               onTerminalChange={setSelectedTerminal}
-              terminals={paymentTerminalsQuery.data ?? []}
-              terminalsLoading={paymentTerminalsQuery.isLoading}
+              terminals={paymentTerminals}
+              terminalsLoading={paymentTerminalsLoading}
+              cardPaymentDisabled={
+                paymentTerminalsLoading || !hasPaymentTerminals
+              }
+              showNoTerminalsWarning={
+                !paymentTerminalsLoading && !hasPaymentTerminals
+              }
               showChange={paymentType !== "LAYAWAY"}
               change={change}
               canRegister={canRegister}
@@ -2339,6 +2501,7 @@ export function SaleBuilder({
                     variant="option"
                     color="inherit"
                     startIcon={<ScanLine size={16} />}
+                    onClick={() => setProductScannerOpen(true)}
                   >
                     Escanear artículos
                   </TouchButton>
@@ -2372,6 +2535,7 @@ export function SaleBuilder({
                       currentBranchId={CURRENT_BRANCH_ID}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
+                      qtyMax={chosenSourcesAvailable(item.sources)}
                     />
                   ))}
                 </Stack>
@@ -2495,18 +2659,24 @@ export function SaleBuilder({
             <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Tipo de venta
             </Typography>
-            <PaymentTypeRow>
-              {PAYMENT_OPTIONS.map((opt) => (
-                <PaymentTypeButton
-                  key={opt.value}
-                  active={paymentType === opt.value}
-                  disabled={isCajeroMode}
-                  onClick={() => setPaymentType(opt.value)}
-                >
-                  {opt.label}
-                </PaymentTypeButton>
-              ))}
-            </PaymentTypeRow>
+            {isCajeroMode ? (
+              <Typography variant="body2">
+                {PAYMENT_OPTIONS.find((opt) => opt.value === paymentType)
+                  ?.label ?? "—"}
+              </Typography>
+            ) : (
+              <PaymentTypeRow>
+                {PAYMENT_OPTIONS.map((opt) => (
+                  <PaymentTypeButton
+                    key={opt.value}
+                    active={paymentType === opt.value}
+                    onClick={() => setPaymentType(opt.value)}
+                  >
+                    {opt.label}
+                  </PaymentTypeButton>
+                ))}
+              </PaymentTypeRow>
+            )}
           </SidebarCard>
 
           <SidebarCard>
@@ -2526,10 +2696,7 @@ export function SaleBuilder({
                     variant="text"
                     disabled={isCajeroMode}
                     sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      p: 0,
-                      minWidth: 0,
+                      ...CHANGE_LINK_SX,
                       fontSize: "0.875rem",
                     }}
                     onClick={() => {
@@ -2630,6 +2797,9 @@ export function SaleBuilder({
                         justifyContent: "flex-start",
                         mt: 1.5,
                         minHeight: 44,
+                        height: 44,
+                        maxHeight: 44,
+                        px: 1.5,
                       }}
                       onClick={() => setCreditIntakeModalOpen(true)}
                     >
@@ -2669,7 +2839,13 @@ export function SaleBuilder({
                     variant="outlined"
                     size="small"
                     startIcon={<Plus size={16} />}
-                    sx={{ justifyContent: "flex-start", minHeight: 44 }}
+                    sx={{
+                      justifyContent: "flex-start",
+                      minHeight: 44,
+                      height: 44,
+                      maxHeight: 44,
+                      px: 1.5,
+                    }}
                     onClick={() => setCreateClientModalOpen(true)}
                   >
                     Registrar nuevo cliente
@@ -2685,6 +2861,61 @@ export function SaleBuilder({
                 Entrega
               </Typography>
 
+              {isCajeroMode ? (
+                <>
+                  <ReadOnlyField
+                    label="Fecha de entrega"
+                    value={formatCheckoutDeliveryDate(checkoutDeliveryDate)}
+                  />
+                  <ReadOnlyField
+                    label="Tipo de entrega"
+                    value={
+                      deliveryType
+                        ? DELIVERY_TYPE_LABELS[deliveryType]
+                        : "Sin tipo de entrega"
+                    }
+                  />
+                  {deliveryType === "delivery" && (
+                    <>
+                      <DeliveryMapPreview
+                        coords={primaryCoords}
+                        apiKey={GOOGLE_MAPS_API_KEY}
+                      />
+                      <ReadOnlyField
+                        label="Dirección de entrega"
+                        value={
+                          useCustomDeliveryAddress
+                            ? customDeliveryAddress?.formatted
+                            : selectedClient.primaryAddressFormatted
+                        }
+                      />
+                      <ReadOnlyField
+                        label="Email"
+                        value={selectedClient.email}
+                      />
+                      <ReadOnlyField
+                        label="Teléfono de quién recibe"
+                        value={selectedClient.phoneNumber}
+                      />
+                    </>
+                  )}
+                  {deliveryType === "pickup" && (
+                    <ReadOnlyField
+                      label="Sucursal de entrega"
+                      value={
+                        effectiveDeliveryBranch
+                          ? `${effectiveDeliveryBranch.label}${
+                              effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                                ? " [Actual]"
+                                : ""
+                            }`
+                          : undefined
+                      }
+                    />
+                  )}
+                </>
+              ) : (
+                <>
               {showCheckoutDeliveryDateField && (
                 <Box sx={{ mb: 1.5 }}>
                   <Typography
@@ -2696,32 +2927,26 @@ export function SaleBuilder({
                     Fecha de entrega (opcional)
                   </Typography>
                   <Box
-                    onClick={() =>
-                      !isCajeroMode && setCheckoutDeliveryDateModalOpen(true)
-                    }
+                    onClick={() => setCheckoutDeliveryDateModalOpen(true)}
                     sx={{
                       border: "1px solid",
                       borderColor: "divider",
                       borderRadius: 1.5,
-                      px: 1.5,
-                      py: 0.75,
+                      px: 2,
+                      py: 1,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      cursor: isCajeroMode ? "default" : "pointer",
-                      color: isCajeroMode
-                        ? "text.disabled"
-                        : checkoutDeliveryDate
-                          ? "text.primary"
-                          : "primary.main",
+                      cursor: "pointer",
+                      color: checkoutDeliveryDate
+                        ? "text.primary"
+                        : "primary.main",
                       fontWeight: 500,
                       fontSize: "0.85rem",
                     }}
                   >
                     {checkoutDeliveryDate
-                      ? dayjs(checkoutDeliveryDate)
-                          .format("dddd D [de] MMMM, YYYY")
-                          .replace(/^\w/, (c) => c.toUpperCase())
+                      ? formatCheckoutDeliveryDate(checkoutDeliveryDate)
                       : "Asignar fecha de entrega"}
                     <Calendar size={16} />
                   </Box>
@@ -2732,7 +2957,6 @@ export function SaleBuilder({
                 fullWidth
                 size="small"
                 displayEmpty
-                disabled={isCajeroMode}
                 value={deliveryType ?? ""}
                 onChange={(e) =>
                   setDeliveryType(
@@ -2783,35 +3007,10 @@ export function SaleBuilder({
 
               {deliveryType === "delivery" && (
                 <>
-                  {primaryCoords && GOOGLE_MAPS_API_KEY ? (
-                    <Box sx={{ mb: 1.5 }}>
-                      <StaticLocationMap
-                        coords={primaryCoords}
-                        apiKey={GOOGLE_MAPS_API_KEY}
-                        height={130}
-                      />
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 130,
-                        bgcolor: "grey.200",
-                        borderRadius: 1,
-                        mb: 1.5,
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography variant="caption" color="text.disabled">
-                        {primaryCoords
-                          ? "Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa"
-                          : "Sin coordenadas registradas"}
-                      </Typography>
-                    </Box>
-                  )}
+                  <DeliveryMapPreview
+                    coords={primaryCoords}
+                    apiKey={GOOGLE_MAPS_API_KEY}
+                  />
 
                   <Stack
                     direction="row"
@@ -2825,12 +3024,8 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                       }}
                       onClick={() => setDeliveryAddressModalOpen(true)}
@@ -2849,11 +3044,8 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
-                        textTransform: "none",
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                         mb: 1,
                       }}
@@ -2903,12 +3095,8 @@ export function SaleBuilder({
                     <Button
                       size="small"
                       variant="text"
-                      disabled={isCajeroMode}
                       sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        p: 0,
-                        minWidth: 0,
+                        ...CHANGE_LINK_SX,
                         fontSize: "0.75rem",
                       }}
                       onClick={() => setBranchPickerOpen(true)}
@@ -2940,6 +3128,8 @@ export function SaleBuilder({
                       Entrega hoy mismo en tienda.
                     </Alert>
                   )}
+                </>
+              )}
                 </>
               )}
             </SidebarCard>
@@ -3332,6 +3522,12 @@ export function SaleBuilder({
             open={creditIntakeModalOpen}
             onClose={() => setCreditIntakeModalOpen(false)}
             onFinalize={handleCreditIntakeFinalize}
+          />
+
+          <ProductCodeScannerDialog
+            open={productScannerOpen}
+            onClose={() => setProductScannerOpen(false)}
+            onCodeScanned={handleProductCodeScanned}
           />
 
           {resumeSaleId !== null && (

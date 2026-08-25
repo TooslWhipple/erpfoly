@@ -18,16 +18,25 @@ import { unwrapOrThrow } from "@/lib/axios";
 import {
     searchSatProductServiceKeys,
     searchSatUnitsOfMeasure,
+    searchSatVehicleConfigs,
+    searchSatPermitTypes,
     SAT_PRODUCT_SERVICE_KEY_SEARCH_DEFAULT_LIMIT,
     SAT_UNIT_OF_MEASURE_SEARCH_DEFAULT_LIMIT,
+    SAT_VEHICLE_CONFIG_SEARCH_DEFAULT_LIMIT,
+    SAT_PERMIT_TYPE_SEARCH_DEFAULT_LIMIT,
     type SatProductServiceKeyItem,
     type SatUnitOfMeasureItem,
+    type SatCatalogKeyItem,
 } from "@/services/sat-catalog.service";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 1;
 
-type SatCatalogType = "product-service-key" | "unit-of-measure";
+type SatCatalogType =
+    | "product-service-key"
+    | "unit-of-measure"
+    | "vehicle-config"
+    | "permit-type";
 
 export interface SatCatalogSearchFieldProps {
     type: SatCatalogType;
@@ -62,6 +71,13 @@ function unitOfMeasureToOption(item: SatUnitOfMeasureItem): SatCatalogOption {
     };
 }
 
+function catalogKeyToOption(item: SatCatalogKeyItem): SatCatalogOption {
+    return {
+        key: item.key,
+        label: `${item.key} - ${item.description}`,
+    };
+}
+
 export function SatCatalogSearchField({
     type,
     label,
@@ -83,9 +99,13 @@ export function SatCatalogSearchField({
 
     const searchTerm = inputValue.trim() || value.trim();
     const debouncedQ = useDebouncedValue(searchTerm, SEARCH_DEBOUNCE_MS);
+    const isSmallOfficialCatalog =
+        type === "vehicle-config" || type === "permit-type";
 
     const { data: options = [], isFetching } = useQuery({
-        queryKey: ["sat-catalog-search", type, debouncedQ],
+        queryKey: isSmallOfficialCatalog
+            ? ["sat-catalog-search", type]
+            : ["sat-catalog-search", type, debouncedQ],
         queryFn: async () => {
             if (type === "product-service-key") {
                 const result = await searchSatProductServiceKeys({
@@ -94,14 +114,26 @@ export function SatCatalogSearchField({
                 });
                 return unwrapOrThrow(result).map(productServiceKeyToOption);
             }
-            const result = await searchSatUnitsOfMeasure({
-                q: debouncedQ,
-                limit: SAT_UNIT_OF_MEASURE_SEARCH_DEFAULT_LIMIT,
+            if (type === "unit-of-measure") {
+                const result = await searchSatUnitsOfMeasure({
+                    q: debouncedQ,
+                    limit: SAT_UNIT_OF_MEASURE_SEARCH_DEFAULT_LIMIT,
+                });
+                return unwrapOrThrow(result).map(unitOfMeasureToOption);
+            }
+            if (type === "vehicle-config") {
+                const result = await searchSatVehicleConfigs({
+                    limit: SAT_VEHICLE_CONFIG_SEARCH_DEFAULT_LIMIT,
+                });
+                return unwrapOrThrow(result).map(catalogKeyToOption);
+            }
+            const result = await searchSatPermitTypes({
+                limit: SAT_PERMIT_TYPE_SEARCH_DEFAULT_LIMIT,
             });
-            return unwrapOrThrow(result).map(unitOfMeasureToOption);
+            return unwrapOrThrow(result).map(catalogKeyToOption);
         },
         staleTime: 30_000,
-        enabled: debouncedQ.length >= MIN_QUERY_LENGTH,
+        enabled: isSmallOfficialCatalog || debouncedQ.length >= MIN_QUERY_LENGTH,
     });
 
     // Synchronize committedSelection & inputValue when `value` prop changes from parent
@@ -180,7 +212,7 @@ export function SatCatalogSearchField({
             disabled={disabled}
             options={options}
             loading={isFetching}
-            filterOptions={(list) => list}
+            filterOptions={isSmallOfficialCatalog ? undefined : (list) => list}
             getOptionLabel={(option) => option.label}
             isOptionEqualToValue={(a, b) => a.key === b.key}
             value={committedSelection}

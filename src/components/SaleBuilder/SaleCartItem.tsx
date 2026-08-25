@@ -23,6 +23,7 @@ export interface SaleCartItemProps {
   currentBranchId: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
+  qtyMax?: number;
 }
 
 export function SaleCartItemRow({
@@ -32,6 +33,7 @@ export function SaleCartItemRow({
   currentBranchId,
   onRemove,
   onQtyChange,
+  qtyMax,
 }: SaleCartItemProps) {
   const branchSrc = item.sources.find(
     (s) => s.sourceType === "branch" && s.quantity > 0,
@@ -126,6 +128,7 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
+                max={qtyMax}
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}

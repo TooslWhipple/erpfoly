@@ -42,6 +42,12 @@ export const filters = {
         return (value: string) =>
             filters.onlyLetters(true)(value).replace(/\s{2,}/g, " ");
     },
+
+    /** SAT PlacaVM: alphanumeric, uppercase, no hyphens/spaces, max 7. */
+    satPlate(): InputFilter {
+        return (value: string) =>
+            value.replace(/[^A-Za-z0-9Ññ]/g, "").toUpperCase().slice(0, 7);
+    },
 } as const;
 
 export const NAME_MAX_LENGTH = 64;

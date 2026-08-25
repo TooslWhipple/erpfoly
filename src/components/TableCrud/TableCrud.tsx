@@ -93,6 +93,17 @@ export interface RowAction<T> {
   hidden?: boolean | ((row: T) => boolean);
 }
 
+function isRowActionHidden<T>(action: RowAction<T>, row: T): boolean {
+  return typeof action.hidden === "function" ? action.hidden(row) : Boolean(action.hidden);
+}
+
+function rowHasVisibleActions<T>(
+  actions: RowAction<T>[] | undefined,
+  row: T,
+): boolean {
+  return Boolean(actions?.some((action) => !isRowActionHidden(action, row)));
+}
+
 interface TableCrudProps<T> {
   columns: Column<T>[];
   rows: T[];
@@ -472,7 +483,9 @@ export function TableCrud<T>({
                 </StyledTableCell>
               </StyledTableRow>
             ) : (
-              rows?.map((row) => (
+              rows?.map((row) => {
+                const actionsDisabled = !rowHasVisibleActions(visibleActions, row);
+                return (
                 <StyledTableRow
                   key={String(row[rowKey])}
                   onClick={() => onRowClick?.(row)}
@@ -497,13 +510,20 @@ export function TableCrud<T>({
                   })}
                   {hasActions && (
                     <ActionsCell align="center" onClick={(e) => e.stopPropagation()}>
-                      <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
+                      <ActionsButton
+                        disabled={actionsDisabled}
+                        onClick={(e) => {
+                          if (actionsDisabled) return;
+                          handleOpenMenu(e, row);
+                        }}
+                      >
                         <MoreVertIcon />
                       </ActionsButton>
                     </ActionsCell>
                   )}
                 </StyledTableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

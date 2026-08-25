@@ -123,7 +123,7 @@ export const UserInfoContainer = styled('div')({
   overflow: "hidden",
 });
 
-export const UserEmail = styled(Typography)({
+export const UserRole = styled(Typography)({
   display: "block",
 });
 

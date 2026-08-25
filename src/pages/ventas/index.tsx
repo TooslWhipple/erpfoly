@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Box, Stack } from "@mui/material";
+import { Stack } from "@mui/material";
 import { Title, TabFilters, TableCrud, StatusChip } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction } from "@/components/TableCrud";
@@ -13,7 +13,6 @@ import type {
   SalePaymentType,
   SaleStatusTab,
 } from "@/types/ventas.types";
-import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 import { SALES_CREATE } from "@/lib/permissions";
 import {
@@ -51,18 +50,22 @@ const PAYMENT_TYPE_CHIP_VARIANTS: Record<SalePaymentType, StatusChipVariant> = {
   CASH: "success",
   LAYAWAY: "infoAlt",
 };
-function formatRelativeDate(value: unknown): string {
-  const d = value == null ? dayjs() : dayjs(value as string | number | Date);
-  if (!d.isValid()) return "—";
-  const now = dayjs();
-  const diffMin = now.diff(d, "minute");
-  const diffHours = now.diff(d, "hour");
-  const diffDays = now.diff(d, "day");
-  if (diffMin < 60) return `Hace ${diffMin} min`;
-  if (diffHours < 24) return `Hace ${diffHours} h`;
-  if (diffDays === 1) return "Ayer";
-  return formatDate(d, "D MMM");
+
+function formatAbsoluteListDate(value: unknown): string {
+  const d = value == null ? null : dayjs(value as string | number | Date);
+  if (!d?.isValid()) return "—";
+  const day = d.format("D");
+  const month = d.format("MMM");
+  const year = d.format("YYYY");
+  const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${day} ${capitalizedMonth} ${year}`;
 }
+
+function formatItemCount(count: number): string {
+  if (count === 1) return "1 ítem";
+  return `${count} ítems`;
+}
+
 export default function Ventas() {
   const router = useRouter();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
@@ -122,6 +125,12 @@ export default function Ventas() {
   };
   const columns: Column<SaleListItem>[] = [
     {
+      id: "folio",
+      label: "Folio",
+      size: "sm",
+      format: (value) => String(value ?? "—"),
+    },
+    {
       id: "status",
       label: "Estatus",
       size: "sm",
@@ -130,45 +139,22 @@ export default function Ventas() {
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
-      id: "folio",
-      label: "Folio",
-      size: "sm",
-      format: (value) => String(value ?? "—"),
-    },
-    {
-      id: "productName",
-      label: "Artículo",
-      size: "xl",
-      format: (value, row) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box
-            component="img"
-            src={row.productImageUrl ?? "/placeholder-product.png"}
-            alt={String(value ?? "")}
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 1,
-              objectFit: "cover",
-              flexShrink: 0,
-              bgcolor: "grey.100",
-            }}
-          />
-          <span>{String(value ?? "—")}</span>
-        </Stack>
-      ),
-    },
-    {
       id: "clientName",
       label: "Cliente",
       size: "lg",
       format: (value) => String(value ?? "—"),
     },
     {
+      id: "itemCount",
+      label: "Artículos",
+      size: "sm",
+      format: (value) => formatItemCount(typeof value === "number" ? value : 0),
+    },
+    {
       id: "createdAt",
       label: "Fecha",
       size: "md",
-      format: (value) => formatRelativeDate(value),
+      format: (value) => formatAbsoluteListDate(value),
     },
     {
       id: "paymentType",
@@ -185,6 +171,13 @@ export default function Ventas() {
           />
         );
       },
+    },
+    {
+      id: "totalAmount",
+      label: "Total",
+      size: "md",
+      type: "currency",
+      align: "right",
     },
   ];
   const actions: RowAction<SaleListItem>[] = [

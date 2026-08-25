@@ -34,6 +34,8 @@ export interface OrderItemInput {
   requested_quantity: number;
   unit_price: number;
   scheduled_delivery_date?: string;
+  currency?: string;
+  exchange_rate?: number;
 }
 
 export interface UpdateOrderItemInput {
@@ -44,6 +46,8 @@ export interface UpdateOrderItemInput {
   delivered_quantity?: number;
   scheduled_delivery_date?: string;
   notes?: string;
+  currency?: string;
+  exchange_rate?: number;
 }
 
 export interface CreateOrderPayload {
@@ -91,6 +95,8 @@ export interface SelectedOrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  currency?: string;
+  exchangeRate?: number;
 }
 
 export interface QueryOrdersParams {

@@ -5,6 +5,7 @@ import numeral from "numeral";
 import type { Article, OrderItem } from "@/types/pedidos.types";
 import { formatDate } from "@/utils/date";
 import { SideModal } from "@/components/SideModal";
+import { FormSelect, FormTextField } from "@/components/Form";
 import {
     AddArticleModalContainer,
     ProductImage,
@@ -33,6 +34,12 @@ export interface AddArticleToOrderModalProps {
     costHistory?: CostHistoryEntry[];
 }
 
+const ORDER_CURRENCIES = [
+    { value: "MXN", label: "MXN" },
+    { value: "USD", label: "USD" },
+    { value: "EUR", label: "EUR" },
+];
+
 function formatCurrency(amount: number): string {
     return numeral(amount).format("$0,0.00");
 }
@@ -45,6 +52,8 @@ export function AddArticleToOrderModal({
     costHistory = [],
 }: AddArticleToOrderModalProps) {
     const [unitPrice, setUnitPrice] = useState<number>(0);
+    const [currency, setCurrency] = useState<string>("MXN");
+    const [exchangeRate, setExchangeRate] = useState<number | "">("");
 
     useEffect(() => {
         if (article && open) {
@@ -53,11 +62,15 @@ export function AddArticleToOrderModal({
             } else {
                 setUnitPrice(0);
             }
+            setCurrency("MXN");
+            setExchangeRate("");
         }
     }, [article, open, costHistory]);
 
     const handleClose = () => {
         setUnitPrice(0);
+        setCurrency("MXN");
+        setExchangeRate("");
         onClose();
     };
 
@@ -70,8 +83,18 @@ export function AddArticleToOrderModal({
         }
     };
 
+    const handleExchangeRateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = event.target.value;
+        if (inputValue === "" || /^\d*\.?\d{0,6}$/.test(inputValue)) {
+            setExchangeRate(inputValue === "" ? "" : parseFloat(inputValue));
+        }
+    };
+
+    const requiresExchangeRate = currency !== "MXN";
+    const isExchangeRateValid = !requiresExchangeRate || (typeof exchangeRate === "number" && exchangeRate > 0);
+
     const handleAddToOrder = () => {
-        if (!article || unitPrice <= 0) {
+        if (!article || unitPrice <= 0 || !isExchangeRateValid) {
             return;
         }
 
@@ -82,6 +105,8 @@ export function AddArticleToOrderModal({
             quantity: 1,
             unitPrice,
             totalPrice: unitPrice,
+            currency,
+            exchangeRate: requiresExchangeRate ? (exchangeRate as number) : undefined,
         };
 
         onAddToOrder(newItem);
@@ -138,11 +163,32 @@ export function AddArticleToOrderModal({
                                 inputMode: "decimal",
                             }}
                         />
+                        <Box sx={{ minWidth: 100, flexShrink: 0 }}>
+                            <FormSelect
+                                label="Moneda"
+                                value={currency}
+                                onChange={(e) => setCurrency(String(e.target.value))}
+                                options={ORDER_CURRENCIES}
+                            />
+                        </Box>
+                        {
+                            requiresExchangeRate &&
+                            <FormTextField
+                                label="Tipo de cambio"
+                                placeholder="17.20"
+                                type="text"
+                                value={exchangeRate}
+                                onChange={handleExchangeRateChange}
+                                error={requiresExchangeRate && !isExchangeRateValid}
+                                helperText={requiresExchangeRate && !isExchangeRateValid ? "Requerido, mayor a 0" : undefined}
+                                inputProps={{ inputMode: "decimal" }}
+                            />
+                        }
                         <Button
                             variant="contained"
                             color="primary"
                             onClick={handleAddToOrder}
-                            disabled={unitPrice <= 0}>
+                            disabled={unitPrice <= 0 || !isExchangeRateValid}>
                             Agregar
                         </Button>
                     </UnitPriceSection>

@@ -76,6 +76,29 @@ export interface SupplierPaymentRow {
   periodYear: number;
   amount: number;
   status: SupplierPaymentStatus;
+  paymentDate: string | Date;
+  scheduledDate: string | Date | null;
+}
+
+export interface ScheduleSupplierPaymentPayload {
+  accountStatementId: number;
+  amount: number;
+  scheduledDate: string;
+}
+
+export interface RegisterSupplierPaymentPayload {
+  accountStatementId: number;
+  amount: number;
+  paidDate: string;
+}
+
+export interface ExecuteSupplierPaymentPayload {
+  paidDate?: string;
+}
+
+export interface EditSupplierPaymentPayload {
+  amount?: number;
+  scheduledDate?: string;
 }
 
 export type SupplierDamagedGoodsStatus = "scheduled" | "pending";

@@ -95,6 +95,7 @@ export default function SupplierDashboardPage() {
     breadcrumbItems,
     handleTabChange,
     handleEdit,
+    refetchDashboard,
   } = useSupplierDashboard();
   const tableRows = useMemo(() => {
     if (!dashboard || activeTab !== "account_statements") return [];
@@ -190,7 +191,10 @@ export default function SupplierDashboardPage() {
               {activeTab === "payments" && validId != null && (
                 <SupplierPaymentsTab
                   supplierId={validId}
+                  supplierName={dashboard?.supplierName ?? ""}
+                  accountStatements={dashboard?.accountStatements ?? []}
                   contentLoading={showContentSkeleton}
+                  onBalanceChanged={refetchDashboard}
                 />
               )}
 

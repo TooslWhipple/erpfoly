@@ -82,8 +82,9 @@ export function ProductCodeScannerDialog({
 }: ProductCodeScannerDialogProps) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down(SALES_POS_BREAKPOINT));
+  const [mediaSessionOpen, setMediaSessionOpen] = useState(false);
   const cameras = useCameraDevices({
-    enabled: open,
+    enabled: mediaSessionOpen,
     preferFacing: "environment",
   });
 
@@ -93,11 +94,15 @@ export function ProductCodeScannerDialog({
   const [scannerSessionKey, setScannerSessionKey] = useState(0);
 
   useEffect(() => {
-    if (open) return;
+    if (open) setMediaSessionOpen(true);
+  }, [open]);
+
+  const handleExited = () => {
+    setMediaSessionOpen(false);
     setScanStarted(false);
     setPaused(false);
     setScannerError(null);
-  }, [open]);
+  };
 
   const canAutoStart =
     cameras.preferenceHydrated
@@ -105,7 +110,7 @@ export function ProductCodeScannerDialog({
     && Boolean(cameras.selectedDeviceId)
     && (cameras.hasRememberedPreference || cameras.devices.length === 1);
 
-  const scanLive = open && Boolean(cameras.selectedDeviceId) && (scanStarted || canAutoStart);
+  const scanLive = Boolean(cameras.selectedDeviceId) && (scanStarted || canAutoStart);
 
   const handleStartScan = () => {
     cameras.commitPreferredDevice();
@@ -145,12 +150,15 @@ export function ProductCodeScannerDialog({
       maxWidth="sm"
       fullWidth
       fullScreen={fullScreen}
+      TransitionProps={{ onExited: handleExited }}
       PaperProps={{
         sx: {
           borderRadius: fullScreen ? 0 : 2,
-          height: fullScreen ? "100%" : "auto",
+          // ScannerViewport sizes with cqi/cqb; those units are 0 unless
+          // the paper has a definite height (size containment ignores children).
+          height: fullScreen ? "100%" : scanLive ? "min(720px, 90dvh)" : "auto",
           maxHeight: fullScreen ? "100%" : "90dvh",
-          minHeight: fullScreen ? "100%" : { xs: 420, md: 520 },
+          ...(fullScreen ? { minHeight: "100%" } : {}),
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",

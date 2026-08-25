@@ -50,7 +50,11 @@ export const ScannerCloseButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-/** Remaining dialog body; sized so the square viewport can use container queries. */
+/**
+ * Remaining dialog body; sized so the square viewport can use container queries.
+ * Parent paper must have a definite height — `container-type: size` ignores
+ * children, so `height: auto` makes 100cqb resolve to 0 (blank preview).
+ */
 export const ScannerStage = styled(Stack)(({ theme }) => ({
   flex: 1,
   minHeight: 0,
@@ -69,8 +73,9 @@ export const ScannerStage = styled(Stack)(({ theme }) => ({
  */
 export const ScannerViewport = styled("div")(({ theme }) => ({
   position: "relative",
-  width: "min(100cqi, 100cqb)",
-  height: "min(100cqi, 100cqb)",
+  width: "min(100%, 68dvh)",
+  aspectRatio: "1 / 1",
+  height: "auto",
   maxWidth: "100%",
   maxHeight: "100%",
   borderRadius: 16,
@@ -78,6 +83,14 @@ export const ScannerViewport = styled("div")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   border: `1px solid ${theme.palette.app.border}`,
   flexShrink: 0,
+  // When the stage has a definite height, fit a square to min(width, height).
+  // If it does not (desktop dialog used to be height:auto), cqb is 0 and this
+  // query does not match — the width-based square above stays visible.
+  "@container (min-height: 1px)": {
+    width: "min(100cqi, 100cqb)",
+    height: "min(100cqi, 100cqb)",
+    aspectRatio: "unset",
+  },
   "@supports not (width: 1cqi)": {
     width: "min(100%, 68dvh)",
     aspectRatio: "1 / 1",

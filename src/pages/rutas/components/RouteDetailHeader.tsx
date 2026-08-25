@@ -1,4 +1,4 @@
-import { Button, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { Box, Repeat2, Route, Truck } from "lucide-react";
 
 import { StatusChip } from "@/components";
@@ -73,9 +73,6 @@ export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
                 )
                 : "—"}
             </Typography>
-            <Button variant="text" size="small">
-              Editar
-            </Button>
           </Stack>
         </Stack>
       </Stack>

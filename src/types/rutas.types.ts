@@ -1,4 +1,10 @@
-export type RouteStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
+export type RouteStatus =
+  | "scheduled"
+  | "in_progress"
+  | "paused"
+  | "completed"
+  | "incomplete"
+  | "cancelled";
 export type RouteType = "deliveries" | "scheduled";
 
 export interface RouteOriginBranch {

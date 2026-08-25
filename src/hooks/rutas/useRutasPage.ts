@@ -35,6 +35,8 @@ import {
 } from "@/pages/rutas/components/constants";
 import type { RouteType } from "@/types/rutas.types";
 
+const ROUTES_POLL_INTERVAL_MS = 20_000;
+
 export function useRutasPage() {
   const { hasPermission } = usePermissions();
   const canUpdateRoute = hasPermission(ROUTES_UPDATE);
@@ -115,6 +117,8 @@ export function useRutasPage() {
       });
       return unwrapOrThrow(res);
     },
+    refetchInterval: ROUTES_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   const routes: RouteSummary[] = useMemo(() => {
@@ -140,6 +144,8 @@ export function useRutasPage() {
       return unwrapOrThrow(res);
     },
     enabled: resolvedRouteId != null,
+    refetchInterval: ROUTES_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   const routeDetail: RouteDetailView | null = useMemo(() => {
@@ -343,26 +349,30 @@ export function useRutasPage() {
 
   const handleConfirmRemove = async () => {
     if (!pendingRemoval || !resolvedRouteId) return;
-    if (pendingRemoval.kind === "assistant") {
-      await removeAssistantMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        userId: pendingRemoval.id,
-      });
-    } else if (pendingRemoval.kind === "driver") {
-      await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
-    } else if (pendingRemoval.kind === "routeOrder") {
-      await removeRoutePointMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        pointId: pendingRemoval.pointId,
-      });
-    } else if (pendingRemoval.kind === "routeItem") {
-      await removeRoutePointItemMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        pointId: pendingRemoval.pointId,
-        itemId: pendingRemoval.itemId,
-      });
+    try {
+      if (pendingRemoval.kind === "assistant") {
+        await removeAssistantMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          userId: pendingRemoval.id,
+        });
+      } else if (pendingRemoval.kind === "driver") {
+        await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
+      } else if (pendingRemoval.kind === "routeOrder") {
+        await removeRoutePointMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          pointId: pendingRemoval.pointId,
+        });
+      } else if (pendingRemoval.kind === "routeItem") {
+        await removeRoutePointItemMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          pointId: pendingRemoval.pointId,
+          itemId: pendingRemoval.itemId,
+        });
+      }
+      setPendingRemoval(null);
+    } catch {
+      // Error already shown by the mutation snackbar
     }
-    setPendingRemoval(null);
   };
 
   const handleRequestRemoveRouteOrder = (

@@ -161,6 +161,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   return {
     id: applicationId,
     status,
+    rejectionReason: api.rejectionReason ?? null,
     approvedClientId: api.approvalSummary?.clientId ?? null,
     approvedBaseCreditLineAmount: api.approvalSummary?.baseCreditLineAmount ?? null,
     riskScore: 0,

@@ -177,6 +177,7 @@ interface AdditionalInformationCatalogApiItem {
 export interface CreditApplicationDetailResponse {
   id: number;
   status: string;
+  rejectionReason?: string | null;
   approvalSummary?: {
     clientId: number | null;
     baseCreditLineAmount: number | null;
@@ -835,10 +836,15 @@ export async function submitCreditApplicationForReview(
 
 export async function rejectCreditApplication(
   applicationId: string,
+  payload: { comments: string },
 ): Promise<RejectCreditApplicationResponse | null> {
-  const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`, undefined, {
-    skipGlobalErrorToast: true,
-  });
+  const result = await patch<RejectCreditApplicationResponse>(
+    `${BASE}/${applicationId}/reject`,
+    payload,
+    {
+      skipGlobalErrorToast: true,
+    },
+  );
   if (result.error) return null;
   return result.data;
 }

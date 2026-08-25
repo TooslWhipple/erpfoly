@@ -251,4 +251,11 @@ export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 export { MapMarker } from "./MapMarker";
 export type { MapMarkerProps } from "./MapMarker";
+export { DateRangeFilter, DateRangeFilterPopover } from "./DateRangePopover";
+export type {
+  DateRangeFilterProps,
+  DateRangePopoverProps,
+  DateRangeValue,
+  PresetFechaId,
+} from "./DateRangePopover";
 

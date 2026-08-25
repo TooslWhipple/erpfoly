@@ -1,18 +1,25 @@
 import { Button, Stack, Typography } from "@mui/material";
-import { Box, Check, Repeat2, Route, Truck } from "lucide-react";
+import { Box, Repeat2, Route, Truck } from "lucide-react";
 
 import { StatusChip } from "@/components";
 import { DetailHeader } from "@/styles/rutas.styles";
 import { theme } from "@/styles/theme";
 import { formatDateOnly } from "@/utils/date";
 import type { RouteDetailView } from "@/utils/rutas-api.mapper";
-import { ROUTE_TYPE_LABEL, STATUS_LABEL } from "./constants";
+import {
+  ROUTE_TYPE_LABEL,
+  getRouteStatusChipConfig,
+  getRouteStatusLabel,
+} from "./constants";
 
 interface RouteDetailHeaderProps {
   routeDetail: RouteDetailView;
 }
 
 export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
+  const statusConfig = getRouteStatusChipConfig(routeDetail.status);
+  const StatusIcon = statusConfig.Icon;
+
   return (
     <DetailHeader>
       <Stack
@@ -30,10 +37,10 @@ export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
               label={ROUTE_TYPE_LABEL[routeDetail.routeType ?? ""]}
             />
             <StatusChip
-              variant={routeDetail.status === "scheduled" ? "pending" : "success"}
-              startIcon={routeDetail.status === "scheduled" ? <Truck size={16} /> : <Check size={16} />}
+              variant={statusConfig.variant}
+              startIcon={<StatusIcon size={16} />}
               size="small"
-              label={STATUS_LABEL[routeDetail.status ?? ""]}
+              label={getRouteStatusLabel(routeDetail.status)}
             />
           </Stack>
           <Typography variant="h3">{routeDetail.originBranch?.name ?? "Sin sucursal"}</Typography>

@@ -13,6 +13,7 @@ import { Link as LinkIcon, Mail as MailIcon } from "@mui/icons-material";
 import { X as CloseIcon } from "lucide-react";
 import numeral from "numeral";
 import { FormTextField } from "@/components/Form";
+import { isValidEmail } from "@/forms/validation/schemas/creditApplication";
 import {
   addDelinquencySharedListAccess,
   createDelinquencySharedList,
@@ -21,6 +22,8 @@ import {
 import type { DelinquencySharedListSummary } from "@/types/delinquency-shared-list.types";
 import type { DelinquentCustomer } from "@/types/delinquency.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+
+const MAX_FIELD_LENGTH = 64;
 
 export interface ShareDelinquencyListModalProps {
   open: boolean;
@@ -52,6 +55,8 @@ export function ShareDelinquencyListModal({
     ? existingList.totalDebtAmount
     : selectedCustomers.reduce((sum, customer) => sum + customer.debtAmount, 0);
 
+  const [clientName, setClientName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [emailFields, setEmailFields] = useState<string[]>([createEmptyEmailField()]);
   const [savedEmails, setSavedEmails] = useState<string[]>([]);
   const [shareUrl, setShareUrl] = useState<string>("");
@@ -62,32 +67,45 @@ export function ShareDelinquencyListModal({
     if (!open) return;
 
     if (existingList) {
-      setSavedEmails(existingList.accessEmails);
+      setClientName(existingList.name);
+      setContactEmail(existingList.contactEmail ?? "");
+      const contact = existingList.contactEmail?.trim().toLowerCase() ?? "";
+      setSavedEmails(
+        existingList.accessEmails.filter(
+          (email) => email.trim().toLowerCase() !== contact,
+        ),
+      );
       setEmailFields([createEmptyEmailField()]);
       setShareUrl(existingList.shareUrl);
       setListId(existingList.id);
       return;
     }
 
+    setClientName("");
+    setContactEmail("");
     setSavedEmails([]);
     setEmailFields([createEmptyEmailField()]);
     setShareUrl("");
     setListId(null);
   }, [open, existingList]);
 
+  const normalizedContactEmail = contactEmail.trim().toLowerCase();
+
   const pendingEmails = useMemo(
     () =>
       emailFields
         .map((email) => email.trim().toLowerCase())
         .filter(Boolean)
-        .filter((email) => !savedEmails.includes(email)),
-    [emailFields, savedEmails],
+        .filter((email) => !savedEmails.includes(email))
+        .filter((email) => email !== normalizedContactEmail),
+    [emailFields, savedEmails, normalizedContactEmail],
   );
 
   const canShare = isExisting
     ? pendingEmails.length > 0
     : selectedCustomers.length > 0 &&
-      (savedEmails.length > 0 || pendingEmails.length > 0);
+      clientName.trim().length > 0 &&
+      isValidEmail(contactEmail);
 
   const handleAddEmailField = useCallback(() => {
     setEmailFields((prev) => [...prev, createEmptyEmailField()]);
@@ -115,21 +133,31 @@ export function ShareDelinquencyListModal({
           showError(result.error.message);
           return;
         }
-        setSavedEmails(result.data?.accessEmails ?? []);
+        const contact = contactEmail.trim().toLowerCase();
+        setSavedEmails(
+          (result.data?.accessEmails ?? []).filter(
+            (item) => item.trim().toLowerCase() !== contact,
+          ),
+        );
         showSuccess("Acceso removido");
         onSuccess?.();
       } finally {
         setLoading(false);
       }
     },
-    [listId, onSuccess, showError, showSuccess],
+    [contactEmail, listId, onSuccess, showError, showSuccess],
   );
 
   const handleShare = useCallback(async () => {
-    const emailsToGrant = [...savedEmails, ...pendingEmails];
-    if (emailsToGrant.length === 0) {
-      showError("Agrega al menos un correo electrónico");
-      return;
+    if (!isExisting) {
+      if (!clientName.trim()) {
+        showError("Ingresa el nombre del cliente");
+        return;
+      }
+      if (!isValidEmail(contactEmail)) {
+        showError("Ingresa un correo electrónico válido");
+        return;
+      }
     }
 
     setLoading(true);
@@ -144,7 +172,12 @@ export function ShareDelinquencyListModal({
           showError(result.error.message);
           return;
         }
-        setSavedEmails(result.data?.accessEmails ?? []);
+        const contact = contactEmail.trim().toLowerCase();
+        setSavedEmails(
+          (result.data?.accessEmails ?? []).filter(
+            (item) => item.trim().toLowerCase() !== contact,
+          ),
+        );
         setEmailFields([createEmptyEmailField()]);
         showSuccess("Accesos actualizados");
         onSuccess?.();
@@ -152,8 +185,10 @@ export function ShareDelinquencyListModal({
       }
 
       const result = await createDelinquencySharedList({
+        clientName: clientName.trim(),
+        contactEmail: contactEmail.trim(),
         clientIds: selectedCustomers.map((customer) => customer.id),
-        emails: emailsToGrant,
+        emails: pendingEmails,
       });
 
       if (result.error) {
@@ -163,7 +198,14 @@ export function ShareDelinquencyListModal({
 
       setShareUrl(result.data?.shareUrl ?? "");
       setListId(result.data?.id ?? null);
-      setSavedEmails(result.data?.accessEmails ?? []);
+      const contact = (result.data?.contactEmail ?? contactEmail)
+        .trim()
+        .toLowerCase();
+      setSavedEmails(
+        (result.data?.accessEmails ?? []).filter(
+          (item) => item.trim().toLowerCase() !== contact,
+        ),
+      );
       setEmailFields([createEmptyEmailField()]);
       showSuccess("Lista compartida correctamente");
       onSuccess?.();
@@ -171,12 +213,13 @@ export function ShareDelinquencyListModal({
       setLoading(false);
     }
   }, [
+    clientName,
+    contactEmail,
     isExisting,
     listId,
     onClose,
     onSuccess,
     pendingEmails,
-    savedEmails,
     selectedCustomers,
     showError,
     showSuccess,
@@ -220,13 +263,38 @@ export function ShareDelinquencyListModal({
         </Stack>
 
         <Box>
-          <Typography variant="h6" fontWeight={600}>
-            Base de clientes compartida
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {numeral(clientCount).format("0,0")} clientes compartidos
-          </Typography>
+          <Typography variant="h6" fontWeight={600}>Base de clientes compartida</Typography>
+          <Typography variant="body2" color="text.secondary">{numeral(clientCount).format("0,0")} clientes compartidos</Typography>
         </Box>
+
+        <Stack spacing={1.5}>
+          <FormTextField
+            label="Cliente"
+            value={clientName}
+            onChange={(event) => setClientName(event.target.value)}
+            placeholder="Nombre del cliente"
+            fullWidth
+            size="small"
+            disabled={isExisting || loading}
+            inputProps={{ maxLength: MAX_FIELD_LENGTH }}
+          />
+          <FormTextField
+            label="Email"
+            value={contactEmail}
+            onChange={(event) => setContactEmail(event.target.value)}
+            placeholder="Email"
+            fullWidth
+            size="small"
+            type="email"
+            disabled={isExisting || loading}
+            inputProps={{ maxLength: MAX_FIELD_LENGTH }}
+            InputProps={{
+              startAdornment: (
+                <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
+              ),
+            }}
+          />
+        </Stack>
 
         <Stack spacing={1.5}>
           <Typography variant="subtitle2" fontWeight={600}>
@@ -267,6 +335,7 @@ export function ShareDelinquencyListModal({
               fullWidth
               size="small"
               type="email"
+              inputProps={{ maxLength: MAX_FIELD_LENGTH }}
               InputProps={{
                 startAdornment: (
                   <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />

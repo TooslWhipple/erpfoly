@@ -3,6 +3,7 @@ import { apiBaseUrl } from "@/config/api";
 import type {
   PublicDelinquencyAccessResponse,
   PublicDelinquencySharedListView,
+  SharedDelinquencyClientDetail,
 } from "@/types/delinquency-shared-list.types";
 
 const publicApi = axios.create({
@@ -80,6 +81,24 @@ export async function getPublicDelinquencySharedList(
   try {
     const { data } = await publicApi.get<PublicDelinquencySharedListView>(
       `${PUBLIC_BASE}/${shareToken}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+    return data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}
+
+export async function getPublicSharedListClientDetail(
+  shareToken: string,
+  listClientId: number,
+  accessToken: string,
+): Promise<SharedDelinquencyClientDetail> {
+  try {
+    const { data } = await publicApi.get<SharedDelinquencyClientDetail>(
+      `${PUBLIC_BASE}/${shareToken}/clients/${listClientId}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       },

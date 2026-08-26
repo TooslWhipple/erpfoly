@@ -224,6 +224,13 @@ export default function ClientesMorosidad() {
     [showSuccess],
   );
 
+  const handleViewSharedListDetail = useCallback(
+    (list: DelinquencySharedListSummary) => {
+      void router.push(`/clientes/morosidad/listas/${list.id}`);
+    },
+    [router],
+  );
+
   const handleShareSuccess = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["clients", "delinquency", "shared-lists"] });
   }, [queryClient]);
@@ -328,7 +335,7 @@ export default function ClientesMorosidad() {
     () => [
       {
         id: "name",
-        label: "NOMBRE",
+        label: "CLIENTE",
         size: "xl",
         truncate: true,
         format: (value) => (
@@ -343,16 +350,11 @@ export default function ClientesMorosidad() {
         ),
       },
       {
-        id: "accessEmails",
+        id: "contactEmail",
         label: "EMAIL",
         size: "lg",
         truncate: true,
-        format: (value) => {
-          const emails = Array.isArray(value) ? value : [];
-          const first = emails[0];
-          if (!first) return "—";
-          return emails.length > 1 ? `${first} (+${emails.length - 1})` : first;
-        },
+        format: (value) => (typeof value === "string" && value ? value : "—"),
       },
       {
         id: "clientCount",
@@ -381,6 +383,11 @@ export default function ClientesMorosidad() {
   const sharedListActions: RowAction<DelinquencySharedListSummary>[] = useMemo(
     () => [
       {
+        id: "view-detail",
+        label: "Ver detalle",
+        onClick: (row) => handleViewSharedListDetail(row),
+      },
+      {
         id: "manage-access",
         label: "Ver accesos",
         onClick: (row) => handleOpenSharedListModal(row),
@@ -392,7 +399,11 @@ export default function ClientesMorosidad() {
         onClick: (row) => void handleCopySharedListLink(row),
       },
     ],
-    [handleCopySharedListLink, handleOpenSharedListModal],
+    [
+      handleCopySharedListLink,
+      handleOpenSharedListModal,
+      handleViewSharedListDetail,
+    ],
   );
 
   return (
@@ -434,6 +445,7 @@ export default function ClientesMorosidad() {
           onPageChange={setSharedListsPage}
           onRowsPerPageChange={setSharedListsRowsPerPage}
           actions={sharedListActions}
+          onRowClick={handleViewSharedListDetail}
           emptyMessage="No hay listas compartidas"
         />
       ) : (

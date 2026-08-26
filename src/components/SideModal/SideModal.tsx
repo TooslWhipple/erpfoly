@@ -1,6 +1,6 @@
 "use client";
 
-import { Dialog, useMediaQuery, useTheme, Stack, Typography } from "@mui/material";
+import { Box, Dialog, useMediaQuery, useTheme, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { DialogContent, CloseButton } from "../ModalForm/styles";
@@ -17,6 +17,8 @@ export interface SideModalProps {
   header?: React.ReactNode;
   headerActions?: React.ReactNode;
   headerActionsPosition?: "title" | "top";
+  /** Centered content in the top row between close and headerActions (when position is "top"). */
+  headerTopCenter?: React.ReactNode;
   title?: string;
   description?: string;
   headerContent?: React.ReactNode;
@@ -38,6 +40,7 @@ export function SideModal({
   header,
   headerActions,
   headerActionsPosition = "title",
+  headerTopCenter,
   title,
   description,
   headerContent,
@@ -119,13 +122,20 @@ export function SideModal({
           <Stack direction="column" alignItems="flex-start" spacing={2}>
             <Stack
               direction="row"
-              justifyContent="space-between"
               alignItems="center"
               width="100%"
+              spacing={1}
             >
               <CloseButton onClick={onClose} disabled={disableClose} size="small">
                 <CloseIcon size={16} />
               </CloseButton>
+              {headerTopCenter != null ? (
+                <Box flex={1} textAlign="center" minWidth={0}>
+                  {headerTopCenter}
+                </Box>
+              ) : (
+                <Box flex={1} />
+              )}
               {headerActionsPosition === "top" ? headerActions : null}
             </Stack>
             {header ?? defaultHeader}

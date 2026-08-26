@@ -9,15 +9,18 @@ import {
   Typography,
 } from "@mui/material";
 import { Title, TableCrud } from "@/components";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { FormTextField } from "@/components/Form";
+import { SharedDelinquencyClientModal } from "@/components/Delinquency";
 import {
   getPublicDelinquencySharedList,
   requestPublicDelinquencyAccess,
   verifyPublicDelinquencyOtp,
 } from "@/services/public-delinquency-shared-list.service";
-import type { PublicDelinquencySharedListView } from "@/types/delinquency-shared-list.types";
-import type { DelinquencyPeriod } from "@/types/delinquency.types";
+import type {
+  DelinquencySharedListClientSnapshot,
+  PublicDelinquencySharedListView,
+} from "@/types/delinquency-shared-list.types";
 import { formatDate, formatDateOnly } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
@@ -53,6 +56,10 @@ export default function PublicDelinquencySharedListPage() {
   const [loading, setLoading] = useState(false);
   const [listData, setListData] = useState<PublicDelinquencySharedListView | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [selectedListClientId, setSelectedListClientId] = useState<number | null>(
+    null,
+  );
+  const [modalOpen, setModalOpen] = useState(false);
 
   const storageKey = `${STORAGE_KEY_PREFIX}${shareToken}`;
 
@@ -85,7 +92,12 @@ export default function PublicDelinquencySharedListPage() {
     }
   }, [router.isReady, shareToken, storageKey, loadList]);
 
-  const columns: Column<PublicDelinquencySharedListView["clients"][number]>[] = useMemo(
+  const openClientDetail = useCallback((row: DelinquencySharedListClientSnapshot) => {
+    setSelectedListClientId(row.id);
+    setModalOpen(true);
+  }, []);
+
+  const columns: Column<DelinquencySharedListClientSnapshot>[] = useMemo(
     () => [
       {
         id: "fullName",
@@ -96,6 +108,12 @@ export default function PublicDelinquencySharedListPage() {
         id: "phone",
         label: "TELÉFONO",
         size: "md",
+        format: (value) => (value ? String(value) : "—"),
+      },
+      {
+        id: "email",
+        label: "EMAIL",
+        size: "lg",
         format: (value) => (value ? String(value) : "—"),
       },
       {
@@ -121,14 +139,38 @@ export default function PublicDelinquencySharedListPage() {
         chipVariantMap: DELINQUENCY_CHIP_VARIANTS,
       },
       {
-        id: "debtAmount",
-        label: "DEUDA",
+        id: "totalDebtAmount",
+        label: "DEUDA ACTUAL",
         type: "currency",
         size: "md",
         align: "right",
       },
+      {
+        id: "negotiatedDebtAmount",
+        label: "NEGOCIACIÓN",
+        size: "md",
+        align: "right",
+        format: (value) =>
+          value != null && typeof value === "number"
+            ? new Intl.NumberFormat("es-MX", {
+                style: "currency",
+                currency: "MXN",
+              }).format(value)
+            : "—",
+      },
     ],
     [],
+  );
+
+  const actions: RowAction<DelinquencySharedListClientSnapshot>[] = useMemo(
+    () => [
+      {
+        id: "view-detail",
+        label: "Ver detalle",
+        onClick: (row) => openClientDetail(row),
+      },
+    ],
+    [openClientDetail],
   );
 
   const handleRequestAccess = async () => {
@@ -206,7 +248,21 @@ export default function PublicDelinquencySharedListPage() {
           rowKey="id"
           hidePagination
           loading={loading}
+          actions={actions}
+          onRowClick={openClientDetail}
           emptyMessage="No hay clientes en esta lista"
+        />
+
+        <SharedDelinquencyClientModal
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setSelectedListClientId(null);
+          }}
+          mode="public"
+          shareToken={shareToken}
+          accessToken={accessToken ?? undefined}
+          listClientId={selectedListClientId}
         />
       </Stack>
     );

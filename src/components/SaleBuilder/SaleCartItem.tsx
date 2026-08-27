@@ -166,6 +166,21 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
+                max={
+                  item.sources.length === 0
+                    ? undefined
+                    : item.sources
+                        .filter((src) => src.quantity > 0)
+                        .reduce(
+                          (sum, src) =>
+                            sum +
+                            src.available +
+                            (src.sourceType === "warehouse"
+                              ? (src.pendingOrdered ?? 0)
+                              : 0),
+                          0,
+                        )
+                }
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}

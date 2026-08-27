@@ -125,6 +125,11 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
+import {
+  backorderedFromSources,
+  sellableMaxFromPickedSources,
+  sourceSellableMax,
+} from "@/utils/saleCartCoverage";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -153,25 +158,6 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "MXN",
   }).format(value);
-}
-
-function coverableFromSources(
-  sources: {
-    quantity: number;
-    available: number;
-    pendingOrdered?: number;
-    sourceType?: string;
-  }[],
-): number {
-  return sources
-    .filter((src) => src.quantity > 0)
-    .reduce(
-      (sum, src) =>
-        sum +
-        src.available +
-        (src.sourceType === "warehouse" ? (src.pendingOrdered ?? 0) : 0),
-      0,
-    );
 }
 
 function toCheckoutDate(value: string | null | undefined): string | null {
@@ -592,6 +578,9 @@ export function SaleBuilder({
   ) {
     setHydratedClientForSaleId(hydratedSaleId);
     setSelectedClient(resumeClientData);
+    if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
+      setPaymentType("CASH");
+    }
   }
 
   const syncDeliverySelection = async (saleId: number) => {
@@ -1190,6 +1179,13 @@ export function SaleBuilder({
     if (!productDetail) return;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
     if (totalQty === 0) return;
+    const sellableMax = sellableMaxFromPickedSources(productSources);
+    if (totalQty > sellableMax) {
+      snackbar.showError(
+        "No hay existencia ni mercancía por surtir suficientes para esa cantidad.",
+      );
+      return;
+    }
 
     const branchSourcesWithQty = productSources.filter(
       (src) => src.sourceType === "branch" && src.quantity > 0,
@@ -1215,11 +1211,11 @@ export function SaleBuilder({
       return;
     }
 
-    // Exceso sobre existencia (+ por surtir de bodega) = backorder. El
-    // spinner no tiene tope: se puede vender sin stock.
-    const backorderedQuantity = Math.max(
-      0,
-      totalQty - coverableFromSources(productSources),
+    // Exceso sobre existencia de las fuentes elegidas = piezas de pedido
+    // aceptado ("por surtir"). El spinner no deja vender más que eso.
+    const backorderedQuantity = backorderedFromSources(
+      productSources,
+      totalQty,
     );
 
     setCart((prev) => {
@@ -1286,17 +1282,20 @@ export function SaleBuilder({
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          const quantity = Math.max(0, item.quantity + delta);
           // Sin `sources` (línea hidratada) se conserva el backorder que
           // confirmó el backend hasta el próximo sync.
-          if (item.sources.length === 0) return { ...item, quantity };
+          if (item.sources.length === 0) {
+            return {
+              ...item,
+              quantity: Math.max(0, item.quantity + delta),
+            };
+          }
+          const maxQty = sellableMaxFromPickedSources(item.sources);
+          const quantity = Math.min(maxQty, Math.max(0, item.quantity + delta));
           return {
             ...item,
             quantity,
-            backorderedQuantity: Math.max(
-              0,
-              quantity - coverableFromSources(item.sources),
-            ),
+            backorderedQuantity: backorderedFromSources(item.sources, quantity),
           };
         })
         .filter((item) => item.quantity > 0),
@@ -1331,8 +1330,7 @@ export function SaleBuilder({
   };
 
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
-  const isClientMoroso =
-    paymentType === "CREDIT" && selectedClient?.creditStatus === "MOROSO";
+  const isMorosoClient = selectedClient?.creditStatus === "MOROSO";
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
 
@@ -1828,6 +1826,7 @@ export function SaleBuilder({
                                   )
                                 }
                                 min={0}
+                                max={sourceSellableMax(src)}
                                 disabled={branchLocked}
                                 size="medium"
                                 iconSize={14}
@@ -1928,6 +1927,7 @@ export function SaleBuilder({
                                       )
                                     }
                                     min={0}
+                                    max={src.available}
                                     disabled={branchLocked}
                                     size="medium"
                                     iconSize={14}
@@ -2346,6 +2346,10 @@ export function SaleBuilder({
         <ConfirmModal
           open={deliveryDateWarningOpen}
           onClose={() => setDeliveryDateWarningOpen(false)}
+          onCancel={() => {
+            setDeliveryDateWarningOpen(false);
+            setCheckoutDeliveryDateModalOpen(true);
+          }}
           onConfirm={() => {
             setDeliveryDateWarningOpen(false);
             cobrarMutation.mutate();
@@ -2661,7 +2665,11 @@ export function SaleBuilder({
                   <PaymentTypeButton
                     key={opt.value}
                     active={paymentType === opt.value}
-                    onClick={() => setPaymentType(opt.value)}
+                    disabled={isMorosoClient && opt.value !== "CASH"}
+                    onClick={() => {
+                      if (isMorosoClient && opt.value !== "CASH") return;
+                      setPaymentType(opt.value);
+                    }}
                   >
                     {opt.label}
                   </PaymentTypeButton>
@@ -2755,7 +2763,7 @@ export function SaleBuilder({
                   </Typography>
                 )}
 
-                {paymentType === "CREDIT" && isClientMoroso && (
+                {isMorosoClient && (
                   <Box
                     sx={{
                       bgcolor: theme.palette.app.chip.variants.error.background,
@@ -2771,14 +2779,14 @@ export function SaleBuilder({
                       color="error.main"
                       fontWeight={600}
                     >
-                      Este cliente no puede realizar una compra a crédito por
-                      estar en mora.
+                      Este cliente está en mora y solo puede realizar compras
+                      de contado.
                     </Typography>
                   </Box>
                 )}
 
                 {paymentType === "CREDIT" &&
-                  selectedClient.creditStatus !== "ACTIVE" && (
+                  selectedClient.creditStatus == null && (
                     <Button
                       fullWidth
                       variant="outlined"
@@ -3469,6 +3477,9 @@ export function SaleBuilder({
                 setSelectedClient(row);
                 setClientSearch(row.fullName);
                 setClientModalOpen(false);
+                if (row.creditStatus === "MOROSO") {
+                  setPaymentType("CASH");
+                }
               }}
             />
           </SideModal>
@@ -3476,6 +3487,7 @@ export function SaleBuilder({
           <CreateCashClientModal
             open={createClientModalOpen}
             onClose={() => setCreateClientModalOpen(false)}
+            requirePhoneVerification={paymentType !== "CASH"}
             onSuccess={(client) => {
               setSelectedClient(client);
               setClientSearch(client.fullName);

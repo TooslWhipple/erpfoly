@@ -8,11 +8,11 @@ export interface CreateCashClientPayload {
   lastSurname: string;
   secondSurname?: string;
   email?: string;
-  phoneNumber?: string;
-  postalCode?: string;
-  neighborhoodFullCode?: string;
-  street?: string;
-  externalNumber?: string;
+  phoneNumber: string;
+  postalCode: string;
+  neighborhoodFullCode: string;
+  street: string;
+  externalNumber: string;
   internalNumber?: string;
   betweenStreets?: string;
   receiverPhone?: string;

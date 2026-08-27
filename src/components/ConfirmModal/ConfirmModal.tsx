@@ -38,6 +38,8 @@ export interface ConfirmModalProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
+  /** Cancel button. Defaults to `onClose` (X and backdrop still use `onClose`). */
+  onCancel?: () => void;
   /** Called after the close transition finishes. */
   onExited?: () => void;
   title?: string;
@@ -91,6 +93,7 @@ export function ConfirmModal({
   open,
   onClose,
   onConfirm,
+  onCancel,
   onExited,
   title = "Confirmar eliminación",
   description,
@@ -162,6 +165,11 @@ export function ConfirmModal({
     if (!loading) onClose();
   };
 
+  const handleCancel = () => {
+    if (loading) return;
+    (onCancel ?? onClose)();
+  };
+
   const handleConfirm = async () => {
     await onConfirm();
   };
@@ -219,7 +227,7 @@ export function ConfirmModal({
             type="button"
             variant="outlined"
             color="primary"
-            onClick={handleDismiss}
+            onClick={handleCancel}
             disabled={loading}
             sx={{ minWidth: 100 }}
           >

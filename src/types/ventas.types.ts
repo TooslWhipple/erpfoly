@@ -87,10 +87,8 @@ export interface CartItem {
   /** Set when this line was hydrated from an existing DRAFT sale being resumed. */
   saleItemId?: number;
   /**
-   * Portion of `quantity` without stock backing it, resolved later when
-   * merchandise arrives. Recomputed locally from `sources` whenever they're
-   * known (fresh line); for resumed lines (`sources: []`) it keeps the
-   * value the backend last computed until the sale is re-synced.
+   * Pieces covered by warehouse `ordered` (supplier PO), plus any leftover
+   * the backend still tracks as uncovered. Shown as the backorder chip.
    */
   backorderedQuantity: number;
 }

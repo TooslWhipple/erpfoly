@@ -1,4 +1,5 @@
 import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import NumberSpinner from "@/components/NumberSpinner";
 import type { CartItem } from "@/types/ventas.types";
@@ -16,6 +17,45 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function BackorderChip({
+  backorderedQuantity,
+  quantity,
+  sx,
+}: {
+  backorderedQuantity: number;
+  quantity: number;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <Chip
+      icon={<AlertTriangle size={14} />}
+      label={`${backorderedQuantity} de ${quantity} en backorder`}
+      size="small"
+      color="warning"
+      variant="outlined"
+      sx={[
+        {
+          height: 24,
+          px: 1,
+          gap: 0.75,
+          fontSize: "0.75rem",
+          fontWeight: 500,
+          "& .MuiChip-icon": {
+            m: 0,
+            width: 14,
+            height: 14,
+            color: "inherit",
+          },
+          "& .MuiChip-label": {
+            px: 0,
+          },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    />
+  );
+}
+
 export interface SaleCartItemProps {
   item: CartItem;
   isLayaway: boolean;
@@ -23,7 +63,6 @@ export interface SaleCartItemProps {
   currentBranchId: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
-  qtyMax?: number;
 }
 
 export function SaleCartItemRow({
@@ -33,7 +72,6 @@ export function SaleCartItemRow({
   currentBranchId,
   onRemove,
   onQtyChange,
-  qtyMax,
 }: SaleCartItemProps) {
   const branchSrc = item.sources.find(
     (s) => s.sourceType === "branch" && s.quantity > 0,
@@ -128,7 +166,6 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
-                max={qtyMax}
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}
@@ -165,13 +202,10 @@ export function SaleCartItemRow({
       )}
 
       {item.backorderedQuantity > 0 && (
-        <Chip
-          icon={<AlertTriangle size={12} />}
-          label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-          size="small"
-          color="warning"
-          variant="outlined"
-          sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
+        <BackorderChip
+          backorderedQuantity={item.backorderedQuantity}
+          quantity={item.quantity}
+          sx={{ mt: 1 }}
         />
       )}
     </CartItemCard>

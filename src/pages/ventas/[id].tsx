@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Divider,
   IconButton,
   MenuItem,
@@ -18,7 +17,6 @@ import {
 import { useTheme } from "@mui/material/styles";
 import {
   Archive,
-  AlertTriangle,
   Calendar,
   CheckCircle,
   Clock,
@@ -61,7 +59,7 @@ import { useInvoicingConfigStore } from "@/store/useInvoicingConfigStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
-import { SaleBuilder } from "@/components/SaleBuilder";
+import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -620,13 +618,10 @@ export default function VentaDetalle() {
                           Cantidad: {item.quantity}
                         </Typography>
                         {item.backorderedQuantity > 0 && (
-                          <Chip
-                            icon={<AlertTriangle size={12} />}
-                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          <BackorderChip
+                            backorderedQuantity={item.backorderedQuantity}
+                            quantity={item.quantity}
+                            sx={{ mt: 0.5 }}
                           />
                         )}
                       </Box>
@@ -790,13 +785,10 @@ export default function VentaDetalle() {
                           Cantidad: {item.quantity}
                         </Typography>
                         {item.backorderedQuantity > 0 && (
-                          <Chip
-                            icon={<AlertTriangle size={12} />}
-                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          <BackorderChip
+                            backorderedQuantity={item.backorderedQuantity}
+                            quantity={item.quantity}
+                            sx={{ mt: 0.5 }}
                           />
                         )}
                       </Box>

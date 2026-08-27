@@ -26,7 +26,6 @@ import {
 import {
   ScanLine,
   Pencil,
-  AlertTriangle,
   X,
   Search,
   ArrowLeft,
@@ -42,7 +41,7 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
-import { SaleCartItemRow } from "./SaleCartItem";
+import { SaleCartItemRow, BackorderChip } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
   Card,
@@ -156,13 +155,23 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function chosenSourcesAvailable(
-  sources: { quantity: number; available: number }[],
-): number | undefined {
-  if (sources.length === 0) return undefined;
+function coverableFromSources(
+  sources: {
+    quantity: number;
+    available: number;
+    pendingOrdered?: number;
+    sourceType?: string;
+  }[],
+): number {
   return sources
     .filter((src) => src.quantity > 0)
-    .reduce((sum, src) => sum + src.available, 0);
+    .reduce(
+      (sum, src) =>
+        sum +
+        src.available +
+        (src.sourceType === "warehouse" ? (src.pendingOrdered ?? 0) : 0),
+      0,
+    );
 }
 
 function toCheckoutDate(value: string | null | undefined): string | null {
@@ -1050,21 +1059,26 @@ export function SaleBuilder({
     lockedBranch !== null &&
     src.branchId !== lockedBranch.id;
 
-  // Sucursal de entrega/recolección: por default es la misma de donde sale
-  // el stock (lockedBranch); el vendedor puede cambiarla con "Cambiar".
-  const effectiveDeliveryBranch = deliveryBranchOverridden
-    ? deliveryBranch
-    : lockedBranch;
-
   const { data: branchesCatalog = [] } = useQuery({
     queryKey: ["branches-catalog-pickup"],
     queryFn: async () => {
       const branches = await getBranchesCatalog();
       return branches.filter((b) => !b.is_main_warehouse);
     },
-    enabled: branchPickerOpen,
+    enabled: branchPickerOpen || deliveryType === "pickup",
     staleTime: 5 * 60 * 1000,
   });
+
+  const currentBranchOption = useMemo(() => {
+    const fromCatalog = branchesCatalog.find((b) => b.id === CURRENT_BRANCH_ID);
+    if (fromCatalog) return { id: fromCatalog.id, label: fromCatalog.name };
+    return { id: CURRENT_BRANCH_ID, label: "Sucursal actual" };
+  }, [branchesCatalog]);
+
+  // Pickup: sucursal actual por default. "Cambiar" fija un override.
+  const effectiveDeliveryBranch = deliveryBranchOverridden
+    ? deliveryBranch
+    : currentBranchOption;
 
   const cartProductIds = useMemo(
     () => cart.map((i) => i.productId).join(","),
@@ -1201,16 +1215,11 @@ export function SaleBuilder({
       return;
     }
 
-    // Lo que exceda la existencia de las fuentes elegidas (sucursal y/o
-    // bodega — cualquiera que el usuario haya usado para cubrir la
-    // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
-    // solo se miraba la fuente "branch", así que elegir desde "Bodega"
-    // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
-    const availableFromChosenSources =
-      chosenSourcesAvailable(productSources) ?? 0;
+    // Exceso sobre existencia (+ por surtir de bodega) = backorder. El
+    // spinner no tiene tope: se puede vender sin stock.
     const backorderedQuantity = Math.max(
       0,
-      totalQty - availableFromChosenSources,
+      totalQty - coverableFromSources(productSources),
     );
 
     setCart((prev) => {
@@ -1277,22 +1286,16 @@ export function SaleBuilder({
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          const uncapped = Math.max(0, item.quantity + delta);
-          const maxQty = chosenSourcesAvailable(item.sources);
-          const quantity =
-            maxQty === undefined ? uncapped : Math.min(uncapped, maxQty);
-          // Sin `sources` (línea hidratada de una venta retomada) no hay
-          // existencia de sucursal a mano para recalcular — se conserva el
-          // último valor que confirmó el backend hasta el próximo sync.
+          const quantity = Math.max(0, item.quantity + delta);
+          // Sin `sources` (línea hidratada) se conserva el backorder que
+          // confirmó el backend hasta el próximo sync.
           if (item.sources.length === 0) return { ...item, quantity };
-          const availableFromChosenSources =
-            chosenSourcesAvailable(item.sources) ?? 0;
           return {
             ...item,
             quantity,
             backorderedQuantity: Math.max(
               0,
-              quantity - availableFromChosenSources,
+              quantity - coverableFromSources(item.sources),
             ),
           };
         })
@@ -1321,15 +1324,9 @@ export function SaleBuilder({
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
-    const available =
-      productDetail?.inventorySources.find((s) => s.sourceKey === sourceKey)
-        ?.available ?? 0;
     setQuantityMap((prev) => ({
       ...prev,
-      [sourceKey]: Math.max(
-        0,
-        Math.min(available, (prev[sourceKey] ?? 0) + delta),
-      ),
+      [sourceKey]: Math.max(0, (prev[sourceKey] ?? 0) + delta),
     }));
   };
 
@@ -1831,7 +1828,6 @@ export function SaleBuilder({
                                   )
                                 }
                                 min={0}
-                                max={src.available}
                                 disabled={branchLocked}
                                 size="medium"
                                 iconSize={14}
@@ -1932,7 +1928,6 @@ export function SaleBuilder({
                                       )
                                     }
                                     min={0}
-                                    max={src.available}
                                     disabled={branchLocked}
                                     size="medium"
                                     iconSize={14}
@@ -2101,13 +2096,10 @@ export function SaleBuilder({
                       </Stack>
                     </Stack>
                     {item.backorderedQuantity > 0 && (
-                      <Chip
-                        icon={<AlertTriangle size={12} />}
-                        label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
+                      <BackorderChip
+                        backorderedQuantity={item.backorderedQuantity}
+                        quantity={item.quantity}
+                        sx={{ mt: 1 }}
                       />
                     )}
                   </Box>
@@ -2535,7 +2527,6 @@ export function SaleBuilder({
                       currentBranchId={CURRENT_BRANCH_ID}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
-                      qtyMax={chosenSourcesAvailable(item.sources)}
                     />
                   ))}
                 </Stack>
@@ -3111,9 +3102,7 @@ export function SaleBuilder({
                             ? " [Actual]"
                             : ""
                         }`
-                      : cart.length > 0
-                        ? "Selecciona una sucursal"
-                        : "Agrega artículos al carrito primero"}
+                      : "Selecciona una sucursal"}
                   </Typography>
 
                   {effectiveDeliveryBranch &&

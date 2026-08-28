@@ -1,8 +1,6 @@
-import { Divider, Stack, Typography } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
+import { Stack, Typography } from "@mui/material";
 import { DataTable } from "@/components";
 import type { DataTableColumn, StatusChipVariant } from "@/components";
-import { BackButton } from "@/components/Breadcrumbs/Breadcrumbs.styles";
 import { CashRegisterSearchBar } from "./CashRegisterSearchBar";
 import type { ClientSearchResult, ClientSearchResultsProps } from "./types";
 import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
@@ -97,14 +95,12 @@ const columns: DataTableColumn<ClientSearchResult>[] = [
 ];
 
 export function ClientSearchResults({
-  cashRegisterName,
   searchQuery,
   results,
   saleResults,
   isSearching = false,
   onSearchQueryChange,
   onSearch,
-  onBack,
   onRowClick,
   onSaleRowClick,
   mode,
@@ -112,16 +108,7 @@ export function ClientSearchResults({
 }: ClientSearchResultsProps) {
   const resultCount = mode === "ventas" ? saleResults.length : results.length;
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" spacing={2} alignItems="center">
-        <BackButton onClick={onBack} size="small">
-          <ArrowLeft size={20} />
-        </BackButton>
-        <Typography variant="h4">{cashRegisterName}</Typography>
-      </Stack>
-
-      <Divider />
-
+    <Stack spacing={2}>
       <CashRegisterSearchBar
         searchQuery={searchQuery}
         isSearching={isSearching}

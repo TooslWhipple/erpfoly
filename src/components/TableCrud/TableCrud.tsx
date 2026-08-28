@@ -122,6 +122,7 @@ interface TableCrudProps<T> {
   selectable?: boolean;
   selectedRowKeys?: Set<string | number>;
   onSelectedRowKeysChange?: (keys: Set<string | number>) => void;
+  minTableWidth?: number;
 }
 
 export function TableCrud<T>({
@@ -142,6 +143,7 @@ export function TableCrud<T>({
   selectable = false,
   selectedRowKeys,
   onSelectedRowKeysChange,
+  minTableWidth = 650,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -279,7 +281,10 @@ export function TableCrud<T>({
             variant={column.buttonVariant || "outlined"}
             color={column.buttonColor || "primary"}
             size="small"
-            onClick={() => column.onButtonClick?.(row)}
+            onClick={(event) => {
+              event.stopPropagation();
+              column.onButtonClick?.(row);
+            }}
           >
             {column.buttonLabel || String(rawValue)}
           </Button>
@@ -463,7 +468,7 @@ export function TableCrud<T>({
   return (
     <TableWrapper>
       <StyledTableContainer>
-        <Table style={{ width: "100%", minWidth: 650 }}>
+        <Table style={{ width: "100%", minWidth: minTableWidth }}>
           {renderTableHeader()}
           <TableBody>
             {loading ? (

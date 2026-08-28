@@ -3,12 +3,15 @@ import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
 import { StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
+import { InlineMobileMenuButton, useAppNav } from "@/components/Layout";
+import { PageHeader, PageShell } from "@/components/SaleBuilder/styles";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCashRegisterSession } from "@/hooks/useCashRegisterSession";
 import { CASH_REGISTERS_UPDATE } from "@/lib/permissions";
 import { getApiErrorMessage } from "@/lib/axios";
 import {
   buildCashRegisterSearchUrl,
+  buildCashRegisterSaleUrl,
   CASH_REGISTER_HISTORY_PATH,
 } from "@/lib/cashRegisterRoutes";
 import { CashMovementType } from "@/lib/cashMovement.constants";
@@ -24,6 +27,7 @@ import {
 import {
   type CashRegisterStatus,
   CashRegisterIconContainer,
+  CashRegisterPageContent,
 } from "@/styles/cajas.styles";
 import {
   openCashRegister as openCashRegisterApi,
@@ -32,8 +36,12 @@ import {
   createFinalCut,
 } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { usePendingCashierSales } from "@/hooks/usePendingCashierSales";
+import { getCashLimitLevel, getCashLimitProgress } from "@/utils/cashLimit";
+import type { SaleListItem } from "@/types/ventas.types";
 export default function Cajas() {
   const router = useRouter();
+  const { embedMobileMenu } = useAppNav();
   const { hasPermission } = usePermissions();
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
   const showError = useSnackbarStore((state) => state.showError);
@@ -46,8 +54,23 @@ export default function Cajas() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isCutting, setIsCutting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<CashSearchMode>("abonos");
+  const [pendingSearch, setPendingSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<CashSearchMode>("ventas");
   const [cutModalOpen, setCutModalOpen] = useState(false);
+  const isRegisterOpen = cashRegister?.status === "open";
+  const { data: pendingSales = [], isLoading: pendingLoading } =
+    usePendingCashierSales({
+      enabled: isRegisterOpen,
+      search: searchMode === "ventas" ? pendingSearch : undefined,
+    });
+  const cashLimitLevel = getCashLimitLevel(
+    cashRegister?.currentCash ?? 0,
+    cashRegister?.limit ?? 0,
+  );
+  const cashLimitProgress = getCashLimitProgress(
+    cashRegister?.currentCash ?? 0,
+    cashRegister?.limit ?? 0,
+  );
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
   const [initialFund, setInitialFund] = useState("1500");
   const [exchangeRate, setExchangeRate] = useState("17.6");
@@ -261,97 +284,153 @@ export default function Cajas() {
   };
   const handleSearchClient = () => {
     const query = searchQuery.trim();
-    if (!query || !cashRegister) return;
-    if (cashRegister.status === "closed") {
+    if (cashRegister?.status === "closed") {
       showError("La caja debe estar abierta para buscar clientes.");
       return;
     }
+    if (searchMode === "ventas") {
+      setPendingSearch(query);
+      return;
+    }
+    if (!query) return;
     router.push(buildCashRegisterSearchUrl(query, searchMode));
   };
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setPendingSearch("");
+    }
+  };
+  const handleProcessSale = (sale: SaleListItem) => {
+    void router.push(buildCashRegisterSaleUrl(sale.id));
+  };
+
+  const identity = cashRegister ? (
+    <Stack direction="row" spacing={2} alignItems="center">
+      <CashRegisterIconContainer>
+        <Monitor size={24} />
+      </CashRegisterIconContainer>
+      <Typography variant="h4">{cashRegister.name}</Typography>
+      <StatusChip
+        label={getStatusLabel(cashRegister.status)}
+        variant={cashRegister.status === "open" ? "success" : "disabled"}
+        size="small"
+      />
+    </Stack>
+  ) : null;
+
   if (isLoading) {
     return (
-      <Stack
-        justifyContent="center"
-        alignItems="center"
-        style={{
-          marginTop: "112px",
-          minHeight: "200px",
-        }}
-      >
-        <Typography variant="body1">Cargando...</Typography>
-      </Stack>
+        <PageShell
+          sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+        >
+          {embedMobileMenu && (
+            <PageHeader>
+              <InlineMobileMenuButton />
+            </PageHeader>
+          )}
+          <Stack flex={1} justifyContent="center" alignItems="center">
+            <Typography variant="body1">Cargando...</Typography>
+          </Stack>
+        </PageShell>
     );
   }
   if (!cashRegister) {
     return (
-      <Stack
-        justifyContent="center"
-        alignItems="center"
-        style={{
-          marginTop: "112px",
-          minHeight: "200px",
-        }}
-      >
-        <Typography variant="h6" color="text.secondary">
-          No tienes una caja asignada
-        </Typography>
-      </Stack>
+        <PageShell
+          sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+        >
+          {embedMobileMenu && (
+            <PageHeader>
+              <InlineMobileMenuButton />
+            </PageHeader>
+          )}
+          <Stack flex={1} justifyContent="center" alignItems="center" px={2}>
+            <Typography variant="h6" color="text.secondary">
+              No tienes una caja asignada
+            </Typography>
+          </Stack>
+        </PageShell>
     );
   }
   return (
     <>
-      <Stack
-        spacing={3}
-        justifyContent="center"
-        alignItems="center"
-        style={{
-          marginTop: "112px",
-          width: "100%",
-        }}
-      >
-        <Stack
-          direction="row"
-          spacing={2}
-          alignSelf="center"
-          alignItems="center"
+      {cashRegister.status === "closed" ? (
+        <PageShell
+          sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
         >
-          <CashRegisterIconContainer>
-            <Monitor size={24} />
-          </CashRegisterIconContainer>
-          <Typography variant="h4">{cashRegister.name}</Typography>
-          <StatusChip
-            label={getStatusLabel(cashRegister.status)}
-            variant={cashRegister.status === "open" ? "success" : "disabled"}
-            size="small"
-          />
-        </Stack>
-        {cashRegister.status === "closed" ? (
-          <OpenCashRegisterForm
-            initialFund={initialFund}
-            exchangeRate={exchangeRate}
-            canOpen={canUpdateCashRegister}
-            isLoading={isOpening}
-            onInitialFundChange={setInitialFund}
-            onExchangeRateChange={setExchangeRate}
-            onOpen={handleOpenCashRegister}
-          />
-        ) : (
-          <CashRegisterDashboard
-            cashRegister={cashRegister}
-            searchQuery={searchQuery}
-            canCut={canUpdateCashRegister}
-            canWithdraw={canUpdateCashRegister}
-            onSearchQueryChange={setSearchQuery}
-            onSearch={handleSearchClient}
-            onCut={handleCut}
-            onWithdrawal={handleWithdrawal}
-            onViewAllHistory={handleViewAllHistory}
-            movements={movements}
-            mode={searchMode}
-            onModeChange={setSearchMode}
-          />
-        )}
-      </Stack>
+          {embedMobileMenu && (
+            <PageHeader>
+              <InlineMobileMenuButton />
+            </PageHeader>
+          )}
+          <Stack
+            flex={1}
+            justifyContent="center"
+            alignItems="center"
+            spacing={3}
+            px={2}
+            py={3}
+          >
+            {identity}
+            <OpenCashRegisterForm
+              initialFund={initialFund}
+              exchangeRate={exchangeRate}
+              canOpen={canUpdateCashRegister}
+              isLoading={isOpening}
+              onInitialFundChange={setInitialFund}
+              onExchangeRateChange={setExchangeRate}
+              onOpen={handleOpenCashRegister}
+            />
+          </Stack>
+        </PageShell>
+      ) : (
+        <PageShell>
+          <PageHeader>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
+              minWidth={0}
+              flex="1 1 auto"
+            >
+              <InlineMobileMenuButton />
+              <CashRegisterIconContainer>
+                <Monitor size={24} />
+              </CashRegisterIconContainer>
+              <Typography variant="h6" fontWeight={700} noWrap>
+                {cashRegister.name}
+              </Typography>
+              <StatusChip
+                label={getStatusLabel(cashRegister.status)}
+                variant="success"
+                size="small"
+              />
+            </Stack>
+          </PageHeader>
+          <CashRegisterPageContent>
+            <CashRegisterDashboard
+              cashRegister={cashRegister}
+              searchQuery={searchQuery}
+              canCut={canUpdateCashRegister}
+              canWithdraw={canUpdateCashRegister}
+              onSearchQueryChange={handleSearchQueryChange}
+              onSearch={handleSearchClient}
+              onCut={handleCut}
+              onWithdrawal={handleWithdrawal}
+              onViewAllHistory={handleViewAllHistory}
+              movements={movements}
+              mode={searchMode}
+              onModeChange={setSearchMode}
+              pendingSales={pendingSales}
+              pendingLoading={pendingLoading}
+              onProcessSale={handleProcessSale}
+              cashLimitLevel={cashLimitLevel}
+              cashLimitProgress={cashLimitProgress}
+            />
+          </CashRegisterPageContent>
+        </PageShell>
+      )}
 
       <CutModal
         open={cutModalOpen}

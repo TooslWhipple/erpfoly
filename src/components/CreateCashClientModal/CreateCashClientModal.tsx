@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button, Stack, Switch, FormControlLabel, Grid, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { Check, CircleAlert, ShieldCheck } from "lucide-react";
@@ -31,12 +31,15 @@ interface CreateCashClientModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (client: Client) => void;
+  /** WhatsApp OTP is required for credit/layaway, not for cash. */
+  requirePhoneVerification?: boolean;
 }
 
 export function CreateCashClientModal({
   open,
   onClose,
   onSuccess,
+  requirePhoneVerification = false,
 }: CreateCashClientModalProps) {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
@@ -53,12 +56,17 @@ export function CreateCashClientModal({
     setBasicFieldError,
     resetForm,
     validateBasicTab,
+    validateAddressTab,
   } = useCreateCashClientForm();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSecurityCodeValid, setIsSecurityCodeValid] = useState<boolean | null>(null);
   const [validatingSecurityCode, setValidatingSecurityCode] = useState(false);
   const otpCooldown = useOtpCooldown("cash-client-creation:whatsapp-otp");
+  const basicValidationOptions = {
+    requirePhoneVerification,
+    isSecurityCodeValid,
+  };
 
   const addressNeighborhoodsQuery = useNeighborhoodsByPostalCode(
     values.address.postalCode
@@ -96,7 +104,7 @@ export function CreateCashClientModal({
   };
 
   const handleContinueBasic = () => {
-    if (!validateBasicTab(isSecurityCodeValid)) {
+    if (!validateBasicTab(basicValidationOptions)) {
       showError("Completa la información básica requerida.");
       return;
     }
@@ -149,7 +157,7 @@ export function CreateCashClientModal({
 
       const response = await verifyClientOtp(
         phoneNumber,
-        values.basic.securityCode
+        values.basic.securityCode,
       );
       if (!response) {
         return false;
@@ -182,6 +190,10 @@ export function CreateCashClientModal({
   ]);
 
   const handleContinueAddress = () => {
+    if (!validateAddressTab()) {
+      showError("Completa la dirección requerida.");
+      return;
+    }
     setActiveTab("billing");
   };
 
@@ -192,7 +204,6 @@ export function CreateCashClientModal({
   const handleUseClientPhoneToggle = (checked: boolean) => {
     setAddressValue("useClientPhone", checked);
     if (checked) {
-      // Copiar datos del cliente
       const fullName = `${values.basic.firstName} ${values.basic.lastSurname}${values.basic.secondSurname ? ` ${values.basic.secondSurname}` : ""}`;
       setAddressValue("receiverPhone", values.basic.phoneNumber);
       setAddressValue("receiverName", fullName.trim());
@@ -200,15 +211,21 @@ export function CreateCashClientModal({
   };
 
   const handleSave = async () => {
-    if (!validateBasicTab(isSecurityCodeValid)) {
+    const basicOk = validateBasicTab(basicValidationOptions);
+    const addressOk = validateAddressTab();
+    if (!basicOk) {
       setActiveTab("basic");
       showError("Completa la información básica requerida.");
+      return;
+    }
+    if (!addressOk) {
+      setActiveTab("address");
+      showError("Completa la dirección requerida.");
       return;
     }
 
     setIsSaving(true);
     try {
-      // Geocodificar dirección para obtener coordenadas
       let latitude: string | undefined;
       let longitude: string | undefined;
 
@@ -236,11 +253,11 @@ export function CreateCashClientModal({
         lastSurname: values.basic.lastSurname,
         secondSurname: values.basic.secondSurname || undefined,
         email: values.basic.email || undefined,
-        phoneNumber: values.basic.phoneNumber || undefined,
-        postalCode: values.address.postalCode || undefined,
-        neighborhoodFullCode: values.address.neighborhoodFullCode || undefined,
-        street: values.address.street || undefined,
-        externalNumber: values.address.externalNumber || undefined,
+        phoneNumber: values.basic.phoneNumber,
+        postalCode: values.address.postalCode,
+        neighborhoodFullCode: values.address.neighborhoodFullCode,
+        street: values.address.street,
+        externalNumber: values.address.externalNumber,
         internalNumber: values.address.internalNumber || undefined,
         betweenStreets: values.address.betweenStreets || undefined,
         receiverPhone: values.address.receiverPhone || undefined,
@@ -393,60 +410,83 @@ export function CreateCashClientModal({
               helperText={basicErrors.email}
             />
 
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormTextField
-                  fullWidth
-                  label="Número de Whatsapp"
-                  placeholder="Ingresa"
-                  value={values.basic.phoneNumber}
-                  onChange={(e) =>
-                    setBasicValue(
-                      "phoneNumber",
-                      e.target.value.replace(/\D/g, "").slice(0, 10)
-                    )
-                  }
-                  disabled={isSecurityCodeValid === true}
-                  inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
-                  error={Boolean(basicErrors.phoneNumber)}
-                  helperText={basicErrors.phoneNumber}
-                />
-              </Grid>
-              <Grid container size={{ xs: "grow" }}>
-                <Grid size={{ xs: "grow" }}>
+            {requirePhoneVerification ? (
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormTextField
                     fullWidth
-                    required={isSecurityCodeValid !== true && hasValidPhoneNumber}
-                    label="Código de seguridad"
+                    required
+                    label="Número de Whatsapp"
                     placeholder="Ingresa"
-                    value={values.basic.securityCode}
-                    onChange={(e) =>
+                    value={values.basic.phoneNumber}
+                    onChange={(e) => {
                       setBasicValue(
-                        "securityCode",
-                        e.target.value.replace(/\D/g, "").slice(0, 6)
-                      )
-                    }
-                    disabled={isSecurityCodeFieldDisabled}
-                    inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
-                    error={Boolean(basicErrors.securityCode)}
-                    helperText={basicErrors.securityCode}
+                        "phoneNumber",
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      );
+                      setIsSecurityCodeValid(null);
+                      otpCooldown.reset();
+                    }}
+                    disabled={isSecurityCodeValid === true}
+                    inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+                    error={Boolean(basicErrors.phoneNumber)}
+                    helperText={basicErrors.phoneNumber}
                   />
                 </Grid>
-                <Grid size={{ xs: "auto" }} alignSelf="flex-start" style={{ marginTop: 24 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ShieldCheck size={16} />}
-                    onClick={validateSecurityCode}
-                    disabled={isOtpActionDisabled}
-                    sx={{ minWidth: 108, alignSelf: "stretch" }}
-                  >
-                    {validatingSecurityCode ? "Procesando..." : otpActionLabel}
-                  </Button>
+                <Grid container size={{ xs: "grow" }}>
+                  <Grid size={{ xs: "grow" }}>
+                    <FormTextField
+                      fullWidth
+                      required={isSecurityCodeValid !== true}
+                      label="Código de seguridad"
+                      placeholder="Ingresa"
+                      value={values.basic.securityCode}
+                      onChange={(e) => {
+                        setBasicValue(
+                          "securityCode",
+                          e.target.value.replace(/\D/g, "").slice(0, 6)
+                        );
+                        setIsSecurityCodeValid(null);
+                      }}
+                      disabled={isSecurityCodeFieldDisabled}
+                      inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
+                      error={Boolean(basicErrors.securityCode)}
+                      helperText={basicErrors.securityCode}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: "auto" }} alignSelf="flex-start" style={{ marginTop: 24 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<ShieldCheck size={16} />}
+                      onClick={validateSecurityCode}
+                      disabled={isOtpActionDisabled}
+                      sx={{ minWidth: 108, alignSelf: "stretch" }}
+                    >
+                      {validatingSecurityCode ? "Procesando..." : otpActionLabel}
+                    </Button>
+                  </Grid>
                 </Grid>
               </Grid>
-            </Grid>
+            ) : (
+              <FormTextField
+                fullWidth
+                required
+                label="Número de teléfono"
+                placeholder="Ingresa"
+                value={values.basic.phoneNumber}
+                onChange={(e) =>
+                  setBasicValue(
+                    "phoneNumber",
+                    e.target.value.replace(/\D/g, "").slice(0, 10)
+                  )
+                }
+                inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+                error={Boolean(basicErrors.phoneNumber)}
+                helperText={basicErrors.phoneNumber}
+              />
+            )}
 
-            {isSecurityCodeValid && (
+            {requirePhoneVerification && isSecurityCodeValid && (
               <Typography
                 variant="body2"
                 color="success.main"
@@ -522,19 +562,25 @@ export function CreateCashClientModal({
             <Grid size={{ xs: 12, md: 8 }}>
               <FormTextField
                 fullWidth
+                required
                 label="Calle"
                 placeholder="Ingresa"
                 value={values.address.street}
                 onChange={(e) => setAddressValue("street", e.target.value)}
+                error={Boolean(addressErrors.street)}
+                helperText={addressErrors.street}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <FormTextField
                 fullWidth
+                required
                 label="Número"
                 placeholder="Ingresa"
                 value={values.address.externalNumber}
                 onChange={(e) => setAddressValue("externalNumber", e.target.value)}
+                error={Boolean(addressErrors.externalNumber)}
+                helperText={addressErrors.externalNumber}
               />
             </Grid>
           </Grid>
@@ -568,6 +614,8 @@ export function CreateCashClientModal({
                 onChange={(e) => setAddressValue("receiverPhone", e.target.value)}
                 disabled={values.address.useClientPhone}
                 inputProps={{ maxLength: 10 }}
+                error={Boolean(addressErrors.receiverPhone)}
+                helperText={addressErrors.receiverPhone}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>

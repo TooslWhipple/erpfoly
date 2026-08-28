@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -26,7 +26,6 @@ import {
 import {
   ScanLine,
   Pencil,
-  AlertTriangle,
   X,
   Search,
   ArrowLeft,
@@ -42,7 +41,7 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
-import { SaleCartItemRow } from "./SaleCartItem";
+import { SaleCartItemRow, BackorderChip } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
   Card,
@@ -126,6 +125,11 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
+import {
+  backorderedFromSources,
+  sellableMaxFromPickedSources,
+  sourceSellableMax,
+} from "@/utils/saleCartCoverage";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -154,15 +158,6 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "MXN",
   }).format(value);
-}
-
-function chosenSourcesAvailable(
-  sources: { quantity: number; available: number }[],
-): number | undefined {
-  if (sources.length === 0) return undefined;
-  return sources
-    .filter((src) => src.quantity > 0)
-    .reduce((sum, src) => sum + src.available, 0);
 }
 
 function toCheckoutDate(value: string | null | undefined): string | null {
@@ -269,7 +264,6 @@ export function SaleBuilder({
   onExit,
   mode = "vendedor",
 }: SaleBuilderProps) {
-  const isCajeroMode = mode === "cajero";
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -328,6 +322,7 @@ export function SaleBuilder({
     useState(false);
   const [deliveryDateWarningOpen, setDeliveryDateWarningOpen] =
     useState(false);
+  const openDeliveryPickerAfterWarningRef = useRef(false);
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
@@ -502,6 +497,13 @@ export function SaleBuilder({
     },
   });
 
+  // Cotización registrada (pendiente de cobro) o apartado en cobro: mismos
+  // términos comerciales, solo caja cobra. No reabrir el editor.
+  const isCajeroMode =
+    mode === "cajero" ||
+    resumeSaleData?.status === "PENDING_CASHIER" ||
+    resumeSaleData?.status === "PENDING_PAYMENT";
+
   const resumeClientId = resumeSaleData?.client?.id ?? null;
   const { data: resumeClientData } = useQuery({
     queryKey: ["resume-sale-client", resumeClientId],
@@ -574,6 +576,10 @@ export function SaleBuilder({
     if (hydratedDeliveryDate) {
       setCheckoutDeliveryDate(hydratedDeliveryDate);
     }
+
+    if (isCajeroMode) {
+      setView("checkout");
+    }
   }
 
   if (
@@ -583,6 +589,9 @@ export function SaleBuilder({
   ) {
     setHydratedClientForSaleId(hydratedSaleId);
     setSelectedClient(resumeClientData);
+    if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
+      setPaymentType("CASH");
+    }
   }
 
   const syncDeliverySelection = async (saleId: number) => {
@@ -711,7 +720,7 @@ export function SaleBuilder({
       }
     }
 
-    if (paymentType === "LAYAWAY" && activeLayawayTerm) {
+    if (!isCajeroMode && paymentType === "LAYAWAY" && activeLayawayTerm) {
       const termRes = await updateSaleLayawayTerm(saleId, activeLayawayTerm.id);
       if (termRes.error) throw new Error(termRes.error.message);
     }
@@ -1050,21 +1059,26 @@ export function SaleBuilder({
     lockedBranch !== null &&
     src.branchId !== lockedBranch.id;
 
-  // Sucursal de entrega/recolección: por default es la misma de donde sale
-  // el stock (lockedBranch); el vendedor puede cambiarla con "Cambiar".
-  const effectiveDeliveryBranch = deliveryBranchOverridden
-    ? deliveryBranch
-    : lockedBranch;
-
   const { data: branchesCatalog = [] } = useQuery({
     queryKey: ["branches-catalog-pickup"],
     queryFn: async () => {
       const branches = await getBranchesCatalog();
       return branches.filter((b) => !b.is_main_warehouse);
     },
-    enabled: branchPickerOpen,
+    enabled: branchPickerOpen || deliveryType === "pickup",
     staleTime: 5 * 60 * 1000,
   });
+
+  const currentBranchOption = useMemo(() => {
+    const fromCatalog = branchesCatalog.find((b) => b.id === CURRENT_BRANCH_ID);
+    if (fromCatalog) return { id: fromCatalog.id, label: fromCatalog.name };
+    return { id: CURRENT_BRANCH_ID, label: "Sucursal actual" };
+  }, [branchesCatalog]);
+
+  // Pickup: sucursal actual por default. "Cambiar" fija un override.
+  const effectiveDeliveryBranch = deliveryBranchOverridden
+    ? deliveryBranch
+    : currentBranchOption;
 
   const cartProductIds = useMemo(
     () => cart.map((i) => i.productId).join(","),
@@ -1176,6 +1190,13 @@ export function SaleBuilder({
     if (!productDetail) return;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
     if (totalQty === 0) return;
+    const sellableMax = sellableMaxFromPickedSources(productSources);
+    if (totalQty > sellableMax) {
+      snackbar.showError(
+        "No hay existencia ni mercancía por surtir suficientes para esa cantidad.",
+      );
+      return;
+    }
 
     const branchSourcesWithQty = productSources.filter(
       (src) => src.sourceType === "branch" && src.quantity > 0,
@@ -1201,16 +1222,11 @@ export function SaleBuilder({
       return;
     }
 
-    // Lo que exceda la existencia de las fuentes elegidas (sucursal y/o
-    // bodega — cualquiera que el usuario haya usado para cubrir la
-    // cantidad) queda en backorder, sin bloquear el alta al carrito. Antes
-    // solo se miraba la fuente "branch", así que elegir desde "Bodega"
-    // (warehouse) siempre marcaba backorder aunque sí hubiera existencia ahí.
-    const availableFromChosenSources =
-      chosenSourcesAvailable(productSources) ?? 0;
-    const backorderedQuantity = Math.max(
-      0,
-      totalQty - availableFromChosenSources,
+    // Exceso sobre existencia de las fuentes elegidas = piezas de pedido
+    // aceptado ("por surtir"). El spinner no deja vender más que eso.
+    const backorderedQuantity = backorderedFromSources(
+      productSources,
+      totalQty,
     );
 
     setCart((prev) => {
@@ -1277,23 +1293,20 @@ export function SaleBuilder({
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          const uncapped = Math.max(0, item.quantity + delta);
-          const maxQty = chosenSourcesAvailable(item.sources);
-          const quantity =
-            maxQty === undefined ? uncapped : Math.min(uncapped, maxQty);
-          // Sin `sources` (línea hidratada de una venta retomada) no hay
-          // existencia de sucursal a mano para recalcular — se conserva el
-          // último valor que confirmó el backend hasta el próximo sync.
-          if (item.sources.length === 0) return { ...item, quantity };
-          const availableFromChosenSources =
-            chosenSourcesAvailable(item.sources) ?? 0;
+          // Sin `sources` (línea hidratada) se conserva el backorder que
+          // confirmó el backend hasta el próximo sync.
+          if (item.sources.length === 0) {
+            return {
+              ...item,
+              quantity: Math.max(0, item.quantity + delta),
+            };
+          }
+          const maxQty = sellableMaxFromPickedSources(item.sources);
+          const quantity = Math.min(maxQty, Math.max(0, item.quantity + delta));
           return {
             ...item,
             quantity,
-            backorderedQuantity: Math.max(
-              0,
-              quantity - availableFromChosenSources,
-            ),
+            backorderedQuantity: backorderedFromSources(item.sources, quantity),
           };
         })
         .filter((item) => item.quantity > 0),
@@ -1321,21 +1334,14 @@ export function SaleBuilder({
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
-    const available =
-      productDetail?.inventorySources.find((s) => s.sourceKey === sourceKey)
-        ?.available ?? 0;
     setQuantityMap((prev) => ({
       ...prev,
-      [sourceKey]: Math.max(
-        0,
-        Math.min(available, (prev[sourceKey] ?? 0) + delta),
-      ),
+      [sourceKey]: Math.max(0, (prev[sourceKey] ?? 0) + delta),
     }));
   };
 
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
-  const isClientMoroso =
-    paymentType === "CREDIT" && selectedClient?.creditStatus === "MOROSO";
+  const isMorosoClient = selectedClient?.creditStatus === "MOROSO";
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
 
@@ -1831,7 +1837,7 @@ export function SaleBuilder({
                                   )
                                 }
                                 min={0}
-                                max={src.available}
+                                max={sourceSellableMax(src)}
                                 disabled={branchLocked}
                                 size="medium"
                                 iconSize={14}
@@ -1978,7 +1984,11 @@ export function SaleBuilder({
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1}>
             <InlineMobileMenuButton />
-            <IconButton size="medium" onClick={() => setView("form")} aria-label="Volver">
+            <IconButton
+              size="medium"
+              onClick={() => (isCajeroMode ? onExit() : setView("form"))}
+              aria-label={isCajeroMode ? "Cerrar" : "Volver"}
+            >
               <X size={20} />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
@@ -2101,13 +2111,10 @@ export function SaleBuilder({
                       </Stack>
                     </Stack>
                     {item.backorderedQuantity > 0 && (
-                      <Chip
-                        icon={<AlertTriangle size={12} />}
-                        label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
+                      <BackorderChip
+                        backorderedQuantity={item.backorderedQuantity}
+                        quantity={item.quantity}
+                        sx={{ mt: 1 }}
                       />
                     )}
                   </Box>
@@ -2353,16 +2360,40 @@ export function SaleBuilder({
 
         <ConfirmModal
           open={deliveryDateWarningOpen}
-          onClose={() => setDeliveryDateWarningOpen(false)}
+          onClose={() => {
+            openDeliveryPickerAfterWarningRef.current = false;
+            setDeliveryDateWarningOpen(false);
+          }}
+          onCancel={() => {
+            openDeliveryPickerAfterWarningRef.current = true;
+            setDeliveryDateWarningOpen(false);
+          }}
           onConfirm={() => {
+            openDeliveryPickerAfterWarningRef.current = false;
             setDeliveryDateWarningOpen(false);
             cobrarMutation.mutate();
+          }}
+          onExited={() => {
+            if (!openDeliveryPickerAfterWarningRef.current) return;
+            openDeliveryPickerAfterWarningRef.current = false;
+            setCheckoutDeliveryDateModalOpen(true);
           }}
           type="warning"
           title="¿Continuar sin asignar fecha de entrega?"
           description="No has asignado una fecha de entrega. Podrás asignarla después desde el detalle de la venta, pero se recomienda confirmarla con el cliente antes de cobrar."
           confirmLabel="Continuar sin fecha"
           cancelLabel="Asignar fecha"
+        />
+
+        <DeliveryDatePicker
+          open={checkoutDeliveryDateModalOpen}
+          onClose={() => setCheckoutDeliveryDateModalOpen(false)}
+          branchId={CURRENT_BRANCH_ID}
+          value={checkoutDeliveryDate}
+          onConfirm={(date) => {
+            setCheckoutDeliveryDate(date);
+            setCheckoutDeliveryDateModalOpen(false);
+          }}
         />
 
         <SideModal
@@ -2535,7 +2566,6 @@ export function SaleBuilder({
                       currentBranchId={CURRENT_BRANCH_ID}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
-                      qtyMax={chosenSourcesAvailable(item.sources)}
                     />
                   ))}
                 </Stack>
@@ -2670,7 +2700,11 @@ export function SaleBuilder({
                   <PaymentTypeButton
                     key={opt.value}
                     active={paymentType === opt.value}
-                    onClick={() => setPaymentType(opt.value)}
+                    disabled={isMorosoClient && opt.value !== "CASH"}
+                    onClick={() => {
+                      if (isMorosoClient && opt.value !== "CASH") return;
+                      setPaymentType(opt.value);
+                    }}
                   >
                     {opt.label}
                   </PaymentTypeButton>
@@ -2764,7 +2798,7 @@ export function SaleBuilder({
                   </Typography>
                 )}
 
-                {paymentType === "CREDIT" && isClientMoroso && (
+                {isMorosoClient && (
                   <Box
                     sx={{
                       bgcolor: theme.palette.app.chip.variants.error.background,
@@ -2780,14 +2814,14 @@ export function SaleBuilder({
                       color="error.main"
                       fontWeight={600}
                     >
-                      Este cliente no puede realizar una compra a crédito por
-                      estar en mora.
+                      Este cliente está en mora y solo puede realizar compras
+                      de contado.
                     </Typography>
                   </Box>
                 )}
 
                 {paymentType === "CREDIT" &&
-                  selectedClient.creditStatus !== "ACTIVE" && (
+                  selectedClient.creditStatus == null && (
                     <Button
                       fullWidth
                       variant="outlined"
@@ -3111,9 +3145,7 @@ export function SaleBuilder({
                             ? " [Actual]"
                             : ""
                         }`
-                      : cart.length > 0
-                        ? "Selecciona una sucursal"
-                        : "Agrega artículos al carrito primero"}
+                      : "Selecciona una sucursal"}
                   </Typography>
 
                   {effectiveDeliveryBranch &&
@@ -3480,6 +3512,9 @@ export function SaleBuilder({
                 setSelectedClient(row);
                 setClientSearch(row.fullName);
                 setClientModalOpen(false);
+                if (row.creditStatus === "MOROSO") {
+                  setPaymentType("CASH");
+                }
               }}
             />
           </SideModal>
@@ -3487,6 +3522,7 @@ export function SaleBuilder({
           <CreateCashClientModal
             open={createClientModalOpen}
             onClose={() => setCreateClientModalOpen(false)}
+            requirePhoneVerification={paymentType !== "CASH"}
             onSuccess={(client) => {
               setSelectedClient(client);
               setClientSearch(client.fullName);

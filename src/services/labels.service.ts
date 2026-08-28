@@ -70,6 +70,25 @@ export async function fetchLabelPdf(
   }
 }
 
+export interface FetchEtiquetaVentaPdfPayload {
+  productId: number;
+  quantity: number;
+  promotionId?: number | null;
+}
+
+/** Product-driven sale labels (`etiqueta-venta`). */
+export async function fetchEtiquetaVentaPdf(
+  payload: FetchEtiquetaVentaPdfPayload,
+): Promise<Blob> {
+  return fetchLabelPdf("etiqueta-venta", {
+    productId: payload.productId,
+    quantity: payload.quantity,
+    ...(payload.promotionId != null
+      ? { promotionId: payload.promotionId }
+      : { promotionId: null }),
+  });
+}
+
 export async function fetchReceptionLabelsPdf(
   receptionId: number,
   options: { mode?: LabelPrintMode; skip?: number } = {},

@@ -202,6 +202,7 @@ export function useRutasPage() {
       return {
         suggested: data.suggested.map(mapRow),
         orders: data.orders.map(mapRow),
+        recoveries: (data.recoveries ?? []).map(mapRow),
         suggestedCount: data.suggested_count,
         ordersCount: data.orders_count,
         recoveriesCount: data.recoveries_count,

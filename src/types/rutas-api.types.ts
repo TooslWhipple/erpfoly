@@ -80,6 +80,7 @@ export interface OrderToAddApi {
 export interface AvailableOrdersApi {
   suggested: SuggestedItemToAddApi[];
   orders: OrderToAddApi[];
+  recoveries: SuggestedItemToAddApi[];
   suggested_count: number;
   orders_count: number;
   recoveries_count: number;

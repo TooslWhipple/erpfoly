@@ -90,6 +90,7 @@ export interface OrderToAdd {
 export interface AvailableOrdersResponse {
   suggested: SuggestedItemToAdd[];
   orders: OrderToAdd[];
+  recoveries: OrderToAdd[];
   suggestedCount: number;
   ordersCount: number;
   recoveriesCount: number;

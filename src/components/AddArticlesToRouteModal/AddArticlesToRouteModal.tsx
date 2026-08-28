@@ -134,6 +134,7 @@ export function AddOrdersToRouteModal({
   const [data, setData] = useState<AvailableOrdersResponse>({
     suggested: [],
     orders: [],
+    recoveries: [],
     suggestedCount: 0,
     ordersCount: 0,
     recoveriesCount: 0,
@@ -142,6 +143,7 @@ export function AddOrdersToRouteModal({
   const [activeTab, setActiveTab] = useState<ModalTab>("orders");
   const [selectedSuggestedIds, setSelectedSuggestedIds] = useState<Set<string>>(new Set());
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [selectedRecoveryIds, setSelectedRecoveryIds] = useState<Set<string>>(new Set());
   const [selectedScheduledIds, setSelectedScheduledIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -160,6 +162,7 @@ export function AddOrdersToRouteModal({
       setData({
         suggested: [],
         orders: [],
+        recoveries: [],
         suggestedCount: 0,
         ordersCount: 0,
         recoveriesCount: 0,
@@ -174,6 +177,7 @@ export function AddOrdersToRouteModal({
     setActiveTab("orders");
     setSelectedSuggestedIds(new Set());
     setSelectedOrderIds(new Set());
+    setSelectedRecoveryIds(new Set());
     setSelectedScheduledIds(new Set());
     setSearchQuery("");
     void loadOrders();
@@ -223,9 +227,22 @@ export function AddOrdersToRouteModal({
     );
   }, [allScheduledItems, searchQuery]);
 
+  const filteredRecoveries = useMemo(() => {
+    if (!searchQuery.trim()) return data.recoveries;
+    const query = searchQuery.toLowerCase();
+    return data.recoveries.filter(
+      (item) =>
+        item.orderNumber.toLowerCase().includes(query) ||
+        item.sku.toLowerCase().includes(query) ||
+        item.articleName.toLowerCase().includes(query),
+    );
+  }, [data.recoveries, searchQuery]);
+
   const selectionCount = isScheduled
     ? selectedScheduledIds.size
-    : selectedSuggestedIds.size + selectedOrderIds.size;
+    : selectedSuggestedIds.size +
+      selectedOrderIds.size +
+      selectedRecoveryIds.size;
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
@@ -258,18 +275,46 @@ export function AddOrdersToRouteModal({
     });
   };
 
+  const handleToggleRecovery = (id: string) => {
+    setSelectedRecoveryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleConfirm = async () => {
     if (selectionCount === 0) return;
     setSubmitting(true);
     try {
-      const points = isScheduled
-        ? buildPointsFromSelected(allScheduledItems, selectedScheduledIds)
-        : buildPointsPayload(
+      let points: AddRoutePointPayload[];
+      if (isScheduled) {
+        points = buildPointsFromSelected(allScheduledItems, selectedScheduledIds);
+      } else {
+        const pointsMap = new Map<string, AddRoutePointPayload>();
+        for (const point of [
+          ...buildPointsPayload(
             data.suggested,
             data.orders,
             selectedSuggestedIds,
             selectedOrderIds,
-          );
+          ),
+          ...buildPointsFromSelected(data.recoveries, selectedRecoveryIds),
+        ]) {
+          const key = `${point.origin}-${point.origin_id}`;
+          const existing = pointsMap.get(key);
+          if (existing) {
+            existing.item_ids.push(...point.item_ids);
+          } else {
+            pointsMap.set(key, {
+              ...point,
+              item_ids: [...point.item_ids],
+            });
+          }
+        }
+        points = Array.from(pointsMap.values());
+      }
       await onConfirm({ points });
       onClose();
     } catch {
@@ -387,6 +432,79 @@ export function AddOrdersToRouteModal({
                     <Checkbox
                       checked={isSelected}
                       onChange={() => handleToggleOrder(row.id)}
+                      disabled={submitting}
+                    />
+                  </StyledTableCell>
+                  <StyledTableCell>{row.orderNumber}</StyledTableCell>
+                  <StyledTableCell>{row.sku}</StyledTableCell>
+                  <StyledTableCell
+                    sx={{
+                      maxWidth: 280,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.articleName}
+                  </StyledTableCell>
+                  <StyledTableCell>{row.zone}</StyledTableCell>
+                  <StyledTableCell>
+                    {row.scheduledDate
+                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
+                      : "-"}
+                  </StyledTableCell>
+                </StyledTableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </GeneralTableContainer>
+    );
+  };
+
+  const renderRecoveriesTable = () => {
+    if (loading) {
+      return (
+        <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
+          <CircularProgress size={32} />
+        </Stack>
+      );
+    }
+
+    if (filteredRecoveries.length === 0) {
+      return (
+        <EmptyStateContainer>
+          <Typography variant="body2" color="text.secondary">
+            {searchQuery
+              ? "No se encontraron recuperaciones"
+              : "No hay artículos pendientes de reasignación"}
+          </Typography>
+        </EmptyStateContainer>
+      );
+    }
+
+    return (
+      <GeneralTableContainer>
+        <Table stickyHeader size="small">
+          <TableHead>
+            <TableRow>
+              <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
+              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>Intento fallido</StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredRecoveries.map((row) => {
+              const isSelected = selectedRecoveryIds.has(row.id);
+              return (
+                <StyledTableRow key={row.id} selected={isSelected} hover>
+                  <StyledTableCell padding="checkbox">
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={() => handleToggleRecovery(row.id)}
                       disabled={submitting}
                     />
                   </StyledTableCell>
@@ -569,11 +687,7 @@ export function AddOrdersToRouteModal({
                 {renderGeneralTable()}
               </Stack>
             ) : (
-              <EmptyStateContainer>
-                <Typography variant="body2" color="text.secondary">
-                  Las recuperaciones estarán disponibles próximamente.
-                </Typography>
-              </EmptyStateContainer>
+              renderRecoveriesTable()
             )}
           </>
         )}

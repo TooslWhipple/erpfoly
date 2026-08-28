@@ -107,6 +107,7 @@ export function RouteDetailBody({
       );
     }
     if (!isScheduled) {
+      if (!canEditArticles) return null;
       return (
         <Button
           variant="option"

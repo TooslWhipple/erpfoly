@@ -23,6 +23,7 @@ export interface SaleListItem {
   status: SaleStatus;
   paymentType: SalePaymentType;
   clientName: string | null;
+  sellerName?: string | null;
   productName: string | null;
   productImageUrl: string | null;
   itemCount: number;
@@ -35,6 +36,7 @@ export interface GetSalesParams {
   limit: number;
   search?: string;
   statusTab?: SaleStatusTab;
+  status?: SaleStatus;
   created_by?: number;
   branch_id?: number;
   amount?: number;

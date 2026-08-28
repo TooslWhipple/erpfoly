@@ -49,7 +49,7 @@ export default function CotizacionesGuardadas() {
     initialRowsPerPage: 10,
     initialSearch: "",
     extraParams: {
-      statusTab: "pending",
+      status: "DRAFT",
       created_by: currentUserId ?? undefined,
     },
     enabled: currentUserId !== null,

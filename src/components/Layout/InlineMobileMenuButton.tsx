@@ -4,7 +4,7 @@ import { useTheme } from "@mui/material/styles";
 import { useAppNav } from "./AppNavContext";
 
 /**
- * Hamburger control for sales flow headers — sits next to the close/back button
+ * Hamburger control for POS flow headers — sits next to the close/back button
  * when the global floating menu is suppressed (`embedMobileMenu`).
  */
 export function InlineMobileMenuButton() {

@@ -1,34 +1,28 @@
-import { useState, useCallback, Fragment } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
   CircularProgress,
-  Divider,
-  FormControl,
-  Grid,
-  MenuItem,
-  Select,
+  IconButton,
   Skeleton,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import numeral from "numeral";
-import { Ban, CheckCircle2, Clock9, XCircle } from "lucide-react";
+import { Ban, CheckCircle2, Clock9, X, XCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Breadcrumbs,
   DiscountRequestItemCard,
   StatusChip,
   ApproveDiscountRequestModal,
   RejectDiscountRequestModal,
 } from "@/components";
-import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { InlineMobileMenuButton } from "@/components/Layout";
 import type { ApproveDiscountRequestResult } from "@/components";
 import type {
   ApproveDiscountRequestPayload,
   DiscountRequestDetail,
+  SaleTypeForm,
 } from "@/types/discount-requests.types";
 import {
   DiscountCard,
@@ -38,7 +32,11 @@ import {
   MapPlaceholder,
   TotalCard,
 } from "@/styles/solicitudes-descuento/nuevo.styles";
-import { theme } from "@/styles/theme";
+import {
+  DetailGrid,
+  DetailHeader,
+  DetailPageShell,
+} from "@/styles/ventas/detalle.styles";
 import {
   approveDiscountRequest,
   getDiscountRequestDetail,
@@ -50,6 +48,11 @@ import { DISCOUNT_REQUESTS_UPDATE } from "@/lib/permissions";
 const DELIVERY_LABELS: Record<string, string> = {
   a_domicilio: "A domicilio",
   recoger_sucursal: "Recoger en sucursal",
+};
+const SALE_TYPE_LABELS: Record<SaleTypeForm, string> = {
+  credito: "Crédito",
+  contado: "Contado",
+  apartado: "Apartado",
 };
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
@@ -179,48 +182,46 @@ export default function DiscountRequestDetailPage() {
   );
   if (isLoading) {
     return (
-      <Stack
-        spacing={2}
-        alignItems="center"
-        justifyContent="center"
-        minHeight={320}
-      >
-        <CircularProgress />
-      </Stack>
+      <DetailPageShell>
+        <DetailHeader>
+          <InlineMobileMenuButton />
+          <CircularProgress size={24} />
+        </DetailHeader>
+        <DetailGrid>
+          <Skeleton variant="rounded" height={200} />
+          <Skeleton variant="rounded" height={300} />
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
   if (isError || !detail) {
     return (
-      <Stack
-        spacing={2}
-        alignItems="center"
-        justifyContent="center"
-        minHeight={320}
-      >
-        <Typography variant="body1" color="text.secondary">
-          No se encontró la solicitud de descuento.
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={() => router.push("/solicitudes-descuento")}
-        >
-          Volver al listado
-        </Button>
-      </Stack>
+      <DetailPageShell>
+        <DetailHeader>
+          <InlineMobileMenuButton />
+          <Typography variant="h6" fontWeight={700}>
+            Solicitud de descuento
+          </Typography>
+        </DetailHeader>
+        <DetailGrid>
+          <Stack spacing={2} alignItems="flex-start">
+            <Typography variant="body1" color="text.secondary">
+              No se encontró la solicitud de descuento.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push("/solicitudes-descuento")}
+            >
+              Volver al listado
+            </Button>
+          </Stack>
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
   const isPending = detail.status === "pending";
-  const breadcrumbs: BreadcrumbItem[] = [
-    {
-      label: "Solicitudes de descuentos",
-      href: "/solicitudes-descuento",
-    },
-    {
-      label: `Cotización ${detail.saleFolio}`,
-    },
-  ];
   return (
-    <>
+    <DetailPageShell>
       <RejectDiscountRequestModal
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
@@ -233,313 +234,268 @@ export default function DiscountRequestDetailPage() {
         suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />
-      <Stack spacing={2}>
-        <Stack
-          spacing={2}
-          direction={{
-            xs: "column",
-            md: "row",
-          }}
-          alignItems={{
-            xs: "flex-start",
-            md: "center",
-          }}
-          justifyContent="space-between"
+      <DetailHeader sx={{ flexWrap: { xs: "wrap", sm: "nowrap" } }}>
+        <InlineMobileMenuButton />
+        <IconButton
+          size="small"
+          onClick={() => router.push("/solicitudes-descuento")}
+          aria-label="Volver a solicitudes de descuento"
         >
-          <Breadcrumbs
-            items={breadcrumbs}
-            showBackButton
-            onBack={() => router.push("/solicitudes-descuento")}
-          />
-
-          <Stack direction="row" spacing={2} alignItems="center">
-            {!isPending && getStatusBadge(detail)}
-            {isPending && canResolve && (
-              <Fragment>
-                <Button
-                  variant="contained"
-                  color="error"
-                  style={{
-                    width: 112,
-                  }}
-                  disabled={
-                    rejectMutation.isPending || approveMutation.isPending
-                  }
-                  onClick={() => setRejectModalOpen(true)}
-                >
-                  Rechazar
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{
-                    width: 112,
-                  }}
-                  disabled={
-                    rejectMutation.isPending || approveMutation.isPending
-                  }
-                  onClick={() => setApproveModalOpen(true)}
-                >
-                  Aprobar
-                </Button>
-              </Fragment>
-            )}
-          </Stack>
-        </Stack>
-
-        <Typography variant="h4" fontWeight={600}>
+          <X size={18} />
+        </IconButton>
+        <Typography variant="h6" fontWeight={700} noWrap sx={{ minWidth: 0, flex: "1 1 auto" }}>
           Cotización {detail.saleFolio}
         </Typography>
-        <Divider />
-
-        <Grid container spacing={4}>
-          <Grid
-            size={{
-              xs: 12,
-              md: 8,
+        {!isPending && getStatusBadge(detail)}
+        {isPending && canResolve && (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              ml: { sm: "auto" },
+              width: { xs: "100%", sm: "auto" },
+              flex: { xs: "1 0 100%", sm: "0 0 auto" },
             }}
           >
-            <Stack spacing={2}>
-              {isPending && (
-                <DiscountCard>
-                  <Stack flex={1}>
-                    <Typography variant="subtitle1">
-                      Descuento solicitado
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Motivo: {detail.reasonLabel}
-                    </Typography>
-                    {detail.reason === "OTHER" && detail.notes && (
-                      <Typography variant="body2" color="text.secondary">
-                        Nota: {detail.notes}
-                      </Typography>
-                    )}
-                  </Stack>
-                  {getStatusBadge(detail)}
-                </DiscountCard>
-              )}
+            <Button
+              variant="contained"
+              color="error"
+              disabled={rejectMutation.isPending || approveMutation.isPending}
+              onClick={() => setRejectModalOpen(true)}
+              sx={{ flex: { xs: 1, sm: "0 0 auto" }, minWidth: 0 }}
+            >
+              Rechazar
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={rejectMutation.isPending || approveMutation.isPending}
+              onClick={() => setApproveModalOpen(true)}
+              sx={{ flex: { xs: 1, sm: "0 0 auto" }, minWidth: 0 }}
+            >
+              Aprobar
+            </Button>
+          </Stack>
+        )}
+      </DetailHeader>
 
-              <SectionCard>
-                <Stack>
-                  <Typography variant="h6">Artículos</Typography>
+      <DetailGrid>
+        <Stack spacing={2} minWidth={0}>
+          {isPending && (
+            <DiscountCard>
+              <Stack flex={1} minWidth={0}>
+                <Typography variant="subtitle1">
+                  Descuento solicitado
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Motivo: {detail.reasonLabel}
+                </Typography>
+                {detail.reason === "OTHER" && detail.notes && (
                   <Typography variant="body2" color="text.secondary">
-                    Detalle de los artículos incluidos en esta solicitud.
+                    Nota: {detail.notes}
                   </Typography>
-                </Stack>
-
-                {detail.lineItems.length === 0 ? (
-                  [1, 2].map((item) => (
-                    <Skeleton key={item} width="100%" height="144px" />
-                  ))
-                ) : (
-                  <ItemsList>
-                    {detail.lineItems.map((item) => (
-                      <DiscountRequestItemCard key={item.id} item={item} />
-                    ))}
-                  </ItemsList>
                 )}
+              </Stack>
+              {getStatusBadge(detail)}
+            </DiscountCard>
+          )}
 
-                <Stack spacing={3}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignContent="center"
-                  >
-                    <Typography variant="body1">Subtotal</Typography>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {formatCurrency(detail.subtotal)}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignContent="center"
-                  >
-                    <Typography variant="body1">Envío</Typography>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {formatCurrency(detail.shipping)}
-                    </Typography>
-                  </Stack>
-                  <TotalCard>
-                    <Typography variant="body1" fontWeight={600}>
-                      Total
-                    </Typography>
-                    <Typography variant="h5" fontWeight={600}>
-                      {formatCurrency(detail.totalBeforeSpecialDiscount)}
-                    </Typography>
-                  </TotalCard>
-
-                  {detail.status === "approved" &&
-                    (detail.approvedDiscountPct != null ||
-                      detail.approvedDiscountAmount != null) && (
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                      >
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="body1">
-                            {detail.approvedDiscountAmount != null
-                              ? `Descuento (${formatCurrency(detail.approvedDiscountAmount)})`
-                              : `Descuento (${detail.approvedDiscountPct}%)`}
-                          </Typography>
-                          <StatusChip
-                            label="Aprobada"
-                            variant="success"
-                            size="small"
-                          />
-                        </Stack>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {formatCurrency(detail.totalAfterSpecialDiscount)}
-                        </Typography>
-                      </Stack>
-                    )}
-
-                  {detail.status === "rejected" && detail.rejectionReason && (
-                    <Stack spacing={0.5}>
-                      <Typography variant="body2" color="text.secondary">
-                        Motivo de rechazo
-                      </Typography>
-                      <Typography variant="body1">
-                        {detail.rejectionReason}
-                      </Typography>
-                    </Stack>
-                  )}
-
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignContent="center"
-                  >
-                    <Typography variant="body1">
-                      Enganche solicitado (
-                      {Math.round(detail.downPaymentPct * 100)}%)
-                    </Typography>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {formatCurrency(detail.downPaymentAmount)}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              </SectionCard>
+          <SectionCard>
+            <Stack>
+              <Typography variant="h6">Artículos</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Detalle de los artículos incluidos en esta solicitud.
+              </Typography>
             </Stack>
-          </Grid>
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 4,
-            }}
-          >
-            <Stack spacing={2}>
-              <SectionGrayCard>
-                <Typography variant="h6">Tipo de venta</Typography>
-                <ToggleButtonGroup
-                  value={detail.saleType}
-                  exclusive
-                  fullWidth
-                  size="small"
-                  sx={{
-                    pointerEvents: "none",
-                    "& .MuiToggleButtonGroup-grouped": {
-                      border: `1px solid ${theme.palette.app.border}`,
-                      "&.Mui-selected": {
-                        backgroundColor: theme.palette.app.sidebar.itemSelected,
-                        color: theme.palette.app.sidebar.textSelected,
-                      },
-                    },
-                  }}
-                >
-                  <ToggleButton value="credito">Crédito</ToggleButton>
-                  <ToggleButton value="contado">Contado</ToggleButton>
-                  <ToggleButton value="apartado">Apartado</ToggleButton>
-                </ToggleButtonGroup>
-              </SectionGrayCard>
+            {detail.lineItems.length === 0 ? (
+              [1, 2].map((item) => (
+                <Skeleton key={item} width="100%" height="144px" />
+              ))
+            ) : (
+              <ItemsList>
+                {detail.lineItems.map((item) => (
+                  <DiscountRequestItemCard key={item.id} item={item} />
+                ))}
+              </ItemsList>
+            )}
 
-              <SectionGrayCard>
-                <Typography variant="h6">Cliente</Typography>
-                {detail.client ? (
-                  <Stack spacing={0.5}>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      flexWrap="nowrap"
-                    >
-                      <Typography variant="body1" fontWeight={500}>
-                        {detail.client.fullName}
+            <Stack spacing={3}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={1}
+              >
+                <Typography variant="body1">Subtotal</Typography>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {formatCurrency(detail.subtotal)}
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={1}
+              >
+                <Typography variant="body1">Envío</Typography>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {formatCurrency(detail.shipping)}
+                </Typography>
+              </Stack>
+              <TotalCard>
+                <Typography variant="body1" fontWeight={600}>
+                  Total
+                </Typography>
+                <Typography variant="h5" fontWeight={600} noWrap>
+                  {formatCurrency(detail.totalBeforeSpecialDiscount)}
+                </Typography>
+              </TotalCard>
+
+              {detail.status === "approved" &&
+                (detail.approvedDiscountPct != null ||
+                  detail.approvedDiscountAmount != null) && (
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    gap={1}
+                    flexWrap="wrap"
+                  >
+                    <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                      <Typography variant="body1">
+                        {detail.approvedDiscountAmount != null
+                          ? `Descuento (${formatCurrency(detail.approvedDiscountAmount)})`
+                          : `Descuento (${detail.approvedDiscountPct}%)`}
                       </Typography>
                       <StatusChip
-                        label="Activo"
+                        label="Aprobada"
                         variant="success"
                         size="small"
                       />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      {detail.client.phone}
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {formatCurrency(detail.totalAfterSpecialDiscount)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {detail.client.email}
-                    </Typography>
-                    {!detail.client.hasActiveCredit && (
-                      <Typography variant="body2" color="text.secondary">
-                        Este cliente no cuenta con crédito activo.
-                      </Typography>
-                    )}
                   </Stack>
-                ) : (
+                )}
+
+              {detail.status === "rejected" && detail.rejectionReason && (
+                <Stack spacing={0.5}>
                   <Typography variant="body2" color="text.secondary">
-                    Sin cliente asignado
+                    Motivo de rechazo
+                  </Typography>
+                  <Typography variant="body1">
+                    {detail.rejectionReason}
+                  </Typography>
+                </Stack>
+              )}
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={1}
+              >
+                <Typography variant="body1">
+                  Enganche solicitado (
+                  {Math.round(detail.downPaymentPct * 100)}%)
+                </Typography>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {formatCurrency(detail.downPaymentAmount)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </SectionCard>
+        </Stack>
+
+        <Stack spacing={2} minWidth={0}>
+          <SectionGrayCard>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Tipo de venta
+            </Typography>
+            <Typography variant="body2">
+              {SALE_TYPE_LABELS[detail.saleType] ?? detail.saleType}
+            </Typography>
+          </SectionGrayCard>
+
+          <SectionGrayCard>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Cliente
+            </Typography>
+            {detail.client ? (
+              <Stack spacing={0.5}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={1}
+                  minWidth={0}
+                >
+                  <Typography variant="body1" fontWeight={500} noWrap>
+                    {detail.client.fullName}
+                  </Typography>
+                  <StatusChip
+                    label="Activo"
+                    variant="success"
+                    size="small"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  {detail.client.phone}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                  {detail.client.email}
+                </Typography>
+                {!detail.client.hasActiveCredit && (
+                  <Typography variant="body2" color="text.secondary">
+                    Este cliente no cuenta con crédito activo.
                   </Typography>
                 )}
-              </SectionGrayCard>
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Sin cliente asignado
+              </Typography>
+            )}
+          </SectionGrayCard>
 
-              <SectionGrayCard>
-                <Typography variant="h6">Entrega</Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={detail.delivery?.type ?? "a_domicilio"}
-                    readOnly
-                    sx={{
-                      backgroundColor: "transparent",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    <MenuItem value={detail.delivery?.type ?? "a_domicilio"}>
-                      {DELIVERY_LABELS[detail.delivery?.type ?? "a_domicilio"]}
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-                <MapPlaceholder />
-                {detail.delivery?.address && (
-                  <Stack spacing={0.5}>
-                    <Typography variant="caption" fontWeight={500}>
-                      Dirección de entrega
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {detail.delivery.address}
-                    </Typography>
-                    {detail.delivery.receiverEmail && (
-                      <Typography variant="body2" color="text.secondary">
-                        {detail.delivery.receiverEmail}
-                      </Typography>
-                    )}
-                  </Stack>
+          <SectionGrayCard>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Entrega
+            </Typography>
+            <Typography variant="body2">
+              {DELIVERY_LABELS[detail.delivery?.type ?? "a_domicilio"]}
+            </Typography>
+            <MapPlaceholder />
+            {detail.delivery?.address && (
+              <Stack spacing={0.5}>
+                <Typography variant="caption" fontWeight={500}>
+                  Dirección de entrega
+                </Typography>
+                <Typography variant="body1" fontWeight={500}>
+                  {detail.delivery.address}
+                </Typography>
+                {detail.delivery.receiverEmail && (
+                  <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                    {detail.delivery.receiverEmail}
+                  </Typography>
                 )}
-                {detail.delivery?.receiverPhone && (
-                  <Stack spacing={0.5}>
-                    <Typography variant="caption" fontWeight={500}>
-                      Teléfono de quien recibe
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {detail.delivery.receiverPhone}
-                    </Typography>
-                  </Stack>
-                )}
-              </SectionGrayCard>
-            </Stack>
-          </Grid>
-        </Grid>
-      </Stack>
-    </>
+              </Stack>
+            )}
+            {detail.delivery?.receiverPhone && (
+              <Stack spacing={0.5}>
+                <Typography variant="caption" fontWeight={500}>
+                  Teléfono de quien recibe
+                </Typography>
+                <Typography variant="body1" fontWeight={500}>
+                  {detail.delivery.receiverPhone}
+                </Typography>
+              </Stack>
+            )}
+          </SectionGrayCard>
+        </Stack>
+      </DetailGrid>
+    </DetailPageShell>
   );
 }

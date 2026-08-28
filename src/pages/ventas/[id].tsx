@@ -36,6 +36,7 @@ import {
   DetailPageShell,
   InvoiceActionsGrid,
   invoiceDownloadButtonSx,
+  SaleSuccessAlert,
 } from "@/styles/ventas/detalle.styles";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +61,7 @@ import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
+import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -378,7 +380,11 @@ export default function VentaDetalle() {
     return (
       <SaleBuilder
         resumeSaleId={saleId}
-        onExit={() => void router.push("/ventas")}
+        onExit={() =>
+          void router.push(
+            isCashRegisterReturnQuery(router.query) ? "/cajas" : "/ventas",
+          )
+        }
         mode="cajero"
       />
     );
@@ -419,22 +425,13 @@ export default function VentaDetalle() {
       <DetailGrid>
         <Box>
           {isNew && (
-            <Alert
-              icon={<CheckCircle size={18} color={theme.palette.success.main} />}
+            <SaleSuccessAlert
               severity="success"
-              sx={{
-                mb: 3,
-                fontWeight: 500,
-                bgcolor: "success.light",
-                borderRadius: 2,
-                py: 1,
-                px: 1.5,
-                color: "text.primary",
-                "& .MuiAlert-icon": { color: "success.main", mr: 1 },
-              }}
+              variant="outlined"
+              icon={<CheckCircle size={18} aria-hidden />}
             >
               Venta registrada con éxito
-            </Alert>
+            </SaleSuccessAlert>
           )}
           <Card
             elevation={0}

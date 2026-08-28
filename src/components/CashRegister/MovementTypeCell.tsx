@@ -22,9 +22,9 @@ export function MovementTypeCell({ type }: MovementTypeCellProps) {
   const Icon = iconVariant === "income" ? ArrowDownRight : ArrowUpRight;
 
   return (
-    <Stack direction="row" spacing={0.75} alignItems="center">
+    <Stack direction="row" spacing={0.75} alignItems="center" minWidth={0}>
       <Icon size={16} color={color} strokeWidth={2} />
-      <Typography variant="body2" sx={{ color, fontWeight: 500 }}>
+      <Typography variant="body2" noWrap sx={{ color, fontWeight: 500 }}>
         {label}
       </Typography>
     </Stack>

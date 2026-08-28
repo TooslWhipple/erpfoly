@@ -1,6 +1,7 @@
 import { CashRegisterStatus } from "@/styles/cajas.styles";
 import type { CashMovementType, CashMovementPaymentForm } from "@/lib/cashMovement.constants";
 import type { SaleListItem } from "@/types/ventas.types";
+import type { CashLimitLevel } from "@/utils/cashLimit";
 
 export interface CashRegisterState {
   id: string;
@@ -58,16 +59,12 @@ export interface CashRegisterSearchBarProps {
 }
 
 export interface ClientSearchResultsProps {
-  cashRegisterName: string;
-  cashRegisterStatusLabel: string;
-  cashRegisterStatus: CashRegisterStatus;
   searchQuery: string;
   results: ClientSearchResult[];
   saleResults: SaleListItem[];
   isSearching?: boolean;
   onSearchQueryChange: (value: string) => void;
   onSearch?: () => void;
-  onBack: () => void;
   onRowClick: (client: ClientSearchResult) => void;
   onSaleRowClick: (sale: SaleListItem) => void;
   mode: CashSearchMode;
@@ -75,11 +72,7 @@ export interface ClientSearchResultsProps {
 }
 
 export interface CashRegisterHistoryProps {
-  cashRegisterName: string;
-  cashRegisterStatusLabel: string;
-  cashRegisterStatus: CashRegisterStatus;
   movements: CashMovement[];
-  onBack: () => void;
 }
 
 export interface CashRegisterDashboardProps {
@@ -96,4 +89,9 @@ export interface CashRegisterDashboardProps {
   movements?: CashMovement[];
   mode: CashSearchMode;
   onModeChange: (mode: CashSearchMode) => void;
+  pendingSales?: SaleListItem[];
+  pendingLoading?: boolean;
+  onProcessSale: (sale: SaleListItem) => void;
+  cashLimitLevel: CashLimitLevel;
+  cashLimitProgress: number;
 }

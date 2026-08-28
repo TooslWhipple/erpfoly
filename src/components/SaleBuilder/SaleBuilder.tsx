@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -264,7 +264,6 @@ export function SaleBuilder({
   onExit,
   mode = "vendedor",
 }: SaleBuilderProps) {
-  const isCajeroMode = mode === "cajero";
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -323,6 +322,7 @@ export function SaleBuilder({
     useState(false);
   const [deliveryDateWarningOpen, setDeliveryDateWarningOpen] =
     useState(false);
+  const openDeliveryPickerAfterWarningRef = useRef(false);
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
@@ -497,6 +497,13 @@ export function SaleBuilder({
     },
   });
 
+  // Cotización registrada (pendiente de cobro) o apartado en cobro: mismos
+  // términos comerciales, solo caja cobra. No reabrir el editor.
+  const isCajeroMode =
+    mode === "cajero" ||
+    resumeSaleData?.status === "PENDING_CASHIER" ||
+    resumeSaleData?.status === "PENDING_PAYMENT";
+
   const resumeClientId = resumeSaleData?.client?.id ?? null;
   const { data: resumeClientData } = useQuery({
     queryKey: ["resume-sale-client", resumeClientId],
@@ -568,6 +575,10 @@ export function SaleBuilder({
     const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
     if (hydratedDeliveryDate) {
       setCheckoutDeliveryDate(hydratedDeliveryDate);
+    }
+
+    if (isCajeroMode) {
+      setView("checkout");
     }
   }
 
@@ -709,7 +720,7 @@ export function SaleBuilder({
       }
     }
 
-    if (paymentType === "LAYAWAY" && activeLayawayTerm) {
+    if (!isCajeroMode && paymentType === "LAYAWAY" && activeLayawayTerm) {
       const termRes = await updateSaleLayawayTerm(saleId, activeLayawayTerm.id);
       if (termRes.error) throw new Error(termRes.error.message);
     }
@@ -1973,7 +1984,11 @@ export function SaleBuilder({
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1}>
             <InlineMobileMenuButton />
-            <IconButton size="medium" onClick={() => setView("form")} aria-label="Volver">
+            <IconButton
+              size="medium"
+              onClick={() => (isCajeroMode ? onExit() : setView("form"))}
+              aria-label={isCajeroMode ? "Cerrar" : "Volver"}
+            >
               <X size={20} />
             </IconButton>
             <Typography variant="h6" fontWeight={700}>
@@ -2345,20 +2360,40 @@ export function SaleBuilder({
 
         <ConfirmModal
           open={deliveryDateWarningOpen}
-          onClose={() => setDeliveryDateWarningOpen(false)}
-          onCancel={() => {
+          onClose={() => {
+            openDeliveryPickerAfterWarningRef.current = false;
             setDeliveryDateWarningOpen(false);
-            setCheckoutDeliveryDateModalOpen(true);
+          }}
+          onCancel={() => {
+            openDeliveryPickerAfterWarningRef.current = true;
+            setDeliveryDateWarningOpen(false);
           }}
           onConfirm={() => {
+            openDeliveryPickerAfterWarningRef.current = false;
             setDeliveryDateWarningOpen(false);
             cobrarMutation.mutate();
+          }}
+          onExited={() => {
+            if (!openDeliveryPickerAfterWarningRef.current) return;
+            openDeliveryPickerAfterWarningRef.current = false;
+            setCheckoutDeliveryDateModalOpen(true);
           }}
           type="warning"
           title="¿Continuar sin asignar fecha de entrega?"
           description="No has asignado una fecha de entrega. Podrás asignarla después desde el detalle de la venta, pero se recomienda confirmarla con el cliente antes de cobrar."
           confirmLabel="Continuar sin fecha"
           cancelLabel="Asignar fecha"
+        />
+
+        <DeliveryDatePicker
+          open={checkoutDeliveryDateModalOpen}
+          onClose={() => setCheckoutDeliveryDateModalOpen(false)}
+          branchId={CURRENT_BRANCH_ID}
+          value={checkoutDeliveryDate}
+          onConfirm={(date) => {
+            setCheckoutDeliveryDate(date);
+            setCheckoutDeliveryDateModalOpen(false);
+          }}
         />
 
         <SideModal

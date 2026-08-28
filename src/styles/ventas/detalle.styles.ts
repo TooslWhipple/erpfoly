@@ -1,5 +1,5 @@
-import { Box, Card, Stack } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { Alert, Box, Card, Stack } from "@mui/material";
+import { alpha, styled } from "@mui/material/styles";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 
 export const DetailPageShell = styled(Box)(({ theme }) => ({
@@ -77,6 +77,31 @@ export const BannerBox = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing(1.5),
 }));
+
+/** Confirmación post-cobro: tokens de chip success, no success.light (acento saturado). */
+export const SaleSuccessAlert = styled(Alert)(({ theme }) => {
+  const success = theme.palette.app.chip.variants.success;
+  return {
+    marginBottom: theme.spacing(3),
+    padding: theme.spacing(1, 1.5),
+    borderRadius: 16,
+    backgroundColor: success.background,
+    color: success.color,
+    border: `1px solid ${alpha(theme.palette.success.main, 0.22)}`,
+    boxShadow: "none",
+    alignItems: "center",
+    "& .MuiAlert-icon": {
+      color: "inherit",
+      padding: 0,
+      marginRight: theme.spacing(1),
+    },
+    "& .MuiAlert-message": {
+      padding: 0,
+      fontWeight: 600,
+      color: "inherit",
+    },
+  };
+});
 
 export const InvoiceActionsGrid = styled(Box)(({ theme }) => ({
   display: "grid",

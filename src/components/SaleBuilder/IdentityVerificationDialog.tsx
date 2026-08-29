@@ -187,8 +187,8 @@ function CameraView({
         Validación de identidad
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Capture el rostro del cliente para verificar que coincida con el
-        rostro enrolado del titular del crédito.
+        Capture el rostro del cliente para verificar que coincida con la
+        fotografía de su INE.
       </Typography>
 
       <CameraStage>

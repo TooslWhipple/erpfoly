@@ -336,15 +336,16 @@ export default function VentaDetalle() {
   });
 
   const deliveryAddressCoords = useMemo(() => {
+    if (sale?.deliveryType !== "ADDRESS") return null;
     const hasPersistedDeliveryCoords =
-      sale?.deliveryAddressLatitude != null &&
+      sale.deliveryAddressLatitude != null &&
       sale.deliveryAddressLongitude != null;
     const latitude = hasPersistedDeliveryCoords
       ? sale.deliveryAddressLatitude
-      : sale?.client?.primaryAddress?.latitude;
+      : sale.client?.primaryAddress?.latitude;
     const longitude = hasPersistedDeliveryCoords
       ? sale.deliveryAddressLongitude
-      : sale?.client?.primaryAddress?.longitude;
+      : sale.client?.primaryAddress?.longitude;
     if (latitude == null || longitude == null) return null;
     const lat = Number(latitude);
     const lng = Number(longitude);
@@ -581,14 +582,20 @@ export default function VentaDetalle() {
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
-                      {sale.deliveryType === 'BRANCH' ? 'Entrega en sucursal' : 'Entrega a domicilio'}
+                      {sale.deliveryType === 'BRANCH'
+                        ? 'Entrega en sucursal'
+                        : sale.deliveryType === 'ADDRESS'
+                          ? 'Entrega a domicilio'
+                          : 'Entrega'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {sale.deliveryType === 'BRANCH'
                         ? sale.deliveryBranchName ?? 'Sucursal no especificada'
-                        : sale.deliveryAddressFormatted ??
-                        sale.client?.primaryAddress?.formatted ??
-                        'Dirección del cliente'}
+                        : sale.deliveryType === 'ADDRESS'
+                          ? sale.deliveryAddressFormatted ??
+                            sale.client?.primaryAddress?.formatted ??
+                            'Dirección no especificada'
+                          : 'Tipo de entrega no definido'}
                     </Typography>
                     {sale.estimatedDeliveryDate && sale.deliveryStatus !== 'DELIVERED' && (
                       <Typography variant="body2" color="text.secondary">
@@ -1157,8 +1164,9 @@ export default function VentaDetalle() {
                     </Typography>
                   )}
 
-                  {(sale.deliveryAddressFormatted ||
-                    sale.client.primaryAddress) && (
+                  {sale.deliveryType === "ADDRESS" &&
+                    (sale.deliveryAddressFormatted ||
+                      sale.client.primaryAddress) && (
                     <Box mt={2}>
                       {deliveryAddressCoords && googleMapsBrowserApiKey ? (
                         <Box sx={{ mb: 1.5 }}>
@@ -1236,13 +1244,19 @@ export default function VentaDetalle() {
         branchId={sale?.branchId ?? undefined}
         value={sale?.deliveryDate ?? null}
         onConfirm={(date) => {
+          if (sale?.deliveryType === "BRANCH") {
+            setDateMutation.mutate({
+              delivery_date: date,
+              delivery_type: "BRANCH",
+              branch_id: sale.deliveryBranchId ?? undefined,
+            });
+            return;
+          }
           setDateMutation.mutate({
             delivery_date: date,
-            // Sin tipo/sucursal/dirección propios ya guardados en la
-            // venta (sale.deliveryType === null), este flujo asume
-            // domicilio a la dirección principal del cliente, igual
-            // que el comportamiento previo de esta pantalla.
-            address_id: sale?.client?.primaryAddress?.id,
+            delivery_type: "ADDRESS",
+            address_id:
+              sale?.deliveryAddressId ?? sale?.client?.primaryAddress?.id,
           });
         }}
         onRemove={sale?.deliveryDate ? () => removeDateMutation.mutate() : undefined}

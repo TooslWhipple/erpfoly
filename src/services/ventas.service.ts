@@ -195,8 +195,8 @@ export interface AddSaleItemPayload {
 export async function addSaleItem(
   saleId: number,
   payload: AddSaleItemPayload,
-): Promise<ApiResult<unknown>> {
-  return post<unknown>(`${BASE}/sales/${saleId}/items`, payload);
+): Promise<ApiResult<{ id: number }>> {
+  return post<{ id: number }>(`${BASE}/sales/${saleId}/items`, payload);
 }
 
 export interface UpdateSaleItemPayload {

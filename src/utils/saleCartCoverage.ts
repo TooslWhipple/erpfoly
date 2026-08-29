@@ -18,6 +18,33 @@ export function toInventorySourcesPayload(
   );
 }
 
+/** Cart +/- only changes line qty; picked sources must be resized to match. */
+export function reallocInventorySources(
+  sources: InventorySource[],
+  quantity: number,
+): InventorySource[] {
+  const pickedKeys = new Set(
+    sources.filter((source) => source.quantity > 0).map((source) => source.sourceKey),
+  );
+  if (pickedKeys.size === 0) return sources;
+
+  let remaining = quantity;
+  const next = sources.map((source) => {
+    if (!pickedKeys.has(source.sourceKey)) return { ...source, quantity: 0 };
+    const take = Math.min(sourceSellableMax(source), remaining);
+    remaining -= take;
+    return { ...source, quantity: take };
+  });
+  if (remaining <= 0) return next;
+
+  const lastPicked = [...pickedKeys].at(-1);
+  return next.map((source) =>
+    source.sourceKey === lastPicked
+      ? { ...source, quantity: source.quantity + remaining }
+      : source,
+  );
+}
+
 export function sourceSellableMax(src: {
   available: number;
   pendingOrdered?: number;
@@ -74,6 +101,29 @@ export function hydratedLineQtyMax(
   return Math.max(currentQty, sellableCeiling);
 }
 
+/** Keep ticket allocation; replace on-hand fields with live product detail. */
+export function overlayLiveInventoryOnSources(
+  sources: InventorySource[],
+  live: InventorySource[] | undefined,
+): InventorySource[] {
+  if (!live?.length || sources.length === 0) return sources;
+  const byBranch = new Map<number, InventorySource>();
+  for (const source of live) {
+    if (source.branchId != null) byBranch.set(source.branchId, source);
+  }
+  return sources.map((source) => {
+    const match =
+      source.branchId != null ? byBranch.get(source.branchId) : undefined;
+    if (!match) return source;
+    return {
+      ...source,
+      available: match.available,
+      pendingOrdered: match.pendingOrdered,
+      inTransit: match.inTransit,
+    };
+  });
+}
+
 // ponytail: fails if the backorder chip / sellable cap regress
 if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   const payload = toInventorySourcesPayload([
@@ -88,6 +138,22 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   ]);
   if (payload.length !== 1 || payload[0].branch_id !== 7) {
     throw new Error("saleCartCoverage: serializes selected inventory source");
+  }
+  const grown = reallocInventorySources(
+    [
+      {
+        sourceKey: "branch-7",
+        sourceType: "branch",
+        branchId: 7,
+        label: "Sucursal",
+        available: 5,
+        quantity: 1,
+      },
+    ],
+    2,
+  );
+  if (grown[0].quantity !== 2) {
+    throw new Error("saleCartCoverage: realloc grows picked source to line qty");
   }
   const warehouse = {
     quantity: 4,
@@ -146,5 +212,32 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   }
   if (hydratedLineQtyMax(8, 5) !== 8) {
     throw new Error("saleCartCoverage: hydrated max keeps backorder qty");
+  }
+  const overlaid = overlayLiveInventoryOnSources(
+    [
+      {
+        sourceKey: "branch-5",
+        sourceType: "branch",
+        branchId: 5,
+        label: "Centro",
+        available: 2,
+        quantity: 2,
+      },
+    ],
+    [
+      {
+        sourceKey: "branch-5",
+        sourceType: "branch",
+        branchId: 5,
+        label: "Centro",
+        available: 10,
+        pendingOrdered: 0,
+        inTransit: 1,
+        quantity: 0,
+      },
+    ],
+  );
+  if (overlaid[0].quantity !== 2 || overlaid[0].available !== 10) {
+    throw new Error("saleCartCoverage: overlay keeps allocation, uses live stock");
   }
 }

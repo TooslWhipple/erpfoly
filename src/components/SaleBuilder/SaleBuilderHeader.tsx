@@ -26,6 +26,7 @@ export interface SaleBuilderHeaderProps {
   onRegisterSale: () => void;
   onProceedToCheckout: () => void;
   proceedLabel?: string;
+  creditLineExceeded?: boolean;
 }
 
 export function SaleBuilderHeader({
@@ -45,6 +46,7 @@ export function SaleBuilderHeader({
   onRegisterSale,
   onProceedToCheckout,
   proceedLabel = "Proceder al cobro",
+  creditLineExceeded = false,
 }: SaleBuilderHeaderProps) {
   return (
     <PageHeader>
@@ -100,7 +102,7 @@ export function SaleBuilderHeader({
             <span>
               <TouchButton
                 variant="contained"
-                disabled={!canProceed || operationPending}
+                disabled={!canProceed || operationPending || creditLineExceeded}
                 onClick={onRegisterSale}
               >
                 {registerPending ? (

@@ -50,10 +50,10 @@ function sanitizeAmountInput(value: string): string {
 }
 
 export const SHOW_CARD_REFERENCE = false;
+const MAX_EXTRA_CARDS = 1;
 
 export interface ExtraCardTender {
   amount: string;
-  terminalId: number | null;
 }
 
 export interface SaleCheckoutPaymentPanelProps {
@@ -263,7 +263,9 @@ export function SaleCheckoutPaymentPanel({
         title={
           showNoTerminalsWarning
             ? "Esta sucursal no tiene terminales activas"
-            : "Agrega otro cobro con terminal distinta"
+            : extraCards.length >= MAX_EXTRA_CARDS
+              ? "Máximo dos tarjetas (la principal y una adicional)"
+              : "Divide el cobro en una segunda tarjeta. Usa la misma terminal."
         }
       >
         <Box component="span" sx={{ alignSelf: "flex-start", display: "inline-flex" }}>
@@ -271,13 +273,15 @@ export function SaleCheckoutPaymentPanel({
             variant="text"
             size="small"
             startIcon={<PlusCircle size={16} />}
-            disabled={showNoTerminalsWarning || cardPaymentDisabled}
-            onClick={() =>
-              onExtraCardsChange([
-                ...extraCards,
-                { amount: "", terminalId: null },
-              ])
+            disabled={
+              showNoTerminalsWarning ||
+              cardPaymentDisabled ||
+              extraCards.length >= MAX_EXTRA_CARDS
             }
+            onClick={() => {
+              if (extraCards.length >= MAX_EXTRA_CARDS) return;
+              onExtraCardsChange([...extraCards, { amount: "" }]);
+            }}
             sx={{ px: 1.5 }}
           >
             Agregar otra tarjeta
@@ -285,16 +289,15 @@ export function SaleCheckoutPaymentPanel({
         </Box>
       </Tooltip>
 
-      {extraCards.map((card, index) => (
+      {extraCards.slice(0, MAX_EXTRA_CARDS).map((card, index) => (
         <Stack key={index} spacing={1} sx={{ pl: 1 }}>
           <PaymentMethodRow>
-            <Typography variant="body2">Tarjeta {index + 2}</Typography>
+            <Typography variant="body2">Tarjeta 2</Typography>
             <PaymentAmountInput
               value={card.amount ? formatNumberInput(card.amount) : ""}
               onChange={(e) => {
                 const next = [...extraCards];
                 next[index] = {
-                  ...card,
                   amount: sanitizeAmountInput(e.target.value),
                 };
                 onExtraCardsChange(next);
@@ -305,29 +308,16 @@ export function SaleCheckoutPaymentPanel({
               }
             />
           </PaymentMethodRow>
-          <Select
-            value={card.terminalId ?? ""}
-            onChange={(e) => {
-              const next = [...extraCards];
-              next[index] = {
-                ...card,
-                terminalId: Number(e.target.value) || null,
-              };
-              onExtraCardsChange(next);
-            }}
-            displayEmpty
-            fullWidth
+          <Button
+            variant="text"
             size="small"
+            onClick={() =>
+              onExtraCardsChange(extraCards.filter((_, i) => i !== index))
+            }
+            sx={{ alignSelf: "flex-start", px: 1.5 }}
           >
-            <MenuItem value="" disabled>
-              Selecciona una terminal
-            </MenuItem>
-            {terminals.map((terminal) => (
-              <MenuItem key={terminal.id} value={terminal.id}>
-                {terminal.name}
-              </MenuItem>
-            ))}
-          </Select>
+            Quitar
+          </Button>
           {SHOW_CARD_REFERENCE ? (
             <PaymentAmountInput placeholder="Referencia (opcional)" />
           ) : null}

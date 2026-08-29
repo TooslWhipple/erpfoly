@@ -62,7 +62,7 @@ export interface SaleCartItemProps {
   isLayaway: boolean;
   isCajeroMode: boolean;
   currentBranchId: number | null;
-  /** Techo de cantidad cuando la línea no trae `sources` (cotización hidratada). */
+  /** Techo de cantidad: existencia viva de las fuentes elegidas. */
   qtyMax?: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
@@ -172,21 +172,7 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
-                max={
-                  item.sources.length === 0
-                    ? qtyMax
-                    : item.sources
-                        .filter((src) => src.quantity > 0)
-                        .reduce(
-                          (sum, src) =>
-                            sum +
-                            src.available +
-                            (src.sourceType === "warehouse"
-                              ? (src.pendingOrdered ?? 0)
-                              : 0),
-                          0,
-                        )
-                }
+                max={qtyMax ?? item.quantity}
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}

@@ -11,6 +11,7 @@ export default function NuevaVenta() {
   return (
     <SaleBuilder
       resumeSaleId={resumeSaleId}
+      resumeRoutePending={!router.isReady}
       onExit={() => void router.push("/ventas")}
       mode="vendedor"
     />

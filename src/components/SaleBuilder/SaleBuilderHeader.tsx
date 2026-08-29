@@ -13,7 +13,6 @@ export interface SaleBuilderHeaderProps {
   title: string;
   onExit: () => void;
   isCajeroMode: boolean;
-  isLayaway: boolean;
   canProceed: boolean;
   showDiscountButton: boolean;
   discountDisabled: boolean;
@@ -25,13 +24,13 @@ export interface SaleBuilderHeaderProps {
   onDiscount: () => void;
   onRegisterSale: () => void;
   onProceedToCheckout: () => void;
+  proceedLabel?: string;
 }
 
 export function SaleBuilderHeader({
   title,
   onExit,
   isCajeroMode,
-  isLayaway,
   canProceed,
   showDiscountButton,
   discountDisabled,
@@ -43,6 +42,7 @@ export function SaleBuilderHeader({
   onDiscount,
   onRegisterSale,
   onProceedToCheckout,
+  proceedLabel = "Proceder al cobro",
 }: SaleBuilderHeaderProps) {
   return (
     <PageHeader>
@@ -88,7 +88,7 @@ export function SaleBuilderHeader({
             )}
           </>
         )}
-        {!isCajeroMode && !isLayaway ? (
+        {!isCajeroMode ? (
           <Tooltip title="Quedará pendiente de cobro en caja">
             <span>
               <TouchButton
@@ -110,7 +110,7 @@ export function SaleBuilderHeader({
             disabled={!canProceed}
             onClick={onProceedToCheckout}
           >
-            Proceder al cobro
+            {proceedLabel}
           </TouchButton>
         )}
       </HeaderActions>

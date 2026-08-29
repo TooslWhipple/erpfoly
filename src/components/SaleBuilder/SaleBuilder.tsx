@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,7 +21,7 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  TextField,
+  Skeleton,
 } from "@mui/material";
 import {
   ScanLine,
@@ -90,17 +90,11 @@ import {
   setDeliveryDate,
   getSaleDetail,
   invalidateSaleDiscount,
-  verifySaleIdentity,
-  validateSupervisor,
-  skipSaleIdentityVerification,
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
-import {
-  NubariumFaceCapture,
-  type NubariumFaceCaptureResult,
-} from "@/components/NubariumFaceCapture";
-import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import { useAuthStore } from "@/store/useAuthStore";
 import { getSessionSummary } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
@@ -108,6 +102,7 @@ import type {
   CartItem,
   NewSaleView,
   ProductSearchResult,
+  SalePaymentType,
 } from "@/types/ventas.types";
 import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -127,6 +122,8 @@ import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
 import {
   backorderedFromSources,
+  hydratedLineQtyMax,
+  sellableCeilingForHydratedLine,
   sellableMaxFromPickedSources,
   sourceSellableMax,
 } from "@/utils/saleCartCoverage";
@@ -150,8 +147,26 @@ const MAX_CASH_SALE_PAYMENT_MESSAGE =
 
 const GOOGLE_MAPS_API_KEY = googleMapsBrowserApiKey;
 
-// TODO: Obtener branch real de la sesion de caja activa
-const CURRENT_BRANCH_ID = 2;
+const STOCK_SHORTAGE_MESSAGE =
+  "No hay existencia ni mercancía por surtir suficientes para esa cantidad.";
+
+type PendingDiscountMutation =
+  | { kind: "qty"; productId: number; delta: number }
+  | { kind: "remove"; productId: number }
+  | { kind: "add" }
+  | { kind: "paymentType"; value: SalePaymentType };
+
+function qtyMaxForCartItem(
+  item: CartItem,
+  coverage: Record<number, number> | undefined,
+): number {
+  if (item.sources.length > 0) {
+    return sellableMaxFromPickedSources(item.sources);
+  }
+  const ceiling = coverage?.[item.productId];
+  if (ceiling == null) return item.quantity;
+  return hydratedLineQtyMax(item.quantity, ceiling);
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -244,6 +259,53 @@ function DeliveryMapPreview({
   );
 }
 
+function SaleBuilderResumeSkeleton({ onExit }: { onExit: () => void }) {
+  return (
+    <PageShell aria-busy="true" aria-label="Cargando cotización">
+      <PageHeader>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          minWidth={0}
+          flex="1 1 auto"
+        >
+          <InlineMobileMenuButton />
+          <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+            <X size={18} />
+          </IconButton>
+          <Skeleton variant="text" width={220} height={36} />
+        </Stack>
+        <Stack direction="row" spacing={1} flexShrink={0}>
+          <Skeleton variant="rounded" width={160} height={36} />
+          <Skeleton variant="rounded" width={140} height={36} />
+        </Stack>
+      </PageHeader>
+      <MainGrid>
+        <Stack spacing={2}>
+          <Card>
+            <Skeleton variant="text" width={120} height={28} sx={{ mb: 2 }} />
+            <Stack spacing={1.5}>
+              <Skeleton variant="rounded" height={96} />
+              <Skeleton variant="rounded" height={96} />
+            </Stack>
+          </Card>
+        </Stack>
+        <StickySidebar>
+          <SidebarCard>
+            <Skeleton variant="text" width={110} height={24} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rounded" height={40} />
+          </SidebarCard>
+          <SidebarCard>
+            <Skeleton variant="text" width={80} height={24} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rounded" height={72} />
+          </SidebarCard>
+        </StickySidebar>
+      </MainGrid>
+    </PageShell>
+  );
+}
+
 export interface SaleBuilderProps {
   resumeSaleId: number | null;
   onExit: () => void;
@@ -253,21 +315,28 @@ export interface SaleBuilderProps {
    * cobre). Apartado es la excepción: sigue el flujo actual completo
    * (captura enganche/plazo) sin pasar por PENDING_CASHIER — ver plan
    * "Dudas resueltas, tarea SaleBuilder.tsx".
-   * 'cajero': el carrito queda bloqueado (solo lectura); solo la sección
-   * de cobro (biometría + pago) es interactiva.
+   * 'cajero': el carrito queda bloqueado (solo lectura). Contado/apartado
+   * van al cobro; crédito exige biometría (o skip de supervisor) antes.
    */
   mode?: "vendedor" | "cajero";
+  /** Next.js aún no resolvió el id de la ruta; no pintar el flujo de nueva venta. */
+  resumeRoutePending?: boolean;
 }
 
 export function SaleBuilder({
   resumeSaleId,
   onExit,
   mode = "vendedor",
+  resumeRoutePending = false,
 }: SaleBuilderProps) {
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [discountRequestModalOpen, setDiscountRequestModalOpen] =
+    useState(false);
+  const [pendingDiscountMutation, setPendingDiscountMutation] =
+    useState<PendingDiscountMutation | null>(null);
+  const [discountInvalidateLoading, setDiscountInvalidateLoading] =
     useState(false);
 
   const [activeSaleId, setActiveSaleId] = useState<number | null>(null);
@@ -275,12 +344,6 @@ export function SaleBuilder({
   const [originalItemIds, setOriginalItemIds] = useState<Set<number>>(
     new Set(),
   );
-  // Snapshot productId -> quantity al retomar la venta, usado para detectar
-  // si quitar/reducir un artículo debe invalidar un descuento especial ya
-  // aprobado (agregar artículos nuevos no invalida).
-  const [originalQuantities, setOriginalQuantities] = useState<
-    Map<number, number>
-  >(new Map());
   const [hydratedSaleId, setHydratedSaleId] = useState<number | null>(null);
   const [hydratedClientForSaleId, setHydratedClientForSaleId] = useState<
     number | null
@@ -328,16 +391,7 @@ export function SaleBuilder({
   const [cardAmount, setCardAmount] = useState("");
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
-  const [identityCaptureResult, setIdentityCaptureResult] =
-    useState<NubariumFaceCaptureResult | null>(null);
-  const [identityCaptureSessionKey, setIdentityCaptureSessionKey] =
-    useState(0);
-  const [skipIdentityModalOpen, setSkipIdentityModalOpen] = useState(false);
-  const [skipIdentityReason, setSkipIdentityReason] = useState("");
-  const [skipIdentitySupervisorUsername, setSkipIdentitySupervisorUsername] =
-    useState("");
-  const [skipIdentitySupervisorPassword, setSkipIdentitySupervisorPassword] =
-    useState("");
+  const [identityOk, setIdentityOk] = useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -399,14 +453,34 @@ export function SaleBuilder({
     },
   });
 
-  const { data: productDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ["product-detail", selectedProductId, showOtherBranches],
-    enabled: view === "product-detail" && selectedProductId !== null,
+  const principalBranchId =
+    useAuthStore((s) => s.user?.principalBranchId) ?? null;
+  const activeSessionQuery = useQuery({
+    queryKey: ["cash-register-session-summary"],
     queryFn: async () => {
-      if (!selectedProductId) return null;
+      try {
+        return await getSessionSummary();
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+  const workingBranchId =
+    activeSessionQuery.data?.branch_id ?? principalBranchId ?? null;
+
+  const { data: productDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ["product-detail", selectedProductId, showOtherBranches, workingBranchId],
+    enabled:
+      view === "product-detail" &&
+      selectedProductId !== null &&
+      workingBranchId != null,
+    queryFn: async () => {
+      if (!selectedProductId || workingBranchId == null) return null;
       const result = await getProductDetail(
         selectedProductId,
-        CURRENT_BRANCH_ID,
+        workingBranchId,
         showOtherBranches,
       );
       if (result.error) throw new Error(result.error.message);
@@ -487,7 +561,7 @@ export function SaleBuilder({
     LAYAWAY: ["APARTADO", "LAYAWAY", "APART"],
   };
 
-  const { data: resumeSaleData } = useQuery({
+  const { data: resumeSaleData, isError: resumeSaleError } = useQuery({
     queryKey: ["resume-sale-draft", resumeSaleId],
     enabled: resumeSaleId !== null && !Number.isNaN(resumeSaleId),
     queryFn: async () => {
@@ -503,6 +577,12 @@ export function SaleBuilder({
     mode === "cajero" ||
     resumeSaleData?.status === "PENDING_CASHIER" ||
     resumeSaleData?.status === "PENDING_PAYMENT";
+
+  const currentBranchId =
+    workingBranchId ?? resumeSaleData?.branchId ?? null;
+  const coverageBranchId = resumeSaleData?.branchId ?? currentBranchId;
+  const branchUnresolved =
+    !activeSessionQuery.isLoading && currentBranchId == null;
 
   const resumeClientId = resumeSaleData?.client?.id ?? null;
   const { data: resumeClientData } = useQuery({
@@ -526,9 +606,6 @@ export function SaleBuilder({
     setActiveSaleId(resumeSaleData.id);
     setActiveSaleFolio(resumeSaleData.folio);
     setOriginalItemIds(new Set(resumeSaleData.items.map((item) => item.id)));
-    setOriginalQuantities(
-      new Map(resumeSaleData.items.map((item) => [item.product.id, item.quantity])),
-    );
 
     setCart(
       resumeSaleData.items.map((item) => ({
@@ -547,12 +624,16 @@ export function SaleBuilder({
       })),
     );
 
+    let nextPaymentType: "CREDIT" | "CASH" | "LAYAWAY" = "CREDIT";
     if (resumeSaleData.purchaseType) {
       const upper = resumeSaleData.purchaseType.toUpperCase();
       const matched = Object.entries(PT_MAP).find(([, keywords]) =>
         keywords.some((k) => upper.includes(k)),
       );
-      if (matched) setPaymentType(matched[0] as "CREDIT" | "CASH" | "LAYAWAY");
+      if (matched) {
+        nextPaymentType = matched[0] as "CREDIT" | "CASH" | "LAYAWAY";
+        setPaymentType(nextPaymentType);
+      }
     }
 
     if (resumeSaleData.layawayTermId != null) {
@@ -577,7 +658,12 @@ export function SaleBuilder({
       setCheckoutDeliveryDate(hydratedDeliveryDate);
     }
 
-    if (isCajeroMode) {
+    const nextIdentityOk =
+      Boolean(resumeSaleData.identityVerifiedAt) ||
+      Boolean(resumeSaleData.identityVerificationAuthorizedBy);
+    setIdentityOk(nextIdentityOk);
+
+    if (isCajeroMode && (nextPaymentType !== "CREDIT" || nextIdentityOk)) {
       setView("checkout");
     }
   }
@@ -592,6 +678,10 @@ export function SaleBuilder({
     if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
       setPaymentType("CASH");
     }
+  }
+
+  if (view === "checkout" && paymentType === "CREDIT" && !identityOk) {
+    setView("form");
   }
 
   const syncDeliverySelection = async (saleId: number) => {
@@ -638,8 +728,12 @@ export function SaleBuilder({
     let folio: string;
 
     if (activeSaleId === null) {
+      const draftBranchId = lockedBranch?.id ?? currentBranchId;
+      if (draftBranchId == null) {
+        throw new Error("No se pudo determinar tu sucursal");
+      }
       const draftRes = await createSaleDraft({
-        branch_id: lockedBranch?.id ?? CURRENT_BRANCH_ID,
+        branch_id: draftBranchId,
         purchase_type_id: pt.id,
         client_id: selectedClient?.id,
         origin: "STORE",
@@ -809,6 +903,11 @@ export function SaleBuilder({
       }
 
       if (paymentType === "CREDIT") {
+        if (!identityOk) {
+          throw new Error(
+            "Debe verificar la identidad del cliente o registrar una omisión autorizada por supervisor.",
+          );
+        }
         if (!selectedClient)
           throw new Error("Se requiere un cliente para venta a crédito");
         const creditRes = await confirmCreditSale(saleId, {
@@ -870,9 +969,8 @@ export function SaleBuilder({
     },
   });
 
-  // Paso vendedor para contado/crédito: registra la venta sin cobrarla
-  // (queda PENDING_CASHIER para que el cajero la cobre). Apartado sigue el
-  // flujo de cobrarMutation sin cambios — ver SaleBuilderProps.mode.
+  // Paso vendedor: registra la venta sin cobrarla (contado, crédito y
+  // apartado quedan PENDING_CASHIER para que el cajero cobre en Cajas).
   const registerSaleMutation = useMutation({
     mutationFn: async () => {
       const { id: saleId } = await ensureSaleSynced();
@@ -886,77 +984,6 @@ export function SaleBuilder({
     },
     onError: (err: Error) => {
       snackbar.showError(err.message);
-    },
-  });
-
-  const {
-    isReady: identitySdkReady,
-    isLoading: identitySdkLoading,
-    token: identitySdkToken,
-    error: identitySdkError,
-    reloadToken: reloadIdentitySdkToken,
-  } = useNubariumSdk({ enabled: identityVerificationModalOpen });
-
-  const verifyIdentityMutation = useMutation({
-    mutationFn: async (result: NubariumFaceCaptureResult) => {
-      if (activeSaleId == null) {
-        throw new Error("No hay una venta activa para verificar identidad");
-      }
-      const res = await verifySaleIdentity(
-        activeSaleId,
-        result.faceDataUrl,
-        result.executionId,
-      );
-      if (res.error) throw new Error(res.error.message);
-      return res.data!;
-    },
-    onSuccess: () => {
-      setIdentityVerificationModalOpen(false);
-      setIdentityCaptureResult(null);
-      setCashAmount(enganche.toFixed(2));
-      setView("checkout");
-    },
-    onError: (err: Error) => {
-      snackbar.showError(err.message);
-      setIdentityCaptureResult(null);
-      setIdentityCaptureSessionKey((current) => current + 1);
-    },
-  });
-
-  const skipIdentityMutation = useMutation({
-    mutationFn: async () => {
-      if (activeSaleId == null) {
-        throw new Error("No hay una venta activa para omitir la verificación");
-      }
-      if (!skipIdentityReason.trim()) {
-        throw new Error("El motivo es requerido");
-      }
-      if (!skipIdentitySupervisorUsername.trim() || !skipIdentitySupervisorPassword) {
-        throw new Error("Usuario y contraseña del supervisor son requeridos");
-      }
-
-      const supervisorRes = await validateSupervisor(
-        skipIdentitySupervisorUsername.trim(),
-        skipIdentitySupervisorPassword,
-      );
-      if (supervisorRes.error) throw new Error(supervisorRes.error.message);
-
-      const skipRes = await skipSaleIdentityVerification(
-        activeSaleId,
-        skipIdentityReason.trim(),
-        supervisorRes.data!.userId,
-      );
-      if (skipRes.error) throw new Error(skipRes.error.message);
-      return skipRes.data!;
-    },
-    onSuccess: () => {
-      setSkipIdentityModalOpen(false);
-      setSkipIdentityReason("");
-      setSkipIdentitySupervisorUsername("");
-      setSkipIdentitySupervisorPassword("");
-      setIdentityVerificationModalOpen(false);
-      setCashAmount(enganche.toFixed(2));
-      setView("checkout");
     },
   });
 
@@ -1019,15 +1046,6 @@ export function SaleBuilder({
   const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
   const isCheckoutView = view === "checkout";
 
-  // La sucursal desde la que se está cobrando en este momento (caja activa
-  // del cajero), no la sucursal del carrito/venta — el backend valida la
-  // terminal contra esa misma sucursal (getActiveBranchId).
-  const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
-    queryFn: () => getSessionSummary(),
-    enabled: isCheckoutView,
-    staleTime: 60_000,
-  });
   const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
   const paymentTerminalsQuery = useQuery({
     queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
@@ -1070,10 +1088,11 @@ export function SaleBuilder({
   });
 
   const currentBranchOption = useMemo(() => {
-    const fromCatalog = branchesCatalog.find((b) => b.id === CURRENT_BRANCH_ID);
+    if (currentBranchId == null) return null;
+    const fromCatalog = branchesCatalog.find((b) => b.id === currentBranchId);
     if (fromCatalog) return { id: fromCatalog.id, label: fromCatalog.name };
-    return { id: CURRENT_BRANCH_ID, label: "Sucursal actual" };
-  }, [branchesCatalog]);
+    return { id: currentBranchId, label: "Sucursal actual" };
+  }, [branchesCatalog, currentBranchId]);
 
   // Pickup: sucursal actual por default. "Cambiar" fija un override.
   const effectiveDeliveryBranch = deliveryBranchOverridden
@@ -1084,6 +1103,45 @@ export function SaleBuilder({
     () => cart.map((i) => i.productId).join(","),
     [cart],
   );
+
+  const hydratedUnsourcedIds = useMemo(
+    () =>
+      cart
+        .filter((item) => item.sources.length === 0)
+        .map((item) => item.productId)
+        .sort((a, b) => a - b),
+    [cart],
+  );
+
+  const { data: hydratedSellableCeiling } = useQuery({
+    queryKey: [
+      "hydrated-cart-coverage",
+      coverageBranchId,
+      hydratedUnsourcedIds,
+    ],
+    enabled:
+      hydratedUnsourcedIds.length > 0 && coverageBranchId != null,
+    queryFn: async () => {
+      const branchId = coverageBranchId!;
+      const pairs = await Promise.all(
+        hydratedUnsourcedIds.map(async (id) => {
+          const res = await getProductDetail(id, branchId);
+          return [
+            id,
+            sellableCeilingForHydratedLine(
+              res.data?.inventorySources ?? [],
+              branchId,
+            ),
+          ] as const;
+        }),
+      );
+      return Object.fromEntries(pairs) as Record<number, number>;
+    },
+    staleTime: 30_000,
+  });
+
+  const isApprovedSpecialDiscount =
+    resumeSaleData?.discountRequest?.status === "APPROVED";
 
   const { data: hasStockAtDeliveryBranch } = useQuery({
     queryKey: [
@@ -1113,7 +1171,7 @@ export function SaleBuilder({
   });
 
   const isDeliveryBranchCurrent =
-    effectiveDeliveryBranch?.id === CURRENT_BRANCH_ID;
+    effectiveDeliveryBranch?.id === currentBranchId;
   const isSameDayPickup =
     deliveryType === "pickup" &&
     isDeliveryBranchCurrent &&
@@ -1186,29 +1244,23 @@ export function SaleBuilder({
     setView("search");
   };
 
-  const handleAddToCart = useCallback(() => {
-    if (!productDetail) return;
+  const canAddToCart = (): boolean => {
+    if (!productDetail) return false;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
-    if (totalQty === 0) return;
-    const sellableMax = sellableMaxFromPickedSources(productSources);
-    if (totalQty > sellableMax) {
-      snackbar.showError(
-        "No hay existencia ni mercancía por surtir suficientes para esa cantidad.",
-      );
-      return;
+    if (totalQty === 0) return false;
+    if (totalQty > sellableMaxFromPickedSources(productSources)) {
+      snackbar.showError(STOCK_SHORTAGE_MESSAGE);
+      return false;
     }
 
     const branchSourcesWithQty = productSources.filter(
       (src) => src.sourceType === "branch" && src.quantity > 0,
     );
-    const distinctBranchIds = new Set(
-      branchSourcesWithQty.map((s) => s.branchId),
-    );
-    if (distinctBranchIds.size > 1) {
+    if (new Set(branchSourcesWithQty.map((s) => s.branchId)).size > 1) {
       snackbar.showError(
         "No puedes combinar existencia de distintas sucursales en el mismo artículo.",
       );
-      return;
+      return false;
     }
     const pickedBranchId = branchSourcesWithQty[0]?.branchId;
     if (
@@ -1219,8 +1271,14 @@ export function SaleBuilder({
       snackbar.showError(
         `Ya tienes artículos de "${lockedBranch.label}" en este ticket. Quita esos artículos para poder agregar de otra sucursal.`,
       );
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const commitAddToCart = (): boolean => {
+    if (!canAddToCart() || !productDetail) return false;
+    const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
 
     // Exceso sobre existencia de las fuentes elegidas = piezas de pedido
     // aceptado ("por surtir"). El spinner no deja vender más que eso.
@@ -1260,49 +1318,22 @@ export function SaleBuilder({
     setSelectedProductId(null);
     setShowOtherBranches(false);
     setProductSearch("");
-  }, [productDetail, productSources, lockedBranch, snackbar]);
+    return true;
+  };
 
-  // Invalidación optimista: el cambio de carrito ya se aplicó localmente
-  // cuando se llama esta función. Si el endpoint falla, se revierte al
-  // `previousCart` y se avisa por snackbar.
-  const triggerDiscountInvalidation = useCallback(
-    (previousCart: CartItem[]) => {
-      const request = resumeSaleData?.discountRequest;
-      if (!request || request.status !== "APPROVED") return;
-
-      void invalidateSaleDiscount(request.id).then((res) => {
-        if (res.error) {
-          setCart(previousCart);
-          snackbar.showError(
-            `No se pudo invalidar el descuento especial: ${res.error.message}`,
-          );
-          return;
-        }
-        void queryClient.invalidateQueries({
-          queryKey: ["resume-sale-draft", resumeSaleId],
-        });
-      });
-    },
-    [resumeSaleData?.discountRequest, resumeSaleId, queryClient, snackbar],
-  );
-
-  const handleCartQtyChange = (productId: number, delta: number) => {
-    const previousCart = cart;
-
+  const applyCartQtyChange = (productId: number, delta: number) => {
     setCart((prev) =>
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          // Sin `sources` (línea hidratada) se conserva el backorder que
-          // confirmó el backend hasta el próximo sync.
+          const maxQty = qtyMaxForCartItem(item, hydratedSellableCeiling);
+          const quantity = Math.min(
+            maxQty,
+            Math.max(0, item.quantity + delta),
+          );
           if (item.sources.length === 0) {
-            return {
-              ...item,
-              quantity: Math.max(0, item.quantity + delta),
-            };
+            return { ...item, quantity };
           }
-          const maxQty = sellableMaxFromPickedSources(item.sources);
-          const quantity = Math.min(maxQty, Math.max(0, item.quantity + delta));
           return {
             ...item,
             quantity,
@@ -1311,26 +1342,77 @@ export function SaleBuilder({
         })
         .filter((item) => item.quantity > 0),
     );
+  };
 
-    if (delta < 0) {
-      const originalQty = originalQuantities.get(productId);
-      const previousQty =
-        previousCart.find((item) => item.productId === productId)?.quantity ??
-        0;
-      const newQty = Math.max(0, previousQty + delta);
-      if (originalQty != null && newQty < originalQty) {
-        triggerDiscountInvalidation(previousCart);
-      }
+  const applyRemoveFromCart = (productId: number) => {
+    setCart((prev) => prev.filter((item) => item.productId !== productId));
+  };
+
+  const handleConfirmDiscountInvalidation = async () => {
+    const mutation = pendingDiscountMutation;
+    const request = resumeSaleData?.discountRequest;
+    if (!mutation || !request) return;
+
+    setDiscountInvalidateLoading(true);
+    const res = await invalidateSaleDiscount(request.id);
+    if (res.error) {
+      snackbar.showError(
+        `No se pudo invalidar el descuento especial: ${res.error.message}`,
+      );
+      setDiscountInvalidateLoading(false);
+      return;
     }
+
+    void queryClient.invalidateQueries({
+      queryKey: ["resume-sale-draft", resumeSaleId],
+    });
+
+    if (mutation.kind === "qty") {
+      applyCartQtyChange(mutation.productId, mutation.delta);
+    } else if (mutation.kind === "remove") {
+      applyRemoveFromCart(mutation.productId);
+    } else if (mutation.kind === "add") {
+      commitAddToCart();
+    } else {
+      setPaymentType(mutation.value);
+    }
+
+    setPendingDiscountMutation(null);
+    setDiscountInvalidateLoading(false);
+  };
+
+  const handleAddToCart = () => {
+    if (isApprovedSpecialDiscount) {
+      if (!canAddToCart()) return;
+      setPendingDiscountMutation({ kind: "add" });
+      return;
+    }
+    commitAddToCart();
+  };
+
+  const handleCartQtyChange = (productId: number, delta: number) => {
+    if (delta === 0) return;
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    const maxQty = qtyMaxForCartItem(item, hydratedSellableCeiling);
+    const next = Math.min(maxQty, Math.max(0, item.quantity + delta));
+    if (next === item.quantity) {
+      if (delta > 0) snackbar.showError(STOCK_SHORTAGE_MESSAGE);
+      return;
+    }
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "qty", productId, delta });
+      return;
+    }
+    applyCartQtyChange(productId, delta);
   };
 
   const handleRemoveFromCart = (productId: number) => {
-    const previousCart = cart;
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
-
-    if (originalQuantities.has(productId)) {
-      triggerDiscountInvalidation(previousCart);
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "remove", productId });
+      return;
     }
+    applyRemoveFromCart(productId);
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
@@ -1342,6 +1424,16 @@ export function SaleBuilder({
 
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
   const isMorosoClient = selectedClient?.creditStatus === "MOROSO";
+
+  const handlePaymentTypeChange = (value: SalePaymentType) => {
+    if (isMorosoClient && value !== "CASH") return;
+    if (value === paymentType) return;
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "paymentType", value });
+      return;
+    }
+    setPaymentType(value);
+  };
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
 
@@ -1395,6 +1487,18 @@ export function SaleBuilder({
   const totalPaid = Math.round(cashAmtNum + cardAmtNum);
   const ENGANCHE_PCT = 0.1;
   const enganche = Math.round(totalFinal * ENGANCHE_PCT);
+  const montoAFinanciar = totalFinal - enganche;
+
+  const handleIdentityVerified = useCallback(() => {
+    setIdentityOk(true);
+    setIdentityVerificationModalOpen(false);
+    setCashAmount(enganche.toFixed(2));
+    setView("checkout");
+  }, [enganche]);
+
+  const handleIdentityDialogClose = useCallback(() => {
+    setIdentityVerificationModalOpen(false);
+  }, []);
   const amountToPay =
     paymentType === "CREDIT"
       ? enganche
@@ -1411,6 +1515,51 @@ export function SaleBuilder({
     { value: "CASH", label: "Contado" },
     { value: "LAYAWAY", label: "Apartado" },
   ];
+
+  const discountInvalidateModal = (
+    <ConfirmModal
+      open={pendingDiscountMutation != null}
+      loading={discountInvalidateLoading}
+      onClose={() => {
+        if (discountInvalidateLoading) return;
+        setPendingDiscountMutation(null);
+      }}
+      onConfirm={handleConfirmDiscountInvalidation}
+      type="warning"
+      title="Se invalidará el descuento"
+      description="Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      confirmLabel="Continuar"
+      cancelLabel="Cancelar"
+    />
+  );
+
+  const resumeIdReady =
+    resumeSaleId !== null && !Number.isNaN(resumeSaleId);
+  const waitingForResumeHydrate =
+    resumeIdReady && hydratedSaleId !== resumeSaleId;
+  if (resumeRoutePending || (waitingForResumeHydrate && !resumeSaleError)) {
+    return <SaleBuilderResumeSkeleton onExit={onExit} />;
+  }
+  if (resumeIdReady && resumeSaleError) {
+    return (
+      <PageShell>
+        <PageHeader>
+          <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
+            <InlineMobileMenuButton />
+            <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+              <X size={18} />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700} noWrap>
+              Cotización
+            </Typography>
+          </Stack>
+        </PageHeader>
+        <Box px={3} py={2}>
+          <Alert severity="error">No se pudo cargar la cotización.</Alert>
+        </Box>
+      </PageShell>
+    );
+  }
 
   if (view === "search") {
     return (
@@ -1509,6 +1658,7 @@ export function SaleBuilder({
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
 
     return (
+      <>
       <PageShell>
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
@@ -1679,7 +1829,7 @@ export function SaleBuilder({
                 Selecciona el origen del artículo a entregar al cliente
               </Typography>
 
-              {lockedBranch && lockedBranch.id !== CURRENT_BRANCH_ID && (
+              {lockedBranch && lockedBranch.id !== currentBranchId && (
                 <Box
                   sx={{
                     bgcolor: "warning.50",
@@ -1706,13 +1856,13 @@ export function SaleBuilder({
                   .filter(
                     (src) =>
                       src.sourceType === "warehouse" ||
-                      src.branchId === CURRENT_BRANCH_ID,
+                      src.branchId === currentBranchId,
                   )
                   .map((src) => {
                     const isWarehouse = src.sourceType === "warehouse";
                     const isCurrentBranch =
                       src.sourceType === "branch" &&
-                      src.branchId === CURRENT_BRANCH_ID;
+                      src.branchId === currentBranchId;
 
                     const sourceLabel = isCurrentBranch
                       ? `Ésta sucursal (${src.label})`
@@ -1882,7 +2032,7 @@ export function SaleBuilder({
                       .filter(
                         (src) =>
                           src.sourceType === "branch" &&
-                          src.branchId !== CURRENT_BRANCH_ID,
+                          src.branchId !== currentBranchId,
                       )
                       .map((src) => {
                         const branchLocked = isBranchSourceLocked(src);
@@ -1968,6 +2118,8 @@ export function SaleBuilder({
           </ProductDetailLayout>
         )}
       </PageShell>
+      {discountInvalidateModal}
+      </>
     );
   }
 
@@ -1976,6 +2128,7 @@ export function SaleBuilder({
       !cobrarMutation.isPending &&
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
+      (paymentType !== "CREDIT" || identityOk) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
@@ -2264,6 +2417,18 @@ export function SaleBuilder({
                     </Stack>
                     <Stack
                       direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography variant="h6" fontWeight={700}>
+                        Monto a financiar
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(montoAFinanciar)}
+                      </Typography>
+                    </Stack>
+                    <Stack
+                      direction="row"
                       alignItems="center"
                       justifyContent="space-between"
                       gap={1}
@@ -2282,7 +2447,7 @@ export function SaleBuilder({
                       </Select>
                       <Typography variant="body2" fontWeight={600}>
                         {formatCurrency(
-                          (totalFinal - enganche) / selectedTermMonths,
+                          montoAFinanciar / selectedTermMonths,
                         )}
                       </Typography>
                     </Stack>
@@ -2388,7 +2553,7 @@ export function SaleBuilder({
         <DeliveryDatePicker
           open={checkoutDeliveryDateModalOpen}
           onClose={() => setCheckoutDeliveryDateModalOpen(false)}
-          branchId={CURRENT_BRANCH_ID}
+          branchId={currentBranchId ?? undefined}
           value={checkoutDeliveryDate}
           onConfirm={(date) => {
             setCheckoutDeliveryDate(date);
@@ -2454,13 +2619,14 @@ export function SaleBuilder({
     <PageShell>
       <SaleBuilderHeader
         title={
-          resumeSaleId !== null && activeSaleFolio
-            ? `Cotización ${activeSaleFolio}`
-            : "Nueva venta"
+          isCajeroMode && activeSaleFolio
+            ? `Cobro ${activeSaleFolio}`
+            : resumeSaleId !== null && activeSaleFolio
+              ? `Cotización ${activeSaleFolio}`
+              : "Nueva venta"
         }
         onExit={onExit}
         isCajeroMode={isCajeroMode}
-        isLayaway={paymentType === "LAYAWAY"}
         canProceed={canProceed}
         showDiscountButton={resumeSaleId !== null}
         discountDisabled={
@@ -2468,7 +2634,7 @@ export function SaleBuilder({
           resumeSaleData.discountRequest.status !== "INVALIDATED"
         }
         savePending={guardarCotizacionMutation.isPending}
-        saveDisabled={cart.length === 0}
+        saveDisabled={cart.length === 0 || (branchUnresolved && activeSaleId === null)}
         registerPending={registerSaleMutation.isPending}
         saveLabel={
           resumeSaleId !== null ? "Actualizar cotización" : "Guardar cotización"
@@ -2476,9 +2642,13 @@ export function SaleBuilder({
         onSave={() => guardarCotizacionMutation.mutate()}
         onDiscount={() => setDiscountRequestModalOpen(true)}
         onRegisterSale={() => registerSaleMutation.mutate()}
+        proceedLabel={
+          paymentType === "CREDIT" && !identityOk
+            ? "Validar identidad"
+            : "Proceder al cobro"
+        }
         onProceedToCheckout={() => {
-          if (paymentType === "CREDIT") {
-            setIdentityCaptureResult(null);
+          if (paymentType === "CREDIT" && !identityOk) {
             setIdentityVerificationModalOpen(true);
           } else {
             setView("checkout");
@@ -2488,6 +2658,17 @@ export function SaleBuilder({
 
       <MainGrid>
         <Stack spacing={2}>
+          {branchUnresolved && (
+            <Alert severity="warning">
+              No se pudo determinar tu sucursal.
+            </Alert>
+          )}
+          {isCajeroMode && paymentType === "CREDIT" && !identityOk && (
+            <Alert severity="info">
+              Valida la identidad del titular del crédito antes de cobrar el
+              enganche.
+            </Alert>
+          )}
           {resumeSaleData?.discountRequest != null && (
             <DiscountRequestStatusBanner
               motivo={getDiscountRequestReasonLabel(
@@ -2497,9 +2678,10 @@ export function SaleBuilder({
               estado={getDiscountRequestStatusLabel(
                 resumeSaleData.discountRequest.status,
               )}
+              status={resumeSaleData.discountRequest.status}
               warning={
                 resumeSaleData.discountRequest.status === "APPROVED"
-                  ? "Quitar un artículo o reducir su cantidad invalidará este descuento."
+                  ? "Cualquier cambio en artículos, cantidades o tipo de venta invalidará este descuento."
                   : undefined
               }
             />
@@ -2563,7 +2745,8 @@ export function SaleBuilder({
                       item={item}
                       isLayaway={paymentType === "LAYAWAY"}
                       isCajeroMode={isCajeroMode}
-                      currentBranchId={CURRENT_BRANCH_ID}
+                      currentBranchId={currentBranchId}
+                      qtyMax={qtyMaxForCartItem(item, hydratedSellableCeiling)}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
                     />
@@ -2615,6 +2798,7 @@ export function SaleBuilder({
                   </TotalBar>
 
                   {paymentType === "CREDIT" && (
+                    <>
                     <Stack
                       direction="row"
                       justifyContent="space-between"
@@ -2628,6 +2812,20 @@ export function SaleBuilder({
                         {formatCurrency(enganche)}
                       </Typography>
                     </Stack>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" fontWeight={700}>
+                        Monto a financiar
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {formatCurrency(montoAFinanciar)}
+                      </Typography>
+                    </Stack>
+                    </>
                   )}
 
                   {paymentType === "LAYAWAY" && (
@@ -2701,10 +2899,7 @@ export function SaleBuilder({
                     key={opt.value}
                     active={paymentType === opt.value}
                     disabled={isMorosoClient && opt.value !== "CASH"}
-                    onClick={() => {
-                      if (isMorosoClient && opt.value !== "CASH") return;
-                      setPaymentType(opt.value);
-                    }}
+                    onClick={() => handlePaymentTypeChange(opt.value)}
                   >
                     {opt.label}
                   </PaymentTypeButton>
@@ -2939,7 +3134,7 @@ export function SaleBuilder({
                       value={
                         effectiveDeliveryBranch
                           ? `${effectiveDeliveryBranch.label}${
-                              effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                              effectiveDeliveryBranch.id === currentBranchId
                                 ? " [Actual]"
                                 : ""
                             }`
@@ -3141,7 +3336,7 @@ export function SaleBuilder({
                   <Typography variant="body2" fontWeight={600} mb={1.5}>
                     {effectiveDeliveryBranch
                       ? `${effectiveDeliveryBranch.label}${
-                          effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                          effectiveDeliveryBranch.id === currentBranchId
                             ? " [Actual]"
                             : ""
                         }`
@@ -3170,7 +3365,7 @@ export function SaleBuilder({
           <DeliveryDatePicker
             open={checkoutDeliveryDateModalOpen}
             onClose={() => setCheckoutDeliveryDateModalOpen(false)}
-            branchId={CURRENT_BRANCH_ID}
+            branchId={currentBranchId ?? undefined}
             value={checkoutDeliveryDate}
             onConfirm={(date) => {
               setCheckoutDeliveryDate(date);
@@ -3204,7 +3399,7 @@ export function SaleBuilder({
                     <ListItemText
                       primary={b.name}
                       secondary={
-                        b.id === CURRENT_BRANCH_ID
+                        b.id === currentBranchId
                           ? "Sucursal actual"
                           : undefined
                       }
@@ -3225,170 +3420,12 @@ export function SaleBuilder({
             }}
           />
 
-          <Dialog
+          <IdentityVerificationDialog
             open={identityVerificationModalOpen}
-            onClose={() => {
-              if (verifyIdentityMutation.isPending) return;
-              setIdentityVerificationModalOpen(false);
-            }}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
-          >
-            <DialogContent sx={{ p: 4 }}>
-              <Stack spacing={3} alignItems="center" textAlign="center">
-                <Typography variant="h5" fontWeight={600}>
-                  Validación de identidad
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Confirma que el cliente está presente antes de continuar con
-                  el cobro
-                </Typography>
-
-                {!identitySdkReady || !identitySdkToken ? (
-                  <Stack spacing={2} alignItems="center">
-                    {identitySdkLoading ? <CircularProgress /> : null}
-                    <Typography variant="body2" textAlign="center">
-                      {identitySdkLoading
-                        ? "Preparando captura biométrica..."
-                        : (identitySdkError ??
-                          "No fue posible inicializar la captura biométrica.")}
-                    </Typography>
-                    {!identitySdkLoading && identitySdkError ? (
-                      <Button
-                        variant="outlined"
-                        onClick={() => void reloadIdentitySdkToken()}
-                      >
-                        Reintentar
-                      </Button>
-                    ) : null}
-                  </Stack>
-                ) : (
-                  <NubariumFaceCapture
-                    key={identityCaptureSessionKey}
-                    token={identitySdkToken}
-                    active={identityVerificationModalOpen && !verifyIdentityMutation.isPending}
-                    completed={Boolean(identityCaptureResult)}
-                    completedResult={identityCaptureResult}
-                    onSuccess={(result) => {
-                      setIdentityCaptureResult(result);
-                      verifyIdentityMutation.mutate(result);
-                    }}
-                    onReset={() => {
-                      setIdentityCaptureResult(null);
-                      setIdentityCaptureSessionKey((current) => current + 1);
-                    }}
-                  />
-                )}
-
-                {verifyIdentityMutation.isPending ? (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <CircularProgress size={16} />
-                    <Typography variant="body2" color="text.secondary">
-                      Verificando identidad...
-                    </Typography>
-                  </Stack>
-                ) : (
-                  <Button
-                    variant="text"
-                    size="small"
-                    sx={{ textTransform: "none" }}
-                    onClick={() => {
-                      skipIdentityMutation.reset();
-                      setSkipIdentityReason("");
-                      setSkipIdentitySupervisorUsername("");
-                      setSkipIdentitySupervisorPassword("");
-                      setSkipIdentityModalOpen(true);
-                    }}
-                  >
-                    ¿Problemas con la cámara?
-                  </Button>
-                )}
-              </Stack>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={skipIdentityModalOpen}
-            onClose={() => {
-              if (skipIdentityMutation.isPending) return;
-              setSkipIdentityModalOpen(false);
-            }}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
-          >
-            <DialogContent sx={{ p: 4 }}>
-              <Stack spacing={3}>
-                <Typography variant="h5" fontWeight={600}>
-                  Omitir validación de identidad
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Requiere autorización de un supervisor (Administrador o
-                  Gerente). Ingresa el motivo y las credenciales del
-                  supervisor para continuar sin la captura facial.
-                </Typography>
-
-                <TextField
-                  label="Motivo"
-                  placeholder="Ej. Cámara no disponible en la sucursal"
-                  value={skipIdentityReason}
-                  onChange={(e) => setSkipIdentityReason(e.target.value)}
-                  multiline
-                  minRows={2}
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-                <TextField
-                  label="Usuario del supervisor"
-                  value={skipIdentitySupervisorUsername}
-                  onChange={(e) =>
-                    setSkipIdentitySupervisorUsername(e.target.value)
-                  }
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-                <TextField
-                  label="Contraseña del supervisor"
-                  type="password"
-                  value={skipIdentitySupervisorPassword}
-                  onChange={(e) =>
-                    setSkipIdentitySupervisorPassword(e.target.value)
-                  }
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-
-                {skipIdentityMutation.isError ? (
-                  <Alert severity="error">
-                    {skipIdentityMutation.error.message}
-                  </Alert>
-                ) : null}
-
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="text"
-                    disabled={skipIdentityMutation.isPending}
-                    onClick={() => setSkipIdentityModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="contained"
-                    sx={{ borderRadius: 2, textTransform: "none" }}
-                    disabled={skipIdentityMutation.isPending}
-                    onClick={() => skipIdentityMutation.mutate()}
-                  >
-                    {skipIdentityMutation.isPending ? (
-                      <CircularProgress size={16} />
-                    ) : (
-                      "Autorizar y continuar"
-                    )}
-                  </Button>
-                </Stack>
-              </Stack>
-            </DialogContent>
-          </Dialog>
+            saleId={activeSaleId}
+            onVerified={handleIdentityVerified}
+            onClose={handleIdentityDialogClose}
+          />
 
           <SideModal
             open={clientModalOpen}
@@ -3586,6 +3623,7 @@ export function SaleBuilder({
           )}
         </StickySidebar>
       </MainGrid>
+      {discountInvalidateModal}
     </PageShell>
   );
 }

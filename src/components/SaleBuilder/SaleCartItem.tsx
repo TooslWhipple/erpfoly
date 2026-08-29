@@ -60,7 +60,9 @@ export interface SaleCartItemProps {
   item: CartItem;
   isLayaway: boolean;
   isCajeroMode: boolean;
-  currentBranchId: number;
+  currentBranchId: number | null;
+  /** Techo de cantidad cuando la línea no trae `sources` (cotización hidratada). */
+  qtyMax?: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
 }
@@ -70,6 +72,7 @@ export function SaleCartItemRow({
   isLayaway,
   isCajeroMode,
   currentBranchId,
+  qtyMax,
   onRemove,
   onQtyChange,
 }: SaleCartItemProps) {
@@ -77,7 +80,9 @@ export function SaleCartItemRow({
     (s) => s.sourceType === "branch" && s.quantity > 0,
   );
   const showBranchChip =
-    branchSrc != null && branchSrc.branchId !== currentBranchId;
+    currentBranchId != null &&
+    branchSrc != null &&
+    branchSrc.branchId !== currentBranchId;
 
   return (
     <CartItemCard>
@@ -168,7 +173,7 @@ export function SaleCartItemRow({
                 min={1}
                 max={
                   item.sources.length === 0
-                    ? undefined
+                    ? qtyMax
                     : item.sources
                         .filter((src) => src.quantity > 0)
                         .reduce(

@@ -142,6 +142,8 @@ export default function VentaDetalle() {
     }
   };
 
+  const fromCajas = isCashRegisterReturnQuery(router.query);
+
   const { data: sale, isLoading, isError } = useQuery({
     queryKey: ["venta-detail", saleId],
     enabled: saleId !== null && !isNaN(saleId!),
@@ -261,15 +263,17 @@ export default function VentaDetalle() {
   const [cancelLayawayModalOpen, setCancelLayawayModalOpen] = useState(false);
 
   const isLayawayCardPayment = layawayMethod === "CARD";
+  const needsCashierSession =
+    fromCajas || Boolean(sale?.layaway && sale.layaway.status === "ACTIVE");
 
-  // La sucursal desde la que se está cobrando el abono (caja activa del
-  // cajero), no la sucursal original del apartado — pueden diferir.
   const activeSessionQuery = useQuery({
     queryKey: ["cash-register-session-summary"],
     queryFn: () => getSessionSummary(),
-    enabled: isLayawayCardPayment,
+    enabled: needsCashierSession,
+    retry: false,
     staleTime: 60_000,
   });
+  const hasOpenCashierSession = activeSessionQuery.data?.status === "OPEN";
   const activeBranchId = activeSessionQuery.data?.branch_id ?? null;
 
   const layawayTerminalsQuery = useQuery({
@@ -368,23 +372,29 @@ export default function VentaDetalle() {
     );
   }
 
-  // Venta ya registrada por el vendedor (contado/crédito) o apartado activo
-  // aún en cobro: el cajero la completa en SaleBuilder modo cajero (carrito
-  // bloqueado, solo la sección de cobro es interactiva) en vez de la vista
-  // de solo-detalle de abajo.
-  const isPendingCashierWork =
-    sale.status === "PENDING_CASHIER" ||
-    (sale.status === "PENDING_PAYMENT" && sale.layaway != null);
+  const isPendingCashierWork = sale.status === "PENDING_CASHIER";
+  const canCollectFromCaja =
+    fromCajas && hasOpenCashierSession && isPendingCashierWork;
 
-  if (isPendingCashierWork) {
+  if (fromCajas && isPendingCashierWork && activeSessionQuery.isLoading) {
+    return (
+      <DetailPageShell>
+        <DetailHeader>
+          <Skeleton variant="circular" width={32} height={32} />
+          <Skeleton variant="text" width={220} height={36} />
+        </DetailHeader>
+        <DetailGrid>
+          <Skeleton variant="rounded" height={200} />
+        </DetailGrid>
+      </DetailPageShell>
+    );
+  }
+
+  if (canCollectFromCaja) {
     return (
       <SaleBuilder
         resumeSaleId={saleId}
-        onExit={() =>
-          void router.push(
-            isCashRegisterReturnQuery(router.query) ? "/cajas" : "/ventas",
-          )
-        }
+        onExit={() => void router.push("/cajas")}
         mode="cajero"
       />
     );
@@ -409,8 +419,8 @@ export default function VentaDetalle() {
         <InlineMobileMenuButton />
         <IconButton
           size="small"
-          onClick={() => router.push("/ventas")}
-          aria-label="Volver a ventas"
+          onClick={() => router.push(fromCajas ? "/cajas" : "/ventas")}
+          aria-label={fromCajas ? "Volver a cajas" : "Volver a ventas"}
         >
           <X size={18} />
         </IconButton>
@@ -424,6 +434,28 @@ export default function VentaDetalle() {
 
       <DetailGrid>
         <Box>
+          {isPendingCashierWork && !fromCajas && (
+            <Alert
+              severity="info"
+              sx={{ mb: 2 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => void router.push("/cajas")}
+                >
+                  Ir a caja
+                </Button>
+              }
+            >
+              Esta venta está pendiente de cobro en caja.
+            </Alert>
+          )}
+          {fromCajas && isPendingCashierWork && !hasOpenCashierSession && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Abre tu caja para procesar el cobro de esta venta.
+            </Alert>
+          )}
           {isNew && (
             <SaleSuccessAlert
               severity="success"
@@ -965,7 +997,7 @@ export default function VentaDetalle() {
                     </Box>
                   )}
 
-                  {sale.layaway.status === "ACTIVE" && (
+                  {sale.layaway.status === "ACTIVE" && hasOpenCashierSession && (
                     <>
                       <Divider sx={{ mb: 2 }} />
                       <Typography variant="caption" color="text.secondary" display="block" mb={1}>

@@ -62,8 +62,8 @@ function formatAbsoluteListDate(value: unknown): string {
 }
 
 function formatItemCount(count: number): string {
-  if (count === 1) return "1 ítem";
-  return `${count} ítems`;
+  if (count === 1) return "1 artículo";
+  return `${count} artículos`;
 }
 
 export default function Ventas() {
@@ -146,7 +146,7 @@ export default function Ventas() {
     },
     {
       id: "itemCount",
-      label: "Artículos",
+      label: "Nº artículos",
       size: "sm",
       format: (value) => formatItemCount(typeof value === "number" ? value : 0),
     },
@@ -196,10 +196,11 @@ export default function Ventas() {
         actions={[
           {
             id: "nueva-venta",
-            label: "Nueva",
+            label: "Nueva venta",
             onClick: () => void router.push("/ventas/nueva"),
             variant: "contained",
             color: "primary",
+            size: "large",
             permission: SALES_CREATE,
           },
         ]}

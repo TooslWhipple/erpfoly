@@ -315,10 +315,11 @@ export async function validateSupervisor(
   username: string,
   password: string,
 ): Promise<ApiResult<ValidateSupervisorResult>> {
-  return post<ValidateSupervisorResult>("/auth/validate-supervisor", {
-    username,
-    password,
-  });
+  return post<ValidateSupervisorResult>(
+    "/auth/validate-supervisor",
+    { username, password },
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export async function skipSaleIdentityVerification(

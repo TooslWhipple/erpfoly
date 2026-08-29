@@ -3,6 +3,7 @@ type QtySource = {
   available: number;
   pendingOrdered?: number;
   sourceType?: string;
+  branchId?: number;
 };
 
 export function sourceSellableMax(src: {
@@ -40,6 +41,27 @@ export function sellableMaxFromPickedSources(sources: QtySource[]): number {
     .reduce((sum, src) => sum + sourceSellableMax(src), 0);
 }
 
+/** Existencia + por surtir (bodega) en sucursal de venta y bodega. */
+export function sellableCeilingForHydratedLine(
+  sources: QtySource[],
+  currentBranchId: number,
+): number {
+  return sources
+    .filter(
+      (src) =>
+        src.sourceType === "warehouse" || src.branchId === currentBranchId,
+    )
+    .reduce((sum, src) => sum + sourceSellableMax(src), 0);
+}
+
+/** No baja una línea ya aceptada (backorder); sí impide subir más que el techo. */
+export function hydratedLineQtyMax(
+  currentQty: number,
+  sellableCeiling: number,
+): number {
+  return Math.max(currentQty, sellableCeiling);
+}
+
 // ponytail: fails if the backorder chip / sellable cap regress
 if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   const warehouse = {
@@ -67,5 +89,37 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   }
   if (backorderedFromSources([branch], 4) !== 0) {
     throw new Error("saleCartCoverage: extra fills unused existence");
+  }
+  const otherBranch = {
+    quantity: 0,
+    available: 99,
+    sourceType: "branch",
+    branchId: 99,
+  };
+  const currentBranch = {
+    quantity: 0,
+    available: 4,
+    sourceType: "branch",
+    branchId: 2,
+  };
+  const warehouseIdle = {
+    quantity: 0,
+    available: 1,
+    pendingOrdered: 2,
+    sourceType: "warehouse",
+  };
+  if (
+    sellableCeilingForHydratedLine(
+      [currentBranch, warehouseIdle, otherBranch],
+      2,
+    ) !== 7
+  ) {
+    throw new Error("saleCartCoverage: hydrated ceiling ignores other branches");
+  }
+  if (hydratedLineQtyMax(3, 10) !== 10) {
+    throw new Error("saleCartCoverage: hydrated max uses ceiling");
+  }
+  if (hydratedLineQtyMax(8, 5) !== 8) {
+    throw new Error("saleCartCoverage: hydrated max keeps backorder qty");
   }
 }

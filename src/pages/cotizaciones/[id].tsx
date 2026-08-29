@@ -9,6 +9,7 @@ export default function CotizacionDetalle() {
   return (
     <SaleBuilder
       resumeSaleId={resumeSaleId}
+      resumeRoutePending={!router.isReady}
       onExit={() => void router.push("/cotizaciones-guardadas")}
     />
   );

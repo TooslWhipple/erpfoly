@@ -191,6 +191,8 @@ export interface SaleDetail {
   totalAmount: number;
   loyaltyPointsValue: number;
   purchaseType: string | null;
+  identityVerifiedAt?: string | null;
+  identityVerificationAuthorizedBy?: number | null;
   layawayTermId?: number | null;
   createdAt: string;
   branchId?: number | null;

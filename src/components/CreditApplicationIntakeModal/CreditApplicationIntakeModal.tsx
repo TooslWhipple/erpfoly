@@ -424,6 +424,7 @@ export function CreditApplicationIntakeModal({
                     }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
+                    acceptFailedLiveness
                     onSuccess={handleLivenessSuccess}
                     onReset={handleLivenessReset}
                   />

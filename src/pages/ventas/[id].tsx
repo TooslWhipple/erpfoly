@@ -785,7 +785,7 @@ export default function VentaDetalle() {
             >
               <CardContent sx={{ p: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                  Artículos [{sale.items.length}]
+                  {`Artículos [${sale.items.reduce((sum, item) => sum + item.quantity, 0)}]`}
                 </Typography>
                 <Stack spacing={1.5}>
                   {sale.items.map((item) => (

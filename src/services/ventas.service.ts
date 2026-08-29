@@ -50,6 +50,7 @@ export async function getProductDetail(
   productId: number,
   currentBranchId?: number,
   includeOthers?: boolean,
+  purchaseTypeId?: number,
 ): Promise<ApiResult<ProductDetail>> {
   const params = new URLSearchParams();
   if (currentBranchId !== undefined) {
@@ -57,6 +58,9 @@ export async function getProductDetail(
   }
   if (includeOthers) {
     params.set("includeOthers", "true");
+  }
+  if (purchaseTypeId != null) {
+    params.set("purchaseTypeId", String(purchaseTypeId));
   }
   const query = params.toString();
   return get<ProductDetail>(
@@ -275,7 +279,7 @@ export async function checkoutSale(
   payload: SaleInvoiceBillingPayload & {
     tenders: CheckoutTenderPayload[];
     idempotency_key?: string;
-    economic_revision?: number;
+    economic_revision: number;
   },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return post<{ id: number; folio: string; status: string }>(
@@ -290,6 +294,7 @@ export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
   tenders?: CheckoutTenderPayload[];
+  economic_revision: number;
 }
 
 export async function confirmCreditSale(
@@ -400,6 +405,50 @@ export async function setDeliveryDate(
       `${BASE}/sales/${saleId}/delivery-date`,
       payload,
     ),
+  );
+}
+
+export type ShippingQuote = {
+  amount: number | null;
+  zoneId: number | null;
+  zoneName: string | null;
+  inZone: boolean;
+  coverage: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
+  economicRevision?: number;
+};
+
+export async function quoteShipping(
+  saleId: number,
+  payload: { address_id: number; dispatch_branch_id?: number },
+): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/sales/${saleId}/shipping-quote`, payload),
+  );
+}
+
+export type PricePreviewLine = {
+  productId: number;
+  originalPrice: number;
+  discountAmount: number;
+  totalAmount: number;
+};
+
+export async function previewCartPrices(payload: {
+  branch_id: number;
+  purchase_type_id: number;
+  items: Array<{ product_id: number; quantity: number }>;
+}): Promise<PricePreviewLine[]> {
+  return unwrapOrThrow(
+    await post<PricePreviewLine[]>(`${BASE}/price-preview`, payload),
+  );
+}
+
+export async function previewShippingQuote(payload: {
+  address_id: number;
+  dispatch_branch_id?: number;
+}): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/shipping-quote`, payload),
   );
 }
 

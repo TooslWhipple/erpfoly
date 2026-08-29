@@ -44,6 +44,16 @@ export interface CreatedAddress {
   longitude: number;
 }
 
+export async function previewAddressGeocode(
+  payload: CreateAddressPayload
+): Promise<{ latitude: number; longitude: number }> {
+  const result = await post<{ latitude: number; longitude: number }>(
+    "/addresses/geocode-preview",
+    payload
+  );
+  return unwrapOrThrow(result);
+}
+
 export async function createAddress(
   payload: CreateAddressPayload
 ): Promise<CreatedAddress> {

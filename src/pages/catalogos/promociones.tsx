@@ -21,6 +21,7 @@ import {
 import {
   CATALOG_PROMOTIONS_CREATE,
   CATALOG_PROMOTIONS_DELETE,
+  CATALOG_PROMOTIONS_READ,
   CATALOG_PROMOTIONS_UPDATE,
 } from "@/lib/permissions";
 const SEARCH_DEBOUNCE_MS = 300;
@@ -169,7 +170,7 @@ export default function Promociones() {
       },
       {
         id: "discount_rate",
-        label: "Margen",
+        label: "Descuento",
         type: "percentage",
         size: "sm",
         align: "left",
@@ -217,7 +218,7 @@ export default function Promociones() {
         label: "Ver detalles",
         icon: <VisibilityIcon fontSize="small" />,
         onClick: handleViewDetails,
-        permission: CATALOG_PROMOTIONS_UPDATE,
+        permission: CATALOG_PROMOTIONS_READ,
       },
       {
         id: "edit",

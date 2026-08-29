@@ -87,10 +87,14 @@ import {
   createLayaway,
   registerSale,
   setDeliveryDate,
+  quoteShipping,
+  previewShippingQuote,
+  previewCartPrices,
   getSaleDetail,
   invalidateSaleDiscount,
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
+import type { ShippingQuote } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -105,6 +109,7 @@ import type {
 } from "@/types/ventas.types";
 import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { TableCrud } from "@/components/TableCrud";
 import { CreateCashClientModal } from "@/components/CreateCashClientModal";
@@ -128,6 +133,13 @@ import {
   sourceSellableMax,
   toInventorySourcesPayload,
 } from "@/utils/saleCartCoverage";
+import {
+  cartLineDiscounts,
+  cartListSubtotal,
+  lineTotal,
+  merchandiseTotal,
+  patchCartLinePrices,
+} from "@/utils/saleCartPricing";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -138,6 +150,26 @@ import {
   getDiscountRequestReasonLabel,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
+
+const PT_MAP: Record<string, string[]> = {
+  CASH: ["CONTADO", "CASH", "EFECTIVO"],
+  CREDIT: ["CREDITO", "CREDIT", "CRÉDITO"],
+  LAYAWAY: ["APARTADO", "LAYAWAY", "APART"],
+};
+
+function resolvePurchaseTypeId(
+  paymentType: string,
+  types: Array<{ id: number; code: string }>,
+): number | null {
+  const keywords = PT_MAP[paymentType] ?? [];
+  return (
+    types.find((type) =>
+      keywords.some((keyword) => type.code.toUpperCase().includes(keyword)),
+    )?.id ??
+    types[0]?.id ??
+    null
+  );
+}
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -340,6 +372,7 @@ export function SaleBuilder({
   const [discountInvalidateLoading, setDiscountInvalidateLoading] =
     useState(false);
   const saleOperationLockRef = useRef(false);
+  const checkoutIdempotencyKeyRef = useRef<string | null>(null);
 
   const [activeSaleId, setActiveSaleId] = useState<number | null>(null);
   const [activeSaleFolio, setActiveSaleFolio] = useState<string | null>(null);
@@ -376,6 +409,11 @@ export function SaleBuilder({
     useState(false);
   const [customDeliveryAddress, setCustomDeliveryAddress] =
     useState<DeliveryAddressSelection | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(
+    null,
+  );
+  const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
+  const lastPatchedPurchaseTypeRef = useRef<number | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -489,8 +527,26 @@ export function SaleBuilder({
   const workingBranchId =
     activeSessionQuery.data?.branch_id ?? principalBranchId ?? null;
 
+  const { data: purchaseTypesRes } = useQuery({
+    queryKey: ["purchase-types"],
+    queryFn: async () => {
+      const res = await getPurchaseTypes();
+      if (res.error) throw new Error(res.error.message);
+      return res.data ?? [];
+    },
+    staleTime: Infinity,
+  });
+  const purchaseTypes = purchaseTypesRes ?? [];
+  const purchaseTypeId = resolvePurchaseTypeId(paymentType, purchaseTypes);
+
   const { data: productDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ["product-detail", selectedProductId, showOtherBranches, workingBranchId],
+    queryKey: [
+      "product-detail",
+      selectedProductId,
+      showOtherBranches,
+      workingBranchId,
+      purchaseTypeId,
+    ],
     enabled:
       view === "product-detail" &&
       selectedProductId !== null &&
@@ -501,6 +557,7 @@ export function SaleBuilder({
         selectedProductId,
         workingBranchId,
         showOtherBranches,
+        purchaseTypeId ?? undefined,
       );
       if (result.error) throw new Error(result.error.message);
       return result.data ?? null;
@@ -545,17 +602,6 @@ export function SaleBuilder({
     await router.push(`/solicitudes-credito/${result.id}`);
   };
 
-  const { data: purchaseTypesRes } = useQuery({
-    queryKey: ["purchase-types"],
-    queryFn: async () => {
-      const res = await getPurchaseTypes();
-      if (res.error) throw new Error(res.error.message);
-      return res.data ?? [];
-    },
-    staleTime: Infinity,
-  });
-  const purchaseTypes = purchaseTypesRes ?? [];
-
   const { data: layawayTermsRes } = useQuery({
     queryKey: ["layaway-terms"],
     queryFn: async () => {
@@ -573,12 +619,6 @@ export function SaleBuilder({
     layawayTerms.find((t) => t.id === selectedLayawayTermId) ??
     layawayTerms[0] ??
     null;
-
-  const PT_MAP: Record<string, string[]> = {
-    CASH: ["CONTADO", "CASH", "EFECTIVO"],
-    CREDIT: ["CREDITO", "CREDIT", "CRÉDITO"],
-    LAYAWAY: ["APARTADO", "LAYAWAY", "APART"],
-  };
 
   const { data: resumeSaleData, isError: resumeSaleError } = useQuery({
     queryKey: ["resume-sale-draft", resumeSaleId],
@@ -633,9 +673,12 @@ export function SaleBuilder({
         productName: item.product.name,
         brandName: null,
         imageUrl: item.product.imageUrl,
-        originalPrice: item.unitPrice,
+        originalPrice: item.listPrice ?? item.unitPrice,
         discountAmount: item.discountAmount,
-        unitPrice: item.unitPrice,
+        unitPrice:
+          item.quantity > 0
+            ? item.totalAmount / item.quantity
+            : item.unitPrice,
         quantity: item.quantity,
         sources: item.inventorySources,
         saleItemId: item.id,
@@ -706,6 +749,17 @@ export function SaleBuilder({
       setUseCustomDeliveryAddress(false);
     }
 
+    if (resumeSaleData.shippingCoverage) {
+      setShippingQuote({
+        amount: resumeSaleData.shippingAmount ?? null,
+        zoneId: null,
+        zoneName: null,
+        inZone: resumeSaleData.shippingCoverage === "IN_ZONE",
+        coverage: resumeSaleData.shippingCoverage,
+        economicRevision: resumeSaleData.economicRevision,
+      });
+    }
+
     const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
     if (hydratedDeliveryDate) {
       setCheckoutDeliveryDate(hydratedDeliveryDate);
@@ -756,6 +810,11 @@ export function SaleBuilder({
           address_id: addressId,
           ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
+        const quote = await quoteShipping(saleId, {
+          address_id: addressId,
+          dispatch_branch_id: coverageBranchId ?? undefined,
+        });
+        setShippingQuote(quote);
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
       await setDeliveryDate(saleId, {
@@ -763,6 +822,7 @@ export function SaleBuilder({
         branch_id: effectiveDeliveryBranch.id,
         ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
       });
+      setShippingQuote(null);
     }
   };
 
@@ -1020,6 +1080,7 @@ export function SaleBuilder({
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
           tenders: creditTenders,
+          economic_revision: economicRevision,
           ...billingPayload,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
@@ -1070,7 +1131,10 @@ export function SaleBuilder({
       const checkoutRes = await checkoutSale(saleId, {
         ...billingPayload,
         tenders,
-        idempotency_key: crypto.randomUUID(),
+        economic_revision: economicRevision,
+        idempotency_key:
+          checkoutIdempotencyKeyRef.current ??
+          (checkoutIdempotencyKeyRef.current = crypto.randomUUID()),
       });
       if (checkoutRes.error) throw new Error(checkoutRes.error.message);
       return checkoutRes.data!;
@@ -1087,6 +1151,9 @@ export function SaleBuilder({
       });
       void queryClient.invalidateQueries({ queryKey: ["cash-session-summary"] });
       void queryClient.invalidateQueries({ queryKey: ["cash-session-history"] });
+      void queryClient.invalidateQueries({ queryKey: ["pending-cashier-sales"] });
+      void queryClient.invalidateQueries({ queryKey: ["sales"] });
+      checkoutIdempotencyKeyRef.current = null;
       void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
@@ -1587,6 +1654,111 @@ export function SaleBuilder({
       ? !!customDeliveryAddress
       : !!selectedClient?.primaryAddressFormatted);
 
+  const deliveryAddressId =
+    deliveryType !== "delivery"
+      ? null
+      : useCustomDeliveryAddress
+        ? (customDeliveryAddress?.id ?? null)
+        : (selectedClient?.addresses?.find((a) => a.isPrimary)?.addressId ??
+          selectedClient?.addresses?.[0]?.addressId ??
+          null);
+  const debouncedDeliveryAddressId = useDebouncedValue(deliveryAddressId, 200);
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      if (deliveryType !== "delivery") {
+        setShippingQuote(null);
+        setShippingQuoteLoading(false);
+        return;
+      }
+      if (debouncedDeliveryAddressId == null || coverageBranchId == null) {
+        setShippingQuote(null);
+        setShippingQuoteLoading(false);
+        return;
+      }
+      setShippingQuoteLoading(true);
+      try {
+        const quote = await previewShippingQuote({
+          address_id: debouncedDeliveryAddressId,
+          dispatch_branch_id: coverageBranchId,
+        });
+        if (!isCancelled()) setShippingQuote(quote);
+      } catch (error) {
+        if (!isCancelled()) {
+          setShippingQuote(null);
+          snackbar.showError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo cotizar el envío",
+          );
+        }
+      } finally {
+        if (!isCancelled()) setShippingQuoteLoading(false);
+      }
+    },
+    [deliveryType, debouncedDeliveryAddressId, coverageBranchId],
+  );
+
+  const cartPriceKey = cart
+    .map((item) => `${item.productId}:${item.quantity}`)
+    .join(",");
+  const debouncedCartPriceKey = useDebouncedValue(cartPriceKey, 200);
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      if (
+        isCajeroMode ||
+        cart.length === 0 ||
+        purchaseTypeId == null ||
+        coverageBranchId == null
+      ) {
+        return;
+      }
+      if (activeSaleId != null && lastPatchedPurchaseTypeRef.current == null) {
+        lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+      } else if (
+        activeSaleId != null &&
+        lastPatchedPurchaseTypeRef.current !== purchaseTypeId
+      ) {
+        const res = await updateSalePurchaseType(activeSaleId, purchaseTypeId);
+        if (isCancelled()) return;
+        if (res.error) {
+          snackbar.showError(res.error.message);
+          return;
+        }
+        lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+      }
+
+      try {
+        const lines = await previewCartPrices({
+          branch_id: coverageBranchId,
+          purchase_type_id: purchaseTypeId,
+          items: cart.map((item) => ({
+            product_id: item.productId,
+            quantity: item.quantity,
+          })),
+        });
+        if (isCancelled()) return;
+        setCart((prev) => patchCartLinePrices(prev, lines));
+      } catch (error) {
+        if (!isCancelled()) {
+          snackbar.showError(
+            error instanceof Error
+              ? error.message
+              : "No se pudieron actualizar las promociones",
+          );
+        }
+      }
+    },
+    [
+      isCajeroMode,
+      debouncedCartPriceKey,
+      purchaseTypeId,
+      coverageBranchId,
+      activeSaleId,
+    ],
+  );
+
   const isPickupReady = deliveryType === "pickup" && !!effectiveDeliveryBranch;
 
   const isDeliveryInfoReady =
@@ -1602,18 +1774,8 @@ export function SaleBuilder({
     deliveryType !== null &&
     isDeliveryInfoReady;
 
-  const subtotal = cart.reduce(
-    (s, item) => s + item.unitPrice * item.quantity,
-    0,
-  );
-  const subtotalOriginal = cart.reduce(
-    (s, item) => s + item.originalPrice * item.quantity,
-    0,
-  );
-  const totalDiscounts = cart.reduce(
-    (s, item) => s + item.discountAmount * item.quantity,
-    0,
-  );
+  const subtotalOriginal = cartListSubtotal(cart);
+  const totalDiscounts = cartLineDiscounts(cart);
   const approvedDiscountRequest =
     resumeSaleData?.discountRequest?.status === "APPROVED"
       ? resumeSaleData.discountRequest
@@ -1623,7 +1785,22 @@ export function SaleBuilder({
       (subtotalOriginal - totalDiscounts) *
         ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
     : 0;
-  const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
+  const merchandiseNet = merchandiseTotal(cart, specialDiscountAmount);
+  const shippingAmount =
+    deliveryType === "delivery" ? (shippingQuote?.amount ?? 0) : 0;
+  const totalFinal = merchandiseNet + shippingAmount;
+  const showShippingInSummary =
+    deliveryType === "delivery" &&
+    (shippingQuoteLoading || shippingQuote != null);
+  const shippingSummaryLabel =
+    shippingQuote?.coverage === "OUT_OF_COVERAGE"
+      ? "Envío (fuera de zona)"
+      : "Envío";
+  const shippingSummaryValue = shippingQuoteLoading
+    ? "Calculando…"
+    : formatCurrency(shippingAmount);
+  const economicRevision =
+    shippingQuote?.economicRevision ?? resumeSaleData?.economicRevision ?? 0;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
   const extraCardAmtNum = extraCards.reduce(
@@ -2408,7 +2585,7 @@ export function SaleBuilder({
                             Total
                           </Typography>
                           <Typography variant="body2" fontWeight={600}>
-                            {formatCurrency(item.unitPrice * item.quantity)}
+                            {formatCurrency(lineTotal(item))}
                           </Typography>
                         </Box>
                       </Stack>
@@ -2538,6 +2715,16 @@ export function SaleBuilder({
                     </Typography>
                     <Typography variant="body2" color="error.main">
                       -{formatCurrency(specialDiscountAmount)}
+                    </Typography>
+                  </Stack>
+                )}
+                {showShippingInSummary && (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {shippingSummaryLabel}
+                    </Typography>
+                    <Typography variant="body2">
+                      {shippingSummaryValue}
                     </Typography>
                   </Stack>
                 )}
@@ -2923,9 +3110,29 @@ export function SaleBuilder({
                       Subtotal
                     </Typography>
                     <Typography variant="body2" fontWeight={500}>
-                      {formatCurrency(subtotal)}
+                      {formatCurrency(subtotalOriginal)}
                     </Typography>
                   </Stack>
+
+                  {totalDiscounts > 0 && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Descuentos
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        color="error.main"
+                      >
+                        -{formatCurrency(totalDiscounts)}
+                      </Typography>
+                    </Stack>
+                  )}
 
                   {specialDiscountAmount > 0 && (
                     <Stack
@@ -2943,6 +3150,22 @@ export function SaleBuilder({
                         color="error.main"
                       >
                         -{formatCurrency(specialDiscountAmount)}
+                      </Typography>
+                    </Stack>
+                  )}
+
+                  {showShippingInSummary && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {shippingSummaryLabel}
+                      </Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {shippingSummaryValue}
                       </Typography>
                     </Stack>
                   )}
@@ -3399,6 +3622,13 @@ export function SaleBuilder({
                     coords={deliveryCoords}
                     apiKey={GOOGLE_MAPS_API_KEY}
                   />
+                  {shippingQuote && shippingQuote.coverage !== "IN_ZONE" ? (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      {shippingQuote.coverage === "UNCONFIGURED"
+                        ? "No hay cobertura de envío configurada para esta dirección."
+                        : "La dirección está fuera de la zona de cobertura. Se aplica el costo de envío fuera de zona."}
+                    </Alert>
+                  ) : null}
 
                   <Stack
                     direction="row"

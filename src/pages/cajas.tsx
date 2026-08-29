@@ -46,7 +46,7 @@ export default function Cajas() {
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
-  const { cashRegister, setCashRegister, movements, isLoading, loadMovements } =
+  const { cashRegister, setCashRegister, movements, isLoading, loadMovements, loadAssignedCashRegister } =
     useCashRegisterSession({
       loadMovementsOnOpen: true,
     });
@@ -78,8 +78,10 @@ export default function Cajas() {
     const withdrawals = movements.filter(
       (m) => m.movement_type === CashMovementType.WITHDRAWAL,
     );
-    const payments = movements.filter(
-      (m) => m.movement_type === CashMovementType.PAYMENT,
+    const incomes = movements.filter(
+      (m) =>
+        m.movement_type === CashMovementType.PAYMENT ||
+        m.movement_type === CashMovementType.SALE,
     );
     const partialCuts = movements.filter(
       (m) => m.movement_type === CashMovementType.PARTIAL_CUT,
@@ -93,10 +95,9 @@ export default function Cajas() {
       (sum, m) => sum + Number(m.amount),
       0,
     );
-    const totalIncome = payments.reduce((sum, m) => sum + Number(m.amount), 0);
+    const totalIncome = incomes.reduce((sum, m) => sum + Number(m.amount), 0);
     const totalWithdrawals = withdrawalTotal + partialCutTotal;
-    const expectedCash =
-      (cashRegister?.initialFund ?? 0) + totalIncome - totalWithdrawals;
+    const expectedCash = cashRegister?.currentCash ?? 0;
     const actualCash = cashRegister?.currentCash ?? 0;
     const shortage = expectedCash - actualCash;
     return {
@@ -165,6 +166,7 @@ export default function Cajas() {
         });
         showSuccess("Corte parcial registrado");
         await loadMovements();
+        await loadAssignedCashRegister();
       } else {
         await createFinalCut({
           total_counted: cashRegister.currentCash,

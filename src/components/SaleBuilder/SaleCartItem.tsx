@@ -9,6 +9,7 @@ import {
   PriceField,
   PriceSummaryRow,
 } from "./styles";
+import { lineTotal } from "@/utils/saleCartPricing";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -214,7 +215,7 @@ export function SaleCartItemRow({
                 Total
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {formatCurrency(item.unitPrice * item.quantity)}
+                {formatCurrency(lineTotal(item))}
               </Typography>
             </PriceField>
           </PriceSummaryRow>

@@ -102,6 +102,7 @@ export interface SaleDetailItem {
   quantity: number;
   backorderedQuantity: number;
   unitPrice: number;
+  listPrice?: number;
   discountAmount: number;
   totalAmount: number;
   inventorySources: InventorySource[];
@@ -190,6 +191,7 @@ export interface SaleDetail {
   subtotal: number;
   discountAmount: number;
   shippingAmount?: number;
+  shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
   economicRevision?: number;
   loyaltyPointsValue: number;

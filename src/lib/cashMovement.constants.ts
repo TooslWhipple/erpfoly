@@ -54,6 +54,9 @@ export const CashMovementPaymentForm = {
   CASH: "CASH",
   CASH_DEPOSIT: "CASH_DEPOSIT",
   CREDIT_CARD: "CREDIT_CARD",
+  TRANSFER: "TRANSFER",
+  CHECK: "CHECK",
+  LOYALTY_POINTS: "LOYALTY_POINTS",
 } as const;
 
 export type CashMovementPaymentForm =
@@ -63,6 +66,9 @@ export const PAYMENT_FORM_LABELS: Record<CashMovementPaymentForm, string> = {
   CASH: "Efectivo",
   CASH_DEPOSIT: "Depósito en efectivo",
   CREDIT_CARD: "Tarjeta de crédito",
+  TRANSFER: "Transferencia",
+  CHECK: "Cheque",
+  LOYALTY_POINTS: "Folypuntos",
 };
 
 export function isCashMovementPaymentForm(

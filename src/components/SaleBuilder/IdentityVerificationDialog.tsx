@@ -173,6 +173,9 @@ function CameraView({
   const showBootstrapOverlay =
     !verifyPending && (!sdkToken || Boolean(sdkError) || !cameraInitialized);
   const showOverlay = showBootstrapOverlay || verifyPending;
+  const canSkip =
+    Boolean(sdkError) ||
+    (verifyError != null && /omisión de supervisor/i.test(verifyError));
 
   useEffect(() => {
     setComparePreview(null);
@@ -185,7 +188,7 @@ function CameraView({
       </Typography>
       <Typography variant="body1" color="text.secondary">
         Capture el rostro del cliente para verificar que coincida con el
-        titular del crédito.
+        rostro enrolado del titular del crédito.
       </Typography>
 
       <CameraStage>
@@ -238,7 +241,7 @@ function CameraView({
 
       {verifyError ? <Alert severity="error">{verifyError}</Alert> : null}
 
-      {verifyPending ? null : (
+      {verifyPending ? null : canSkip ? (
         <Button
           variant="text"
           size="small"
@@ -247,7 +250,7 @@ function CameraView({
         >
           ¿Problemas con la cámara?
         </Button>
-      )}
+      ) : null}
     </Stack>
   );
 }
@@ -293,9 +296,9 @@ function SkipView({
         Omitir validación de identidad
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Requiere autorización de un supervisor (Administrador o Gerente).
-        Ingresa el motivo y las credenciales del supervisor para continuar sin
-        la captura facial.
+        Requiere autorización de un supervisor (Administrador o Gerente)
+        por falla técnica (cámara o proveedor). Un no-match facial no se
+        puede omitir.
       </Typography>
 
       <TextField

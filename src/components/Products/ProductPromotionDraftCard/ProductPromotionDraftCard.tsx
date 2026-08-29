@@ -54,6 +54,8 @@ export function ProductPromotionDraftCard({
   } = draft.payload;
 
   const rangeLabel = formatPromotionDraftValidityRange(startDate, endDate);
+  const affectedCount = draft.payload.productIds?.length ?? 1;
+  const isShared = affectedCount > 1;
 
   const creditTermLabels =
     draft.payload.creditTermOptionLabels?.filter(Boolean) ??
@@ -109,7 +111,7 @@ export function ProductPromotionDraftCard({
           ) : null
         }
 
-        {!readOnly && (
+        {!readOnly && !isShared && (
         <Stack direction="row" spacing={1}>
           <Button
             variant="text"
@@ -117,8 +119,19 @@ export function ProductPromotionDraftCard({
           <Button
             variant="text"
             color="error"
-            onClick={handleDelete}>Eliminar</Button>
+            onClick={handleDelete}>Desvincular</Button>
         </Stack>
+        )}
+        {!readOnly && isShared && (
+          <Typography variant="body2" color="text.secondary">
+            Esta promoción aplica a {affectedCount} productos. Edítela desde el
+            catálogo o desvincúlela de este artículo.
+          </Typography>
+        )}
+        {!readOnly && isShared && (
+          <Button variant="text" color="error" onClick={handleDelete}>
+            Desvincular
+          </Button>
         )}
       </Stack>
     </DraftCardRoot>

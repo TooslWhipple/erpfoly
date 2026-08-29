@@ -45,6 +45,8 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DISCOUNT_REQUESTS_UPDATE } from "@/lib/permissions";
+import { StaticLocationMap } from "@/components/StaticLocationMap";
+import { googleMapsBrowserApiKey } from "@/config/maps";
 const DELIVERY_LABELS: Record<string, string> = {
   a_domicilio: "A domicilio",
   recoger_sucursal: "Recoger en sucursal",
@@ -220,6 +222,22 @@ export default function DiscountRequestDetailPage() {
     );
   }
   const isPending = detail.status === "pending";
+  const deliveryLatitude =
+    detail.delivery?.latitude != null
+      ? Number(detail.delivery.latitude)
+      : null;
+  const deliveryLongitude =
+    detail.delivery?.longitude != null
+      ? Number(detail.delivery.longitude)
+      : null;
+  const deliveryCoords =
+    deliveryLatitude != null &&
+    deliveryLongitude != null &&
+    Number.isFinite(deliveryLatitude) &&
+    Number.isFinite(deliveryLongitude)
+      ? { lat: deliveryLatitude, lng: deliveryLongitude }
+      : null;
+
   return (
     <DetailPageShell>
       <RejectDiscountRequestModal
@@ -467,7 +485,15 @@ export default function DiscountRequestDetailPage() {
             <Typography variant="body2">
               {DELIVERY_LABELS[detail.delivery?.type ?? "a_domicilio"]}
             </Typography>
-            <MapPlaceholder />
+            {deliveryCoords && googleMapsBrowserApiKey ? (
+              <StaticLocationMap
+                coords={deliveryCoords}
+                apiKey={googleMapsBrowserApiKey}
+                height={180}
+              />
+            ) : (
+              <MapPlaceholder />
+            )}
             {detail.delivery?.address && (
               <Stack spacing={0.5}>
                 <Typography variant="caption" fontWeight={500}>

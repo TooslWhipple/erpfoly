@@ -18,7 +18,6 @@ import {
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import {
   skipSaleIdentityVerification,
-  validateSupervisor,
   verifySaleIdentity,
 } from "@/services/ventas.service";
 import {
@@ -278,14 +277,10 @@ function SkipView({
         throw new Error("Usuario y contraseña del supervisor son requeridos");
       }
 
-      const supervisorRes = await validateSupervisor(username.trim(), password);
-      if (supervisorRes.error) throw new Error(supervisorRes.error.message);
-
-      const skipRes = await skipSaleIdentityVerification(
-        saleId,
-        reason.trim(),
-        supervisorRes.data!.userId,
-      );
+      const skipRes = await skipSaleIdentityVerification(saleId, reason.trim(), {
+        username: username.trim(),
+        password,
+      });
       if (skipRes.error) throw new Error(skipRes.error.message);
       return skipRes.data!;
     },

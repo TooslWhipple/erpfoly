@@ -16,6 +16,7 @@ export interface SaleBuilderHeaderProps {
   canProceed: boolean;
   showDiscountButton: boolean;
   discountDisabled: boolean;
+  operationPending: boolean;
   savePending: boolean;
   saveDisabled: boolean;
   registerPending: boolean;
@@ -34,6 +35,7 @@ export function SaleBuilderHeader({
   canProceed,
   showDiscountButton,
   discountDisabled,
+  operationPending,
   savePending,
   saveDisabled,
   registerPending,
@@ -55,7 +57,12 @@ export function SaleBuilderHeader({
         overflow="hidden"
       >
         <InlineMobileMenuButton />
-        <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+        <IconButton
+          size="small"
+          disabled={operationPending}
+          onClick={onExit}
+          aria-label="Cerrar"
+        >
           <X size={18} />
         </IconButton>
         <Typography
@@ -72,7 +79,7 @@ export function SaleBuilderHeader({
           <>
             <TouchButton
               variant="outlined"
-              disabled={saveDisabled || savePending}
+              disabled={saveDisabled || operationPending}
               onClick={onSave}
             >
               {savePending ? <CircularProgress size={16} /> : saveLabel}
@@ -80,7 +87,7 @@ export function SaleBuilderHeader({
             {showDiscountButton && (
               <TouchButton
                 variant="outlined"
-                disabled={discountDisabled}
+                disabled={discountDisabled || operationPending}
                 onClick={onDiscount}
               >
                 Solicitar descuento
@@ -93,7 +100,7 @@ export function SaleBuilderHeader({
             <span>
               <TouchButton
                 variant="contained"
-                disabled={!canProceed || registerPending}
+                disabled={!canProceed || operationPending}
                 onClick={onRegisterSale}
               >
                 {registerPending ? (
@@ -107,7 +114,7 @@ export function SaleBuilderHeader({
         ) : (
           <TouchButton
             variant="contained"
-            disabled={!canProceed}
+            disabled={!canProceed || operationPending}
             onClick={onProceedToCheckout}
           >
             {proceedLabel}

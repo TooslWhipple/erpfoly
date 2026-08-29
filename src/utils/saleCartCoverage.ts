@@ -1,3 +1,5 @@
+import type { InventorySource } from "@/types/ventas.types";
+
 type QtySource = {
   quantity: number;
   available: number;
@@ -5,6 +7,16 @@ type QtySource = {
   sourceType?: string;
   branchId?: number;
 };
+
+export function toInventorySourcesPayload(
+  sources: InventorySource[],
+): Array<{ branch_id: number; quantity: number }> {
+  return sources.flatMap((source) =>
+    source.quantity > 0 && source.branchId != null
+      ? [{ branch_id: source.branchId, quantity: source.quantity }]
+      : [],
+  );
+}
 
 export function sourceSellableMax(src: {
   available: number;
@@ -64,6 +76,19 @@ export function hydratedLineQtyMax(
 
 // ponytail: fails if the backorder chip / sellable cap regress
 if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
+  const payload = toInventorySourcesPayload([
+    {
+      sourceKey: "branch-7",
+      sourceType: "branch",
+      branchId: 7,
+      label: "Sucursal",
+      available: 2,
+      quantity: 2,
+    },
+  ]);
+  if (payload.length !== 1 || payload[0].branch_id !== 7) {
+    throw new Error("saleCartCoverage: serializes selected inventory source");
+  }
   const warehouse = {
     quantity: 4,
     available: 2,

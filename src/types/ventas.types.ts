@@ -104,6 +104,7 @@ export interface SaleDetailItem {
   unitPrice: number;
   discountAmount: number;
   totalAmount: number;
+  inventorySources: InventorySource[];
   product: {
     id: number;
     code: string;
@@ -188,7 +189,9 @@ export interface SaleDetail {
   status: string;
   subtotal: number;
   discountAmount: number;
+  shippingAmount?: number;
   totalAmount: number;
+  economicRevision?: number;
   loyaltyPointsValue: number;
   purchaseType: string | null;
   identityVerifiedAt?: string | null;
@@ -202,7 +205,10 @@ export interface SaleDetail {
   deliveryType?: string | null;
   deliveryBranchId?: number | null;
   deliveryBranchName?: string | null;
+  deliveryAddressId?: number | null;
   deliveryAddressFormatted?: string | null;
+  deliveryAddressLatitude?: string | null;
+  deliveryAddressLongitude?: string | null;
   client: SaleDetailClient | null;
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];

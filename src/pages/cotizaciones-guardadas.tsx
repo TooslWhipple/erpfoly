@@ -12,7 +12,6 @@ import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
 import { QUOTATIONS_READ } from "@/lib/permissions";
-import { useAuthStore } from "@/store/useAuthStore";
 import {
   SALE_STATUS_CHIP_LABELS,
   SALE_STATUS_CHIP_VARIANTS,
@@ -36,8 +35,6 @@ function formatItemCount(count: number): string {
 
 export default function CotizacionesGuardadas() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const currentUserId = user ? Number(user.id) : null;
   const {
     data: cotizaciones,
     total: totalRows,
@@ -49,16 +46,14 @@ export default function CotizacionesGuardadas() {
     setSearch,
     isLoading: loading,
   } = usePaginatedList<SaleListItem>({
-    queryKey: ["sale-drafts", String(currentUserId)],
+    queryKey: ["sale-drafts"],
     queryFn: getSales,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
     extraParams: {
       status: "DRAFT",
-      created_by: currentUserId ?? undefined,
     },
-    enabled: currentUserId !== null,
   });
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -91,6 +86,13 @@ export default function CotizacionesGuardadas() {
       id: "clientName",
       label: "Cliente",
       size: "lg",
+      truncate: true,
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
+    },
+    {
+      id: "sellerName",
+      label: "Vendedor",
+      size: "md",
       truncate: true,
       format: (value) => (value == null || value === "" ? "—" : String(value)),
     },

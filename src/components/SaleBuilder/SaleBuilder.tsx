@@ -82,8 +82,7 @@ import {
   addSaleItem,
   updateSaleItem,
   removeSaleItem,
-  registerSalePayment,
-  confirmSalePayment,
+  checkoutSale,
   confirmCreditSale,
   createLayaway,
   registerSale,
@@ -115,6 +114,7 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import type { DeliveryAddressSelection } from "@/components/DeliveryAddressModal";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
@@ -126,6 +126,7 @@ import {
   sellableCeilingForHydratedLine,
   sellableMaxFromPickedSources,
   sourceSellableMax,
+  toInventorySourcesPayload,
 } from "@/utils/saleCartCoverage";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
@@ -338,6 +339,7 @@ export function SaleBuilder({
     useState<PendingDiscountMutation | null>(null);
   const [discountInvalidateLoading, setDiscountInvalidateLoading] =
     useState(false);
+  const saleOperationLockRef = useRef(false);
 
   const [activeSaleId, setActiveSaleId] = useState<number | null>(null);
   const [activeSaleFolio, setActiveSaleFolio] = useState<string | null>(null);
@@ -372,10 +374,8 @@ export function SaleBuilder({
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const [useCustomDeliveryAddress, setUseCustomDeliveryAddress] =
     useState(false);
-  const [customDeliveryAddress, setCustomDeliveryAddress] = useState<{
-    id: number;
-    formatted: string;
-  } | null>(null);
+  const [customDeliveryAddress, setCustomDeliveryAddress] =
+    useState<DeliveryAddressSelection | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -389,6 +389,9 @@ export function SaleBuilder({
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
+  const [extraCards, setExtraCards] = useState<
+    Array<{ amount: string; terminalId: number | null }>
+  >([]);
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
   const [identityOk, setIdentityOk] = useState(false);
@@ -407,12 +410,28 @@ export function SaleBuilder({
     const primary =
       selectedClient.addresses.find((a) => a.isPrimary) ??
       selectedClient.addresses[0];
-    if (!primary?.latitude || !primary?.longitude) return null;
+    if (primary?.latitude == null || primary.longitude == null) return null;
     const lat = Number(primary.latitude);
     const lng = Number(primary.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
   }, [selectedClient]);
+
+  const deliveryCoords = useMemo(() => {
+    if (!useCustomDeliveryAddress || !customDeliveryAddress) {
+      return primaryCoords;
+    }
+    if (
+      customDeliveryAddress.latitude == null ||
+      customDeliveryAddress.longitude == null
+    ) {
+      return null;
+    }
+    return {
+      lat: customDeliveryAddress.latitude,
+      lng: customDeliveryAddress.longitude,
+    };
+  }, [customDeliveryAddress, primaryCoords, useCustomDeliveryAddress]);
 
   const todayIsoDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
@@ -618,7 +637,7 @@ export function SaleBuilder({
         discountAmount: item.discountAmount,
         unitPrice: item.unitPrice,
         quantity: item.quantity,
-        sources: [],
+        sources: item.inventorySources,
         saleItemId: item.id,
         backorderedQuantity: item.backorderedQuantity,
       })),
@@ -642,8 +661,38 @@ export function SaleBuilder({
 
     if (resumeSaleData.deliveryType === "ADDRESS") {
       setDeliveryType("delivery");
+      const deliveryAddressId = resumeSaleData.deliveryAddressId;
+      const isCustomAddress =
+        deliveryAddressId != null &&
+        deliveryAddressId !== resumeSaleData.client?.primaryAddress?.id;
+      if (isCustomAddress) {
+        const latitude =
+          resumeSaleData.deliveryAddressLatitude != null
+            ? Number(resumeSaleData.deliveryAddressLatitude)
+            : null;
+        const longitude =
+          resumeSaleData.deliveryAddressLongitude != null
+            ? Number(resumeSaleData.deliveryAddressLongitude)
+            : null;
+        setCustomDeliveryAddress({
+          id: deliveryAddressId,
+          formatted:
+            resumeSaleData.deliveryAddressFormatted ??
+            "Dirección de entrega personalizada",
+          latitude:
+            latitude != null && Number.isFinite(latitude) ? latitude : null,
+          longitude:
+            longitude != null && Number.isFinite(longitude) ? longitude : null,
+        });
+        setUseCustomDeliveryAddress(true);
+      } else {
+        setCustomDeliveryAddress(null);
+        setUseCustomDeliveryAddress(false);
+      }
     } else if (resumeSaleData.deliveryType === "BRANCH") {
       setDeliveryType("pickup");
+      setCustomDeliveryAddress(null);
+      setUseCustomDeliveryAddress(false);
       if (resumeSaleData.deliveryBranchId != null) {
         setDeliveryBranch({
           id: resumeSaleData.deliveryBranchId,
@@ -651,6 +700,10 @@ export function SaleBuilder({
         });
         setDeliveryBranchOverridden(true);
       }
+    } else {
+      setDeliveryType(null);
+      setCustomDeliveryAddress(null);
+      setUseCustomDeliveryAddress(false);
     }
 
     const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
@@ -728,7 +781,9 @@ export function SaleBuilder({
     let folio: string;
 
     if (activeSaleId === null) {
-      const draftBranchId = lockedBranch?.id ?? currentBranchId;
+      // Sale ownership stays with the operating branch. Inventory sources are
+      // persisted per item and may belong to another branch.
+      const draftBranchId = currentBranchId;
       if (draftBranchId == null) {
         throw new Error("No se pudo determinar tu sucursal");
       }
@@ -743,12 +798,13 @@ export function SaleBuilder({
       folio = draftRes.data!.folio;
 
       for (const item of cart) {
+        const inventorySources = toInventorySourcesPayload(item.sources);
         const itemRes = await addSaleItem(saleId, {
           product_id: item.productId,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
-          discount_amount:
-            item.discountAmount > 0 ? item.discountAmount : undefined,
+          ...(inventorySources.length > 0
+            ? { inventory_sources: inventorySources }
+            : {}),
         });
         if (itemRes.error) throw new Error(itemRes.error.message);
       }
@@ -790,21 +846,22 @@ export function SaleBuilder({
         }
 
         for (const item of cart) {
+          const inventorySources = toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
             const updateRes = await updateSaleItem(saleId, item.saleItemId, {
               quantity: item.quantity,
-              unit_price: item.unitPrice,
-              discount_amount:
-                item.discountAmount > 0 ? item.discountAmount : undefined,
+              ...(inventorySources.length > 0
+                ? { inventory_sources: inventorySources }
+                : {}),
             });
             if (updateRes.error) throw new Error(updateRes.error.message);
           } else {
             const itemRes = await addSaleItem(saleId, {
               product_id: item.productId,
               quantity: item.quantity,
-              unit_price: item.unitPrice,
-              discount_amount:
-                item.discountAmount > 0 ? item.discountAmount : undefined,
+              ...(inventorySources.length > 0
+                ? { inventory_sources: inventorySources }
+                : {}),
             });
             if (itemRes.error) throw new Error(itemRes.error.message);
           }
@@ -902,6 +959,41 @@ export function SaleBuilder({
         });
       }
 
+      const extraCardTenders = extraCards
+        .map((card) => ({
+          amount: parseFloat(card.amount.replace(/[^0-9.]/g, "")) || 0,
+          terminalId: card.terminalId,
+        }))
+        .filter((card) => card.amount > 0);
+
+      const tenders: Array<{
+        payment_method: "CASH" | "CARD";
+        amount: number;
+        received_amount?: number;
+        payment_terminal_id?: number;
+      }> = [];
+      if (cashAmtNum > 0) {
+        tenders.push({
+          payment_method: "CASH",
+          amount: Math.min(cashAmtNum, totalFinal),
+          received_amount: cashAmtNum,
+        });
+      }
+      if (cardAmtNum > 0) {
+        tenders.push({
+          payment_method: "CARD",
+          amount: cardAmtNum,
+          payment_terminal_id: selectedTerminal ?? undefined,
+        });
+      }
+      for (const card of extraCardTenders) {
+        tenders.push({
+          payment_method: "CARD",
+          amount: card.amount,
+          payment_terminal_id: card.terminalId ?? undefined,
+        });
+      }
+
       if (paymentType === "CREDIT") {
         if (!identityOk) {
           throw new Error(
@@ -910,11 +1002,24 @@ export function SaleBuilder({
         }
         if (!selectedClient)
           throw new Error("Se requiere un cliente para venta a crédito");
+        const creditTenders =
+          tenders.length > 0
+            ? tenders
+            : [
+                {
+                  payment_method: (isCardPayment ? "CARD" : "CASH") as
+                    | "CASH"
+                    | "CARD",
+                  amount: enganche,
+                  payment_terminal_id: selectedTerminal ?? undefined,
+                },
+              ];
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          tenders: creditTenders,
           ...billingPayload,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
@@ -924,12 +1029,27 @@ export function SaleBuilder({
       if (paymentType === "LAYAWAY") {
         if (!activeLayawayTerm)
           throw new Error("Selecciona un plazo de apartado");
-        const depositAmount = cashAmtNum + cardAmtNum;
+        const depositAmount = cashAmtNum + cardAmtNum + extraCardAmtNum;
+        const layawayTenders =
+          tenders.length > 0
+            ? tenders
+            : depositAmount > 0
+              ? [
+                  {
+                    payment_method: (isCardPayment ? "CARD" : "CASH") as
+                      | "CASH"
+                      | "CARD",
+                    amount: depositAmount,
+                    payment_terminal_id: selectedTerminal ?? undefined,
+                  },
+                ]
+              : [];
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
           deposit_amount: depositAmount,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          tenders: layawayTenders,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
         return {
@@ -939,18 +1059,21 @@ export function SaleBuilder({
         };
       }
 
-      const paymentRes = await registerSalePayment(saleId, {
-        payment_method: isCardPayment ? "CARD" : "CASH",
-        amount: totalFinal,
-        received_amount: !isCardPayment && cashAmtNum > 0 ? cashAmtNum : undefined,
-        change_amount: !isCardPayment && cashAmtNum > 0 ? change : undefined,
-        payment_terminal_id: selectedTerminal ?? undefined,
-      });
-      if (paymentRes.error) throw new Error(paymentRes.error.message);
+      if (tenders.length === 0) {
+        tenders.push({
+          payment_method: "CASH",
+          amount: totalFinal,
+          received_amount: cashAmtNum || totalFinal,
+        });
+      }
 
-      const confirmRes = await confirmSalePayment(saleId, billingPayload);
-      if (confirmRes.error) throw new Error(confirmRes.error.message);
-      return confirmRes.data!;
+      const checkoutRes = await checkoutSale(saleId, {
+        ...billingPayload,
+        tenders,
+        idempotency_key: crypto.randomUUID(),
+      });
+      if (checkoutRes.error) throw new Error(checkoutRes.error.message);
+      return checkoutRes.data!;
     },
     onSuccess: (data) => {
       // En modo cajero, SaleBuilder se monta dentro de /ventas/[id] (misma
@@ -962,6 +1085,8 @@ export function SaleBuilder({
       void queryClient.invalidateQueries({
         queryKey: ["venta-detail", data.id],
       });
+      void queryClient.invalidateQueries({ queryKey: ["cash-session-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["cash-session-history"] });
       void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
@@ -986,6 +1111,23 @@ export function SaleBuilder({
       snackbar.showError(err.message);
     },
   });
+
+  const saleOperationPending =
+    guardarCotizacionMutation.isPending ||
+    cobrarMutation.isPending ||
+    registerSaleMutation.isPending;
+
+  const executeSaleOperation = async (operation: () => Promise<unknown>) => {
+    if (saleOperationLockRef.current) return;
+    saleOperationLockRef.current = true;
+    try {
+      await operation();
+    } catch {
+      // Each mutation reports its own contextual error through onError.
+    } finally {
+      saleOperationLockRef.current = false;
+    }
+  };
 
   const { data: clientSearchData, isLoading: clientSearchLoading } = useQuery({
     queryKey: [
@@ -1043,7 +1185,9 @@ export function SaleBuilder({
 
   const lockedBranch = cartBranch ?? selectionBranch;
 
-  const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
+  const isCardPayment =
+    (Boolean(cardAmount) && parseFloat(cardAmount) > 0) ||
+    extraCards.some((card) => parseFloat(card.amount.replace(/[^0-9.]/g, "")) > 0);
   const isCheckoutView = view === "checkout";
 
   const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
@@ -1482,9 +1626,14 @@ export function SaleBuilder({
   const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
+  const extraCardAmtNum = extraCards.reduce(
+    (sum, card) =>
+      sum + (parseFloat(card.amount.replace(/[^0-9.]/g, "")) || 0),
+    0,
+  );
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
-  const totalPaid = Math.round(cashAmtNum + cardAmtNum);
+  const totalPaid = Math.round(cashAmtNum + cardAmtNum + extraCardAmtNum);
   const ENGANCHE_PCT = 0.1;
   const enganche = Math.round(totalFinal * ENGANCHE_PCT);
   const montoAFinanciar = totalFinal - enganche;
@@ -2125,7 +2274,7 @@ export function SaleBuilder({
 
   if (view === "checkout") {
     const canRegister =
-      !cobrarMutation.isPending &&
+      !saleOperationPending &&
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" || identityOk) &&
@@ -2133,12 +2282,13 @@ export function SaleBuilder({
         (hasPaymentTerminals && selectedTerminal != null));
 
     return (
-      <PageShell>
+      <PageShell aria-busy={saleOperationPending}>
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1}>
             <InlineMobileMenuButton />
             <IconButton
               size="medium"
+              disabled={saleOperationPending}
               onClick={() => (isCajeroMode ? onExit() : setView("form"))}
               aria-label={isCajeroMode ? "Cerrar" : "Volver"}
             >
@@ -2494,6 +2644,8 @@ export function SaleBuilder({
               cardAmount={cardAmount}
               onCashAmountChange={setCashAmount}
               onCardAmountChange={setCardAmount}
+              extraCards={extraCards}
+              onExtraCardsChange={setExtraCards}
               isCardPayment={isCardPayment}
               exceedsCashLimit={exceedsCashLimit}
               cashLimitErrorMessage={MAX_CASH_SALE_PAYMENT_MESSAGE}
@@ -2510,13 +2662,13 @@ export function SaleBuilder({
               showChange={paymentType !== "LAYAWAY"}
               change={change}
               canRegister={canRegister}
-              isPending={cobrarMutation.isPending}
+              isPending={saleOperationPending}
               amountToPay={amountToPay}
               onRegister={() => {
                 if (showCheckoutDeliveryDateField && !checkoutDeliveryDate) {
                   setDeliveryDateWarningOpen(true);
                 } else {
-                  cobrarMutation.mutate();
+                  void executeSaleOperation(() => cobrarMutation.mutateAsync());
                 }
               }}
             />
@@ -2536,7 +2688,7 @@ export function SaleBuilder({
           onConfirm={() => {
             openDeliveryPickerAfterWarningRef.current = false;
             setDeliveryDateWarningOpen(false);
-            cobrarMutation.mutate();
+            void executeSaleOperation(() => cobrarMutation.mutateAsync());
           }}
           onExited={() => {
             if (!openDeliveryPickerAfterWarningRef.current) return;
@@ -2616,7 +2768,7 @@ export function SaleBuilder({
   }
 
   return (
-    <PageShell>
+    <PageShell aria-busy={saleOperationPending}>
       <SaleBuilderHeader
         title={
           isCajeroMode && activeSaleFolio
@@ -2633,15 +2785,22 @@ export function SaleBuilder({
           resumeSaleData?.discountRequest != null &&
           resumeSaleData.discountRequest.status !== "INVALIDATED"
         }
+        operationPending={saleOperationPending}
         savePending={guardarCotizacionMutation.isPending}
         saveDisabled={cart.length === 0 || (branchUnresolved && activeSaleId === null)}
         registerPending={registerSaleMutation.isPending}
         saveLabel={
           resumeSaleId !== null ? "Actualizar cotización" : "Guardar cotización"
         }
-        onSave={() => guardarCotizacionMutation.mutate()}
+        onSave={() =>
+          void executeSaleOperation(() =>
+            guardarCotizacionMutation.mutateAsync(),
+          )
+        }
         onDiscount={() => setDiscountRequestModalOpen(true)}
-        onRegisterSale={() => registerSaleMutation.mutate()}
+        onRegisterSale={() =>
+          void executeSaleOperation(() => registerSaleMutation.mutateAsync())
+        }
         proceedLabel={
           paymentType === "CREDIT" && !identityOk
             ? "Validar identidad"
@@ -3107,7 +3266,7 @@ export function SaleBuilder({
                   {deliveryType === "delivery" && (
                     <>
                       <DeliveryMapPreview
-                        coords={primaryCoords}
+                        coords={deliveryCoords}
                         apiKey={GOOGLE_MAPS_API_KEY}
                       />
                       <ReadOnlyField
@@ -3237,7 +3396,7 @@ export function SaleBuilder({
               {deliveryType === "delivery" && (
                 <>
                   <DeliveryMapPreview
-                    coords={primaryCoords}
+                    coords={deliveryCoords}
                     apiKey={GOOGLE_MAPS_API_KEY}
                   />
 
@@ -3413,7 +3572,16 @@ export function SaleBuilder({
           <DeliveryAddressModal
             open={deliveryAddressModalOpen}
             onClose={() => setDeliveryAddressModalOpen(false)}
-            onSaved={(address) => {
+            onSaved={async (address) => {
+              if (activeSaleId) {
+                await setDeliveryDate(activeSaleId, {
+                  delivery_type: "ADDRESS",
+                  address_id: address.id,
+                  ...(checkoutDeliveryDate
+                    ? { delivery_date: checkoutDeliveryDate }
+                    : {}),
+                });
+              }
               setCustomDeliveryAddress(address);
               setUseCustomDeliveryAddress(true);
               setDeliveryAddressModalOpen(false);

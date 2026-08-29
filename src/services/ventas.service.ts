@@ -85,11 +85,20 @@ export async function getLayawayTerms(): Promise<ApiResult<LayawayTerm[]>> {
   return get<LayawayTerm[]>(`${BASE}/layaway-terms`);
 }
 
+export interface CheckoutTenderPayload {
+  payment_method: "CASH" | "CARD" | "TRANSFER";
+  amount: number;
+  received_amount?: number;
+  payment_terminal_id?: number;
+  reference?: string;
+}
+
 export interface CreateLayawayPayload {
   layaway_term_id: number;
   deposit_amount: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
 }
 
 export async function createLayaway(
@@ -176,8 +185,7 @@ export async function updateSaleLayawayTerm(
 export interface AddSaleItemPayload {
   product_id: number;
   quantity: number;
-  unit_price: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function addSaleItem(
@@ -189,8 +197,7 @@ export async function addSaleItem(
 
 export interface UpdateSaleItemPayload {
   quantity?: number;
-  unit_price?: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function updateSaleItem(
@@ -263,11 +270,26 @@ export async function confirmSalePayment(
   );
 }
 
+export async function checkoutSale(
+  saleId: number,
+  payload: SaleInvoiceBillingPayload & {
+    tenders: CheckoutTenderPayload[];
+    idempotency_key?: string;
+    economic_revision?: number;
+  },
+): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
+  return post<{ id: number; folio: string; status: string }>(
+    `${BASE}/sales/${saleId}/checkout`,
+    payload,
+  );
+}
+
 export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   term_months: number;
   down_payment: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
 }
 
 export async function confirmCreditSale(
@@ -325,11 +347,12 @@ export async function validateSupervisor(
 export async function skipSaleIdentityVerification(
   saleId: number,
   reason: string,
-  supervisorUserId: number,
+  credentials: { username: string; password: string },
 ): Promise<ApiResult<VerifySaleIdentityResult>> {
   return post<VerifySaleIdentityResult>(
     `${BASE}/sales/${saleId}/identity-verification/skip`,
-    { reason, supervisorUserId },
+    { reason, ...credentials },
+    { skipGlobalErrorToast: true },
   );
 }
 

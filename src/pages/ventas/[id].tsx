@@ -62,6 +62,8 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CASH_REGISTERS_READ } from "@/lib/permissions";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -118,6 +120,8 @@ export default function VentaDetalle() {
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
+  const { hasPermission } = usePermissions();
+  const canAccessCashRegisters = hasPermission(CASH_REGISTERS_READ);
 
   const { data: invoicingConfig } = useQuery({
     queryKey: ["invoicingConfig"],
@@ -331,10 +335,17 @@ export default function VentaDetalle() {
     onError: (err: Error) => snackbar.showError(err.message),
   });
 
-  const primaryCoords = useMemo(() => {
-    if (!sale?.client?.primaryAddress) return null;
-    const { latitude, longitude } = sale.client.primaryAddress;
-    if (!latitude || !longitude) return null;
+  const deliveryAddressCoords = useMemo(() => {
+    const hasPersistedDeliveryCoords =
+      sale?.deliveryAddressLatitude != null &&
+      sale.deliveryAddressLongitude != null;
+    const latitude = hasPersistedDeliveryCoords
+      ? sale.deliveryAddressLatitude
+      : sale?.client?.primaryAddress?.latitude;
+    const longitude = hasPersistedDeliveryCoords
+      ? sale.deliveryAddressLongitude
+      : sale?.client?.primaryAddress?.longitude;
+    if (latitude == null || longitude == null) return null;
     const lat = Number(latitude);
     const lng = Number(longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -439,13 +450,15 @@ export default function VentaDetalle() {
               severity="info"
               sx={{ mb: 2 }}
               action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={() => void router.push("/cajas")}
-                >
-                  Ir a caja
-                </Button>
+                canAccessCashRegisters ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => void router.push("/cajas")}
+                  >
+                    Ir a caja
+                  </Button>
+                ) : undefined
               }
             >
               Esta venta está pendiente de cobro en caja.
@@ -1144,12 +1157,13 @@ export default function VentaDetalle() {
                     </Typography>
                   )}
 
-                  {sale.client.primaryAddress && (
+                  {(sale.deliveryAddressFormatted ||
+                    sale.client.primaryAddress) && (
                     <Box mt={2}>
-                      {primaryCoords && googleMapsBrowserApiKey ? (
+                      {deliveryAddressCoords && googleMapsBrowserApiKey ? (
                         <Box sx={{ mb: 1.5 }}>
                           <StaticLocationMap
-                            coords={primaryCoords}
+                            coords={deliveryAddressCoords}
                             apiKey={googleMapsBrowserApiKey}
                             height={160}
                             borderRadius={2}
@@ -1199,7 +1213,8 @@ export default function VentaDetalle() {
                         </Button>
                       </Stack>
                       <Typography variant="body2" mt={0.5}>
-                        {sale.deliveryAddressFormatted ?? sale.client.primaryAddress.formatted}
+                        {sale.deliveryAddressFormatted ??
+                          sale.client.primaryAddress?.formatted}
                       </Typography>
                       {sale.client.email && (
                         <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>

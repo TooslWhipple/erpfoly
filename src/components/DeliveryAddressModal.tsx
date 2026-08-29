@@ -11,7 +11,14 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 interface DeliveryAddressModalProps {
   open: boolean;
   onClose: () => void;
-  onSaved: (address: { id: number; formatted: string }) => void;
+  onSaved: (address: DeliveryAddressSelection) => void | Promise<void>;
+}
+
+export interface DeliveryAddressSelection {
+  id: number;
+  formatted: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface DeliveryAddressFormState {
@@ -48,10 +55,12 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
 
   const canSave =
     form.street.trim().length > 0 &&
+    form.externalNumber.trim().length > 0 &&
     form.neighborhoodFullCode !== "-1" &&
     form.postalCode.trim().length === 5;
 
   const handleClose = () => {
+    if (saving) return;
     setForm(EMPTY_FORM);
     onClose();
   };
@@ -62,9 +71,9 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
     try {
       const created = await createAddress({
         neighborhoodFullCode: form.neighborhoodFullCode,
-        street: form.street,
-        externalNumber: form.externalNumber || undefined,
-        internalNumber: form.internalNumber || undefined,
+        street: form.street.trim(),
+        externalNumber: form.externalNumber.trim(),
+        internalNumber: form.internalNumber.trim() || undefined,
         postalCode: form.postalCode,
       });
       const neighborhoodName =
@@ -82,7 +91,12 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
         .filter((part) => part && part.trim().length > 0)
         .join(", ");
 
-      onSaved({ id: created.id, formatted });
+      await onSaved({
+        id: created.id,
+        formatted,
+        latitude: created.latitude,
+        longitude: created.longitude,
+      });
       setForm(EMPTY_FORM);
     } catch {
       snackbar.showError("No se pudo guardar la dirección, intenta nuevamente.");
@@ -137,7 +151,12 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
           </Grid>
 
           <Stack direction="row" spacing={1.5} justifyContent="flex-end">
-            <Button variant="outlined" onClick={handleClose} sx={{ textTransform: "none" }}>
+            <Button
+              variant="outlined"
+              disabled={saving}
+              onClick={handleClose}
+              sx={{ textTransform: "none" }}
+            >
               Cancelar
             </Button>
             <Button

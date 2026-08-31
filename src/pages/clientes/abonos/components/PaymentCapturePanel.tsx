@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   Checkbox,
@@ -21,6 +21,7 @@ import {
   CaptureCardChangeRow,
   InstallmentsControl,
   InstallmentsControlDivider,
+  InstallmentsControlInput,
   PaymentMethodButton,
 } from "@/styles/clientes/abonos.styles";
 import { RadioButton } from "@/components";
@@ -54,6 +55,11 @@ function formatCurrency(value: number): string {
 
 function formatAmountForInput(amount: number): string {
   return amount > 0 ? String(Math.round(amount * 100) / 100) : "";
+}
+
+function clampInstallmentCount(raw: number, max: number): number {
+  if (max <= 0) return 1;
+  return Math.min(max, Math.max(1, Math.trunc(raw)));
 }
 
 // InstallmentsControl fija el color de fondo/texto vía CSS `color` heredado,
@@ -91,6 +97,7 @@ export function PaymentCapturePanel({
 }: PaymentCapturePanelProps) {
   const [inputValue, setInputValue] = useState("");
   const [installmentCount, setInstallmentCount] = useState(1);
+  const [installmentInputValue, setInstallmentInputValue] = useState("1");
   const lastEmittedAmountRef = useRef(paymentAmount);
 
   // El campo de monto es texto libre (`inputValue`) y solo se actualiza al
@@ -111,6 +118,20 @@ export function PaymentCapturePanel({
     Math.max(totalPendingInstallmentsCount, 1),
   );
 
+  const applyInstallmentCount = useCallback((count: number) => {
+    const clamped = clampInstallmentCount(count, totalPendingInstallmentsCount);
+    setInstallmentCount(clamped);
+    setInstallmentInputValue(String(clamped));
+    onInstallmentCountChange(clamped);
+  }, [totalPendingInstallmentsCount, onInstallmentCountChange]);
+
+  // Si el máximo baja (p. ej. excluir una cuenta), reclampar y reemitir el
+  // conteo para que el monto derivado no quede desincronizado.
+  useEffect(() => {
+    if (displayedInstallmentCount === installmentCount) return;
+    applyInstallmentCount(displayedInstallmentCount);
+  }, [displayedInstallmentCount, installmentCount, applyInstallmentCount]);
+
   const handleInputChange = (raw: string) => {
     const cleaned = raw.replace(/[^0-9.]/g, "");
     const parts = cleaned.split(".");
@@ -122,9 +143,25 @@ export function PaymentCapturePanel({
     onPaymentAmountChange(amount);
   };
 
-  const applyInstallmentCount = (count: number) => {
-    setInstallmentCount(count);
-    onInstallmentCountChange(count);
+  const handleInstallmentInputChange = (raw: string) => {
+    const digitsOnly = raw.replace(/\D/g, "");
+    setInstallmentInputValue(digitsOnly);
+
+    if (digitsOnly.length === 0) return;
+
+    const parsed = parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) return;
+
+    applyInstallmentCount(parsed);
+  };
+
+  const handleInstallmentInputBlur = () => {
+    const parsed = parseInt(installmentInputValue, 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      applyInstallmentCount(1);
+      return;
+    }
+    applyInstallmentCount(parsed);
   };
 
   const handleDecrementInstallments = () => {
@@ -160,9 +197,18 @@ export function PaymentCapturePanel({
           >
             <Minus size={16} />
           </IconButton>
-          <Typography variant="body1" fontWeight={600} minWidth={20} textAlign="center">
-            {displayedInstallmentCount}
-          </Typography>
+          <InstallmentsControlInput
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={totalPendingInstallmentsCount || 1}
+            step={1}
+            value={installmentInputValue}
+            disabled={totalPendingInstallmentsCount === 0}
+            aria-label="Parcialidades a cubrir"
+            onChange={(event) => handleInstallmentInputChange(event.target.value)}
+            onBlur={handleInstallmentInputBlur}
+          />
           <IconButton
             size="small"
             onClick={handleIncrementInstallments}

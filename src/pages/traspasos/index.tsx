@@ -114,7 +114,6 @@ export default function TraspasosPage() {
     ];
 
     const getStatusFilter = useCallback((): "all" | BranchOrderStatus => {
-        if (activeTab === SCHEDULED_TAB) return PENDING_TAB as BranchOrderStatus;
         return activeTab as "all" | BranchOrderStatus;
     }, [activeTab]);
 
@@ -189,13 +188,6 @@ export default function TraspasosPage() {
         setRowsPerPage(newRowsPerPage);
         setPage(0);
     };
-
-    const filteredOrders =
-        activeTab === SCHEDULED_TAB
-            ? orders.filter((order) => order.status === "scheduled")
-            : activeTab === PENDING_TAB
-                ? orders.filter((order) => order.status === "pending")
-                : orders;
 
     const columns: Column<BranchOrder>[] = [
         {
@@ -302,7 +294,7 @@ export default function TraspasosPage() {
 
                 <TableCrud
                     columns={columns}
-                    rows={filteredOrders}
+                    rows={orders}
                     actions={actions}
                     loading={loading}
                     rowKey="id"

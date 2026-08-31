@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
 import { StatusChip } from "@/components";
@@ -14,7 +14,10 @@ import {
   buildCashRegisterSaleUrl,
   CASH_REGISTER_HISTORY_PATH,
 } from "@/lib/cashRegisterRoutes";
-import { CashMovementType } from "@/lib/cashMovement.constants";
+import {
+  CashMovementType,
+  CashMovementPaymentForm,
+} from "@/lib/cashMovement.constants";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
@@ -46,10 +49,15 @@ export default function Cajas() {
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
-  const { cashRegister, setCashRegister, movements, isLoading, loadMovements, loadAssignedCashRegister } =
-    useCashRegisterSession({
-      loadMovementsOnOpen: true,
-    });
+  const {
+    cashRegister,
+    setCashRegister,
+    movements,
+    isLoading,
+    loadAssignedCashRegister,
+  } = useCashRegisterSession({
+    loadMovementsOnOpen: true,
+  });
   const [isOpening, setIsOpening] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isCutting, setIsCutting] = useState(false);
@@ -74,11 +82,25 @@ export default function Cajas() {
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
   const [initialFund, setInitialFund] = useState("1500");
   const [exchangeRate, setExchangeRate] = useState("17.6");
+
+  useEffect(() => {
+    const handleRouteComplete = (url: string) => {
+      const path = url.split("?")[0];
+      if (path === "/cajas") {
+        void loadAssignedCashRegister();
+      }
+    };
+    router.events.on("routeChangeComplete", handleRouteComplete);
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteComplete);
+    };
+  }, [router.events, loadAssignedCashRegister]);
+
   const cutModalData = useMemo(() => {
     const withdrawals = movements.filter(
       (m) => m.movement_type === CashMovementType.WITHDRAWAL,
     );
-    const incomes = movements.filter(
+    const payments = movements.filter(
       (m) =>
         m.movement_type === CashMovementType.PAYMENT ||
         m.movement_type === CashMovementType.SALE,
@@ -86,6 +108,14 @@ export default function Cajas() {
     const partialCuts = movements.filter(
       (m) => m.movement_type === CashMovementType.PARTIAL_CUT,
     );
+    const sumByPaymentForm = (form: string) =>
+      payments
+        .filter((m) => (m.payment_form ?? CashMovementPaymentForm.CASH) === form)
+        .reduce((sum, m) => sum + Number(m.amount), 0);
+
+    const cashSales = sumByPaymentForm(CashMovementPaymentForm.CASH);
+    const creditCard = sumByPaymentForm(CashMovementPaymentForm.CREDIT_CARD);
+    const cashDeposits = sumByPaymentForm(CashMovementPaymentForm.CASH_DEPOSIT);
     const withdrawalCount = withdrawals.length;
     const withdrawalTotal = withdrawals.reduce(
       (sum, m) => sum + Number(m.amount),
@@ -95,15 +125,20 @@ export default function Cajas() {
       (sum, m) => sum + Number(m.amount),
       0,
     );
-    const totalIncome = incomes.reduce((sum, m) => sum + Number(m.amount), 0);
     const totalWithdrawals = withdrawalTotal + partialCutTotal;
-    const expectedCash = cashRegister?.currentCash ?? 0;
+    const totalIncome = cashSales + creditCard + cashDeposits;
+    // Efectivo esperado en caja: fondo + ventas efectivo + depósitos - retiros
+    const expectedCash =
+      (cashRegister?.initialFund ?? 0) +
+      cashSales +
+      cashDeposits -
+      totalWithdrawals;
     const actualCash = cashRegister?.currentCash ?? 0;
     const shortage = expectedCash - actualCash;
     return {
-      cash: actualCash,
-      creditCard: 0,
-      cashDeposits: 0,
+      cash: cashSales,
+      creditCard,
+      cashDeposits,
       withdrawals: withdrawalCount,
       withdrawalAmount: totalWithdrawals,
       totalIncome,
@@ -130,6 +165,7 @@ export default function Cajas() {
           : prev,
       );
       showSuccess("Caja abierta exitosamente");
+      await loadAssignedCashRegister();
     } catch (err) {
       showError(getApiErrorMessage(err));
     } finally {
@@ -165,16 +201,15 @@ export default function Cajas() {
           total_counted: total,
         });
         showSuccess("Corte parcial registrado");
-        await loadMovements();
         await loadAssignedCashRegister();
       } else {
         await createFinalCut({
           total_counted: cashRegister.currentCash,
-          cash: cashRegister.currentCash,
-          credit_card: 0,
-          cash_deposits: 0,
+          cash: cutModalData.cash,
+          credit_card: cutModalData.creditCard,
+          cash_deposits: cutModalData.cashDeposits,
           initial_fund: cashRegister.initialFund,
-          shortage: 0,
+          shortage: cutModalData.shortage,
         });
         setCashRegister((prev) =>
           prev
@@ -187,6 +222,7 @@ export default function Cajas() {
         setInitialFund("1500");
         setExchangeRate("17.6");
         showSuccess("Corte final realizado, caja cerrada");
+        await loadAssignedCashRegister();
       }
       setCutModalOpen(false);
     } catch (err) {
@@ -211,16 +247,8 @@ export default function Cajas() {
         bank,
         check_number: checkNumber || undefined,
       });
-      setCashRegister((prev) =>
-        prev
-          ? {
-              ...prev,
-              currentCash: prev.currentCash - amount,
-            }
-          : prev,
-      );
       showSuccess("Retiro registrado exitosamente");
-      await loadMovements();
+      await loadAssignedCashRegister();
     } catch (err) {
       showError(getApiErrorMessage(err));
     } finally {

@@ -35,6 +35,58 @@ export interface DelinquencySharedListDetail extends DelinquencySharedListSummar
   clients: DelinquencySharedListClientSnapshot[];
 }
 
+export interface SharedDelinquencyBasicInformation {
+  firstName: string;
+  firstSurname: string;
+  secondSurname: string;
+  birthDate: string | null;
+  maritalStatus: string;
+  curp: string;
+  rfc: string;
+  email: string;
+  phone: string;
+  phoneVerified: boolean;
+}
+
+export interface SharedDelinquencyAddress {
+  postalCode: string;
+  neighborhoodName: string;
+  state: string;
+  city: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
+  betweenStreets: string;
+  housingTypeName: string;
+  residenceTimeValue: number | null;
+  residenceTimeUnit: "months" | "years" | null;
+  previousAddress: string;
+  previousResidenceTimeValue: number | null;
+  previousResidenceTimeUnit: "months" | "years" | null;
+}
+
+export interface SharedDelinquencyGuarantorAddress {
+  postalCode: string;
+  neighborhoodName: string;
+  state: string;
+  city: string;
+  street: string;
+  externalNumber: string;
+  internalNumber: string;
+  betweenStreets: string;
+}
+
+export interface SharedDelinquencyGuarantor {
+  fullName: string;
+  birthDate: string | null;
+  maritalStatus: string;
+  curp: string;
+  rfc: string;
+  phone: string;
+  hasSpouse: boolean;
+  address: SharedDelinquencyGuarantorAddress;
+}
+
 export interface SharedDelinquencyClientDetail
   extends DelinquencySharedListClientSnapshot {
   curp: string | null;
@@ -45,6 +97,9 @@ export interface SharedDelinquencyClientDetail
   creditUsed: number | null;
   creditAvailable: number | null;
   negotiatedAt: string | null;
+  basicInformation: SharedDelinquencyBasicInformation | null;
+  address: SharedDelinquencyAddress | null;
+  guarantor: SharedDelinquencyGuarantor | null;
 }
 
 export interface ApplyDelinquencyNegotiationPayload {

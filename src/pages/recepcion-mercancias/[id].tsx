@@ -13,8 +13,20 @@ import numeral from "numeral";
 import { Breadcrumbs } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import { StatusChip } from "@/components/StatusChip";
+import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
+import { PrinterSetupDialog } from "@/components/printing";
+import { useLabelPrinter } from "@/hooks/printing/useLabelPrinter";
+import {
+  getReceptionLabelCounts,
+  resolveReceptionPrintParams,
+} from "@/lib/reception/label-print";
+import {
+  getReceptionById,
+  updateReception,
+  type ReceptionDetail,
+} from "@/services/recepcion-mercancias.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { formatDate } from "@/utils/date";
-import { getReceptionById, type ReceptionDetail } from "@/services/recepcion-mercancias.service";
 import {
   PageContainer,
   PageHeader,
@@ -77,11 +89,22 @@ function calculateProgress(received: number, ordered: number): number {
 
 export default function RecepcionDetalle() {
   const router = useRouter();
+  const showError = useSnackbarStore((state) => state.showError);
+  const {
+    progress: printProgress,
+    isConfigured,
+    printerProfile,
+    acknowledgePrinterSetup,
+    printReceptionLabels,
+  } = useLabelPrinter();
   const [reception, setReception] = useState<ReceptionDetail | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [printerSetupOpen, setPrinterSetupOpen] = useState(false);
 
   const id = router.isReady ? Number(router.query.id) : null;
 
@@ -113,6 +136,61 @@ export default function RecepcionDetalle() {
       cancelled = true;
     };
   }, [idIsValid, id]);
+
+  const handleOpenPrintLabels = () => {
+    if (!reception) return;
+    if (!isConfigured) {
+      setPrinterSetupOpen(true);
+      return;
+    }
+    setConfirmOpen(true);
+  };
+
+  const handlePrinterSetupConfirm = () => {
+    acknowledgePrinterSetup();
+    setPrinterSetupOpen(false);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmPrint = async () => {
+    if (!reception) return;
+
+    const { totalLabels, extraLabels } = getReceptionLabelCounts(
+      reception.items,
+      reception.printedLabelsCount,
+    );
+    const { mode, skip } = resolveReceptionPrintParams(
+      reception.printedLabelsCount,
+      totalLabels,
+    );
+
+    setConfirmLoading(true);
+    try {
+      await printReceptionLabels(reception.id, {
+        mode,
+        skip,
+      });
+
+      if (extraLabels > 0) {
+        const result = await updateReception(reception.id, {
+          printed_labels_count: totalLabels,
+        });
+        if (result.data) {
+          setReception(result.data);
+        }
+      }
+
+      setConfirmOpen(false);
+    } catch (printErr) {
+      const message =
+        printErr instanceof Error
+          ? printErr.message
+          : "No se pudieron imprimir las etiquetas";
+      showError(message);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
   const loading = loadState === "loading" && !reception;
 
@@ -154,6 +232,16 @@ export default function RecepcionDetalle() {
 
   const totalOrdered = reception.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalReceived = reception.items.reduce((sum, item) => sum + item.received, 0);
+  const { totalLabels, extraLabels } = getReceptionLabelCounts(
+    reception.items,
+    reception.printedLabelsCount,
+  );
+  const confirmVariant = resolveReceptionPrintParams(
+    reception.printedLabelsCount,
+    totalLabels,
+  ).variant;
+  const canPrintLabels =
+    reception.status === "pre_captured" && totalReceived > 0;
   const progress = calculateProgress(totalReceived, totalOrdered);
   const invoicesTotal = reception.invoices.reduce((sum, inv) => sum + inv.amount, 0);
   const statusChip = getStatusChip(reception.status);
@@ -198,6 +286,16 @@ export default function RecepcionDetalle() {
               }
             >
               Editar
+            </ActionButton>
+          )}
+          {canPrintLabels && (
+            <ActionButton
+              variant="outlined"
+              color="primary"
+              onClick={handleOpenPrintLabels}
+              disabled={printProgress != null}
+            >
+              Imprimir etiquetas
             </ActionButton>
           )}
           {reception.costeo && (
@@ -349,6 +447,30 @@ export default function RecepcionDetalle() {
           )}
         </Stack>
       </ContentLayout>
+
+      <SendToCostingModal
+        open={confirmOpen}
+        onClose={() => {
+          if (printProgress == null) {
+            setConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleConfirmPrint}
+        variant={confirmVariant}
+        totalArticles={totalReceived}
+        totalLabels={totalLabels}
+        extraLabels={extraLabels}
+        loading={confirmLoading && printProgress == null}
+        printProgress={printProgress}
+        printerName={printerProfile.displayName}
+      />
+
+      <PrinterSetupDialog
+        open={printerSetupOpen}
+        onClose={() => setPrinterSetupOpen(false)}
+        onConfirm={handlePrinterSetupConfirm}
+        printerProfile={printerProfile}
+      />
     </PageContainer>
   );
 }

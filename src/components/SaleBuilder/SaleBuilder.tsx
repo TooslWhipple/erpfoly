@@ -99,6 +99,10 @@ import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSessionSummary } from "@/services/cash-register.service";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
 import type {
@@ -154,8 +158,7 @@ import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
 import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
-import {
-  getDiscountRequestReasonLabel,
+import {  getDiscountRequestReasonLabel,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
 
@@ -531,7 +534,7 @@ export function SaleBuilder({
   const principalBranchId =
     useAuthStore((s) => s.user?.principalBranchId) ?? null;
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: async () => {
       try {
         return await getSessionSummary();
@@ -1213,9 +1216,7 @@ export function SaleBuilder({
       void queryClient.invalidateQueries({
         queryKey: ["venta-detail", data.id],
       });
-      void queryClient.invalidateQueries({ queryKey: ["cash-session-summary"] });
-      void queryClient.invalidateQueries({ queryKey: ["cash-session-history"] });
-      void queryClient.invalidateQueries({ queryKey: ["pending-cashier-sales"] });
+      invalidateCashRegisterQueries(queryClient);
       void queryClient.invalidateQueries({ queryKey: ["sales"] });
       checkoutIdempotencyKeyRef.current = null;
       void router.push(`/ventas/${data.id}?nuevo=1`);

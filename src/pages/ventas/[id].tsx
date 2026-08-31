@@ -64,6 +64,10 @@ import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CASH_REGISTERS_READ } from "@/lib/permissions";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -271,7 +275,7 @@ export default function VentaDetalle() {
     fromCajas || Boolean(sale?.layaway && sale.layaway.status === "ACTIVE");
 
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
     enabled: needsCashierSession,
     retry: false,
@@ -300,6 +304,9 @@ export default function VentaDetalle() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      if (isCashRegisterReturnQuery(router.query)) {
+        invalidateCashRegisterQueries(queryClient);
+      }
       snackbar.showSuccess("Abono registrado");
       setLayawayAmount("");
     },

@@ -102,6 +102,10 @@ import {
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
 import type {
@@ -136,8 +140,7 @@ import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
 import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
-import {
-  getDiscountRequestReasonLabel,
+import {  getDiscountRequestReasonLabel,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
 
@@ -863,6 +866,7 @@ export function SaleBuilder({
       void queryClient.invalidateQueries({
         queryKey: ["venta-detail", data.id],
       });
+      invalidateCashRegisterQueries(queryClient);
       void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
@@ -1023,7 +1027,7 @@ export function SaleBuilder({
   // del cajero), no la sucursal del carrito/venta — el backend valida la
   // terminal contra esa misma sucursal (getActiveBranchId).
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
     enabled: isCheckoutView,
     staleTime: 60_000,

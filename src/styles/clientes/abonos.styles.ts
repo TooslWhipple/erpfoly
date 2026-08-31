@@ -158,6 +158,32 @@ export const InstallmentsControlDivider = styled("div")(({ theme }) => ({
   opacity: 0.25,
 }));
 
+export const InstallmentsControlInput = styled("input")(({ theme }) => ({
+  width: 48,
+  padding: theme.spacing(0.25, 0.5),
+  border: "none",
+  borderRadius: 6,
+  backgroundColor: "transparent",
+  color: "inherit",
+  fontSize: 16,
+  fontWeight: 600,
+  fontFamily: "inherit",
+  textAlign: "center",
+  MozAppearance: "textfield",
+  "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+    WebkitAppearance: "none",
+    margin: 0,
+  },
+  "&:focus": {
+    outline: `2px solid ${theme.palette.app.chip.variants.info.color}`,
+    outlineOffset: 1,
+  },
+  "&:disabled": {
+    opacity: 0.4,
+    cursor: "not-allowed",
+  },
+}));
+
 export const PaymentMethodButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ theme, active }) => ({

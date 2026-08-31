@@ -62,6 +62,10 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -265,7 +269,7 @@ export default function VentaDetalle() {
   // La sucursal desde la que se está cobrando el abono (caja activa del
   // cajero), no la sucursal original del apartado — pueden diferir.
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
     enabled: isLayawayCardPayment,
     staleTime: 60_000,
@@ -292,6 +296,9 @@ export default function VentaDetalle() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      if (isCashRegisterReturnQuery(router.query)) {
+        invalidateCashRegisterQueries(queryClient);
+      }
       snackbar.showSuccess("Abono registrado");
       setLayawayAmount("");
     },

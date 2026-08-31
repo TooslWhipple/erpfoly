@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getActiveSaleCredits,
   registerCascadePayment,
@@ -10,6 +10,10 @@ import type { CascadePaymentPayload, CascadePaymentResult } from "@/services/sal
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types";
 import { getSessionSummary } from "@/services/cash-register.service";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 import { unwrapOrThrow, get } from "@/lib/axios";
 import type {
   ClientCreditAccount,
@@ -137,6 +141,7 @@ function mapFrontendToBackendMethod(method: ClientPaymentMethod): "CASH" | "CARD
 export function useClientPayment(): UseClientPaymentResult {
   const router = useRouter();
   const { id, from, caja } = router.query;
+  const queryClient = useQueryClient();
 
   const [context, setContext] = useState<ClientPaymentContext | null>(null);
   const [creditOrder, setCreditOrder] = useState<string[]>([]);
@@ -395,7 +400,7 @@ export function useClientPayment(): UseClientPaymentResult {
   // La sucursal desde la que se está cobrando el abono en este momento
   // (caja activa del cajero), no la sucursal original de la venta a crédito.
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
     enabled: isCardPayment,
     staleTime: 60_000,
@@ -518,6 +523,10 @@ export function useClientPayment(): UseClientPaymentResult {
         receiptUrl: "",
       });
 
+      if (fromCashRegister) {
+        invalidateCashRegisterQueries(queryClient);
+      }
+
       await fetchContext();
     } catch (err) {
       console.error("[useClientPayment] Error submitting payment:", err);
@@ -532,6 +541,7 @@ export function useClientPayment(): UseClientPaymentResult {
     clientId,
     context,
     excludedCreditIds,
+    fromCashRegister,
     fullyCoveredCascadeAmount,
     isCardPayment,
     isCashDeposit,
@@ -540,6 +550,7 @@ export function useClientPayment(): UseClientPaymentResult {
     paymentAmount,
     paymentMethod,
     paymentTerminalId,
+    queryClient,
     totalOutstanding,
     fetchContext,
   ]);

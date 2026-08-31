@@ -7,5 +7,8 @@ export {
   formatClientSinceLabel,
 } from "./SharedDelinquencyClientHeader";
 export { NegotiationTab } from "./NegotiationTab";
+export { GeneralInformationTab } from "./GeneralInformationTab";
+export { ClientAddressTab } from "./ClientAddressTab";
+export { GuarantorReadOnlyTab } from "./GuarantorReadOnlyTab";
 export { AccessAvatars } from "./AccessAvatars";
 

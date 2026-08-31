@@ -20,6 +20,9 @@ import type { SharedDelinquencyClientDetail } from "@/types/delinquency-shared-l
 import type { ClientStatus } from "@/types/clientes.types";
 import { SharedDelinquencyClientHeader, formatClientSinceLabel } from "./SharedDelinquencyClientHeader";
 import { NegotiationTab } from "./NegotiationTab";
+import { GeneralInformationTab } from "./GeneralInformationTab";
+import { ClientAddressTab } from "./ClientAddressTab";
+import { GuarantorReadOnlyTab } from "./GuarantorReadOnlyTab";
 
 const STATUS_LABELS: Record<ClientStatus, string> = {
   active: "Activo",
@@ -189,12 +192,20 @@ export function SharedDelinquencyClientModal({
   });
 
   const tabs = useMemo(() => {
+    const infoTabs = [
+      { value: "informacion-general", label: "Información general" },
+      { value: "direccion", label: "Dirección" },
+      { value: "aval", label: "Aval" },
+    ];
+
     if (mode === "public") {
-      return [{ value: "negociacion", label: "Negociación" }];
+      return [{ value: "negociacion", label: "Negociación" }, ...infoTabs];
     }
+
     return [
       { value: "actividad", label: "Actividad" },
       { value: "negociacion", label: "Negociación" },
+      ...infoTabs,
     ];
   }, [mode]);
 
@@ -266,6 +277,21 @@ export function SharedDelinquencyClientModal({
                     mode === "internal" ? handleApplyNegotiation : undefined
                   }
                 />
+              }
+
+              {
+                activeTab === "informacion-general" &&
+                <GeneralInformationTab basicInformation={client.basicInformation} />
+              }
+
+              {
+                activeTab === "direccion" &&
+                <ClientAddressTab address={client.address} />
+              }
+
+              {
+                activeTab === "aval" &&
+                <GuarantorReadOnlyTab guarantor={client.guarantor} />
               }
             </Stack>
       }

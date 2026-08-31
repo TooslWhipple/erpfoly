@@ -53,6 +53,7 @@ export interface Client {
   email: string | null;
   status: string | null;
   creditStatus: ClientCreditStatus | null;
+  creditAvailable?: number | null;
   addresses: ClientAddressItem[];
   primaryAddressFormatted: string | null;
   rfc?: string | null;

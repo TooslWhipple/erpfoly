@@ -49,11 +49,20 @@ function sanitizeAmountInput(value: string): string {
     : val;
 }
 
+export const SHOW_CARD_REFERENCE = false;
+const MAX_EXTRA_CARDS = 1;
+
+export interface ExtraCardTender {
+  amount: string;
+}
+
 export interface SaleCheckoutPaymentPanelProps {
   cashAmount: string;
   cardAmount: string;
   onCashAmountChange: (value: string) => void;
   onCardAmountChange: (value: string) => void;
+  extraCards: ExtraCardTender[];
+  onExtraCardsChange: (value: ExtraCardTender[]) => void;
   isCardPayment: boolean;
   exceedsCashLimit: boolean;
   cashLimitErrorMessage: string;
@@ -76,6 +85,8 @@ export function SaleCheckoutPaymentPanel({
   cardAmount,
   onCashAmountChange,
   onCardAmountChange,
+  extraCards,
+  onExtraCardsChange,
   isCardPayment,
   exceedsCashLimit,
   cashLimitErrorMessage,
@@ -252,7 +263,9 @@ export function SaleCheckoutPaymentPanel({
         title={
           showNoTerminalsWarning
             ? "Esta sucursal no tiene terminales activas"
-            : "El cobro con varias tarjetas aún no está disponible"
+            : extraCards.length >= MAX_EXTRA_CARDS
+              ? "Máximo dos tarjetas (la principal y una adicional)"
+              : "Divide el cobro en una segunda tarjeta. Usa la misma terminal."
         }
       >
         <Box component="span" sx={{ alignSelf: "flex-start", display: "inline-flex" }}>
@@ -260,13 +273,56 @@ export function SaleCheckoutPaymentPanel({
             variant="text"
             size="small"
             startIcon={<PlusCircle size={16} />}
-            disabled
+            disabled={
+              showNoTerminalsWarning ||
+              cardPaymentDisabled ||
+              extraCards.length >= MAX_EXTRA_CARDS
+            }
+            onClick={() => {
+              if (extraCards.length >= MAX_EXTRA_CARDS) return;
+              onExtraCardsChange([...extraCards, { amount: "" }]);
+            }}
             sx={{ px: 1.5 }}
           >
             Agregar otra tarjeta
           </Button>
         </Box>
       </Tooltip>
+
+      {extraCards.slice(0, MAX_EXTRA_CARDS).map((card, index) => (
+        <Stack key={index} spacing={1} sx={{ pl: 1 }}>
+          <PaymentMethodRow>
+            <Typography variant="body2">Tarjeta 2</Typography>
+            <PaymentAmountInput
+              value={card.amount ? formatNumberInput(card.amount) : ""}
+              onChange={(e) => {
+                const next = [...extraCards];
+                next[index] = {
+                  amount: sanitizeAmountInput(e.target.value),
+                };
+                onExtraCardsChange(next);
+              }}
+              placeholder="0.00"
+              startAdornment={
+                <InputAdornment position="start">$</InputAdornment>
+              }
+            />
+          </PaymentMethodRow>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() =>
+              onExtraCardsChange(extraCards.filter((_, i) => i !== index))
+            }
+            sx={{ alignSelf: "flex-start", px: 1.5 }}
+          >
+            Quitar
+          </Button>
+          {SHOW_CARD_REFERENCE ? (
+            <PaymentAmountInput placeholder="Referencia (opcional)" />
+          ) : null}
+        </Stack>
+      ))}
 
       {exceedsCashLimit && (
         <PaymentErrorBanner>{cashLimitErrorMessage}</PaymentErrorBanner>

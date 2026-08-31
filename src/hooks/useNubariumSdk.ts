@@ -108,7 +108,6 @@ export function useNubariumSdk(options: UseNubariumSdkOptions = {}): UseNubarium
     const bootstrap = async () => {
       setIsLoading(true);
       setError(null);
-      setIsReady(false);
 
       try {
         await loadNubariumScripts();
@@ -140,10 +139,15 @@ export function useNubariumSdk(options: UseNubariumSdkOptions = {}): UseNubarium
       }
     };
 
-    void bootstrap();
+    // Skip React Strict Mode's discarded first effect so we don't fetch two
+    // tokens and remount FaceCapture (looks like the camera restarted).
+    const startTimer = window.setTimeout(() => {
+      void bootstrap();
+    }, 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
     };
   }, [enabled, tokenTtlSeconds]);
 

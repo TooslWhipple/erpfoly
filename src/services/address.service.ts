@@ -31,16 +31,32 @@ export async function getHousingTypes(): Promise<HousingTypeCatalogItem[]> {
 export interface CreateAddressPayload {
   neighborhoodFullCode: string;
   street: string;
-  externalNumber?: string;
+  externalNumber: string;
   internalNumber?: string;
   postalCode?: string;
   latitude?: number;
   longitude?: number;
 }
 
+export interface CreatedAddress {
+  id: number;
+  latitude: number;
+  longitude: number;
+}
+
+export async function previewAddressGeocode(
+  payload: CreateAddressPayload
+): Promise<{ latitude: number; longitude: number }> {
+  const result = await post<{ latitude: number; longitude: number }>(
+    "/addresses/geocode-preview",
+    payload
+  );
+  return unwrapOrThrow(result);
+}
+
 export async function createAddress(
   payload: CreateAddressPayload
-): Promise<{ id: number }> {
-  const result = await post<{ id: number }>("/addresses", payload);
+): Promise<CreatedAddress> {
+  const result = await post<CreatedAddress>("/addresses", payload);
   return unwrapOrThrow(result);
 }

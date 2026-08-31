@@ -101,7 +101,9 @@ export default function Cajas() {
       (m) => m.movement_type === CashMovementType.WITHDRAWAL,
     );
     const payments = movements.filter(
-      (m) => m.movement_type === CashMovementType.PAYMENT,
+      (m) =>
+        m.movement_type === CashMovementType.PAYMENT ||
+        m.movement_type === CashMovementType.SALE,
     );
     const partialCuts = movements.filter(
       (m) => m.movement_type === CashMovementType.PARTIAL_CUT,

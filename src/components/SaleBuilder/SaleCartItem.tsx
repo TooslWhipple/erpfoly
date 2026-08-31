@@ -9,6 +9,7 @@ import {
   PriceField,
   PriceSummaryRow,
 } from "./styles";
+import { lineTotal } from "@/utils/saleCartPricing";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -60,7 +61,9 @@ export interface SaleCartItemProps {
   item: CartItem;
   isLayaway: boolean;
   isCajeroMode: boolean;
-  currentBranchId: number;
+  currentBranchId: number | null;
+  /** Techo de cantidad: existencia viva de las fuentes elegidas. */
+  qtyMax?: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
 }
@@ -70,6 +73,7 @@ export function SaleCartItemRow({
   isLayaway,
   isCajeroMode,
   currentBranchId,
+  qtyMax,
   onRemove,
   onQtyChange,
 }: SaleCartItemProps) {
@@ -77,7 +81,9 @@ export function SaleCartItemRow({
     (s) => s.sourceType === "branch" && s.quantity > 0,
   );
   const showBranchChip =
-    branchSrc != null && branchSrc.branchId !== currentBranchId;
+    currentBranchId != null &&
+    branchSrc != null &&
+    branchSrc.branchId !== currentBranchId;
 
   return (
     <CartItemCard>
@@ -166,21 +172,7 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
-                max={
-                  item.sources.length === 0
-                    ? undefined
-                    : item.sources
-                        .filter((src) => src.quantity > 0)
-                        .reduce(
-                          (sum, src) =>
-                            sum +
-                            src.available +
-                            (src.sourceType === "warehouse"
-                              ? (src.pendingOrdered ?? 0)
-                              : 0),
-                          0,
-                        )
-                }
+                max={qtyMax ?? item.quantity}
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}
@@ -209,7 +201,7 @@ export function SaleCartItemRow({
                 Total
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {formatCurrency(item.unitPrice * item.quantity)}
+                {formatCurrency(lineTotal(item))}
               </Typography>
             </PriceField>
           </PriceSummaryRow>

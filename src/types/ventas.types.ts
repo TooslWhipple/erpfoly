@@ -102,8 +102,10 @@ export interface SaleDetailItem {
   quantity: number;
   backorderedQuantity: number;
   unitPrice: number;
+  listPrice?: number;
   discountAmount: number;
   totalAmount: number;
+  inventorySources: InventorySource[];
   product: {
     id: number;
     code: string;
@@ -188,9 +190,14 @@ export interface SaleDetail {
   status: string;
   subtotal: number;
   discountAmount: number;
+  shippingAmount?: number;
+  shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
+  economicRevision?: number;
   loyaltyPointsValue: number;
   purchaseType: string | null;
+  identityVerifiedAt?: string | null;
+  identityVerificationAuthorizedBy?: number | null;
   layawayTermId?: number | null;
   createdAt: string;
   branchId?: number | null;
@@ -200,7 +207,10 @@ export interface SaleDetail {
   deliveryType?: string | null;
   deliveryBranchId?: number | null;
   deliveryBranchName?: string | null;
+  deliveryAddressId?: number | null;
   deliveryAddressFormatted?: string | null;
+  deliveryAddressLatitude?: string | null;
+  deliveryAddressLongitude?: string | null;
   client: SaleDetailClient | null;
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];

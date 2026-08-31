@@ -17,6 +17,7 @@ export interface TitleAction {
   permission?: string;
   disabled?: boolean;
   loading?: boolean;
+  size?: "small" | "medium" | "large";
 }
 
 interface TitleProps {
@@ -76,6 +77,7 @@ export function Title({ title, description, actions }: TitleProps) {
               loading={action.loading}
               onClick={() => handleAction(action)}
               startIcon={action.icon}
+              size={action.size}
             >
               {action.label}
             </Button>

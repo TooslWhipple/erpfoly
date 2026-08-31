@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,7 +21,7 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  TextField,
+  Skeleton,
 } from "@mui/material";
 import {
   ScanLine,
@@ -82,25 +82,22 @@ import {
   addSaleItem,
   updateSaleItem,
   removeSaleItem,
-  registerSalePayment,
-  confirmSalePayment,
+  checkoutSale,
   confirmCreditSale,
   createLayaway,
   registerSale,
   setDeliveryDate,
+  quoteShipping,
+  previewShippingQuote,
+  previewCartPrices,
   getSaleDetail,
   invalidateSaleDiscount,
-  verifySaleIdentity,
-  validateSupervisor,
-  skipSaleIdentityVerification,
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
-import {
-  NubariumFaceCapture,
-  type NubariumFaceCaptureResult,
-} from "@/components/NubariumFaceCapture";
-import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import type { ShippingQuote } from "@/services/ventas.service";
+import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
+import { useAuthStore } from "@/store/useAuthStore";
 import { getSessionSummary } from "@/services/cash-register.service";
 import {
   CASH_REGISTER_SESSION_SUMMARY_KEY,
@@ -110,11 +107,14 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClients } from "@/services/clients.service";
 import type {
   CartItem,
+  InventorySource,
   NewSaleView,
   ProductSearchResult,
+  SalePaymentType,
 } from "@/types/ventas.types";
 import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAsyncEffect } from "@/hooks/useAsyncEffect";
 import { SideModal } from "@/components/SideModal/SideModal";
 import { TableCrud } from "@/components/TableCrud";
 import { CreateCashClientModal } from "@/components/CreateCashClientModal";
@@ -124,6 +124,7 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import type { DeliveryAddressSelection } from "@/components/DeliveryAddressModal";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
@@ -131,9 +132,26 @@ import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
 import {
   backorderedFromSources,
+  hydratedLineQtyMax,
+  overlayLiveInventoryOnSources,
+  sellableCeilingForHydratedLine,
+  reallocInventorySources,
   sellableMaxFromPickedSources,
   sourceSellableMax,
+  toInventorySourcesPayload,
 } from "@/utils/saleCartCoverage";
+import {
+  cartLineDiscounts,
+  cartListSubtotal,
+  lineTotal,
+  merchandiseTotal,
+  patchCartLinePrices,
+} from "@/utils/saleCartPricing";
+import {
+  allocateCheckoutTenders,
+  cashChangeDue,
+} from "@/utils/saleCheckoutTenders";
+import { roundToCents } from "@/utils/number";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -144,6 +162,26 @@ import {  getDiscountRequestReasonLabel,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
 
+const PT_MAP: Record<string, string[]> = {
+  CASH: ["CONTADO", "CASH", "EFECTIVO"],
+  CREDIT: ["CREDITO", "CREDIT", "CRÉDITO"],
+  LAYAWAY: ["APARTADO", "LAYAWAY", "APART"],
+};
+
+function resolvePurchaseTypeId(
+  paymentType: string,
+  types: Array<{ id: number; code: string }>,
+): number | null {
+  const keywords = PT_MAP[paymentType] ?? [];
+  return (
+    types.find((type) =>
+      keywords.some((keyword) => type.code.toUpperCase().includes(keyword)),
+    )?.id ??
+    types[0]?.id ??
+    null
+  );
+}
+
 const SEARCH_DEBOUNCE_MS = 350;
 
 /** Max cash payment allowed for cash (contado) sales. */
@@ -153,8 +191,36 @@ const MAX_CASH_SALE_PAYMENT_MESSAGE =
 
 const GOOGLE_MAPS_API_KEY = googleMapsBrowserApiKey;
 
-// TODO: Obtener branch real de la sesion de caja activa
-const CURRENT_BRANCH_ID = 2;
+const STOCK_SHORTAGE_MESSAGE =
+  "No hay existencia ni mercancía por surtir suficientes para esa cantidad.";
+
+type PendingDiscountMutation =
+  | { kind: "qty"; productId: number; delta: number }
+  | { kind: "remove"; productId: number }
+  | { kind: "add" }
+  | { kind: "paymentType"; value: SalePaymentType };
+
+function qtyMaxForCartItem(
+  item: CartItem,
+  liveByProduct: Record<number, InventorySource[]> | undefined,
+  coverageBranchId: number | null,
+): number {
+  const live = liveByProduct?.[item.productId];
+  const sources = overlayLiveInventoryOnSources(item.sources, live);
+  if (sources.length > 0) {
+    return hydratedLineQtyMax(
+      item.quantity,
+      sellableMaxFromPickedSources(sources),
+    );
+  }
+  if (live && coverageBranchId != null) {
+    return hydratedLineQtyMax(
+      item.quantity,
+      sellableCeilingForHydratedLine(live, coverageBranchId),
+    );
+  }
+  return item.quantity;
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -247,6 +313,53 @@ function DeliveryMapPreview({
   );
 }
 
+function SaleBuilderResumeSkeleton({ onExit }: { onExit: () => void }) {
+  return (
+    <PageShell aria-busy="true" aria-label="Cargando cotización">
+      <PageHeader>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          minWidth={0}
+          flex="1 1 auto"
+        >
+          <InlineMobileMenuButton />
+          <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+            <X size={18} />
+          </IconButton>
+          <Skeleton variant="text" width={220} height={36} />
+        </Stack>
+        <Stack direction="row" spacing={1} flexShrink={0}>
+          <Skeleton variant="rounded" width={160} height={36} />
+          <Skeleton variant="rounded" width={140} height={36} />
+        </Stack>
+      </PageHeader>
+      <MainGrid>
+        <Stack spacing={2}>
+          <Card>
+            <Skeleton variant="text" width={120} height={28} sx={{ mb: 2 }} />
+            <Stack spacing={1.5}>
+              <Skeleton variant="rounded" height={96} />
+              <Skeleton variant="rounded" height={96} />
+            </Stack>
+          </Card>
+        </Stack>
+        <StickySidebar>
+          <SidebarCard>
+            <Skeleton variant="text" width={110} height={24} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rounded" height={40} />
+          </SidebarCard>
+          <SidebarCard>
+            <Skeleton variant="text" width={80} height={24} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rounded" height={72} />
+          </SidebarCard>
+        </StickySidebar>
+      </MainGrid>
+    </PageShell>
+  );
+}
+
 export interface SaleBuilderProps {
   resumeSaleId: number | null;
   onExit: () => void;
@@ -256,34 +369,37 @@ export interface SaleBuilderProps {
    * cobre). Apartado es la excepción: sigue el flujo actual completo
    * (captura enganche/plazo) sin pasar por PENDING_CASHIER — ver plan
    * "Dudas resueltas, tarea SaleBuilder.tsx".
-   * 'cajero': el carrito queda bloqueado (solo lectura); solo la sección
-   * de cobro (biometría + pago) es interactiva.
+   * 'cajero': el carrito queda bloqueado (solo lectura). Contado/apartado
+   * van al cobro; crédito exige biometría (o skip de supervisor) antes.
    */
   mode?: "vendedor" | "cajero";
+  /** Next.js aún no resolvió el id de la ruta; no pintar el flujo de nueva venta. */
+  resumeRoutePending?: boolean;
 }
 
 export function SaleBuilder({
   resumeSaleId,
   onExit,
   mode = "vendedor",
+  resumeRoutePending = false,
 }: SaleBuilderProps) {
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [discountRequestModalOpen, setDiscountRequestModalOpen] =
     useState(false);
+  const [pendingDiscountMutation, setPendingDiscountMutation] =
+    useState<PendingDiscountMutation | null>(null);
+  const [discountInvalidateLoading, setDiscountInvalidateLoading] =
+    useState(false);
+  const saleOperationLockRef = useRef(false);
+  const checkoutIdempotencyKeyRef = useRef<string | null>(null);
 
   const [activeSaleId, setActiveSaleId] = useState<number | null>(null);
   const [activeSaleFolio, setActiveSaleFolio] = useState<string | null>(null);
   const [originalItemIds, setOriginalItemIds] = useState<Set<number>>(
     new Set(),
   );
-  // Snapshot productId -> quantity al retomar la venta, usado para detectar
-  // si quitar/reducir un artículo debe invalidar un descuento especial ya
-  // aprobado (agregar artículos nuevos no invalida).
-  const [originalQuantities, setOriginalQuantities] = useState<
-    Map<number, number>
-  >(new Map());
   const [hydratedSaleId, setHydratedSaleId] = useState<number | null>(null);
   const [hydratedClientForSaleId, setHydratedClientForSaleId] = useState<
     number | null
@@ -312,10 +428,13 @@ export function SaleBuilder({
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const [useCustomDeliveryAddress, setUseCustomDeliveryAddress] =
     useState(false);
-  const [customDeliveryAddress, setCustomDeliveryAddress] = useState<{
-    id: number;
-    formatted: string;
-  } | null>(null);
+  const [customDeliveryAddress, setCustomDeliveryAddress] =
+    useState<DeliveryAddressSelection | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(
+    null,
+  );
+  const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
+  const lastPatchedPurchaseTypeRef = useRef<number | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -329,18 +448,12 @@ export function SaleBuilder({
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [cardAmount, setCardAmount] = useState("");
+  const [extraCards, setExtraCards] = useState<Array<{ amount: string }>>(
+    [],
+  );
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
-  const [identityCaptureResult, setIdentityCaptureResult] =
-    useState<NubariumFaceCaptureResult | null>(null);
-  const [identityCaptureSessionKey, setIdentityCaptureSessionKey] =
-    useState(0);
-  const [skipIdentityModalOpen, setSkipIdentityModalOpen] = useState(false);
-  const [skipIdentityReason, setSkipIdentityReason] = useState("");
-  const [skipIdentitySupervisorUsername, setSkipIdentitySupervisorUsername] =
-    useState("");
-  const [skipIdentitySupervisorPassword, setSkipIdentitySupervisorPassword] =
-    useState("");
+  const [identityOk, setIdentityOk] = useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -356,12 +469,28 @@ export function SaleBuilder({
     const primary =
       selectedClient.addresses.find((a) => a.isPrimary) ??
       selectedClient.addresses[0];
-    if (!primary?.latitude || !primary?.longitude) return null;
+    if (primary?.latitude == null || primary.longitude == null) return null;
     const lat = Number(primary.latitude);
     const lng = Number(primary.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
   }, [selectedClient]);
+
+  const deliveryCoords = useMemo(() => {
+    if (!useCustomDeliveryAddress || !customDeliveryAddress) {
+      return primaryCoords;
+    }
+    if (
+      customDeliveryAddress.latitude == null ||
+      customDeliveryAddress.longitude == null
+    ) {
+      return null;
+    }
+    return {
+      lat: customDeliveryAddress.latitude,
+      lng: customDeliveryAddress.longitude,
+    };
+  }, [customDeliveryAddress, primaryCoords, useCustomDeliveryAddress]);
 
   const todayIsoDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
@@ -402,15 +531,54 @@ export function SaleBuilder({
     },
   });
 
-  const { data: productDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ["product-detail", selectedProductId, showOtherBranches],
-    enabled: view === "product-detail" && selectedProductId !== null,
+  const principalBranchId =
+    useAuthStore((s) => s.user?.principalBranchId) ?? null;
+  const activeSessionQuery = useQuery({
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: async () => {
-      if (!selectedProductId) return null;
+      try {
+        return await getSessionSummary();
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+  const workingBranchId =
+    activeSessionQuery.data?.branch_id ?? principalBranchId ?? null;
+
+  const { data: purchaseTypesRes } = useQuery({
+    queryKey: ["purchase-types"],
+    queryFn: async () => {
+      const res = await getPurchaseTypes();
+      if (res.error) throw new Error(res.error.message);
+      return res.data ?? [];
+    },
+    staleTime: Infinity,
+  });
+  const purchaseTypes = purchaseTypesRes ?? [];
+  const purchaseTypeId = resolvePurchaseTypeId(paymentType, purchaseTypes);
+
+  const { data: productDetail, isLoading: detailLoading } = useQuery({
+    queryKey: [
+      "product-detail",
+      selectedProductId,
+      showOtherBranches,
+      workingBranchId,
+      purchaseTypeId,
+    ],
+    enabled:
+      view === "product-detail" &&
+      selectedProductId !== null &&
+      workingBranchId != null,
+    queryFn: async () => {
+      if (!selectedProductId || workingBranchId == null) return null;
       const result = await getProductDetail(
         selectedProductId,
-        CURRENT_BRANCH_ID,
+        workingBranchId,
         showOtherBranches,
+        purchaseTypeId ?? undefined,
       );
       if (result.error) throw new Error(result.error.message);
       return result.data ?? null;
@@ -455,17 +623,6 @@ export function SaleBuilder({
     await router.push(`/solicitudes-credito/${result.id}`);
   };
 
-  const { data: purchaseTypesRes } = useQuery({
-    queryKey: ["purchase-types"],
-    queryFn: async () => {
-      const res = await getPurchaseTypes();
-      if (res.error) throw new Error(res.error.message);
-      return res.data ?? [];
-    },
-    staleTime: Infinity,
-  });
-  const purchaseTypes = purchaseTypesRes ?? [];
-
   const { data: layawayTermsRes } = useQuery({
     queryKey: ["layaway-terms"],
     queryFn: async () => {
@@ -484,13 +641,7 @@ export function SaleBuilder({
     layawayTerms[0] ??
     null;
 
-  const PT_MAP: Record<string, string[]> = {
-    CASH: ["CONTADO", "CASH", "EFECTIVO"],
-    CREDIT: ["CREDITO", "CREDIT", "CRÉDITO"],
-    LAYAWAY: ["APARTADO", "LAYAWAY", "APART"],
-  };
-
-  const { data: resumeSaleData } = useQuery({
+  const { data: resumeSaleData, isError: resumeSaleError } = useQuery({
     queryKey: ["resume-sale-draft", resumeSaleId],
     enabled: resumeSaleId !== null && !Number.isNaN(resumeSaleId),
     queryFn: async () => {
@@ -506,6 +657,12 @@ export function SaleBuilder({
     mode === "cajero" ||
     resumeSaleData?.status === "PENDING_CASHIER" ||
     resumeSaleData?.status === "PENDING_PAYMENT";
+
+  const currentBranchId =
+    workingBranchId ?? resumeSaleData?.branchId ?? null;
+  const coverageBranchId = resumeSaleData?.branchId ?? currentBranchId;
+  const branchUnresolved =
+    !activeSessionQuery.isLoading && currentBranchId == null;
 
   const resumeClientId = resumeSaleData?.client?.id ?? null;
   const { data: resumeClientData } = useQuery({
@@ -529,9 +686,6 @@ export function SaleBuilder({
     setActiveSaleId(resumeSaleData.id);
     setActiveSaleFolio(resumeSaleData.folio);
     setOriginalItemIds(new Set(resumeSaleData.items.map((item) => item.id)));
-    setOriginalQuantities(
-      new Map(resumeSaleData.items.map((item) => [item.product.id, item.quantity])),
-    );
 
     setCart(
       resumeSaleData.items.map((item) => ({
@@ -540,22 +694,29 @@ export function SaleBuilder({
         productName: item.product.name,
         brandName: null,
         imageUrl: item.product.imageUrl,
-        originalPrice: item.unitPrice,
+        originalPrice: item.listPrice ?? item.unitPrice,
         discountAmount: item.discountAmount,
-        unitPrice: item.unitPrice,
+        unitPrice:
+          item.quantity > 0
+            ? item.totalAmount / item.quantity
+            : item.unitPrice,
         quantity: item.quantity,
-        sources: [],
+        sources: item.inventorySources,
         saleItemId: item.id,
         backorderedQuantity: item.backorderedQuantity,
       })),
     );
 
+    let nextPaymentType: "CREDIT" | "CASH" | "LAYAWAY" = "CREDIT";
     if (resumeSaleData.purchaseType) {
       const upper = resumeSaleData.purchaseType.toUpperCase();
       const matched = Object.entries(PT_MAP).find(([, keywords]) =>
         keywords.some((k) => upper.includes(k)),
       );
-      if (matched) setPaymentType(matched[0] as "CREDIT" | "CASH" | "LAYAWAY");
+      if (matched) {
+        nextPaymentType = matched[0] as "CREDIT" | "CASH" | "LAYAWAY";
+        setPaymentType(nextPaymentType);
+      }
     }
 
     if (resumeSaleData.layawayTermId != null) {
@@ -564,8 +725,38 @@ export function SaleBuilder({
 
     if (resumeSaleData.deliveryType === "ADDRESS") {
       setDeliveryType("delivery");
+      const deliveryAddressId = resumeSaleData.deliveryAddressId;
+      const isCustomAddress =
+        deliveryAddressId != null &&
+        deliveryAddressId !== resumeSaleData.client?.primaryAddress?.id;
+      if (isCustomAddress) {
+        const latitude =
+          resumeSaleData.deliveryAddressLatitude != null
+            ? Number(resumeSaleData.deliveryAddressLatitude)
+            : null;
+        const longitude =
+          resumeSaleData.deliveryAddressLongitude != null
+            ? Number(resumeSaleData.deliveryAddressLongitude)
+            : null;
+        setCustomDeliveryAddress({
+          id: deliveryAddressId,
+          formatted:
+            resumeSaleData.deliveryAddressFormatted ??
+            "Dirección de entrega personalizada",
+          latitude:
+            latitude != null && Number.isFinite(latitude) ? latitude : null,
+          longitude:
+            longitude != null && Number.isFinite(longitude) ? longitude : null,
+        });
+        setUseCustomDeliveryAddress(true);
+      } else {
+        setCustomDeliveryAddress(null);
+        setUseCustomDeliveryAddress(false);
+      }
     } else if (resumeSaleData.deliveryType === "BRANCH") {
       setDeliveryType("pickup");
+      setCustomDeliveryAddress(null);
+      setUseCustomDeliveryAddress(false);
       if (resumeSaleData.deliveryBranchId != null) {
         setDeliveryBranch({
           id: resumeSaleData.deliveryBranchId,
@@ -573,6 +764,21 @@ export function SaleBuilder({
         });
         setDeliveryBranchOverridden(true);
       }
+    } else {
+      setDeliveryType(null);
+      setCustomDeliveryAddress(null);
+      setUseCustomDeliveryAddress(false);
+    }
+
+    if (resumeSaleData.shippingCoverage) {
+      setShippingQuote({
+        amount: resumeSaleData.shippingAmount ?? null,
+        zoneId: null,
+        zoneName: null,
+        inZone: resumeSaleData.shippingCoverage === "IN_ZONE",
+        coverage: resumeSaleData.shippingCoverage,
+        economicRevision: resumeSaleData.economicRevision,
+      });
     }
 
     const hydratedDeliveryDate = toCheckoutDate(resumeSaleData.deliveryDate);
@@ -580,7 +786,12 @@ export function SaleBuilder({
       setCheckoutDeliveryDate(hydratedDeliveryDate);
     }
 
-    if (isCajeroMode) {
+    const nextIdentityOk =
+      Boolean(resumeSaleData.identityVerifiedAt) ||
+      Boolean(resumeSaleData.identityVerificationAuthorizedBy);
+    setIdentityOk(nextIdentityOk);
+
+    if (isCajeroMode && (nextPaymentType !== "CREDIT" || nextIdentityOk)) {
       setView("checkout");
     }
   }
@@ -595,6 +806,10 @@ export function SaleBuilder({
     if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
       setPaymentType("CASH");
     }
+  }
+
+  if (view === "checkout" && paymentType === "CREDIT" && !identityOk) {
+    setView("form");
   }
 
   const syncDeliverySelection = async (saleId: number) => {
@@ -616,6 +831,11 @@ export function SaleBuilder({
           address_id: addressId,
           ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
+        const quote = await quoteShipping(saleId, {
+          address_id: addressId,
+          dispatch_branch_id: coverageBranchId ?? undefined,
+        });
+        setShippingQuote(quote);
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
       await setDeliveryDate(saleId, {
@@ -623,6 +843,7 @@ export function SaleBuilder({
         branch_id: effectiveDeliveryBranch.id,
         ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
       });
+      setShippingQuote(null);
     }
   };
 
@@ -641,8 +862,14 @@ export function SaleBuilder({
     let folio: string;
 
     if (activeSaleId === null) {
+      // Sale ownership stays with the operating branch. Inventory sources are
+      // persisted per item and may belong to another branch.
+      const draftBranchId = currentBranchId;
+      if (draftBranchId == null) {
+        throw new Error("No se pudo determinar tu sucursal");
+      }
       const draftRes = await createSaleDraft({
-        branch_id: lockedBranch?.id ?? CURRENT_BRANCH_ID,
+        branch_id: draftBranchId,
         purchase_type_id: pt.id,
         client_id: selectedClient?.id,
         origin: "STORE",
@@ -651,26 +878,40 @@ export function SaleBuilder({
       saleId = draftRes.data!.id;
       folio = draftRes.data!.folio;
 
+      const createdIds: Array<{ productId: number; saleItemId: number }> = [];
       for (const item of cart) {
+        const inventorySources = toInventorySourcesPayload(item.sources);
         const itemRes = await addSaleItem(saleId, {
           product_id: item.productId,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
-          discount_amount:
-            item.discountAmount > 0 ? item.discountAmount : undefined,
+          ...(inventorySources.length > 0
+            ? { inventory_sources: inventorySources }
+            : {}),
         });
         if (itemRes.error) throw new Error(itemRes.error.message);
+        if (itemRes.data?.id != null) {
+          createdIds.push({
+            productId: item.productId,
+            saleItemId: itemRes.data.id,
+          });
+        }
       }
 
       setActiveSaleId(saleId);
       setActiveSaleFolio(folio);
-      setOriginalItemIds(
-        new Set(
-          cart
-            .filter((item) => item.saleItemId)
-            .map((item) => item.saleItemId!),
-        ),
-      );
+      setOriginalItemIds(new Set(createdIds.map((row) => row.saleItemId)));
+      if (createdIds.length > 0) {
+        setCart((prev) =>
+          prev.map((item) => {
+            const created = createdIds.find(
+              (row) => row.productId === item.productId,
+            );
+            return created
+              ? { ...item, saleItemId: created.saleItemId }
+              : item;
+          }),
+        );
+      }
     } else {
       saleId = activeSaleId;
       folio = activeSaleFolio ?? "";
@@ -694,32 +935,59 @@ export function SaleBuilder({
         for (const originalId of originalItemIds) {
           if (!currentIds.has(originalId)) {
             const removeRes = await removeSaleItem(saleId, originalId);
-            if (removeRes.error) throw new Error(removeRes.error.message);
+            if (
+              removeRes.error &&
+              !/no encontrado/i.test(removeRes.error.message)
+            ) {
+              throw new Error(removeRes.error.message);
+            }
           }
         }
 
+        const addedIds: Array<{ productId: number; saleItemId: number }> = [];
         for (const item of cart) {
+          const inventorySources = toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
             const updateRes = await updateSaleItem(saleId, item.saleItemId, {
               quantity: item.quantity,
-              unit_price: item.unitPrice,
-              discount_amount:
-                item.discountAmount > 0 ? item.discountAmount : undefined,
+              ...(inventorySources.length > 0
+                ? { inventory_sources: inventorySources }
+                : {}),
             });
             if (updateRes.error) throw new Error(updateRes.error.message);
           } else {
             const itemRes = await addSaleItem(saleId, {
               product_id: item.productId,
               quantity: item.quantity,
-              unit_price: item.unitPrice,
-              discount_amount:
-                item.discountAmount > 0 ? item.discountAmount : undefined,
+              ...(inventorySources.length > 0
+                ? { inventory_sources: inventorySources }
+                : {}),
             });
             if (itemRes.error) throw new Error(itemRes.error.message);
+            if (itemRes.data?.id != null) {
+              addedIds.push({
+                productId: item.productId,
+                saleItemId: itemRes.data.id,
+              });
+            }
           }
         }
 
-        setOriginalItemIds(currentIds);
+        const nextIds = new Set(currentIds);
+        for (const added of addedIds) nextIds.add(added.saleItemId);
+        setOriginalItemIds(nextIds);
+        if (addedIds.length > 0) {
+          setCart((prev) =>
+            prev.map((item) => {
+              const added = addedIds.find(
+                (row) => row.productId === item.productId,
+              );
+              return added
+                ? { ...item, saleItemId: added.saleItemId }
+                : item;
+            }),
+          );
+        }
       }
     }
 
@@ -728,7 +996,10 @@ export function SaleBuilder({
       if (termRes.error) throw new Error(termRes.error.message);
     }
 
-    await syncDeliverySelection(saleId);
+    // Cajero cobra el ticket ya registrado: envío y entrega no se recotizan.
+    if (!isCajeroMode) {
+      await syncDeliverySelection(saleId);
+    }
     return { id: saleId, folio };
   };
 
@@ -798,27 +1069,93 @@ export function SaleBuilder({
         if (!addressId) {
           throw new Error("Falta la dirección de entrega");
         }
-        await setDeliveryDate(saleId, {
-          delivery_type: "ADDRESS",
-          address_id: addressId,
-          delivery_date: checkoutDeliveryDate ?? undefined,
-        });
+        if (!isCajeroMode) {
+          await setDeliveryDate(saleId, {
+            delivery_type: "ADDRESS",
+            address_id: addressId,
+            delivery_date: checkoutDeliveryDate ?? undefined,
+          });
+        }
       } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-        await setDeliveryDate(saleId, {
-          delivery_type: "BRANCH",
-          branch_id: effectiveDeliveryBranch.id,
-          delivery_date: effectivePickupDate || checkoutDeliveryDate || undefined,
-        });
+        if (!isCajeroMode) {
+          await setDeliveryDate(saleId, {
+            delivery_type: "BRANCH",
+            branch_id: effectiveDeliveryBranch.id,
+            delivery_date:
+              effectivePickupDate || checkoutDeliveryDate || undefined,
+          });
+        }
       }
 
+      const extraCardTenders = extraCards
+        .slice(0, 1)
+        .map((card) => ({
+          amount: parseFloat(card.amount.replace(/[^0-9.]/g, "")) || 0,
+        }))
+        .filter((card) => card.amount > 0);
+
+      const tenderDue =
+        paymentType === "CREDIT"
+          ? enganche
+          : paymentType === "LAYAWAY"
+            ? cashAmtNum + cardAmtNum + extraCardAmtNum
+            : totalFinal;
+      const allocatedTenders = allocateCheckoutTenders({
+        due: tenderDue,
+        cashReceived: cashAmtNum,
+        cards: [
+          ...(cardAmtNum > 0
+            ? [
+                {
+                  amount: cardAmtNum,
+                  payment_terminal_id: selectedTerminal ?? undefined,
+                },
+              ]
+            : []),
+          ...extraCardTenders.map((card) => ({
+            amount: card.amount,
+            payment_terminal_id: selectedTerminal ?? undefined,
+          })),
+        ],
+      });
+      const tenders =
+        allocatedTenders.length > 0
+          ? allocatedTenders
+          : [
+              {
+                payment_method: "CASH" as const,
+                amount: roundToCents(tenderDue),
+                received_amount: cashAmtNum || roundToCents(tenderDue),
+              },
+            ];
+
       if (paymentType === "CREDIT") {
+        if (!identityOk) {
+          throw new Error(
+            "Debe verificar la identidad del cliente o registrar una omisión autorizada por supervisor.",
+          );
+        }
         if (!selectedClient)
           throw new Error("Se requiere un cliente para venta a crédito");
+        const creditTenders =
+          tenders.length > 0
+            ? tenders
+            : [
+                {
+                  payment_method: (isCardPayment ? "CARD" : "CASH") as
+                    | "CASH"
+                    | "CARD",
+                  amount: enganche,
+                  payment_terminal_id: selectedTerminal ?? undefined,
+                },
+              ];
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          tenders: creditTenders,
+          economic_revision: economicRevision,
           ...billingPayload,
         });
         if (creditRes.error) throw new Error(creditRes.error.message);
@@ -828,12 +1165,27 @@ export function SaleBuilder({
       if (paymentType === "LAYAWAY") {
         if (!activeLayawayTerm)
           throw new Error("Selecciona un plazo de apartado");
-        const depositAmount = cashAmtNum + cardAmtNum;
+        const depositAmount = cashAmtNum + cardAmtNum + extraCardAmtNum;
+        const layawayTenders =
+          tenders.length > 0
+            ? tenders
+            : depositAmount > 0
+              ? [
+                  {
+                    payment_method: (isCardPayment ? "CARD" : "CASH") as
+                      | "CASH"
+                      | "CARD",
+                    amount: depositAmount,
+                    payment_terminal_id: selectedTerminal ?? undefined,
+                  },
+                ]
+              : [];
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
           deposit_amount: depositAmount,
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
+          tenders: layawayTenders,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
         return {
@@ -843,18 +1195,16 @@ export function SaleBuilder({
         };
       }
 
-      const paymentRes = await registerSalePayment(saleId, {
-        payment_method: isCardPayment ? "CARD" : "CASH",
-        amount: totalFinal,
-        received_amount: !isCardPayment && cashAmtNum > 0 ? cashAmtNum : undefined,
-        change_amount: !isCardPayment && cashAmtNum > 0 ? change : undefined,
-        payment_terminal_id: selectedTerminal ?? undefined,
+      const checkoutRes = await checkoutSale(saleId, {
+        ...billingPayload,
+        tenders,
+        economic_revision: economicRevision,
+        idempotency_key:
+          checkoutIdempotencyKeyRef.current ??
+          (checkoutIdempotencyKeyRef.current = crypto.randomUUID()),
       });
-      if (paymentRes.error) throw new Error(paymentRes.error.message);
-
-      const confirmRes = await confirmSalePayment(saleId, billingPayload);
-      if (confirmRes.error) throw new Error(confirmRes.error.message);
-      return confirmRes.data!;
+      if (checkoutRes.error) throw new Error(checkoutRes.error.message);
+      return checkoutRes.data!;
     },
     onSuccess: (data) => {
       // En modo cajero, SaleBuilder se monta dentro de /ventas/[id] (misma
@@ -867,6 +1217,8 @@ export function SaleBuilder({
         queryKey: ["venta-detail", data.id],
       });
       invalidateCashRegisterQueries(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["sales"] });
+      checkoutIdempotencyKeyRef.current = null;
       void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
@@ -874,9 +1226,8 @@ export function SaleBuilder({
     },
   });
 
-  // Paso vendedor para contado/crédito: registra la venta sin cobrarla
-  // (queda PENDING_CASHIER para que el cajero la cobre). Apartado sigue el
-  // flujo de cobrarMutation sin cambios — ver SaleBuilderProps.mode.
+  // Paso vendedor: registra la venta sin cobrarla (contado, crédito y
+  // apartado quedan PENDING_CASHIER para que el cajero cobre en Cajas).
   const registerSaleMutation = useMutation({
     mutationFn: async () => {
       const { id: saleId } = await ensureSaleSynced();
@@ -893,76 +1244,22 @@ export function SaleBuilder({
     },
   });
 
-  const {
-    isReady: identitySdkReady,
-    isLoading: identitySdkLoading,
-    token: identitySdkToken,
-    error: identitySdkError,
-    reloadToken: reloadIdentitySdkToken,
-  } = useNubariumSdk({ enabled: identityVerificationModalOpen });
+  const saleOperationPending =
+    guardarCotizacionMutation.isPending ||
+    cobrarMutation.isPending ||
+    registerSaleMutation.isPending;
 
-  const verifyIdentityMutation = useMutation({
-    mutationFn: async (result: NubariumFaceCaptureResult) => {
-      if (activeSaleId == null) {
-        throw new Error("No hay una venta activa para verificar identidad");
-      }
-      const res = await verifySaleIdentity(
-        activeSaleId,
-        result.faceDataUrl,
-        result.executionId,
-      );
-      if (res.error) throw new Error(res.error.message);
-      return res.data!;
-    },
-    onSuccess: () => {
-      setIdentityVerificationModalOpen(false);
-      setIdentityCaptureResult(null);
-      setCashAmount(enganche.toFixed(2));
-      setView("checkout");
-    },
-    onError: (err: Error) => {
-      snackbar.showError(err.message);
-      setIdentityCaptureResult(null);
-      setIdentityCaptureSessionKey((current) => current + 1);
-    },
-  });
-
-  const skipIdentityMutation = useMutation({
-    mutationFn: async () => {
-      if (activeSaleId == null) {
-        throw new Error("No hay una venta activa para omitir la verificación");
-      }
-      if (!skipIdentityReason.trim()) {
-        throw new Error("El motivo es requerido");
-      }
-      if (!skipIdentitySupervisorUsername.trim() || !skipIdentitySupervisorPassword) {
-        throw new Error("Usuario y contraseña del supervisor son requeridos");
-      }
-
-      const supervisorRes = await validateSupervisor(
-        skipIdentitySupervisorUsername.trim(),
-        skipIdentitySupervisorPassword,
-      );
-      if (supervisorRes.error) throw new Error(supervisorRes.error.message);
-
-      const skipRes = await skipSaleIdentityVerification(
-        activeSaleId,
-        skipIdentityReason.trim(),
-        supervisorRes.data!.userId,
-      );
-      if (skipRes.error) throw new Error(skipRes.error.message);
-      return skipRes.data!;
-    },
-    onSuccess: () => {
-      setSkipIdentityModalOpen(false);
-      setSkipIdentityReason("");
-      setSkipIdentitySupervisorUsername("");
-      setSkipIdentitySupervisorPassword("");
-      setIdentityVerificationModalOpen(false);
-      setCashAmount(enganche.toFixed(2));
-      setView("checkout");
-    },
-  });
+  const executeSaleOperation = async (operation: () => Promise<unknown>) => {
+    if (saleOperationLockRef.current) return;
+    saleOperationLockRef.current = true;
+    try {
+      await operation();
+    } catch {
+      // Each mutation reports its own contextual error through onError.
+    } finally {
+      saleOperationLockRef.current = false;
+    }
+  };
 
   const { data: clientSearchData, isLoading: clientSearchLoading } = useQuery({
     queryKey: [
@@ -1020,18 +1317,11 @@ export function SaleBuilder({
 
   const lockedBranch = cartBranch ?? selectionBranch;
 
-  const isCardPayment = Boolean(cardAmount) && parseFloat(cardAmount) > 0;
+  const isCardPayment =
+    (Boolean(cardAmount) && parseFloat(cardAmount) > 0) ||
+    extraCards.some((card) => parseFloat(card.amount.replace(/[^0-9.]/g, "")) > 0);
   const isCheckoutView = view === "checkout";
 
-  // La sucursal desde la que se está cobrando en este momento (caja activa
-  // del cajero), no la sucursal del carrito/venta — el backend valida la
-  // terminal contra esa misma sucursal (getActiveBranchId).
-  const activeSessionQuery = useQuery({
-    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
-    queryFn: () => getSessionSummary(),
-    enabled: isCheckoutView,
-    staleTime: 60_000,
-  });
   const paymentTerminalBranchId = activeSessionQuery.data?.branch_id ?? null;
   const paymentTerminalsQuery = useQuery({
     queryKey: ["payment-terminals-catalog", paymentTerminalBranchId],
@@ -1074,10 +1364,11 @@ export function SaleBuilder({
   });
 
   const currentBranchOption = useMemo(() => {
-    const fromCatalog = branchesCatalog.find((b) => b.id === CURRENT_BRANCH_ID);
+    if (currentBranchId == null) return null;
+    const fromCatalog = branchesCatalog.find((b) => b.id === currentBranchId);
     if (fromCatalog) return { id: fromCatalog.id, label: fromCatalog.name };
-    return { id: CURRENT_BRANCH_ID, label: "Sucursal actual" };
-  }, [branchesCatalog]);
+    return { id: currentBranchId, label: "Sucursal actual" };
+  }, [branchesCatalog, currentBranchId]);
 
   // Pickup: sucursal actual por default. "Cambiar" fija un override.
   const effectiveDeliveryBranch = deliveryBranchOverridden
@@ -1088,6 +1379,38 @@ export function SaleBuilder({
     () => cart.map((i) => i.productId).join(","),
     [cart],
   );
+
+  const cartCoverageProductIds = useMemo(
+    () =>
+      [...new Set(cart.map((item) => item.productId))].sort((a, b) => a - b),
+    [cart],
+  );
+
+  const { data: hydratedLiveSources } = useQuery({
+    queryKey: [
+      "hydrated-cart-coverage",
+      coverageBranchId,
+      cartCoverageProductIds,
+    ],
+    enabled:
+      hydratedSaleId != null &&
+      cartCoverageProductIds.length > 0 &&
+      coverageBranchId != null,
+    queryFn: async () => {
+      const branchId = coverageBranchId!;
+      const pairs = await Promise.all(
+        cartCoverageProductIds.map(async (id) => {
+          const res = await getProductDetail(id, branchId, true);
+          return [id, res.data?.inventorySources ?? []] as const;
+        }),
+      );
+      return Object.fromEntries(pairs) as Record<number, InventorySource[]>;
+    },
+    staleTime: 30_000,
+  });
+
+  const isApprovedSpecialDiscount =
+    resumeSaleData?.discountRequest?.status === "APPROVED";
 
   const { data: hasStockAtDeliveryBranch } = useQuery({
     queryKey: [
@@ -1117,7 +1440,7 @@ export function SaleBuilder({
   });
 
   const isDeliveryBranchCurrent =
-    effectiveDeliveryBranch?.id === CURRENT_BRANCH_ID;
+    effectiveDeliveryBranch?.id === currentBranchId;
   const isSameDayPickup =
     deliveryType === "pickup" &&
     isDeliveryBranchCurrent &&
@@ -1190,29 +1513,23 @@ export function SaleBuilder({
     setView("search");
   };
 
-  const handleAddToCart = useCallback(() => {
-    if (!productDetail) return;
+  const canAddToCart = (): boolean => {
+    if (!productDetail) return false;
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
-    if (totalQty === 0) return;
-    const sellableMax = sellableMaxFromPickedSources(productSources);
-    if (totalQty > sellableMax) {
-      snackbar.showError(
-        "No hay existencia ni mercancía por surtir suficientes para esa cantidad.",
-      );
-      return;
+    if (totalQty === 0) return false;
+    if (totalQty > sellableMaxFromPickedSources(productSources)) {
+      snackbar.showError(STOCK_SHORTAGE_MESSAGE);
+      return false;
     }
 
     const branchSourcesWithQty = productSources.filter(
       (src) => src.sourceType === "branch" && src.quantity > 0,
     );
-    const distinctBranchIds = new Set(
-      branchSourcesWithQty.map((s) => s.branchId),
-    );
-    if (distinctBranchIds.size > 1) {
+    if (new Set(branchSourcesWithQty.map((s) => s.branchId)).size > 1) {
       snackbar.showError(
         "No puedes combinar existencia de distintas sucursales en el mismo artículo.",
       );
-      return;
+      return false;
     }
     const pickedBranchId = branchSourcesWithQty[0]?.branchId;
     if (
@@ -1223,8 +1540,14 @@ export function SaleBuilder({
       snackbar.showError(
         `Ya tienes artículos de "${lockedBranch.label}" en este ticket. Quita esos artículos para poder agregar de otra sucursal.`,
       );
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const commitAddToCart = (): boolean => {
+    if (!canAddToCart() || !productDetail) return false;
+    const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
 
     // Exceso sobre existencia de las fuentes elegidas = piezas de pedido
     // aceptado ("por surtir"). El spinner no deja vender más que eso.
@@ -1264,77 +1587,117 @@ export function SaleBuilder({
     setSelectedProductId(null);
     setShowOtherBranches(false);
     setProductSearch("");
-  }, [productDetail, productSources, lockedBranch, snackbar]);
+    return true;
+  };
 
-  // Invalidación optimista: el cambio de carrito ya se aplicó localmente
-  // cuando se llama esta función. Si el endpoint falla, se revierte al
-  // `previousCart` y se avisa por snackbar.
-  const triggerDiscountInvalidation = useCallback(
-    (previousCart: CartItem[]) => {
-      const request = resumeSaleData?.discountRequest;
-      if (!request || request.status !== "APPROVED") return;
-
-      void invalidateSaleDiscount(request.id).then((res) => {
-        if (res.error) {
-          setCart(previousCart);
-          snackbar.showError(
-            `No se pudo invalidar el descuento especial: ${res.error.message}`,
-          );
-          return;
-        }
-        void queryClient.invalidateQueries({
-          queryKey: ["resume-sale-draft", resumeSaleId],
-        });
-      });
-    },
-    [resumeSaleData?.discountRequest, resumeSaleId, queryClient, snackbar],
-  );
-
-  const handleCartQtyChange = (productId: number, delta: number) => {
-    const previousCart = cart;
-
+  const applyCartQtyChange = (productId: number, delta: number) => {
     setCart((prev) =>
       prev
         .map((item) => {
           if (item.productId !== productId) return item;
-          // Sin `sources` (línea hidratada) se conserva el backorder que
-          // confirmó el backend hasta el próximo sync.
+          const maxQty = qtyMaxForCartItem(
+            item,
+            hydratedLiveSources,
+            coverageBranchId,
+          );
+          const quantity = Math.min(
+            maxQty,
+            Math.max(0, item.quantity + delta),
+          );
           if (item.sources.length === 0) {
-            return {
-              ...item,
-              quantity: Math.max(0, item.quantity + delta),
-            };
+            return { ...item, quantity };
           }
-          const maxQty = sellableMaxFromPickedSources(item.sources);
-          const quantity = Math.min(maxQty, Math.max(0, item.quantity + delta));
+          const sources = reallocInventorySources(
+            overlayLiveInventoryOnSources(
+              item.sources,
+              hydratedLiveSources?.[item.productId],
+            ),
+            quantity,
+          );
           return {
             ...item,
             quantity,
-            backorderedQuantity: backorderedFromSources(item.sources, quantity),
+            sources,
+            backorderedQuantity: backorderedFromSources(sources, quantity),
           };
         })
         .filter((item) => item.quantity > 0),
     );
+  };
 
-    if (delta < 0) {
-      const originalQty = originalQuantities.get(productId);
-      const previousQty =
-        previousCart.find((item) => item.productId === productId)?.quantity ??
-        0;
-      const newQty = Math.max(0, previousQty + delta);
-      if (originalQty != null && newQty < originalQty) {
-        triggerDiscountInvalidation(previousCart);
-      }
+  const applyRemoveFromCart = (productId: number) => {
+    setCart((prev) => prev.filter((item) => item.productId !== productId));
+  };
+
+  const handleConfirmDiscountInvalidation = async () => {
+    const mutation = pendingDiscountMutation;
+    const request = resumeSaleData?.discountRequest;
+    if (!mutation || !request) return;
+
+    setDiscountInvalidateLoading(true);
+    const res = await invalidateSaleDiscount(request.id);
+    if (res.error) {
+      snackbar.showError(
+        `No se pudo invalidar el descuento especial: ${res.error.message}`,
+      );
+      setDiscountInvalidateLoading(false);
+      return;
     }
+
+    void queryClient.invalidateQueries({
+      queryKey: ["resume-sale-draft", resumeSaleId],
+    });
+
+    if (mutation.kind === "qty") {
+      applyCartQtyChange(mutation.productId, mutation.delta);
+    } else if (mutation.kind === "remove") {
+      applyRemoveFromCart(mutation.productId);
+    } else if (mutation.kind === "add") {
+      commitAddToCart();
+    } else {
+      setPaymentType(mutation.value);
+    }
+
+    setPendingDiscountMutation(null);
+    setDiscountInvalidateLoading(false);
+  };
+
+  const handleAddToCart = () => {
+    if (isApprovedSpecialDiscount) {
+      if (!canAddToCart()) return;
+      setPendingDiscountMutation({ kind: "add" });
+      return;
+    }
+    commitAddToCart();
+  };
+
+  const handleCartQtyChange = (productId: number, delta: number) => {
+    if (delta === 0) return;
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    const maxQty = qtyMaxForCartItem(
+      item,
+      hydratedLiveSources,
+      coverageBranchId,
+    );
+    const next = Math.min(maxQty, Math.max(0, item.quantity + delta));
+    if (next === item.quantity) {
+      if (delta > 0) snackbar.showError(STOCK_SHORTAGE_MESSAGE);
+      return;
+    }
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "qty", productId, delta });
+      return;
+    }
+    applyCartQtyChange(productId, delta);
   };
 
   const handleRemoveFromCart = (productId: number) => {
-    const previousCart = cart;
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
-
-    if (originalQuantities.has(productId)) {
-      triggerDiscountInvalidation(previousCart);
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "remove", productId });
+      return;
     }
+    applyRemoveFromCart(productId);
   };
 
   const handleQtyChange = (sourceKey: string, delta: number) => {
@@ -1346,6 +1709,16 @@ export function SaleBuilder({
 
   const totalCartQty = cart.reduce((s, item) => s + item.quantity, 0);
   const isMorosoClient = selectedClient?.creditStatus === "MOROSO";
+
+  const handlePaymentTypeChange = (value: SalePaymentType) => {
+    if (isMorosoClient && value !== "CASH") return;
+    if (value === paymentType) return;
+    if (isApprovedSpecialDiscount) {
+      setPendingDiscountMutation({ kind: "paymentType", value });
+      return;
+    }
+    setPaymentType(value);
+  };
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
 
@@ -1354,6 +1727,111 @@ export function SaleBuilder({
     (useCustomDeliveryAddress
       ? !!customDeliveryAddress
       : !!selectedClient?.primaryAddressFormatted);
+
+  const deliveryAddressId =
+    deliveryType !== "delivery"
+      ? null
+      : useCustomDeliveryAddress
+        ? (customDeliveryAddress?.id ?? null)
+        : (selectedClient?.addresses?.find((a) => a.isPrimary)?.addressId ??
+          selectedClient?.addresses?.[0]?.addressId ??
+          null);
+  const debouncedDeliveryAddressId = useDebouncedValue(deliveryAddressId, 200);
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      if (deliveryType !== "delivery") {
+        setShippingQuote(null);
+        setShippingQuoteLoading(false);
+        return;
+      }
+      if (debouncedDeliveryAddressId == null || coverageBranchId == null) {
+        setShippingQuote(null);
+        setShippingQuoteLoading(false);
+        return;
+      }
+      setShippingQuoteLoading(true);
+      try {
+        const quote = await previewShippingQuote({
+          address_id: debouncedDeliveryAddressId,
+          dispatch_branch_id: coverageBranchId,
+        });
+        if (!isCancelled()) setShippingQuote(quote);
+      } catch (error) {
+        if (!isCancelled()) {
+          setShippingQuote(null);
+          snackbar.showError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo cotizar el envío",
+          );
+        }
+      } finally {
+        if (!isCancelled()) setShippingQuoteLoading(false);
+      }
+    },
+    [deliveryType, debouncedDeliveryAddressId, coverageBranchId],
+  );
+
+  const cartPriceKey = cart
+    .map((item) => `${item.productId}:${item.quantity}`)
+    .join(",");
+  const debouncedCartPriceKey = useDebouncedValue(cartPriceKey, 200);
+
+  useAsyncEffect(
+    async (isCancelled) => {
+      if (
+        isCajeroMode ||
+        cart.length === 0 ||
+        purchaseTypeId == null ||
+        coverageBranchId == null
+      ) {
+        return;
+      }
+      if (activeSaleId != null && lastPatchedPurchaseTypeRef.current == null) {
+        lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+      } else if (
+        activeSaleId != null &&
+        lastPatchedPurchaseTypeRef.current !== purchaseTypeId
+      ) {
+        const res = await updateSalePurchaseType(activeSaleId, purchaseTypeId);
+        if (isCancelled()) return;
+        if (res.error) {
+          snackbar.showError(res.error.message);
+          return;
+        }
+        lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+      }
+
+      try {
+        const lines = await previewCartPrices({
+          branch_id: coverageBranchId,
+          purchase_type_id: purchaseTypeId,
+          items: cart.map((item) => ({
+            product_id: item.productId,
+            quantity: item.quantity,
+          })),
+        });
+        if (isCancelled()) return;
+        setCart((prev) => patchCartLinePrices(prev, lines));
+      } catch (error) {
+        if (!isCancelled()) {
+          snackbar.showError(
+            error instanceof Error
+              ? error.message
+              : "No se pudieron actualizar las promociones",
+          );
+        }
+      }
+    },
+    [
+      isCajeroMode,
+      debouncedCartPriceKey,
+      purchaseTypeId,
+      coverageBranchId,
+      activeSaleId,
+    ],
+  );
 
   const isPickupReady = deliveryType === "pickup" && !!effectiveDeliveryBranch;
 
@@ -1370,18 +1848,8 @@ export function SaleBuilder({
     deliveryType !== null &&
     isDeliveryInfoReady;
 
-  const subtotal = cart.reduce(
-    (s, item) => s + item.unitPrice * item.quantity,
-    0,
-  );
-  const subtotalOriginal = cart.reduce(
-    (s, item) => s + item.originalPrice * item.quantity,
-    0,
-  );
-  const totalDiscounts = cart.reduce(
-    (s, item) => s + item.discountAmount * item.quantity,
-    0,
-  );
+  const subtotalOriginal = cartListSubtotal(cart);
+  const totalDiscounts = cartLineDiscounts(cart);
   const approvedDiscountRequest =
     resumeSaleData?.discountRequest?.status === "APPROVED"
       ? resumeSaleData.discountRequest
@@ -1391,21 +1859,61 @@ export function SaleBuilder({
       (subtotalOriginal - totalDiscounts) *
         ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
     : 0;
-  const totalFinal = subtotalOriginal - totalDiscounts - specialDiscountAmount;
+  const merchandiseNet = merchandiseTotal(cart, specialDiscountAmount);
+  const shippingAmount =
+    deliveryType === "delivery" ? (shippingQuote?.amount ?? 0) : 0;
+  const totalFinal = merchandiseNet + shippingAmount;
+  const showShippingInSummary =
+    deliveryType === "delivery" &&
+    (shippingQuoteLoading || shippingQuote != null);
+  const shippingSummaryLabel =
+    shippingQuote?.coverage === "OUT_OF_COVERAGE"
+      ? "Envío (fuera de zona)"
+      : "Envío";
+  const shippingSummaryValue = shippingQuoteLoading
+    ? "Calculando…"
+    : formatCurrency(shippingAmount);
+  const economicRevision =
+    shippingQuote?.economicRevision ?? resumeSaleData?.economicRevision ?? 0;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
+  const extraCardAmtNum = extraCards.slice(0, 1).reduce(
+    (sum, card) =>
+      sum + (parseFloat(card.amount.replace(/[^0-9.]/g, "")) || 0),
+    0,
+  );
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
-  const totalPaid = Math.round(cashAmtNum + cardAmtNum);
+  const totalPaid = roundToCents(cashAmtNum + cardAmtNum + extraCardAmtNum);
   const ENGANCHE_PCT = 0.1;
   const enganche = Math.round(totalFinal * ENGANCHE_PCT);
+  const montoAFinanciar = roundToCents(totalFinal - enganche);
+  const creditLineExceeded =
+    paymentType === "CREDIT" &&
+    selectedClient?.creditAvailable != null &&
+    montoAFinanciar > selectedClient.creditAvailable + 0.009;
+
+  const handleIdentityVerified = useCallback(() => {
+    setIdentityOk(true);
+    setIdentityVerificationModalOpen(false);
+    setCashAmount(enganche.toFixed(2));
+    setView("checkout");
+  }, [enganche]);
+
+  const handleIdentityDialogClose = useCallback(() => {
+    setIdentityVerificationModalOpen(false);
+  }, []);
   const amountToPay =
     paymentType === "CREDIT"
       ? enganche
       : paymentType === "LAYAWAY"
         ? 0
-        : Math.round(totalFinal);
-  const change = Math.max(0, totalPaid - amountToPay);
+        : roundToCents(totalFinal);
+  const change = cashChangeDue(
+    amountToPay,
+    cashAmtNum,
+    cardAmtNum + extraCardAmtNum,
+  );
 
   const PAYMENT_OPTIONS: {
     value: "CREDIT" | "CASH" | "LAYAWAY";
@@ -1415,6 +1923,51 @@ export function SaleBuilder({
     { value: "CASH", label: "Contado" },
     { value: "LAYAWAY", label: "Apartado" },
   ];
+
+  const discountInvalidateModal = (
+    <ConfirmModal
+      open={pendingDiscountMutation != null}
+      loading={discountInvalidateLoading}
+      onClose={() => {
+        if (discountInvalidateLoading) return;
+        setPendingDiscountMutation(null);
+      }}
+      onConfirm={handleConfirmDiscountInvalidation}
+      type="warning"
+      title="Se invalidará el descuento"
+      description="Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      confirmLabel="Continuar"
+      cancelLabel="Cancelar"
+    />
+  );
+
+  const resumeIdReady =
+    resumeSaleId !== null && !Number.isNaN(resumeSaleId);
+  const waitingForResumeHydrate =
+    resumeIdReady && hydratedSaleId !== resumeSaleId;
+  if (resumeRoutePending || (waitingForResumeHydrate && !resumeSaleError)) {
+    return <SaleBuilderResumeSkeleton onExit={onExit} />;
+  }
+  if (resumeIdReady && resumeSaleError) {
+    return (
+      <PageShell>
+        <PageHeader>
+          <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
+            <InlineMobileMenuButton />
+            <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+              <X size={18} />
+            </IconButton>
+            <Typography variant="h6" fontWeight={700} noWrap>
+              Cotización
+            </Typography>
+          </Stack>
+        </PageHeader>
+        <Box px={3} py={2}>
+          <Alert severity="error">No se pudo cargar la cotización.</Alert>
+        </Box>
+      </PageShell>
+    );
+  }
 
   if (view === "search") {
     return (
@@ -1513,6 +2066,7 @@ export function SaleBuilder({
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
 
     return (
+      <>
       <PageShell>
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
@@ -1683,7 +2237,7 @@ export function SaleBuilder({
                 Selecciona el origen del artículo a entregar al cliente
               </Typography>
 
-              {lockedBranch && lockedBranch.id !== CURRENT_BRANCH_ID && (
+              {lockedBranch && lockedBranch.id !== currentBranchId && (
                 <Box
                   sx={{
                     bgcolor: "warning.50",
@@ -1710,13 +2264,13 @@ export function SaleBuilder({
                   .filter(
                     (src) =>
                       src.sourceType === "warehouse" ||
-                      src.branchId === CURRENT_BRANCH_ID,
+                      src.branchId === currentBranchId,
                   )
                   .map((src) => {
                     const isWarehouse = src.sourceType === "warehouse";
                     const isCurrentBranch =
                       src.sourceType === "branch" &&
-                      src.branchId === CURRENT_BRANCH_ID;
+                      src.branchId === currentBranchId;
 
                     const sourceLabel = isCurrentBranch
                       ? `Ésta sucursal (${src.label})`
@@ -1886,7 +2440,7 @@ export function SaleBuilder({
                       .filter(
                         (src) =>
                           src.sourceType === "branch" &&
-                          src.branchId !== CURRENT_BRANCH_ID,
+                          src.branchId !== currentBranchId,
                       )
                       .map((src) => {
                         const branchLocked = isBranchSourceLocked(src);
@@ -1972,24 +2526,28 @@ export function SaleBuilder({
           </ProductDetailLayout>
         )}
       </PageShell>
+      {discountInvalidateModal}
+      </>
     );
   }
 
   if (view === "checkout") {
     const canRegister =
-      !cobrarMutation.isPending &&
+      !saleOperationPending &&
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
+      (paymentType !== "CREDIT" || identityOk) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
     return (
-      <PageShell>
+      <PageShell aria-busy={saleOperationPending}>
         <PageHeader>
           <Stack direction="row" alignItems="center" spacing={1}>
             <InlineMobileMenuButton />
             <IconButton
               size="medium"
+              disabled={saleOperationPending}
               onClick={() => (isCajeroMode ? onExit() : setView("form"))}
               aria-label={isCajeroMode ? "Cerrar" : "Volver"}
             >
@@ -2109,7 +2667,7 @@ export function SaleBuilder({
                             Total
                           </Typography>
                           <Typography variant="body2" fontWeight={600}>
-                            {formatCurrency(item.unitPrice * item.quantity)}
+                            {formatCurrency(lineTotal(item))}
                           </Typography>
                         </Box>
                       </Stack>
@@ -2242,6 +2800,16 @@ export function SaleBuilder({
                     </Typography>
                   </Stack>
                 )}
+                {showShippingInSummary && (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      {shippingSummaryLabel}
+                    </Typography>
+                    <Typography variant="body2">
+                      {shippingSummaryValue}
+                    </Typography>
+                  </Stack>
+                )}
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">
                     Total
@@ -2268,6 +2836,18 @@ export function SaleBuilder({
                     </Stack>
                     <Stack
                       direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography variant="h6" fontWeight={700}>
+                        Monto a financiar
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(montoAFinanciar)}
+                      </Typography>
+                    </Stack>
+                    <Stack
+                      direction="row"
                       alignItems="center"
                       justifyContent="space-between"
                       gap={1}
@@ -2286,7 +2866,7 @@ export function SaleBuilder({
                       </Select>
                       <Typography variant="body2" fontWeight={600}>
                         {formatCurrency(
-                          (totalFinal - enganche) / selectedTermMonths,
+                          montoAFinanciar / selectedTermMonths,
                         )}
                       </Typography>
                     </Stack>
@@ -2333,6 +2913,8 @@ export function SaleBuilder({
               cardAmount={cardAmount}
               onCashAmountChange={setCashAmount}
               onCardAmountChange={setCardAmount}
+              extraCards={extraCards}
+              onExtraCardsChange={setExtraCards}
               isCardPayment={isCardPayment}
               exceedsCashLimit={exceedsCashLimit}
               cashLimitErrorMessage={MAX_CASH_SALE_PAYMENT_MESSAGE}
@@ -2349,13 +2931,13 @@ export function SaleBuilder({
               showChange={paymentType !== "LAYAWAY"}
               change={change}
               canRegister={canRegister}
-              isPending={cobrarMutation.isPending}
+              isPending={saleOperationPending}
               amountToPay={amountToPay}
               onRegister={() => {
                 if (showCheckoutDeliveryDateField && !checkoutDeliveryDate) {
                   setDeliveryDateWarningOpen(true);
                 } else {
-                  cobrarMutation.mutate();
+                  void executeSaleOperation(() => cobrarMutation.mutateAsync());
                 }
               }}
             />
@@ -2375,7 +2957,7 @@ export function SaleBuilder({
           onConfirm={() => {
             openDeliveryPickerAfterWarningRef.current = false;
             setDeliveryDateWarningOpen(false);
-            cobrarMutation.mutate();
+            void executeSaleOperation(() => cobrarMutation.mutateAsync());
           }}
           onExited={() => {
             if (!openDeliveryPickerAfterWarningRef.current) return;
@@ -2392,7 +2974,7 @@ export function SaleBuilder({
         <DeliveryDatePicker
           open={checkoutDeliveryDateModalOpen}
           onClose={() => setCheckoutDeliveryDateModalOpen(false)}
-          branchId={CURRENT_BRANCH_ID}
+          branchId={currentBranchId ?? undefined}
           value={checkoutDeliveryDate}
           onConfirm={(date) => {
             setCheckoutDeliveryDate(date);
@@ -2455,34 +3037,47 @@ export function SaleBuilder({
   }
 
   return (
-    <PageShell>
+    <PageShell aria-busy={saleOperationPending}>
       <SaleBuilderHeader
         title={
-          resumeSaleId !== null && activeSaleFolio
-            ? `Cotización ${activeSaleFolio}`
-            : "Nueva venta"
+          isCajeroMode && activeSaleFolio
+            ? `Cobro ${activeSaleFolio}`
+            : resumeSaleId !== null && activeSaleFolio
+              ? `Cotización ${activeSaleFolio}`
+              : "Nueva venta"
         }
         onExit={onExit}
         isCajeroMode={isCajeroMode}
-        isLayaway={paymentType === "LAYAWAY"}
         canProceed={canProceed}
         showDiscountButton={resumeSaleId !== null}
         discountDisabled={
           resumeSaleData?.discountRequest != null &&
           resumeSaleData.discountRequest.status !== "INVALIDATED"
         }
+        operationPending={saleOperationPending}
         savePending={guardarCotizacionMutation.isPending}
-        saveDisabled={cart.length === 0}
+        saveDisabled={cart.length === 0 || (branchUnresolved && activeSaleId === null)}
         registerPending={registerSaleMutation.isPending}
         saveLabel={
           resumeSaleId !== null ? "Actualizar cotización" : "Guardar cotización"
         }
-        onSave={() => guardarCotizacionMutation.mutate()}
+        onSave={() =>
+          void executeSaleOperation(() =>
+            guardarCotizacionMutation.mutateAsync(),
+          )
+        }
         onDiscount={() => setDiscountRequestModalOpen(true)}
-        onRegisterSale={() => registerSaleMutation.mutate()}
+        onRegisterSale={() =>
+          void executeSaleOperation(() => registerSaleMutation.mutateAsync())
+        }
+        creditLineExceeded={creditLineExceeded}
+        proceedLabel={
+          paymentType === "CREDIT" && !identityOk
+            ? "Validar identidad"
+            : "Proceder al cobro"
+        }
         onProceedToCheckout={() => {
-          if (paymentType === "CREDIT") {
-            setIdentityCaptureResult(null);
+          if (paymentType === "CREDIT" && !identityOk) {
             setIdentityVerificationModalOpen(true);
           } else {
             setView("checkout");
@@ -2492,6 +3087,24 @@ export function SaleBuilder({
 
       <MainGrid>
         <Stack spacing={2}>
+          {branchUnresolved && (
+            <Alert severity="warning">
+              No se pudo determinar tu sucursal.
+            </Alert>
+          )}
+          {creditLineExceeded && selectedClient?.creditAvailable != null && (
+            <Alert severity="error">
+              Línea de crédito insuficiente. Disponible:{" "}
+              {formatCurrency(selectedClient.creditAvailable)}, Requerido:{" "}
+              {formatCurrency(montoAFinanciar)}.
+            </Alert>
+          )}
+          {isCajeroMode && paymentType === "CREDIT" && !identityOk && (
+            <Alert severity="info">
+              Valida la identidad del titular del crédito antes de cobrar el
+              enganche.
+            </Alert>
+          )}
           {resumeSaleData?.discountRequest != null && (
             <DiscountRequestStatusBanner
               motivo={getDiscountRequestReasonLabel(
@@ -2501,9 +3114,10 @@ export function SaleBuilder({
               estado={getDiscountRequestStatusLabel(
                 resumeSaleData.discountRequest.status,
               )}
+              status={resumeSaleData.discountRequest.status}
               warning={
                 resumeSaleData.discountRequest.status === "APPROVED"
-                  ? "Quitar un artículo o reducir su cantidad invalidará este descuento."
+                  ? "Cualquier cambio en artículos, cantidades o tipo de venta invalidará este descuento."
                   : undefined
               }
             />
@@ -2567,7 +3181,12 @@ export function SaleBuilder({
                       item={item}
                       isLayaway={paymentType === "LAYAWAY"}
                       isCajeroMode={isCajeroMode}
-                      currentBranchId={CURRENT_BRANCH_ID}
+                      currentBranchId={currentBranchId}
+                      qtyMax={qtyMaxForCartItem(
+                        item,
+                        hydratedLiveSources,
+                        coverageBranchId,
+                      )}
                       onRemove={handleRemoveFromCart}
                       onQtyChange={handleCartQtyChange}
                     />
@@ -2585,9 +3204,29 @@ export function SaleBuilder({
                       Subtotal
                     </Typography>
                     <Typography variant="body2" fontWeight={500}>
-                      {formatCurrency(subtotal)}
+                      {formatCurrency(subtotalOriginal)}
                     </Typography>
                   </Stack>
+
+                  {totalDiscounts > 0 && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Descuentos
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        color="error.main"
+                      >
+                        -{formatCurrency(totalDiscounts)}
+                      </Typography>
+                    </Stack>
+                  )}
 
                   {specialDiscountAmount > 0 && (
                     <Stack
@@ -2609,6 +3248,22 @@ export function SaleBuilder({
                     </Stack>
                   )}
 
+                  {showShippingInSummary && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {shippingSummaryLabel}
+                      </Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {shippingSummaryValue}
+                      </Typography>
+                    </Stack>
+                  )}
+
                   <TotalBar>
                     <Typography variant="body2" fontWeight={600}>
                       Total
@@ -2619,6 +3274,7 @@ export function SaleBuilder({
                   </TotalBar>
 
                   {paymentType === "CREDIT" && (
+                    <>
                     <Stack
                       direction="row"
                       justifyContent="space-between"
@@ -2632,6 +3288,20 @@ export function SaleBuilder({
                         {formatCurrency(enganche)}
                       </Typography>
                     </Stack>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      py={1.25}
+                    >
+                      <Typography variant="body2" fontWeight={700}>
+                        Monto a financiar
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {formatCurrency(montoAFinanciar)}
+                      </Typography>
+                    </Stack>
+                    </>
                   )}
 
                   {paymentType === "LAYAWAY" && (
@@ -2705,10 +3375,7 @@ export function SaleBuilder({
                     key={opt.value}
                     active={paymentType === opt.value}
                     disabled={isMorosoClient && opt.value !== "CASH"}
-                    onClick={() => {
-                      if (isMorosoClient && opt.value !== "CASH") return;
-                      setPaymentType(opt.value);
-                    }}
+                    onClick={() => handlePaymentTypeChange(opt.value)}
                   >
                     {opt.label}
                   </PaymentTypeButton>
@@ -2916,7 +3583,7 @@ export function SaleBuilder({
                   {deliveryType === "delivery" && (
                     <>
                       <DeliveryMapPreview
-                        coords={primaryCoords}
+                        coords={deliveryCoords}
                         apiKey={GOOGLE_MAPS_API_KEY}
                       />
                       <ReadOnlyField
@@ -2943,7 +3610,7 @@ export function SaleBuilder({
                       value={
                         effectiveDeliveryBranch
                           ? `${effectiveDeliveryBranch.label}${
-                              effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                              effectiveDeliveryBranch.id === currentBranchId
                                 ? " [Actual]"
                                 : ""
                             }`
@@ -3046,9 +3713,16 @@ export function SaleBuilder({
               {deliveryType === "delivery" && (
                 <>
                   <DeliveryMapPreview
-                    coords={primaryCoords}
+                    coords={deliveryCoords}
                     apiKey={GOOGLE_MAPS_API_KEY}
                   />
+                  {shippingQuote && shippingQuote.coverage !== "IN_ZONE" ? (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      {shippingQuote.coverage === "UNCONFIGURED"
+                        ? "No hay cobertura de envío configurada para esta dirección."
+                        : "La dirección está fuera de la zona de cobertura. Se aplica el costo de envío fuera de zona."}
+                    </Alert>
+                  ) : null}
 
                   <Stack
                     direction="row"
@@ -3145,7 +3819,7 @@ export function SaleBuilder({
                   <Typography variant="body2" fontWeight={600} mb={1.5}>
                     {effectiveDeliveryBranch
                       ? `${effectiveDeliveryBranch.label}${
-                          effectiveDeliveryBranch.id === CURRENT_BRANCH_ID
+                          effectiveDeliveryBranch.id === currentBranchId
                             ? " [Actual]"
                             : ""
                         }`
@@ -3174,7 +3848,7 @@ export function SaleBuilder({
           <DeliveryDatePicker
             open={checkoutDeliveryDateModalOpen}
             onClose={() => setCheckoutDeliveryDateModalOpen(false)}
-            branchId={CURRENT_BRANCH_ID}
+            branchId={currentBranchId ?? undefined}
             value={checkoutDeliveryDate}
             onConfirm={(date) => {
               setCheckoutDeliveryDate(date);
@@ -3208,7 +3882,7 @@ export function SaleBuilder({
                     <ListItemText
                       primary={b.name}
                       secondary={
-                        b.id === CURRENT_BRANCH_ID
+                        b.id === currentBranchId
                           ? "Sucursal actual"
                           : undefined
                       }
@@ -3222,177 +3896,28 @@ export function SaleBuilder({
           <DeliveryAddressModal
             open={deliveryAddressModalOpen}
             onClose={() => setDeliveryAddressModalOpen(false)}
-            onSaved={(address) => {
+            onSaved={async (address) => {
+              if (activeSaleId) {
+                await setDeliveryDate(activeSaleId, {
+                  delivery_type: "ADDRESS",
+                  address_id: address.id,
+                  ...(checkoutDeliveryDate
+                    ? { delivery_date: checkoutDeliveryDate }
+                    : {}),
+                });
+              }
               setCustomDeliveryAddress(address);
               setUseCustomDeliveryAddress(true);
               setDeliveryAddressModalOpen(false);
             }}
           />
 
-          <Dialog
+          <IdentityVerificationDialog
             open={identityVerificationModalOpen}
-            onClose={() => {
-              if (verifyIdentityMutation.isPending) return;
-              setIdentityVerificationModalOpen(false);
-            }}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
-          >
-            <DialogContent sx={{ p: 4 }}>
-              <Stack spacing={3} alignItems="center" textAlign="center">
-                <Typography variant="h5" fontWeight={600}>
-                  Validación de identidad
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Confirma que el cliente está presente antes de continuar con
-                  el cobro
-                </Typography>
-
-                {!identitySdkReady || !identitySdkToken ? (
-                  <Stack spacing={2} alignItems="center">
-                    {identitySdkLoading ? <CircularProgress /> : null}
-                    <Typography variant="body2" textAlign="center">
-                      {identitySdkLoading
-                        ? "Preparando captura biométrica..."
-                        : (identitySdkError ??
-                          "No fue posible inicializar la captura biométrica.")}
-                    </Typography>
-                    {!identitySdkLoading && identitySdkError ? (
-                      <Button
-                        variant="outlined"
-                        onClick={() => void reloadIdentitySdkToken()}
-                      >
-                        Reintentar
-                      </Button>
-                    ) : null}
-                  </Stack>
-                ) : (
-                  <NubariumFaceCapture
-                    key={identityCaptureSessionKey}
-                    token={identitySdkToken}
-                    active={identityVerificationModalOpen && !verifyIdentityMutation.isPending}
-                    completed={Boolean(identityCaptureResult)}
-                    completedResult={identityCaptureResult}
-                    onSuccess={(result) => {
-                      setIdentityCaptureResult(result);
-                      verifyIdentityMutation.mutate(result);
-                    }}
-                    onReset={() => {
-                      setIdentityCaptureResult(null);
-                      setIdentityCaptureSessionKey((current) => current + 1);
-                    }}
-                  />
-                )}
-
-                {verifyIdentityMutation.isPending ? (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <CircularProgress size={16} />
-                    <Typography variant="body2" color="text.secondary">
-                      Verificando identidad...
-                    </Typography>
-                  </Stack>
-                ) : (
-                  <Button
-                    variant="text"
-                    size="small"
-                    sx={{ textTransform: "none" }}
-                    onClick={() => {
-                      skipIdentityMutation.reset();
-                      setSkipIdentityReason("");
-                      setSkipIdentitySupervisorUsername("");
-                      setSkipIdentitySupervisorPassword("");
-                      setSkipIdentityModalOpen(true);
-                    }}
-                  >
-                    ¿Problemas con la cámara?
-                  </Button>
-                )}
-              </Stack>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={skipIdentityModalOpen}
-            onClose={() => {
-              if (skipIdentityMutation.isPending) return;
-              setSkipIdentityModalOpen(false);
-            }}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
-          >
-            <DialogContent sx={{ p: 4 }}>
-              <Stack spacing={3}>
-                <Typography variant="h5" fontWeight={600}>
-                  Omitir validación de identidad
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Requiere autorización de un supervisor (Administrador o
-                  Gerente). Ingresa el motivo y las credenciales del
-                  supervisor para continuar sin la captura facial.
-                </Typography>
-
-                <TextField
-                  label="Motivo"
-                  placeholder="Ej. Cámara no disponible en la sucursal"
-                  value={skipIdentityReason}
-                  onChange={(e) => setSkipIdentityReason(e.target.value)}
-                  multiline
-                  minRows={2}
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-                <TextField
-                  label="Usuario del supervisor"
-                  value={skipIdentitySupervisorUsername}
-                  onChange={(e) =>
-                    setSkipIdentitySupervisorUsername(e.target.value)
-                  }
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-                <TextField
-                  label="Contraseña del supervisor"
-                  type="password"
-                  value={skipIdentitySupervisorPassword}
-                  onChange={(e) =>
-                    setSkipIdentitySupervisorPassword(e.target.value)
-                  }
-                  disabled={skipIdentityMutation.isPending}
-                  fullWidth
-                />
-
-                {skipIdentityMutation.isError ? (
-                  <Alert severity="error">
-                    {skipIdentityMutation.error.message}
-                  </Alert>
-                ) : null}
-
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="text"
-                    disabled={skipIdentityMutation.isPending}
-                    onClick={() => setSkipIdentityModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="contained"
-                    sx={{ borderRadius: 2, textTransform: "none" }}
-                    disabled={skipIdentityMutation.isPending}
-                    onClick={() => skipIdentityMutation.mutate()}
-                  >
-                    {skipIdentityMutation.isPending ? (
-                      <CircularProgress size={16} />
-                    ) : (
-                      "Autorizar y continuar"
-                    )}
-                  </Button>
-                </Stack>
-              </Stack>
-            </DialogContent>
-          </Dialog>
+            saleId={activeSaleId}
+            onVerified={handleIdentityVerified}
+            onClose={handleIdentityDialogClose}
+          />
 
           <SideModal
             open={clientModalOpen}
@@ -3590,6 +4115,7 @@ export function SaleBuilder({
           )}
         </StickySidebar>
       </MainGrid>
+      {discountInvalidateModal}
     </PageShell>
   );
 }

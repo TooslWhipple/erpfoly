@@ -50,6 +50,7 @@ export async function getProductDetail(
   productId: number,
   currentBranchId?: number,
   includeOthers?: boolean,
+  purchaseTypeId?: number,
 ): Promise<ApiResult<ProductDetail>> {
   const params = new URLSearchParams();
   if (currentBranchId !== undefined) {
@@ -57,6 +58,9 @@ export async function getProductDetail(
   }
   if (includeOthers) {
     params.set("includeOthers", "true");
+  }
+  if (purchaseTypeId != null) {
+    params.set("purchaseTypeId", String(purchaseTypeId));
   }
   const query = params.toString();
   return get<ProductDetail>(
@@ -85,11 +89,20 @@ export async function getLayawayTerms(): Promise<ApiResult<LayawayTerm[]>> {
   return get<LayawayTerm[]>(`${BASE}/layaway-terms`);
 }
 
+export interface CheckoutTenderPayload {
+  payment_method: "CASH" | "CARD" | "TRANSFER";
+  amount: number;
+  received_amount?: number;
+  payment_terminal_id?: number;
+  reference?: string;
+}
+
 export interface CreateLayawayPayload {
   layaway_term_id: number;
   deposit_amount: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
 }
 
 export async function createLayaway(
@@ -176,21 +189,19 @@ export async function updateSaleLayawayTerm(
 export interface AddSaleItemPayload {
   product_id: number;
   quantity: number;
-  unit_price: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function addSaleItem(
   saleId: number,
   payload: AddSaleItemPayload,
-): Promise<ApiResult<unknown>> {
-  return post<unknown>(`${BASE}/sales/${saleId}/items`, payload);
+): Promise<ApiResult<{ id: number }>> {
+  return post<{ id: number }>(`${BASE}/sales/${saleId}/items`, payload);
 }
 
 export interface UpdateSaleItemPayload {
   quantity?: number;
-  unit_price?: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function updateSaleItem(
@@ -263,11 +274,27 @@ export async function confirmSalePayment(
   );
 }
 
+export async function checkoutSale(
+  saleId: number,
+  payload: SaleInvoiceBillingPayload & {
+    tenders: CheckoutTenderPayload[];
+    idempotency_key?: string;
+    economic_revision: number;
+  },
+): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
+  return post<{ id: number; folio: string; status: string }>(
+    `${BASE}/sales/${saleId}/checkout`,
+    payload,
+  );
+}
+
 export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   term_months: number;
   down_payment: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
+  economic_revision: number;
 }
 
 export async function confirmCreditSale(
@@ -315,20 +342,22 @@ export async function validateSupervisor(
   username: string,
   password: string,
 ): Promise<ApiResult<ValidateSupervisorResult>> {
-  return post<ValidateSupervisorResult>("/auth/validate-supervisor", {
-    username,
-    password,
-  });
+  return post<ValidateSupervisorResult>(
+    "/auth/validate-supervisor",
+    { username, password },
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export async function skipSaleIdentityVerification(
   saleId: number,
   reason: string,
-  supervisorUserId: number,
+  credentials: { username: string; password: string },
 ): Promise<ApiResult<VerifySaleIdentityResult>> {
   return post<VerifySaleIdentityResult>(
     `${BASE}/sales/${saleId}/identity-verification/skip`,
-    { reason, supervisorUserId },
+    { reason, ...credentials },
+    { skipGlobalErrorToast: true },
   );
 }
 
@@ -376,6 +405,50 @@ export async function setDeliveryDate(
       `${BASE}/sales/${saleId}/delivery-date`,
       payload,
     ),
+  );
+}
+
+export type ShippingQuote = {
+  amount: number | null;
+  zoneId: number | null;
+  zoneName: string | null;
+  inZone: boolean;
+  coverage: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
+  economicRevision?: number;
+};
+
+export async function quoteShipping(
+  saleId: number,
+  payload: { address_id: number; dispatch_branch_id?: number },
+): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/sales/${saleId}/shipping-quote`, payload),
+  );
+}
+
+export type PricePreviewLine = {
+  productId: number;
+  originalPrice: number;
+  discountAmount: number;
+  totalAmount: number;
+};
+
+export async function previewCartPrices(payload: {
+  branch_id: number;
+  purchase_type_id: number;
+  items: Array<{ product_id: number; quantity: number }>;
+}): Promise<PricePreviewLine[]> {
+  return unwrapOrThrow(
+    await post<PricePreviewLine[]>(`${BASE}/price-preview`, payload),
+  );
+}
+
+export async function previewShippingQuote(payload: {
+  address_id: number;
+  dispatch_branch_id?: number;
+}): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/shipping-quote`, payload),
   );
 }
 

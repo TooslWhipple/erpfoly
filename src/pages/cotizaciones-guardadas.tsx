@@ -12,7 +12,6 @@ import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 import type { SaleListItem, SalePaymentType } from "@/types/ventas.types";
 import { QUOTATIONS_READ } from "@/lib/permissions";
-import { useAuthStore } from "@/store/useAuthStore";
 import {
   SALE_STATUS_CHIP_LABELS,
   SALE_STATUS_CHIP_VARIANTS,
@@ -28,10 +27,14 @@ const PAYMENT_TYPE_COLORS: Record<SalePaymentType, string> = {
   CASH: "#2563eb",
   LAYAWAY: "#d97706",
 };
+
+function formatItemCount(count: number): string {
+  if (count === 1) return "1 artículo";
+  return `${count} artículos`;
+}
+
 export default function CotizacionesGuardadas() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const currentUserId = user ? Number(user.id) : null;
   const {
     data: cotizaciones,
     total: totalRows,
@@ -43,16 +46,14 @@ export default function CotizacionesGuardadas() {
     setSearch,
     isLoading: loading,
   } = usePaginatedList<SaleListItem>({
-    queryKey: ["sale-drafts", String(currentUserId)],
+    queryKey: ["sale-drafts"],
     queryFn: getSales,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
     extraParams: {
       status: "DRAFT",
-      created_by: currentUserId ?? undefined,
     },
-    enabled: currentUserId !== null,
   });
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -76,44 +77,22 @@ export default function CotizacionesGuardadas() {
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
-      id: "productName",
-      label: "Artículo",
-      size: "xl",
-      format: (value, row) => (
-        <Stack direction="row" alignItems="center" spacing={1}>
-          {row.productImageUrl && (
-            <Box
-              component="img"
-              src={row.productImageUrl}
-              alt={String(value ?? "")}
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 1,
-                objectFit: "cover",
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <Box
-            component="span"
-            sx={{
-              fontSize: "0.85rem",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 200,
-            }}
-          >
-            {String(value ?? "—")}
-          </Box>
-        </Stack>
-      ),
+      id: "itemCount",
+      label: "Nº artículos",
+      size: "sm",
+      format: (value) => formatItemCount(typeof value === "number" ? value : 0),
     },
     {
       id: "clientName",
       label: "Cliente",
       size: "lg",
+      truncate: true,
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
+    },
+    {
+      id: "sellerName",
+      label: "Vendedor",
+      size: "md",
       truncate: true,
       format: (value) => (value == null || value === "" ? "—" : String(value)),
     },

@@ -3,6 +3,9 @@ export const CashMovementType = {
   WITHDRAWAL: "WITHDRAWAL",
   PARTIAL_CUT: "PARTIAL_CUT",
   FINAL_CUT: "FINAL_CUT",
+  SALE: "SALE",
+  REVERSAL: "REVERSAL",
+  REFUND: "REFUND",
 } as const;
 
 export type CashMovementType =
@@ -13,6 +16,9 @@ export const MOVEMENT_TYPE_LABELS: Record<CashMovementType, string> = {
   WITHDRAWAL: "Retiro de caja",
   PARTIAL_CUT: "Corte parcial",
   FINAL_CUT: "Corte final",
+  SALE: "Cobro de venta",
+  REVERSAL: "Reverso",
+  REFUND: "Reembolso",
 };
 
 export const MOVEMENT_TYPE_COLORS: Record<CashMovementType, string> = {
@@ -20,6 +26,9 @@ export const MOVEMENT_TYPE_COLORS: Record<CashMovementType, string> = {
   WITHDRAWAL: "#D97706",
   PARTIAL_CUT: "#D97706",
   FINAL_CUT: "#D97706",
+  SALE: "#16A34A",
+  REVERSAL: "#D97706",
+  REFUND: "#DC2626",
 };
 
 export type MovementTypeIconVariant = "income" | "outcome";
@@ -32,6 +41,9 @@ export const MOVEMENT_TYPE_ICON_VARIANT: Record<
   WITHDRAWAL: "outcome",
   PARTIAL_CUT: "outcome",
   FINAL_CUT: "outcome",
+  SALE: "income",
+  REVERSAL: "outcome",
+  REFUND: "outcome",
 };
 
 export function isCashMovementType(value: string): value is CashMovementType {
@@ -42,6 +54,9 @@ export const CashMovementPaymentForm = {
   CASH: "CASH",
   CASH_DEPOSIT: "CASH_DEPOSIT",
   CREDIT_CARD: "CREDIT_CARD",
+  TRANSFER: "TRANSFER",
+  CHECK: "CHECK",
+  LOYALTY_POINTS: "LOYALTY_POINTS",
 } as const;
 
 export type CashMovementPaymentForm =
@@ -51,6 +66,9 @@ export const PAYMENT_FORM_LABELS: Record<CashMovementPaymentForm, string> = {
   CASH: "Efectivo",
   CASH_DEPOSIT: "Depósito en efectivo",
   CREDIT_CARD: "Tarjeta de crédito",
+  TRANSFER: "Transferencia",
+  CHECK: "Cheque",
+  LOYALTY_POINTS: "Folypuntos",
 };
 
 export function isCashMovementPaymentForm(

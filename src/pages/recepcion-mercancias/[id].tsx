@@ -270,17 +270,10 @@ export default function RecepcionDetalle() {
               size="small"
             />
           )}
-          <ActionButton
-            variant="outlined"
-            color="inherit"
-            onClick={() => router.push("/recepcion-mercancias")}
-          >
-            Volver
-          </ActionButton>
           {canEdit && (
             <ActionButton
               variant="outlined"
-              color="primary"
+              color="inherit"
               onClick={() =>
                 router.push(`/recepcion-mercancias/${reception.id}/editar`)
               }
@@ -291,7 +284,7 @@ export default function RecepcionDetalle() {
           {canPrintLabels && (
             <ActionButton
               variant="outlined"
-              color="primary"
+              color="inherit"
               onClick={handleOpenPrintLabels}
               disabled={printProgress != null}
             >

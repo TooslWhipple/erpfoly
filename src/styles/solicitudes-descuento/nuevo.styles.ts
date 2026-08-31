@@ -7,8 +7,9 @@ export const DiscountCard = styled('div')({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  wrap: "nowrap",
+  flexWrap: "wrap",
   width: "100%",
+  minWidth: 0,
   backgroundColor: "#FFF7ED",
   border: `1px solid #FFEDD5`,
   borderRadius: "16px",
@@ -21,30 +22,40 @@ export const TotalCard = styled('div')({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  wrap: "nowrap",
+  flexWrap: "wrap",
+  gap: 8,
+  minWidth: 0,
   background: "#F4F4F5",
   borderRadius: '12px',
   padding: '20px',
 });
 
-export const SectionCard = styled('div')({
+export const SectionCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
+  minWidth: 0,
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: "16px",
-  padding: "24px"
-});
+  padding: "24px",
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2),
+  },
+}));
 
-export const SectionGrayCard = styled('div')({
+export const SectionGrayCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
+  minWidth: 0,
   backgroundColor: "#F4F4F5",
   borderRadius: "16px",
-  padding: "24px"
-});
+  padding: "24px",
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2),
+  },
+}));
 
 export const ChangeLink = styled(Typography)({
   fontSize: 13,
@@ -66,6 +77,7 @@ export const ItemsList = styled('div')({
 export const ItemCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: 'column',
+  minWidth: 0,
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 8,

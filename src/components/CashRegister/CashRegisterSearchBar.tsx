@@ -1,8 +1,9 @@
-import { Button, InputAdornment, MenuItem } from "@mui/material";
+import { InputAdornment, MenuItem } from "@mui/material";
 import { Search } from "lucide-react";
 import { theme } from "@/styles/theme";
 import {
   PaymentTypeSelect,
+  SearchBarButton,
   SearchBarContainer,
   SearchInput,
 } from "@/styles/cajas.styles";
@@ -30,13 +31,13 @@ export function CashRegisterSearchBar({
         onChange={(event) => onModeChange(event.target.value as typeof mode)}
       >
         <MenuItem value="abonos">Abonos</MenuItem>
-        <MenuItem value="ventas">Ventas</MenuItem>
+        <MenuItem value="ventas">Cobros Pendientes</MenuItem>
       </PaymentTypeSelect>
 
       <SearchInput
         placeholder={
           mode === "ventas"
-            ? "Ingresa folio, cliente o monto"
+            ? "Buscar por Folio, Cliente o Vendedor"
             : "Ingresa código o nombre del cliente"
         }
         value={searchQuery}
@@ -51,14 +52,13 @@ export function CashRegisterSearchBar({
         }}
       />
 
-      <Button
+      <SearchBarButton
         variant="contained"
-        sx={{ minWidth: "112px" }}
         disabled={!searchQuery.trim() || isSearching}
         onClick={onSearch}
       >
         {isSearching ? "Buscando..." : "Buscar"}
-      </Button>
+      </SearchBarButton>
     </SearchBarContainer>
   );
 }

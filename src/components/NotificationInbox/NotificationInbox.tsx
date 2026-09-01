@@ -1,20 +1,23 @@
 'use client';
 
 import { Inbox } from '@novu/nextjs';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useInboxCredentials } from '@/hooks/useInboxCredentials';
 
 export default function NotificationInbox() {
-  const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APPLICATION_IDENTIFIER;
-  const userId = useAuthStore((state) => state.user?.id);
+  const { data: credentials } = useInboxCredentials();
 
-  if (!userId || !applicationIdentifier) {
+  // Never render an unsigned Inbox: with HMAC enabled in Novu, an <Inbox>
+  // without its hash is rejected, so while the request is in flight or if it
+  // failed the bell simply is not shown.
+  if (!credentials) {
     return null;
   }
 
   return (
     <Inbox
-      applicationIdentifier={applicationIdentifier}
-      subscriberId={String(userId)}
+      applicationIdentifier={credentials.applicationIdentifier}
+      subscriberId={credentials.subscriberId}
+      subscriberHash={credentials.subscriberHash}
       placement="bottom-end"
       appearance={{
         variables: {

@@ -95,6 +95,7 @@ import {
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import type { ShippingQuote } from "@/services/ventas.service";
+import type { UpdateSalePurchaseTypeResult } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -152,7 +153,7 @@ import {
   allocateCheckoutTenders,
   cashChangeDue,
 } from "@/utils/saleCheckoutTenders";
-import { roundToCents } from "@/utils/number";
+import { creditMinimumDownPayment, roundToCents } from "@/utils/number";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -199,7 +200,8 @@ type PendingDiscountMutation =
   | { kind: "qty"; productId: number; delta: number }
   | { kind: "remove"; productId: number }
   | { kind: "add" }
-  | { kind: "paymentType"; value: SalePaymentType };
+  | { kind: "paymentType"; value: SalePaymentType }
+  | { kind: "cashierPaymentType"; value: SalePaymentType };
 
 function qtyMaxForCartItem(
   item: CartItem,
@@ -455,6 +457,11 @@ export function SaleBuilder({
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
   const [identityOk, setIdentityOk] = useState(false);
+  const [saleEconomicRevision, setSaleEconomicRevision] = useState<
+    number | null
+  >(null);
+  const [checkoutRule, setCheckoutRule] =
+    useState<UpdateSalePurchaseTypeResult["checkout"] | null>(null);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -791,10 +798,7 @@ export function SaleBuilder({
       Boolean(resumeSaleData.identityVerifiedAt) ||
       Boolean(resumeSaleData.identityVerificationAuthorizedBy);
     setIdentityOk(nextIdentityOk);
-
-    if (isCajeroMode && (nextPaymentType !== "CREDIT" || nextIdentityOk)) {
-      setView("checkout");
-    }
+    setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
   }
 
   if (
@@ -926,7 +930,10 @@ export function SaleBuilder({
           if (clientRes.error) throw new Error(clientRes.error.message);
         }
 
-        const purchaseTypeRes = await updateSalePurchaseType(saleId, pt.id);
+        const purchaseTypeRes = await updateSalePurchaseType(saleId, {
+          purchase_type_id: pt.id,
+          economic_revision: economicRevision,
+        });
         if (purchaseTypeRes.error) throw new Error(purchaseTypeRes.error.message);
 
         const currentIds = new Set(
@@ -1187,6 +1194,7 @@ export function SaleBuilder({
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
           tenders: layawayTenders,
+          economic_revision: economicRevision,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
         return {
@@ -1245,10 +1253,89 @@ export function SaleBuilder({
     },
   });
 
+  const resetCheckoutCapture = () => {
+    setCashAmount("");
+    setCardAmount("");
+    setExtraCards([]);
+    setSelectedTerminal(null);
+    checkoutIdempotencyKeyRef.current = null;
+    setView("form");
+  };
+
+  const applyPurchaseTypeSnapshot = (
+    result: UpdateSalePurchaseTypeResult,
+    nextPaymentType: SalePaymentType,
+  ) => {
+    setPaymentType(nextPaymentType);
+    lastPatchedPurchaseTypeRef.current = result.purchaseType.id;
+    setSaleEconomicRevision(result.economicRevision);
+    setCheckoutRule(result.checkout);
+    setCart((prev) =>
+      patchCartLinePrices(
+        prev,
+        result.items.map((item) => ({
+          productId: item.productId,
+          originalPrice: item.listPrice,
+          discountAmount: item.discountAmount,
+          totalAmount: item.totalAmount,
+        })),
+      ),
+    );
+    if (result.discountInvalidated) {
+      void queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", resumeSaleId],
+      });
+    }
+    setIdentityOk(false);
+    setIdentityVerificationModalOpen(false);
+    if (nextPaymentType === "CREDIT") {
+      setSelectedTermMonths(12);
+    }
+    if (nextPaymentType === "LAYAWAY") {
+      setSelectedLayawayTermId((current) => current ?? layawayTerms[0]?.id ?? null);
+    } else {
+      setSelectedLayawayTermId(null);
+    }
+    resetCheckoutCapture();
+  };
+
+  const purchaseTypeMutation = useMutation({
+    mutationFn: async (value: SalePaymentType) => {
+      if (activeSaleId == null) {
+        throw new Error("La venta no está lista");
+      }
+      const nextId = resolvePurchaseTypeId(value, purchaseTypes);
+      if (nextId == null) {
+        throw new Error("Tipo de venta no disponible");
+      }
+      const revision =
+        saleEconomicRevision ??
+        shippingQuote?.economicRevision ??
+        resumeSaleData?.economicRevision ??
+        0;
+      const res = await updateSalePurchaseType(activeSaleId, {
+        purchase_type_id: nextId,
+        economic_revision: revision,
+      });
+      if (res.error) throw new Error(res.error.message);
+      if (!res.data) {
+        throw new Error("No se pudo actualizar el tipo de venta");
+      }
+      return { value, result: res.data };
+    },
+    onSuccess: ({ value, result }) => {
+      applyPurchaseTypeSnapshot(result, value);
+    },
+    onError: (err: Error) => {
+      snackbar.showError(err.message);
+    },
+  });
+
   const saleOperationPending =
     guardarCotizacionMutation.isPending ||
     cobrarMutation.isPending ||
-    registerSaleMutation.isPending;
+    registerSaleMutation.isPending ||
+    purchaseTypeMutation.isPending;
 
   const executeSaleOperation = async (operation: () => Promise<unknown>) => {
     if (saleOperationLockRef.current) return;
@@ -1635,6 +1722,17 @@ export function SaleBuilder({
     const request = resumeSaleData?.discountRequest;
     if (!mutation || !request) return;
 
+    if (mutation.kind === "cashierPaymentType") {
+      setDiscountInvalidateLoading(true);
+      try {
+        await purchaseTypeMutation.mutateAsync(mutation.value);
+        setPendingDiscountMutation(null);
+      } finally {
+        setDiscountInvalidateLoading(false);
+      }
+      return;
+    }
+
     setDiscountInvalidateLoading(true);
     const res = await invalidateSaleDiscount(request.id);
     if (res.error) {
@@ -1714,6 +1812,15 @@ export function SaleBuilder({
   const handlePaymentTypeChange = (value: SalePaymentType) => {
     if (isMorosoClient && value !== "CASH") return;
     if (value === paymentType) return;
+    if (purchaseTypeMutation.isPending) return;
+    if (isCajeroMode) {
+      if (isApprovedSpecialDiscount) {
+        setPendingDiscountMutation({ kind: "cashierPaymentType", value });
+        return;
+      }
+      purchaseTypeMutation.mutate(value);
+      return;
+    }
     if (isApprovedSpecialDiscount) {
       setPendingDiscountMutation({ kind: "paymentType", value });
       return;
@@ -1795,13 +1902,23 @@ export function SaleBuilder({
         activeSaleId != null &&
         lastPatchedPurchaseTypeRef.current !== purchaseTypeId
       ) {
-        const res = await updateSalePurchaseType(activeSaleId, purchaseTypeId);
+        const res = await updateSalePurchaseType(activeSaleId, {
+          purchase_type_id: purchaseTypeId,
+          economic_revision:
+            saleEconomicRevision ??
+            shippingQuote?.economicRevision ??
+            resumeSaleData?.economicRevision ??
+            0,
+        });
         if (isCancelled()) return;
         if (res.error) {
           snackbar.showError(res.error.message);
           return;
         }
         lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+        if (res.data) {
+          setSaleEconomicRevision(res.data.economicRevision);
+        }
       }
 
       try {
@@ -1877,7 +1994,10 @@ export function SaleBuilder({
     ? "Calculando…"
     : formatCurrency(shippingAmount);
   const economicRevision =
-    shippingQuote?.economicRevision ?? resumeSaleData?.economicRevision ?? 0;
+    saleEconomicRevision ??
+    shippingQuote?.economicRevision ??
+    resumeSaleData?.economicRevision ??
+    0;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
   const extraCardAmtNum = extraCards.slice(0, 1).reduce(
@@ -1888,20 +2008,29 @@ export function SaleBuilder({
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
   const totalPaid = roundToCents(cashAmtNum + cardAmtNum + extraCardAmtNum);
-  const ENGANCHE_PCT = 0.1;
-  const enganche = Math.round(totalFinal * ENGANCHE_PCT);
-  const montoAFinanciar = roundToCents(totalFinal - enganche);
+  const enganche =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.minimumDownPayment
+      : creditMinimumDownPayment(totalFinal);
+  const montoAFinanciar =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.financedAmount
+      : roundToCents(totalFinal - enganche);
+  const creditAvailable =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.creditAvailable
+      : selectedClient?.creditAvailable;
   const creditLineExceeded =
     paymentType === "CREDIT" &&
-    selectedClient?.creditAvailable != null &&
-    montoAFinanciar > selectedClient.creditAvailable + 0.009;
+    creditAvailable != null &&
+    montoAFinanciar > creditAvailable + 0.009;
 
-  const handleIdentityVerified = useCallback(() => {
+  const handleIdentityVerified = () => {
     setIdentityOk(true);
     setIdentityVerificationModalOpen(false);
     setCashAmount(enganche.toFixed(2));
     setView("checkout");
-  }, [enganche]);
+  };
 
   const handleIdentityDialogClose = useCallback(() => {
     setIdentityVerificationModalOpen(false);
@@ -1910,7 +2039,7 @@ export function SaleBuilder({
     paymentType === "CREDIT"
       ? enganche
       : paymentType === "LAYAWAY"
-        ? 0
+        ? totalPaid
         : roundToCents(totalFinal);
   const change = cashChangeDue(
     amountToPay,
@@ -1938,7 +2067,11 @@ export function SaleBuilder({
       onConfirm={handleConfirmDiscountInvalidation}
       type="warning"
       title="Se invalidará el descuento"
-      description="Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      description={
+        pendingDiscountMutation?.kind === "cashierPaymentType"
+          ? "Al cambiar el tipo de venta se invalidará el descuento especial aprobado y se recalcularán los precios. ¿Deseas continuar?"
+          : "Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      }
       confirmLabel="Continuar"
       cancelLabel="Cancelar"
     />
@@ -2540,6 +2673,8 @@ export function SaleBuilder({
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" || identityOk) &&
+      (paymentType !== "LAYAWAY" ||
+        (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
@@ -2551,8 +2686,8 @@ export function SaleBuilder({
             <IconButton
               size="medium"
               disabled={saleOperationPending}
-              onClick={() => (isCajeroMode ? onExit() : setView("form"))}
-              aria-label={isCajeroMode ? "Cerrar" : "Volver"}
+              onClick={() => setView("form")}
+              aria-label="Volver"
             >
               <X size={20} />
             </IconButton>
@@ -3101,10 +3236,10 @@ export function SaleBuilder({
               No se pudo determinar tu sucursal.
             </Alert>
           )}
-          {creditLineExceeded && selectedClient?.creditAvailable != null && (
+          {creditLineExceeded && creditAvailable != null && (
             <Alert severity="error">
               Línea de crédito insuficiente. Disponible:{" "}
-              {formatCurrency(selectedClient.creditAvailable)}, Requerido:{" "}
+              {formatCurrency(creditAvailable)}, Requerido:{" "}
               {formatCurrency(montoAFinanciar)}.
             </Alert>
           )}
@@ -3372,25 +3507,21 @@ export function SaleBuilder({
             <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Tipo de venta
             </Typography>
-            {isCajeroMode ? (
-              <Typography variant="body2">
-                {PAYMENT_OPTIONS.find((opt) => opt.value === paymentType)
-                  ?.label ?? "—"}
-              </Typography>
-            ) : (
-              <PaymentTypeRow>
-                {PAYMENT_OPTIONS.map((opt) => (
-                  <PaymentTypeButton
-                    key={opt.value}
-                    active={paymentType === opt.value}
-                    disabled={isMorosoClient && opt.value !== "CASH"}
-                    onClick={() => handlePaymentTypeChange(opt.value)}
-                  >
-                    {opt.label}
-                  </PaymentTypeButton>
-                ))}
-              </PaymentTypeRow>
-            )}
+            <PaymentTypeRow>
+              {PAYMENT_OPTIONS.map((opt) => (
+                <PaymentTypeButton
+                  key={opt.value}
+                  active={paymentType === opt.value}
+                  disabled={
+                    purchaseTypeMutation.isPending ||
+                    (isMorosoClient && opt.value !== "CASH")
+                  }
+                  onClick={() => handlePaymentTypeChange(opt.value)}
+                >
+                  {opt.label}
+                </PaymentTypeButton>
+              ))}
+            </PaymentTypeRow>
           </SidebarCard>
 
           <SidebarCard>

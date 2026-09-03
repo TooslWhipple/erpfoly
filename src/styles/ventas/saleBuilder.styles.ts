@@ -395,8 +395,24 @@ export const PaymentIconBadge = styled(Box)(({ theme }) => ({
 export const PaymentAmountInput = styled(OutlinedInput)(({ theme }) => ({
   width: 180,
   maxWidth: "100%",
-  backgroundColor: "transparent",
   borderRadius: 12,
+  "&:not(.Mui-disabled)": {
+    backgroundColor: theme.palette.background.paper,
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.app.border,
+  },
+  "&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline":
+    {
+      borderColor: theme.palette.text.secondary,
+    },
+  "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.primary.main,
+    borderWidth: 1,
+  },
+  "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.error.main,
+  },
   "& .MuiOutlinedInput-input": {
     textAlign: "right",
     fontSize: "1.15rem",

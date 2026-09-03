@@ -135,10 +135,19 @@ export interface SaleDetailPayment {
   changeAmount: number | null;
 }
 
+export interface SaleDetailCreditInstallment {
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+}
+
 export interface SaleDetailCredit {
   downPayment: number;
+  financedAmount: number;
   termMonths: number;
   installmentAmount: number;
+  paymentFrequency: "MONTHLY";
+  installments: SaleDetailCreditInstallment[];
 }
 
 export interface SaleDetailLayawayPayment {

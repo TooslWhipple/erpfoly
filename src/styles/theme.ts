@@ -15,6 +15,7 @@ const optionButtonBase = (theme: Theme) => ({
 });
 
 export const SIDEBAR_WIDTH = 256;
+export const SIDEBAR_COLLAPSED_WIDTH = 64;
 export const CONTENT_PADDING = 32;
 
 /** Tokens de aplicación (sidebar, chips, bordes). Expuesto en theme.palette.app */

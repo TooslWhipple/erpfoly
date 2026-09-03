@@ -193,8 +193,11 @@ export function removeAssistantFromRoute(routeId: number, userId: number) {
   return del<RouteDetailApi>(`/routes/${routeId}/assistants/${userId}`);
 }
 
-export function updateRouteVehicleInfo(routeId: number, vehicleInfo: string) {
+export function assignVehicleToRoute(
+  routeId: number,
+  vehicleId: number | null,
+) {
   return patch<RouteDetailApi>(`/routes/${routeId}/vehicle`, {
-    vehicle_info: vehicleInfo,
+    vehicle_id: vehicleId,
   });
 }

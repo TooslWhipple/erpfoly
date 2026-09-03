@@ -108,13 +108,22 @@ export interface RoutePerson {
   role: "driver" | "assistant";
 }
 
+export interface RouteVehicle {
+  id: number;
+  brand: string;
+  model: string;
+  plate: string;
+  label: string;
+}
+
 export interface RouteDetail extends RouteSummary {
   routeType?: RouteType;
   scheduledDate: string | null;
   originBranch: RouteOriginBranch | null;
   scheduledStops: RouteScheduledStop[];
   driverName: string;
-  vehicleInfo: string;
+  vehicleId: number | null;
+  vehicle: RouteVehicle | null;
   orders: RouteOrder[];
   driver: RoutePerson | null;
   assistants: RoutePerson[];

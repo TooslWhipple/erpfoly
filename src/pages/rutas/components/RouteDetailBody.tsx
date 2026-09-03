@@ -33,6 +33,7 @@ interface RouteDetailBodyProps {
   savingCarta: boolean;
   loadingDriver: boolean;
   loadingAssistant: boolean;
+  loadingVehicle: boolean;
   onSaveCartaPorte: () => void;
   onAddOrders: () => void;
   onAddOrdersForBranch: (branchId: number) => void;
@@ -53,6 +54,7 @@ interface RouteDetailBodyProps {
   onAddAssistant: () => void;
   onRemoveDriver: () => void;
   onRemoveAssistant: (assistantId: string) => void;
+  onAssignVehicle: (vehicleId: number | null) => void;
 }
 
 export function RouteDetailBody({
@@ -67,6 +69,7 @@ export function RouteDetailBody({
   savingCarta,
   loadingDriver,
   loadingAssistant,
+  loadingVehicle,
   onSaveCartaPorte,
   onAddOrders,
   onAddOrdersForBranch,
@@ -78,6 +81,7 @@ export function RouteDetailBody({
   onAddAssistant,
   onRemoveDriver,
   onRemoveAssistant,
+  onAssignVehicle,
 }: RouteDetailBodyProps) {
   const routeType = routeDetail.routeType ?? "deliveries";
   const isScheduled = routeType === "scheduled";
@@ -179,10 +183,12 @@ export function RouteDetailBody({
           canManage={canUpdateRoute}
           loadingDriver={loadingDriver}
           loadingAssistant={loadingAssistant}
+          loadingVehicle={loadingVehicle}
           onAddDriver={onAddDriver}
           onAddAssistant={onAddAssistant}
           onRemoveDriver={onRemoveDriver}
           onRemoveAssistant={onRemoveAssistant}
+          onAssignVehicle={onAssignVehicle}
         />
       )}
     </>

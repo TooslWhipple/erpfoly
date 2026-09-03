@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useMediaQuery, useTheme } from "@mui/material";
 import { Sidebar } from "@/components/Sidebar";
@@ -7,6 +7,7 @@ import {
   SALES_POS_BREAKPOINT,
 } from "@/lib/layoutBreakpoints";
 import { isSalesFlowRoute } from "@/lib/salesFlowRoutes";
+import { useSidebarPreferenceStore } from "@/store/useSidebarPreferenceStore";
 import { AppNavProvider } from "./AppNavContext";
 import {
   LayoutContainer,
@@ -34,6 +35,9 @@ export function AppLayoutShell({ children }: AppLayoutShellProps) {
     theme.breakpoints.down(SALES_POS_BREAKPOINT),
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isCollapsed = useSidebarPreferenceStore((s) => s.isCollapsed);
+  const setCollapsed = useSidebarPreferenceStore((s) => s.setCollapsed);
+  const toggleCollapsed = useSidebarPreferenceStore((s) => s.toggleCollapsed);
 
   const isSalesFlowChrome = isSalesFlowRoute(router.pathname);
   const isDrawerNav = isSalesFlowChrome
@@ -42,16 +46,32 @@ export function AppLayoutShell({ children }: AppLayoutShellProps) {
   const isSalesPosLayout = isSalesFlowChrome && isBelowSalesPosBreakpoint;
   const embedMobileMenu = isDrawerNav && isSalesFlowChrome;
   const flushPadding = isSalesPosLayout;
+  // Only apply desktop collapse when the permanent sidebar is shown.
+  const isSidebarCollapsed = !isDrawerNav && isCollapsed;
+
+  useEffect(() => {
+    if (isDrawerNav && isCollapsed) {
+      setCollapsed(false);
+    }
+  }, [isDrawerNav, isCollapsed, setCollapsed]);
 
   const navValue = useMemo(
     () => ({
       isDrawerNav,
       isSalesPosLayout,
       embedMobileMenu,
+      isSidebarCollapsed,
       openMobileNav: () => setMobileOpen(true),
       toggleMobileNav: () => setMobileOpen((prev) => !prev),
+      toggleSidebarCollapse: () => toggleCollapsed(),
     }),
-    [isDrawerNav, isSalesPosLayout, embedMobileMenu],
+    [
+      isDrawerNav,
+      isSalesPosLayout,
+      embedMobileMenu,
+      isSidebarCollapsed,
+      toggleCollapsed,
+    ],
   );
 
   return (

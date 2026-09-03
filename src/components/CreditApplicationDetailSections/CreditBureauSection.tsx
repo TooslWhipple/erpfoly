@@ -72,7 +72,7 @@ function scoreRowCopy(
           </>
         ),
         subtitle:
-          "El error no bloquea la revisión; puedes reintentar o continuar el análisis.",
+          "La aprobación permanece bloqueada hasta obtener una consulta exitosa. Puedes reintentar la consulta.",
         iconColor: "#DC2626",
       };
     default:
@@ -112,7 +112,12 @@ export function CreditBureauSection({
 }: CreditBureauSectionProps) {
   const { creditBureau } = detail;
   const signatureUrl = creditBureau.signatureUrl;
-  const signatureSubtitle = "Firma capturada por el sistema";
+  const hasSignature = Boolean(
+    creditBureau.clientAuthorized || signatureUrl,
+  );
+  const signatureSubtitle = hasSignature
+    ? "Firma capturada por el sistema"
+    : "Se requiere la firma de autorización del cliente para consultar Buró.";
   const scoreCopy = scoreRowCopy(creditBureau);
   const StatusIcon =
     creditBureau.queryStatus === "SUCCESS"
@@ -180,15 +185,15 @@ export function CreditBureauSection({
           }
         >
           <VerifiedCheck>
-            <Check
-              size={18}
-              color={creditBureau.clientAuthorized || signatureUrl ? "#059669" : "#9CA3AF"}
-              strokeWidth={2}
-            />
+            {hasSignature ? (
+              <Check size={18} color="#059669" strokeWidth={2} />
+            ) : (
+              <AlertCircle size={18} color="#D97706" strokeWidth={2} />
+            )}
           </VerifiedCheck>
           <Stack>
             <Typography variant="subtitle2" fontWeight={600}>
-              {creditBureau.clientAuthorized || signatureUrl
+              {hasSignature
                 ? "El cliente ha autorizado la revisión de buró de Crédito"
                 : "No se encontró firma de autorización de buró"}
             </Typography>

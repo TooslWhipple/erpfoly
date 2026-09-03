@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Box, Button, CircularProgress, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Grid, Stack, Typography, useTheme } from "@mui/material";
 import { Check, Trash2, Upload } from "lucide-react";
 import { ImageViewerModal } from "@/components/ImageViewerModal";
 import { DropZoneRoot } from "@/components/FileUpload/styles";
@@ -360,27 +360,31 @@ export function DocumentationTab({
 
   return (
     <Card>
-      <Stack spacing={2}>
-        {documentSlots
-          .filter((slot) => slot.visible)
-          .map((slot) => (
-            <DocumentationDocumentSlot
-              key={slot.key}
-              label={slot.label}
-              file={slot.files[0]}
-              required={slot.required}
-              allowRemove={slot.allowRemove}
-              imageOnlySlot={slot.imageOnlySlot}
-              accept={slot.accept}
-              disabled={saving}
-              error={
-                slot.required && slot.files.length === 0 ? requiredErrorMessage : undefined
-              }
-              onChange={slot.onChange}
-              onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
-            />
-          ))}
-      </Stack>
+      <Grid container spacing={2}>
+        {
+          documentSlots
+            .filter((slot) => slot.visible)
+            .map((slot) => (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <DocumentationDocumentSlot
+                  key={slot.key}
+                  label={slot.label}
+                  file={slot.files[0]}
+                  required={slot.required}
+                  allowRemove={slot.allowRemove}
+                  imageOnlySlot={slot.imageOnlySlot}
+                  accept={slot.accept}
+                  disabled={saving}
+                  error={
+                    slot.required && slot.files.length === 0 ? requiredErrorMessage : undefined
+                  }
+                  onChange={slot.onChange}
+                  onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
+                />
+              </Grid>
+            ))
+        }
+      </Grid>
 
       <Button
         variant="contained"

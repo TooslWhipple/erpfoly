@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Button, Stack, Typography, useTheme } from "@mui/material";
-import { Logout as LogoutIcon } from "@mui/icons-material";
+import { Button, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { LogOut, PanelLeft } from "lucide-react";
 import { Plus } from "@/components/Icons";
 import { useAppNav } from "@/components/Layout";
 import {
@@ -37,7 +37,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const theme = useTheme();
-  const { isDrawerNav } = useAppNav();
+  const { isDrawerNav, isSidebarCollapsed, toggleSidebarCollapse } = useAppNav();
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.logout);
   const showError = useSnackbarStore((state) => state.showError);
@@ -104,26 +104,64 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         variant={isDrawerNav ? "temporary" : "permanent"}
         open={isDrawerNav ? open : true}
         onClose={onClose}
-        isMobile={isDrawerNav}>
+        isMobile={isDrawerNav}
+        collapsed={isSidebarCollapsed}
+      >
         <SidebarHeader>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-              <Stack>
-                <Typography variant="subtitle2">Folysoft</Typography>
-                <Typography variant="body2" color="text.secondary">V.1.0</Typography>
+          <Stack
+            direction={isSidebarCollapsed ? "column" : "row"}
+            alignItems="center"
+            justifyContent="space-between"
+            spacing={1}
+            sx={{ width: "100%" }}
+          >
+            <Stack
+              direction={isSidebarCollapsed ? "column" : "row"}
+              alignItems="center"
+              spacing={1}
+              sx={{ width: isSidebarCollapsed ? "100%" : "auto" }}
+            >
+              {!isDrawerNav && (
+                <IconButton
+                  size="small"
+                  onClick={toggleSidebarCollapse}
+                  aria-label={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+                  sx={{
+                    border: `1px solid ${theme.palette.app.border}`,
+                    borderRadius: 1,
+                    width: 32,
+                    height: 32,
+                    flexShrink: 0,
+                  }}
+                >
+                  <PanelLeft size={16} color={theme.palette.text.primary} />
+                </IconButton>
+              )}
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+                {!isSidebarCollapsed && (
+                  <Stack>
+                    <Typography variant="subtitle2" lineHeight={1.2}>
+                      Folysoft
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" lineHeight={1.2}>
+                      V.1.0
+                    </Typography>
+                  </Stack>
+                )}
               </Stack>
             </Stack>
             <NotificationInbox />
           </Stack>
 
-          {canCreateCreditApplication && (
+          {canCreateCreditApplication && !isSidebarCollapsed && (
             <Button
               variant="option"
               color="primary"
               fullWidth
               startIcon={<Plus size={16} color={theme.palette.primary.light} strokeWidth={3} />}
-              onClick={handleOpenNewCreditApplicationIntake}>
+              onClick={handleOpenNewCreditApplicationIntake}
+            >
               Nueva solicitud
             </Button>
           )}
@@ -134,30 +172,35 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             items={visibleNavItems}
             pathname={router.pathname}
             openMenus={openMenus}
+            collapsed={isSidebarCollapsed}
             onNavigate={handleNavigation}
             onToggleMenu={handleToggleMenu}
           />
         </NavigationContainer>
 
-        <UserProfileContainer>
-          <UserAvatar alt={user?.name ?? "Usuario"}>{getInitials(user?.name)}</UserAvatar>
-          <UserInfoContainer>
-            <Typography variant="subtitle2" noWrap>
-              {user?.name ?? "Usuario"}
-            </Typography>
-            <UserRole variant="caption" noWrap>
-              {user?.roleName?.trim() || user?.role?.trim() || "Sin rol asignado"}
-            </UserRole>
-          </UserInfoContainer>
-          <Button
-            variant="text"
+        <UserProfileContainer collapsed={isSidebarCollapsed}>
+          {!isSidebarCollapsed && (
+            <>
+              <UserAvatar alt={user?.name ?? "Usuario"}>{getInitials(user?.name)}</UserAvatar>
+              <UserInfoContainer>
+                <Typography variant="subtitle2" noWrap lineHeight={1.2}>
+                  {user?.name ?? "Usuario"}
+                </Typography>
+                <UserRole variant="caption" color="text.secondary" noWrap lineHeight={1.2}>
+                  {user?.roleName?.trim() || user?.role?.trim() || "Sin rol asignado"}
+                </UserRole>
+              </UserInfoContainer>
+            </>
+          )}
+          <IconButton
             size="small"
             color="inherit"
             onClick={handleLogout}
             aria-label="Cerrar sesión"
+            sx={{ width: 28, height: 28, flexShrink: 0 }}
           >
-            <LogoutIcon fontSize="small" />
-          </Button>
+            <LogOut size={16} color={theme.palette.text.secondary} />
+          </IconButton>
         </UserProfileContainer>
       </StyledDrawer>
 

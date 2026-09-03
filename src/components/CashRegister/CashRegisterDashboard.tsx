@@ -1,6 +1,7 @@
 import { Alert, Button, Stack, Table, TableBody, TableHead, TableRow, Typography } from "@mui/material";
 import numeral from "numeral";
 import { AlertTriangle } from "lucide-react";
+import { TabFilters } from "@/components";
 import {
     AdminActionsRow,
     DashboardSplit,
@@ -14,6 +15,7 @@ import {
 } from "@/styles/cajas.styles";
 
 import type { CashRegisterDashboardProps } from "./types";
+import type { CashierSalesTab } from "@/hooks/useCashierSales";
 import { CashRegisterSearchBar } from "./CashRegisterSearchBar";
 import { PendingCollectionsPanel } from "./PendingCollectionsPanel";
 import { MovementTypeCell } from "./MovementTypeCell";
@@ -38,6 +40,9 @@ export function CashRegisterDashboard({
     onModeChange,
     pendingSales = [],
     pendingLoading = false,
+    collectionTabs,
+    activeCollectionTab,
+    onCollectionTabChange,
     onProcessSale,
     cashLimitLevel,
     cashLimitProgress,
@@ -59,12 +64,18 @@ export function CashRegisterDashboard({
                 />
 
                 <Stack spacing={1.5}>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                        Cobros Pendientes
-                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={600}>Cobros</Typography>
+                    <TabFilters
+                        tabs={collectionTabs}
+                        activeTab={activeCollectionTab}
+                        onTabChange={(value) =>
+                            onCollectionTabChange(value as CashierSalesTab)
+                        }
+                    />
                     <PendingCollectionsPanel
                         rows={pendingSales}
                         loading={pendingLoading}
+                        activeTab={activeCollectionTab}
                         onProcess={onProcessSale}
                     />
                 </Stack>

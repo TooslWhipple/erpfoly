@@ -14,7 +14,7 @@ export const TAB_DRIVER = "driver";
 const SHARED_TABS: TabItem[] = [
   { value: TAB_ROUTE, label: "Ruta" },
   { value: TAB_CARTA_PORTE, label: "Carta porte" },
-  { value: TAB_DRIVER, label: "Chofer y ayudantes" },
+  { value: TAB_DRIVER, label: "Unidad y Personal" },
 ];
 
 export const TABS: TabItem[] = [

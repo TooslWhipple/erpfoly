@@ -7,6 +7,7 @@ import {
   addAssistantToRoute,
   addOrdersToRoute,
   assignDriverToRoute,
+  assignVehicleToRoute,
   createRoute,
   deleteCartaPorteDocument,
   removeAssistantFromRoute,
@@ -205,6 +206,39 @@ export function useRouteMutations({
         detail
           ? `No se pudo asignar el chofer: ${detail}`
           : "No se pudo asignar el chofer.",
+      );
+    },
+  });
+
+  const assignVehicleMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      vehicleId,
+    }: {
+      routeId: number;
+      vehicleId: number | null;
+    }) => {
+      const res = await assignVehicleToRoute(routeId, vehicleId);
+      return unwrapOrThrow(res);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess(
+        vars.vehicleId == null
+          ? "Vehículo desasignado correctamente."
+          : "Vehículo asignado correctamente.",
+      );
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo actualizar el vehículo: ${detail}`
+          : "No se pudo actualizar el vehículo.",
       );
     },
   });
@@ -414,6 +448,7 @@ export function useRouteMutations({
     uploadCartaMutation,
     deleteCartaMutation,
     assignDriverMutation,
+    assignVehicleMutation,
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,

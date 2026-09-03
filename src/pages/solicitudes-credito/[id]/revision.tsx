@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, Button, Typography, Skeleton, Grid } from "@mui/material";
+import { Stack, Button, Typography, Skeleton, Grid, Tooltip, Box } from "@mui/material";
 import {
   Breadcrumbs,
   VerticalSidebarTabs,
@@ -252,6 +252,28 @@ export default function CreditApplicationReviewPage() {
       </Stack>
     );
   }
+  const canApproveByBuro = detail.creditBureau.queryStatus === "SUCCESS";
+  const buroApproveBlockReason =
+    detail.creditBureau.queryStatus === "FAILED"
+      ? "La consulta a Buró falló; reintenta antes de aprobar."
+      : detail.creditBureau.queryStatus === "NOT_QUERIED"
+        ? "Consulta Buró de Crédito pendiente."
+        : "";
+  const canApproveByFaceMatch = detail.faceMatch.status === "SUCCESS";
+  const faceMatchApproveBlockReason =
+    detail.faceMatch.status === "FAILED"
+      ? "Identidad no verificada: el rostro capturado no coincide con la identificación."
+      : detail.faceMatch.status === "NOT_VERIFIED"
+        ? "Falta la verificación biométrica facial exitosa."
+        : "";
+  const approveDisabledByStatus =
+    detail.status === "DRAFT" || detail.status === "CANCELLED";
+  const approveButtonDisabled =
+    approveDisabledByStatus || !canApproveByBuro || !canApproveByFaceMatch;
+  const approveTooltipTitle =
+    !approveDisabledByStatus
+      ? faceMatchApproveBlockReason || buroApproveBlockReason
+      : "";
   return (
     <>
       <Stack spacing={3}>
@@ -320,16 +342,19 @@ export default function CreditApplicationReviewPage() {
                   md: "auto",
                 }}
               >
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => setApproveModalOpen(true)}
-                  disabled={
-                    detail.status === "DRAFT" || detail.status === "CANCELLED"
-                  }
-                >
-                  Aprobar solicitud
-                </Button>
+                <Tooltip title={approveTooltipTitle}>
+                  <Box
+                    component="span"
+                    sx={{ display: "inline-flex", width: "100%" }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => setApproveModalOpen(true)}
+                      disabled={approveButtonDisabled}>
+                      Aprobar solicitud
+                    </Button>
+                  </Box>
+                </Tooltip>
               </Grid>
             </Grid>
           )}

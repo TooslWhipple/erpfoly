@@ -15,7 +15,10 @@ export type SaleStatusTab =
   | "pendingCollection"
   | "pendingPayment"
   | "paid"
-  | "cancelled";
+  | "cancelled"
+  | "pendingCashier"
+  | "processedCashier"
+  | "cashierAll";
 
 export interface SaleListItem {
   id: number;

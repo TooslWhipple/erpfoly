@@ -1,5 +1,5 @@
 import type { StatusChipVariant } from "@/components/TableCrud";
-import type { SaleStatus } from "@/types/ventas.types";
+import type { SaleListItem, SaleStatus } from "@/types/ventas.types";
 
 export const SALE_STATUS_CHIP_LABELS: Record<SaleStatus, string> = {
   DRAFT: "Borrador",
@@ -22,3 +22,11 @@ export const SALE_STATUS_CHIP_VARIANTS: Record<SaleStatus, StatusChipVariant> = 
   DELIVERED: "success",
   CANCELLED: "error",
 };
+
+/** True when the cashier can still collect payment for this sale. */
+export function isSaleCollectableByCashier(sale: SaleListItem): boolean {
+  return (
+    sale.status === "PENDING_CASHIER" ||
+    (sale.status === "PENDING_PAYMENT" && sale.paymentType === "LAYAWAY")
+  );
+}

@@ -1,7 +1,9 @@
-import { CashRegisterStatus } from "@/styles/cajas.styles";
+import type { CashRegisterStatus } from "@/styles/cajas.styles";
 import type { CashMovementType, CashMovementPaymentForm } from "@/lib/cashMovement.constants";
 import type { SaleListItem } from "@/types/ventas.types";
 import type { CashLimitLevel } from "@/utils/cashLimit";
+import type { CashierSalesTab } from "@/hooks/useCashierSales";
+import type { TabOption } from "@/components/TabFilters";
 
 export interface CashRegisterState {
   id: string;
@@ -91,6 +93,9 @@ export interface CashRegisterDashboardProps {
   onModeChange: (mode: CashSearchMode) => void;
   pendingSales?: SaleListItem[];
   pendingLoading?: boolean;
+  collectionTabs: TabOption[];
+  activeCollectionTab: CashierSalesTab;
+  onCollectionTabChange: (value: CashierSalesTab) => void;
   onProcessSale: (sale: SaleListItem) => void;
   cashLimitLevel: CashLimitLevel;
   cashLimitProgress: number;

@@ -30,6 +30,10 @@ import {
 import { getActiveSaleCredits } from "@/services/sale-credit.service";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { isCreditClient as checkIsCreditClient } from "@/utils/client";
+import {
+  getClientPaymentAccessDenial,
+  getClientPaymentAccessDenialMessage,
+} from "@/utils/clientPaymentAccess";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMERS_DELETE } from "@/lib/permissions";
@@ -288,23 +292,23 @@ export default function ClientDetailPage() {
     }
 
     if (!isCreditClient) {
-      showWarning(
-        "Este cliente es de contado y no puede registrar abonos.",
-      );
+      const message = getClientPaymentAccessDenialMessage("cash-client");
+      if (message) showWarning(message);
       return;
     }
 
     setValidatingPayment(true);
     try {
       const result = await activeCreditsQuery.refetch();
-      const hasPayableCredit = (result.data?.rows ?? []).some(
-        (credit) => credit.outstanding_balance > 0,
-      );
+      const denial = getClientPaymentAccessDenial({
+        creditApplicationId: header.creditApplicationId,
+        status: clientStatus,
+        activeCredits: result.data?.rows ?? [],
+      });
 
-      if (!hasPayableCredit) {
-        showWarning(
-          "El cliente no tiene compras a crédito vigentes con parcialidades pendientes.",
-        );
+      if (denial) {
+        const message = getClientPaymentAccessDenialMessage(denial);
+        if (message) showWarning(message);
         return;
       }
 

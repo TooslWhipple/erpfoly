@@ -161,10 +161,11 @@ export const InstallmentsControlDivider = styled("div")(({ theme }) => ({
 export const InstallmentsControlInput = styled("input")(({ theme }) => ({
   width: 48,
   padding: theme.spacing(0.25, 0.5),
-  border: "none",
-  borderRadius: 6,
-  backgroundColor: "transparent",
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: 12,
+  backgroundColor: theme.palette.background.paper,
   color: "inherit",
+  cursor: "text",
   fontSize: 16,
   fontWeight: 600,
   fontFamily: "inherit",
@@ -175,8 +176,8 @@ export const InstallmentsControlInput = styled("input")(({ theme }) => ({
     margin: 0,
   },
   "&:focus": {
-    outline: `2px solid ${theme.palette.app.chip.variants.info.color}`,
-    outlineOffset: 1,
+    outline: "none",
+    borderColor: theme.palette.app.chip.variants.info.color,
   },
   "&:disabled": {
     opacity: 0.4,

@@ -70,6 +70,10 @@ const EMPTY_DETAIL = {
     canQueryNow: false,
     missingFields: [],
   },
+  faceMatch: {
+    status: "NOT_VERIFIED" as const,
+    score: null,
+  },
   biometrics: { items: [] },
   purchaseIntention: { items: [], subtotal: 0, total: 0 },
 };

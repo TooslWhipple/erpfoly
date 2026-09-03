@@ -41,7 +41,7 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
-import { SaleCartItemRow, BackorderChip } from "./SaleCartItem";
+import { SaleCartItemRow, BackorderChip, PendingSupplyAlert } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
   Card,
@@ -95,6 +95,7 @@ import {
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import type { ShippingQuote } from "@/services/ventas.service";
+import type { UpdateSalePurchaseTypeResult } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -139,6 +140,8 @@ import {
   sellableMaxFromPickedSources,
   sourceSellableMax,
   toInventorySourcesPayload,
+  inventorySourcesMatch,
+  cartPendingSupplyTotal,
 } from "@/utils/saleCartCoverage";
 import {
   cartLineDiscounts,
@@ -151,7 +154,7 @@ import {
   allocateCheckoutTenders,
   cashChangeDue,
 } from "@/utils/saleCheckoutTenders";
-import { roundToCents } from "@/utils/number";
+import { creditMinimumDownPayment, roundToCents } from "@/utils/number";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -198,7 +201,8 @@ type PendingDiscountMutation =
   | { kind: "qty"; productId: number; delta: number }
   | { kind: "remove"; productId: number }
   | { kind: "add" }
-  | { kind: "paymentType"; value: SalePaymentType };
+  | { kind: "paymentType"; value: SalePaymentType }
+  | { kind: "cashierPaymentType"; value: SalePaymentType };
 
 function qtyMaxForCartItem(
   item: CartItem,
@@ -232,6 +236,27 @@ function formatCurrency(value: number) {
 function toCheckoutDate(value: string | null | undefined): string | null {
   if (!value) return null;
   return value.slice(0, 10);
+}
+
+type SyncedDeliverySnapshot = {
+  fulfillment: "delivery" | "pickup";
+  addressId: number | null;
+  pickupBranchId: number | null;
+  dispatchBranchId: number | null;
+  deliveryDate: string | null;
+};
+
+function sameDeliveryPlace(
+  prev: SyncedDeliverySnapshot | null,
+  next: SyncedDeliverySnapshot,
+): boolean {
+  return (
+    prev != null &&
+    prev.fulfillment === next.fulfillment &&
+    prev.addressId === next.addressId &&
+    prev.pickupBranchId === next.pickupBranchId &&
+    prev.dispatchBranchId === next.dispatchBranchId
+  );
 }
 
 const CHANGE_LINK_SX = {
@@ -435,6 +460,11 @@ export function SaleBuilder({
   );
   const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
   const lastPatchedPurchaseTypeRef = useRef<number | null>(null);
+  const [lastSeenGetRevision, setLastSeenGetRevision] = useState<
+    number | null
+  >(null);
+  const [lastSyncedDelivery, setLastSyncedDelivery] =
+    useState<SyncedDeliverySnapshot | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -454,6 +484,11 @@ export function SaleBuilder({
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
   const [identityOk, setIdentityOk] = useState(false);
+  const [saleEconomicRevision, setSaleEconomicRevision] = useState<
+    number | null
+  >(null);
+  const [checkoutRule, setCheckoutRule] =
+    useState<UpdateSalePurchaseTypeResult["checkout"] | null>(null);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -792,10 +827,38 @@ export function SaleBuilder({
       Boolean(resumeSaleData.identityVerifiedAt) ||
       Boolean(resumeSaleData.identityVerificationAuthorizedBy);
     setIdentityOk(nextIdentityOk);
-
-    if (isCajeroMode && (nextPaymentType !== "CREDIT" || nextIdentityOk)) {
-      setView("checkout");
+    setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
+    setLastSeenGetRevision(resumeSaleData.economicRevision ?? null);
+    if (resumeSaleData.deliveryType === "ADDRESS") {
+      setLastSyncedDelivery({
+        fulfillment: "delivery",
+        addressId: resumeSaleData.deliveryAddressId ?? null,
+        pickupBranchId: null,
+        dispatchBranchId:
+          resumeSaleData.dispatchBranchId ?? resumeSaleData.branchId ?? null,
+        deliveryDate: hydratedDeliveryDate,
+      });
+    } else if (resumeSaleData.deliveryType === "BRANCH") {
+      setLastSyncedDelivery({
+        fulfillment: "pickup",
+        addressId: null,
+        pickupBranchId: resumeSaleData.deliveryBranchId ?? null,
+        dispatchBranchId:
+          resumeSaleData.dispatchBranchId ?? resumeSaleData.branchId ?? null,
+        deliveryDate: hydratedDeliveryDate,
+      });
+    } else {
+      setLastSyncedDelivery(null);
     }
+  }
+
+  if (
+    resumeSaleData &&
+    hydratedSaleId === resumeSaleData.id &&
+    lastSeenGetRevision !== (resumeSaleData.economicRevision ?? null)
+  ) {
+    setLastSeenGetRevision(resumeSaleData.economicRevision ?? null);
+    setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
   }
 
   if (
@@ -819,6 +882,8 @@ export function SaleBuilder({
       deliveryType === "pickup"
         ? effectivePickupDate || checkoutDeliveryDate || undefined
         : checkoutDeliveryDate ?? undefined;
+    const deliveryDateKey = deliveryDate ?? null;
+    const dispatchBranchId = coverageBranchId ?? null;
 
     if (deliveryType === "delivery") {
       const clientPrimaryAddress =
@@ -828,24 +893,61 @@ export function SaleBuilder({
         ? customDeliveryAddress?.id
         : clientPrimaryAddress?.addressId;
       if (addressId) {
-        await setDeliveryDate(saleId, {
-          delivery_type: "ADDRESS",
-          address_id: addressId,
-          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
-        });
-        const quote = await quoteShipping(saleId, {
-          address_id: addressId,
-          dispatch_branch_id: coverageBranchId ?? undefined,
-        });
-        setShippingQuote(quote);
+        const snapshot: SyncedDeliverySnapshot = {
+          fulfillment: "delivery",
+          addressId,
+          pickupBranchId: null,
+          dispatchBranchId,
+          deliveryDate: deliveryDateKey,
+        };
+        const placeUnchanged = sameDeliveryPlace(
+          lastSyncedDelivery,
+          snapshot,
+        );
+        const dateUnchanged =
+          lastSyncedDelivery?.deliveryDate === deliveryDateKey;
+        if (!placeUnchanged || !dateUnchanged) {
+          await setDeliveryDate(saleId, {
+            delivery_type: "ADDRESS",
+            address_id: addressId,
+            ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
+          });
+        }
+        if (!placeUnchanged) {
+          const quote = await quoteShipping(saleId, {
+            address_id: addressId,
+            dispatch_branch_id: coverageBranchId ?? undefined,
+          });
+          setShippingQuote(quote);
+          if (quote.economicRevision != null) {
+            setSaleEconomicRevision(quote.economicRevision);
+          }
+        }
+        setLastSyncedDelivery(snapshot);
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-      await setDeliveryDate(saleId, {
-        delivery_type: "BRANCH",
-        branch_id: effectiveDeliveryBranch.id,
-        ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
-      });
+      const snapshot: SyncedDeliverySnapshot = {
+        fulfillment: "pickup",
+        addressId: null,
+        pickupBranchId: effectiveDeliveryBranch.id,
+        dispatchBranchId,
+        deliveryDate: deliveryDateKey,
+      };
+      const placeUnchanged = sameDeliveryPlace(
+        lastSyncedDelivery,
+        snapshot,
+      );
+      const dateUnchanged =
+        lastSyncedDelivery?.deliveryDate === deliveryDateKey;
+      if (!placeUnchanged || !dateUnchanged) {
+        await setDeliveryDate(saleId, {
+          delivery_type: "BRANCH",
+          branch_id: effectiveDeliveryBranch.id,
+          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
+        });
+      }
       setShippingQuote(null);
+      setLastSyncedDelivery(snapshot);
     }
   };
 
@@ -902,6 +1004,7 @@ export function SaleBuilder({
       setActiveSaleId(saleId);
       setActiveSaleFolio(folio);
       setOriginalItemIds(new Set(createdIds.map((row) => row.saleItemId)));
+      lastPatchedPurchaseTypeRef.current = pt.id;
       if (createdIds.length > 0) {
         setCart((prev) =>
           prev.map((item) => {
@@ -927,13 +1030,33 @@ export function SaleBuilder({
           if (clientRes.error) throw new Error(clientRes.error.message);
         }
 
-        const purchaseTypeRes = await updateSalePurchaseType(saleId, pt.id);
-        if (purchaseTypeRes.error) throw new Error(purchaseTypeRes.error.message);
+        const persistedTypeMatches =
+          lastPatchedPurchaseTypeRef.current === pt.id ||
+          (lastPatchedPurchaseTypeRef.current == null &&
+            resumeSaleData?.purchaseType != null &&
+            keywords.some((k) =>
+              resumeSaleData.purchaseType!.toUpperCase().includes(k),
+            ));
+        if (!persistedTypeMatches) {
+          const purchaseTypeRes = await updateSalePurchaseType(saleId, {
+            purchase_type_id: pt.id,
+            economic_revision: economicRevision,
+          });
+          if (purchaseTypeRes.error)
+            throw new Error(purchaseTypeRes.error.message);
+          lastPatchedPurchaseTypeRef.current = pt.id;
+          if (purchaseTypeRes.data) {
+            setSaleEconomicRevision(purchaseTypeRes.data.economicRevision);
+          }
+        } else {
+          lastPatchedPurchaseTypeRef.current = pt.id;
+        }
 
         const currentIds = new Set(
           cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
         );
 
+        let cartWrote = false;
         for (const originalId of originalItemIds) {
           if (!currentIds.has(originalId)) {
             const removeRes = await removeSaleItem(saleId, originalId);
@@ -943,13 +1066,26 @@ export function SaleBuilder({
             ) {
               throw new Error(removeRes.error.message);
             }
+            cartWrote = true;
           }
         }
 
+        const hydratedById = new Map(
+          (resumeSaleData?.items ?? []).map((item) => [item.id, item]),
+        );
         const addedIds: Array<{ productId: number; saleItemId: number }> = [];
         for (const item of cart) {
           const inventorySources = toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
+            const hydrated = hydratedById.get(item.saleItemId);
+            const unchanged =
+              hydrated != null &&
+              item.quantity === hydrated.quantity &&
+              inventorySourcesMatch(
+                inventorySources,
+                toInventorySourcesPayload(hydrated.inventorySources),
+              );
+            if (unchanged) continue;
             const updateRes = await updateSaleItem(saleId, item.saleItemId, {
               quantity: item.quantity,
               ...(inventorySources.length > 0
@@ -957,6 +1093,7 @@ export function SaleBuilder({
                 : {}),
             });
             if (updateRes.error) throw new Error(updateRes.error.message);
+            cartWrote = true;
           } else {
             const itemRes = await addSaleItem(saleId, {
               product_id: item.productId,
@@ -966,12 +1103,20 @@ export function SaleBuilder({
                 : {}),
             });
             if (itemRes.error) throw new Error(itemRes.error.message);
+            cartWrote = true;
             if (itemRes.data?.id != null) {
               addedIds.push({
                 productId: item.productId,
                 saleItemId: itemRes.data.id,
               });
             }
+          }
+        }
+
+        if (cartWrote) {
+          const detailRes = await getSaleDetail(saleId);
+          if (detailRes.data?.economicRevision != null) {
+            setSaleEconomicRevision(detailRes.data.economicRevision);
           }
         }
 
@@ -1071,7 +1216,8 @@ export function SaleBuilder({
         if (!addressId) {
           throw new Error("Falta la dirección de entrega");
         }
-        if (!isCajeroMode) {
+        // Cajero: persistir solo si eligió fecha en el cobro. No recotizar envío.
+        if (!isCajeroMode || checkoutDeliveryDate) {
           await setDeliveryDate(saleId, {
             delivery_type: "ADDRESS",
             address_id: addressId,
@@ -1079,12 +1225,13 @@ export function SaleBuilder({
           });
         }
       } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-        if (!isCajeroMode) {
+        const pickupDate =
+          effectivePickupDate || checkoutDeliveryDate || undefined;
+        if (!isCajeroMode || pickupDate) {
           await setDeliveryDate(saleId, {
             delivery_type: "BRANCH",
             branch_id: effectiveDeliveryBranch.id,
-            delivery_date:
-              effectivePickupDate || checkoutDeliveryDate || undefined,
+            delivery_date: pickupDate,
           });
         }
       }
@@ -1188,6 +1335,7 @@ export function SaleBuilder({
           payment_method: isCardPayment ? "CARD" : "CASH",
           payment_terminal_id: selectedTerminal ?? undefined,
           tenders: layawayTenders,
+          economic_revision: economicRevision,
         });
         if (layawayRes.error) throw new Error(layawayRes.error.message);
         return {
@@ -1235,11 +1383,92 @@ export function SaleBuilder({
       const { id: saleId } = await ensureSaleSynced();
       const registerRes = await registerSale(saleId);
       if (registerRes.error) throw new Error(registerRes.error.message);
-      return registerRes.data!;
+      return saleId;
     },
-    onSuccess: () => {
+    onSuccess: (saleId) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", saleId],
+      });
       showSuccess("Venta registrada. Queda pendiente de cobro en caja.");
       onExit();
+    },
+    onError: (err: Error) => {
+      snackbar.showError(err.message);
+    },
+  });
+
+  const resetCheckoutCapture = () => {
+    setCashAmount("");
+    setCardAmount("");
+    setExtraCards([]);
+    setSelectedTerminal(null);
+    checkoutIdempotencyKeyRef.current = null;
+    setView("form");
+  };
+
+  const applyPurchaseTypeSnapshot = (
+    result: UpdateSalePurchaseTypeResult,
+    nextPaymentType: SalePaymentType,
+  ) => {
+    setPaymentType(nextPaymentType);
+    lastPatchedPurchaseTypeRef.current = result.purchaseType.id;
+    setSaleEconomicRevision(result.economicRevision);
+    setCheckoutRule(result.checkout);
+    setCart((prev) =>
+      patchCartLinePrices(
+        prev,
+        result.items.map((item) => ({
+          productId: item.productId,
+          originalPrice: item.listPrice,
+          discountAmount: item.discountAmount,
+          totalAmount: item.totalAmount,
+        })),
+      ),
+    );
+    if (result.discountInvalidated) {
+      void queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", resumeSaleId],
+      });
+    }
+    setIdentityOk(false);
+    setIdentityVerificationModalOpen(false);
+    if (nextPaymentType === "CREDIT") {
+      setSelectedTermMonths(12);
+    }
+    if (nextPaymentType === "LAYAWAY") {
+      setSelectedLayawayTermId((current) => current ?? layawayTerms[0]?.id ?? null);
+    } else {
+      setSelectedLayawayTermId(null);
+    }
+    resetCheckoutCapture();
+  };
+
+  const purchaseTypeMutation = useMutation({
+    mutationFn: async (value: SalePaymentType) => {
+      if (activeSaleId == null) {
+        throw new Error("La venta no está lista");
+      }
+      const nextId = resolvePurchaseTypeId(value, purchaseTypes);
+      if (nextId == null) {
+        throw new Error("Tipo de venta no disponible");
+      }
+      const revision =
+        saleEconomicRevision ??
+        shippingQuote?.economicRevision ??
+        resumeSaleData?.economicRevision ??
+        0;
+      const res = await updateSalePurchaseType(activeSaleId, {
+        purchase_type_id: nextId,
+        economic_revision: revision,
+      });
+      if (res.error) throw new Error(res.error.message);
+      if (!res.data) {
+        throw new Error("No se pudo actualizar el tipo de venta");
+      }
+      return { value, result: res.data };
+    },
+    onSuccess: ({ value, result }) => {
+      applyPurchaseTypeSnapshot(result, value);
     },
     onError: (err: Error) => {
       snackbar.showError(err.message);
@@ -1249,7 +1478,8 @@ export function SaleBuilder({
   const saleOperationPending =
     guardarCotizacionMutation.isPending ||
     cobrarMutation.isPending ||
-    registerSaleMutation.isPending;
+    registerSaleMutation.isPending ||
+    purchaseTypeMutation.isPending;
 
   const executeSaleOperation = async (operation: () => Promise<unknown>) => {
     if (saleOperationLockRef.current) return;
@@ -1636,6 +1866,17 @@ export function SaleBuilder({
     const request = resumeSaleData?.discountRequest;
     if (!mutation || !request) return;
 
+    if (mutation.kind === "cashierPaymentType") {
+      setDiscountInvalidateLoading(true);
+      try {
+        await purchaseTypeMutation.mutateAsync(mutation.value);
+        setPendingDiscountMutation(null);
+      } finally {
+        setDiscountInvalidateLoading(false);
+      }
+      return;
+    }
+
     setDiscountInvalidateLoading(true);
     const res = await invalidateSaleDiscount(request.id);
     if (res.error) {
@@ -1715,6 +1956,15 @@ export function SaleBuilder({
   const handlePaymentTypeChange = (value: SalePaymentType) => {
     if (isMorosoClient && value !== "CASH") return;
     if (value === paymentType) return;
+    if (purchaseTypeMutation.isPending) return;
+    if (isCajeroMode) {
+      if (isApprovedSpecialDiscount) {
+        setPendingDiscountMutation({ kind: "cashierPaymentType", value });
+        return;
+      }
+      purchaseTypeMutation.mutate(value);
+      return;
+    }
     if (isApprovedSpecialDiscount) {
       setPendingDiscountMutation({ kind: "paymentType", value });
       return;
@@ -1796,13 +2046,23 @@ export function SaleBuilder({
         activeSaleId != null &&
         lastPatchedPurchaseTypeRef.current !== purchaseTypeId
       ) {
-        const res = await updateSalePurchaseType(activeSaleId, purchaseTypeId);
+        const res = await updateSalePurchaseType(activeSaleId, {
+          purchase_type_id: purchaseTypeId,
+          economic_revision:
+            saleEconomicRevision ??
+            shippingQuote?.economicRevision ??
+            resumeSaleData?.economicRevision ??
+            0,
+        });
         if (isCancelled()) return;
         if (res.error) {
           snackbar.showError(res.error.message);
           return;
         }
         lastPatchedPurchaseTypeRef.current = purchaseTypeId;
+        if (res.data) {
+          setSaleEconomicRevision(res.data.economicRevision);
+        }
       }
 
       try {
@@ -1865,6 +2125,8 @@ export function SaleBuilder({
   const shippingAmount =
     deliveryType === "delivery" ? (shippingQuote?.amount ?? 0) : 0;
   const totalFinal = merchandiseNet + shippingAmount;
+  const totalPending = cartPendingSupplyTotal(cart);
+  const showPendingSupplyAlert = totalPending > 0;
   const showShippingInSummary =
     deliveryType === "delivery" &&
     (shippingQuoteLoading || shippingQuote != null);
@@ -1876,7 +2138,10 @@ export function SaleBuilder({
     ? "Calculando…"
     : formatCurrency(shippingAmount);
   const economicRevision =
-    shippingQuote?.economicRevision ?? resumeSaleData?.economicRevision ?? 0;
+    saleEconomicRevision ??
+    shippingQuote?.economicRevision ??
+    resumeSaleData?.economicRevision ??
+    0;
   const cashAmtNum = parseFloat(cashAmount.replace(/[^0-9.]/g, "")) || 0;
   const cardAmtNum = parseFloat(cardAmount.replace(/[^0-9.]/g, "")) || 0;
   const extraCardAmtNum = extraCards.slice(0, 1).reduce(
@@ -1887,20 +2152,29 @@ export function SaleBuilder({
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
   const totalPaid = roundToCents(cashAmtNum + cardAmtNum + extraCardAmtNum);
-  const ENGANCHE_PCT = 0.1;
-  const enganche = Math.round(totalFinal * ENGANCHE_PCT);
-  const montoAFinanciar = roundToCents(totalFinal - enganche);
+  const enganche =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.minimumDownPayment
+      : creditMinimumDownPayment(totalFinal);
+  const montoAFinanciar =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.financedAmount
+      : roundToCents(totalFinal - enganche);
+  const creditAvailable =
+    checkoutRule?.type === "CREDIT"
+      ? checkoutRule.creditAvailable
+      : selectedClient?.creditAvailable;
   const creditLineExceeded =
     paymentType === "CREDIT" &&
-    selectedClient?.creditAvailable != null &&
-    montoAFinanciar > selectedClient.creditAvailable + 0.009;
+    creditAvailable != null &&
+    montoAFinanciar > creditAvailable + 0.009;
 
-  const handleIdentityVerified = useCallback(() => {
+  const handleIdentityVerified = () => {
     setIdentityOk(true);
     setIdentityVerificationModalOpen(false);
     setCashAmount(enganche.toFixed(2));
     setView("checkout");
-  }, [enganche]);
+  };
 
   const handleIdentityDialogClose = useCallback(() => {
     setIdentityVerificationModalOpen(false);
@@ -1909,7 +2183,7 @@ export function SaleBuilder({
     paymentType === "CREDIT"
       ? enganche
       : paymentType === "LAYAWAY"
-        ? 0
+        ? totalPaid
         : roundToCents(totalFinal);
   const change = cashChangeDue(
     amountToPay,
@@ -1937,7 +2211,11 @@ export function SaleBuilder({
       onConfirm={handleConfirmDiscountInvalidation}
       type="warning"
       title="Se invalidará el descuento"
-      description="Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      description={
+        pendingDiscountMutation?.kind === "cashierPaymentType"
+          ? "Al cambiar el tipo de venta se invalidará el descuento especial aprobado y se recalcularán los precios. ¿Deseas continuar?"
+          : "Si continúas, el descuento especial aprobado se invalidará. Tendrás que solicitar uno nuevo si lo necesitas."
+      }
       confirmLabel="Continuar"
       cancelLabel="Cancelar"
     />
@@ -2539,6 +2817,8 @@ export function SaleBuilder({
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" || identityOk) &&
+      (paymentType !== "LAYAWAY" ||
+        (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
@@ -2550,8 +2830,8 @@ export function SaleBuilder({
             <IconButton
               size="medium"
               disabled={saleOperationPending}
-              onClick={() => (isCajeroMode ? onExit() : setView("form"))}
-              aria-label={isCajeroMode ? "Cerrar" : "Volver"}
+              onClick={() => setView("form")}
+              aria-label="Volver"
             >
               <X size={20} />
             </IconButton>
@@ -2562,6 +2842,9 @@ export function SaleBuilder({
         </PageHeader>
 
         <CheckoutGrid>
+          {showPendingSupplyAlert && (
+            <PendingSupplyAlert sx={{ gridColumn: "1 / -1" }} />
+          )}
           <Stack spacing={3}>
             <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
@@ -3088,16 +3371,19 @@ export function SaleBuilder({
       />
 
       <MainGrid>
+        {showPendingSupplyAlert && (
+          <PendingSupplyAlert sx={{ gridColumn: "1 / -1" }} />
+        )}
         <Stack spacing={2}>
           {branchUnresolved && (
             <Alert severity="warning">
               No se pudo determinar tu sucursal.
             </Alert>
           )}
-          {creditLineExceeded && selectedClient?.creditAvailable != null && (
+          {creditLineExceeded && creditAvailable != null && (
             <Alert severity="error">
               Línea de crédito insuficiente. Disponible:{" "}
-              {formatCurrency(selectedClient.creditAvailable)}, Requerido:{" "}
+              {formatCurrency(creditAvailable)}, Requerido:{" "}
               {formatCurrency(montoAFinanciar)}.
             </Alert>
           )}
@@ -3365,25 +3651,21 @@ export function SaleBuilder({
             <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Tipo de venta
             </Typography>
-            {isCajeroMode ? (
-              <Typography variant="body2">
-                {PAYMENT_OPTIONS.find((opt) => opt.value === paymentType)
-                  ?.label ?? "—"}
-              </Typography>
-            ) : (
-              <PaymentTypeRow>
-                {PAYMENT_OPTIONS.map((opt) => (
-                  <PaymentTypeButton
-                    key={opt.value}
-                    active={paymentType === opt.value}
-                    disabled={isMorosoClient && opt.value !== "CASH"}
-                    onClick={() => handlePaymentTypeChange(opt.value)}
-                  >
-                    {opt.label}
-                  </PaymentTypeButton>
-                ))}
-              </PaymentTypeRow>
-            )}
+            <PaymentTypeRow>
+              {PAYMENT_OPTIONS.map((opt) => (
+                <PaymentTypeButton
+                  key={opt.value}
+                  active={paymentType === opt.value}
+                  disabled={
+                    purchaseTypeMutation.isPending ||
+                    (isMorosoClient && opt.value !== "CASH")
+                  }
+                  onClick={() => handlePaymentTypeChange(opt.value)}
+                >
+                  {opt.label}
+                </PaymentTypeButton>
+              ))}
+            </PaymentTypeRow>
           </SidebarCard>
 
           <SidebarCard>

@@ -1,4 +1,4 @@
-import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Chip, IconButton, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import NumberSpinner from "@/components/NumberSpinner";
@@ -10,6 +10,10 @@ import {
   PriceSummaryRow,
 } from "./styles";
 import { lineTotal } from "@/utils/saleCartPricing";
+import {
+  formatPendingSupplyLabel,
+  pendingSupplyBreakdown,
+} from "@/utils/saleCartCoverage";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -27,10 +31,16 @@ export function BackorderChip({
   quantity: number;
   sx?: SxProps<Theme>;
 }) {
+  const { available, pending } = pendingSupplyBreakdown(
+    quantity,
+    backorderedQuantity,
+  );
+  if (pending <= 0) return null;
+
   return (
     <Chip
       icon={<AlertTriangle size={14} />}
-      label={`${backorderedQuantity} de ${quantity} en backorder`}
+      label={formatPendingSupplyLabel(available, pending)}
       size="small"
       color="warning"
       variant="outlined"
@@ -54,6 +64,17 @@ export function BackorderChip({
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     />
+  );
+}
+
+const PENDING_SUPPLY_ALERT_TEXT =
+  "Atención: Esta orden contiene artículos 'Por surtir'. La mercancía está pendiente de entrega por el proveedor, lo que comprometerá la fecha de entrega final al cliente.";
+
+export function PendingSupplyAlert({ sx }: { sx?: SxProps<Theme> }) {
+  return (
+    <Alert severity="warning" sx={sx}>
+      {PENDING_SUPPLY_ALERT_TEXT}
+    </Alert>
   );
 }
 
@@ -208,13 +229,11 @@ export function SaleCartItemRow({
         </>
       )}
 
-      {item.backorderedQuantity > 0 && (
-        <BackorderChip
-          backorderedQuantity={item.backorderedQuantity}
-          quantity={item.quantity}
-          sx={{ mt: 1 }}
-        />
-      )}
+      <BackorderChip
+        backorderedQuantity={item.backorderedQuantity}
+        quantity={item.quantity}
+        sx={{ mt: 1 }}
+      />
     </CartItemCard>
   );
 }

@@ -18,6 +18,29 @@ export function toInventorySourcesPayload(
   );
 }
 
+function inventorySourcesKey(
+  rows: Array<{ branch_id: number; quantity: number }>,
+): string {
+  const byBranch = new Map<number, number>();
+  for (const row of rows) {
+    byBranch.set(
+      row.branch_id,
+      (byBranch.get(row.branch_id) ?? 0) + row.quantity,
+    );
+  }
+  return [...byBranch.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([id, qty]) => `${id}:${qty}`)
+    .join("|");
+}
+
+export function inventorySourcesMatch(
+  a: Array<{ branch_id: number; quantity: number }>,
+  b: Array<{ branch_id: number; quantity: number }>,
+): boolean {
+  return inventorySourcesKey(a) === inventorySourcesKey(b);
+}
+
 /** Cart +/- only changes line qty; picked sources must be resized to match. */
 export function reallocInventorySources(
   sources: InventorySource[],
@@ -53,6 +76,43 @@ export function sourceSellableMax(src: {
   return (
     src.available +
     (src.sourceType === "warehouse" ? (src.pendingOrdered ?? 0) : 0)
+  );
+}
+
+export function pendingSupplyBreakdown(
+  quantity: number,
+  backorderedQuantity: number,
+): { available: number; pending: number } {
+  const safeQuantity = Number.isFinite(quantity) ? Math.max(0, Math.trunc(quantity)) : 0;
+  const rawPending = Number.isFinite(backorderedQuantity)
+    ? Math.trunc(backorderedQuantity)
+    : 0;
+  const pending = Math.min(safeQuantity, Math.max(0, rawPending));
+  return { available: Math.max(0, safeQuantity - pending), pending };
+}
+
+export function formatPendingSupplyLabel(
+  available: number,
+  pending: number,
+): string {
+  const parts: string[] = [];
+  if (available > 0) {
+    const availableWord = available === 1 ? "disponible" : "disponibles";
+    parts.push(`${available} ${availableWord} para entrega`);
+  }
+  if (pending > 0) {
+    parts.push(`${pending} por surtir`);
+  }
+  return parts.join(" • ");
+}
+
+export function cartPendingSupplyTotal(
+  items: Array<{ quantity: number; backorderedQuantity: number }>,
+): number {
+  return items.reduce(
+    (sum, item) =>
+      sum + pendingSupplyBreakdown(item.quantity, item.backorderedQuantity).pending,
+    0,
   );
 }
 
@@ -138,6 +198,12 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   ]);
   if (payload.length !== 1 || payload[0].branch_id !== 7) {
     throw new Error("saleCartCoverage: serializes selected inventory source");
+  }
+  if (
+    !inventorySourcesMatch(payload, [{ branch_id: 7, quantity: 2 }]) ||
+    inventorySourcesMatch(payload, [{ branch_id: 7, quantity: 1 }])
+  ) {
+    throw new Error("saleCartCoverage: inventory source equality");
   }
   const grown = reallocInventorySources(
     [
@@ -239,5 +305,45 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   );
   if (overlaid[0].quantity !== 2 || overlaid[0].available !== 10) {
     throw new Error("saleCartCoverage: overlay keeps allocation, uses live stock");
+  }
+  const mixed = pendingSupplyBreakdown(3, 2);
+  if (
+    mixed.available !== 1 ||
+    mixed.pending !== 2 ||
+    formatPendingSupplyLabel(mixed.available, mixed.pending) !==
+      "1 disponible para entrega • 2 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: mixed pending supply label");
+  }
+  const allPending = pendingSupplyBreakdown(3, 3);
+  if (
+    formatPendingSupplyLabel(allPending.available, allPending.pending) !==
+    "3 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: all-pending supply label");
+  }
+  const pluralAvailable = pendingSupplyBreakdown(3, 1);
+  if (
+    formatPendingSupplyLabel(
+      pluralAvailable.available,
+      pluralAvailable.pending,
+    ) !== "2 disponibles para entrega • 1 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: plural available supply label");
+  }
+  if (pendingSupplyBreakdown(2, -4).pending !== 0) {
+    throw new Error("saleCartCoverage: negative pending clamps to 0");
+  }
+  if (pendingSupplyBreakdown(2, 9).pending !== 2) {
+    throw new Error("saleCartCoverage: pending cannot exceed quantity");
+  }
+  if (
+    cartPendingSupplyTotal([
+      { quantity: 3, backorderedQuantity: 2 },
+      { quantity: 1, backorderedQuantity: 0 },
+      { quantity: 4, backorderedQuantity: 4 },
+    ]) !== 6
+  ) {
+    throw new Error("saleCartCoverage: cart pending total");
   }
 }

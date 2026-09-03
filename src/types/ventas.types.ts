@@ -12,12 +12,13 @@ export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
 
 export type SaleStatusTab =
   | "all"
-  | "completed"
-  | "pending"
+  | "pendingCollection"
+  | "pendingPayment"
+  | "paid"
+  | "cancelled"
   | "pendingCashier"
   | "processedCashier"
-  | "cashierAll"
-  | "finalized";
+  | "cashierAll";
 
 export interface SaleListItem {
   id: number;
@@ -38,6 +39,8 @@ export interface GetSalesParams {
   limit: number;
   search?: string;
   statusTab?: SaleStatusTab;
+  dateFrom?: string;
+  dateTo?: string;
   status?: SaleStatus;
   created_by?: number;
   branch_id?: number;
@@ -137,10 +140,19 @@ export interface SaleDetailPayment {
   changeAmount: number | null;
 }
 
+export interface SaleDetailCreditInstallment {
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+}
+
 export interface SaleDetailCredit {
   downPayment: number;
+  financedAmount: number;
   termMonths: number;
   installmentAmount: number;
+  paymentFrequency: "MONTHLY";
+  installments: SaleDetailCreditInstallment[];
 }
 
 export interface SaleDetailLayawayPayment {
@@ -196,6 +208,7 @@ export interface SaleDetail {
   shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
   economicRevision?: number;
+  dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   purchaseType: string | null;
   identityVerifiedAt?: string | null;

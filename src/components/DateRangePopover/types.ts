@@ -34,4 +34,13 @@ export type DateRangeFilterProps = {
   label?: string;
   /** Oculta la etiqueta externa; solo muestra el botón selector. */
   compact?: boolean;
+  /**
+   * `title` hereda tipografía del encabezado (selector inline).
+   * `button` es el control outlined de toolbar (default).
+   */
+  variant?: "button" | "title";
+  /** Si se omite, se usan todos los presets actuales. */
+  options?: DateRangeSelectOption[];
+  /** Zona IANA para calcular Hoy / Esta semana. Sin valor, usa la zona local. */
+  timeZone?: string;
 };

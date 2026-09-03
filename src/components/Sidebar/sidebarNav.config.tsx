@@ -84,12 +84,12 @@ export const NAV_ITEMS: NavItem[] = [
     requirement: { permission: CREDIT_APPLICATIONS_READ },
   },
   {
-    label: "Ventas",
+    label: "Órdenes de venta",
     path: "/ventas",
     icon: <ShoppingCart size={ICON_SIZE} />,
     requirement: { permission: SALES_READ },
     subItems: [
-      { label: "Todas las ventas", path: "/ventas", requirement: { permission: SALES_READ } },
+      { label: "Todas las órdenes", path: "/ventas", requirement: { permission: SALES_READ } },
       { label: "Ventas en rojo", path: "/ventas/en-rojo", requirement: { roles: [ROLE_CODES.ADMINISTRADOR] } },
     ],
   },

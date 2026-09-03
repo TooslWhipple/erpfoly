@@ -103,6 +103,7 @@ export interface CreateLayawayPayload {
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
   tenders?: CheckoutTenderPayload[];
+  economic_revision?: number;
 }
 
 export async function createLayaway(
@@ -168,13 +169,56 @@ export async function updateSaleClient(
   });
 }
 
+export type UpdateSalePurchaseTypeCheckout =
+  | { type: "CASH"; amountDue: number }
+  | {
+      type: "CREDIT";
+      minimumDownPayment: number;
+      financedAmount: number;
+      creditAvailable: number;
+      identityRequired: boolean;
+      identityVerified: boolean;
+      allowedTermMonths: number[];
+    }
+  | {
+      type: "LAYAWAY";
+      minimumDeposit: number;
+      maximumDeposit: number;
+    };
+
+export interface UpdateSalePurchaseTypeResult {
+  saleId: number;
+  status: string;
+  purchaseType: { id: number; code: string; name: string };
+  economicRevision: number;
+  discountInvalidated: boolean;
+  items: Array<{
+    id: number;
+    productId: number;
+    listPrice: number;
+    discountAmount: number;
+    totalAmount: number;
+    promotionId: number | null;
+    promotionCode: string | null;
+  }>;
+  totals: {
+    subtotal: number;
+    discountAmount: number;
+    shippingAmount: number;
+    loyaltyPointsValue: number;
+    totalAmount: number;
+  };
+  checkout: UpdateSalePurchaseTypeCheckout;
+}
+
 export async function updateSalePurchaseType(
   saleId: number,
-  purchaseTypeId: number,
-): Promise<ApiResult<unknown>> {
-  return patch<unknown>(`${BASE}/sales/${saleId}/purchase-type`, {
-    purchase_type_id: purchaseTypeId,
-  });
+  payload: { purchase_type_id: number; economic_revision: number },
+): Promise<ApiResult<UpdateSalePurchaseTypeResult>> {
+  return patch<UpdateSalePurchaseTypeResult>(
+    `${BASE}/sales/${saleId}/purchase-type`,
+    payload,
+  );
 }
 
 export async function updateSaleLayawayTerm(

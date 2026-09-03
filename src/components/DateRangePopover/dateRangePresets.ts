@@ -22,18 +22,34 @@ export const OPCIONES_FECHA_PRESET: DateRangeSelectOption[] = [
   { value: PRESET_PERIODO, label: "Seleccionar periodo" },
 ];
 
-function etiquetaPreset(id: PresetFechaId): string {
-  return OPCIONES_FECHA_PRESET.find((opcion) => opcion.value === id)?.label ?? id;
+function etiquetaPreset(
+  id: PresetFechaId,
+  options: DateRangeSelectOption[] = OPCIONES_FECHA_PRESET,
+): string {
+  return options.find((opcion) => opcion.value === id)?.label ?? id;
 }
 
 export function labelPeriodoPersonalizado(start: Dayjs, end: Dayjs): string {
   return `${start.format("DD/MM/YYYY")} – ${end.format("DD/MM/YYYY")}`;
 }
 
+function todayInZone(timeZone?: string): Dayjs {
+  if (!timeZone) return dayjs().startOf("day");
+  const ymd = new Date().toLocaleDateString("en-CA", { timeZone });
+  return dayjs(ymd).startOf("day");
+}
+
+function startOfMonday(day: Dayjs): Dayjs {
+  const weekday = day.day();
+  const offset = weekday === 0 ? 6 : weekday - 1;
+  return day.subtract(offset, "day").startOf("day");
+}
+
 export function computePresetRange(
   id: Exclude<PresetFechaId, typeof PRESET_PERIODO>,
+  timeZone?: string,
 ): { startDate: Dayjs; endDate: Dayjs } {
-  const hoy = dayjs().startOf("day");
+  const hoy = todayInZone(timeZone);
 
   switch (id) {
     case PRESET_HOY:
@@ -43,6 +59,10 @@ export function computePresetRange(
       return { startDate: ayer, endDate: ayer };
     }
     case PRESET_SEMANA:
+      if (timeZone) {
+        const start = startOfMonday(hoy);
+        return { startDate: start, endDate: start.add(6, "day") };
+      }
       return {
         startDate: hoy.startOf("week"),
         endDate: hoy.endOf("week").startOf("day"),
@@ -64,11 +84,14 @@ function leerDia(valor: unknown): Dayjs | null {
 export function inferPresetFromDates(
   startValue: unknown,
   endValue: unknown,
+  options: DateRangeSelectOption[] = OPCIONES_FECHA_PRESET,
+  timeZone?: string,
 ): DateRangeSelectOption | null {
   const start = leerDia(startValue);
   const end = leerDia(endValue);
   if (!start || !end) return null;
 
+  const allowed = new Set(options.map((opcion) => opcion.value));
   const fijos: Exclude<PresetFechaId, typeof PRESET_PERIODO>[] = [
     PRESET_HOY,
     PRESET_AYER,
@@ -77,12 +100,14 @@ export function inferPresetFromDates(
   ];
 
   for (const id of fijos) {
-    const rango = computePresetRange(id);
+    if (!allowed.has(id)) continue;
+    const rango = computePresetRange(id, timeZone);
     if (start.isSame(rango.startDate, "day") && end.isSame(rango.endDate, "day")) {
-      return { value: id, label: etiquetaPreset(id) };
+      return { value: id, label: etiquetaPreset(id, options) };
     }
   }
 
+  if (!allowed.has(PRESET_PERIODO)) return null;
   return {
     value: PRESET_PERIODO,
     label: labelPeriodoPersonalizado(start, end),
@@ -90,8 +115,9 @@ export function inferPresetFromDates(
 }
 
 export function formatRangeForApi(start: Dayjs, end: Dayjs): { startDate: string; endDate: string } {
+  const [from, to] = end.isBefore(start, "day") ? [end, start] : [start, end];
   return {
-    startDate: start.format("YYYY-MM-DD"),
-    endDate: end.format("YYYY-MM-DD"),
+    startDate: from.format("YYYY-MM-DD"),
+    endDate: to.format("YYYY-MM-DD"),
   };
 }

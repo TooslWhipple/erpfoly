@@ -61,6 +61,7 @@ import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
+import { formatCreditInstallmentPlan } from "@/utils/creditInstallmentPlan";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CASH_REGISTERS_READ } from "@/lib/permissions";
@@ -431,6 +432,12 @@ export default function VentaDetalle() {
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
   const isSaleCancelled = sale.status === "CANCELLED";
   const isDraftSale = sale.status === "DRAFT";
+  const creditInstallmentPlan = sale.credit
+    ? formatCreditInstallmentPlan(
+        sale.credit.installments ?? [],
+        formatCurrency,
+      )
+    : null;
 
   return (
     <DetailPageShell>
@@ -920,16 +927,21 @@ export default function VentaDetalle() {
                           {formatCurrency(sale.credit.downPayment)}
                         </Typography>
                       </Stack>
-                      <Box sx={{ bgcolor: "grey.100", borderRadius: 1, px: 2, py: 1 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                          Monto a financiar
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatCurrency(sale.credit.financedAmount)}
+                        </Typography>
+                      </Stack>
+                      {creditInstallmentPlan && (
+                        <Box sx={{ bgcolor: "grey.100", borderRadius: 1, px: 2, py: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            {sale.credit.termMonths} Meses de
+                            {creditInstallmentPlan}
                           </Typography>
-                          <Typography variant="body2" fontWeight={600}>
-                            {formatCurrency(sale.credit.installmentAmount)}
-                          </Typography>
-                        </Stack>
-                      </Box>
+                        </Box>
+                      )}
                     </>
                   )}
                 </Stack>

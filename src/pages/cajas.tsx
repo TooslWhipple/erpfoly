@@ -39,9 +39,11 @@ import {
   createFinalCut,
 } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { usePendingCashierSales } from "@/hooks/usePendingCashierSales";
+import { useCashierSales } from "@/hooks/useCashierSales";
 import { getCashLimitLevel, getCashLimitProgress } from "@/utils/cashLimit";
 import type { SaleListItem } from "@/types/ventas.types";
+import type { TabOption } from "@/components/TabFilters";
+
 export default function Cajas() {
   const router = useRouter();
   const { embedMobileMenu } = useAppNav();
@@ -66,11 +68,24 @@ export default function Cajas() {
   const [searchMode, setSearchMode] = useState<CashSearchMode>("ventas");
   const [cutModalOpen, setCutModalOpen] = useState(false);
   const isRegisterOpen = cashRegister?.status === "open";
-  const { data: pendingSales = [], isLoading: pendingLoading } =
-    usePendingCashierSales({
-      enabled: isRegisterOpen,
-      search: searchMode === "ventas" ? pendingSearch : undefined,
-    });
+  const {
+    rows: pendingSales,
+    loading: pendingLoading,
+    activeTab: activeCollectionTab,
+    setActiveTab: setActiveCollectionTab,
+    tabCounts,
+  } = useCashierSales({
+    enabled: isRegisterOpen,
+    search: searchMode === "ventas" ? pendingSearch : undefined,
+  });
+  const collectionTabs: TabOption[] = useMemo(
+    () => [
+      { label: "Todas", value: "all", count: tabCounts.all },
+      { label: "Pendientes", value: "pending", count: tabCounts.pending },
+      { label: "Procesados", value: "processed", count: tabCounts.processed },
+    ],
+    [tabCounts],
+  );
   const cashLimitLevel = getCashLimitLevel(
     cashRegister?.currentCash ?? 0,
     cashRegister?.limit ?? 0,
@@ -156,12 +171,12 @@ export default function Cajas() {
       setCashRegister((prev) =>
         prev
           ? {
-              ...prev,
-              status: "open",
-              initialFund: parseFloat(initialFund) || 0,
-              exchangeRate: parseFloat(exchangeRate) || 0,
-              currentCash: parseFloat(initialFund) || 0,
-            }
+            ...prev,
+            status: "open",
+            initialFund: parseFloat(initialFund) || 0,
+            exchangeRate: parseFloat(exchangeRate) || 0,
+            currentCash: parseFloat(initialFund) || 0,
+          }
           : prev,
       );
       showSuccess("Caja abierta exitosamente");
@@ -214,9 +229,9 @@ export default function Cajas() {
         setCashRegister((prev) =>
           prev
             ? {
-                ...prev,
-                status: "closed",
-              }
+              ...prev,
+              status: "closed",
+            }
             : prev,
         );
         setInitialFund("1500");
@@ -351,36 +366,36 @@ export default function Cajas() {
 
   if (isLoading) {
     return (
-        <PageShell
-          sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
-        >
-          {embedMobileMenu && (
-            <PageHeader>
-              <InlineMobileMenuButton />
-            </PageHeader>
-          )}
-          <Stack flex={1} justifyContent="center" alignItems="center">
-            <Typography variant="body1">Cargando...</Typography>
-          </Stack>
-        </PageShell>
+      <PageShell
+        sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+      >
+        {embedMobileMenu && (
+          <PageHeader>
+            <InlineMobileMenuButton />
+          </PageHeader>
+        )}
+        <Stack flex={1} justifyContent="center" alignItems="center">
+          <Typography variant="body1">Cargando...</Typography>
+        </Stack>
+      </PageShell>
     );
   }
   if (!cashRegister) {
     return (
-        <PageShell
-          sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
-        >
-          {embedMobileMenu && (
-            <PageHeader>
-              <InlineMobileMenuButton />
-            </PageHeader>
-          )}
-          <Stack flex={1} justifyContent="center" alignItems="center" px={2}>
-            <Typography variant="h6" color="text.secondary">
-              No tienes una caja asignada
-            </Typography>
-          </Stack>
-        </PageShell>
+      <PageShell
+        sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+      >
+        {embedMobileMenu && (
+          <PageHeader>
+            <InlineMobileMenuButton />
+          </PageHeader>
+        )}
+        <Stack flex={1} justifyContent="center" alignItems="center" px={2}>
+          <Typography variant="h6" color="text.secondary">
+            No tienes una caja asignada
+          </Typography>
+        </Stack>
+      </PageShell>
     );
   }
   return (
@@ -422,8 +437,7 @@ export default function Cajas() {
               alignItems="center"
               spacing={1.5}
               minWidth={0}
-              flex="1 1 auto"
-            >
+              flex="1 1 auto">
               <InlineMobileMenuButton />
               <CashRegisterIconContainer>
                 <Monitor size={24} />
@@ -454,6 +468,9 @@ export default function Cajas() {
               onModeChange={setSearchMode}
               pendingSales={pendingSales}
               pendingLoading={pendingLoading}
+              collectionTabs={collectionTabs}
+              activeCollectionTab={activeCollectionTab}
+              onCollectionTabChange={setActiveCollectionTab}
               onProcessSale={handleProcessSale}
               cashLimitLevel={cashLimitLevel}
               cashLimitProgress={cashLimitProgress}

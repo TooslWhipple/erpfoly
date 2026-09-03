@@ -15,6 +15,8 @@ export type SaleStatusTab =
   | "completed"
   | "pending"
   | "pendingCashier"
+  | "processedCashier"
+  | "cashierAll"
   | "finalized";
 
 export interface SaleListItem {

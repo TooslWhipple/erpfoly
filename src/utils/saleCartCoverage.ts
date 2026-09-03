@@ -56,6 +56,36 @@ export function sourceSellableMax(src: {
   );
 }
 
+export function pendingSupplyBreakdown(
+  quantity: number,
+  backorderedQuantity: number,
+): { available: number; pending: number } {
+  const safeQuantity = Number.isFinite(quantity) ? Math.max(0, Math.trunc(quantity)) : 0;
+  const rawPending = Number.isFinite(backorderedQuantity)
+    ? Math.trunc(backorderedQuantity)
+    : 0;
+  const pending = Math.min(safeQuantity, Math.max(0, rawPending));
+  return { available: Math.max(0, safeQuantity - pending), pending };
+}
+
+export function formatPendingSupplyLabel(
+  available: number,
+  pending: number,
+): string {
+  const availableWord = available === 1 ? "disponible" : "disponibles";
+  return `${available} ${availableWord} para entrega • ${pending} por surtir`;
+}
+
+export function cartPendingSupplyTotal(
+  items: Array<{ quantity: number; backorderedQuantity: number }>,
+): number {
+  return items.reduce(
+    (sum, item) =>
+      sum + pendingSupplyBreakdown(item.quantity, item.backorderedQuantity).pending,
+    0,
+  );
+}
+
 export function backorderedFromSources(
   sources: QtySource[],
   quantity: number,
@@ -239,5 +269,45 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   );
   if (overlaid[0].quantity !== 2 || overlaid[0].available !== 10) {
     throw new Error("saleCartCoverage: overlay keeps allocation, uses live stock");
+  }
+  const mixed = pendingSupplyBreakdown(3, 2);
+  if (
+    mixed.available !== 1 ||
+    mixed.pending !== 2 ||
+    formatPendingSupplyLabel(mixed.available, mixed.pending) !==
+      "1 disponible para entrega • 2 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: mixed pending supply label");
+  }
+  const allPending = pendingSupplyBreakdown(3, 3);
+  if (
+    formatPendingSupplyLabel(allPending.available, allPending.pending) !==
+    "0 disponibles para entrega • 3 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: all-pending supply label");
+  }
+  const pluralAvailable = pendingSupplyBreakdown(3, 1);
+  if (
+    formatPendingSupplyLabel(
+      pluralAvailable.available,
+      pluralAvailable.pending,
+    ) !== "2 disponibles para entrega • 1 por surtir"
+  ) {
+    throw new Error("saleCartCoverage: plural available supply label");
+  }
+  if (pendingSupplyBreakdown(2, -4).pending !== 0) {
+    throw new Error("saleCartCoverage: negative pending clamps to 0");
+  }
+  if (pendingSupplyBreakdown(2, 9).pending !== 2) {
+    throw new Error("saleCartCoverage: pending cannot exceed quantity");
+  }
+  if (
+    cartPendingSupplyTotal([
+      { quantity: 3, backorderedQuantity: 2 },
+      { quantity: 1, backorderedQuantity: 0 },
+      { quantity: 4, backorderedQuantity: 4 },
+    ]) !== 6
+  ) {
+    throw new Error("saleCartCoverage: cart pending total");
   }
 }

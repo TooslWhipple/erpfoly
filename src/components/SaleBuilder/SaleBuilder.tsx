@@ -41,7 +41,7 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
-import { SaleCartItemRow, BackorderChip } from "./SaleCartItem";
+import { SaleCartItemRow, BackorderChip, PendingSupplyAlert } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
   Card,
@@ -139,6 +139,7 @@ import {
   sellableMaxFromPickedSources,
   sourceSellableMax,
   toInventorySourcesPayload,
+  cartPendingSupplyTotal,
 } from "@/utils/saleCartCoverage";
 import {
   cartLineDiscounts,
@@ -1863,6 +1864,8 @@ export function SaleBuilder({
   const shippingAmount =
     deliveryType === "delivery" ? (shippingQuote?.amount ?? 0) : 0;
   const totalFinal = merchandiseNet + shippingAmount;
+  const totalPending = cartPendingSupplyTotal(cart);
+  const showPendingSupplyAlert = totalPending > 0;
   const showShippingInSummary =
     deliveryType === "delivery" &&
     (shippingQuoteLoading || shippingQuote != null);
@@ -2560,6 +2563,9 @@ export function SaleBuilder({
         </PageHeader>
 
         <CheckoutGrid>
+          {showPendingSupplyAlert && (
+            <PendingSupplyAlert sx={{ gridColumn: "1 / -1" }} />
+          )}
           <Stack spacing={3}>
             <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
               <Typography variant="subtitle1" fontWeight={700}>
@@ -3086,6 +3092,9 @@ export function SaleBuilder({
       />
 
       <MainGrid>
+        {showPendingSupplyAlert && (
+          <PendingSupplyAlert sx={{ gridColumn: "1 / -1" }} />
+        )}
         <Stack spacing={2}>
           {branchUnresolved && (
             <Alert severity="warning">

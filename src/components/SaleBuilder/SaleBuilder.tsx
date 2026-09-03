@@ -606,21 +606,23 @@ export function SaleBuilder({
   ) => {
     if (!selectedClient) return;
 
-    const result = await createCreditApplicationFromIntake(
-      payload,
-      selectedClient.id,
-    );
-    if (!result?.id) {
-      snackbar.showError(
-        "No se pudo crear la solicitud de crédito, intenta nuevamente.",
+    try {
+      const result = await createCreditApplicationFromIntake(
+        payload,
+        selectedClient.id,
       );
-      throw new Error("No se pudo crear la solicitud de crédito.");
+      showSuccess(
+        `Solicitud de crédito ${result.folio} creada para ${selectedClient.fullName}.`,
+      );
+      await router.push(`/solicitudes-credito/${result.id}`);
+    } catch (err) {
+      snackbar.showError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo crear la solicitud de crédito, intenta nuevamente.",
+      );
+      throw err;
     }
-
-    showSuccess(
-      `Solicitud de crédito ${result.folio} creada para ${selectedClient.fullName}.`,
-    );
-    await router.push(`/solicitudes-credito/${result.id}`);
   };
 
   const { data: layawayTermsRes } = useQuery({

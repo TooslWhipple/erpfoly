@@ -201,6 +201,10 @@ export interface CreditApplicationDetailResponse {
     canQueryNow?: boolean;
     missingFields?: string[];
   };
+  faceMatch?: {
+    status: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+    score: number | null;
+  };
 }
 
 export interface IdentityConflictsResult {
@@ -540,7 +544,7 @@ async function ensureDocumentFilesUploaded(
 export async function createCreditApplicationFromIntake(
   payload: CreditApplicationBiometricsData,
   clientId?: number
-): Promise<CreateCreditApplicationFromIntakeResult | null> {
+): Promise<CreateCreditApplicationFromIntakeResult> {
   const ineFront = payload.ineFrontImage?.trim();
   const ineBack = payload.ineBackImage?.trim();
   const faceCapture = payload.selfieImage?.trim();
@@ -554,6 +558,10 @@ export async function createCreditApplicationFromIntake(
   const ineExecutionId = payload.ineExecutionId?.trim();
   if (ineExecutionId) {
     formData.append("ineExecutionId", ineExecutionId);
+  }
+  const livenessExecutionId = payload.livenessExecutionId?.trim();
+  if (livenessExecutionId) {
+    formData.append("livenessExecutionId", livenessExecutionId);
   }
   if (clientId) {
     formData.append("clientId", String(clientId));
@@ -575,7 +583,12 @@ export async function createCreditApplicationFromIntake(
       skipGlobalErrorToast: true,
     },
   );
-  if (result.error) return null;
+  if (result.error || !result.data) {
+    throw new Error(
+      result.error?.message
+        ?? "No se pudo crear la solicitud, intenta nuevamente.",
+    );
+  }
   return result.data;
 }
 

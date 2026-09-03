@@ -7,9 +7,10 @@ import { SideModal } from "@/components/SideModal";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
-import { CaptureStepRoot } from "@/components/NubariumCapturePreview/styles";
+import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import { useCameraDevices } from "@/hooks/useCameraDevices";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import { compareIneFace } from "@/services/nubarium.service";
 import { releaseCameraHardware } from "@/utils/cameraDevices";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import {
@@ -39,6 +40,22 @@ const STEP_ORDER: IntakeStepId[] = [
   "liveness",
   "signature",
 ];
+
+const FACE_MATCH_FAILURE_MESSAGE = "El rostro capturado no coincide con la identificación. Asegúrate de que la INE y la selfie correspondan a la misma persona e intenta de nuevo.";
+
+function formatFaceMatchScoreHint(
+  score: number,
+  threshold?: number,
+): string | null {
+  if (!(score > 0)) return null;
+  const required = threshold ?? 60;
+  const displayScore = score > 1 ? score : score * 100;
+  const rounded =
+    displayScore >= 10
+      ? Math.round(displayScore)
+      : Math.round(displayScore * 10) / 10;
+  return `Similitud: ${rounded}% (requerido: ${required}%)`;
+}
 
 const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string; progressLabel: string }> = {
   "ine-capture": {
@@ -77,6 +94,10 @@ export function CreditApplicationIntakeModal({
   const [livenessCaptureSessionKey, setLivenessCaptureSessionKey] = useState(0);
   const [ineCaptureStarted, setIneCaptureStarted] = useState(false);
   const [livenessCaptureStarted, setLivenessCaptureStarted] = useState(false);
+  const [verifyingFaceMatch, setVerifyingFaceMatch] = useState(false);
+  const [faceMatchError, setFaceMatchError] = useState<string | null>(null);
+  const [faceMatchScoreHint, setFaceMatchScoreHint] = useState<string | null>(null);
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -99,7 +120,7 @@ export function CreditApplicationIntakeModal({
   });
 
   const ineCompleted = Boolean(ineFrontImage && ineBackImage);
-  const livenessCompleted = Boolean(selfieImage);
+  const livenessCompleted = Boolean(selfieImage) && !verifyingFaceMatch;
   const canAutoStartCapture =
     cameras.preferenceHydrated
     && cameras.permissionGranted
@@ -116,6 +137,8 @@ export function CreditApplicationIntakeModal({
     open
     && activeStep === "liveness"
     && !livenessCompleted
+    && !verifyingFaceMatch
+    && !faceMatchError
     && (livenessCaptureStarted || canAutoStartCapture);
 
   const currentStepIndex = STEP_ORDER.indexOf(activeStep);
@@ -124,14 +147,18 @@ export function CreditApplicationIntakeModal({
 
   const canContinue = useMemo(() => {
     if (activeStep === "ine-capture") return Boolean(ineFrontImage && ineBackImage);
-    if (activeStep === "liveness") return Boolean(selfieImage);
+    if (activeStep === "liveness") {
+      return Boolean(selfieImage) && !verifyingFaceMatch && !faceMatchError;
+    }
     return signatureDrawn;
   }, [
     activeStep,
+    faceMatchError,
     ineBackImage,
     ineFrontImage,
     selfieImage,
     signatureDrawn,
+    verifyingFaceMatch,
   ]);
 
   const resetModalState = useCallback(() => {
@@ -147,11 +174,15 @@ export function CreditApplicationIntakeModal({
     setLivenessCaptureSessionKey(0);
     setIneCaptureStarted(false);
     setLivenessCaptureStarted(false);
+    setVerifyingFaceMatch(false);
+    setFaceMatchError(null);
+    setFaceMatchScoreHint(null);
+    setFinalizeError(null);
     clearSignatureCanvas();
   }, []);
 
   const handleCloseModal = () => {
-    if (saving) return;
+    if (saving || verifyingFaceMatch) return;
     releaseCameraHardware();
     onClose();
     resetModalState();
@@ -170,19 +201,57 @@ export function CreditApplicationIntakeModal({
     setIneCaptureSessionKey((current) => current + 1);
   }, []);
 
-  const handleLivenessSuccess = useCallback((result: { executionId: string; faceDataUrl: string }) => {
-    setLivenessExecutionId(result.executionId);
-    setSelfieImage(result.faceDataUrl);
-  }, []);
-
   const handleLivenessReset = useCallback(() => {
     setLivenessExecutionId(null);
     setSelfieImage(null);
+    setFaceMatchError(null);
+    setFaceMatchScoreHint(null);
+    setVerifyingFaceMatch(false);
     setLivenessCaptureSessionKey((current) => current + 1);
   }, []);
 
+  const handleLivenessSuccess = useCallback(
+    async (result: { executionId: string; faceDataUrl: string }) => {
+      if (!ineFrontImage) {
+        setFaceMatchError(
+          "Falta la captura del INE para verificar la identidad.",
+        );
+        setFaceMatchScoreHint(null);
+        return;
+      }
+
+      setVerifyingFaceMatch(true);
+      setFaceMatchError(null);
+      setFaceMatchScoreHint(null);
+      try {
+        const match = await compareIneFace(ineFrontImage, result.faceDataUrl);
+        if (!match.isMatch) {
+          setFaceMatchError(match.message ?? FACE_MATCH_FAILURE_MESSAGE);
+          setFaceMatchScoreHint(
+            formatFaceMatchScoreHint(match.score, match.threshold),
+          );
+          setLivenessExecutionId(null);
+          setSelfieImage(null);
+          return;
+        }
+        setLivenessExecutionId(result.executionId);
+        setSelfieImage(result.faceDataUrl);
+      } catch (err) {
+        setFaceMatchError(
+          err instanceof Error ? err.message : FACE_MATCH_FAILURE_MESSAGE,
+        );
+        setFaceMatchScoreHint(null);
+        setLivenessExecutionId(null);
+        setSelfieImage(null);
+      } finally {
+        setVerifyingFaceMatch(false);
+      }
+    },
+    [ineFrontImage],
+  );
+
   const goToNextStep = async (): Promise<void> => {
-    if (!canContinue) return;
+    if (!canContinue || verifyingFaceMatch) return;
 
     if (activeStep === "ine-capture" && !sdkToken) {
       await reloadToken();
@@ -194,6 +263,7 @@ export function CreditApplicationIntakeModal({
 
     if (isLastStep) {
       setSaving(true);
+      setFinalizeError(null);
       try {
         await onFinalize({
           ineFrontImage,
@@ -206,7 +276,12 @@ export function CreditApplicationIntakeModal({
         });
         resetModalState();
         onClose();
-      } catch {
+      } catch (err) {
+        setFinalizeError(
+          err instanceof Error
+            ? err.message
+            : "No se pudo crear la solicitud, intenta nuevamente.",
+        );
       } finally {
         setSaving(false);
       }
@@ -364,10 +439,10 @@ export function CreditApplicationIntakeModal({
               <CaptureStepRoot>
                 {!ineCompleted && !ineCaptureLive
                   ? renderCameraSelect(
-                      startIneCapture,
-                      "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
-                      "Iniciar captura de INE",
-                    )
+                    startIneCapture,
+                    "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
+                    "Iniciar captura de INE",
+                  )
                   : null}
                 {ineCaptureLive || ineCompleted ? (
                   <NubariumIdCapture
@@ -378,10 +453,10 @@ export function CreditApplicationIntakeModal({
                     completedResult={
                       ineFrontImage && ineBackImage
                         ? {
-                            executionId: ineExecutionId ?? "",
-                            frontDataUrl: ineFrontImage,
-                            backDataUrl: ineBackImage,
-                          }
+                          executionId: ineExecutionId ?? "",
+                          frontDataUrl: ineFrontImage,
+                          backDataUrl: ineBackImage,
+                        }
                         : null
                     }
                     videoDeviceId={cameras.selectedDeviceId}
@@ -401,14 +476,37 @@ export function CreditApplicationIntakeModal({
               renderSdkBootstrapState()
             ) : (
               <CaptureStepRoot>
-                {!livenessCompleted && !livenessCaptureLive
+                {!livenessCompleted && !livenessCaptureLive && !verifyingFaceMatch && !faceMatchError
                   ? renderCameraSelect(
-                      startLivenessCapture,
-                      "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
-                      "Iniciar prueba de vida",
-                    )
+                    startLivenessCapture,
+                    "Elige la cámara que te parezca mejor. La recordaremos en este dispositivo.",
+                    "Iniciar prueba de vida",
+                  )
                   : null}
-                {livenessCaptureLive || livenessCompleted ? (
+                {verifyingFaceMatch ? (
+                  <SdkBootstrapState>
+                    <CircularProgress size={28} />
+                    <Typography variant="body2" color="text.secondary" textAlign="center">
+                      Verificando identidad…
+                    </Typography>
+                  </SdkBootstrapState>
+                ) : null}
+                {faceMatchError ? (
+                  <CaptureErrorState>
+                    <Typography variant="body2" color="error.main" textAlign="center">
+                      {faceMatchError}
+                    </Typography>
+                    {faceMatchScoreHint ? (
+                      <Typography variant="caption" color="text.secondary" textAlign="center">
+                        {faceMatchScoreHint}
+                      </Typography>
+                    ) : null}
+                    <Button variant="outlined" onClick={handleLivenessReset}>
+                      Reintentar captura
+                    </Button>
+                  </CaptureErrorState>
+                ) : null}
+                {(livenessCaptureLive || livenessCompleted) && !verifyingFaceMatch && !faceMatchError ? (
                   <NubariumFaceCapture
                     key={`${livenessCaptureSessionKey}-${cameras.selectedDeviceId}`}
                     token={sdkToken}
@@ -417,14 +515,13 @@ export function CreditApplicationIntakeModal({
                     completedResult={
                       selfieImage
                         ? {
-                            executionId: livenessExecutionId ?? "",
-                            faceDataUrl: selfieImage,
-                          }
+                          executionId: livenessExecutionId ?? "",
+                          faceDataUrl: selfieImage,
+                        }
                         : null
                     }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
-                    acceptFailedLiveness
                     onSuccess={handleLivenessSuccess}
                     onReset={handleLivenessReset}
                   />
@@ -470,6 +567,11 @@ export function CreditApplicationIntakeModal({
       </StepContainer>
 
       <FooterActions>
+        {finalizeError ? (
+          <Typography variant="body2" color="error.main" textAlign="center" sx={{ width: "100%" }}>
+            {finalizeError}
+          </Typography>
+        ) : null}
         <Button
           fullWidth
           variant="contained"
@@ -477,10 +579,11 @@ export function CreditApplicationIntakeModal({
           disabled={
             !canContinue
             || saving
+            || verifyingFaceMatch
             || (activeStep !== "signature" && sdkLoading)
           }
         >
-          {saving ? (
+          {saving || verifyingFaceMatch ? (
             <CircularProgress size={20} color="inherit" />
           ) : (
             isLastStep ? "Finalizar" : "Siguiente"

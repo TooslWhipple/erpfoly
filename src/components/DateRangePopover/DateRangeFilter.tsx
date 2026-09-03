@@ -28,6 +28,7 @@ export function DateRangeFilter({
   onChange,
   label = "Fecha",
   compact = false,
+  variant = "button",
   options = OPCIONES_FECHA_PRESET,
   timeZone,
 }: DateRangeFilterProps) {
@@ -36,6 +37,7 @@ export function DateRangeFilter({
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const menuOpen = Boolean(menuAnchor);
+  const isTitle = variant === "title";
 
   const hasActiveRange = Boolean(dateFrom || dateTo);
 
@@ -84,29 +86,66 @@ export function DateRangeFilter({
     <>
       <Button
         ref={buttonRef}
-        variant="outlined"
+        variant={isTitle ? "text" : "outlined"}
         size="small"
-        startIcon={compact ? <Calendar size={16} /> : undefined}
-        endIcon={<ChevronDown size={16} />}
+        disableRipple={isTitle}
+        startIcon={!isTitle && compact ? <Calendar size={16} /> : undefined}
+        endIcon={<ChevronDown size={isTitle ? 18 : 16} />}
         onClick={handleOpenMenu}
-        aria-label={label}
+        aria-label={`Periodo: ${displayLabel}`}
+        aria-haspopup="listbox"
+        aria-expanded={menuOpen}
         title={displayLabel}
-        sx={{
-          textTransform: "none",
-          color: hasActiveRange ? "text.primary" : "text.secondary",
-          fontWeight: hasActiveRange ? 500 : 400,
-          ...(compact && {
-            width: "160px",
-            minWidth: "160px",
-            maxWidth: "160px",
-            justifyContent: "flex-start",
-            "& .MuiButton-startIcon": { flexShrink: 0, mr: "8px" },
-            "& .MuiButton-endIcon": { flexShrink: 0, ml: "auto" },
-          }),
-        }}
+        sx={
+          isTitle
+            ? {
+                textTransform: "none",
+                font: "inherit",
+                fontWeight: 700,
+                lineHeight: 1.2,
+                color: "text.primary",
+                minWidth: 0,
+                minHeight: "unset",
+                py: 0,
+                px: 0.25,
+                borderRadius: 1,
+                "&:hover": {
+                  bgcolor: "transparent",
+                  color: "primary.main",
+                  "& .date-range-period": {
+                    borderColor: "primary.main",
+                  },
+                  "& .MuiButton-endIcon": { color: "primary.main" },
+                },
+                "&:focus-visible": {
+                  outline: "2px solid",
+                  outlineColor: "primary.main",
+                  outlineOffset: 3,
+                },
+                "& .MuiButton-endIcon": {
+                  ml: 0.5,
+                  mr: 0,
+                  color: "text.secondary",
+                },
+              }
+            : {
+                textTransform: "none",
+                color: hasActiveRange ? "text.primary" : "text.secondary",
+                fontWeight: hasActiveRange ? 500 : 400,
+                ...(compact && {
+                  width: "160px",
+                  minWidth: "160px",
+                  maxWidth: "160px",
+                  justifyContent: "flex-start",
+                  "& .MuiButton-startIcon": { flexShrink: 0, mr: "8px" },
+                  "& .MuiButton-endIcon": { flexShrink: 0, ml: "auto" },
+                }),
+              }
+        }
       >
         <Box
           component="span"
+          className="date-range-period"
           sx={{
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -114,6 +153,11 @@ export function DateRangeFilter({
             flex: 1,
             minWidth: 0,
             textAlign: "left",
+            ...(isTitle && {
+              borderBottom: "2px dashed",
+              borderColor: "divider",
+              pb: "1px",
+            }),
           }}
         >
           {displayLabel}
@@ -144,7 +188,7 @@ export function DateRangeFilter({
             <ListItemText primary={opcion.label} />
           </ListItemButton>
         ))}
-        {(dateFrom || dateTo) && (
+        {!isTitle && (dateFrom || dateTo) && (
           <ListItemButton onClick={handleClearFromMenu} sx={{ color: "error.main" }}>
             <ListItemText primary="Limpiar filtro" />
           </ListItemButton>

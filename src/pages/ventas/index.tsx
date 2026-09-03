@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { Title, TabFilters, TableCrud, StatusChip, DateRangeFilter } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction } from "@/components/TableCrud";
@@ -206,8 +206,11 @@ export default function Ventas() {
       <Title
         title={
           <>
-            Órdenes de ventas de
+            <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+              Órdenes de ventas de
+            </Box>
             <DateRangeFilter
+              variant="title"
               dateFrom={dateFrom}
               dateTo={dateTo}
               onChange={handleDateRangeChange}

@@ -50,7 +50,17 @@ export function Title({ title, description, actions }: TitleProps) {
           <Typography variant="h2">{title}</Typography>
         ) : (
           <Box sx={{ "& .MuiTypography-h2": { margin: 0 } }}>
-            <Typography variant="h2" component="div" sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Typography
+              variant="h2"
+              component="div"
+              sx={{
+                display: "flex",
+                alignItems: "baseline",
+                flexWrap: "wrap",
+                columnGap: 1,
+                rowGap: 0.5,
+              }}
+            >
               {title}
             </Typography>
           </Box>

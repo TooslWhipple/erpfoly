@@ -172,6 +172,7 @@ export function useRutasPage() {
     uploadCartaMutation,
     deleteCartaMutation,
     assignDriverMutation,
+    assignVehicleMutation,
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
@@ -313,6 +314,14 @@ export function useRutasPage() {
     });
   };
 
+  const handleAssignVehicle = async (vehicleId: number | null) => {
+    if (!resolvedRouteId) return;
+    await assignVehicleMutation.mutateAsync({
+      routeId: resolvedRouteId,
+      vehicleId,
+    });
+  };
+
   const handleSaveCartaPorte = async () => {
     if (!resolvedRouteId || !pendingCartaLocalFile) return;
     await uploadCartaMutation.mutateAsync({
@@ -443,6 +452,7 @@ export function useRutasPage() {
     handleConfirmAddOrders,
     handleConfirmAssignDriver,
     handleConfirmAddAssistant,
+    handleAssignVehicle,
     handleSaveCartaPorte,
     handleRemoveCartaServerDocument,
     handleRequestRemoveAssistant,
@@ -456,6 +466,7 @@ export function useRutasPage() {
     createRouteMutation,
     uploadCartaMutation,
     assignDriverMutation,
+    assignVehicleMutation,
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,

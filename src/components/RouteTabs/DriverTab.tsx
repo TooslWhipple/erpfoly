@@ -1,5 +1,6 @@
 import { Stack, Typography, Button, IconButton } from "@mui/material";
 import { CircleMinus, Plus, User } from "lucide-react";
+import { VehicleSearchField } from "@/components/VehicleSearchField";
 import { IconContainer, PersonRow } from "@/styles/rutas.styles";
 import { theme } from "@/styles/theme";
 import type { RouteDetail } from "@/types/rutas.types";
@@ -12,9 +13,11 @@ export interface DriverTabProps {
   onAddAssistant?: () => void;
   onRemoveDriver?: () => void;
   onRemoveAssistant?: (assistantId: string) => void;
+  onAssignVehicle?: (vehicleId: number | null) => void;
   canManage?: boolean;
   loadingDriver?: boolean;
   loadingAssistant?: boolean;
+  loadingVehicle?: boolean;
 }
 
 export function DriverTab({
@@ -23,9 +26,11 @@ export function DriverTab({
   onAddAssistant,
   onRemoveDriver,
   onRemoveAssistant,
+  onAssignVehicle,
   canManage = true,
   loadingDriver = false,
   loadingAssistant = false,
+  loadingVehicle = false,
 }: DriverTabProps) {
   const hasDriver = Boolean(routeDetail.driver);
   const assistantCount = routeDetail.assistants.length;
@@ -33,6 +38,30 @@ export function DriverTab({
 
   return (
     <Stack spacing={3} alignItems="flex-start">
+      <Stack spacing={1} width="100%">
+        {canManage ? (
+          <VehicleSearchField
+            label="Vehículo asignado"
+            value={routeDetail.vehicleId}
+            selectedLabel={routeDetail.vehicle?.label ?? null}
+            onChange={(vehicleId) => onAssignVehicle?.(vehicleId)}
+            disabled={loadingVehicle}
+          />
+        ) : routeDetail.vehicle ? (
+          <>
+            <Typography variant="subtitle2">Vehículo asignado</Typography>
+            <Typography variant="body2">{routeDetail.vehicle.label}</Typography>
+          </>
+        ) : (
+          <>
+            <Typography variant="subtitle2">Vehículo asignado</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sin asignar
+            </Typography>
+          </>
+        )}
+      </Stack>
+
       <Stack spacing={1} width="100%">
         <Stack
           direction="row"

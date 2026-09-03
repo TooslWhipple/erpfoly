@@ -99,6 +99,13 @@ export interface CartaPorteFileApi {
   uploaded_at: string;
 }
 
+export interface RouteVehicleApi {
+  id: number;
+  brand: string;
+  model: string;
+  plate: string;
+}
+
 /** Raw detail from GET /routes/:id */
 export interface RouteDetailApi {
   id: number;
@@ -116,7 +123,8 @@ export interface RouteDetailApi {
   article_count: number;
   point_count: number;
   driver_name: string;
-  vehicle_info: string;
+  vehicle_id: number | null;
+  vehicle: RouteVehicleApi | null;
   orders: RouteOrderApi[];
   driver: RoutePersonApi | null;
   assistants: RoutePersonApi[];

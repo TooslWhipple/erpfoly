@@ -94,6 +94,7 @@ export default function RutaPage() {
                   r.addAssistantMutation.isPending ||
                   r.removeAssistantMutation.isPending
                 }
+                loadingVehicle={r.assignVehicleMutation.isPending}
                 onSaveCartaPorte={() => void r.handleSaveCartaPorte()}
                 onAddOrders={r.handleOpenAddOrders}
                 onAddOrdersForBranch={r.handleOpenAddOrdersForBranch}
@@ -105,6 +106,7 @@ export default function RutaPage() {
                 onAddAssistant={() => r.setAddAssistantModalOpen(true)}
                 onRemoveDriver={r.handleRequestRemoveDriver}
                 onRemoveAssistant={r.handleRequestRemoveAssistant}
+                onAssignVehicle={(vehicleId) => void r.handleAssignVehicle(vehicleId)}
               />
             </Stack>
           ) : (

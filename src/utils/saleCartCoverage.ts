@@ -18,6 +18,29 @@ export function toInventorySourcesPayload(
   );
 }
 
+function inventorySourcesKey(
+  rows: Array<{ branch_id: number; quantity: number }>,
+): string {
+  const byBranch = new Map<number, number>();
+  for (const row of rows) {
+    byBranch.set(
+      row.branch_id,
+      (byBranch.get(row.branch_id) ?? 0) + row.quantity,
+    );
+  }
+  return [...byBranch.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([id, qty]) => `${id}:${qty}`)
+    .join("|");
+}
+
+export function inventorySourcesMatch(
+  a: Array<{ branch_id: number; quantity: number }>,
+  b: Array<{ branch_id: number; quantity: number }>,
+): boolean {
+  return inventorySourcesKey(a) === inventorySourcesKey(b);
+}
+
 /** Cart +/- only changes line qty; picked sources must be resized to match. */
 export function reallocInventorySources(
   sources: InventorySource[],
@@ -72,8 +95,15 @@ export function formatPendingSupplyLabel(
   available: number,
   pending: number,
 ): string {
-  const availableWord = available === 1 ? "disponible" : "disponibles";
-  return `${available} ${availableWord} para entrega • ${pending} por surtir`;
+  const parts: string[] = [];
+  if (available > 0) {
+    const availableWord = available === 1 ? "disponible" : "disponibles";
+    parts.push(`${available} ${availableWord} para entrega`);
+  }
+  if (pending > 0) {
+    parts.push(`${pending} por surtir`);
+  }
+  return parts.join(" • ");
 }
 
 export function cartPendingSupplyTotal(
@@ -168,6 +198,12 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   ]);
   if (payload.length !== 1 || payload[0].branch_id !== 7) {
     throw new Error("saleCartCoverage: serializes selected inventory source");
+  }
+  if (
+    !inventorySourcesMatch(payload, [{ branch_id: 7, quantity: 2 }]) ||
+    inventorySourcesMatch(payload, [{ branch_id: 7, quantity: 1 }])
+  ) {
+    throw new Error("saleCartCoverage: inventory source equality");
   }
   const grown = reallocInventorySources(
     [
@@ -282,7 +318,7 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   const allPending = pendingSupplyBreakdown(3, 3);
   if (
     formatPendingSupplyLabel(allPending.available, allPending.pending) !==
-    "0 disponibles para entrega • 3 por surtir"
+    "3 por surtir"
   ) {
     throw new Error("saleCartCoverage: all-pending supply label");
   }

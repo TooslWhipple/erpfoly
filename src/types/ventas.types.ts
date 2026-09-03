@@ -205,6 +205,7 @@ export interface SaleDetail {
   shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
   economicRevision?: number;
+  dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   purchaseType: string | null;
   identityVerifiedAt?: string | null;

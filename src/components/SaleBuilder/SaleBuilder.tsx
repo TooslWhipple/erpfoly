@@ -140,6 +140,7 @@ import {
   sellableMaxFromPickedSources,
   sourceSellableMax,
   toInventorySourcesPayload,
+  inventorySourcesMatch,
   cartPendingSupplyTotal,
 } from "@/utils/saleCartCoverage";
 import {
@@ -235,6 +236,27 @@ function formatCurrency(value: number) {
 function toCheckoutDate(value: string | null | undefined): string | null {
   if (!value) return null;
   return value.slice(0, 10);
+}
+
+type SyncedDeliverySnapshot = {
+  fulfillment: "delivery" | "pickup";
+  addressId: number | null;
+  pickupBranchId: number | null;
+  dispatchBranchId: number | null;
+  deliveryDate: string | null;
+};
+
+function sameDeliveryPlace(
+  prev: SyncedDeliverySnapshot | null,
+  next: SyncedDeliverySnapshot,
+): boolean {
+  return (
+    prev != null &&
+    prev.fulfillment === next.fulfillment &&
+    prev.addressId === next.addressId &&
+    prev.pickupBranchId === next.pickupBranchId &&
+    prev.dispatchBranchId === next.dispatchBranchId
+  );
 }
 
 const CHANGE_LINK_SX = {
@@ -438,6 +460,11 @@ export function SaleBuilder({
   );
   const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
   const lastPatchedPurchaseTypeRef = useRef<number | null>(null);
+  const [lastSeenGetRevision, setLastSeenGetRevision] = useState<
+    number | null
+  >(null);
+  const [lastSyncedDelivery, setLastSyncedDelivery] =
+    useState<SyncedDeliverySnapshot | null>(null);
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -799,6 +826,37 @@ export function SaleBuilder({
       Boolean(resumeSaleData.identityVerificationAuthorizedBy);
     setIdentityOk(nextIdentityOk);
     setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
+    setLastSeenGetRevision(resumeSaleData.economicRevision ?? null);
+    if (resumeSaleData.deliveryType === "ADDRESS") {
+      setLastSyncedDelivery({
+        fulfillment: "delivery",
+        addressId: resumeSaleData.deliveryAddressId ?? null,
+        pickupBranchId: null,
+        dispatchBranchId:
+          resumeSaleData.dispatchBranchId ?? resumeSaleData.branchId ?? null,
+        deliveryDate: hydratedDeliveryDate,
+      });
+    } else if (resumeSaleData.deliveryType === "BRANCH") {
+      setLastSyncedDelivery({
+        fulfillment: "pickup",
+        addressId: null,
+        pickupBranchId: resumeSaleData.deliveryBranchId ?? null,
+        dispatchBranchId:
+          resumeSaleData.dispatchBranchId ?? resumeSaleData.branchId ?? null,
+        deliveryDate: hydratedDeliveryDate,
+      });
+    } else {
+      setLastSyncedDelivery(null);
+    }
+  }
+
+  if (
+    resumeSaleData &&
+    hydratedSaleId === resumeSaleData.id &&
+    lastSeenGetRevision !== (resumeSaleData.economicRevision ?? null)
+  ) {
+    setLastSeenGetRevision(resumeSaleData.economicRevision ?? null);
+    setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
   }
 
   if (
@@ -822,6 +880,8 @@ export function SaleBuilder({
       deliveryType === "pickup"
         ? effectivePickupDate || checkoutDeliveryDate || undefined
         : checkoutDeliveryDate ?? undefined;
+    const deliveryDateKey = deliveryDate ?? null;
+    const dispatchBranchId = coverageBranchId ?? null;
 
     if (deliveryType === "delivery") {
       const clientPrimaryAddress =
@@ -831,24 +891,61 @@ export function SaleBuilder({
         ? customDeliveryAddress?.id
         : clientPrimaryAddress?.addressId;
       if (addressId) {
-        await setDeliveryDate(saleId, {
-          delivery_type: "ADDRESS",
-          address_id: addressId,
-          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
-        });
-        const quote = await quoteShipping(saleId, {
-          address_id: addressId,
-          dispatch_branch_id: coverageBranchId ?? undefined,
-        });
-        setShippingQuote(quote);
+        const snapshot: SyncedDeliverySnapshot = {
+          fulfillment: "delivery",
+          addressId,
+          pickupBranchId: null,
+          dispatchBranchId,
+          deliveryDate: deliveryDateKey,
+        };
+        const placeUnchanged = sameDeliveryPlace(
+          lastSyncedDelivery,
+          snapshot,
+        );
+        const dateUnchanged =
+          lastSyncedDelivery?.deliveryDate === deliveryDateKey;
+        if (!placeUnchanged || !dateUnchanged) {
+          await setDeliveryDate(saleId, {
+            delivery_type: "ADDRESS",
+            address_id: addressId,
+            ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
+          });
+        }
+        if (!placeUnchanged) {
+          const quote = await quoteShipping(saleId, {
+            address_id: addressId,
+            dispatch_branch_id: coverageBranchId ?? undefined,
+          });
+          setShippingQuote(quote);
+          if (quote.economicRevision != null) {
+            setSaleEconomicRevision(quote.economicRevision);
+          }
+        }
+        setLastSyncedDelivery(snapshot);
       }
     } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-      await setDeliveryDate(saleId, {
-        delivery_type: "BRANCH",
-        branch_id: effectiveDeliveryBranch.id,
-        ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
-      });
+      const snapshot: SyncedDeliverySnapshot = {
+        fulfillment: "pickup",
+        addressId: null,
+        pickupBranchId: effectiveDeliveryBranch.id,
+        dispatchBranchId,
+        deliveryDate: deliveryDateKey,
+      };
+      const placeUnchanged = sameDeliveryPlace(
+        lastSyncedDelivery,
+        snapshot,
+      );
+      const dateUnchanged =
+        lastSyncedDelivery?.deliveryDate === deliveryDateKey;
+      if (!placeUnchanged || !dateUnchanged) {
+        await setDeliveryDate(saleId, {
+          delivery_type: "BRANCH",
+          branch_id: effectiveDeliveryBranch.id,
+          ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
+        });
+      }
       setShippingQuote(null);
+      setLastSyncedDelivery(snapshot);
     }
   };
 
@@ -905,6 +1002,7 @@ export function SaleBuilder({
       setActiveSaleId(saleId);
       setActiveSaleFolio(folio);
       setOriginalItemIds(new Set(createdIds.map((row) => row.saleItemId)));
+      lastPatchedPurchaseTypeRef.current = pt.id;
       if (createdIds.length > 0) {
         setCart((prev) =>
           prev.map((item) => {
@@ -930,16 +1028,33 @@ export function SaleBuilder({
           if (clientRes.error) throw new Error(clientRes.error.message);
         }
 
-        const purchaseTypeRes = await updateSalePurchaseType(saleId, {
-          purchase_type_id: pt.id,
-          economic_revision: economicRevision,
-        });
-        if (purchaseTypeRes.error) throw new Error(purchaseTypeRes.error.message);
+        const persistedTypeMatches =
+          lastPatchedPurchaseTypeRef.current === pt.id ||
+          (lastPatchedPurchaseTypeRef.current == null &&
+            resumeSaleData?.purchaseType != null &&
+            keywords.some((k) =>
+              resumeSaleData.purchaseType!.toUpperCase().includes(k),
+            ));
+        if (!persistedTypeMatches) {
+          const purchaseTypeRes = await updateSalePurchaseType(saleId, {
+            purchase_type_id: pt.id,
+            economic_revision: economicRevision,
+          });
+          if (purchaseTypeRes.error)
+            throw new Error(purchaseTypeRes.error.message);
+          lastPatchedPurchaseTypeRef.current = pt.id;
+          if (purchaseTypeRes.data) {
+            setSaleEconomicRevision(purchaseTypeRes.data.economicRevision);
+          }
+        } else {
+          lastPatchedPurchaseTypeRef.current = pt.id;
+        }
 
         const currentIds = new Set(
           cart.filter((item) => item.saleItemId).map((item) => item.saleItemId!),
         );
 
+        let cartWrote = false;
         for (const originalId of originalItemIds) {
           if (!currentIds.has(originalId)) {
             const removeRes = await removeSaleItem(saleId, originalId);
@@ -949,13 +1064,26 @@ export function SaleBuilder({
             ) {
               throw new Error(removeRes.error.message);
             }
+            cartWrote = true;
           }
         }
 
+        const hydratedById = new Map(
+          (resumeSaleData?.items ?? []).map((item) => [item.id, item]),
+        );
         const addedIds: Array<{ productId: number; saleItemId: number }> = [];
         for (const item of cart) {
           const inventorySources = toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
+            const hydrated = hydratedById.get(item.saleItemId);
+            const unchanged =
+              hydrated != null &&
+              item.quantity === hydrated.quantity &&
+              inventorySourcesMatch(
+                inventorySources,
+                toInventorySourcesPayload(hydrated.inventorySources),
+              );
+            if (unchanged) continue;
             const updateRes = await updateSaleItem(saleId, item.saleItemId, {
               quantity: item.quantity,
               ...(inventorySources.length > 0
@@ -963,6 +1091,7 @@ export function SaleBuilder({
                 : {}),
             });
             if (updateRes.error) throw new Error(updateRes.error.message);
+            cartWrote = true;
           } else {
             const itemRes = await addSaleItem(saleId, {
               product_id: item.productId,
@@ -972,12 +1101,20 @@ export function SaleBuilder({
                 : {}),
             });
             if (itemRes.error) throw new Error(itemRes.error.message);
+            cartWrote = true;
             if (itemRes.data?.id != null) {
               addedIds.push({
                 productId: item.productId,
                 saleItemId: itemRes.data.id,
               });
             }
+          }
+        }
+
+        if (cartWrote) {
+          const detailRes = await getSaleDetail(saleId);
+          if (detailRes.data?.economicRevision != null) {
+            setSaleEconomicRevision(detailRes.data.economicRevision);
           }
         }
 
@@ -1242,9 +1379,12 @@ export function SaleBuilder({
       const { id: saleId } = await ensureSaleSynced();
       const registerRes = await registerSale(saleId);
       if (registerRes.error) throw new Error(registerRes.error.message);
-      return registerRes.data!;
+      return saleId;
     },
-    onSuccess: () => {
+    onSuccess: (saleId) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", saleId],
+      });
       showSuccess("Venta registrada. Queda pendiente de cobro en caja.");
       onExit();
     },

@@ -1214,7 +1214,8 @@ export function SaleBuilder({
         if (!addressId) {
           throw new Error("Falta la dirección de entrega");
         }
-        if (!isCajeroMode) {
+        // Cajero: persistir solo si eligió fecha en el cobro. No recotizar envío.
+        if (!isCajeroMode || checkoutDeliveryDate) {
           await setDeliveryDate(saleId, {
             delivery_type: "ADDRESS",
             address_id: addressId,
@@ -1222,12 +1223,13 @@ export function SaleBuilder({
           });
         }
       } else if (deliveryType === "pickup" && effectiveDeliveryBranch) {
-        if (!isCajeroMode) {
+        const pickupDate =
+          effectivePickupDate || checkoutDeliveryDate || undefined;
+        if (!isCajeroMode || pickupDate) {
           await setDeliveryDate(saleId, {
             delivery_type: "BRANCH",
             branch_id: effectiveDeliveryBranch.id,
-            delivery_date:
-              effectivePickupDate || checkoutDeliveryDate || undefined,
+            delivery_date: pickupDate,
           });
         }
       }

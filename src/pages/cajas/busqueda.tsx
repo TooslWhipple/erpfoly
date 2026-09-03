@@ -66,7 +66,7 @@ export default function CajasBusquedaPage() {
       const res = await getSales({
         page: 1,
         limit: 20,
-        statusTab: "pendingCashier",
+        statusTab: "pendingCollection",
         ...(isAmountSearch
           ? { amount: numericAmount }
           : { search: trimmed }),

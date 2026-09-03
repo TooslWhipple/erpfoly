@@ -34,4 +34,8 @@ export type DateRangeFilterProps = {
   label?: string;
   /** Oculta la etiqueta externa; solo muestra el botón selector. */
   compact?: boolean;
+  /** Si se omite, se usan todos los presets actuales. */
+  options?: DateRangeSelectOption[];
+  /** Zona IANA para calcular Hoy / Esta semana. Sin valor, usa la zona local. */
+  timeZone?: string;
 };

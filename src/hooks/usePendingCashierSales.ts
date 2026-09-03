@@ -19,7 +19,7 @@ export function usePendingCashierSales(options: {
       const res = await getSales({
         page: 1,
         limit: PENDING_CASHIER_LIMIT,
-        statusTab: "pendingCashier",
+        statusTab: "pendingCollection",
         search,
       });
       if (res.error) throw new Error(res.error.message);

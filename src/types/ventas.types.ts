@@ -12,10 +12,10 @@ export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
 
 export type SaleStatusTab =
   | "all"
-  | "completed"
-  | "pending"
-  | "pendingCashier"
-  | "finalized";
+  | "pendingCollection"
+  | "pendingPayment"
+  | "paid"
+  | "cancelled";
 
 export interface SaleListItem {
   id: number;
@@ -36,6 +36,8 @@ export interface GetSalesParams {
   limit: number;
   search?: string;
   statusTab?: SaleStatusTab;
+  dateFrom?: string;
+  dateTo?: string;
   status?: SaleStatus;
   created_by?: number;
   branch_id?: number;

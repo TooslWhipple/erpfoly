@@ -28,6 +28,8 @@ export function DateRangeFilter({
   onChange,
   label = "Fecha",
   compact = false,
+  options = OPCIONES_FECHA_PRESET,
+  timeZone,
 }: DateRangeFilterProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -39,9 +41,9 @@ export function DateRangeFilter({
 
   const displayLabel = useMemo(() => {
     if (!hasActiveRange) return label;
-    const inferred = inferPresetFromDates(dateFrom, dateTo);
+    const inferred = inferPresetFromDates(dateFrom, dateTo, options, timeZone);
     return inferred?.label ?? label;
-  }, [dateFrom, dateTo, hasActiveRange, label]);
+  }, [dateFrom, dateTo, hasActiveRange, label, options, timeZone]);
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setMenuAnchor(event.currentTarget);
@@ -59,7 +61,7 @@ export function DateRangeFilter({
       return;
     }
 
-    const range = computePresetRange(presetId);
+    const range = computePresetRange(presetId, timeZone);
     onChange(formatRangeForApi(range.startDate, range.endDate));
   };
 
@@ -130,12 +132,13 @@ export function DateRangeFilter({
           },
         }}
       >
-        {OPCIONES_FECHA_PRESET.map((opcion) => (
+        {options.map((opcion) => (
           <ListItemButton
             key={opcion.value}
             onClick={() => handlePresetSelect(opcion.value as PresetFechaId)}
             selected={
-              inferPresetFromDates(dateFrom, dateTo)?.value === opcion.value
+              inferPresetFromDates(dateFrom, dateTo, options, timeZone)?.value ===
+              opcion.value
             }
           >
             <ListItemText primary={opcion.label} />

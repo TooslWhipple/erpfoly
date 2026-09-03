@@ -1,102 +1,112 @@
 ---
 name: writing-commit-messages
-description: Write clear, conventional commit messages with proper type prefixes, scopes, and body content.
+description: Analiza los cambios locales, crea un commit con mensaje convencional en español y lo ejecuta en folysoft-frontend. Usar cuando el usuario pida hacer commit, commitear cambios, o invoque @writing-commit-messages.
 user-invocable: true
 ---
 
-# Writing Commit Messages
+# Commit de cambios
 
-Write commit messages that are useful for humans and machines.
+Al invocarse, **ejecuta el commit** de los cambios actuales. No basta con sugerir un mensaje.
 
-## Format
+Trabaja siempre desde la raíz del repositorio (`folysoft-frontend`).
 
-```
-<type>(<optional scope>): <subject>
+## Flujo obligatorio
 
-<optional body>
+1. En paralelo, ejecuta:
+   - `git status`
+   - `git diff` (staged y unstaged)
+   - `git log -10 --oneline`
+2. Analiza los cambios y redacta **un mensaje puntual** que describa el cambio lógico realizado.
+3. Añade al staging solo archivos relevantes al cambio.
+4. Crea el commit con el mensaje usando HEREDOC.
+5. Ejecuta `git status` para confirmar que el commit se creó correctamente.
 
-<optional footer>
-```
+## Protocolo de seguridad git
 
-### Subject Line Rules
+- **NUNCA** modifiques la configuración de git.
+- **NUNCA** ejecutes comandos destructivos (`push --force`, `reset --hard`, etc.) salvo que el usuario lo pida explícitamente.
+- **NUNCA** uses `--no-verify` ni `--no-gpg-sign` salvo que el usuario lo pida explícitamente.
+- **NUNCA** hagas `push` salvo que el usuario lo pida explícitamente.
+- **NUNCA** commitees archivos con secretos (`.env`, credenciales, tokens, claves).
+- **NUNCA** crees un commit vacío si no hay cambios.
+- Evita `git commit --amend` salvo que el usuario lo pida y se cumplan todas las condiciones de seguridad.
 
-- **50 characters or less** for the subject
-- Use imperative mood: "add feature" not "added feature" or "adding feature"
-- Don't capitalize the first letter after the type prefix
-- No period at the end
-
-### Types
-
-| Type | When to use |
-|------|-------------|
-| `feat` | New user-facing feature |
-| `fix` | Bug fix |
-| `refactor` | Code restructuring without behavior change |
-| `docs` | Documentation changes |
-| `test` | Adding or updating tests |
-| `chore` | Build, CI, tooling, deps |
-| `perf` | Performance improvement |
-| `style` | Formatting, whitespace (not CSS) |
-| `ci` | CI/CD pipeline changes |
-| `revert` | Reverting a previous commit |
-
-### Scope (Optional)
-
-The area of the codebase affected:
-- `feat(auth): add OAuth2 login flow`
-- `fix(api): handle null response from payments endpoint`
-- `refactor(db): extract query builder into module`
-
-### Body (When Needed)
-
-Explain **why**, not what (the diff shows what):
+## Formato del mensaje
 
 ```
-fix(checkout): prevent duplicate order submissions
-
-The submit button was not disabled after the first click,
-allowing users to create multiple orders. This caused
-duplicate charges in Stripe.
+tipo(ámbito): descripción breve en español [TICKET-123]
 ```
 
-### Footer (When Needed)
+### Reglas
+
+- **Tipos permitidos:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
+- **Idioma:** español
+- **Verbo:** infinitivo (agregar, corregir, mejorar, eliminar, actualizar, refactorizar)
+- **Longitud:** ~72 caracteres máximo en la línea de asunto
+- **Sin punto final**
+- **Ámbito:** opcional pero recomendado (auth, ui, rutas, layout, notificaciones, api, etc.)
+- **Ticket:** incluir entre corchetes al final si aparece en la rama, el contexto o lo menciona el usuario; omitir si no se conoce
+- **Una sola línea** (sin cuerpo ni pies salvo breaking changes)
+- **Un commit = un cambio lógico**; no mezclar refactor con feature en el mismo commit
+
+### Ejemplos válidos
 
 ```
-BREAKING CHANGE: rename `getUserById` to `findUser`
-
-Closes #456
-Co-authored-by: Name <email>
+feat(rutas): asignar vehículos desde la pestaña de conductor
+feat(layout): colapsar sidebar y reubicar inbox
+fix(api): corregir error en la serialización de respuestas
+refactor(ui): reorganizar componentes del dashboard
+chore(deps): actualizar dependencias de notificaciones
 ```
 
-## Examples
+### Ejemplos inválidos
 
-Good:
-```
-feat(dashboard): add real-time notification bell
-fix: resolve race condition in WebSocket reconnect
-refactor(api): consolidate error handling middleware
-test: add integration tests for payment webhook
-chore: upgrade TypeScript to 5.4
-```
-
-Bad:
 ```
 fixed stuff
 WIP
 update
-changes
-asdf
+cambios varios
+feat: se hicieron cosas
 ```
 
-## When to Commit
+## Cómo redactar el mensaje
 
-- Each commit should represent one logical change
-- Don't mix refactoring with feature work in the same commit
-- Don't commit half-working code (use `git stash` instead)
-- Commit early and often on feature branches, squash before merge if needed
+- Resume **qué cambió** de forma concreta, no genérica.
+- Usa el diff como fuente de verdad, no supongas.
+- Elige el tipo según el impacto real:
+  - `feat` → funcionalidad nueva visible para el usuario
+  - `fix` → corrección de bug
+  - `refactor` → reestructuración sin cambio de comportamiento
+  - `chore` / `ci` → tooling, deps, pipelines, config
+- Si hay cambios no relacionados, commitea solo el bloque coherente y avisa al usuario sobre el resto.
 
-## Breaking Changes
+## Cuándo NO commitear
 
-If the commit introduces a breaking change:
-1. Add `!` after the type: `feat(api)!: change auth token format`
-2. Add `BREAKING CHANGE:` in the footer with migration instructions
+- No hay cambios que commitear.
+- El código está a medias o claramente roto (avisar al usuario; sugerir `git stash` si aplica).
+- Solo hay archivos sensibles modificados.
+- Los cambios mezclan varios temas no relacionados → proponer commits separados.
+
+## Breaking changes
+
+Si el cambio rompe compatibilidad:
+
+```
+feat(api)!: cambiar formato del token de autenticación
+
+BREAKING CHANGE: migrar clientes al nuevo header Authorization
+```
+
+## Ejemplo de commit
+
+```bash
+git add <archivos-relevantes>
+
+git commit -m "$(cat <<'EOF'
+feat(layout): colapsar sidebar y reubicar inbox
+
+EOF
+)"
+```
+
+Tras el commit, informa al usuario el hash corto, el mensaje usado y si quedaron cambios sin commitear.

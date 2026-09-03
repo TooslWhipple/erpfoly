@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Popover from '@mui/material/Popover';
-import { useTheme } from '@mui/material/styles';
 import { Bell as LucideBell } from 'lucide-react';
 import { Bell, Inbox, InboxContent } from '@novu/nextjs';
 import { useInboxCredentials } from '@/hooks/useInboxCredentials';
@@ -24,7 +23,6 @@ const inboxAppearance = {
 } as const;
 
 export default function NotificationInbox() {
-  const theme = useTheme();
   const { data: credentials } = useInboxCredentials();
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -59,16 +57,11 @@ export default function NotificationInbox() {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 40,
-          height: 40,
+          width: 32,
+          height: 32,
           flexShrink: 0,
           cursor: 'pointer',
-          backgroundColor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.app.border}`,
           borderRadius: 1,
-          '&:hover': {
-            backgroundColor: theme.palette.background.paper,
-          },
         }}
       >
         <Bell
@@ -89,7 +82,7 @@ export default function NotificationInbox() {
         anchorEl={anchorRef.current}
         onClose={() => setOpen(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         slotProps={{
           paper: {
             sx: {

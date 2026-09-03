@@ -8,10 +8,6 @@ export const Container = styled(Box)(({ theme }) => ({
   flexDirection: "row",
   gap: theme.spacing(2),
   marginBottom: theme.spacing(3),
-  paddingRight: 56,
-  [theme.breakpoints.down("md")]: {
-    paddingRight: 48,
-  },
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",

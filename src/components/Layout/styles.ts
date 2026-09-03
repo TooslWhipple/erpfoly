@@ -77,20 +77,3 @@ export const MobileMenuIcon = styled(MenuIcon)(({ theme }) => ({
   height: 20,
   color: theme.palette.text.primary,
 }));
-
-export const NotificationsButtonContainer = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "flushPadding",
-})<{ flushPadding?: boolean }>(({ theme, flushPadding }) => ({
-  position: "absolute",
-  right: flushPadding ? 16 : CONTENT_PADDING,
-  top: flushPadding ? 16 : CONTENT_PADDING,
-  zIndex: theme.zIndex.appBar,
-  [theme.breakpoints.down(NAV_COMPACT_BREAKPOINT)]: {
-    right: 16,
-    top: 16,
-  },
-  [theme.breakpoints.down("sm")]: {
-    right: 12,
-    top: 12,
-  },
-}));

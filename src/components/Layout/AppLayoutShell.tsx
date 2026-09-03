@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useMediaQuery, useTheme } from "@mui/material";
-import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { Sidebar } from "@/components/Sidebar";
 import {
   NAV_COMPACT_BREAKPOINT,
@@ -16,7 +15,6 @@ import {
   ContentWrapper,
   MobileMenuButton,
   MobileMenuIcon,
-  NotificationsButtonContainer,
 } from "./styles";
 
 interface AppLayoutShellProps {
@@ -93,9 +91,6 @@ export function AppLayoutShell({ children }: AppLayoutShellProps) {
                 <MobileMenuIcon />
               </MobileMenuButton>
             )}
-            <NotificationsButtonContainer flushPadding={flushPadding}>
-              <NotificationInbox />
-            </NotificationsButtonContainer>
             {children}
           </ContentWrapper>
         </MainContent>

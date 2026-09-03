@@ -22,6 +22,7 @@ import { hasAccessRequirement } from "@/lib/routeAccess";
 import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { NAV_ITEMS } from "./sidebarNav.config";
@@ -110,38 +111,47 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <Stack
             direction={isSidebarCollapsed ? "column" : "row"}
             alignItems="center"
+            justifyContent="space-between"
             spacing={1}
             sx={{ width: "100%" }}
           >
-            {!isDrawerNav && (
-              <IconButton
-                size="small"
-                onClick={toggleSidebarCollapse}
-                aria-label={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
-                sx={{
-                  border: `1px solid ${theme.palette.app.border}`,
-                  borderRadius: 1,
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                }}
-              >
-                <PanelLeft size={16} color={theme.palette.text.primary} />
-              </IconButton>
-            )}
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
-              {!isSidebarCollapsed && (
-                <Stack>
-                  <Typography variant="subtitle2" lineHeight={1.2}>
-                    Folysoft
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" lineHeight={1.2}>
-                    V.1.0
-                  </Typography>
-                </Stack>
+            <Stack
+              direction={isSidebarCollapsed ? "column" : "row"}
+              alignItems="center"
+              spacing={1}
+              sx={{ width: isSidebarCollapsed ? "100%" : "auto" }}
+            >
+              {!isDrawerNav && (
+                <IconButton
+                  size="small"
+                  onClick={toggleSidebarCollapse}
+                  aria-label={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+                  sx={{
+                    border: `1px solid ${theme.palette.app.border}`,
+                    borderRadius: 1,
+                    width: 32,
+                    height: 32,
+                    flexShrink: 0,
+                  }}
+                >
+                  <PanelLeft size={16} color={theme.palette.text.primary} />
+                </IconButton>
               )}
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Image src="/logo/foly.svg" alt="Foly" width={32} height={32} />
+                {!isSidebarCollapsed && (
+                  <Stack>
+                    <Typography variant="subtitle2" lineHeight={1.2}>
+                      Folysoft
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" lineHeight={1.2}>
+                      V.1.0
+                    </Typography>
+                  </Stack>
+                )}
+              </Stack>
             </Stack>
+            <NotificationInbox />
           </Stack>
 
           {canCreateCreditApplication && !isSidebarCollapsed && (

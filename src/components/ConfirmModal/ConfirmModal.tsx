@@ -196,7 +196,7 @@ export function ConfirmModal({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="sm"
+      maxWidth="xs"
       fullWidth
       TransitionProps={{ onExited: handleTransitionExited }}
       PaperProps={{

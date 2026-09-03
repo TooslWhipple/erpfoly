@@ -259,12 +259,20 @@ export default function CreditApplicationReviewPage() {
       : detail.creditBureau.queryStatus === "NOT_QUERIED"
         ? "Consulta Buró de Crédito pendiente."
         : "";
+  const canApproveByFaceMatch = detail.faceMatch.status === "SUCCESS";
+  const faceMatchApproveBlockReason =
+    detail.faceMatch.status === "FAILED"
+      ? "Identidad no verificada: el rostro capturado no coincide con la identificación."
+      : detail.faceMatch.status === "NOT_VERIFIED"
+        ? "Falta la verificación biométrica facial exitosa."
+        : "";
   const approveDisabledByStatus =
     detail.status === "DRAFT" || detail.status === "CANCELLED";
-  const approveButtonDisabled = approveDisabledByStatus || !canApproveByBuro;
+  const approveButtonDisabled =
+    approveDisabledByStatus || !canApproveByBuro || !canApproveByFaceMatch;
   const approveTooltipTitle =
-    !approveDisabledByStatus && buroApproveBlockReason
-      ? buroApproveBlockReason
+    !approveDisabledByStatus
+      ? faceMatchApproveBlockReason || buroApproveBlockReason
       : "";
   return (
     <>

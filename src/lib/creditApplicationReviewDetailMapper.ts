@@ -232,6 +232,10 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       canQueryNow: api.creditBureau?.canQueryNow ?? false,
       missingFields: api.creditBureau?.missingFields ?? [],
     },
+    faceMatch: {
+      status: api.faceMatch?.status ?? "NOT_VERIFIED",
+      score: api.faceMatch?.score ?? null,
+    },
     biometrics: { items: biometricItems },
     purchaseIntention: { items: [], subtotal: 0, total: 0 },
   };

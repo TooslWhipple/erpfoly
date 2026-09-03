@@ -198,11 +198,8 @@ export function PaymentCapturePanel({
             <Minus size={16} />
           </IconButton>
           <InstallmentsControlInput
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={1}
-            max={totalPendingInstallmentsCount || 1}
-            step={1}
             value={installmentInputValue}
             disabled={totalPendingInstallmentsCount === 0}
             aria-label="Parcialidades a cubrir"

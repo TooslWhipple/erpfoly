@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -18,19 +18,20 @@ import {
   PaymentSummaryPanel,
 } from "../../abonos/components";
 import { ErrorState } from "@/styles/clientes/detalle.styles";
-import {
-  Card,
-  PageLayout,
-  SidebarColumn,
-} from "@/styles/clientes/abonos.styles";
+import { Card } from "@/styles/clientes/abonos.styles";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { getClientPaymentAccessDenialMessage } from "@/utils/clientPaymentAccess";
+
 export default function ClientPaymentPage() {
   const router = useRouter();
+  const showWarning = useSnackbarStore((s) => s.showWarning);
   const {
     routerReady,
     clientId,
     fromCashRegister,
     cashRegisterName,
     context,
+    accessDeniedReason,
     loading,
     error,
     paymentMethod,
@@ -61,6 +62,31 @@ export default function ClientPaymentPage() {
     submitPayment,
     refetch,
   } = useClientPayment();
+
+  useEffect(() => {
+    if (!routerReady || loading || !accessDeniedReason || paymentResult) return;
+
+    const message = getClientPaymentAccessDenialMessage(accessDeniedReason);
+    if (message) showWarning(message);
+
+    const destination = fromCashRegister
+      ? "/cajas"
+      : clientId
+        ? `/clientes/${clientId}`
+        : "/clientes";
+
+    void router.replace(destination);
+  }, [
+    accessDeniedReason,
+    clientId,
+    fromCashRegister,
+    loading,
+    paymentResult,
+    router,
+    routerReady,
+    showWarning,
+  ]);
+
   const breadcrumbs: BreadcrumbItem[] = useMemo(() => {
     const clientName = context?.clientName ?? "...";
     if (fromCashRegister) {
@@ -118,7 +144,7 @@ export default function ClientPaymentPage() {
     link.download = `comprobante-${paymentResult.id}.pdf`;
     link.click();
   };
-  if (!routerReady || loading) {
+  if (!routerReady || loading || (accessDeniedReason && !paymentResult)) {
     return (
       <Stack spacing={3}>
         <Skeleton variant="text" width="60%" height={32} />

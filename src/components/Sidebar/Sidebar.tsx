@@ -83,13 +83,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const handleIntakeFinalize = async (payload: CreditApplicationBiometricsData) => {
-    const result = await createCreditApplicationFromIntake(payload);
-    if (!result?.id) {
-      showError("No se pudo crear la solicitud, intenta nuevamente.");
-      return;
+    try {
+      const result = await createCreditApplicationFromIntake(payload);
+      await router.push(`/solicitudes-credito/${result.id}`);
+    } catch (err) {
+      showError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo crear la solicitud, intenta nuevamente.",
+      );
+      throw err;
     }
-
-    await router.push(`/solicitudes-credito/${result.id}`);
   };
 
   const handleLogout = async () => {

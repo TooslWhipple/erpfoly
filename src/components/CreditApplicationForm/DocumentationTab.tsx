@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Box, Button, CircularProgress, IconButton, Grid, Stack, Typography, useTheme } from "@mui/material";
-import { Check, Trash2, Upload } from "lucide-react";
+import { Check, Camera, RefreshCw, Trash2, Upload } from "lucide-react";
 import { ImageViewerModal } from "@/components/ImageViewerModal";
+import {
+  CreditApplicationBiometricUpdateModal,
+  type BiometricUpdateMode,
+} from "@/components/CreditApplicationBiometricUpdateModal";
 import { DropZoneRoot } from "@/components/FileUpload/styles";
 import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
 import {
@@ -19,6 +23,7 @@ interface DocumentationTabProps {
     employmentProofLetterFiles: CreditApplicationDocumentFile[];
     ineFrontFiles: CreditApplicationDocumentFile[];
     ineBackFiles: CreditApplicationDocumentFile[];
+    faceCaptureFiles?: CreditApplicationDocumentFile[];
   };
   showIncomeProof: boolean;
   showEmploymentProofLetter: boolean;
@@ -30,6 +35,11 @@ interface DocumentationTabProps {
   onIneBackChange: (files: CreditApplicationDocumentFile[]) => void;
   onSave: () => Promise<boolean>;
   saving: boolean;
+  applicationId?: string;
+  canEditBiometrics?: boolean;
+  faceMatchStatus?: "SUCCESS" | "FAILED" | "NOT_VERIFIED" | null;
+  faceMatchScore?: number | null;
+  onBiometricsUpdated?: () => void | Promise<void>;
 }
 
 interface DocumentSlotConfig {
@@ -291,6 +301,123 @@ function DocumentationDocumentSlot({
   );
 }
 
+interface BiometricDocumentSlotProps {
+  label: string;
+  file?: CreditApplicationDocumentFile;
+  required: boolean;
+  statusCaption?: string;
+  actionLabel: string;
+  disabled: boolean;
+  error?: string;
+  onCapture: () => void;
+  onOpenPreview: (title: string, subtitle: string, url: string) => void;
+}
+
+function BiometricDocumentSlot({
+  label,
+  file,
+  required,
+  statusCaption,
+  actionLabel,
+  disabled,
+  error,
+  onCapture,
+  onOpenPreview,
+}: BiometricDocumentSlotProps) {
+  const theme = useTheme();
+  const previewUrl = useDocumentPreviewUrl(file);
+  const subtitle = statusCaption ?? file?.uploadedAt ?? VERIFIED_BY_LABEL;
+  const showImagePreview = Boolean(file && previewUrl);
+
+  if (!file) {
+    return (
+      <Stack spacing={0.75}>
+        <DropZoneRoot
+          isDragActive={false}
+          isError={!!error}
+          onClick={() => !disabled && onCapture()}
+        >
+          <Stack alignItems="center" spacing={0.5}>
+            <Camera size={16} color={theme.palette.primary.main} strokeWidth={2} />
+            <Typography variant="body1" fontWeight={500} color="primary.main">
+              {label}
+              {required ? " *" : ""}
+            </Typography>
+            <Typography variant="body2" color="primary.main">
+              {actionLabel}
+            </Typography>
+          </Stack>
+        </DropZoneRoot>
+        {error && (
+          <Typography variant="caption" sx={{ color: theme.palette.app.chip.variants.error.color }}>
+            {error}
+          </Typography>
+        )}
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack spacing={0.75}>
+      <VerifiedRow
+        style={{ cursor: previewUrl ? "pointer" : "default", marginBottom: 0 }}
+        onClick={previewUrl ? () => onOpenPreview(label, subtitle, previewUrl) : undefined}
+      >
+        <VerifiedCheck>
+          <Check size={18} color="#059669" strokeWidth={2} />
+        </VerifiedCheck>
+        <Stack minWidth={0}>
+          <Typography variant="subtitle2" fontWeight={600}>
+            {label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {subtitle}
+          </Typography>
+        </Stack>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ marginLeft: "auto" }}>
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<RefreshCw size={14} />}
+            disabled={disabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              onCapture();
+            }}
+          >
+            Actualizar
+          </Button>
+          {showImagePreview ? (
+            <VerifiedThumb src={previewUrl} alt={label} />
+          ) : null}
+        </Stack>
+      </VerifiedRow>
+      {error && (
+        <Typography variant="caption" sx={{ color: theme.palette.app.chip.variants.error.color }}>
+          {error}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
+function faceMatchCaption(
+  status?: "SUCCESS" | "FAILED" | "NOT_VERIFIED" | null,
+  score?: number | null,
+): string {
+  if (status === "SUCCESS") {
+    if (score != null && score > 0) {
+      const displayScore = score > 1 ? score : score * 100;
+      return `Facematch exitoso · ${Math.round(displayScore)}%`;
+    }
+    return "Facematch exitoso";
+  }
+  if (status === "FAILED") {
+    return "Facematch pendiente o fallido · vuelve a capturar la selfie";
+  }
+  return "Sin verificación facial";
+}
+
 export function DocumentationTab({
   values,
   showIncomeProof,
@@ -299,19 +426,31 @@ export function DocumentationTab({
   requireEmploymentProofLetter,
   onIncomeProofChange,
   onEmploymentProofLetterChange,
-  onIneFrontChange,
-  onIneBackChange,
+  onIneFrontChange: _onIneFrontChange,
+  onIneBackChange: _onIneBackChange,
   onSave,
   saving,
+  applicationId,
+  canEditBiometrics = false,
+  faceMatchStatus = null,
+  faceMatchScore = null,
+  onBiometricsUpdated,
 }: DocumentationTabProps) {
+  void _onIneFrontChange;
+  void _onIneBackChange;
+
   const requiredErrorMessage = "Documento obligatorio.";
   const [imageViewer, setImageViewer] = useState<{
     title: string;
     subtitle: string;
     url: string;
   } | null>(null);
+  const [biometricModal, setBiometricModal] = useState<{
+    open: boolean;
+    mode: BiometricUpdateMode;
+  }>({ open: false, mode: "ine" });
 
-  const documentSlots: DocumentSlotConfig[] = [
+  const supportingSlots: DocumentSlotConfig[] = [
     {
       key: "income-proof",
       label: "Comprobante de ingresos",
@@ -334,56 +473,97 @@ export function DocumentationTab({
       imageOnlySlot: false,
       accept: ["image/*", "image/jpeg", "image/png", "image/webp", "application/pdf"],
     },
-    {
-      key: "ine-front",
-      label: "INE frontal",
-      files: values.ineFrontFiles,
-      onChange: onIneFrontChange,
-      visible: true,
-      required: true,
-      allowRemove: false,
-      imageOnlySlot: true,
-      accept: ["image/*", "image/jpeg", "image/png", "image/webp"],
-    },
-    {
-      key: "ine-back",
-      label: "INE posterior",
-      files: values.ineBackFiles,
-      onChange: onIneBackChange,
-      visible: true,
-      required: true,
-      allowRemove: false,
-      imageOnlySlot: true,
-      accept: ["image/*", "image/jpeg", "image/png", "image/webp"],
-    },
   ];
+
+  const ineFrontFile = values.ineFrontFiles[0];
+  const ineBackFile = values.ineBackFiles[0];
+  const faceCaptureFile = values.faceCaptureFiles?.[0];
+  const hasIneFront = Boolean(ineFrontFile);
+  const existingIneFrontUrl = resolveDocumentPreviewUrl(ineFrontFile);
+
+  const openBiometricModal = (mode: BiometricUpdateMode) => {
+    if (!canEditBiometrics || !applicationId || saving) return;
+    if (mode === "face" && !hasIneFront) return;
+    setBiometricModal({ open: true, mode });
+  };
 
   return (
     <Card>
       <Grid container spacing={2}>
-        {
-          documentSlots
-            .filter((slot) => slot.visible)
-            .map((slot) => (
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentationDocumentSlot
-                  key={slot.key}
-                  label={slot.label}
-                  file={slot.files[0]}
-                  required={slot.required}
-                  allowRemove={slot.allowRemove}
-                  imageOnlySlot={slot.imageOnlySlot}
-                  accept={slot.accept}
-                  disabled={saving}
-                  error={
-                    slot.required && slot.files.length === 0 ? requiredErrorMessage : undefined
-                  }
-                  onChange={slot.onChange}
-                  onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
-                />
-              </Grid>
-            ))
-        }
+        {supportingSlots
+          .filter((slot) => slot.visible)
+          .map((slot) => (
+            <Grid key={slot.key} size={{ xs: 12, md: 6 }}>
+              <DocumentationDocumentSlot
+                label={slot.label}
+                file={slot.files[0]}
+                required={slot.required}
+                allowRemove={slot.allowRemove}
+                imageOnlySlot={slot.imageOnlySlot}
+                accept={slot.accept}
+                disabled={saving}
+                error={
+                  slot.required && slot.files.length === 0 ? requiredErrorMessage : undefined
+                }
+                onChange={slot.onChange}
+                onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
+              />
+            </Grid>
+          ))}
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <BiometricDocumentSlot
+            label="INE frontal"
+            file={ineFrontFile}
+            required
+            statusCaption={ineFrontFile ? VERIFIED_BY_LABEL : undefined}
+            actionLabel={canEditBiometrics ? "Capturar INE con Nubarium" : "Sin captura disponible"}
+            disabled={saving || !canEditBiometrics || !applicationId}
+            error={!ineFrontFile ? requiredErrorMessage : undefined}
+            onCapture={() => openBiometricModal("ine")}
+            onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <BiometricDocumentSlot
+            label="INE posterior"
+            file={ineBackFile}
+            required
+            statusCaption={ineBackFile ? VERIFIED_BY_LABEL : undefined}
+            actionLabel={canEditBiometrics ? "Capturar INE con Nubarium" : "Sin captura disponible"}
+            disabled={saving || !canEditBiometrics || !applicationId}
+            error={!ineBackFile ? requiredErrorMessage : undefined}
+            onCapture={() => openBiometricModal("ine")}
+            onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <BiometricDocumentSlot
+            label="Captura facial"
+            file={faceCaptureFile}
+            required
+            statusCaption={faceMatchCaption(faceMatchStatus, faceMatchScore)}
+            actionLabel={
+              !hasIneFront
+                ? "Primero captura el INE frontal"
+                : canEditBiometrics
+                  ? "Capturar selfie con Nubarium"
+                  : "Sin captura disponible"
+            }
+            disabled={saving || !canEditBiometrics || !applicationId || !hasIneFront}
+            error={
+              !faceCaptureFile
+                ? requiredErrorMessage
+                : faceMatchStatus !== "SUCCESS"
+                  ? "Se requiere una verificación facial exitosa."
+                  : undefined
+            }
+            onCapture={() => openBiometricModal("face")}
+            onOpenPreview={(title, subtitle, url) => setImageViewer({ title, subtitle, url })}
+          />
+        </Grid>
       </Grid>
 
       <Button
@@ -402,6 +582,19 @@ export function DocumentationTab({
         subtitle={imageViewer?.subtitle}
         imageUrl={imageViewer?.url ?? ""}
       />
+
+      {applicationId ? (
+        <CreditApplicationBiometricUpdateModal
+          open={biometricModal.open}
+          mode={biometricModal.mode}
+          applicationId={applicationId}
+          existingIneFrontUrl={existingIneFrontUrl}
+          onClose={() => setBiometricModal((current) => ({ ...current, open: false }))}
+          onSuccess={async () => {
+            await onBiometricsUpdated?.();
+          }}
+        />
+      ) : null}
     </Card>
   );
 }

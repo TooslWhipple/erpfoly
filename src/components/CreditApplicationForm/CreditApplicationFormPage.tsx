@@ -63,6 +63,9 @@ export function CreditApplicationFormPage({
     guarantorTab,
     handleSaveActiveTab,
     handleSubmitApplication,
+    canEditBiometrics,
+    faceMatch,
+    refreshBiometricsDocumentation,
   } = useCreditApplicationForm({
     applicationId,
     isCreateMode,
@@ -392,6 +395,11 @@ export function CreditApplicationFormPage({
           }}
           onSave={handleContinueToNextTab}
           saving={saving}
+          applicationId={applicationId}
+          canEditBiometrics={canEditBiometrics}
+          faceMatchStatus={faceMatch?.status ?? null}
+          faceMatchScore={faceMatch?.score ?? null}
+          onBiometricsUpdated={refreshBiometricsDocumentation}
         />
       )}
       {activeTab === "guarantor" && (

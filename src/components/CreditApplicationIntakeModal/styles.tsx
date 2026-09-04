@@ -104,8 +104,12 @@ export const SignatureLegalText = styled(Typography)(({ theme }) => ({
 }));
 
 export const FooterActions = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "flex-end",
   flexShrink: 0,
   paddingTop: theme.spacing(1),
+  gap: theme.spacing(2),
   position: "relative",
   zIndex: 2,
   width: "100%",

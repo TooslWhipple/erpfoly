@@ -140,6 +140,7 @@ const EMPTY_DOCUMENTATION_VALUES: DocumentationTabValues = {
   employmentProofLetterFiles: [],
   ineFrontFiles: [],
   ineBackFiles: [],
+  faceCaptureFiles: [],
 };
 
 const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
@@ -353,6 +354,7 @@ function mapCreditApplicationToFormValues(
     ),
     ineFrontFiles: mapDocumentItems(creditApplication.documentation?.ineFrontFiles),
     ineBackFiles: mapDocumentItems(creditApplication.documentation?.ineBackFiles),
+    faceCaptureFiles: mapDocumentItems(creditApplication.documentation?.faceCaptureFiles),
   };
 
   const guarantor: GuarantorTabValues = {
@@ -419,6 +421,11 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
   const [additionalInformationRequested, setAdditionalInformationRequested] = useState<
     AdditionalInformationRequestedItem[]
   >([]);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [faceMatch, setFaceMatch] = useState<{
+    status: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+    score: number | null;
+  } | null>(null);
 
   const requestedAdditionalInformationCodes = useMemo(
     () =>
@@ -517,6 +524,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
           return;
         }
         setAdditionalInformationRequested(loadedApplication.additionalInformationRequested ?? []);
+        setApplicationStatus(loadedApplication.status ?? null);
+        setFaceMatch(loadedApplication.faceMatch ?? null);
 
         const mappedValues = mapCreditApplicationToFormValues(loadedApplication);
 
@@ -578,6 +587,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     documentationTab.validateValues({
       requireIncomeProof: requiresIncomeProof,
       requireEmploymentProofLetter: requiresEmploymentProofLetter,
+      requireFaceMatchSuccess: !isCreateMode,
+      faceMatchStatus: faceMatch?.status ?? null,
       silent: true,
     }) &&
     (!shouldShowGuarantorTab || guarantorTab.validateValues(true));
@@ -641,6 +652,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
       return documentationTab.validateValues({
         requireIncomeProof: requiresIncomeProof,
         requireEmploymentProofLetter: requiresEmploymentProofLetter,
+        requireFaceMatchSuccess: !isCreateMode,
+        faceMatchStatus: faceMatch?.status ?? null,
       });
     }
     if (activeTab === "guarantor") {
@@ -655,6 +668,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     documentationTab,
     employmentTab,
     familyTab,
+    faceMatch,
     guarantorTab,
     isCreateMode,
     referencesTab,
@@ -769,6 +783,8 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     const documentationFormIsValid = documentationTab.validateValues({
       requireIncomeProof: requiresIncomeProof,
       requireEmploymentProofLetter: requiresEmploymentProofLetter,
+      requireFaceMatchSuccess: !isCreateMode,
+      faceMatchStatus: faceMatch?.status ?? null,
     });
     if (!documentationFormIsValid) invalidTabs.push("documentation");
 
@@ -784,6 +800,7 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     documentationTab,
     employmentTab,
     familyTab,
+    faceMatch,
     guarantorTab,
     isCreateMode,
     referencesTab,
@@ -791,6 +808,25 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     requiresIncomeProof,
     shouldShowGuarantorTab,
   ]);
+
+  const refreshBiometricsDocumentation = useCallback(async () => {
+    if (!applicationId || isCreateMode) return;
+    const refreshedApplication = await getCreditApplicationDetailOnce(applicationId);
+    if (!refreshedApplication) return;
+    setApplicationStatus(refreshedApplication.status ?? null);
+    setFaceMatch(refreshedApplication.faceMatch ?? null);
+    setDocumentationValuesFromExternal(
+      mapCreditApplicationToFormValues(refreshedApplication).documentation,
+    );
+  }, [applicationId, isCreateMode, setDocumentationValuesFromExternal]);
+
+  const canEditBiometrics = Boolean(
+    applicationId
+    && !isCreateMode
+    && applicationStatus
+    && applicationStatus !== "APPROVED"
+    && applicationStatus !== "CANCELLED",
+  );
 
   const handleSaveActiveTab = useCallback(async (): Promise<boolean> => {
     if (!beginFormAction("validating")) {
@@ -932,6 +968,10 @@ export function useCreditApplicationForm({ applicationId, isCreateMode }: UseCre
     requiresGuarantorInformation,
     missingAdditionalInformationLabels,
     tabsWithMissingRequestedInformation,
+    applicationStatus,
+    faceMatch,
+    canEditBiometrics,
+    refreshBiometricsDocumentation,
     setActiveTab,
     basicInformationTab,
     familyTab,

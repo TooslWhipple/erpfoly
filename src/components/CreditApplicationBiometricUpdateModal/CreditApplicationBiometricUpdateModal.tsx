@@ -1,82 +1,63 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button, CircularProgress, Typography, useMediaQuery } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import { PenSquare } from "lucide-react";
 import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
 import { SideModal } from "@/components/SideModal";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
 import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
-import { useCameraDevices } from "@/hooks/useCameraDevices";
-import { useNubariumSdk } from "@/hooks/useNubariumSdk";
-import { compareIneFace } from "@/services/nubarium.service";
-import { releaseCameraHardware } from "@/utils/cameraDevices";
-import {
-  FACE_MATCH_FAILURE_MESSAGE,
-  formatFaceMatchScoreHint,
-} from "@/utils/creditApplicationFaceMatch";
-import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import {
   FooterActions,
   SdkBootstrapState,
-  SignatureCanvas,
-  SignatureCanvasWrapper,
-  SignatureLegalText,
-  SignatureSection,
   StepContainer,
   StepContent,
   StepProgress,
   StepProgressRow,
-} from "./styles";
+} from "@/components/CreditApplicationIntakeModal/styles";
+import { useCameraDevices } from "@/hooks/useCameraDevices";
+import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import { compareIneFace } from "@/services/nubarium.service";
+import {
+  updateCreditApplicationFaceBiometrics,
+  updateCreditApplicationIneBiometrics,
+} from "@/services/creditApplications.service";
+import { releaseCameraHardware } from "@/utils/cameraDevices";
+import {
+  FACE_MATCH_FAILURE_MESSAGE,
+  formatFaceMatchScoreHint,
+  imageUrlToDataUrl,
+} from "@/utils/creditApplicationFaceMatch";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 
-interface CreditApplicationIntakeModalProps {
+export type BiometricUpdateMode = "ine" | "face";
+
+interface CreditApplicationBiometricUpdateModalProps {
   open: boolean;
+  mode: BiometricUpdateMode;
+  applicationId: string;
+  /** Signed URL of the current INE front image; required for face mode client-side compare. */
+  existingIneFrontUrl?: string | null;
   onClose: () => void;
-  /** Persist intake to the server; on failure, throw so the modal stays open for retry. */
-  onFinalize: (payload: CreditApplicationBiometricsData) => Promise<void>;
+  onSuccess: () => void | Promise<void>;
 }
 
-type IntakeStepId = "ine-capture" | "liveness" | "signature";
-
-const STEP_ORDER: IntakeStepId[] = [
-  "ine-capture",
-  "liveness",
-  "signature",
-];
-
-const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string; progressLabel: string }> = {
-  "ine-capture": {
-    title: "Identificación oficial",
-    subtitle: "Verifica la INE del cliente",
-    progressLabel: "Identificación oficial",
-  },
-  liveness: {
-    title: "Prueba de vida",
-    subtitle: "Confirma la identidad del cliente",
-    progressLabel: "Prueba de vida",
-  },
-  signature: {
-    title: "Autorización de Buró",
-    subtitle: "Firma del cliente para consulta crediticia",
-    progressLabel: "Autorización de Buró",
-  },
-};
-
-export function CreditApplicationIntakeModal({
+export function CreditApplicationBiometricUpdateModal({
   open,
+  mode,
+  applicationId,
+  existingIneFrontUrl,
   onClose,
-  onFinalize,
-}: CreditApplicationIntakeModalProps) {
-  const theme = useTheme();
+  onSuccess,
+}: CreditApplicationBiometricUpdateModalProps) {
   const isCoarsePointer = useMediaQuery("(pointer: coarse)");
-  const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
+  const showError = useSnackbarStore((s) => s.showError);
+
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
   const [ineBackImage, setIneBackImage] = useState<string | null>(null);
   const [livenessExecutionId, setLivenessExecutionId] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
-  const [signatureDrawn, setSignatureDrawn] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ineCaptureSessionKey, setIneCaptureSessionKey] = useState(0);
   const [livenessCaptureSessionKey, setLivenessCaptureSessionKey] = useState(0);
@@ -85,25 +66,14 @@ export function CreditApplicationIntakeModal({
   const [verifyingFaceMatch, setVerifyingFaceMatch] = useState(false);
   const [faceMatchError, setFaceMatchError] = useState<string | null>(null);
   const [faceMatchScoreHint, setFaceMatchScoreHint] = useState<string | null>(null);
-  const [finalizeError, setFinalizeError] = useState<string | null>(null);
-
-  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawingRef = useRef(false);
-
-  const clearSignatureCanvas = () => {
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    setSignatureDrawn(false);
-  };
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { isReady: sdkReady, isLoading: sdkLoading, token: sdkToken, error: sdkError, reloadToken } =
     useNubariumSdk({ enabled: open });
 
-  const preferFacing = activeStep === "liveness" ? "user" : "environment";
+  const preferFacing = mode === "face" ? "user" : "environment";
   const cameras = useCameraDevices({
-    enabled: open && activeStep !== "signature",
+    enabled: open,
     preferFacing,
   });
 
@@ -118,46 +88,35 @@ export function CreditApplicationIntakeModal({
 
   const ineCaptureLive =
     open
-    && activeStep === "ine-capture"
+    && mode === "ine"
     && !ineCompleted
     && (ineCaptureStarted || canAutoStartCapture);
   const livenessCaptureLive =
     open
-    && activeStep === "liveness"
+    && mode === "face"
     && !livenessCompleted
     && !verifyingFaceMatch
     && !faceMatchError
     && (livenessCaptureStarted || canAutoStartCapture);
 
-  const currentStepIndex = STEP_ORDER.indexOf(activeStep);
-  const isLastStep = currentStepIndex === STEP_ORDER.length - 1;
-  const stepContent = STEP_TITLES[activeStep];
+  const title = mode === "ine" ? "Actualizar INE" : "Actualizar prueba de vida";
+  const subtitle =
+    mode === "ine"
+      ? "Vuelve a capturar la identificación oficial del cliente"
+      : "Confirma la identidad del cliente contra el INE frontal";
 
-  const canContinue = useMemo(() => {
-    if (activeStep === "ine-capture") return Boolean(ineFrontImage && ineBackImage);
-    if (activeStep === "liveness") {
-      return Boolean(selfieImage) && !verifyingFaceMatch && !faceMatchError;
-    }
-    return signatureDrawn;
-  }, [
-    activeStep,
-    faceMatchError,
-    ineBackImage,
-    ineFrontImage,
-    selfieImage,
-    signatureDrawn,
-    verifyingFaceMatch,
-  ]);
+  const canSave = useMemo(() => {
+    if (mode === "ine") return Boolean(ineFrontImage && ineBackImage);
+    return Boolean(selfieImage) && !verifyingFaceMatch && !faceMatchError;
+  }, [faceMatchError, ineBackImage, ineFrontImage, mode, selfieImage, verifyingFaceMatch]);
 
   const resetModalState = useCallback(() => {
     releaseCameraHardware();
-    setActiveStep("ine-capture");
     setIneExecutionId(null);
     setIneFrontImage(null);
     setIneBackImage(null);
     setLivenessExecutionId(null);
     setSelfieImage(null);
-    setSignatureDrawn(false);
     setIneCaptureSessionKey(0);
     setLivenessCaptureSessionKey(0);
     setIneCaptureStarted(false);
@@ -165,8 +124,7 @@ export function CreditApplicationIntakeModal({
     setVerifyingFaceMatch(false);
     setFaceMatchError(null);
     setFaceMatchScoreHint(null);
-    setFinalizeError(null);
-    clearSignatureCanvas();
+    setSubmitError(null);
   }, []);
 
   const handleCloseModal = () => {
@@ -200,9 +158,10 @@ export function CreditApplicationIntakeModal({
 
   const handleLivenessSuccess = useCallback(
     async (result: { executionId: string; faceDataUrl: string }) => {
-      if (!ineFrontImage) {
+      const ineFrontForCompare = existingIneFrontUrl?.trim();
+      if (!ineFrontForCompare) {
         setFaceMatchError(
-          "Falta la captura del INE para verificar la identidad.",
+          "Falta la captura del INE frontal para verificar la identidad.",
         );
         setFaceMatchScoreHint(null);
         return;
@@ -212,7 +171,8 @@ export function CreditApplicationIntakeModal({
       setFaceMatchError(null);
       setFaceMatchScoreHint(null);
       try {
-        const match = await compareIneFace(ineFrontImage, result.faceDataUrl);
+        const ineFrontDataUrl = await imageUrlToDataUrl(ineFrontForCompare);
+        const match = await compareIneFace(ineFrontDataUrl, result.faceDataUrl);
         if (!match.isMatch) {
           setFaceMatchError(match.message ?? FACE_MATCH_FAILURE_MESSAGE);
           setFaceMatchScoreHint(
@@ -235,99 +195,43 @@ export function CreditApplicationIntakeModal({
         setVerifyingFaceMatch(false);
       }
     },
-    [ineFrontImage],
+    [existingIneFrontUrl],
   );
 
-  const goToNextStep = async (): Promise<void> => {
-    if (!canContinue || verifyingFaceMatch) return;
-
-    if (activeStep === "ine-capture" && !sdkToken) {
-      await reloadToken();
-    }
-
-    if (activeStep === "liveness" && !sdkToken) {
-      await reloadToken();
-    }
-
-    if (isLastStep) {
-      setSaving(true);
-      setFinalizeError(null);
-      try {
-        await onFinalize({
+  const handleSave = async () => {
+    if (!canSave || saving || verifyingFaceMatch) return;
+    setSaving(true);
+    setSubmitError(null);
+    try {
+      if (mode === "ine") {
+        if (!ineFrontImage || !ineBackImage) return;
+        const result = await updateCreditApplicationIneBiometrics(applicationId, {
+          ineExecutionId,
           ineFrontImage,
           ineBackImage,
-          selfieImage,
-          ineExecutionId,
-          livenessExecutionId,
-          signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
-          completedAt: new Date().toISOString(),
         });
-        resetModalState();
-        onClose();
-      } catch (err) {
-        setFinalizeError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo crear la solicitud, intenta nuevamente.",
-        );
-      } finally {
-        setSaving(false);
+        showSuccess(result.message);
+      } else {
+        if (!selfieImage) return;
+        const result = await updateCreditApplicationFaceBiometrics(applicationId, {
+          livenessExecutionId,
+          faceCaptureImage: selfieImage,
+        });
+        showSuccess(result.message);
       }
-      return;
+      await onSuccess();
+      resetModalState();
+      onClose();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "No se pudo guardar la captura biométrica. Intenta nuevamente.";
+      setSubmitError(message);
+      showError(message);
+    } finally {
+      setSaving(false);
     }
-
-    const nextStep = STEP_ORDER[currentStepIndex + 1];
-    setActiveStep(nextStep);
-  };
-
-  const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    const canvas = signatureCanvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
-    };
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (saving) return;
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    event.preventDefault();
-    canvas.setPointerCapture(event.pointerId);
-    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
-    context.beginPath();
-    context.moveTo(x, y);
-    isDrawingRef.current = true;
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current || saving) return;
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    event.preventDefault();
-    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
-    context.lineTo(x, y);
-    context.strokeStyle = theme.palette.text.primary;
-    context.lineWidth = 2;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.stroke();
-    setSignatureDrawn(true);
-  };
-
-  const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (signatureCanvasRef.current?.hasPointerCapture(event.pointerId)) {
-      signatureCanvasRef.current.releasePointerCapture(event.pointerId);
-    }
-    isDrawingRef.current = false;
   };
 
   const renderSdkBootstrapState = () => (
@@ -361,7 +265,7 @@ export function CreditApplicationIntakeModal({
   const stepProgressHeader = (
     <StepProgressRow>
       <StepProgress variant="body2">
-        {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
+        {mode === "ine" ? "Identificación oficial" : "Prueba de vida"}
       </StepProgress>
       {captureLive ? (
         <CameraSwitchControl
@@ -392,12 +296,14 @@ export function CreditApplicationIntakeModal({
     />
   );
 
+  const missingIneFrontForFace = mode === "face" && !existingIneFrontUrl?.trim();
+
   return (
     <SideModal
       open={open}
       onClose={handleCloseModal}
-      title={stepContent.title}
-      description={stepContent.subtitle}
+      title={title}
+      description={subtitle}
       headerContent={stepProgressHeader}
       disableClose={saving}
       maxWidth="lg"
@@ -416,10 +322,20 @@ export function CreditApplicationIntakeModal({
         sx={{
           flex: 1,
           minHeight: 0,
-          overflowY: activeStep === "signature" ? "auto" : "hidden",
+          overflowY: "hidden",
         }}
       >
-        {activeStep === "ine-capture" && (
+        {missingIneFrontForFace ? (
+          <StepContent>
+            <CaptureErrorState>
+              <Typography variant="body2" color="error.main" textAlign="center">
+                Debe existir el INE frontal antes de capturar la prueba de vida.
+              </Typography>
+            </CaptureErrorState>
+          </StepContent>
+        ) : null}
+
+        {mode === "ine" && !missingIneFrontForFace ? (
           <StepContent>
             {!sdkReady || !sdkToken ? (
               renderSdkBootstrapState()
@@ -456,9 +372,9 @@ export function CreditApplicationIntakeModal({
               </CaptureStepRoot>
             )}
           </StepContent>
-        )}
+        ) : null}
 
-        {activeStep === "liveness" && (
+        {mode === "face" && !missingIneFrontForFace ? (
           <StepContent>
             {!sdkReady || !sdkToken ? (
               renderSdkBootstrapState()
@@ -510,71 +426,42 @@ export function CreditApplicationIntakeModal({
                     }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
-                    onSuccess={handleLivenessSuccess}
+                    onSuccess={(result) => {
+                      void handleLivenessSuccess(result);
+                    }}
                     onReset={handleLivenessReset}
                   />
                 ) : null}
               </CaptureStepRoot>
             )}
           </StepContent>
-        )}
+        ) : null}
 
-        {activeStep === "signature" && (
-          <SignatureSection>
-            <Typography variant="body2" color="text.secondary">
-              Solicita la autorización del cliente para revisar su historial crediticio
-              a través del Buró de Crédito.
-            </Typography>
-            <SignatureCanvasWrapper>
-              <SignatureCanvas
-                ref={signatureCanvasRef}
-                width={900}
-                height={480}
-                disabled={saving}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-              />
-            </SignatureCanvasWrapper>
-            <SignatureLegalText variant="body2">
-              Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
-              S.A. de C.V.
-            </SignatureLegalText>
-            <Button
-              variant="text"
-              startIcon={<PenSquare size={16} />}
-              onClick={clearSignatureCanvas}
-              disabled={saving}
-              sx={{ alignSelf: "flex-end" }}
-            >
-              Limpiar firma
-            </Button>
-          </SignatureSection>
-        )}
+        {submitError ? (
+          <Typography variant="body2" color="error.main" sx={{ px: 2, pb: 1 }}>
+            {submitError}
+          </Typography>
+        ) : null}
       </StepContainer>
 
       <FooterActions>
-        {finalizeError ? (
-          <Typography variant="body2" color="error.main" textAlign="center" sx={{ width: "100%" }}>
-            {finalizeError}
-          </Typography>
-        ) : null}
         <Button
-          fullWidth
-          variant="contained"
-          onClick={goToNextStep}
-          disabled={
-            !canContinue
-            || saving
-            || verifyingFaceMatch
-            || (activeStep !== "signature" && sdkLoading)
-          }
+          variant="outlined"
+          onClick={handleCloseModal}
+          disabled={saving || verifyingFaceMatch}
         >
-          {saving || verifyingFaceMatch ? (
+          Cancelar
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => void handleSave()}
+          disabled={!canSave || saving || verifyingFaceMatch || missingIneFrontForFace}
+          sx={{ minWidth: 140 }}
+        >
+          {saving ? (
             <CircularProgress size={20} color="inherit" />
           ) : (
-            isLastStep ? "Finalizar" : "Siguiente"
+            "Guardar captura"
           )}
         </Button>
       </FooterActions>

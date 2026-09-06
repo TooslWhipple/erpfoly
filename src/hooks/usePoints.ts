@@ -87,7 +87,7 @@ function formStateToRules(
         purchaseTypeId: pt.id,
         amountToSpend: c.amountToSpend,
         pointsAwarded: c.pointsAwarded,
-        amountPerPoint: c.amountPerPoint,
+        amountPerPoint: 1,
       };
     });
 }

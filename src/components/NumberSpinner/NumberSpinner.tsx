@@ -10,6 +10,7 @@ export interface NumberSpinnerProps {
   disabled?: boolean;
   size?: "small" | "medium";
   iconSize?: number;
+  inputWidth?: number;
 }
 
 export default function NumberSpinner({
@@ -20,6 +21,7 @@ export default function NumberSpinner({
   disabled = false,
   size = "small",
   iconSize = 14,
+  inputWidth = 40,
 }: NumberSpinnerProps) {
   const [draftValue, setDraftValue] = useState<string | null>(null);
   const displayValue = draftValue !== null ? draftValue : String(value);
@@ -114,7 +116,7 @@ export default function NumberSpinner({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         sx={{
-          width: 40,
+          width: inputWidth,
           height: btnSize,
           border: "none",
           outline: "none",

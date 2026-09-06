@@ -27,13 +27,13 @@ export interface FolypuntosFormProps {
 const PURCHASE_SECTION = {
     title: "Equivalencia de compra a Folypuntos",
     description:
-        "Configura la cantidad de Folypuntos que se otorgan por cada peso gastado.",
+        "Configura cuántos Folypuntos se otorgan por cada peso gastado. La generación vigente aplica solo a ventas a crédito.",
 } as const;
 
 const SALE_SECTION = {
     title: "Equivalencia de venta a Folypuntos",
     description:
-        "Configura el valor en pesos que tendrá cada Folypunto al ser canjeado.",
+        "1 Folypunto vale $1.00 MXN al canjearse. Esta equivalencia no se puede modificar.",
 } as const;
 
 const DEFAULT_CONFIG = {
@@ -104,17 +104,9 @@ export function FolypuntosForm({
                     <NumberInputArrow>
                         <ArrowForwardIcon fontSize="small" />
                     </NumberInputArrow>
-                    <CurrencyInput
-                        value={config.amountPerPoint}
-                        onChange={handleChange("amountPerPoint")}
-                        min={0.01}
-                        max={999999.99}
-                        step={0.01}
-                        disabled={disabled}
-                        currencySymbol="$"
-                        decimals={2}
-                        unit="pesos mexicanos."
-                    />
+                    <Typography variant="body1" fontWeight={600}>
+                        $1.00 MXN
+                    </Typography>
                 </NumberInputContainer>
             </FormCard>
         </Stack>

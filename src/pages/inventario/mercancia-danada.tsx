@@ -3,6 +3,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Edit as EditIcon,
   LocalShipping as LocalShippingIcon,
+  AttachMoney as AttachMoneyIcon,
 } from "@mui/icons-material";
 import {
   Title,
@@ -11,7 +12,9 @@ import {
   TabFilters,
   AddDamagedGoodsModal,
   ConfirmModal,
+  MarkDamagedGoodsDiscountedModal,
 } from "@/components";
+import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
 import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
   Column,
@@ -26,6 +29,7 @@ import {
   getDamagedProducts,
   getDamagedProductStats,
   updateDamagedProductStatus,
+  discountDamagedProduct,
   type DamagedProductListItem,
   type DamagedProductStats,
   type DamagedProductTransitionStatus,
@@ -54,6 +58,16 @@ const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   COMPLETED: "success",
   CANCELLED: "error",
 };
+const DISCOUNT_STATUS_CHIP_LABELS: Record<string, string> = {
+  not_discounted: "Pendiente",
+  discounted_pending_pickup: "Descontado",
+  collected: "Recolectado",
+};
+const DISCOUNT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
+  not_discounted: "pending",
+  discounted_pending_pickup: "info",
+  collected: "success",
+};
 function isFolioCompleted(row: DamagedProductListItem): boolean {
   return row.status.toLowerCase() === "completed";
 }
@@ -73,6 +87,10 @@ export default function MercanciaDanada() {
       }
   >({ open: false });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [discountItem, setDiscountItem] = useState<DamagedProductListItem | null>(
+    null,
+  );
+  const [discountSaving, setDiscountSaving] = useState(false);
   const listExtraParams = useMemo(() => {
     if (activeTab === "all") {
       return {};
@@ -209,6 +227,37 @@ export default function MercanciaDanada() {
     );
     void refetch();
   }, [confirmState, showError, showSuccess, refetch]);
+  const openDiscountModal = useCallback((item: DamagedProductListItem) => {
+    setDiscountItem(item);
+  }, []);
+  const closeDiscountModal = useCallback(() => {
+    if (discountSaving) {
+      return;
+    }
+    setDiscountItem(null);
+  }, [discountSaving]);
+  const handleSubmitDiscount = useCallback(
+    async (values: MarkDamagedGoodsDiscountedFormValues) => {
+      if (!discountItem) {
+        return false;
+      }
+      setDiscountSaving(true);
+      const result = await discountDamagedProduct(discountItem.id, {
+        amount: values.amount,
+        vatIncluded: values.vatIncluded,
+      });
+      setDiscountSaving(false);
+      if (result.error) {
+        showError(result.error.message);
+        return false;
+      }
+      setDiscountItem(null);
+      showSuccess("Folio marcado como descontado");
+      void refetch();
+      return true;
+    },
+    [discountItem, showError, showSuccess, refetch],
+  );
   const statsCards: StatsCardData[] = stats
     ? [
         {
@@ -302,6 +351,14 @@ export default function MercanciaDanada() {
         chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
       },
       {
+        id: "discountStatus",
+        label: "Descuento a proveedor",
+        size: "md",
+        type: "chip",
+        chipLabelMap: DISCOUNT_STATUS_CHIP_LABELS,
+        chipVariantMap: DISCOUNT_STATUS_CHIP_VARIANTS,
+      },
+      {
         id: "elapsedSinceRegistration",
         label: "Tiempo transcurrido",
         size: "md",
@@ -329,8 +386,18 @@ export default function MercanciaDanada() {
         hidden: (row) => row.dispositionCode !== RETURN_TO_SUPPLIER_CODE,
         permission: DAMAGED_INVENTORY_UPDATE,
       },
+      {
+        id: "discount",
+        label: "Marcar como descontado",
+        icon: <AttachMoneyIcon fontSize="small" />,
+        onClick: openDiscountModal,
+        hidden: (row) =>
+          row.dispositionCode !== RETURN_TO_SUPPLIER_CODE ||
+          row.discountStatus !== "not_discounted",
+        permission: DAMAGED_INVENTORY_UPDATE,
+      },
     ],
-    [handleEdit, openStatusConfirm],
+    [handleEdit, openStatusConfirm, openDiscountModal],
   );
   return (
     <Stack direction="column" spacing={3}>
@@ -444,6 +511,15 @@ export default function MercanciaDanada() {
             : "success"
         }
         loading={confirmLoading}
+      />
+
+      <MarkDamagedGoodsDiscountedModal
+        open={discountItem != null}
+        onClose={closeDiscountModal}
+        productName={discountItem?.productName ?? ""}
+        productCode={discountItem?.productCode ?? ""}
+        saving={discountSaving}
+        onSubmit={handleSubmitDiscount}
       />
     </Stack>
   );

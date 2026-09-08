@@ -39,6 +39,7 @@ import { getProductById } from "@/services/productos.service";
 import { getApiErrorMessage } from "@/lib/axios";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
+import { QRCodeSVG } from "qrcode.react";
 
 const DISPOSITION_CODES = {
     INTERNAL_REPAIR: "INTERNAL_MAINTENANCE",
@@ -1009,6 +1010,23 @@ export function AddDamagedGoodsModal({
                                         value={folio?.quantity ?? ""}
                                         disabled
                                     />
+                                )}
+
+                                {isEditMode && folio != null && (
+                                    <Stack
+                                        direction="row"
+                                        spacing={2}
+                                        alignItems="center"
+                                        sx={{ p: 2, border: "1px solid", borderColor: "divider", borderRadius: 1 }}
+                                    >
+                                        <QRCodeSVG value={String(folio.id)} size={96} />
+                                        <Stack spacing={0.5}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Código del folio (para etiqueta física)
+                                            </Typography>
+                                            <Typography variant="subtitle2">{folio.folio}</Typography>
+                                        </Stack>
+                                    </Stack>
                                 )}
 
                                 <form.Field name="damageOrigin">

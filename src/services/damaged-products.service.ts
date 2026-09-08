@@ -51,7 +51,19 @@ export interface DamagedProductListApiRow {
     dispositionCode: string;
     /** Human-readable elapsed time in Spanish (e.g. "menos de un minuto", "2 días"). */
     elapsedSinceRegistration: string;
+    /**
+     * Derivado: "collected" si el folio ya está `completed`; si no,
+     * "discounted_pending_pickup" si existe un `SupplierDamagedGoods` en
+     * `scheduled` para el folio; si no, "not_discounted".
+     */
+    discountStatus: DamagedProductDiscountStatus;
 }
+
+/** Ver `discountStatus` en `DamagedProductListApiRow`. */
+export type DamagedProductDiscountStatus =
+    | "not_discounted"
+    | "discounted_pending_pickup"
+    | "collected";
 
 export type DamagedProductListItem = DamagedProductListApiRow & {
     /** Stable key for TableCrud when `id` is not provided by the API. */
@@ -356,6 +368,35 @@ export async function updateDamagedProductStatus(
     return patch<UpdateDamagedProductStatusResult>(
         `${DAMAGED_PRODUCTS_BASE}/${id}/status`,
         { status }
+    );
+}
+
+export interface DiscountDamagedProductPayload {
+    amount: number;
+    vatIncluded: boolean;
+    accountStatementId?: number;
+}
+
+export interface DiscountDamagedProductResult {
+    damagedProductId: number;
+    supplierDamagedGoodsId: number;
+    supplierChargeId: number;
+    discountStatus: DamagedProductDiscountStatus;
+}
+
+/**
+ * POST /damaged-products/:id/discount — crea el `SupplierDamagedGoods` y el
+ * `SupplierCharge` de categoría `damaged_goods` para un folio `RETURN_TO_SUPPLIER`
+ * que aún no está descontado. `accountStatementId` es opcional: si no se envía,
+ * el backend usa (o crea) el estado de cuenta del periodo actual.
+ */
+export async function discountDamagedProduct(
+    id: number,
+    payload: DiscountDamagedProductPayload
+): Promise<ApiResult<DiscountDamagedProductResult>> {
+    return post<DiscountDamagedProductResult>(
+        `${DAMAGED_PRODUCTS_BASE}/${id}/discount`,
+        payload
     );
 }
 

@@ -1,6 +1,20 @@
-import { api, get, post, patch, del } from "@/lib/axios";
-import { unwrapOrThrow } from "@/lib/axios";
-import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import axios from "axios";
+import {
+  api,
+  get,
+  post,
+  patch,
+  del,
+  getApiErrorMessage,
+  unwrapOrThrow,
+} from "@/lib/axios";
+import type {
+  ApiResult,
+  AxiosConfigWithSkipToast,
+  PaginatedRowsResponse,
+} from "@/lib/axios";
+import { throwIfEconomicRevisionRequired } from "@/utils/economicRevision";
+import type { EconomicRevisionPreview } from "@/utils/economicRevision";
 import { buildListUrl } from "@/lib/apiHelpers";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
@@ -21,6 +35,25 @@ import type {
 export type { SaleListItem, GetSalesParams };
 
 const BASE = "/pos";
+
+async function postPosSaleAction<T>(
+  url: string,
+  payload: unknown,
+): Promise<ApiResult<T>> {
+  try {
+    const config: AxiosConfigWithSkipToast = { skipGlobalErrorToast: true };
+    const { data } = await api.post<T>(url, payload, config);
+    return { data, error: null };
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throwIfEconomicRevisionRequired(err.response?.data);
+    }
+    return {
+      data: null,
+      error: { message: getApiErrorMessage(err) },
+    };
+  }
+}
 
 export type GetSalesResponse = PaginatedRowsResponse<SaleListItem>;
 
@@ -104,13 +137,14 @@ export interface CreateLayawayPayload {
   payment_terminal_id?: number;
   tenders?: CheckoutTenderPayload[];
   economic_revision?: number;
+  accept_revision?: boolean;
 }
 
 export async function createLayaway(
   saleId: number,
   payload: CreateLayawayPayload,
 ): Promise<ApiResult<{ id: number; sale_id: number }>> {
-  return post<{ id: number; sale_id: number }>(
+  return postPosSaleAction<{ id: number; sale_id: number }>(
     `${BASE}/sales/${saleId}/layaways`,
     payload,
   );
@@ -324,9 +358,10 @@ export async function checkoutSale(
     tenders: CheckoutTenderPayload[];
     idempotency_key?: string;
     economic_revision: number;
+    accept_revision?: boolean;
   },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
-  return post<{ id: number; folio: string; status: string }>(
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/checkout`,
     payload,
   );
@@ -339,13 +374,15 @@ export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   payment_terminal_id?: number;
   tenders?: CheckoutTenderPayload[];
   economic_revision: number;
+  loyalty_points?: number;
+  accept_revision?: boolean;
 }
 
 export async function confirmCreditSale(
   saleId: number,
   payload: ConfirmCreditSalePayload,
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
-  return post<{ id: number; folio: string; status: string }>(
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm-credit`,
     payload,
   );
@@ -407,9 +444,11 @@ export async function skipSaleIdentityVerification(
 
 export async function registerSale(
   saleId: number,
+  payload?: { economic_revision?: number; accept_revision?: boolean },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
-  return post<{ id: number; folio: string; status: string }>(
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/register`,
+    payload ?? {},
   );
 }
 
@@ -421,6 +460,33 @@ export async function getSaleDetail(
   saleId: number,
 ): Promise<ApiResult<SaleDetail>> {
   return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+}
+
+/** Persist catalog/promo prices onto the ticket without charging. */
+export async function acceptSaleEconomicRevision(
+  saleId: number,
+  expectedRevision: number,
+): Promise<ApiResult<EconomicRevisionPreview>> {
+  return post<EconomicRevisionPreview>(
+    `${BASE}/sales/${saleId}/checkout-preview`,
+    { expected_revision: expectedRevision, accept: true },
+    { skipGlobalErrorToast: true },
+  );
+}
+
+export type ClientLoyaltySummary = {
+  available: number;
+  used: number;
+  valueMxn: number;
+  nextExpiry: string | null;
+};
+
+export async function getClientLoyalty(
+  clientId: number,
+): Promise<ClientLoyaltySummary> {
+  return unwrapOrThrow(
+    await get<ClientLoyaltySummary>(`${BASE}/clients/${clientId}/loyalty`),
+  );
 }
 
 export async function getDeliveryAvailability(

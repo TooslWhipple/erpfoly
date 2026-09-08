@@ -8,7 +8,6 @@ import {
     DashboardColumn,
     DashboardPanel,
     DashboardHistoryTableContainer,
-    StyledProgressBar,
     ViewAllLink,
     TableCell,
     TableHeaderCell,
@@ -16,6 +15,8 @@ import {
 
 import type { CashRegisterDashboardProps } from "./types";
 import type { CashierSalesTab } from "@/hooks/useCashierSales";
+import { getCashLimitLevel } from "@/utils/cashLimit";
+import { CashInDrawerMeter } from "./CashInDrawerMeter";
 import { CashRegisterSearchBar } from "./CashRegisterSearchBar";
 import { PendingCollectionsPanel } from "./PendingCollectionsPanel";
 import { MovementTypeCell } from "./MovementTypeCell";
@@ -44,12 +45,11 @@ export function CashRegisterDashboard({
     activeCollectionTab,
     onCollectionTabChange,
     onProcessSale,
-    cashLimitLevel,
-    cashLimitProgress,
 }: CashRegisterDashboardProps) {
     const visibleMovements = movements.slice(0, DASHBOARD_MOVEMENTS_LIMIT);
     const shouldFadeHistory = movements.length > 1;
-    const isLimitExceeded = cashLimitLevel === "exceeded";
+    const isLimitExceeded =
+        getCashLimitLevel(cashRegister.currentCash, cashRegister.limit) === "exceeded";
 
     return (
         <DashboardSplit>
@@ -86,21 +86,10 @@ export function CashRegisterDashboard({
                     <Typography variant="subtitle1" fontWeight={600}>
                         Efectivo en caja
                     </Typography>
-                    <Stack spacing={0.4}>
-                        <StyledProgressBar
-                            variant="determinate"
-                            value={cashLimitProgress}
-                            level={cashLimitLevel}
-                        />
-                        <Stack direction="row" justifyContent="space-between">
-                            <Typography variant="body2" color="text.secondary">
-                                {numeral(cashRegister.currentCash).format("$0,0.00")}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {numeral(cashRegister.limit).format("$0,0.00")}
-                            </Typography>
-                        </Stack>
-                    </Stack>
+                    <CashInDrawerMeter
+                        currentCash={cashRegister.currentCash}
+                        limit={cashRegister.limit}
+                    />
                     {isLimitExceeded && (
                         <Alert
                             severity="error"

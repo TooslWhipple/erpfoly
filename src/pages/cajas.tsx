@@ -40,7 +40,6 @@ import {
 } from "@/services/cash-register.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useCashierSales } from "@/hooks/useCashierSales";
-import { getCashLimitLevel, getCashLimitProgress } from "@/utils/cashLimit";
 import type { SaleListItem } from "@/types/ventas.types";
 import type { TabOption } from "@/components/TabFilters";
 
@@ -85,14 +84,6 @@ export default function Cajas() {
       { label: "Procesados", value: "processed", count: tabCounts.processed },
     ],
     [tabCounts],
-  );
-  const cashLimitLevel = getCashLimitLevel(
-    cashRegister?.currentCash ?? 0,
-    cashRegister?.limit ?? 0,
-  );
-  const cashLimitProgress = getCashLimitProgress(
-    cashRegister?.currentCash ?? 0,
-    cashRegister?.limit ?? 0,
   );
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
   const [initialFund, setInitialFund] = useState("1500");
@@ -472,8 +463,6 @@ export default function Cajas() {
               activeCollectionTab={activeCollectionTab}
               onCollectionTabChange={setActiveCollectionTab}
               onProcessSale={handleProcessSale}
-              cashLimitLevel={cashLimitLevel}
-              cashLimitProgress={cashLimitProgress}
             />
           </CashRegisterPageContent>
         </PageShell>

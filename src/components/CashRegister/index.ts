@@ -3,6 +3,8 @@ export { CashRegisterHistory } from "./CashRegisterHistory";
 export { MovementTypeCell } from "./MovementTypeCell";
 export { PaymentFormCell } from "./PaymentFormCell";
 export { CashRegisterDashboard } from "./CashRegisterDashboard";
+export { CashInDrawerMeter } from "./CashInDrawerMeter";
+export { CashInDrawerWidget } from "./CashInDrawerWidget";
 export { PendingCollectionsPanel } from "./PendingCollectionsPanel";
 export type { PendingCollectionsPanelProps } from "./PendingCollectionsPanel";
 export { CashRegisterSearchBar } from "./CashRegisterSearchBar";

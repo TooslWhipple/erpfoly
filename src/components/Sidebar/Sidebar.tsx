@@ -23,6 +23,7 @@ import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
+import { CashInDrawerWidget } from "@/components/CashRegister";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { NAV_ITEMS } from "./sidebarNav.config";
@@ -169,6 +170,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               Nueva solicitud
             </Button>
           )}
+
+          <CashInDrawerWidget
+            collapsed={isSidebarCollapsed}
+            onNavigate={handleNavigation}
+          />
         </SidebarHeader>
 
         <NavigationContainer>

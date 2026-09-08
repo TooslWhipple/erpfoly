@@ -17,16 +17,18 @@ import type { CashRegisterState } from "@/components/CashRegister";
 
 interface UseCashRegisterSessionOptions {
   loadMovementsOnOpen?: boolean;
+  enabled?: boolean;
 }
 
 function mapSummaryToState(summary: CashRegisterSummary): CashRegisterState {
+  const isOpen = summary.status === "OPEN";
   return {
     id: String(summary.cash_register_id),
     name: summary.cash_register_name,
-    status: summary.status === "OPEN" ? "open" : "closed",
+    status: isOpen ? "open" : "closed",
     initialFund: summary.opening_balance ?? 0,
     exchangeRate: summary.exchange_rate ?? 17.6,
-    currentCash: summary.current_cash ?? 0,
+    currentCash: isOpen ? (summary.current_cash ?? 0) : 0,
     limit: summary.limit ?? 20000,
     branchId: summary.branch_id,
   };
@@ -35,11 +37,12 @@ function mapSummaryToState(summary: CashRegisterSummary): CashRegisterState {
 export function useCashRegisterSession(
   options: UseCashRegisterSessionOptions = {},
 ) {
-  const { loadMovementsOnOpen = false } = options;
+  const { loadMovementsOnOpen = false, enabled = true } = options;
   const user = useAuthStore((state) => state.user);
   const showError = useSnackbarStore((state) => state.showError);
   const queryClient = useQueryClient();
   const lastErrorRef = useRef<unknown>(null);
+  const canFetch = Boolean(user?.id) && enabled;
 
   const summaryQuery = useQuery({
     queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
@@ -54,7 +57,7 @@ export function useCashRegisterSession(
         throw err;
       }
     },
-    enabled: Boolean(user?.id),
+    enabled: canFetch,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
@@ -64,7 +67,7 @@ export function useCashRegisterSession(
   const historyQuery = useQuery({
     queryKey: CASH_REGISTER_SESSION_HISTORY_KEY,
     queryFn: () => getSessionHistory(),
-    enabled: Boolean(user?.id) && loadMovementsOnOpen && isOpen,
+    enabled: canFetch && loadMovementsOnOpen && isOpen,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });

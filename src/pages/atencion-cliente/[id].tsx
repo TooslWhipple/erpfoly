@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
-  IconButton,
+  Divider,
+  Grid,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -27,32 +28,15 @@ import { CUSTOMER_SUPPORT_INVOICES_DELETE } from "@/lib/permissions";
 import type { SaleCancelBlockReason } from "@/types/cancelPurchase.types";
 import { InvoiceActivityTab, InvoiceArticlesTab } from "./components";
 import {
-  DetailPageContainer,
-  FinancialItem,
-  FinancialLabel,
-  FinancialSummary,
-  FinancialValue,
-  HeaderRightSection,
-  HeaderSection,
-  InvoiceNumber,
+  MenuIconButton,
   MainContent,
   PaymentDot,
   PaymentDots,
   PaymentIndicator,
-  PaymentText,
-  PurchaseDate,
   SummaryCard,
-  SummaryLabel,
   SummaryPanel,
-  SummaryRow,
-  SummaryTitle,
-  SummaryTotalLabel,
   SummaryTotalRow,
-  SummaryTotalValue,
-  SummaryValue,
-  TitleSection,
   ContentLayout,
-  TopBar,
 } from "@/styles/atencion-cliente.styles";
 
 const INVOICE_TABS = [
@@ -162,46 +146,42 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <DetailPageContainer>
-      <TopBar>
+    <Stack spacing={2}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
         <Breadcrumbs
           items={breadcrumbs}
           showBackButton
           onBack={handleBack}
         />
-        <HeaderRightSection>
-          <StatusChip
-            label={STATUS_LABELS[invoice.status]}
-            variant={STATUS_VARIANTS[invoice.status]}
-            size="small"
-          />
-        </HeaderRightSection>
-      </TopBar>
+        <StatusChip
+          label={STATUS_LABELS[invoice.status]}
+          variant={STATUS_VARIANTS[invoice.status]}
+          size="small"
+        />
+      </Stack>
 
-      <HeaderSection>
-        <TitleSection>
-          <InvoiceNumber>Factura {invoice.invoiceNumber}</InvoiceNumber>
-          <PurchaseDate>Comprado el {invoice.purchaseDate}</PurchaseDate>
-        </TitleSection>
-        <IconButton
+      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" color="text.secondary">Factura</Typography>
+          <Typography variant="h5">{invoice.invoiceNumber}</Typography>
+          <Typography variant="body2" color="text.secondary">Comprado el {invoice.purchaseDate}</Typography>
+        </Stack>
+        <MenuIconButton
           size="small"
           aria-label="Opciones de la factura"
           onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
-          disabled={invoice.status === "cancelado"}
-        >
+          disabled={invoice.status === "cancelado"}>
           <MoreVertical size={18} />
-        </IconButton>
+        </MenuIconButton>
         <Menu
           anchorEl={headerMenuAnchor}
           open={Boolean(headerMenuAnchor)}
           onClose={() => setHeaderMenuAnchor(null)}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-        >
+          transformOrigin={{ vertical: "top", horizontal: "right" }}>
           <Tooltip
             title={cancelTooltip}
-            placement="left"
-          >
+            placement="left">
             <span>
               <MenuItem
                 onClick={handleOpenCancelInvoice}
@@ -216,50 +196,50 @@ export default function InvoiceDetailPage() {
             </span>
           </Tooltip>
         </Menu>
-      </HeaderSection>
+      </Stack>
 
-      <FinancialSummary>
-        <FinancialItem>
-          <FinancialLabel>Costo inicial</FinancialLabel>
-          <FinancialValue>{formatCurrency(invoice.initialCost)}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Total abonos</FinancialLabel>
-          <FinancialValue>
-            {formatCurrency(invoice.totalPayments)}
-          </FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Resta</FinancialLabel>
-          <FinancialValue>{formatCurrency(invoice.remaining)}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Fecha de pago</FinancialLabel>
-          <FinancialValue>{invoice.paymentDate}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Próx. Pago</FinancialLabel>
-          <FinancialValue>
-            {formatCurrency(invoice.nextPayment)}
-          </FinancialValue>
-        </FinancialItem>
-
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+        <Grid container spacing={3} flexWrap="wrap">
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Costo inicial</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.initialCost)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Total abonos</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.totalPayments)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Resta</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.remaining)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Fecha de pago</Typography>
+            <Typography variant="body1">{invoice.paymentDate}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Próx. Pago</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.nextPayment)}</Typography>
+          </Grid>
+        </Grid>
         <PaymentIndicator>
           <PaymentDots>
-            {Array.from({ length: invoice.totalPaymentsCount }).map(
-              (_, index) => (
-                <PaymentDot
-                  key={index}
-                  active={index < invoice.currentPayment}
-                />
-              ),
-            )}
+            {
+              Array.from({ length: invoice.totalPaymentsCount }).map(
+                (_, index) => (
+                  <PaymentDot
+                    key={index}
+                    active={index < invoice.currentPayment}
+                  />
+                )
+              )
+            }
           </PaymentDots>
-          <PaymentText>
-            {invoice.currentPayment} de {invoice.totalPaymentsCount} pagos
-          </PaymentText>
+          <Typography variant="body2" color="text.secondary">{invoice.currentPayment} de {invoice.totalPaymentsCount} pagos</Typography>
         </PaymentIndicator>
-      </FinancialSummary>
+      </Stack>
+
+      <Divider />
+
 
       <TabFilters
         tabs={INVOICE_TABS}
@@ -269,11 +249,13 @@ export default function InvoiceDetailPage() {
 
       <ContentLayout>
         <MainContent>
-          {activeTab === "actividad" && (
+          {
+            activeTab === "actividad" &&
             <InvoiceActivityTab activities={invoice.activities} />
-          )}
+          }
 
-          {activeTab === "articulos" && (
+          {
+            activeTab === "articulos" &&
             <InvoiceArticlesTab
               invoice={invoice}
               onRefresh={() => {
@@ -283,41 +265,31 @@ export default function InvoiceDetailPage() {
               }}
               onRequestCancelInvoice={handleOpenCancelInvoice}
             />
-          )}
+          }
         </MainContent>
 
         <SummaryPanel>
           <SummaryCard>
-            <SummaryTitle>Resumen</SummaryTitle>
-            <SummaryRow>
-              <SummaryLabel>Subtotal sin IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.subtotalWithoutTax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.tax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>Importe con IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.amountWithTax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>Impuesto Suntuario</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.luxuryTax)}
-              </SummaryValue>
-            </SummaryRow>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Resumen</Typography>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Subtotal sin IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.subtotalWithoutTax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.tax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Importe con IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.amountWithTax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Impuesto Suntuario</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.luxuryTax)}</Typography>
+            </Stack>
             <SummaryTotalRow>
-              <SummaryTotalLabel>Total</SummaryTotalLabel>
-              <SummaryTotalValue>
-                {formatCurrency(invoice.summary.total)}
-              </SummaryTotalValue>
+              <Typography variant="body1" fontWeight={600}>Total</Typography>
+              <Typography variant="body1" fontWeight={600}>{formatCurrency(invoice.summary.total)}</Typography>
             </SummaryTotalRow>
           </SummaryCard>
         </SummaryPanel>
@@ -339,6 +311,6 @@ export default function InvoiceDetailPage() {
           }}
         />
       ) : null}
-    </DetailPageContainer>
+    </Stack>
   );
 }

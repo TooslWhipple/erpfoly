@@ -1,11 +1,8 @@
 import { styled } from "@mui/material/styles";
-import { Box, Button, TextField, Select, Typography, IconButton } from "@mui/material";
+import { Button, TextField, Select, Typography, IconButton } from "@mui/material";
 
-// ============================================================================
-// SEARCH PAGE STYLES
-// ============================================================================
 
-export const SearchPageContainer = styled(Box, {
+export const SearchPageContainer = styled('div', {
   shouldForwardProp: (prop) => prop !== "pinnedTop",
 })<{ pinnedTop?: boolean }>(({ theme, pinnedTop }) => ({
   display: "flex",
@@ -17,7 +14,7 @@ export const SearchPageContainer = styled(Box, {
   gap: theme.spacing(3),
 }));
 
-export const LogoContainer = styled(Box)({
+export const LogoContainer = styled('div')({
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -44,7 +41,7 @@ export const VersionText = styled(Typography)(({ theme }) => ({
   marginLeft: 8,
 }));
 
-export const SearchBarContainer = styled(Box)(({ theme }) => ({
+export const SearchBarContainer = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1),
@@ -94,7 +91,7 @@ export const SearchButton = styled(Button)({
   borderRadius: 8,
 });
 
-export const SearchResultsList = styled(Box)(({ theme }) => ({
+export const SearchResultsList = styled('div')(({ theme }) => ({
   width: "100%",
   maxWidth: 800,
   display: "flex",
@@ -102,7 +99,7 @@ export const SearchResultsList = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
 }));
 
-export const SearchResultsHeader = styled(Box)(({ theme }) => ({
+export const SearchResultsHeader = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
@@ -110,7 +107,7 @@ export const SearchResultsHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(0, 0.5),
 }));
 
-export const SearchResultCard = styled(Box)(({ theme }) => ({
+export const SearchResultCard = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(2),
@@ -133,7 +130,7 @@ export const SearchResultCard = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const SearchResultIcon = styled(Box)(({ theme }) => ({
+export const SearchResultIcon = styled('div')(({ theme }) => ({
   width: 40,
   height: 40,
   flexShrink: 0,
@@ -145,7 +142,7 @@ export const SearchResultIcon = styled(Box)(({ theme }) => ({
   color: theme.palette.primary.main,
 }));
 
-export const SearchResultBody = styled(Box)({
+export const SearchResultBody = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 4,
@@ -153,14 +150,14 @@ export const SearchResultBody = styled(Box)({
   flex: 1,
 });
 
-export const SearchResultMeta = styled(Box)(({ theme }) => ({
+export const SearchResultMeta = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexWrap: "wrap",
   gap: theme.spacing(1),
 }));
 
-export const SearchResultAside = styled(Box)(({ theme }) => ({
+export const SearchResultAside = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-end",
@@ -169,7 +166,7 @@ export const SearchResultAside = styled(Box)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const SearchEmptyState = styled(Box)(({ theme }) => ({
+export const SearchEmptyState = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -183,7 +180,7 @@ export const SearchEmptyState = styled(Box)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const ActivityTimeline = styled(Box)(({ theme }) => ({
+export const ActivityTimeline = styled('div')(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
@@ -191,7 +188,7 @@ export const ActivityTimeline = styled(Box)(({ theme }) => ({
   paddingLeft: theme.spacing(1),
 }));
 
-export const ActivityItem = styled(Box)(({ theme }) => ({
+export const ActivityItem = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing(1.5),
@@ -201,7 +198,7 @@ export const ActivityItem = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
 }));
 
-export const ActivityIcon = styled(Box, {
+export const ActivityIcon = styled('div', {
   shouldForwardProp: (prop) => prop !== "tone",
 })<{ tone?: "payment" | "status" | "note" }>(({ theme, tone = "status" }) => {
   const tones = {
@@ -223,80 +220,14 @@ export const ActivityIcon = styled(Box, {
   };
 });
 
-// ============================================================================
-// DETAIL PAGE STYLES
-// ============================================================================
-
-export const DetailPageContainer = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(3),
-  width: "100%",
-  minWidth: 0,
-  [theme.breakpoints.down("md")]: {
-    gap: theme.spacing(2),
-  },
-}));
-
-export const TopBar = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: theme.spacing(2),
-  width: "100%",
-  minWidth: 0,
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: theme.spacing(1.5),
-  },
-}));
-
-export const HeaderSection = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: theme.spacing(2),
-  flexWrap: "nowrap",
-  width: "100%",
-  minWidth: 0,
-}));
-
-export const TitleSection = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  minWidth: 0,
-  flex: 1,
-});
-
-export const InvoiceNumber = styled(Typography)(({ theme }) => ({
-  fontSize: 28,
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-  lineHeight: 1.2,
-  wordBreak: "break-word",
-  [theme.breakpoints.down("sm")]: {
-    fontSize: 22,
-  },
-}));
-
-export const PurchaseDate = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
+export const MenuIconButton = styled(IconButton)(({ theme }) => ({
+  width: "32px",
+  height: "32px",
+  padding: "4px",
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: "6px",
   color: theme.palette.text.secondary,
-}));
-
-export const HeaderRightSection = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  gap: theme.spacing(1.5),
-  flexShrink: 0,
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-    justifyContent: "flex-start",
-  },
+  backgroundColor: theme.palette.background.paper
 }));
 
 export const MoreOptionsButton = styled(IconButton)(({ theme }) => ({
@@ -304,7 +235,7 @@ export const MoreOptionsButton = styled(IconButton)(({ theme }) => ({
   padding: 8,
 }));
 
-export const FinancialSummary = styled(Box)(({ theme }) => ({
+export const FinancialSummary = styled('div')(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
   flexWrap: "wrap",
@@ -321,31 +252,8 @@ export const FinancialSummary = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const FinancialItem = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  minWidth: 120,
-  [theme.breakpoints.down("sm")]: {
-    minWidth: 0,
-  },
-}));
 
-export const FinancialLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 12,
-  color: theme.palette.text.secondary,
-}));
-
-export const FinancialValue = styled(Typography)(({ theme }) => ({
-  fontSize: 16,
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-  [theme.breakpoints.down("sm")]: {
-    fontSize: 15,
-  },
-}));
-
-export const PaymentIndicator = styled(Box)(({ theme }) => ({
+export const PaymentIndicator = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-end",
@@ -359,13 +267,13 @@ export const PaymentIndicator = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const PaymentDots = styled(Box)(({ theme }) => ({
+export const PaymentDots = styled('div')(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(0.5),
   alignItems: "center",
 }));
 
-export const PaymentDot = styled(Box, {
+export const PaymentDot = styled('div', {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active: boolean }>(({ theme, active }) => ({
   width: 8,
@@ -376,12 +284,7 @@ export const PaymentDot = styled(Box, {
     : theme.palette.app.background.lowGray,
 }));
 
-export const PaymentText = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
-}));
-
-export const EmptyState = styled(Box)(({ theme }) => ({
+export const EmptyState = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -393,13 +296,13 @@ export const EmptyState = styled(Box)(({ theme }) => ({
   borderRadius: 16,
 }));
 
-export const ArticlesList = styled(Box)(({ theme }) => ({
+export const ArticlesList = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(2),
 }));
 
-export const ArticleCard = styled(Box)(({ theme }) => ({
+export const ArticleCard = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "space-between",
@@ -416,7 +319,7 @@ export const ArticleCard = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const ArticleLeft = styled(Box)(({ theme }) => ({
+export const ArticleLeft = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(1),
@@ -424,7 +327,7 @@ export const ArticleLeft = styled(Box)(({ theme }) => ({
   flex: 1,
 }));
 
-export const ArticleMetaRow = styled(Box)(({ theme }) => ({
+export const ArticleMetaRow = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1),
@@ -456,7 +359,7 @@ export const ServiceOrderButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const ArticleDetails = styled(Box)(({ theme }) => ({
+export const ArticleDetails = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing(3),
@@ -474,7 +377,7 @@ export const ArticleDetails = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const ArticleDetailItem = styled(Box)({
+export const ArticleDetailItem = styled('div')({
   display: "flex",
   flexDirection: "column",
   gap: 4,
@@ -492,7 +395,7 @@ export const ArticleDetailValue = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-export const ContentLayout = styled(Box)(({ theme }) => ({
+export const ContentLayout = styled('div')(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
   alignItems: "flex-start",
@@ -503,33 +406,34 @@ export const ContentLayout = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const MainContent = styled(Box)({
+export const MainContent = styled('div')({
   flex: 1,
   minWidth: 0,
   width: "100%",
 });
 
-export const SummaryPanel = styled(Box)(({ theme }) => ({
-  width: 280,
+export const SummaryPanel = styled('div')(({ theme }) => ({
+  width: "272px",
   flexShrink: 0,
   position: "sticky",
-  top: theme.spacing(2),
+  top: "16px",
   [theme.breakpoints.down("lg")]: {
     width: "100%",
     position: "relative",
     top: 0,
-  },
+  }
 }));
 
-export const SummaryCard = styled(Box)(({ theme }) => ({
+export const SummaryCard = styled('div')(({ theme }) => ({
   display: "flex",
+  width: "100%",
   flexDirection: "column",
-  gap: theme.spacing(1.5),
+  gap: "8px",
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: 16,
-  padding: theme.spacing(2.5),
-  overflow: "hidden",
+  borderRadius: "12px",
+  padding: "16px 8px",
+  overflow: "hidden"
 }));
 
 export const SummaryTitle = styled(Typography)(({ theme }) => ({
@@ -539,50 +443,16 @@ export const SummaryTitle = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
 }));
 
-export const SummaryRow = styled(Box)({
+export const SummaryTotalRow = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-});
-
-export const SummaryLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  color: theme.palette.text.secondary,
+  padding: "8px",
+  borderRadius: "8px",
+  backgroundColor: theme.palette.app.background.lowGray,
 }));
 
-export const SummaryValue = styled(Typography)(({ theme }) => ({
-  fontSize: 14,
-  fontWeight: 500,
-  color: theme.palette.text.primary,
-  textAlign: "right",
-}));
-
-export const SummaryTotalRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  margin: theme.spacing(0.5, -2.5, -2.5),
-  padding: theme.spacing(1.5, 2.5),
-  backgroundColor: theme.palette.app.background.lowerBlue,
-}));
-
-export const SummaryTotalLabel = styled(Typography)(({ theme }) => ({
-  fontSize: 16,
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-}));
-
-export const SummaryTotalValue = styled(Typography)(({ theme }) => ({
-  fontSize: 18,
-  fontWeight: 700,
-  color: theme.palette.text.primary,
-}));
-
-// ============================================================================
-// CREATE SERVICE ORDER MODAL
-// ============================================================================
-
-export const ModalMetaRow = styled(Box)(({ theme }) => ({
+export const ModalMetaRow = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexWrap: "wrap",
@@ -598,7 +468,7 @@ export const ModalInvoiceLink = styled(Typography)(({ theme }) => ({
   cursor: "default",
 }));
 
-export const InfoGrid = styled(Box)(({ theme }) => ({
+export const InfoGrid = styled('div')(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: theme.spacing(2),
@@ -607,7 +477,7 @@ export const InfoGrid = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const InfoField = styled(Box)(({ theme }) => ({
+export const InfoField = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(0.5),
@@ -624,20 +494,20 @@ export const InfoValue = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-export const ArticleMetaInfo = styled(Box)(({ theme }) => ({
+export const ArticleMetaInfo = styled('div')(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   gap: theme.spacing(2),
   marginTop: theme.spacing(1),
 }));
 
-export const EvidenceRow = styled(Box)(({ theme }) => ({
+export const EvidenceRow = styled('div')(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   gap: theme.spacing(1.5),
 }));
 
-export const EvidenceThumb = styled(Box)(({ theme }) => ({
+export const EvidenceThumb = styled('div')(({ theme }) => ({
   width: 72,
   height: 72,
   borderRadius: 12,
@@ -689,7 +559,7 @@ export const EvidenceRemoveButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-export const ModalFooterActions = styled(Box)(({ theme }) => ({
+export const ModalFooterActions = styled('div')(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
   gap: theme.spacing(1.5),
@@ -702,7 +572,7 @@ export const ModalFooterActions = styled(Box)(({ theme }) => ({
 // SERVICE ORDER DETAIL MODAL
 // ============================================================================
 
-export const ServiceOrderBadge = styled(Box)(({ theme }) => ({
+export const ServiceOrderBadge = styled('div')(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: theme.spacing(0.75),
@@ -723,7 +593,7 @@ export const GeneratedByText = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const DetailHeaderActions = styled(Box)(({ theme }) => ({
+export const DetailHeaderActions = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1),
@@ -765,7 +635,7 @@ export const SectionLabel = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
-export const CostSection = styled(Box)(({ theme }) => ({
+export const CostSection = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(2),
@@ -775,7 +645,7 @@ export const CostSection = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.app.background.lowerGray,
 }));
 
-export const SwitchRow = styled(Box)(({ theme }) => ({
+export const SwitchRow = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -783,7 +653,7 @@ export const SwitchRow = styled(Box)(({ theme }) => ({
   width: "100%",
 }));
 
-export const RadioGroupResponsive = styled(Box)(({ theme }) => ({
+export const RadioGroupResponsive = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
@@ -797,7 +667,7 @@ export const RadioGroupResponsive = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const DamagedGoodsCard = styled(Box)(({ theme }) => ({
+export const DamagedGoodsCard = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing(1.5),
@@ -811,7 +681,7 @@ export const DamagedGoodsCard = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const AlertBox = styled(Box, {
+export const AlertBox = styled('div', {
   shouldForwardProp: (prop) => prop !== "tone",
 })<{ tone?: "warning" | "info" }>(({ theme, tone = "info" }) => ({
   display: "flex",
@@ -823,15 +693,15 @@ export const AlertBox = styled(Box, {
   lineHeight: 1.45,
   ...(tone === "warning"
     ? {
-        backgroundColor: theme.palette.app.chip.variants.pending.background,
-        color: theme.palette.app.chip.variants.pending.color,
-        border: `1px solid ${theme.palette.warning.light}`,
-      }
+      backgroundColor: theme.palette.app.chip.variants.pending.background,
+      color: theme.palette.app.chip.variants.pending.color,
+      border: `1px solid ${theme.palette.warning.light}`,
+    }
     : {
-        backgroundColor: theme.palette.app.background.lowerBlue,
-        color: theme.palette.primary.dark,
-        border: `1px solid ${theme.palette.app.border}`,
-      }),
+      backgroundColor: theme.palette.app.background.lowerBlue,
+      color: theme.palette.primary.dark,
+      border: `1px solid ${theme.palette.app.border}`,
+    }),
 }));
 
 export const AlertLinkButton = styled(Button)(({ theme }) => ({
@@ -848,7 +718,7 @@ export const AlertLinkButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const ArticleActionsRow = styled(Box)(({ theme }) => ({
+export const ArticleActionsRow = styled('div')(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",

@@ -220,7 +220,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    label: "Levantar ticket",
+    label: "Soporte técnico",
     path: "https://docs.google.com/forms/d/e/1FAIpQLSdXU7YMTEM_upfKetX4Gpl8N127UtDld1YYxvG9pSArhz4Sfg/viewform",
     icon: <LifeBuoy size={ICON_SIZE} />,
     requirement: { allowAuthenticated: true },

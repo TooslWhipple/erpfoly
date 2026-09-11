@@ -36,6 +36,11 @@ export { ProductPromotionModal } from "./ProductPromotionModal";
 export type { ProductPromotionModalProps } from "./ProductPromotionModal";
 export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
 export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues } from "./AddDamagedGoodsModal";
+export { MarkDamagedGoodsDiscountedModal } from "./MarkDamagedGoodsDiscountedModal";
+export type {
+  MarkDamagedGoodsDiscountedModalProps,
+  MarkDamagedGoodsDiscountedFormValues,
+} from "./MarkDamagedGoodsDiscountedModal";
 export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
 export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
@@ -149,6 +154,8 @@ export { InvoiceSelectorModal } from "./InvoiceSelector";
 export type { InvoiceSelectorModalProps } from "./InvoiceSelector";
 export { ReceptionForm } from "./ReceptionForm";
 export type { ReceptionFormProps } from "./ReceptionForm";
+export { SupplierReturnForm } from "./SupplierReturnForm";
+export type { SupplierReturnFormProps } from "./SupplierReturnForm";
 export { PrinterSetupDialog } from "./printing";
 export type { PrinterSetupDialogProps } from "./printing";
 export type {

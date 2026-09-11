@@ -147,6 +147,7 @@ export interface SaleDetailCreditInstallment {
 }
 
 export interface SaleDetailCredit {
+  status?: string;
   downPayment: number;
   financedAmount: number;
   termMonths: number;
@@ -210,6 +211,10 @@ export interface SaleDetail {
   economicRevision?: number;
   dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsToEarn?: number;
+  loyaltyEarnAmountToSpend?: number | null;
+  loyaltyEarnPointsAwarded?: number | null;
   purchaseType: string | null;
   identityVerifiedAt?: string | null;
   identityVerificationAuthorizedBy?: number | null;

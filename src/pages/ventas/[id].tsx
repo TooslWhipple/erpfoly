@@ -942,6 +942,25 @@ export default function VentaDetalle() {
                           </Typography>
                         </Box>
                       )}
+                      {(sale.loyaltyPointsEarned ?? 0) > 0 ? (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            Folypuntos generados
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="success.dark">
+                            +{(sale.loyaltyPointsEarned ?? 0).toLocaleString("es-MX")} pts
+                          </Typography>
+                        </Stack>
+                      ) : sale.credit.status !== "PAID" ? (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            Folypuntos al liquidar
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="success.dark">
+                            +{(sale.loyaltyPointsToEarn ?? 0).toLocaleString("es-MX")} pts
+                          </Typography>
+                        </Stack>
+                      ) : null}
                     </>
                   )}
                 </Stack>

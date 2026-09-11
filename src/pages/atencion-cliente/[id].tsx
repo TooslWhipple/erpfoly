@@ -17,9 +17,10 @@ import numeral from "numeral";
 import { Breadcrumbs, StatusChip, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { StatusChipVariant } from "@/components/StatusChip";
-import type {
-  InvoiceDetail,
-  InvoiceStatus,
+import {
+  paymentTypeLabel,
+  type InvoiceDetail,
+  type InvoiceStatus,
 } from "@/types/atencion-cliente.types";
 import { getInvoiceDetail } from "@/services/customer-support.service";
 import { CancelPurchaseModal } from "@/pages/clientes/compras/components";
@@ -145,6 +146,8 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const isCreditSale = invoice.paymentType === "credito";
+
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
@@ -201,6 +204,10 @@ export default function InvoiceDetailPage() {
       <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
         <Grid container spacing={3} flexWrap="wrap">
           <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Tipo de venta</Typography>
+            <Typography variant="body1">{paymentTypeLabel(invoice.paymentType)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
             <Typography variant="body2" color="text.secondary">Costo inicial</Typography>
             <Typography variant="body1">{formatCurrency(invoice.initialCost)}</Typography>
           </Grid>
@@ -208,34 +215,40 @@ export default function InvoiceDetailPage() {
             <Typography variant="body2" color="text.secondary">Total abonos</Typography>
             <Typography variant="body1">{formatCurrency(invoice.totalPayments)}</Typography>
           </Grid>
-          <Grid size={{ xs: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">Resta</Typography>
-            <Typography variant="body1">{formatCurrency(invoice.remaining)}</Typography>
-          </Grid>
-          <Grid size={{ xs: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">Fecha de pago</Typography>
-            <Typography variant="body1">{invoice.paymentDate}</Typography>
-          </Grid>
-          <Grid size={{ xs: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">Próx. Pago</Typography>
-            <Typography variant="body1">{formatCurrency(invoice.nextPayment)}</Typography>
-          </Grid>
+          {isCreditSale ? (
+            <>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Resta</Typography>
+                <Typography variant="body1">{formatCurrency(invoice.remaining)}</Typography>
+              </Grid>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Fecha de pago</Typography>
+                <Typography variant="body1">{invoice.paymentDate}</Typography>
+              </Grid>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Próx. Pago</Typography>
+                <Typography variant="body1">{formatCurrency(invoice.nextPayment)}</Typography>
+              </Grid>
+            </>
+          ) : null}
         </Grid>
-        <PaymentIndicator>
-          <PaymentDots>
-            {
-              Array.from({ length: invoice.totalPaymentsCount }).map(
-                (_, index) => (
-                  <PaymentDot
-                    key={index}
-                    active={index < invoice.currentPayment}
-                  />
+        {isCreditSale ? (
+          <PaymentIndicator>
+            <PaymentDots>
+              {
+                Array.from({ length: invoice.totalPaymentsCount }).map(
+                  (_, index) => (
+                    <PaymentDot
+                      key={index}
+                      active={index < invoice.currentPayment}
+                    />
+                  )
                 )
-              )
-            }
-          </PaymentDots>
-          <Typography variant="body2" color="text.secondary">{invoice.currentPayment} de {invoice.totalPaymentsCount} pagos</Typography>
-        </PaymentIndicator>
+              }
+            </PaymentDots>
+            <Typography variant="body2" color="text.secondary">{invoice.currentPayment} de {invoice.totalPaymentsCount} pagos</Typography>
+          </PaymentIndicator>
+        ) : null}
       </Stack>
 
       <Divider />

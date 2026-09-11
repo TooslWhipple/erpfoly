@@ -59,8 +59,13 @@ function mapSaleStatus(status: string): InvoiceStatus {
 }
 
 function mapPaymentType(code: string | null): InvoicePaymentType {
-  if (code === "CREDIT") return "credito";
-  if (code === "LAYAWAY") return "apartado";
+  const u = (code ?? "").toUpperCase();
+  if (u.includes("CREDITO") || u.includes("CRÉD") || u.includes("CREDIT")) {
+    return "credito";
+  }
+  if (u.includes("APART") || u.includes("LAYAWAY")) {
+    return "apartado";
+  }
   return "contado";
 }
 

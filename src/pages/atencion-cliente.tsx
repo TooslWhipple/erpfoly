@@ -7,7 +7,6 @@ import {
   SelectChangeEvent,
   Stack,
 } from "@mui/material";
-import { Check as CheckIcon } from "@mui/icons-material";
 import { Search } from "lucide-react";
 import type { SearchType } from "@/types/atencion-cliente.types";
 import {
@@ -94,24 +93,23 @@ export default function AtencionCliente() {
           <span className="foly">FoLy</span>
           <span className="soft">Soft</span>
         </LogoText>
-        {searched ? null : <VersionText>V1.0</VersionText>}
+        {
+          (searched) ? null : <VersionText>V1.0</VersionText>
+        }
       </LogoContainer>
 
       <SearchBarContainer>
         <SearchTypeSelect
           value={searchType}
           onChange={handleSearchTypeChange}
-          size="small"
-        >
+          size="small">
           <MenuItem value="facturas">
             <Stack direction="row" alignItems="center" spacing={1}>
-              {searchType === "facturas" && <CheckIcon sx={{ fontSize: 16 }} />}
               Facturas
             </Stack>
           </MenuItem>
           <MenuItem value="clientes">
             <Stack direction="row" alignItems="center" spacing={1}>
-              {searchType === "clientes" && <CheckIcon sx={{ fontSize: 16 }} />}
               Clientes
             </Stack>
           </MenuItem>
@@ -143,23 +141,22 @@ export default function AtencionCliente() {
           variant="contained"
           color="primary"
           onClick={() => void handleSearch()}
-          disabled={loading || !searchQuery.trim()}
-          startIcon={
-            loading ? <CircularProgress size={16} color="inherit" /> : undefined
+          disabled={loading || !searchQuery.trim()}>
+          {
+            (loading) ? <CircularProgress size={16} color="inherit" /> : 'Buscar'
           }
-        >
-          Buscar
         </SearchButton>
       </SearchBarContainer>
 
-      {searched ? (
+      {
+        searched &&
         <SearchResults
           results={results ?? []}
           loading={loading}
           hint={resultsHint}
           onSelect={(result) => void handleSelect(result)}
         />
-      ) : null}
+      }
     </SearchPageContainer>
   );
 }

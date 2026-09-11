@@ -1467,8 +1467,17 @@ export function SaleBuilder({
   const registerSaleMutation = useMutation({
     mutationFn: async () => {
       const { id: saleId } = await ensureSaleSynced();
+      // Same as cobrar: persist (create + items + delivery) bumps
+      // economic_revision, and this mutation still holds the pre-sync 0.
+      const detailRes = await getSaleDetail(saleId);
+      if (detailRes.error) throw new Error(detailRes.error.message);
+      const revision =
+        detailRes.data?.economicRevision ?? economicRevision;
+      if (detailRes.data?.economicRevision != null) {
+        setSaleEconomicRevision(detailRes.data.economicRevision);
+      }
       const registerRes = await registerSale(saleId, {
-        economic_revision: economicRevision,
+        economic_revision: revision,
       });
       throwIfSaleError(registerRes.error);
       return saleId;

@@ -15,6 +15,7 @@ import type {
   InvoiceDetail,
   ServiceOrder,
 } from "@/types/atencion-cliente.types";
+import { paymentTypeLabel } from "@/types/atencion-cliente.types";
 import {
   ArticleMetaInfo,
   EvidenceAddButton,
@@ -183,8 +184,7 @@ export function CreateServiceOrderModal({
     }
   };
 
-  const paymentTypeLabel =
-    invoice.paymentType === "credito" ? "Crédito" : "Contado";
+  const paymentTypeLabelText = paymentTypeLabel(invoice.paymentType);
 
   return (
     <SideModal
@@ -213,7 +213,7 @@ export function CreateServiceOrderModal({
             {invoice.purchaseDate}
           </Typography>
           <StatusChip
-            label={paymentTypeLabel}
+            label={paymentTypeLabelText}
             variant="info"
             size="small"
             startIcon={<Settings2 size={12} />}

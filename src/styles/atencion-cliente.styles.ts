@@ -5,14 +5,16 @@ import { Box, Button, TextField, Select, Typography, IconButton } from "@mui/mat
 // SEARCH PAGE STYLES
 // ============================================================================
 
-export const SearchPageContainer = styled(Box)(({ theme }) => ({
+export const SearchPageContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "pinnedTop",
+})<{ pinnedTop?: boolean }>(({ theme, pinnedTop }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  justifyContent: "center",
+  justifyContent: pinnedTop ? "flex-start" : "center",
   minHeight: "calc(100vh - 200px)",
-  padding: theme.spacing(4),
-  gap: theme.spacing(4),
+  padding: theme.spacing(pinnedTop ? 2 : 4, 4, 4),
+  gap: theme.spacing(3),
 }));
 
 export const LogoContainer = styled(Box)({
@@ -22,8 +24,10 @@ export const LogoContainer = styled(Box)({
   marginBottom: 16,
 });
 
-export const LogoText = styled(Typography)(({ theme }) => ({
-  fontSize: 32,
+export const LogoText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "compact",
+})<{ compact?: boolean }>(({ theme, compact }) => ({
+  fontSize: compact ? 22 : 32,
   fontWeight: 700,
   lineHeight: 1.2,
   "& .foly": {
@@ -88,6 +92,135 @@ export const SearchButton = styled(Button)({
   textTransform: "none",
   fontWeight: 600,
   borderRadius: 8,
+});
+
+export const SearchResultsList = styled(Box)(({ theme }) => ({
+  width: "100%",
+  maxWidth: 800,
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1.5),
+}));
+
+export const SearchResultsHeader = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: theme.spacing(2),
+  padding: theme.spacing(0, 0.5),
+}));
+
+export const SearchResultCard = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(2),
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: 16,
+  padding: theme.spacing(2, 2.5),
+  color: theme.palette.text.primary,
+  transition: "border-color 120ms ease, background-color 120ms ease",
+  "&:hover": {
+    backgroundColor: theme.palette.app.background.lowerGray,
+    borderColor: theme.palette.primary.light,
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: 2,
+  },
+}));
+
+export const SearchResultIcon = styled(Box)(({ theme }) => ({
+  width: 40,
+  height: 40,
+  flexShrink: 0,
+  borderRadius: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: theme.palette.app.background.lowerBlue,
+  color: theme.palette.primary.main,
+}));
+
+export const SearchResultBody = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  minWidth: 0,
+  flex: 1,
+});
+
+export const SearchResultMeta = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: theme.spacing(1),
+}));
+
+export const SearchResultAside = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: 4,
+  flexShrink: 0,
+  color: theme.palette.text.secondary,
+}));
+
+export const SearchEmptyState = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing(1),
+  padding: theme.spacing(6, 3),
+  textAlign: "center",
+  backgroundColor: theme.palette.background.paper,
+  border: `1px dashed ${theme.palette.app.border}`,
+  borderRadius: 16,
+  color: theme.palette.text.secondary,
+}));
+
+export const ActivityTimeline = styled(Box)(({ theme }) => ({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1.5),
+  paddingLeft: theme.spacing(1),
+}));
+
+export const ActivityItem = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing(1.5),
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: 16,
+  padding: theme.spacing(2),
+}));
+
+export const ActivityIcon = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "tone",
+})<{ tone?: "payment" | "status" | "note" }>(({ theme, tone = "status" }) => {
+  const tones = {
+    payment: theme.palette.app.chip.variants.success,
+    status: theme.palette.app.chip.variants.info,
+    note: theme.palette.app.chip.variants.infoAlt,
+  };
+  const { background, color } = tones[tone];
+  return {
+    width: 36,
+    height: 36,
+    flexShrink: 0,
+    borderRadius: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: background,
+    color,
+  };
 });
 
 // ============================================================================

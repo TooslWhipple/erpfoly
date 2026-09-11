@@ -12,9 +12,12 @@ import { Ban, Download, FileText, MoreVertical, Wrench } from "lucide-react";
 import numeral from "numeral";
 import { ConfirmModal, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
-import { cancelInvoiceArticle } from "@/data/atencion-cliente.mockData";
-import { getMockRecoverySheetIdByInvoiceId } from "@/data/recovery-sheets.mockData";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { usePermissions } from "@/hooks/usePermissions";
+import {
+  CUSTOMER_SUPPORT_REPAIRS_CREATE,
+  CUSTOMER_SUPPORT_REPAIRS_READ,
+} from "@/lib/permissions";
 import type {
   ArticleStatus,
   InvoiceArticle,
@@ -72,8 +75,10 @@ export function InvoiceArticlesTab({
   onRequestCancelInvoice,
 }: InvoiceArticlesTabProps) {
   const router = useRouter();
-  const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
+  const { hasPermission } = usePermissions();
+  const canCreateOrder = hasPermission(CUSTOMER_SUPPORT_REPAIRS_CREATE);
+  const canReadOrder = hasPermission(CUSTOMER_SUPPORT_REPAIRS_READ);
 
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuArticle, setMenuArticle] = useState<InvoiceArticle | null>(null);
@@ -145,28 +150,20 @@ export function InvoiceArticlesTab({
   };
 
   const handleConfirmCancel = async () => {
-    if (!cancelArticle) return;
-    setCancelLoading(true);
-    try {
-      await cancelInvoiceArticle(cancelArticle.id);
-      showSuccess("El artículo se canceló correctamente.");
-      setCancelArticle(null);
-      onRefresh?.();
-    } catch (error) {
-      console.error("[InvoiceArticlesTab] Error canceling article:", error);
-      showError("No se pudo cancelar el artículo. Intenta de nuevo.");
-    } finally {
-      setCancelLoading(false);
-    }
+    showError(
+      "La cancelación de un artículo se hace desde la orden de servicio.",
+    );
+    setCancelArticle(null);
   };
 
-  const handleRecoverySheet = () => {
-    const recoverySheetId = getMockRecoverySheetIdByInvoiceId(invoice.id);
-    if (recoverySheetId) {
-      void router.push(`/inventario/hojas-recuperacion/${recoverySheetId}`);
+  const handleRecoverySheet = (article: InvoiceArticle) => {
+    if (article.recoverySheetId) {
+      void router.push(
+        `/inventario/hojas-recuperacion/${article.recoverySheetId}`,
+      );
       return;
     }
-    showSuccess("La hoja de recuperación estará disponible próximamente.");
+    showError("Esta orden aún no tiene hoja de recuperación.");
   };
 
   const showServiceOrderButton = (article: InvoiceArticle) =>
@@ -201,7 +198,7 @@ export function InvoiceArticlesTab({
                   {showRecoverySheetButton(article) && (
                     <ServiceOrderButton
                       startIcon={<Download size={14} />}
-                      onClick={handleRecoverySheet}
+                      onClick={() => handleRecoverySheet(article)}
                     >
                       Hoja de recuperación
                     </ServiceOrderButton>
@@ -275,6 +272,9 @@ export function InvoiceArticlesTab({
       >
         <MenuItem
           onClick={() => menuArticle && handleServiceOrderClick(menuArticle)}
+          disabled={
+            menuArticle?.serviceOrderId ? !canReadOrder : !canCreateOrder
+          }
         >
           <ListItemIcon>
             <FileText size={16} />
@@ -288,6 +288,7 @@ export function InvoiceArticlesTab({
         <MenuItem
           onClick={() => menuArticle && handleRequestCancel(menuArticle)}
           sx={{ color: "error.main" }}
+          disabled
         >
           <ListItemIcon sx={{ color: "error.main" }}>
             <Ban size={16} />

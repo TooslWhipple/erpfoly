@@ -17,10 +17,13 @@ import {
 } from "lucide-react";
 import { SideModal, StatusChip, TabFilters } from "@/components";
 import {
+  downloadServiceOrderPdf,
   getServiceOrderById,
   updateServiceOrder,
   updateServiceOrderStatus,
 } from "@/services/service-orders.service";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CUSTOMER_SUPPORT_REPAIRS_UPDATE } from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type {
   InvoiceDetail,
@@ -30,6 +33,7 @@ import type {
   ServiceOrderSolucion,
   ServiceOrderStatus,
 } from "@/types/atencion-cliente.types";
+import { paymentTypeLabel } from "@/types/atencion-cliente.types";
 import {
   DetailHeaderActions,
   GeneratedByText,
@@ -78,6 +82,8 @@ export function ServiceOrderDetailModal({
 }: ServiceOrderDetailModalProps) {
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
+  const { hasPermission } = usePermissions();
+  const canUpdate = hasPermission(CUSTOMER_SUPPORT_REPAIRS_UPDATE);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -148,8 +154,14 @@ export function ServiceOrderDetailModal({
     }
   };
 
-  const handleDownload = () => {
-    showSuccess("La descarga estará disponible próximamente.");
+  const handleDownload = async () => {
+    if (!draft) return;
+    try {
+      await downloadServiceOrderPdf(draft.id);
+    } catch (error) {
+      console.error("[ServiceOrderDetailModal] Download error:", error);
+      showError("No se pudo descargar la orden de servicio.");
+    }
   };
 
   const handleSave = async () => {
@@ -185,10 +197,9 @@ export function ServiceOrderDetailModal({
     }
   };
 
-  const paymentTypeLabel =
-    (draft?.paymentType ?? invoice.paymentType) === "credito"
-      ? "Crédito"
-      : "Contado";
+  const paymentTypeLabelText = paymentTypeLabel(
+    draft?.paymentType ?? invoice.paymentType,
+  );
 
   const customHeader = (
     <Stack spacing={2} sx={{ width: "100%" }}>
@@ -197,7 +208,7 @@ export function ServiceOrderDetailModal({
           <>
             <StatusMenuButton
               onClick={(event) => setStatusMenuAnchor(event.currentTarget)}
-              disabled={saving}
+              disabled={saving || !canUpdate}
               endIcon={<ChevronDown size={14} />}
             >
               <StatusChip
@@ -221,7 +232,7 @@ export function ServiceOrderDetailModal({
               variant="contained"
               color="primary"
               onClick={handleSave}
-              disabled={saving || loading}
+              disabled={saving || loading || !canUpdate}
               startIcon={
                 saving ? (
                   <CircularProgress size={16} color="inherit" />
@@ -250,7 +261,7 @@ export function ServiceOrderDetailModal({
               {draft.purchaseDate}
             </Typography>
             <StatusChip
-              label={paymentTypeLabel}
+              label={paymentTypeLabelText}
               variant="info"
               size="small"
               startIcon={<Wrench size={12} />}

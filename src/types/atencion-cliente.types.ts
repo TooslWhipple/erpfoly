@@ -10,7 +10,13 @@ export type ArticleStatus =
   | "esperando_recuperacion"
   | "recuperado";
 
-export type InvoicePaymentType = "credito" | "contado";
+export type InvoicePaymentType = "credito" | "contado" | "apartado";
+
+export function paymentTypeLabel(type: InvoicePaymentType): string {
+  if (type === "credito") return "Crédito";
+  if (type === "apartado") return "Apartado";
+  return "Contado";
+}
 
 export type ServiceOrderStatus =
   | "por_realizar"
@@ -50,7 +56,9 @@ export interface InvoiceArticle {
   deliveryMethod?: string;
   serialNumber?: string;
   quantity?: number;
+  productId?: number;
   serviceOrderId?: string;
+  recoverySheetId?: string;
   hasRecoveryOrder?: boolean;
 }
 
@@ -58,7 +66,8 @@ export interface InvoiceActivity {
   id: string;
   date: string;
   type: "payment" | "adjustment" | "note" | "status_change";
-  description: string;
+  title: string;
+  description?: string;
   amount?: number;
 }
 
@@ -81,6 +90,8 @@ export interface InvoiceDetail {
   totalPaymentsCount: number;
   articles: InvoiceArticle[];
   activities: InvoiceActivity[];
+  canCancel?: boolean;
+  cancelBlockReason?: string | null;
   summary: {
     subtotalWithoutTax: number;
     tax: number;
@@ -147,6 +158,7 @@ export interface ServiceOrderSolucion {
   observations: string;
   deliveredSolutionId: string;
   acceptanceLetterUrl: string;
+  acceptanceLetterFile?: File;
   authorizedById: string;
 }
 
@@ -166,6 +178,8 @@ export interface ServiceOrder {
   queja: ServiceOrderQueja;
   indicaciones: ServiceOrderIndicaciones;
   solucion: ServiceOrderSolucion;
+  folio?: string;
+  recoverySheetId?: string | null;
 }
 
 export interface UpdateServiceOrderPayload {

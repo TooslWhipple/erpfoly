@@ -42,6 +42,7 @@ export interface GetSalesParams {
   dateFrom?: string;
   dateTo?: string;
   status?: SaleStatus;
+  client_id?: number;
   created_by?: number;
   branch_id?: number;
   amount?: number;
@@ -110,6 +111,7 @@ export interface SaleDetailItem {
   listPrice?: number;
   discountAmount: number;
   totalAmount: number;
+  cancelledAt?: string | null;
   inventorySources: InventorySource[];
   product: {
     id: number;
@@ -138,6 +140,7 @@ export interface SaleDetailPayment {
   amount: number;
   receivedAmount: number | null;
   changeAmount: number | null;
+  createdAt?: string;
 }
 
 export interface SaleDetailCreditInstallment {
@@ -237,6 +240,13 @@ export interface SaleDetail {
   credit: SaleDetailCredit | null;
   layaway: SaleDetailLayaway | null;
   discountRequest: SaleDiscountRequest | null;
+  statusHistory?: Array<{
+    id: number;
+    previousStatus: string | null;
+    newStatus: string;
+    comments: string | null;
+    createdAt: string;
+  }>;
 }
 
 export type DeliveryAvailability = "available" | "low" | "none";

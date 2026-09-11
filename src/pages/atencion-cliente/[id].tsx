@@ -13,23 +13,21 @@ import {
 } from "@mui/material";
 import { Ban, MoreVertical } from "lucide-react";
 import numeral from "numeral";
-import { Breadcrumbs, ConfirmModal, StatusChip, TabFilters } from "@/components";
+import { Breadcrumbs, StatusChip, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import type {
   InvoiceDetail,
   InvoiceStatus,
 } from "@/types/atencion-cliente.types";
-import { canCancelInvoice } from "@/types/atencion-cliente.types";
-import {
-  cancelInvoice,
-  getInvoiceDetail,
-} from "@/data/atencion-cliente.mockData";
-import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { InvoiceArticlesTab } from "./components";
+import { getInvoiceDetail } from "@/services/customer-support.service";
+import { CancelPurchaseModal } from "@/pages/clientes/compras/components";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CUSTOMER_SUPPORT_INVOICES_DELETE } from "@/lib/permissions";
+import type { SaleCancelBlockReason } from "@/types/cancelPurchase.types";
+import { InvoiceActivityTab, InvoiceArticlesTab } from "./components";
 import {
   DetailPageContainer,
-  EmptyState,
   FinancialItem,
   FinancialLabel,
   FinancialSummary,
@@ -81,8 +79,8 @@ function formatCurrency(value: number): string {
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const showSuccess = useSnackbarStore((state) => state.showSuccess);
-  const showError = useSnackbarStore((state) => state.showError);
+  const { hasPermission } = usePermissions();
+  const canCancelSale = hasPermission(CUSTOMER_SUPPORT_INVOICES_DELETE);
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +88,6 @@ export default function InvoiceDetailPage() {
   const [headerMenuAnchor, setHeaderMenuAnchor] =
     useState<null | HTMLElement>(null);
   const [cancelInvoiceOpen, setCancelInvoiceOpen] = useState(false);
-  const [cancelInvoiceLoading, setCancelInvoiceLoading] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === "string") {
@@ -105,6 +102,7 @@ export default function InvoiceDetailPage() {
       setInvoice(data);
     } catch (err) {
       console.error("[InvoiceDetail] Error loading invoice:", err);
+      setInvoice(null);
     } finally {
       setLoading(false);
     }
@@ -119,9 +117,16 @@ export default function InvoiceDetailPage() {
     [invoice?.customerId, invoice?.customerName],
   );
 
-  const invoiceCancellable = invoice
-    ? canCancelInvoice(invoice.articles)
-    : false;
+  const invoiceCancellable = Boolean(invoice?.canCancel);
+  const cancelTooltip = invoice?.cancelBlockReason
+    ? invoice.cancelBlockReason === "IN_ROUTE"
+      ? "No es posible cancelar: la mercancía va en ruta"
+      : invoice.cancelBlockReason === "DELIVERED"
+        ? "No es posible cancelar: ya fue entregada"
+        : "No es posible cancelar esta factura"
+    : invoiceCancellable
+      ? ""
+      : "No se puede cancelar esta factura";
 
   const handleBack = () => {
     router.push("/atencion-cliente");
@@ -130,26 +135,6 @@ export default function InvoiceDetailPage() {
   const handleOpenCancelInvoice = () => {
     setHeaderMenuAnchor(null);
     setCancelInvoiceOpen(true);
-  };
-
-  const handleConfirmCancelInvoice = async () => {
-    if (!invoice) return;
-    setCancelInvoiceLoading(true);
-    try {
-      await cancelInvoice(invoice.id);
-      showSuccess("La factura se canceló correctamente.");
-      setCancelInvoiceOpen(false);
-      await loadInvoice(invoice.id);
-    } catch (error) {
-      console.error("[InvoiceDetail] Error canceling invoice:", error);
-      showError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo cancelar la factura.",
-      );
-    } finally {
-      setCancelInvoiceLoading(false);
-    }
   };
 
   if (loading) {
@@ -214,17 +199,13 @@ export default function InvoiceDetailPage() {
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
           <Tooltip
-            title={
-              invoiceCancellable
-                ? ""
-                : "Cancela todos los artículos primero"
-            }
+            title={cancelTooltip}
             placement="left"
           >
             <span>
               <MenuItem
                 onClick={handleOpenCancelInvoice}
-                disabled={!invoiceCancellable}
+                disabled={!invoiceCancellable || !canCancelSale}
                 sx={{ color: "error.main" }}
               >
                 <ListItemIcon sx={{ color: "error.main" }}>
@@ -289,19 +270,7 @@ export default function InvoiceDetailPage() {
       <ContentLayout>
         <MainContent>
           {activeTab === "actividad" && (
-            <>
-              {invoice.activities.length === 0 ? (
-                <EmptyState>No hay actividad reciente</EmptyState>
-              ) : (
-                <Stack spacing={1.5}>
-                  {invoice.activities.map((activity) => (
-                    <EmptyState key={activity.id}>
-                      {activity.description}
-                    </EmptyState>
-                  ))}
-                </Stack>
-              )}
-            </>
+            <InvoiceActivityTab activities={invoice.activities} />
           )}
 
           {activeTab === "articulos" && (
@@ -354,16 +323,22 @@ export default function InvoiceDetailPage() {
         </SummaryPanel>
       </ContentLayout>
 
-      <ConfirmModal
-        open={cancelInvoiceOpen}
-        onClose={() => !cancelInvoiceLoading && setCancelInvoiceOpen(false)}
-        onConfirm={handleConfirmCancelInvoice}
-        title="Cancelar factura"
-        itemName={`Factura ${invoice.invoiceNumber}`}
-        confirmLabel="Cancelar factura"
-        type="error"
-        loading={cancelInvoiceLoading}
-      />
+      {invoice.customerId ? (
+        <CancelPurchaseModal
+          open={cancelInvoiceOpen}
+          clientId={Number(invoice.customerId)}
+          saleId={Number(invoice.id)}
+          totalPaid={invoice.totalPayments}
+          blockReason={
+            (invoice.cancelBlockReason as SaleCancelBlockReason | null) ?? null
+          }
+          onClose={() => setCancelInvoiceOpen(false)}
+          onSuccess={() => {
+            setCancelInvoiceOpen(false);
+            void loadInvoice(invoice.id);
+          }}
+        />
+      ) : null}
     </DetailPageContainer>
   );
 }

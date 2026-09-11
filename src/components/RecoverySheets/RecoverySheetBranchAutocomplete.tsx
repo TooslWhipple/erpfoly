@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BranchAutocompleteField } from "@/components/BranchSelectionModal/styles";
-import { MOCK_RECOVERY_SHEET_BRANCHES } from "@/data/recovery-sheets.mockData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   getBranchesCatalog,
@@ -15,13 +14,6 @@ import {
 } from "@/services/branches.service";
 
 const SEARCH_DEBOUNCE_MS = 300;
-
-const MOCK_BRANCH_CATALOG: BranchCatalogItem[] =
-  MOCK_RECOVERY_SHEET_BRANCHES.map((branch) => ({
-    id: branch.id,
-    name: branch.name,
-    is_main_warehouse: branch.id === 1,
-  }));
 
 function getBranchLabel(branch: BranchCatalogItem): string {
   if (branch.is_main_warehouse) {
@@ -38,18 +30,6 @@ function withSelectedBranch(
     return branches;
   }
   return [selected, ...branches];
-}
-
-async function fetchBranchCatalog(search: string): Promise<BranchCatalogItem[]> {
-  try {
-    return await getBranchesCatalog(search || undefined);
-  } catch {
-    const query = search.trim().toLowerCase();
-    if (!query) return MOCK_BRANCH_CATALOG;
-    return MOCK_BRANCH_CATALOG.filter((branch) =>
-      branch.name.toLowerCase().includes(query),
-    );
-  }
 }
 
 export interface RecoverySheetBranchAutocompleteProps {
@@ -71,14 +51,14 @@ export function RecoverySheetBranchAutocomplete({
 
   const { data: branches, isFetching } = useQuery({
     queryKey: ["branches-catalog", "recovery-sheet", debouncedSearch.trim()],
-    queryFn: () => fetchBranchCatalog(debouncedSearch.trim()),
+    queryFn: () => getBranchesCatalog(debouncedSearch.trim() || undefined),
     enabled: enabled && dropdownOpen,
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   });
 
   const options = useMemo(
-    () => withSelectedBranch(branches ?? MOCK_BRANCH_CATALOG, value),
+    () => withSelectedBranch(branches ?? [], value),
     [branches, value],
   );
 

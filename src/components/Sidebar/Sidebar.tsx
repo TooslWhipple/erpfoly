@@ -62,7 +62,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   }, [router.pathname, visibleNavItems]);
 
   const handleNavigation = (path: string) => {
-    router.push(path);
+    if (path.startsWith("https://")) {
+      window.open(path, "_blank", "noopener,noreferrer");
+    } else {
+      void router.push(path);
+    }
     if (isDrawerNav) {
       onClose();
     }

@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown, Calculator, Receipt } from "lucide-react";
+import { BanknoteArrowDown, Calculator, LifeBuoy, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
@@ -220,5 +220,11 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Usuarios", path: "/catalogos/usuarios", requirement: { permission: CATALOG_USERS_READ } },
       { label: "Vendedores", path: "/catalogos/vendedores", requirement: { permission: CATALOG_SELLERS_READ } },
     ],
+  },
+  {
+    label: "Soporte técnico",
+    path: "https://docs.google.com/forms/d/e/1FAIpQLSdXU7YMTEM_upfKetX4Gpl8N127UtDld1YYxvG9pSArhz4Sfg/viewform",
+    icon: <LifeBuoy size={ICON_SIZE} />,
+    requirement: { allowAuthenticated: true },
   },
 ];

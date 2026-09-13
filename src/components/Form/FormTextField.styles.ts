@@ -4,7 +4,7 @@ import { Box, TextField, Typography } from "@mui/material";
 export const FieldWrapper = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  width: "100%",
+  minWidth: 0,
 });
 
 export const FieldLabel = styled(Typography)(({ theme }) => ({

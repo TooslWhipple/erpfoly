@@ -7,6 +7,9 @@ const INVENTORY_REF_TYPE_LABELS: Record<string, string> = {
   order_purchase: "Pedido de compra",
   merchandise_reception: "Recepción de mercancía",
   damaged_product: "Producto dañado",
+  service_order: "Orden de servicio",
+  recovery_sheet: "Hoja de recuperación",
+  physical_inventory: "Inventario físico",
   manual_adjustment: "Ajuste manual",
 };
 

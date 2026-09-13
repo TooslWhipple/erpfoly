@@ -24,6 +24,7 @@ export type PermissionModule =
   | "inventario"
   | "inventario.mercancia_danada"
   | "inventario.hojas_recuperacion"
+  | "inventario.inventario_fisico"
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
@@ -151,6 +152,12 @@ export const RECOVERY_SHEETS_CREATE = RECOVERY_SHEETS_PERMISSIONS.create;
 export const RECOVERY_SHEETS_READ = RECOVERY_SHEETS_PERMISSIONS.read;
 export const RECOVERY_SHEETS_UPDATE = RECOVERY_SHEETS_PERMISSIONS.update;
 export const RECOVERY_SHEETS_DELETE = RECOVERY_SHEETS_PERMISSIONS.delete;
+
+export const PHYSICAL_INVENTORY_PERMISSIONS = createCrudPermissions("inventario.inventario_fisico");
+export const PHYSICAL_INVENTORY_CREATE = PHYSICAL_INVENTORY_PERMISSIONS.create;
+export const PHYSICAL_INVENTORY_READ = PHYSICAL_INVENTORY_PERMISSIONS.read;
+export const PHYSICAL_INVENTORY_UPDATE = PHYSICAL_INVENTORY_PERMISSIONS.update;
+export const PHYSICAL_INVENTORY_DELETE = PHYSICAL_INVENTORY_PERMISSIONS.delete;
 
 export const INVENTORY_LIQUIDATIONS_PERMISSIONS = createCrudPermissions("inventario.liquidaciones");
 export const INVENTORY_LIQUIDATIONS_CREATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.create;
@@ -433,6 +440,7 @@ export const PERMISSIONS_BY_MODULE = {
     inventory: Object.values(INVENTORY_PERMISSIONS),
     damagedInventory: Object.values(DAMAGED_INVENTORY_PERMISSIONS),
     recoverySheets: Object.values(RECOVERY_SHEETS_PERMISSIONS),
+    physicalInventory: Object.values(PHYSICAL_INVENTORY_PERMISSIONS),
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),

@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   LinearProgress,
-  Stack,
 } from "@mui/material";
 
 export const AlertBanner = styled(Alert)(({ theme }) => ({
@@ -70,28 +69,14 @@ export const UploadDashedButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const TotalsFooter = styled(Stack)(({ theme }) => ({
-  gap: theme.spacing(1),
-  paddingTop: theme.spacing(1),
-}));
-
-export const TotalsRow = styled("div")(({ theme }) => ({
-  display: "grid",
-  gridTemplateColumns: "1fr 120px 140px",
-  gap: theme.spacing(2),
-  padding: theme.spacing(1.25, 2),
-  borderRadius: 8,
+/** Total debajo de la tabla (fuera de las filas). */
+export const StatementTotalBar = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
   alignItems: "center",
-  [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr",
-  },
-}));
-
-export const SubtotalRow = styled(TotalsRow)(({ theme }) => ({
-  backgroundColor: theme.palette.action.hover,
-}));
-
-export const GrandTotalRow = styled(TotalsRow)(({ theme }) => ({
+  gap: theme.spacing(2),
+  padding: theme.spacing(1.5, 2),
+  borderRadius: 8,
   backgroundColor: theme.palette.background.lowerBlue,
 }));
 

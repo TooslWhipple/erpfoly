@@ -1,29 +1,28 @@
 import { Box, Link, Stack, Typography } from "@mui/material";
 import numeral from "numeral";
 import { DataTable } from "@/components/TableCrud";
-import type { DataTableColumn } from "@/components/TableCrud";
+import type { DataTableColumn, DataTableSummaryRow } from "@/components/TableCrud";
 import type { SupplierPayableMovement } from "@/types/supplier-payables.types";
 import { formatDate } from "@/utils/date";
-import { GrandTotalRow, SubtotalRow, TotalsFooter } from "./styles";
+import { StatementTotalBar } from "./styles";
 
 export interface StatementMovementsTabProps {
   movements: SupplierPayableMovement[];
   cargoSubtotal: number;
   ventaSubtotal: number;
-  total: number;
 }
 
 export function StatementMovementsTab({
   movements,
   cargoSubtotal,
   ventaSubtotal,
-  total,
 }: StatementMovementsTabProps) {
+  const total = ventaSubtotal - cargoSubtotal;
   const columns: DataTableColumn<SupplierPayableMovement>[] = [
     {
       id: "date",
       label: "Fecha",
-      format: (_value, row) => formatDate(row.date, "D [de] MMM, YYYY"),
+      format: (_value, row) => formatDate(row.date, "DD/MM/YYYY"),
     },
     {
       id: "concept",
@@ -78,46 +77,65 @@ export function StatementMovementsTab({
       label: "Cargo",
       align: "right",
       format: (_value, row) =>
-        row.cargo != null ? numeral(row.cargo).format("$0,0.00") : "",
+        row.cargo != null ? numeral(row.cargo).format("$0,0.00") : "-",
     },
     {
       id: "venta",
       label: "Venta",
       align: "right",
       format: (_value, row) =>
-        row.venta != null ? numeral(row.venta).format("$0,0.00") : "",
+        row.venta != null ? numeral(row.venta).format("$0,0.00") : "-",
     },
   ];
 
+  const summaryRows: DataTableSummaryRow[] =
+    movements.length > 0
+      ? [
+          {
+            id: "subtotal",
+            cells: [
+              null,
+              <Typography key="label" variant="body2" color="text.secondary">
+                Subtotal
+              </Typography>,
+              <Typography key="cargo" variant="body2" textAlign="right">
+                {numeral(cargoSubtotal).format("$0,0.00")}
+              </Typography>,
+              <Typography key="venta" variant="body2" textAlign="right">
+                {numeral(ventaSubtotal).format("$0,0.00")}
+              </Typography>,
+            ],
+            rowSx: {
+              "&:hover": {
+                backgroundColor: "transparent",
+                "& td": { backgroundColor: "transparent" },
+              },
+            },
+          },
+        ]
+      : [];
+
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ width: "100%", minWidth: 0 }}>
       <DataTable
         columns={columns}
         rows={movements}
         rowKey="id"
         emptyMessage="No hay movimientos"
+        summaryRows={summaryRows}
+        borderless
       />
 
-      <TotalsFooter>
-        <SubtotalRow>
-          <Typography variant="body2" color="text.secondary">
-            Subtotal
+      {movements.length > 0 ? (
+        <StatementTotalBar>
+          <Typography variant="subtitle2" fontWeight={600}>
+            Total
           </Typography>
-          <Typography variant="body2" textAlign="right">
-            {numeral(cargoSubtotal).format("$0,0.00")}
-          </Typography>
-          <Typography variant="body2" textAlign="right">
-            {numeral(ventaSubtotal).format("$0,0.00")}
-          </Typography>
-        </SubtotalRow>
-        <GrandTotalRow>
-          <Typography variant="subtitle2">Total</Typography>
-          <Typography variant="subtitle2" />
-          <Typography variant="subtitle2" textAlign="right">
+          <Typography variant="subtitle2" fontWeight={700} textAlign="right">
             {numeral(total).format("$0,0.00")}
           </Typography>
-        </GrandTotalRow>
-      </TotalsFooter>
+        </StatementTotalBar>
+      ) : null}
     </Stack>
   );
 }

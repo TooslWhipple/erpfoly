@@ -84,6 +84,7 @@ export interface AddressTabErrors {
   residenceTimeValue?: string;
   residenceTimeUnit?: string;
   previousAddress?: string;
+  previousResidenceTimeValue?: string;
   betweenStreets?: string;
   housingType?: string;
 }

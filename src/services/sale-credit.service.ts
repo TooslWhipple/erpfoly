@@ -1,5 +1,6 @@
-import { get, post } from "@/lib/axios";
-import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import axios from "axios";
+import { api, get, post } from "@/lib/axios";
+import type { ApiResult, AxiosConfigWithSkipToast } from "@/lib/axios";
 
 export interface SaleCreditInstallment {
   id: number;
@@ -195,6 +196,67 @@ export async function registerCascadePayment(
   payload: CascadePaymentPayload,
 ): Promise<ApiResult<CascadePaymentResult>> {
   return post<CascadePaymentResult>(`/sale-credits/client/${clientId}/cascade-payment`, payload);
+}
+
+async function blobFromPdfResponse(data: unknown, fallbackMessage: string): Promise<Blob> {
+  if (data instanceof Blob) {
+    const looksJson =
+      data.type.includes("application/json") || data.type.includes("text/plain");
+    if (looksJson) {
+      const text = await data.text();
+      try {
+        const json = JSON.parse(text) as {
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(json.error?.message ?? json.message ?? fallbackMessage);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new Error(fallbackMessage);
+        }
+        throw error;
+      }
+    }
+    return data.type.includes("pdf")
+      ? data
+      : new Blob([data], { type: "application/pdf" });
+  }
+
+  return new Blob([data as BlobPart], { type: "application/pdf" });
+}
+
+export async function downloadClientPaymentReceiptPdf(
+  clientId: number,
+  paymentIds: number[],
+): Promise<Blob> {
+  if (paymentIds.length === 0) {
+    throw new Error("No hay abonos para generar el comprobante");
+  }
+
+  try {
+    const response = await api.get(
+      `/sale-credits/client/${clientId}/payments/receipt`,
+      {
+        params: { paymentIds: paymentIds.join(",") },
+        responseType: "blob",
+        skipGlobalErrorToast: true,
+      } as AxiosConfigWithSkipToast,
+    );
+    return blobFromPdfResponse(
+      response.data,
+      "No se pudo generar el comprobante",
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      return blobFromPdfResponse(
+        error.response.data,
+        "No se pudo generar el comprobante",
+      );
+    }
+    throw error instanceof Error
+      ? error
+      : new Error("No se pudo generar el comprobante");
+  }
 }
 
 function buildSaleCreditUrl(params: Record<string, unknown>): string {

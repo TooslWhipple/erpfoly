@@ -14,6 +14,10 @@ const RESIDENCE_TIME_UNIT_OPTIONS: SelectOption[] = [
   { value: "years", label: "Años" },
 ];
 
+function digitsOnly(value: string, maxLength = 2): string {
+  return value.replace(/\D/g, "").slice(0, maxLength);
+}
+
 interface AddressTabProps {
   values: AddressTabValues;
   errors: AddressTabErrors;
@@ -147,7 +151,7 @@ export function AddressTab({
             label="Tiempo en el domicilio"
             placeholder="Ingresa"
             value={values.residenceTimeValue}
-            onChange={(event) => onFieldChange("residenceTimeValue", event.target.value)}
+            onChange={(event) => onFieldChange("residenceTimeValue", digitsOnly(event.target.value))}
             error={Boolean(errors.residenceTimeValue)}
             helperText={errors.residenceTimeValue}
             disabled={saving}
@@ -185,7 +189,9 @@ export function AddressTab({
             label="Tiempo"
             placeholder="Ingresa"
             value={values.previousResidenceTimeValue}
-            onChange={(event) => onFieldChange("previousResidenceTimeValue", event.target.value)}
+            onChange={(event) => onFieldChange("previousResidenceTimeValue", digitsOnly(event.target.value))}
+            error={Boolean(errors.previousResidenceTimeValue)}
+            helperText={errors.previousResidenceTimeValue}
             disabled={saving}
             inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: 2 }}
           />

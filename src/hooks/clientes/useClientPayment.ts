@@ -543,6 +543,9 @@ export function useClientPayment(): UseClientPaymentResult {
         totalInstallments: firstAffectedAccount?.totalInstallments ?? 0,
         creditsAffectedCount: backendResult.credits.length,
         receiptUrl: "",
+        paymentIds: backendResult.credits
+          .map((credit) => credit.payment_id)
+          .filter((id) => Number.isInteger(id) && id > 0),
       });
 
       if (fromCashRegister) {

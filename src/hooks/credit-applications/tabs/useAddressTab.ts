@@ -55,6 +55,20 @@ export function useAddressTab(initialValues: AddressTabValues) {
         nextErrors.residenceTimeValue = "El tiempo en el domicilio debe ser un número entero entre 1 y 99";
       }
     }
+    if (values.previousResidenceTimeValue.trim()) {
+      const previousResidenceTimeValue = Number.parseInt(
+        values.previousResidenceTimeValue,
+        10,
+      );
+      if (
+        !Number.isInteger(previousResidenceTimeValue) ||
+        previousResidenceTimeValue < 1 ||
+        previousResidenceTimeValue > 99
+      ) {
+        nextErrors.previousResidenceTimeValue =
+          "El tiempo en el domicilio anterior debe ser un número entero entre 1 y 99";
+      }
+    }
     if (!values.residenceTimeUnit.trim()) nextErrors.residenceTimeUnit = "Selecciona una unidad";
     if (!values.betweenStreets.trim()) nextErrors.betweenStreets = "Entre calles es requerido";
     if (!values.housingType.trim()) nextErrors.housingType = "Tipo de vivienda es requerido";

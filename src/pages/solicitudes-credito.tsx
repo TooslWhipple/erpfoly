@@ -123,7 +123,8 @@ export default function SolicitudesCredito() {
     {
       id: "id",
       label: "ID",
-      size: "sm",
+      type: "id",
+      size: "xs",
     },
     {
       id: "status",
@@ -137,6 +138,7 @@ export default function SolicitudesCredito() {
       id: "fullName",
       label: "Nombre",
       size: "lg",
+      truncate: true,
     },
     {
       id: "phone",

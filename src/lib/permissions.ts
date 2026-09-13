@@ -24,6 +24,7 @@ export type PermissionModule =
   | "inventario"
   | "inventario.mercancia_danada"
   | "inventario.hojas_recuperacion"
+  | "inventario.inventario_fisico"
   | "inventario.liquidaciones"
   | "recepcion_mercancias"
   | "costeos"
@@ -152,6 +153,12 @@ export const RECOVERY_SHEETS_READ = RECOVERY_SHEETS_PERMISSIONS.read;
 export const RECOVERY_SHEETS_UPDATE = RECOVERY_SHEETS_PERMISSIONS.update;
 export const RECOVERY_SHEETS_DELETE = RECOVERY_SHEETS_PERMISSIONS.delete;
 
+export const PHYSICAL_INVENTORY_PERMISSIONS = createCrudPermissions("inventario.inventario_fisico");
+export const PHYSICAL_INVENTORY_CREATE = PHYSICAL_INVENTORY_PERMISSIONS.create;
+export const PHYSICAL_INVENTORY_READ = PHYSICAL_INVENTORY_PERMISSIONS.read;
+export const PHYSICAL_INVENTORY_UPDATE = PHYSICAL_INVENTORY_PERMISSIONS.update;
+export const PHYSICAL_INVENTORY_DELETE = PHYSICAL_INVENTORY_PERMISSIONS.delete;
+
 export const INVENTORY_LIQUIDATIONS_PERMISSIONS = createCrudPermissions("inventario.liquidaciones");
 export const INVENTORY_LIQUIDATIONS_CREATE = INVENTORY_LIQUIDATIONS_PERMISSIONS.create;
 export const INVENTORY_LIQUIDATIONS_READ = INVENTORY_LIQUIDATIONS_PERMISSIONS.read;
@@ -230,6 +237,39 @@ export const CUSTOMER_SUPPORT_REPAIRS_CREATE = CUSTOMER_SUPPORT_REPAIRS_PERMISSI
 export const CUSTOMER_SUPPORT_REPAIRS_READ = CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS.read;
 export const CUSTOMER_SUPPORT_REPAIRS_UPDATE = CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS.update;
 export const CUSTOMER_SUPPORT_REPAIRS_DELETE = CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS.delete;
+
+/**
+ * Repair permissions with parent-module fallback.
+ * Roles often only receive `atencion_cliente.*` from the parent screen seed;
+ * granular `atencion_cliente.reparaciones.*` may be missing until sub-screens exist.
+ */
+export function canCreateCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_CREATE) ||
+    hasPermission(CUSTOMER_SUPPORT_CREATE) ||
+    hasPermission(CUSTOMER_SUPPORT_UPDATE)
+  );
+}
+
+export function canReadCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_READ) ||
+    hasPermission(CUSTOMER_SUPPORT_READ)
+  );
+}
+
+export function canUpdateCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_UPDATE) ||
+    hasPermission(CUSTOMER_SUPPORT_UPDATE)
+  );
+}
 
 // Routes
 export const ROUTES_PERMISSIONS = createCrudPermissions("rutas");
@@ -400,6 +440,7 @@ export const PERMISSIONS_BY_MODULE = {
     inventory: Object.values(INVENTORY_PERMISSIONS),
     damagedInventory: Object.values(DAMAGED_INVENTORY_PERMISSIONS),
     recoverySheets: Object.values(RECOVERY_SHEETS_PERMISSIONS),
+    physicalInventory: Object.values(PHYSICAL_INVENTORY_PERMISSIONS),
     liquidations: Object.values(INVENTORY_LIQUIDATIONS_PERMISSIONS),
   },
   merchandiseReception: Object.values(MERCHANDISE_RECEPTION_PERMISSIONS),

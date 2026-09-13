@@ -12,7 +12,21 @@ export interface FormTextFieldProps extends Omit<TextFieldProps, "variant" | "la
 const HiddenSelectIcon = () => null;
 
 export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
-    ({ label, required, error, helperText, select, SelectProps, readOnly, disabled, InputProps, inputProps, ...props }, ref) => {
+    ({
+        label,
+        required,
+        error,
+        helperText,
+        select,
+        SelectProps,
+        readOnly,
+        disabled,
+        InputProps,
+        inputProps,
+        fullWidth = true,
+        sx,
+        ...props
+    }, ref) => {
         const mergedSelectProps = select
             ? {
                 displayEmpty: true,
@@ -34,7 +48,13 @@ export const FormTextField = forwardRef<HTMLDivElement, FormTextFieldProps>(
         };
 
         return (
-            <FieldWrapper>
+            <FieldWrapper
+                sx={{
+                    width: fullWidth ? "100%" : "auto",
+                    flexShrink: fullWidth ? undefined : 0,
+                    ...sx,
+                }}
+            >
                 {
                     label &&
                     <FieldLabel sx={{ display: "flex", alignItems: "center" }}>

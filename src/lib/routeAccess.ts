@@ -53,6 +53,8 @@ import {
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
   RECOVERY_SHEETS_READ,
+  PHYSICAL_INVENTORY_READ,
+  PHYSICAL_INVENTORY_CREATE,
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
@@ -137,6 +139,14 @@ export const routeAccessRules: RouteAccessRule[] = [
   {
     pattern: /^\/inventario\/hojas-recuperacion(\/.*)?$/,
     permission: RECOVERY_SHEETS_READ,
+  },
+  {
+    pattern: /^\/inventario-fisico\/nuevo(\/.*)?$/,
+    permission: PHYSICAL_INVENTORY_CREATE,
+  },
+  {
+    pattern: /^\/inventario-fisico(\/.*)?$/,
+    permission: PHYSICAL_INVENTORY_READ,
   },
   { pattern: /^\/inventario\/liquidaciones(\/.*)?$/, permission: INVENTORY_LIQUIDATIONS_READ },
   { pattern: /^\/inventario(\/.*)?$/, permission: INVENTORY_READ },

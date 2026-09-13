@@ -239,7 +239,10 @@ export function ServiceOrderSolucionTab({
                 const url =
                   first?.url ??
                   (first?.file ? URL.createObjectURL(first.file) : "");
-                onChange({ acceptanceLetterUrl: url });
+                onChange({
+                  acceptanceLetterUrl: url,
+                  acceptanceLetterFile: first?.file,
+                });
               }}
               accept={["application/pdf", "image/*"]}
               placeholder="Cargar carta de aceptación"

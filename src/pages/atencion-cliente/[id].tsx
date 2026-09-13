@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
-  IconButton,
+  Divider,
+  Grid,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -13,48 +14,30 @@ import {
 } from "@mui/material";
 import { Ban, MoreVertical } from "lucide-react";
 import numeral from "numeral";
-import { Breadcrumbs, ConfirmModal, StatusChip, TabFilters } from "@/components";
+import { Breadcrumbs, StatusChip, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { StatusChipVariant } from "@/components/StatusChip";
-import type {
-  InvoiceDetail,
-  InvoiceStatus,
+import {
+  paymentTypeLabel,
+  type InvoiceDetail,
+  type InvoiceStatus,
 } from "@/types/atencion-cliente.types";
-import { canCancelInvoice } from "@/types/atencion-cliente.types";
+import { getInvoiceDetail } from "@/services/customer-support.service";
+import { CancelPurchaseModal } from "@/pages/clientes/compras/components";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CUSTOMER_SUPPORT_INVOICES_DELETE } from "@/lib/permissions";
+import type { SaleCancelBlockReason } from "@/types/cancelPurchase.types";
+import { InvoiceActivityTab, InvoiceArticlesTab } from "./components";
 import {
-  cancelInvoice,
-  getInvoiceDetail,
-} from "@/data/atencion-cliente.mockData";
-import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { InvoiceArticlesTab } from "./components";
-import {
-  DetailPageContainer,
-  EmptyState,
-  FinancialItem,
-  FinancialLabel,
-  FinancialSummary,
-  FinancialValue,
-  HeaderRightSection,
-  HeaderSection,
-  InvoiceNumber,
+  MenuIconButton,
   MainContent,
   PaymentDot,
   PaymentDots,
   PaymentIndicator,
-  PaymentText,
-  PurchaseDate,
   SummaryCard,
-  SummaryLabel,
   SummaryPanel,
-  SummaryRow,
-  SummaryTitle,
-  SummaryTotalLabel,
   SummaryTotalRow,
-  SummaryTotalValue,
-  SummaryValue,
-  TitleSection,
   ContentLayout,
-  TopBar,
 } from "@/styles/atencion-cliente.styles";
 
 const INVOICE_TABS = [
@@ -81,8 +64,8 @@ function formatCurrency(value: number): string {
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const showSuccess = useSnackbarStore((state) => state.showSuccess);
-  const showError = useSnackbarStore((state) => state.showError);
+  const { hasPermission } = usePermissions();
+  const canCancelSale = hasPermission(CUSTOMER_SUPPORT_INVOICES_DELETE);
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +73,6 @@ export default function InvoiceDetailPage() {
   const [headerMenuAnchor, setHeaderMenuAnchor] =
     useState<null | HTMLElement>(null);
   const [cancelInvoiceOpen, setCancelInvoiceOpen] = useState(false);
-  const [cancelInvoiceLoading, setCancelInvoiceLoading] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === "string") {
@@ -105,6 +87,7 @@ export default function InvoiceDetailPage() {
       setInvoice(data);
     } catch (err) {
       console.error("[InvoiceDetail] Error loading invoice:", err);
+      setInvoice(null);
     } finally {
       setLoading(false);
     }
@@ -119,9 +102,16 @@ export default function InvoiceDetailPage() {
     [invoice?.customerId, invoice?.customerName],
   );
 
-  const invoiceCancellable = invoice
-    ? canCancelInvoice(invoice.articles)
-    : false;
+  const invoiceCancellable = Boolean(invoice?.canCancel);
+  const cancelTooltip = invoice?.cancelBlockReason
+    ? invoice.cancelBlockReason === "IN_ROUTE"
+      ? "No es posible cancelar: la mercancía va en ruta"
+      : invoice.cancelBlockReason === "DELIVERED"
+        ? "No es posible cancelar: ya fue entregada"
+        : "No es posible cancelar esta factura"
+    : invoiceCancellable
+      ? ""
+      : "No se puede cancelar esta factura";
 
   const handleBack = () => {
     router.push("/atencion-cliente");
@@ -130,26 +120,6 @@ export default function InvoiceDetailPage() {
   const handleOpenCancelInvoice = () => {
     setHeaderMenuAnchor(null);
     setCancelInvoiceOpen(true);
-  };
-
-  const handleConfirmCancelInvoice = async () => {
-    if (!invoice) return;
-    setCancelInvoiceLoading(true);
-    try {
-      await cancelInvoice(invoice.id);
-      showSuccess("La factura se canceló correctamente.");
-      setCancelInvoiceOpen(false);
-      await loadInvoice(invoice.id);
-    } catch (error) {
-      console.error("[InvoiceDetail] Error canceling invoice:", error);
-      showError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo cancelar la factura.",
-      );
-    } finally {
-      setCancelInvoiceLoading(false);
-    }
   };
 
   if (loading) {
@@ -176,55 +146,49 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const isCreditSale = invoice.paymentType === "credito";
+
   return (
-    <DetailPageContainer>
-      <TopBar>
+    <Stack spacing={2}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
         <Breadcrumbs
           items={breadcrumbs}
           showBackButton
           onBack={handleBack}
         />
-        <HeaderRightSection>
-          <StatusChip
-            label={STATUS_LABELS[invoice.status]}
-            variant={STATUS_VARIANTS[invoice.status]}
-            size="small"
-          />
-        </HeaderRightSection>
-      </TopBar>
+        <StatusChip
+          label={STATUS_LABELS[invoice.status]}
+          variant={STATUS_VARIANTS[invoice.status]}
+          size="small"
+        />
+      </Stack>
 
-      <HeaderSection>
-        <TitleSection>
-          <InvoiceNumber>Factura {invoice.invoiceNumber}</InvoiceNumber>
-          <PurchaseDate>Comprado el {invoice.purchaseDate}</PurchaseDate>
-        </TitleSection>
-        <IconButton
+      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" color="text.secondary">Factura</Typography>
+          <Typography variant="h5">{invoice.invoiceNumber}</Typography>
+          <Typography variant="body2" color="text.secondary">Comprado el {invoice.purchaseDate}</Typography>
+        </Stack>
+        <MenuIconButton
           size="small"
           aria-label="Opciones de la factura"
           onClick={(event) => setHeaderMenuAnchor(event.currentTarget)}
-          disabled={invoice.status === "cancelado"}
-        >
+          disabled={invoice.status === "cancelado"}>
           <MoreVertical size={18} />
-        </IconButton>
+        </MenuIconButton>
         <Menu
           anchorEl={headerMenuAnchor}
           open={Boolean(headerMenuAnchor)}
           onClose={() => setHeaderMenuAnchor(null)}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-        >
+          transformOrigin={{ vertical: "top", horizontal: "right" }}>
           <Tooltip
-            title={
-              invoiceCancellable
-                ? ""
-                : "Cancela todos los artículos primero"
-            }
-            placement="left"
-          >
+            title={cancelTooltip}
+            placement="left">
             <span>
               <MenuItem
                 onClick={handleOpenCancelInvoice}
-                disabled={!invoiceCancellable}
+                disabled={!invoiceCancellable || !canCancelSale}
                 sx={{ color: "error.main" }}
               >
                 <ListItemIcon sx={{ color: "error.main" }}>
@@ -235,50 +199,60 @@ export default function InvoiceDetailPage() {
             </span>
           </Tooltip>
         </Menu>
-      </HeaderSection>
+      </Stack>
 
-      <FinancialSummary>
-        <FinancialItem>
-          <FinancialLabel>Costo inicial</FinancialLabel>
-          <FinancialValue>{formatCurrency(invoice.initialCost)}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Total abonos</FinancialLabel>
-          <FinancialValue>
-            {formatCurrency(invoice.totalPayments)}
-          </FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Resta</FinancialLabel>
-          <FinancialValue>{formatCurrency(invoice.remaining)}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Fecha de pago</FinancialLabel>
-          <FinancialValue>{invoice.paymentDate}</FinancialValue>
-        </FinancialItem>
-        <FinancialItem>
-          <FinancialLabel>Próx. Pago</FinancialLabel>
-          <FinancialValue>
-            {formatCurrency(invoice.nextPayment)}
-          </FinancialValue>
-        </FinancialItem>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+        <Grid container spacing={3} flexWrap="wrap">
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Tipo de venta</Typography>
+            <Typography variant="body1">{paymentTypeLabel(invoice.paymentType)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Costo inicial</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.initialCost)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 'auto' }}>
+            <Typography variant="body2" color="text.secondary">Total abonos</Typography>
+            <Typography variant="body1">{formatCurrency(invoice.totalPayments)}</Typography>
+          </Grid>
+          {isCreditSale ? (
+            <>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Resta</Typography>
+                <Typography variant="body1">{formatCurrency(invoice.remaining)}</Typography>
+              </Grid>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Fecha de pago</Typography>
+                <Typography variant="body1">{invoice.paymentDate}</Typography>
+              </Grid>
+              <Grid size={{ xs: 'auto' }}>
+                <Typography variant="body2" color="text.secondary">Próx. Pago</Typography>
+                <Typography variant="body1">{formatCurrency(invoice.nextPayment)}</Typography>
+              </Grid>
+            </>
+          ) : null}
+        </Grid>
+        {isCreditSale ? (
+          <PaymentIndicator>
+            <PaymentDots>
+              {
+                Array.from({ length: invoice.totalPaymentsCount }).map(
+                  (_, index) => (
+                    <PaymentDot
+                      key={index}
+                      active={index < invoice.currentPayment}
+                    />
+                  )
+                )
+              }
+            </PaymentDots>
+            <Typography variant="body2" color="text.secondary">{invoice.currentPayment} de {invoice.totalPaymentsCount} pagos</Typography>
+          </PaymentIndicator>
+        ) : null}
+      </Stack>
 
-        <PaymentIndicator>
-          <PaymentDots>
-            {Array.from({ length: invoice.totalPaymentsCount }).map(
-              (_, index) => (
-                <PaymentDot
-                  key={index}
-                  active={index < invoice.currentPayment}
-                />
-              ),
-            )}
-          </PaymentDots>
-          <PaymentText>
-            {invoice.currentPayment} de {invoice.totalPaymentsCount} pagos
-          </PaymentText>
-        </PaymentIndicator>
-      </FinancialSummary>
+      <Divider />
+
 
       <TabFilters
         tabs={INVOICE_TABS}
@@ -288,23 +262,13 @@ export default function InvoiceDetailPage() {
 
       <ContentLayout>
         <MainContent>
-          {activeTab === "actividad" && (
-            <>
-              {invoice.activities.length === 0 ? (
-                <EmptyState>No hay actividad reciente</EmptyState>
-              ) : (
-                <Stack spacing={1.5}>
-                  {invoice.activities.map((activity) => (
-                    <EmptyState key={activity.id}>
-                      {activity.description}
-                    </EmptyState>
-                  ))}
-                </Stack>
-              )}
-            </>
-          )}
+          {
+            activeTab === "actividad" &&
+            <InvoiceActivityTab activities={invoice.activities} />
+          }
 
-          {activeTab === "articulos" && (
+          {
+            activeTab === "articulos" &&
             <InvoiceArticlesTab
               invoice={invoice}
               onRefresh={() => {
@@ -314,56 +278,52 @@ export default function InvoiceDetailPage() {
               }}
               onRequestCancelInvoice={handleOpenCancelInvoice}
             />
-          )}
+          }
         </MainContent>
 
         <SummaryPanel>
           <SummaryCard>
-            <SummaryTitle>Resumen</SummaryTitle>
-            <SummaryRow>
-              <SummaryLabel>Subtotal sin IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.subtotalWithoutTax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.tax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>Importe con IVA</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.amountWithTax)}
-              </SummaryValue>
-            </SummaryRow>
-            <SummaryRow>
-              <SummaryLabel>Impuesto Suntuario</SummaryLabel>
-              <SummaryValue>
-                {formatCurrency(invoice.summary.luxuryTax)}
-              </SummaryValue>
-            </SummaryRow>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Resumen</Typography>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Subtotal sin IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.subtotalWithoutTax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.tax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Importe con IVA</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.amountWithTax)}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+              <Typography variant="body1" fontWeight={500}>Impuesto Suntuario</Typography>
+              <Typography variant="body1">{formatCurrency(invoice.summary.luxuryTax)}</Typography>
+            </Stack>
             <SummaryTotalRow>
-              <SummaryTotalLabel>Total</SummaryTotalLabel>
-              <SummaryTotalValue>
-                {formatCurrency(invoice.summary.total)}
-              </SummaryTotalValue>
+              <Typography variant="body1" fontWeight={600}>Total</Typography>
+              <Typography variant="body1" fontWeight={600}>{formatCurrency(invoice.summary.total)}</Typography>
             </SummaryTotalRow>
           </SummaryCard>
         </SummaryPanel>
       </ContentLayout>
 
-      <ConfirmModal
-        open={cancelInvoiceOpen}
-        onClose={() => !cancelInvoiceLoading && setCancelInvoiceOpen(false)}
-        onConfirm={handleConfirmCancelInvoice}
-        title="Cancelar factura"
-        itemName={`Factura ${invoice.invoiceNumber}`}
-        confirmLabel="Cancelar factura"
-        type="error"
-        loading={cancelInvoiceLoading}
-      />
-    </DetailPageContainer>
+      {invoice.customerId ? (
+        <CancelPurchaseModal
+          open={cancelInvoiceOpen}
+          clientId={Number(invoice.customerId)}
+          saleId={Number(invoice.id)}
+          totalPaid={invoice.totalPayments}
+          blockReason={
+            (invoice.cancelBlockReason as SaleCancelBlockReason | null) ?? null
+          }
+          onClose={() => setCancelInvoiceOpen(false)}
+          onSuccess={() => {
+            setCancelInvoiceOpen(false);
+            void loadInvoice(invoice.id);
+          }}
+        />
+      ) : null}
+    </Stack>
   );
 }

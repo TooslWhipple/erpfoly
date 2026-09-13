@@ -12,7 +12,6 @@ import {
   RadioButton,
   RadioButtonGroup,
 } from "@/components";
-import { MOCK_RECOVERY_SHEET_BRANCHES } from "@/data/recovery-sheets.mockData";
 import {
   getBranchesCatalog,
   type BranchCatalogItem,
@@ -26,12 +25,6 @@ const ITEM_CONDITION_OPTIONS: RecoverySheetItemCondition[] = [
   "danado",
   "no_funciona",
 ];
-
-const DEFAULT_MOCK_BRANCH: BranchCatalogItem = {
-  id: MOCK_RECOVERY_SHEET_BRANCHES[0].id,
-  name: MOCK_RECOVERY_SHEET_BRANCHES[0].name,
-  is_main_warehouse: true,
-};
 
 export interface ReceiveRecoveryItemModalProps {
   open: boolean;
@@ -52,7 +45,7 @@ export function ReceiveRecoveryItemModal({
   onClose,
 }: ReceiveRecoveryItemModalProps) {
   const [selectedBranch, setSelectedBranch] =
-    useState<BranchCatalogItem | null>(DEFAULT_MOCK_BRANCH);
+    useState<BranchCatalogItem | null>(null);
   const [receivedDate, setReceivedDate] = useState<string>(
     new Date().toISOString().slice(0, 10),
   );
@@ -61,17 +54,7 @@ export function ReceiveRecoveryItemModal({
 
   const { data: initialBranches } = useQuery({
     queryKey: ["branches-catalog", "recovery-sheet-default"],
-    queryFn: async () => {
-      try {
-        return await getBranchesCatalog();
-      } catch {
-        return MOCK_RECOVERY_SHEET_BRANCHES.map((branch) => ({
-          id: branch.id,
-          name: branch.name,
-          is_main_warehouse: branch.id === 1,
-        }));
-      }
-    },
+    queryFn: () => getBranchesCatalog(),
     enabled: open,
     staleTime: 60_000,
   });
@@ -80,7 +63,7 @@ export function ReceiveRecoveryItemModal({
     return (
       initialBranches?.find((branch) => branch.is_main_warehouse) ??
       initialBranches?.[0] ??
-      DEFAULT_MOCK_BRANCH
+      null
     );
   }, [initialBranches]);
 

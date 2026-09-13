@@ -226,7 +226,6 @@ export function StatementDetailModal({
                 movements={statement.movements}
                 cargoSubtotal={statement.cargoSubtotal}
                 ventaSubtotal={statement.ventaSubtotal}
-                total={statement.amount}
               />
             ) : (
               <StatementPaymentsTab

@@ -4,7 +4,7 @@ import { DataTable } from "@/components/TableCrud";
 import type { DataTableColumn } from "@/components/TableCrud";
 import type { SupplierPayablePayment } from "@/types/supplier-payables.types";
 import { formatDate } from "@/utils/date";
-import { BlockedPaymentsBox, GrandTotalRow, TotalsFooter } from "./styles";
+import { BlockedPaymentsBox, StatementTotalBar } from "./styles";
 
 export interface StatementPaymentsTabProps {
   payments: SupplierPayablePayment[];
@@ -26,11 +26,11 @@ export function StatementPaymentsTab({
     {
       id: "date",
       label: "Fecha",
-      format: (_value, row) => formatDate(row.date, "DD/MMMM/YYYY"),
+      format: (_value, row) => formatDate(row.date, "DD/MM/YYYY"),
     },
     {
       id: "registeredBy",
-      label: "Registró",
+      label: "Responsable",
     },
     {
       id: "status",
@@ -44,7 +44,7 @@ export function StatementPaymentsTab({
     },
     {
       id: "amount",
-      label: "Monto del pago",
+      label: "Monto",
       type: "currency",
       align: "right",
     },
@@ -62,27 +62,25 @@ export function StatementPaymentsTab({
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ width: "100%", minWidth: 0 }}>
       <DataTable
         columns={columns}
         rows={payments}
         rowKey="id"
         emptyMessage="Aún no hay pagos registrados"
+        borderless
       />
 
-      {payments.length > 0 && (
-        <TotalsFooter>
-          <GrandTotalRow>
-            <Typography variant="subtitle2" />
-            <Typography variant="subtitle2" textAlign="center">
-              Total
-            </Typography>
-            <Typography variant="subtitle2" textAlign="right">
-              {numeral(total).format("$0,0.00")}
-            </Typography>
-          </GrandTotalRow>
-        </TotalsFooter>
-      )}
+      {payments.length > 0 ? (
+        <StatementTotalBar>
+          <Typography variant="subtitle2" fontWeight={600}>
+            Total
+          </Typography>
+          <Typography variant="subtitle2" fontWeight={700} textAlign="right">
+            {numeral(total).format("$0,0.00")}
+          </Typography>
+        </StatementTotalBar>
+      ) : null}
     </Stack>
   );
 }

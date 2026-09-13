@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import {
-  Stack,
+  CircularProgress,
   InputAdornment,
   MenuItem,
   SelectChangeEvent,
+  Stack,
 } from "@mui/material";
-import { Check as CheckIcon } from "@mui/icons-material";
 import { Search } from "lucide-react";
 import type { SearchType } from "@/types/atencion-cliente.types";
-import { searchInvoices } from "@/data/atencion-cliente.mockData";
+import {
+  searchCustomerSupport,
+  searchSalesForClient,
+  type CustomerSupportSearchResult,
+} from "@/services/customer-support.service";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { SearchResults } from "./atencion-cliente/components/SearchResults";
 import {
   SearchPageContainer,
   LogoContainer,
@@ -20,93 +26,91 @@ import {
   SearchInput,
   SearchButton,
 } from "@/styles/atencion-cliente.styles";
+
 export default function AtencionCliente() {
   const router = useRouter();
+  const showError = useSnackbarStore((state) => state.showError);
   const [searchType, setSearchType] = useState<SearchType>("facturas");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<CustomerSupportSearchResult[] | null>(
+    null,
+  );
+  const [searched, setSearched] = useState(false);
+  const [resultsHint, setResultsHint] = useState<string | null>(null);
+
   const handleSearchTypeChange = (event: SelectChangeEvent<unknown>) => {
     setSearchType(event.target.value as SearchType);
+    setResults(null);
+    setSearched(false);
+    setResultsHint(null);
   };
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
+
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      return;
-    }
+    if (!searchQuery.trim()) return;
     setLoading(true);
+    setSearched(true);
+    setResultsHint(null);
     try {
-      const results = await searchInvoices(searchQuery, searchType);
-      if (results.length > 0) {
-        const firstResult = results[0];
-        const redirectPath = `/atencion-cliente/${firstResult.id}`;
-        router.push(redirectPath).catch((err) => {
-          console.error("[AtencionCliente] Navigation error:", err);
-        });
-      } else {
-        setLoading(false);
-      }
+      const found = await searchCustomerSupport(searchQuery, searchType);
+      setResults(found);
     } catch (error) {
       console.error("[AtencionCliente] Search error:", error);
+      showError("No se pudo completar la búsqueda.");
+      setResults([]);
+    } finally {
       setLoading(false);
     }
   };
-  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      handleSearch();
+
+  const handleSelect = async (result: CustomerSupportSearchResult) => {
+    if (result.type === "facturas") {
+      void router.push(`/atencion-cliente/${result.id}`);
+      return;
+    }
+    if (result.clientId) {
+      setLoading(true);
+      setSearched(true);
+      setResultsHint(`Facturas de ${result.title}`);
+      try {
+        const sales = await searchSalesForClient(result.clientId);
+        setResults(sales);
+        setSearchType("facturas");
+      } catch (error) {
+        console.error("[AtencionCliente] Client sales error:", error);
+        showError("No se pudieron cargar las facturas del cliente.");
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
     }
   };
+
   return (
-    <SearchPageContainer>
+    <SearchPageContainer pinnedTop={searched}>
       <LogoContainer>
-        <LogoText>
+        <LogoText compact={searched}>
           <span className="foly">FoLy</span>
           <span className="soft">Soft</span>
         </LogoText>
-        <VersionText>V1.0</VersionText>
+        {
+          (searched) ? null : <VersionText>V1.0</VersionText>
+        }
       </LogoContainer>
 
       <SearchBarContainer>
         <SearchTypeSelect
           value={searchType}
           onChange={handleSearchTypeChange}
-          size="small"
-        >
+          size="small">
           <MenuItem value="facturas">
             <Stack direction="row" alignItems="center" spacing={1}>
-              {searchType === "facturas" && (
-                <CheckIcon
-                  sx={{
-                    fontSize: 16,
-                  }}
-                />
-              )}
               Facturas
             </Stack>
           </MenuItem>
           <MenuItem value="clientes">
             <Stack direction="row" alignItems="center" spacing={1}>
-              {searchType === "clientes" && (
-                <CheckIcon
-                  sx={{
-                    fontSize: 16,
-                  }}
-                />
-              )}
               Clientes
-            </Stack>
-          </MenuItem>
-          <MenuItem value="pedidos">
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {searchType === "pedidos" && (
-                <CheckIcon
-                  sx={{
-                    fontSize: 16,
-                  }}
-                />
-              )}
-              Pedidos
             </Stack>
           </MenuItem>
         </SearchTypeSelect>
@@ -114,14 +118,14 @@ export default function AtencionCliente() {
         <SearchInput
           placeholder={
             searchType === "facturas"
-              ? "Buscar facturas o clientes..."
-              : searchType === "clientes"
-                ? "Buscar clientes..."
-                : "Buscar pedidos..."
+              ? "Buscar por folio o nombre..."
+              : "Buscar clientes..."
           }
           value={searchQuery}
-          onChange={handleSearchChange}
-          onKeyPress={handleKeyPress}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void handleSearch();
+          }}
           size="small"
           fullWidth
           InputProps={{
@@ -136,12 +140,23 @@ export default function AtencionCliente() {
         <SearchButton
           variant="contained"
           color="primary"
-          onClick={handleSearch}
-          disabled={loading || !searchQuery.trim()}
-        >
-          Buscar
+          onClick={() => void handleSearch()}
+          disabled={loading || !searchQuery.trim()}>
+          {
+            (loading) ? <CircularProgress size={16} color="inherit" /> : 'Buscar'
+          }
         </SearchButton>
       </SearchBarContainer>
+
+      {
+        searched &&
+        <SearchResults
+          results={results ?? []}
+          loading={loading}
+          hint={resultsHint}
+          onSelect={(result) => void handleSelect(result)}
+        />
+      }
     </SearchPageContainer>
   );
 }

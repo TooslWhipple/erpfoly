@@ -231,6 +231,39 @@ export const CUSTOMER_SUPPORT_REPAIRS_READ = CUSTOMER_SUPPORT_REPAIRS_PERMISSION
 export const CUSTOMER_SUPPORT_REPAIRS_UPDATE = CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS.update;
 export const CUSTOMER_SUPPORT_REPAIRS_DELETE = CUSTOMER_SUPPORT_REPAIRS_PERMISSIONS.delete;
 
+/**
+ * Repair permissions with parent-module fallback.
+ * Roles often only receive `atencion_cliente.*` from the parent screen seed;
+ * granular `atencion_cliente.reparaciones.*` may be missing until sub-screens exist.
+ */
+export function canCreateCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_CREATE) ||
+    hasPermission(CUSTOMER_SUPPORT_CREATE) ||
+    hasPermission(CUSTOMER_SUPPORT_UPDATE)
+  );
+}
+
+export function canReadCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_READ) ||
+    hasPermission(CUSTOMER_SUPPORT_READ)
+  );
+}
+
+export function canUpdateCustomerSupportRepair(
+  hasPermission: (permission: string) => boolean,
+): boolean {
+  return (
+    hasPermission(CUSTOMER_SUPPORT_REPAIRS_UPDATE) ||
+    hasPermission(CUSTOMER_SUPPORT_UPDATE)
+  );
+}
+
 // Routes
 export const ROUTES_PERMISSIONS = createCrudPermissions("rutas");
 export const ROUTES_CREATE = ROUTES_PERMISSIONS.create;

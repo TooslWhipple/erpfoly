@@ -107,8 +107,7 @@ export function SideModal({
             : { justifyContent: "flex-end", alignItems: "stretch" },
         },
         paper: { sx: paperSxMerged },
-      }}
-    >
+      }}>
       <DialogContent
         sx={{
           p: 0,
@@ -124,24 +123,22 @@ export function SideModal({
               direction="row"
               alignItems="center"
               width="100%"
-              spacing={1}
-            >
+              spacing={1}>
               <CloseButton onClick={onClose} disabled={disableClose} size="small">
                 <CloseIcon size={16} />
               </CloseButton>
-              {headerTopCenter != null ? (
-                <Box flex={1} textAlign="center" minWidth={0}>
-                  {headerTopCenter}
-                </Box>
-              ) : (
-                <Box flex={1} />
-              )}
-              {headerActionsPosition === "top" ? headerActions : null}
+              {
+                (headerTopCenter != null)
+                  ? <Box flex={1} textAlign="center" minWidth={0}>{headerTopCenter}</Box>
+                  : <Box flex={1} />
+              }
+              {
+                (headerActionsPosition === "top") ? headerActions : null
+              }
             </Stack>
             {header ?? defaultHeader}
           </Stack>
         </SideModalHeader>
-
         <SideModalContent direction="column" spacing={2} sx={contentSx}>
           {children}
         </SideModalContent>

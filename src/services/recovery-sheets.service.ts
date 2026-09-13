@@ -1,15 +1,10 @@
+import { api, get, patch, post, unwrapOrThrow } from "@/lib/axios";
 import type { ApiResult } from "@/lib/axios";
+import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   PaginatedListParams,
   PaginatedListPayload,
 } from "@/hooks/usePaginatedList";
-import {
-  getMockRecoverySheetDetail,
-  getMockRecoverySheets,
-  receiveMockRecoveryItem,
-  searchMockRecoverySheets,
-  updateMockRecoverySheetStatus,
-} from "@/data/recovery-sheets.mockData";
 import type {
   ReceiveRecoveryItemPayload,
   RecoverySheetDetail,
@@ -18,106 +13,80 @@ import type {
   RecoverySheetStatus,
 } from "@/types/recovery-sheets.types";
 
-function ok<T>(data: T): ApiResult<T> {
-  return { data, error: null };
-}
-
-function fail<T>(message: string): ApiResult<T> {
-  return { data: null, error: { message } };
-}
-
 export type GetRecoverySheetsResponse =
   PaginatedListPayload<RecoverySheetListItem>;
 
 export async function getRecoverySheets(
   params: PaginatedListParams,
 ): Promise<ApiResult<GetRecoverySheetsResponse>> {
-  try {
-    const statusTab =
-      typeof params.statusTab === "string" ? params.statusTab : "all";
-    const originFilter = params.originFilter as
-      | RecoverySheetOriginFilter
-      | undefined;
-
-    const { rows, total } = await getMockRecoverySheets({
-      page: params.page ?? 1,
-      limit: params.limit ?? 10,
+  const originFilter = params.originFilter as
+    | RecoverySheetOriginFilter
+    | undefined;
+  return get<GetRecoverySheetsResponse>(
+    buildListUrl("/recovery-sheets", {
+      page: params.page,
+      limit: params.limit,
       search: params.search,
-      statusTab,
-      originFilter: originFilter ?? "all",
-    });
-
-    const page = params.page ?? 1;
-    const limit = params.limit ?? 10;
-
-    return ok({
-      rows,
-      total,
-      page,
-      limit,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    });
-  } catch (error) {
-    return fail(
-      error instanceof Error
-        ? error.message
-        : "No se pudieron cargar las hojas de recuperación",
-    );
-  }
+      status:
+        typeof params.statusTab === "string" && params.statusTab !== "all"
+          ? params.statusTab
+          : undefined,
+      origin:
+        originFilter && originFilter !== "all" ? originFilter : undefined,
+    }),
+  );
 }
 
 export async function getRecoverySheetDetail(
   id: string,
 ): Promise<ApiResult<RecoverySheetDetail>> {
-  try {
-    const detail = await getMockRecoverySheetDetail(id);
-    if (!detail) {
-      return fail("Hoja de recuperación no encontrada");
-    }
-    return ok(detail);
-  } catch (error) {
-    return fail(
-      error instanceof Error
-        ? error.message
-        : "No se pudo cargar la hoja de recuperación",
-    );
-  }
+  return get<RecoverySheetDetail>(`/recovery-sheets/${id}`);
 }
 
 export async function updateRecoverySheetStatus(
   id: string,
   status: RecoverySheetStatus,
 ): Promise<ApiResult<RecoverySheetDetail>> {
-  try {
-    const updated = await updateMockRecoverySheetStatus(id, status);
-    return ok(updated);
-  } catch (error) {
-    return fail(
-      error instanceof Error
-        ? error.message
-        : "No se pudo actualizar el estatus",
-    );
-  }
+  return patch<RecoverySheetDetail>(`/recovery-sheets/${id}/status`, {
+    status,
+  });
 }
 
 export async function receiveRecoveryItem(
   id: string,
   payload: ReceiveRecoveryItemPayload,
 ): Promise<ApiResult<RecoverySheetDetail>> {
-  try {
-    const updated = await receiveMockRecoveryItem(id, payload);
-    return ok(updated);
-  } catch (error) {
-    return fail(
-      error instanceof Error
-        ? error.message
-        : "No se pudo registrar la recepción del artículo",
-    );
-  }
+  return post<RecoverySheetDetail>(`/recovery-sheets/${id}/receive`, {
+    branchId: payload.branchId,
+    itemCondition: payload.itemCondition,
+    receivedDate: payload.receivedDate,
+  });
 }
 
 export async function searchRecoverySheets(
   query: string,
 ): Promise<RecoverySheetListItem[]> {
-  return searchMockRecoverySheets(query);
+  const result = await getRecoverySheets({
+    page: 1,
+    limit: 20,
+    search: query,
+  });
+  return result.data?.rows ?? [];
 }
+
+export async function downloadRecoverySheetPdf(id: string): Promise<void> {
+  const response = await api.get(`/recovery-sheets/${id}/pdf`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `HR-${id}.pdf`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export { unwrapOrThrow };

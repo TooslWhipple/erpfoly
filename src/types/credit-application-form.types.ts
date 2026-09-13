@@ -194,6 +194,7 @@ export interface DocumentationTabValues {
   employmentProofLetterFiles: CreditApplicationDocumentFile[];
   ineFrontFiles: CreditApplicationDocumentFile[];
   ineBackFiles: CreditApplicationDocumentFile[];
+  faceCaptureFiles?: CreditApplicationDocumentFile[];
 }
 
 export interface CreditApplicationDocumentFile {

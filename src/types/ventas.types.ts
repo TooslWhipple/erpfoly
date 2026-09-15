@@ -54,6 +54,7 @@ export interface ProductSearchResult {
   name: string;
   imageUrl: string | null;
   finalPrice: number;
+  isLiquidation?: boolean;
 }
 
 export interface InventorySource {
@@ -79,6 +80,7 @@ export interface ProductDetail {
   finalPrice: number;
   inventorySources: InventorySource[];
   hasOtherBranches?: boolean;
+  isLiquidation?: boolean;
 }
 
 export interface CartItem {
@@ -99,6 +101,7 @@ export interface CartItem {
    * the backend still tracks as uncovered. Shown as the backorder chip.
    */
   backorderedQuantity: number;
+  isLiquidation?: boolean;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -118,6 +121,7 @@ export interface SaleDetailItem {
     code: string;
     name: string;
     imageUrl: string | null;
+    isLiquidation?: boolean;
   };
 }
 

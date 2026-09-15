@@ -10,9 +10,9 @@ import { Title, DepartmentCard, PriceSuggestionsSidebar, ConfirmPriceChangeModal
 import type { StatsCardData } from "@/components/StatsCard";
 import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
-  getLowRotationStrategy,
   applyPriceSuggestion,
-} from "@/data/liquidaciones.mockData";
+  getLowRotationStrategy,
+} from "@/services/liquidaciones.service";
 import { SidebarPanel } from "@/styles/inventario/liquidaciones.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
@@ -35,6 +35,7 @@ export default function LiquidacionesPage() {
   const [suggestions, setSuggestions] = useState<PriceSuggestionItem[]>([]);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalItem, setConfirmModalItem] = useState<PriceSuggestionItem | null>(null);
+  const [confirmPrice, setConfirmPrice] = useState<number | null>(null);
   const [applyLoading, setApplyLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -58,26 +59,29 @@ export default function LiquidacionesPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleApplyClick = useCallback((item: PriceSuggestionItem, _price: number) => {
+  const handleApplyClick = useCallback((item: PriceSuggestionItem, price: number) => {
     setConfirmModalItem(item);
+    setConfirmPrice(price);
     setConfirmModalOpen(true);
   }, []);
 
   const handleConfirmPriceChange = useCallback(async () => {
     if (!confirmModalItem) return;
+    const price = confirmPrice ?? confirmModalItem.suggestedPrice;
     setApplyLoading(true);
     try {
-      await applyPriceSuggestion(confirmModalItem.id, confirmModalItem.suggestedPrice);
+      await applyPriceSuggestion(confirmModalItem.id, price);
       showSuccess("Precio aplicado correctamente");
       setConfirmModalOpen(false);
       setConfirmModalItem(null);
+      setConfirmPrice(null);
       fetchData();
     } catch {
       showError("No se pudo aplicar el precio");
     } finally {
       setApplyLoading(false);
     }
-  }, [confirmModalItem, showSuccess, showError, fetchData]);
+  }, [confirmModalItem, confirmPrice, showSuccess, showError, fetchData]);
 
   const handleDepartmentClick = useCallback(
     (department: { id: string }) => {
@@ -160,13 +164,14 @@ export default function LiquidacionesPage() {
           if (!applyLoading) {
             setConfirmModalOpen(false);
             setConfirmModalItem(null);
+            setConfirmPrice(null);
           }
         }}
         productName={confirmModalItem?.productName ?? ""}
         sku={confirmModalItem?.sku ?? ""}
         imageUrl={confirmModalItem?.imageUrl}
         previousPrice={previousPriceFromItem}
-        newPrice={confirmModalItem?.suggestedPrice ?? 0}
+        newPrice={confirmPrice ?? confirmModalItem?.suggestedPrice ?? 0}
         changePercent={confirmModalItem?.changePercent ?? 0}
         direction={confirmModalItem?.direction ?? "down"}
         onConfirm={handleConfirmPriceChange}

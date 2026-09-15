@@ -1,6 +1,5 @@
 import { styled } from "@mui/material/styles";
 import { Box, Select, TextField, Typography } from "@mui/material";
-import { theme } from "@/styles/theme";
 
 // ============================================================================
 // CARD
@@ -16,6 +15,11 @@ export const RuleCardContainer = styled(Box)(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   backgroundColor: theme.palette.background.paper,
   marginBottom: theme.spacing(2),
+  minWidth: 0,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
 }));
 
 export const RuleNumberBadge = styled(Box)(({ theme }) => ({
@@ -44,6 +48,10 @@ export const RuleOperatorSelect = styled(Select)(({ theme }) => ({
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
   },
+  [theme.breakpoints.down("sm")]: {
+    minWidth: 0,
+    width: "100%",
+  },
 }));
 
 export const RuleValueInput = styled(TextField)(({ theme }) => ({
@@ -53,6 +61,9 @@ export const RuleValueInput = styled(TextField)(({ theme }) => ({
     fontSize: 14,
     textAlign: "center",
   },
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }));
 
 export const RulePeriodSelect = styled(Select)(({ theme }) => ({
@@ -60,6 +71,10 @@ export const RulePeriodSelect = styled(Select)(({ theme }) => ({
   fontSize: 14,
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
+  },
+  [theme.breakpoints.down("sm")]: {
+    minWidth: 0,
+    width: "100%",
   },
 }));
 
@@ -69,6 +84,9 @@ export const RulePromotionInput = styled(TextField)(({ theme }) => ({
     padding: theme.spacing(1, 1.5),
     fontSize: 14,
   },
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }));
 
 export const RuleActions = styled(Box)(({ theme }) => ({
@@ -77,4 +95,9 @@ export const RuleActions = styled(Box)(({ theme }) => ({
   gap: theme.spacing(0.5),
   marginLeft: "auto",
   flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    marginLeft: 0,
+    justifyContent: "flex-end",
+    width: "100%",
+  },
 }));

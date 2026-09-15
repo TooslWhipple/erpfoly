@@ -766,6 +766,7 @@ export function SaleBuilder({
         sources: item.inventorySources,
         saleItemId: item.id,
         backorderedQuantity: item.backorderedQuantity,
+        isLiquidation: item.product.isLiquidation,
       })),
     );
 
@@ -1939,6 +1940,7 @@ export function SaleBuilder({
         quantity: totalQty,
         sources: productSources,
         backorderedQuantity,
+        isLiquidation: productDetail.isLiquidation,
       };
       if (existing >= 0) {
         const updated = [...prev];
@@ -2510,6 +2512,21 @@ export function SaleBuilder({
                 type: "text",
                 size: "lg",
                 truncate: true,
+                format: (value, row) => (
+                  <Stack spacing={0.5} minWidth={0}>
+                    <Typography noWrap title={String(value ?? "")}>
+                      {String(value ?? "")}
+                    </Typography>
+                    {row.isLiquidation && (
+                      <Chip
+                        size="small"
+                        color="error"
+                        label="Liquidación"
+                        sx={{ width: "fit-content", height: 20 }}
+                      />
+                    )}
+                  </Stack>
+                ),
               },
               {
                 id: "finalPrice",
@@ -2671,6 +2688,14 @@ export function SaleBuilder({
               <Typography variant="h5" fontWeight={700} mt={0.5} mb={0.25}>
                 {productDetail.name}
               </Typography>
+              {productDetail.isLiquidation && (
+                <Chip
+                  size="small"
+                  color="error"
+                  label="Liquidación"
+                  sx={{ mt: 0.5, mb: 1 }}
+                />
+              )}
               {productDetail.brandName && (
                 <Typography variant="body2" color="text.secondary" mb={2}>
                   {productDetail.brandName}
@@ -3105,6 +3130,14 @@ export function SaleBuilder({
                           <Typography variant="caption" color="text.secondary">
                             {item.brandName}
                           </Typography>
+                        )}
+                        {item.isLiquidation && (
+                          <Chip
+                            size="small"
+                            color="error"
+                            label="Liquidación"
+                            sx={{ mt: 0.5, height: 20 }}
+                          />
                         )}
                       </Box>
                       <Stack

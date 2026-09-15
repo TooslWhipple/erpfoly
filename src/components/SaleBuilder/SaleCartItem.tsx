@@ -131,6 +131,14 @@ export function SaleCartItemRow({
               {item.brandName}
             </Typography>
           )}
+          {item.isLiquidation && (
+            <Chip
+              size="small"
+              color="error"
+              label="Liquidación"
+              sx={{ mt: 0.5, height: 20, fontSize: "0.6875rem" }}
+            />
+          )}
           {showBranchChip && branchSrc && (
             <Chip
               label={branchSrc.label}

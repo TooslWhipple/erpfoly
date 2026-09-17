@@ -33,3 +33,13 @@ export function getCashRegisterSearchMode(
   const value = query[CASH_REGISTER_MODE_QUERY_KEY];
   return value === "ventas" ? "ventas" : "abonos";
 }
+
+export function buildCashRegisterSaleUrl(saleId: number): string {
+  return `/ventas/${saleId}?from=cajas`;
+}
+
+export function isCashRegisterReturnQuery(
+  query: Record<string, string | string[] | undefined>,
+): boolean {
+  return query.from === "cajas";
+}

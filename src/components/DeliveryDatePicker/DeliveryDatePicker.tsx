@@ -90,6 +90,22 @@ export function DeliveryDatePicker({
     return map;
   }, [availabilityData]);
 
+  // Si el modal abre en "hoy" y el cutoff ya cerró (availability none),
+  // saltar a mañana para no confirmar un día que el API va a rechazar.
+  if (
+    open &&
+    !value &&
+    !availabilityLoading &&
+    modalDate?.isSame(dayjs(), "day") &&
+    isTodayClosed(availabilityMap)
+  ) {
+    const nextOpenDay = dayjs().add(1, "day");
+    setModalDate(nextOpenDay);
+    if (!nextOpenDay.isSame(calendarMonth, "month")) {
+      setCalendarMonth(nextOpenDay);
+    }
+  }
+
   // Debounce month changes to avoid rapid refetch on << >> clicks
   const monthChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleMonthChange = (newMonth: Dayjs) => {
@@ -128,6 +144,7 @@ export function DeliveryDatePicker({
             value={modalDate}
             onChange={handleDateChange}
             onMonthChange={handleMonthChange}
+            shouldDisableDate={(day) => isDeliveryDayClosed(day, availabilityMap)}
             slots={{ day: CalendarDay }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             slotProps={{ day: { availabilityMap } as any }}
@@ -307,7 +324,12 @@ export function DeliveryDatePicker({
                     py: 1,
                     mt: 1,
                   }}
-                  disabled={confirmLoading || availabilityLoading}
+                  disabled={
+                    confirmLoading ||
+                    availabilityLoading ||
+                    (modalDate != null &&
+                      isDeliveryDayClosed(modalDate, availabilityMap))
+                  }
                   onClick={() => {
                     if (modalDate) {
                       onConfirm(modalDate.format("YYYY-MM-DD"));
@@ -333,6 +355,23 @@ export function DeliveryDatePicker({
         </Grid>
       </Grid>
     </SideModal>
+  );
+}
+
+function isTodayClosed(
+  availabilityMap: Record<string, DeliveryAvailability>,
+): boolean {
+  return availabilityMap[dayjs().format("YYYY-MM-DD")] === "none";
+}
+
+function isDeliveryDayClosed(
+  day: Dayjs,
+  availabilityMap: Record<string, DeliveryAvailability>,
+): boolean {
+  if (day.startOf("day").isBefore(dayjs().startOf("day"))) return true;
+  return (
+    day.isSame(dayjs(), "day") &&
+    availabilityMap[day.format("YYYY-MM-DD")] === "none"
   );
 }
 
@@ -404,9 +443,9 @@ function CalendarDay(props: PickersDayProps<Dayjs> & { availabilityMap?: Record<
         outsideCurrentMonth={outsideCurrentMonth}
         selected={selected}
         today={today}
-        disabled={isPastDay}
+        disabled={isDeliveryDayClosed(day, availabilityMap ?? {})}
         sx={{
-          // Días deshabilitados (pasados)
+          // Días deshabilitados (pasados o hoy con cutoff cerrado)
           "&.Mui-disabled": {
             color: "#9CA3AF",
             opacity: 0.6,

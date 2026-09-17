@@ -1,4 +1,5 @@
-import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import NumberSpinner from "@/components/NumberSpinner";
 import type { CartItem } from "@/types/ventas.types";
@@ -8,6 +9,11 @@ import {
   PriceField,
   PriceSummaryRow,
 } from "./styles";
+import { lineTotal } from "@/utils/saleCartPricing";
+import {
+  formatPendingSupplyLabel,
+  pendingSupplyBreakdown,
+} from "@/utils/saleCartCoverage";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -16,11 +22,69 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function BackorderChip({
+  backorderedQuantity,
+  quantity,
+  sx,
+}: {
+  backorderedQuantity: number;
+  quantity: number;
+  sx?: SxProps<Theme>;
+}) {
+  const { available, pending } = pendingSupplyBreakdown(
+    quantity,
+    backorderedQuantity,
+  );
+  if (pending <= 0) return null;
+
+  return (
+    <Chip
+      icon={<AlertTriangle size={14} />}
+      label={formatPendingSupplyLabel(available, pending)}
+      size="small"
+      color="warning"
+      variant="outlined"
+      sx={[
+        {
+          height: 24,
+          px: 1,
+          gap: 0.75,
+          fontSize: "0.75rem",
+          fontWeight: 500,
+          "& .MuiChip-icon": {
+            m: 0,
+            width: 14,
+            height: 14,
+            color: "inherit",
+          },
+          "& .MuiChip-label": {
+            px: 0,
+          },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    />
+  );
+}
+
+const PENDING_SUPPLY_ALERT_TEXT =
+  "Atención: Esta orden contiene artículos 'Por surtir'. La mercancía está pendiente de entrega por el proveedor, lo que comprometerá la fecha de entrega final al cliente.";
+
+export function PendingSupplyAlert({ sx }: { sx?: SxProps<Theme> }) {
+  return (
+    <Alert severity="warning" sx={sx}>
+      {PENDING_SUPPLY_ALERT_TEXT}
+    </Alert>
+  );
+}
+
 export interface SaleCartItemProps {
   item: CartItem;
   isLayaway: boolean;
   isCajeroMode: boolean;
-  currentBranchId: number;
+  currentBranchId: number | null;
+  /** Techo de cantidad: existencia viva de las fuentes elegidas. */
+  qtyMax?: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
 }
@@ -30,6 +94,7 @@ export function SaleCartItemRow({
   isLayaway,
   isCajeroMode,
   currentBranchId,
+  qtyMax,
   onRemove,
   onQtyChange,
 }: SaleCartItemProps) {
@@ -37,7 +102,9 @@ export function SaleCartItemRow({
     (s) => s.sourceType === "branch" && s.quantity > 0,
   );
   const showBranchChip =
-    branchSrc != null && branchSrc.branchId !== currentBranchId;
+    currentBranchId != null &&
+    branchSrc != null &&
+    branchSrc.branchId !== currentBranchId;
 
   return (
     <CartItemCard>
@@ -63,6 +130,14 @@ export function SaleCartItemRow({
             <Typography variant="caption" color="text.secondary">
               {item.brandName}
             </Typography>
+          )}
+          {item.isLiquidation && (
+            <Chip
+              size="small"
+              color="error"
+              label="Liquidación"
+              sx={{ mt: 0.5, height: 20, fontSize: "0.6875rem" }}
+            />
           )}
           {showBranchChip && branchSrc && (
             <Chip
@@ -126,6 +201,7 @@ export function SaleCartItemRow({
                   onQtyChange(item.productId, val - item.quantity)
                 }
                 min={1}
+                max={qtyMax ?? item.quantity}
                 size="small"
                 iconSize={13}
                 disabled={isCajeroMode}
@@ -154,23 +230,18 @@ export function SaleCartItemRow({
                 Total
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {formatCurrency(item.unitPrice * item.quantity)}
+                {formatCurrency(lineTotal(item))}
               </Typography>
             </PriceField>
           </PriceSummaryRow>
         </>
       )}
 
-      {item.backorderedQuantity > 0 && (
-        <Chip
-          icon={<AlertTriangle size={12} />}
-          label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-          size="small"
-          color="warning"
-          variant="outlined"
-          sx={{ mt: 1, height: 22, fontSize: "0.6875rem" }}
-        />
-      )}
+      <BackorderChip
+        backorderedQuantity={item.backorderedQuantity}
+        quantity={item.quantity}
+        sx={{ mt: 1 }}
+      />
     </CartItemCard>
   );
 }

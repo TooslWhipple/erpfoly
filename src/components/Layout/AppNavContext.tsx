@@ -3,12 +3,15 @@ import { createContext, useContext } from "react";
 export interface AppNavContextValue {
   /** Sidebar is a temporary drawer (breakpoint depends on the current route). */
   isDrawerNav: boolean;
-  /** Compact POS layout for sales / quotes routes (below `lg`). */
+  /** Compact POS layout for sales / quotes / caja routes (below `lg`). */
   isSalesPosLayout: boolean;
-  /** When true, sales chrome renders the menu toggle inline instead of floating. */
+  /** When true, POS chrome renders the menu toggle inline instead of floating. */
   embedMobileMenu: boolean;
+  /** Desktop-only: sidebar reduced to an icon rail. */
+  isSidebarCollapsed: boolean;
   openMobileNav: () => void;
   toggleMobileNav: () => void;
+  toggleSidebarCollapse: () => void;
 }
 
 const AppNavContext = createContext<AppNavContextValue | null>(null);
@@ -32,8 +35,10 @@ export function useAppNav(): AppNavContextValue {
       isDrawerNav: false,
       isSalesPosLayout: false,
       embedMobileMenu: false,
+      isSidebarCollapsed: false,
       openMobileNav: () => undefined,
       toggleMobileNav: () => undefined,
+      toggleSidebarCollapse: () => undefined,
     };
   }
   return ctx;

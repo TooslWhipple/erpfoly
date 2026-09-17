@@ -161,6 +161,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   return {
     id: applicationId,
     status,
+    rejectionReason: api.rejectionReason ?? null,
     approvedClientId: api.approvalSummary?.clientId ?? null,
     approvedBaseCreditLineAmount: api.approvalSummary?.baseCreditLineAmount ?? null,
     riskScore: 0,
@@ -230,6 +231,10 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
       signatureUrl: api.creditBureau?.signatureUrl ?? signatureFile?.fileUrl,
       canQueryNow: api.creditBureau?.canQueryNow ?? false,
       missingFields: api.creditBureau?.missingFields ?? [],
+    },
+    faceMatch: {
+      status: api.faceMatch?.status ?? "NOT_VERIFIED",
+      score: api.faceMatch?.score ?? null,
     },
     biometrics: { items: biometricItems },
     purchaseIntention: { items: [], subtotal: 0, total: 0 },

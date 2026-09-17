@@ -17,6 +17,25 @@ import { theme } from "@/styles/theme";
 import type { MonthlySalesPoint } from "@/types/sucursales.types";
 import { SalesDashboardChartTooltip } from "./SalesDashboardChartTooltip";
 
+const MONTH_LABEL_TO_SHORT: Record<string, string> = {
+  Enero: "Ene",
+  Febrero: "Feb",
+  Marzo: "Mar",
+  Abril: "Abr",
+  Mayo: "May",
+  Junio: "Jun",
+  Julio: "Jul",
+  Agosto: "Ago",
+  Septiembre: "Sep",
+  Octubre: "Oct",
+  Noviembre: "Nov",
+  Diciembre: "Dic",
+};
+
+function formatMonthTick(label: string): string {
+  return MONTH_LABEL_TO_SHORT[label] ?? label.slice(0, 3);
+}
+
 export interface MonthlySalesComposedChartCardProps {
   data: MonthlySalesPoint[];
   title: string;
@@ -44,6 +63,8 @@ export function MonthlySalesComposedChartCard({
                 tickLine={false}
                 axisLine={{ stroke: theme.palette.app.border }}
                 tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
+                interval={0}
+                tickFormatter={formatMonthTick}
               />
               <YAxis
                 tick={{ fontSize: 12 }}

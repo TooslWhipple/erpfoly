@@ -177,6 +177,7 @@ interface AdditionalInformationCatalogApiItem {
 export interface CreditApplicationDetailResponse {
   id: number;
   status: string;
+  rejectionReason?: string | null;
   approvalSummary?: {
     clientId: number | null;
     baseCreditLineAmount: number | null;
@@ -199,6 +200,10 @@ export interface CreditApplicationDetailResponse {
     signatureUrl?: string;
     canQueryNow?: boolean;
     missingFields?: string[];
+  };
+  faceMatch?: {
+    status: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+    score: number | null;
   };
 }
 
@@ -539,7 +544,7 @@ async function ensureDocumentFilesUploaded(
 export async function createCreditApplicationFromIntake(
   payload: CreditApplicationBiometricsData,
   clientId?: number
-): Promise<CreateCreditApplicationFromIntakeResult | null> {
+): Promise<CreateCreditApplicationFromIntakeResult> {
   const ineFront = payload.ineFrontImage?.trim();
   const ineBack = payload.ineBackImage?.trim();
   const faceCapture = payload.selfieImage?.trim();
@@ -553,6 +558,10 @@ export async function createCreditApplicationFromIntake(
   const ineExecutionId = payload.ineExecutionId?.trim();
   if (ineExecutionId) {
     formData.append("ineExecutionId", ineExecutionId);
+  }
+  const livenessExecutionId = payload.livenessExecutionId?.trim();
+  if (livenessExecutionId) {
+    formData.append("livenessExecutionId", livenessExecutionId);
   }
   if (clientId) {
     formData.append("clientId", String(clientId));
@@ -574,7 +583,112 @@ export async function createCreditApplicationFromIntake(
       skipGlobalErrorToast: true,
     },
   );
-  if (result.error) return null;
+  if (result.error || !result.data) {
+    throw new Error(
+      result.error?.message
+        ?? "No se pudo crear la solicitud, intenta nuevamente.",
+    );
+  }
+  return result.data;
+}
+
+export interface UpdateIneBiometricsResponse {
+  success: true;
+  message: string;
+  ineFront: {
+    documentId: number;
+    filePath: string;
+    fileUrl: string;
+  };
+  ineBack: {
+    documentId: number;
+    filePath: string;
+    fileUrl: string;
+  };
+  ocrStatus: "SUCCESS" | "FAILED";
+  faceMatchInvalidated: true;
+}
+
+export interface UpdateFaceBiometricsResponse {
+  success: true;
+  message: string;
+  faceCapture: {
+    documentId: number;
+    filePath: string;
+    fileUrl: string;
+  };
+  faceMatch: {
+    status: "SUCCESS";
+    score: number;
+  };
+}
+
+export async function updateCreditApplicationIneBiometrics(
+  applicationId: string,
+  payload: {
+    ineExecutionId?: string | null;
+    ineFrontImage: string;
+    ineBackImage: string;
+  },
+): Promise<UpdateIneBiometricsResponse> {
+  const formData = new FormData();
+  const ineExecutionId = payload.ineExecutionId?.trim();
+  if (ineExecutionId) {
+    formData.append("ineExecutionId", ineExecutionId);
+  }
+  formData.append("ineFront", dataUrlToFile(payload.ineFrontImage, "ine-front"));
+  formData.append("ineBack", dataUrlToFile(payload.ineBackImage, "ine-back"));
+
+  const result = await post<UpdateIneBiometricsResponse>(
+    `${BASE}/${applicationId}/biometrics/ine`,
+    formData,
+    {
+      timeout: INTAKE_CREATE_TIMEOUT_MS,
+      headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
+    },
+  );
+  if (result.error || !result.data) {
+    throw new Error(
+      result.error?.message
+        ?? "No se pudo actualizar el INE. Intenta nuevamente.",
+    );
+  }
+  return result.data;
+}
+
+export async function updateCreditApplicationFaceBiometrics(
+  applicationId: string,
+  payload: {
+    livenessExecutionId?: string | null;
+    faceCaptureImage: string;
+  },
+): Promise<UpdateFaceBiometricsResponse> {
+  const formData = new FormData();
+  const livenessExecutionId = payload.livenessExecutionId?.trim();
+  if (livenessExecutionId) {
+    formData.append("livenessExecutionId", livenessExecutionId);
+  }
+  formData.append(
+    "faceCapture",
+    dataUrlToFile(payload.faceCaptureImage, "face-capture"),
+  );
+
+  const result = await post<UpdateFaceBiometricsResponse>(
+    `${BASE}/${applicationId}/biometrics/face`,
+    formData,
+    {
+      timeout: INTAKE_CREATE_TIMEOUT_MS,
+      headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
+    },
+  );
+  if (result.error || !result.data) {
+    throw new Error(
+      result.error?.message
+        ?? "No se pudo actualizar la captura facial. Intenta nuevamente.",
+    );
+  }
   return result.data;
 }
 
@@ -835,10 +949,15 @@ export async function submitCreditApplicationForReview(
 
 export async function rejectCreditApplication(
   applicationId: string,
+  payload: { comments: string },
 ): Promise<RejectCreditApplicationResponse | null> {
-  const result = await patch<RejectCreditApplicationResponse>(`${BASE}/${applicationId}/reject`, undefined, {
-    skipGlobalErrorToast: true,
-  });
+  const result = await patch<RejectCreditApplicationResponse>(
+    `${BASE}/${applicationId}/reject`,
+    payload,
+    {
+      skipGlobalErrorToast: true,
+    },
+  );
   if (result.error) return null;
   return result.data;
 }

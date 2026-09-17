@@ -14,6 +14,7 @@ export interface ShippingZone {
   color: string;
   sortOrder: number;
   polygon: GeoJsonPolygon;
+  price: number;
 }
 
 export interface MunicipalityShippingCatalogItem {

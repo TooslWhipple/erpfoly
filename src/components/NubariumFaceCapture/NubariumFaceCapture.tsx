@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Typography } from "@mui/material";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
-import { CaptureErrorState, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
+import { CaptureErrorState, CaptureHost, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
 import {
   extractFaceCaptureImage,
   getCameraAccessErrorMessage,
@@ -33,6 +33,9 @@ interface NubariumFaceCaptureProps {
   completedResult?: NubariumFaceCaptureResult | null;
   videoDeviceId?: string | null;
   cameraFacing?: CameraFacingHint;
+  acceptFailedLiveness?: boolean;
+  fillParent?: boolean;
+  onInitialized?: () => void;
   onSuccess: (result: NubariumFaceCaptureResult) => void;
   onReset?: () => void;
 }
@@ -44,12 +47,21 @@ export function NubariumFaceCapture({
   completedResult = null,
   videoDeviceId = null,
   cameraFacing,
+  acceptFailedLiveness = false,
+  fillParent = false,
+  onInitialized,
   onSuccess,
   onReset,
 }: NubariumFaceCaptureProps) {
   const reactId = useId().replace(/:/g, "");
   const rootElementId = `nubarium-face-capture-${reactId}`;
   const captureRef = useRef<FaceCapture | null>(null);
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+  const onInitializedRef = useRef(onInitialized);
+  onInitializedRef.current = onInitialized;
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,13 +73,13 @@ export function NubariumFaceCapture({
   }, [videoDeviceId]);
 
   useEffect(() => {
-    if (!active || completed || !token.trim()) return;
+    if (!active || completed || !tokenRef.current.trim()) return;
 
     let cancelled = false;
     setErrorMessage(null);
 
     const mountCapture = () => {
-      if (cancelled) return;
+      if (cancelled || captureRef.current) return;
 
       const cameraAccessError = getCameraAccessErrorMessage();
       if (cameraAccessError) {
@@ -78,6 +90,7 @@ export function NubariumFaceCapture({
       try {
         const capture = new FaceCapture();
         captureRef.current = capture;
+        const sessionToken = tokenRef.current;
 
         capture.init({
           ...NUBARIUM_FACE_CAPTURE_CONFIG,
@@ -87,7 +100,7 @@ export function NubariumFaceCapture({
           rootElement: rootElementId,
         });
 
-        capture.setToken(token);
+        capture.setToken(sessionToken);
 
         capture
           .onSuccess((data) => {
@@ -106,17 +119,17 @@ export function NubariumFaceCapture({
             safeClearNubariumCapture(capture, rootElementId);
             captureRef.current = null;
             releaseCameraHardware();
-            onSuccess({ executionId, faceDataUrl });
+            onSuccessRef.current({ executionId, faceDataUrl });
           })
           .onFail((fail) => {
             if (cancelled) return;
             const faceDataUrl = extractFaceCaptureImage(fail);
             const executionId = fail.id?.trim();
-            if (faceDataUrl && executionId) {
+            if (acceptFailedLiveness && faceDataUrl && executionId) {
               safeClearNubariumCapture(capture, rootElementId);
               captureRef.current = null;
               releaseCameraHardware();
-              onSuccess({ executionId, faceDataUrl });
+              onSuccessRef.current({ executionId, faceDataUrl });
               return;
             }
 
@@ -131,11 +144,13 @@ export function NubariumFaceCapture({
             captureRef.current = null;
             releaseCameraHardware();
             setErrorMessage(translateNubariumError(sdkError));
+            onInitializedRef.current?.();
           });
 
         capture.load(() => {
-          if (cancelled) return;
+          if (cancelled || captureRef.current !== capture) return;
           capture.start();
+          onInitializedRef.current?.();
         });
       } catch (mountError) {
         const rawMessage = mountError instanceof Error ? mountError.message : "";
@@ -144,18 +159,22 @@ export function NubariumFaceCapture({
             ? (getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.")
             : (rawMessage || "No fue posible iniciar la prueba de vida."),
         );
+        onInitializedRef.current?.();
       }
     };
 
-    mountCapture();
+    // Defer past React Strict Mode's discarded first effect so FaceCapture is
+    // not started, torn down, and started again (looks like the camera opened twice).
+    const startTimer = window.setTimeout(mountCapture, 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
       safeClearNubariumCapture(captureRef.current, rootElementId);
       captureRef.current = null;
       releaseCameraHardware();
     };
-  }, [active, cameraFacing, completed, onSuccess, rootElementId, token, videoDeviceId]);
+  }, [acceptFailedLiveness, active, cameraFacing, completed, rootElementId, videoDeviceId]);
 
   const handleRetry = () => {
     safeClearNubariumCapture(captureRef.current, rootElementId);
@@ -165,24 +184,35 @@ export function NubariumFaceCapture({
     onReset?.();
   };
 
+  const host = <CaptureHost id={rootElementId} />;
   const showPreview = Boolean(completed && completedResult?.faceDataUrl);
 
   if (showPreview && completedResult) {
     return (
       <NubariumCapturePreview
-        title="Prueba de vida completada"
+        title="Rostro capturado"
         images={[
-          { label: "Selfie", alt: "Selfie del cliente", src: completedResult.faceDataUrl },
+          {
+            label: "Selfie",
+            alt: "Rostro capturado",
+            src: completedResult.faceDataUrl,
+          },
         ]}
-        retryLabel="Repetir prueba de vida"
+        retryLabel="Repetir captura"
         onRetry={handleRetry}
       />
     );
   }
 
+  if (fillParent) {
+    return host;
+  }
+
   return (
     <CaptureStepRoot>
-      <CaptureViewport id={rootElementId} />
+      <CaptureViewport>
+        {host}
+      </CaptureViewport>
 
       {errorMessage ? (
         <CaptureErrorState>

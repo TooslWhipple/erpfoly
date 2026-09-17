@@ -22,7 +22,14 @@ export function DiscountRequestItemCard({ item }: DiscountRequestItemCardProps) 
           <Typography variant="caption" color="text.secondary">{item.brand}</Typography>
         </Stack>
       </Stack>
-      <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ paddingRight: 4 }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        spacing={1}
+        flexWrap="wrap"
+        useFlexGap
+        sx={{ minWidth: 0 }}
+      >
         <Stack spacing={1}>
           <Typography variant="body2" color="text.secondary">Cantidad</Typography>
           <Typography variant="body1" fontWeight={600}>{item.quantity}</Typography>

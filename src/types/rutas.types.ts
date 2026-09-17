@@ -1,4 +1,10 @@
-export type RouteStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
+export type RouteStatus =
+  | "scheduled"
+  | "in_progress"
+  | "paused"
+  | "completed"
+  | "incomplete"
+  | "cancelled";
 export type RouteType = "deliveries" | "scheduled";
 
 export interface RouteOriginBranch {
@@ -84,6 +90,7 @@ export interface OrderToAdd {
 export interface AvailableOrdersResponse {
   suggested: SuggestedItemToAdd[];
   orders: OrderToAdd[];
+  recoveries: OrderToAdd[];
   suggestedCount: number;
   ordersCount: number;
   recoveriesCount: number;
@@ -101,13 +108,22 @@ export interface RoutePerson {
   role: "driver" | "assistant";
 }
 
+export interface RouteVehicle {
+  id: number;
+  brand: string;
+  model: string;
+  plate: string;
+  label: string;
+}
+
 export interface RouteDetail extends RouteSummary {
   routeType?: RouteType;
   scheduledDate: string | null;
   originBranch: RouteOriginBranch | null;
   scheduledStops: RouteScheduledStop[];
   driverName: string;
-  vehicleInfo: string;
+  vehicleId: number | null;
+  vehicle: RouteVehicle | null;
   orders: RouteOrder[];
   driver: RoutePerson | null;
   assistants: RoutePerson[];

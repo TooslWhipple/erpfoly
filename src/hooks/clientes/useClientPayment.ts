@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getActiveSaleCredits,
   registerCascadePayment,
@@ -10,7 +10,12 @@ import type { CascadePaymentPayload, CascadePaymentResult } from "@/services/sal
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types";
 import { getSessionSummary } from "@/services/cash-register.service";
-import { unwrapOrThrow, get } from "@/lib/axios";
+import { getClientDetail } from "@/services/clients.service";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
+import { unwrapOrThrow } from "@/lib/axios";
 import type {
   ClientCreditAccount,
   ClientPaymentContext,
@@ -27,6 +32,10 @@ import {
   getTotalPendingInstallmentsCount,
   type CascadeInstallmentPreview,
 } from "@/utils/cascadePayment";
+import {
+  getClientPaymentAccessDenial,
+  type ClientPaymentAccessDenialReason,
+} from "@/utils/clientPaymentAccess";
 
 export type PartialRemainderDecision = "apply-next" | "give-change";
 
@@ -36,6 +45,7 @@ interface UseClientPaymentResult {
   fromCashRegister: boolean;
   cashRegisterName: string | null;
   context: ClientPaymentContext | null;
+  accessDeniedReason: ClientPaymentAccessDenialReason | null;
   loading: boolean;
   error: string | null;
   paymentMethod: ClientPaymentMethod;
@@ -137,8 +147,11 @@ function mapFrontendToBackendMethod(method: ClientPaymentMethod): "CASH" | "CARD
 export function useClientPayment(): UseClientPaymentResult {
   const router = useRouter();
   const { id, from, caja } = router.query;
+  const queryClient = useQueryClient();
 
   const [context, setContext] = useState<ClientPaymentContext | null>(null);
+  const [accessDeniedReason, setAccessDeniedReason] =
+    useState<ClientPaymentAccessDenialReason | null>(null);
   const [creditOrder, setCreditOrder] = useState<string[]>([]);
   const [excludedCreditIds, setExcludedCreditIds] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethodState] = useState<ClientPaymentMethod>("cash");
@@ -184,22 +197,37 @@ export function useClientPayment(): UseClientPaymentResult {
 
     setLoading(true);
     setError(null);
+    setAccessDeniedReason(null);
 
     try {
       const numericClientId = parseInt(clientId, 10);
-      const result = await getActiveSaleCredits(numericClientId, 1, 50);
-      const data = unwrapOrThrow(result);
+      const [clientDetailResult, creditsResult] = await Promise.all([
+        getClientDetail(numericClientId),
+        getActiveSaleCredits(numericClientId, 1, 50),
+      ]);
+      const clientDetail = unwrapOrThrow(clientDetailResult);
+      const data = unwrapOrThrow(creditsResult);
+      const activeCredits = data.rows ?? [];
 
-      if (!data.rows || data.rows.length === 0) {
-        const clientResult = await get(`/clients/${numericClientId}/detail`);
-        const clientData = unwrapOrThrow(clientResult) as { firstName?: string; lastSurname?: string; phoneNumber?: string } | null;
+      const denial = getClientPaymentAccessDenial({
+        creditApplicationId: clientDetail.creditApplicationId,
+        status: clientDetail.status,
+        activeCredits,
+      });
 
+      if (denial) {
+        setAccessDeniedReason(denial);
+        setContext(null);
+        setCreditOrder([]);
+        setExcludedCreditIds([]);
+        return;
+      }
+
+      if (activeCredits.length === 0) {
         setContext({
           clientId,
-          clientName: clientData
-            ? `${clientData.firstName ?? ""} ${clientData.lastSurname ?? ""}`.trim() || "Cliente"
-            : "Cliente",
-          clientPhone: clientData?.phoneNumber ?? "",
+          clientName: clientDetail.fullName || "Cliente",
+          clientPhone: "",
           creditAccounts: [],
         });
         setCreditOrder([]);
@@ -208,7 +236,7 @@ export function useClientPayment(): UseClientPaymentResult {
       }
 
       const creditDetails = await Promise.all(
-        data.rows.map(async (item: BackendSaleCreditActiveItem) => {
+        activeCredits.map(async (item: BackendSaleCreditActiveItem) => {
           try {
             const detailResult = await getSaleCreditDetail(item.id);
             const detail = unwrapOrThrow(detailResult);
@@ -234,13 +262,11 @@ export function useClientPayment(): UseClientPaymentResult {
         })
         .sort((a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime());
 
-      const firstAccount = accounts[0];
-      const clientName = firstAccount ? "Cliente" : "Cliente";
-      const clientPhone = data.rows[0]?.client_phone ?? "";
+      const clientPhone = activeCredits[0]?.client_phone ?? "";
 
       setContext({
         clientId,
-        clientName,
+        clientName: clientDetail.fullName || "Cliente",
         clientPhone,
         creditAccounts: accounts,
       });
@@ -249,6 +275,7 @@ export function useClientPayment(): UseClientPaymentResult {
     } catch (err) {
       console.error("[useClientPayment] Error loading payment context:", err);
       setContext(null);
+      setAccessDeniedReason(null);
       setError("Error al cargar la información del cliente");
     } finally {
       setLoading(false);
@@ -395,7 +422,7 @@ export function useClientPayment(): UseClientPaymentResult {
   // La sucursal desde la que se está cobrando el abono en este momento
   // (caja activa del cajero), no la sucursal original de la venta a crédito.
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
     enabled: isCardPayment,
     staleTime: 60_000,
@@ -516,7 +543,14 @@ export function useClientPayment(): UseClientPaymentResult {
         totalInstallments: firstAffectedAccount?.totalInstallments ?? 0,
         creditsAffectedCount: backendResult.credits.length,
         receiptUrl: "",
+        paymentIds: backendResult.credits
+          .map((credit) => credit.payment_id)
+          .filter((id) => Number.isInteger(id) && id > 0),
       });
+
+      if (fromCashRegister) {
+        invalidateCashRegisterQueries(queryClient);
+      }
 
       await fetchContext();
     } catch (err) {
@@ -532,6 +566,7 @@ export function useClientPayment(): UseClientPaymentResult {
     clientId,
     context,
     excludedCreditIds,
+    fromCashRegister,
     fullyCoveredCascadeAmount,
     isCardPayment,
     isCashDeposit,
@@ -540,6 +575,7 @@ export function useClientPayment(): UseClientPaymentResult {
     paymentAmount,
     paymentMethod,
     paymentTerminalId,
+    queryClient,
     totalOutstanding,
     fetchContext,
   ]);
@@ -550,6 +586,7 @@ export function useClientPayment(): UseClientPaymentResult {
     fromCashRegister,
     cashRegisterName,
     context,
+    accessDeniedReason,
     loading,
     error,
     paymentMethod,

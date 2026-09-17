@@ -19,6 +19,7 @@ import type {
   RouteStatus,
   RouteStopType,
   RouteSummary,
+  RouteVehicle,
 } from "@/types/rutas.types";
 
 function mapOrderItemStatus(status: string): RouteOrderItemStatus {
@@ -143,9 +144,8 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
     articleCount: data.article_count,
     pointCount: data.point_count,
     driverName: data.driver_name,
-    vehicleInfo: data.vehicle_info?.trim()
-      ? data.vehicle_info
-      : "—",
+    vehicleId: data.vehicle_id ?? null,
+    vehicle: mapVehicleApiToView(data.vehicle),
     orders,
     driver,
     assistants,
@@ -157,6 +157,27 @@ export function mapRouteDetailApiToView(data: RouteDetailApi): RouteDetailView {
 function formatRouteName(id: number, code?: string | null): string {
   if (code && code.trim().length > 0) return code;
   return String(id);
+}
+
+export function formatVehicleLabel(
+  brand: string,
+  model: string,
+  plate: string,
+): string {
+  return `${brand}/${model} ${plate}`;
+}
+
+function mapVehicleApiToView(
+  vehicle: RouteDetailApi["vehicle"],
+): RouteVehicle | null {
+  if (!vehicle) return null;
+  return {
+    id: vehicle.id,
+    brand: vehicle.brand,
+    model: vehicle.model,
+    plate: vehicle.plate,
+    label: formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.plate),
+  };
 }
 
 export function mapDriverCandidateToView(

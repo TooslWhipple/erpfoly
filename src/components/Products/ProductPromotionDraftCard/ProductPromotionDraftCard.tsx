@@ -1,6 +1,9 @@
+import { useRouter } from "next/router";
 import dayjs from "@/lib/dayjs";
 import { Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CATALOG_PROMOTIONS_UPDATE } from "@/lib/permissions";
 import type { ProductPromotionDraft } from "@/types/productos.types";
 import { DraftCardRoot } from "./ProductPromotionDraftCard.styledComponents";
 
@@ -32,6 +35,16 @@ export function formatPromotionDraftValidityRange(
   return `Del ${formatSegment(start)}`;
 }
 
+/** Persisted API id from a hydrated draft (`promo-123`). New drafts use `promo-<timestamp>-…`. */
+export function parseLinkedPromotionId(draftId: string): number | undefined {
+  const match = /^promo-(\d+)$/.exec(draftId);
+  if (!match) {
+    return undefined;
+  }
+  const promotionId = Number(match[1]);
+  return Number.isFinite(promotionId) && promotionId >= 1 ? promotionId : undefined;
+}
+
 export interface ProductPromotionDraftCardProps {
   draft: ProductPromotionDraft;
   handleEdit: () => void;
@@ -46,6 +59,8 @@ export function ProductPromotionDraftCard({
   readOnly = false,
 }: ProductPromotionDraftCardProps) {
   const theme = useTheme();
+  const router = useRouter();
+  const { hasPermission } = usePermissions();
 
   const {
     name,
@@ -54,6 +69,11 @@ export function ProductPromotionDraftCard({
   } = draft.payload;
 
   const rangeLabel = formatPromotionDraftValidityRange(startDate, endDate);
+  const affectedCount = draft.payload.productIds?.length ?? 1;
+  const isShared = affectedCount > 1;
+  const linkedPromotionId = parseLinkedPromotionId(draft.id);
+  const canOpenCatalog =
+    linkedPromotionId != null && hasPermission(CATALOG_PROMOTIONS_UPDATE);
 
   const creditTermLabels =
     draft.payload.creditTermOptionLabels?.filter(Boolean) ??
@@ -61,6 +81,13 @@ export function ProductPromotionDraftCard({
   const layawayTermLabels =
     draft.payload.layawayTermOptionLabels?.filter(Boolean) ??
     (draft.payload.layawayTermIds?.map((id) => String(id)) ?? []);
+
+  const handleOpenCatalog = () => {
+    if (linkedPromotionId == null) {
+      return;
+    }
+    void router.push(`/catalogos/promociones/${linkedPromotionId}`);
+  };
 
   return (
     <DraftCardRoot>
@@ -109,17 +136,30 @@ export function ProductPromotionDraftCard({
           ) : null
         }
 
-        {!readOnly && (
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="text"
-            onClick={handleEdit}>Editar</Button>
-          <Button
-            variant="text"
-            color="error"
-            onClick={handleDelete}>Eliminar</Button>
-        </Stack>
-        )}
+        {!readOnly && isShared ? (
+          <Typography variant="body2" color="text.secondary">
+            Esta promoción aplica a {affectedCount} productos. Edítela desde el
+            catálogo o desvincúlela de este artículo.
+          </Typography>
+        ) : null}
+
+        {!readOnly ? (
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {!isShared ? (
+              <Button variant="text" onClick={handleEdit}>
+                Editar
+              </Button>
+            ) : null}
+            {canOpenCatalog ? (
+              <Button variant="text" onClick={handleOpenCatalog}>
+                Ver en catálogo
+              </Button>
+            ) : null}
+            <Button variant="text" color="error" onClick={handleDelete}>
+              Desvincular
+            </Button>
+          </Stack>
+        ) : null}
       </Stack>
     </DraftCardRoot>
   );

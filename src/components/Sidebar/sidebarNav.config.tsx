@@ -10,7 +10,7 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown, Calculator, Receipt } from "lucide-react";
+import { BanknoteArrowDown, Calculator, LifeBuoy, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
@@ -34,6 +34,7 @@ import {
   CATALOG_SHIPPING_COSTS_READ,
   CATALOG_SUPPLIERS_READ,
   CATALOG_USERS_READ,
+  CATALOG_VEHICLES_READ,
   CREDIT_APPLICATIONS_READ,
   CUSTOMER_COLLECTION_READ,
   CUSTOMER_DELINQUENCY_READ,
@@ -44,6 +45,7 @@ import {
   INVENTORY_LIQUIDATIONS_READ,
   INVENTORY_READ,
   RECOVERY_SHEETS_READ,
+  PHYSICAL_INVENTORY_READ,
   MERCHANDISE_RECEPTION_READ,
   COSTEOS_READ,
   PAYABLE_INVOICES_READ,
@@ -83,12 +85,12 @@ export const NAV_ITEMS: NavItem[] = [
     requirement: { permission: CREDIT_APPLICATIONS_READ },
   },
   {
-    label: "Ventas",
+    label: "Órdenes de venta",
     path: "/ventas",
     icon: <ShoppingCart size={ICON_SIZE} />,
     requirement: { permission: SALES_READ },
     subItems: [
-      { label: "Todas las ventas", path: "/ventas", requirement: { permission: SALES_READ } },
+      { label: "Todas las órdenes", path: "/ventas", requirement: { permission: SALES_READ } },
       { label: "Ventas en rojo", path: "/ventas/en-rojo", requirement: { roles: [ROLE_CODES.ADMINISTRADOR] } },
     ],
   },
@@ -132,6 +134,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Inventario", path: "/inventario", requirement: { permission: INVENTORY_READ } },
       { label: "Mercancía dañada", path: "/inventario/mercancia-danada", requirement: { permission: DAMAGED_INVENTORY_READ } },
       { label: "Hojas de recuperación", path: "/inventario/hojas-recuperacion", requirement: { permission: RECOVERY_SHEETS_READ } },
+      { label: "Inventario físico", path: "/inventario-fisico", requirement: { permission: PHYSICAL_INVENTORY_READ } },
       { label: "Liquidaciones", path: "/inventario/liquidaciones", requirement: { permission: INVENTORY_LIQUIDATIONS_READ } },
       { label: "Recepción de mercancía", path: "/recepcion-mercancias", requirement: { permission: MERCHANDISE_RECEPTION_READ } },
       { label: "Costeos", path: "/costeos", requirement: { permission: COSTEOS_READ } },
@@ -207,6 +210,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Proveedores de reparaciones", path: "/catalogos/proveedores-reparaciones", requirement: { permission: CATALOG_REPAIR_SUPPLIERS_READ } },
       { label: "Zonas", path: "/catalogos/zonas", requirement: { permission: CATALOG_ZONES_READ } },
       { label: "Sucursales", path: "/catalogos/sucursales", requirement: { permission: CATALOG_BRANCHES_READ } },
+      { label: "Vehículos", path: "/catalogos/vehiculos", requirement: { permission: CATALOG_VEHICLES_READ } },
       { label: "Cajas", path: "/catalogos/cajas", requirement: { permission: CATALOG_CASH_REGISTERS_READ } },
       { label: "Proveedores", path: "/catalogos/proveedores", requirement: { permission: CATALOG_SUPPLIERS_READ } },
       { label: "Mensajes", path: "/catalogos/mensajes", requirement: { permission: CATALOG_MESSAGES_READ } },
@@ -218,5 +222,11 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Usuarios", path: "/catalogos/usuarios", requirement: { permission: CATALOG_USERS_READ } },
       { label: "Vendedores", path: "/catalogos/vendedores", requirement: { permission: CATALOG_SELLERS_READ } },
     ],
+  },
+  {
+    label: "Soporte técnico",
+    path: "https://docs.google.com/forms/d/e/1FAIpQLSdXU7YMTEM_upfKetX4Gpl8N127UtDld1YYxvG9pSArhz4Sfg/viewform",
+    icon: <LifeBuoy size={ICON_SIZE} />,
+    requirement: { allowAuthenticated: true },
   },
 ];

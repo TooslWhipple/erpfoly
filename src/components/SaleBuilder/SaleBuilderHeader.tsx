@@ -13,10 +13,10 @@ export interface SaleBuilderHeaderProps {
   title: string;
   onExit: () => void;
   isCajeroMode: boolean;
-  isLayaway: boolean;
   canProceed: boolean;
   showDiscountButton: boolean;
   discountDisabled: boolean;
+  operationPending: boolean;
   savePending: boolean;
   saveDisabled: boolean;
   registerPending: boolean;
@@ -25,16 +25,18 @@ export interface SaleBuilderHeaderProps {
   onDiscount: () => void;
   onRegisterSale: () => void;
   onProceedToCheckout: () => void;
+  proceedLabel?: string;
+  creditLineExceeded?: boolean;
 }
 
 export function SaleBuilderHeader({
   title,
   onExit,
   isCajeroMode,
-  isLayaway,
   canProceed,
   showDiscountButton,
   discountDisabled,
+  operationPending,
   savePending,
   saveDisabled,
   registerPending,
@@ -43,6 +45,8 @@ export function SaleBuilderHeader({
   onDiscount,
   onRegisterSale,
   onProceedToCheckout,
+  proceedLabel = "Proceder al cobro",
+  creditLineExceeded = false,
 }: SaleBuilderHeaderProps) {
   return (
     <PageHeader>
@@ -55,7 +59,12 @@ export function SaleBuilderHeader({
         overflow="hidden"
       >
         <InlineMobileMenuButton />
-        <IconButton size="small" onClick={onExit} aria-label="Cerrar">
+        <IconButton
+          size="small"
+          disabled={operationPending}
+          onClick={onExit}
+          aria-label="Cerrar"
+        >
           <X size={18} />
         </IconButton>
         <Typography
@@ -72,7 +81,7 @@ export function SaleBuilderHeader({
           <>
             <TouchButton
               variant="outlined"
-              disabled={saveDisabled || savePending}
+              disabled={saveDisabled || operationPending}
               onClick={onSave}
             >
               {savePending ? <CircularProgress size={16} /> : saveLabel}
@@ -80,7 +89,7 @@ export function SaleBuilderHeader({
             {showDiscountButton && (
               <TouchButton
                 variant="outlined"
-                disabled={discountDisabled}
+                disabled={discountDisabled || operationPending}
                 onClick={onDiscount}
               >
                 Solicitar descuento
@@ -88,12 +97,12 @@ export function SaleBuilderHeader({
             )}
           </>
         )}
-        {!isCajeroMode && !isLayaway ? (
+        {!isCajeroMode ? (
           <Tooltip title="Quedará pendiente de cobro en caja">
             <span>
               <TouchButton
                 variant="contained"
-                disabled={!canProceed || registerPending}
+                disabled={!canProceed || operationPending || creditLineExceeded}
                 onClick={onRegisterSale}
               >
                 {registerPending ? (
@@ -107,10 +116,10 @@ export function SaleBuilderHeader({
         ) : (
           <TouchButton
             variant="contained"
-            disabled={!canProceed}
+            disabled={!canProceed || operationPending}
             onClick={onProceedToCheckout}
           >
-            Proceder al cobro
+            {proceedLabel}
           </TouchButton>
         )}
       </HeaderActions>

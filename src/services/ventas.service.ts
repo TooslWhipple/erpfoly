@@ -1,6 +1,20 @@
-import { api, get, post, patch, del } from "@/lib/axios";
-import { unwrapOrThrow } from "@/lib/axios";
-import type { ApiResult, PaginatedRowsResponse } from "@/lib/axios";
+import axios from "axios";
+import {
+  api,
+  get,
+  post,
+  patch,
+  del,
+  getApiErrorMessage,
+  unwrapOrThrow,
+} from "@/lib/axios";
+import type {
+  ApiResult,
+  AxiosConfigWithSkipToast,
+  PaginatedRowsResponse,
+} from "@/lib/axios";
+import { throwIfEconomicRevisionRequired } from "@/utils/economicRevision";
+import type { EconomicRevisionPreview } from "@/utils/economicRevision";
 import { buildListUrl } from "@/lib/apiHelpers";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
@@ -21,6 +35,25 @@ import type {
 export type { SaleListItem, GetSalesParams };
 
 const BASE = "/pos";
+
+async function postPosSaleAction<T>(
+  url: string,
+  payload: unknown,
+): Promise<ApiResult<T>> {
+  try {
+    const config: AxiosConfigWithSkipToast = { skipGlobalErrorToast: true };
+    const { data } = await api.post<T>(url, payload, config);
+    return { data, error: null };
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throwIfEconomicRevisionRequired(err.response?.data);
+    }
+    return {
+      data: null,
+      error: { message: getApiErrorMessage(err) },
+    };
+  }
+}
 
 export type GetSalesResponse = PaginatedRowsResponse<SaleListItem>;
 
@@ -50,6 +83,7 @@ export async function getProductDetail(
   productId: number,
   currentBranchId?: number,
   includeOthers?: boolean,
+  purchaseTypeId?: number,
 ): Promise<ApiResult<ProductDetail>> {
   const params = new URLSearchParams();
   if (currentBranchId !== undefined) {
@@ -57,6 +91,9 @@ export async function getProductDetail(
   }
   if (includeOthers) {
     params.set("includeOthers", "true");
+  }
+  if (purchaseTypeId != null) {
+    params.set("purchaseTypeId", String(purchaseTypeId));
   }
   const query = params.toString();
   return get<ProductDetail>(
@@ -85,18 +122,29 @@ export async function getLayawayTerms(): Promise<ApiResult<LayawayTerm[]>> {
   return get<LayawayTerm[]>(`${BASE}/layaway-terms`);
 }
 
+export interface CheckoutTenderPayload {
+  payment_method: "CASH" | "CARD" | "TRANSFER";
+  amount: number;
+  received_amount?: number;
+  payment_terminal_id?: number;
+  reference?: string;
+}
+
 export interface CreateLayawayPayload {
   layaway_term_id: number;
   deposit_amount: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
+  economic_revision?: number;
+  accept_revision?: boolean;
 }
 
 export async function createLayaway(
   saleId: number,
   payload: CreateLayawayPayload,
 ): Promise<ApiResult<{ id: number; sale_id: number }>> {
-  return post<{ id: number; sale_id: number }>(
+  return postPosSaleAction<{ id: number; sale_id: number }>(
     `${BASE}/sales/${saleId}/layaways`,
     payload,
   );
@@ -155,6 +203,58 @@ export async function updateSaleClient(
   });
 }
 
+export type UpdateSalePurchaseTypeCheckout =
+  | { type: "CASH"; amountDue: number }
+  | {
+      type: "CREDIT";
+      minimumDownPayment: number;
+      financedAmount: number;
+      creditAvailable: number;
+      identityRequired: boolean;
+      identityVerified: boolean;
+      allowedTermMonths: number[];
+    }
+  | {
+      type: "LAYAWAY";
+      minimumDeposit: number;
+      maximumDeposit: number;
+    };
+
+export interface UpdateSalePurchaseTypeResult {
+  saleId: number;
+  status: string;
+  purchaseType: { id: number; code: string; name: string };
+  economicRevision: number;
+  discountInvalidated: boolean;
+  items: Array<{
+    id: number;
+    productId: number;
+    listPrice: number;
+    discountAmount: number;
+    totalAmount: number;
+    promotionId: number | null;
+    promotionCode: string | null;
+  }>;
+  totals: {
+    subtotal: number;
+    discountAmount: number;
+    shippingAmount: number;
+    loyaltyPointsValue: number;
+    totalAmount: number;
+  };
+  checkout: UpdateSalePurchaseTypeCheckout;
+}
+
+export async function updateSalePurchaseType(
+  saleId: number,
+  payload: { purchase_type_id: number; economic_revision: number },
+): Promise<ApiResult<UpdateSalePurchaseTypeResult>> {
+  return patch<UpdateSalePurchaseTypeResult>(
+    `${BASE}/sales/${saleId}/purchase-type`,
+    payload,
+  );
+}
+
 export async function updateSaleLayawayTerm(
   saleId: number,
   layawayTermId: number,
@@ -167,21 +267,19 @@ export async function updateSaleLayawayTerm(
 export interface AddSaleItemPayload {
   product_id: number;
   quantity: number;
-  unit_price: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function addSaleItem(
   saleId: number,
   payload: AddSaleItemPayload,
-): Promise<ApiResult<unknown>> {
-  return post<unknown>(`${BASE}/sales/${saleId}/items`, payload);
+): Promise<ApiResult<{ id: number }>> {
+  return post<{ id: number }>(`${BASE}/sales/${saleId}/items`, payload);
 }
 
 export interface UpdateSaleItemPayload {
   quantity?: number;
-  unit_price?: number;
-  discount_amount?: number;
+  inventory_sources?: Array<{ branch_id: number; quantity: number }>;
 }
 
 export async function updateSaleItem(
@@ -254,18 +352,37 @@ export async function confirmSalePayment(
   );
 }
 
+export async function checkoutSale(
+  saleId: number,
+  payload: SaleInvoiceBillingPayload & {
+    tenders: CheckoutTenderPayload[];
+    idempotency_key?: string;
+    economic_revision: number;
+    accept_revision?: boolean;
+  },
+): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
+    `${BASE}/sales/${saleId}/checkout`,
+    payload,
+  );
+}
+
 export interface ConfirmCreditSalePayload extends SaleInvoiceBillingPayload {
   term_months: number;
   down_payment: number;
   payment_method: "CASH" | "CARD";
   payment_terminal_id?: number;
+  tenders?: CheckoutTenderPayload[];
+  economic_revision: number;
+  loyalty_points?: number;
+  accept_revision?: boolean;
 }
 
 export async function confirmCreditSale(
   saleId: number,
   payload: ConfirmCreditSalePayload,
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
-  return post<{ id: number; folio: string; status: string }>(
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/confirm-credit`,
     payload,
   );
@@ -306,28 +423,32 @@ export async function validateSupervisor(
   username: string,
   password: string,
 ): Promise<ApiResult<ValidateSupervisorResult>> {
-  return post<ValidateSupervisorResult>("/auth/validate-supervisor", {
-    username,
-    password,
-  });
+  return post<ValidateSupervisorResult>(
+    "/auth/validate-supervisor",
+    { username, password },
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export async function skipSaleIdentityVerification(
   saleId: number,
   reason: string,
-  supervisorUserId: number,
+  credentials: { username: string; password: string },
 ): Promise<ApiResult<VerifySaleIdentityResult>> {
   return post<VerifySaleIdentityResult>(
     `${BASE}/sales/${saleId}/identity-verification/skip`,
-    { reason, supervisorUserId },
+    { reason, ...credentials },
+    { skipGlobalErrorToast: true },
   );
 }
 
 export async function registerSale(
   saleId: number,
+  payload?: { economic_revision?: number; accept_revision?: boolean },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
-  return post<{ id: number; folio: string; status: string }>(
+  return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/register`,
+    payload ?? {},
   );
 }
 
@@ -339,6 +460,33 @@ export async function getSaleDetail(
   saleId: number,
 ): Promise<ApiResult<SaleDetail>> {
   return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+}
+
+/** Persist catalog/promo prices onto the ticket without charging. */
+export async function acceptSaleEconomicRevision(
+  saleId: number,
+  expectedRevision: number,
+): Promise<ApiResult<EconomicRevisionPreview>> {
+  return post<EconomicRevisionPreview>(
+    `${BASE}/sales/${saleId}/checkout-preview`,
+    { expected_revision: expectedRevision, accept: true },
+    { skipGlobalErrorToast: true },
+  );
+}
+
+export type ClientLoyaltySummary = {
+  available: number;
+  used: number;
+  valueMxn: number;
+  nextExpiry: string | null;
+};
+
+export async function getClientLoyalty(
+  clientId: number,
+): Promise<ClientLoyaltySummary> {
+  return unwrapOrThrow(
+    await get<ClientLoyaltySummary>(`${BASE}/clients/${clientId}/loyalty`),
+  );
 }
 
 export async function getDeliveryAvailability(
@@ -367,6 +515,50 @@ export async function setDeliveryDate(
       `${BASE}/sales/${saleId}/delivery-date`,
       payload,
     ),
+  );
+}
+
+export type ShippingQuote = {
+  amount: number | null;
+  zoneId: number | null;
+  zoneName: string | null;
+  inZone: boolean;
+  coverage: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
+  economicRevision?: number;
+};
+
+export async function quoteShipping(
+  saleId: number,
+  payload: { address_id: number; dispatch_branch_id?: number },
+): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/sales/${saleId}/shipping-quote`, payload),
+  );
+}
+
+export type PricePreviewLine = {
+  productId: number;
+  originalPrice: number;
+  discountAmount: number;
+  totalAmount: number;
+};
+
+export async function previewCartPrices(payload: {
+  branch_id: number;
+  purchase_type_id: number;
+  items: Array<{ product_id: number; quantity: number }>;
+}): Promise<PricePreviewLine[]> {
+  return unwrapOrThrow(
+    await post<PricePreviewLine[]>(`${BASE}/price-preview`, payload),
+  );
+}
+
+export async function previewShippingQuote(payload: {
+  address_id: number;
+  dispatch_branch_id?: number;
+}): Promise<ShippingQuote> {
+  return unwrapOrThrow(
+    await post<ShippingQuote>(`${BASE}/shipping-quote`, payload),
   );
 }
 

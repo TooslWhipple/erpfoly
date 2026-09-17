@@ -15,20 +15,28 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { ShippingMunicipalityAutocomplete } from "@/components";
+import { Delete as DeleteIcon, Edit as EditIcon } from "@mui/icons-material";
+import { ConfirmModal, ShippingMunicipalityAutocomplete } from "@/components";
 import {
-  DividerSpace,
   LeftPanel,
   MainContent,
-  PriceInput,
   RightPanel,
   SectionSubtitle,
   SectionTitle,
-  ZoneColor,
+  ZoneActionButton,
+  ZoneActionButtonDanger,
+  ZoneActionGroup,
+  ZoneCard,
+  ZoneCardBody,
+  ZoneCardHeader,
+  ZoneColorPicker,
+  ZoneEmptyState,
+  ZoneField,
+  ZoneFieldLabel,
   ZoneHeader,
-  ZoneItem,
   ZoneList,
   ZoneName,
+  ZonePriceInput,
 } from "@/styles/catalogos/costos-envio.styles";
 import {
   getConfiguredMunicipalityShippingCatalog,
@@ -100,8 +108,23 @@ function cloneConfig(
 ): MunicipalityShippingConfig {
   return JSON.parse(JSON.stringify(config)) as MunicipalityShippingConfig;
 }
+function getZoneKey(zone: ShippingZone, index: number): string {
+  return zone.id != null ? String(zone.id) : `new-${index}`;
+}
 function clonePolygon(polygon: GeoJsonPolygon): GeoJsonPolygon {
   return JSON.parse(JSON.stringify(polygon)) as GeoJsonPolygon;
+}
+function hydrateZonePrices(
+  config: MunicipalityShippingConfig,
+): MunicipalityShippingConfig {
+  const fallbackPrice = config.priceInZone;
+  return {
+    ...config,
+    zones: config.zones.map((zone) => ({
+      ...zone,
+      price: zone.price ?? fallbackPrice,
+    })),
+  };
 }
 export default function CostosEnvioPage() {
   const queryClient = useQueryClient();
@@ -112,8 +135,11 @@ export default function CostosEnvioPage() {
     useState<MunicipalityShippingConfig | null>(null);
   const [draftConfig, setDraftConfig] =
     useState<MunicipalityShippingConfig | null>(null);
-  const [priceInZoneInput, setPriceInZoneInput] = useState("0.00");
-  const [priceOutOfZoneInput, setPriceOutOfZoneInput] = useState("0.00");
+  const [zonePriceInputs, setZonePriceInputs] = useState<Record<string, string>>(
+    {},
+  );
+  const [deleteConfirmZone, setDeleteConfirmZone] =
+    useState<ShippingZone | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<number | undefined>(
     undefined,
   );
@@ -171,14 +197,20 @@ export default function CostosEnvioPage() {
     if (!configQuery.data) return;
     if (municipalityId == null) return;
     if (configQuery.data.municipalityId !== municipalityId) return;
-    const normalized = cloneConfig(configQuery.data);
+    const normalized = hydrateZonePrices(cloneConfig(configQuery.data));
     if (normalized.zones.length === 0) {
       normalized.mapCenter = null;
     }
     setServerSnapshot(cloneConfig(normalized));
     setDraftConfig(cloneConfig(normalized));
-    setPriceInZoneInput(formatCurrency(normalized.priceInZone));
-    setPriceOutOfZoneInput(formatCurrency(normalized.priceOutOfZone));
+    setZonePriceInputs(
+      Object.fromEntries(
+        normalized.zones.map((zone, index) => [
+          getZoneKey(zone, index),
+          formatCurrency(zone.price),
+        ]),
+      ),
+    );
     editingZoneSnapshotRef.current = null;
     setEditMode({
       type: "idle",
@@ -247,7 +279,7 @@ export default function CostosEnvioPage() {
       const result = await upsertMunicipalityShippingConfig(
         payload.municipalityId,
         {
-          priceInZone: payload.priceInZone,
+          priceInZone: 0,
           priceOutOfZone: payload.priceOutOfZone,
           mapCenter: payload.mapCenter ?? undefined,
           mapDefaultZoom: payload.mapDefaultZoom,
@@ -277,39 +309,56 @@ export default function CostosEnvioPage() {
       });
     },
   });
-  const handlePriceChange = useCallback(
-    (field: "priceInZone" | "priceOutOfZone", value: string) => {
+  const handleZonePriceChange = useCallback(
+    (zoneKey: string, zoneId: number | undefined, value: string) => {
       const sanitized = sanitizePriceInput(value);
-      if (field === "priceInZone") {
-        setPriceInZoneInput(sanitized);
-      } else {
-        setPriceOutOfZoneInput(sanitized);
-      }
+      setZonePriceInputs((prev) => ({
+        ...prev,
+        [zoneKey]: sanitized,
+      }));
       setDraftConfig((prev) =>
         prev == null
           ? prev
           : {
               ...prev,
-              [field]: Math.max(0, parseCurrencyInput(sanitized)),
+              zones: prev.zones.map((zone) =>
+                zone.id === zoneId || (zoneId == null && zone.id == null)
+                  ? {
+                      ...zone,
+                      price: Math.max(0, parseCurrencyInput(sanitized)),
+                    }
+                  : zone,
+              ),
             },
       );
     },
     [],
   );
-  const handlePriceBlur = useCallback(
-    (field: "priceInZone" | "priceOutOfZone") => {
+  const handleZonePriceBlur = useCallback(
+    (zoneKey: string, zoneId: number | undefined) => {
       setDraftConfig((prev) => {
         if (!prev) return prev;
-        const nextValue = Math.max(0, prev[field]);
+        const zone = prev.zones.find(
+          (item) =>
+            item.id === zoneId || (zoneId == null && item.id == null),
+        );
+        if (!zone) return prev;
+        const nextValue = Math.max(0, zone.price);
         const formatted = formatCurrency(nextValue);
-        if (field === "priceInZone") {
-          setPriceInZoneInput(formatted);
-        } else {
-          setPriceOutOfZoneInput(formatted);
-        }
+        setZonePriceInputs((inputs) => ({
+          ...inputs,
+          [zoneKey]: formatted,
+        }));
         return {
           ...prev,
-          [field]: nextValue,
+          zones: prev.zones.map((item) =>
+            item.id === zoneId || (zoneId == null && item.id == null)
+              ? {
+                  ...item,
+                  price: nextValue,
+                }
+              : item,
+          ),
         };
       });
     },
@@ -359,11 +408,17 @@ export default function CostosEnvioPage() {
       name: `Zona ${draftConfig.zones.length + 1}`,
       color: nextColor,
       sortOrder: draftConfig.zones.length,
+      price: 0,
       polygon: {
         type: "Polygon",
         coordinates: [[]],
       },
     };
+    const nextKey = getZoneKey(nextZone, draftConfig.zones.length);
+    setZonePriceInputs((prev) => ({
+      ...prev,
+      [nextKey]: formatCurrency(0),
+    }));
     setDraftConfig({
       ...draftConfig,
       zones: [...draftConfig.zones, nextZone],
@@ -443,19 +498,40 @@ export default function CostosEnvioPage() {
       type: "idle",
     });
     if (isCreating && tempId != null) {
+      const draftIndex = draftConfig.zones.findIndex((zone) => zone.id == null);
+      if (draftIndex >= 0) {
+        const oldKey = getZoneKey(draftConfig.zones[draftIndex], draftIndex);
+        const newKey = String(tempId);
+        setZonePriceInputs((prev) => {
+          const next = { ...prev };
+          if (oldKey in next) {
+            next[newKey] = next[oldKey];
+            delete next[oldKey];
+          }
+          return next;
+        });
+      }
       setSelectedZoneId(tempId);
     }
   };
   const handleCancelZoneMapEdit = () => {
     if (editMode.type === "creating") {
-      setDraftConfig((prev) =>
-        prev == null
-          ? prev
-          : {
-              ...prev,
-              zones: prev.zones.filter((zone) => zone.id != null),
-            },
-      );
+      setDraftConfig((prev) => {
+        if (!prev) return prev;
+        const draftIndex = prev.zones.findIndex((zone) => zone.id == null);
+        if (draftIndex >= 0) {
+          const draftKey = getZoneKey(prev.zones[draftIndex], draftIndex);
+          setZonePriceInputs((inputs) => {
+            const next = { ...inputs };
+            delete next[draftKey];
+            return next;
+          });
+        }
+        return {
+          ...prev,
+          zones: prev.zones.filter((zone) => zone.id != null),
+        };
+      });
     } else if (editMode.type === "editing" && editingZoneSnapshotRef.current) {
       const snapshot = editingZoneSnapshotRef.current;
       setDraftConfig((prev) =>
@@ -495,6 +571,28 @@ export default function CostosEnvioPage() {
         severity: "error",
         message:
           "No se permite solapar zonas. Ajusta los vértices antes de guardar.",
+      });
+      return;
+    }
+    const zoneWithoutPrice = draftConfig.zones.find(
+      (zone) => !Number.isFinite(zone.price) || zone.price < 0,
+    );
+    if (zoneWithoutPrice) {
+      setSnackbar({
+        open: true,
+        severity: "error",
+        message: `La zona "${zoneWithoutPrice.name}" debe tener un costo de envío válido.`,
+      });
+      return;
+    }
+    const zoneWithoutPolygon = draftConfig.zones.find(
+      (zone) => zoneToMapPath(zone).length < 3,
+    );
+    if (zoneWithoutPolygon) {
+      setSnackbar({
+        open: true,
+        severity: "error",
+        message: `La zona "${zoneWithoutPolygon.name}" debe tener un polígono válido con al menos 3 puntos.`,
       });
       return;
     }
@@ -556,6 +654,38 @@ export default function CostosEnvioPage() {
       zoneId: zone.id,
     });
     setSelectedZoneId(zone.id);
+  };
+  const handleRequestDeleteZone = (zone: ShippingZone) => {
+    if (zone.id == null) return;
+    setDeleteConfirmZone(zone);
+  };
+  const handleConfirmDeleteZone = () => {
+    if (!deleteConfirmZone || deleteConfirmZone.id == null) return;
+    const zoneId = deleteConfirmZone.id;
+    setDraftConfig((prev) =>
+      prev == null
+        ? prev
+        : {
+            ...prev,
+            zones: prev.zones.filter((zone) => zone.id !== zoneId),
+          },
+    );
+    setZonePriceInputs((prev) => {
+      const next = { ...prev };
+      delete next[String(zoneId)];
+      return next;
+    });
+    if (
+      editMode.type === "editing" &&
+      editMode.zoneId === zoneId
+    ) {
+      editingZoneSnapshotRef.current = null;
+      setEditMode({ type: "idle" });
+    }
+    if (selectedZoneId === zoneId) {
+      setSelectedZoneId(undefined);
+    }
+    setDeleteConfirmZone(null);
   };
   const resolveConfirmLeave = (allow: boolean) => {
     setConfirmLeaveOpen(false);
@@ -624,48 +754,14 @@ export default function CostosEnvioPage() {
             </SectionSubtitle>
           ) : (
             <>
-              <SectionTitle>Configuración de costos de envío</SectionTitle>
-              <SectionSubtitle>
-                Define los costos de envío por municipio para dentro y fuera de
-                zona.
-              </SectionSubtitle>
-
-              <PriceInput
-                size="small"
-                label="Costo dentro de zona"
-                value={priceInZoneInput}
-                disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                onChange={(event) =>
-                  handlePriceChange("priceInZone", event.target.value)
-                }
-                onBlur={() => handlePriceBlur("priceInZone")}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">$</InputAdornment>
-                  ),
-                }}
-              />
-
-              <PriceInput
-                size="small"
-                label="Costo fuera de zona"
-                value={priceOutOfZoneInput}
-                disabled={!canUpdateShippingCosts || isMapZoneEditing}
-                onChange={(event) =>
-                  handlePriceChange("priceOutOfZone", event.target.value)
-                }
-                onBlur={() => handlePriceBlur("priceOutOfZone")}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">$</InputAdornment>
-                  ),
-                }}
-              />
-
-              <DividerSpace />
-
               <ZoneHeader>
-                <SectionTitle>Configuración de zonas</SectionTitle>
+                <Box>
+                  <SectionTitle>Configuración de zonas</SectionTitle>
+                  <SectionSubtitle>
+                    Define el polígono y el costo de envío para cada zona del
+                    municipio.
+                  </SectionSubtitle>
+                </Box>
                 <Button
                   variant="outlined"
                   size="small"
@@ -677,52 +773,119 @@ export default function CostosEnvioPage() {
               </ZoneHeader>
 
               <ZoneList>
-                {draftConfig.zones.map((zone, index) => (
-                  <ZoneItem key={zone.id ?? `new-${index}`}>
-                    <ZoneColor
-                      style={{
-                        backgroundColor: zone.color,
-                      }}
-                    />
-                    <ZoneName
-                      size="small"
-                      value={zone.name}
-                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                      onChange={(event) =>
-                        handleZoneChange(zone.id, {
-                          name: event.target.value,
-                        })
-                      }
-                      placeholder={`Zona ${index + 1}`}
-                    />
-                    <PriceInput
-                      size="small"
-                      type="color"
-                      value={zone.color}
-                      disabled={!canUpdateShippingCosts || isZoneMetadataLocked}
-                      onChange={(event) =>
-                        handleZoneChange(zone.id, {
-                          color: event.target.value,
-                        })
-                      }
-                      sx={{
-                        width: 46,
-                      }}
-                    />
-                    <Button
-                      variant="text"
-                      size="small"
-                      disabled={
-                        !canUpdateShippingCosts ||
-                        isMapZoneEditing ||
-                        zone.id == null
-                      }
-                      onClick={() => handleStartZoneEdit(zone)}
+                {draftConfig.zones.length === 0 ? (
+                  <ZoneEmptyState>
+                    <Typography variant="body2" fontWeight={600}>
+                      Sin zonas configuradas
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Pulsa &quot;Nueva&quot; para trazar la primera zona en el mapa.
+                    </Typography>
+                  </ZoneEmptyState>
+                ) : null}
+                {draftConfig.zones.map((zone, index) => {
+                  const zoneKey = getZoneKey(zone, index);
+                  const isZoneSelected =
+                    zone.id != null &&
+                    (selectedZoneId === zone.id ||
+                      (editMode.type === "editing" &&
+                        editMode.zoneId === zone.id));
+                  return (
+                    <ZoneCard
+                      key={zone.id ?? `new-${index}`}
+                      selected={isZoneSelected}
                     >
-                      Editar
-                    </Button>
-                  </ZoneItem>
-                ))}
+                      <ZoneCardHeader>
+                        <ZoneName
+                          size="small"
+                          placeholder={`Zona ${index + 1}`}
+                          value={zone.name}
+                          disabled={
+                            !canUpdateShippingCosts || isZoneMetadataLocked
+                          }
+                          onChange={(event) =>
+                            handleZoneChange(zone.id, {
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                        <ZoneActionGroup>
+                          <ZoneActionButton
+                            size="small"
+                            aria-label="Editar zona"
+                            disabled={
+                              !canUpdateShippingCosts ||
+                              isMapZoneEditing ||
+                              zone.id == null
+                            }
+                            onClick={() => handleStartZoneEdit(zone)}
+                          >
+                            <EditIcon sx={{ fontSize: 18 }} />
+                          </ZoneActionButton>
+                          <ZoneActionButtonDanger
+                            size="small"
+                            aria-label="Eliminar zona"
+                            disabled={
+                              !canUpdateShippingCosts ||
+                              isMapZoneEditing ||
+                              zone.id == null
+                            }
+                            onClick={() => handleRequestDeleteZone(zone)}
+                          >
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </ZoneActionButtonDanger>
+                        </ZoneActionGroup>
+                      </ZoneCardHeader>
+                      <ZoneCardBody>
+                        <ZoneField>
+                          <ZoneFieldLabel>Costo de envío</ZoneFieldLabel>
+                          <ZonePriceInput
+                            size="small"
+                            placeholder="0.00"
+                            value={
+                              zonePriceInputs[zoneKey] ??
+                              formatCurrency(zone.price)
+                            }
+                            disabled={
+                              !canUpdateShippingCosts || isZoneMetadataLocked
+                            }
+                            onChange={(event) =>
+                              handleZonePriceChange(
+                                zoneKey,
+                                zone.id,
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() => handleZonePriceBlur(zoneKey, zone.id)}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">$</InputAdornment>
+                              ),
+                            }}
+                          />
+                        </ZoneField>
+                        <ZoneField>
+                          <ZoneFieldLabel>Color</ZoneFieldLabel>
+                          <ZoneColorPicker>
+                            <input
+                              type="color"
+                              value={zone.color}
+                              disabled={
+                                !canUpdateShippingCosts || isZoneMetadataLocked
+                              }
+                              aria-label="Color de la zona"
+                              onChange={(event) =>
+                                handleZoneChange(zone.id, {
+                                  color: event.target.value,
+                                })
+                              }
+                            />
+                          </ZoneColorPicker>
+                        </ZoneField>
+                      </ZoneCardBody>
+                    </ZoneCard>
+                  );
+                })}
               </ZoneList>
 
               {isMapZoneEditing ? (
@@ -830,6 +993,16 @@ export default function CostosEnvioPage() {
           )}
         </RightPanel>
       </MainContent>
+
+      <ConfirmModal
+        open={deleteConfirmZone != null}
+        onClose={() => setDeleteConfirmZone(null)}
+        onConfirm={handleConfirmDeleteZone}
+        title="Eliminar zona"
+        description="¿Estás seguro de eliminar esta zona?"
+        confirmLabel="Eliminar"
+        type="error"
+      />
 
       <Dialog
         open={confirmLeaveOpen}

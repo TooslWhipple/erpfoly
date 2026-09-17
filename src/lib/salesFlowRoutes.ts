@@ -4,6 +4,10 @@ export function isSalesFlowRoute(pathname: string): boolean {
   return (
     pathname === "/ventas/nueva" ||
     pathname === "/ventas/[id]" ||
-    pathname === "/cotizaciones/[id]"
+    pathname === "/cotizaciones/[id]" ||
+    pathname === "/cajas" ||
+    pathname === "/cajas/busqueda" ||
+    pathname === "/cajas/historial" ||
+    pathname === "/solicitudes-descuento/[id]"
   );
 }

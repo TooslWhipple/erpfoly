@@ -10,7 +10,7 @@ interface PaymentFormCellProps {
 
 export function PaymentFormCell({ paymentForm }: PaymentFormCellProps) {
   return (
-    <Typography variant="body2">
+    <Typography variant="body2" noWrap>
       {getPaymentFormLabel(paymentForm)}
     </Typography>
   );

@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Divider,
   IconButton,
   MenuItem,
@@ -18,7 +17,6 @@ import {
 import { useTheme } from "@mui/material/styles";
 import {
   Archive,
-  AlertTriangle,
   Calendar,
   CheckCircle,
   Clock,
@@ -37,6 +35,8 @@ import {
   DetailHeader,
   DetailPageShell,
   InvoiceActionsGrid,
+  invoiceDownloadButtonSx,
+  SaleSuccessAlert,
 } from "@/styles/ventas/detalle.styles";
 import dayjs from "@/lib/dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,7 +60,15 @@ import { useInvoicingConfigStore } from "@/store/useInvoicingConfigStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
-import { SaleBuilder } from "@/components/SaleBuilder";
+import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
+import { formatCreditInstallmentPlan } from "@/utils/creditInstallmentPlan";
+import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
+import { usePermissions } from "@/hooks/usePermissions";
+import { CASH_REGISTERS_READ } from "@/lib/permissions";
+import {
+  CASH_REGISTER_SESSION_SUMMARY_KEY,
+  invalidateCashRegisterQueries,
+} from "@/lib/cashRegisterQueries";
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -117,6 +125,8 @@ export default function VentaDetalle() {
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
+  const { hasPermission } = usePermissions();
+  const canAccessCashRegisters = hasPermission(CASH_REGISTERS_READ);
 
   const { data: invoicingConfig } = useQuery({
     queryKey: ["invoicingConfig"],
@@ -140,6 +150,8 @@ export default function VentaDetalle() {
       setDownloadingType(null);
     }
   };
+
+  const fromCajas = isCashRegisterReturnQuery(router.query);
 
   const { data: sale, isLoading, isError } = useQuery({
     queryKey: ["venta-detail", saleId],
@@ -260,15 +272,17 @@ export default function VentaDetalle() {
   const [cancelLayawayModalOpen, setCancelLayawayModalOpen] = useState(false);
 
   const isLayawayCardPayment = layawayMethod === "CARD";
+  const needsCashierSession =
+    fromCajas || Boolean(sale?.layaway && sale.layaway.status === "ACTIVE");
 
-  // La sucursal desde la que se está cobrando el abono (caja activa del
-  // cajero), no la sucursal original del apartado — pueden diferir.
   const activeSessionQuery = useQuery({
-    queryKey: ["cash-register-session-summary"],
+    queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
     queryFn: () => getSessionSummary(),
-    enabled: isLayawayCardPayment,
+    enabled: needsCashierSession,
+    retry: false,
     staleTime: 60_000,
   });
+  const hasOpenCashierSession = activeSessionQuery.data?.status === "OPEN";
   const activeBranchId = activeSessionQuery.data?.branch_id ?? null;
 
   const layawayTerminalsQuery = useQuery({
@@ -291,6 +305,9 @@ export default function VentaDetalle() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      if (isCashRegisterReturnQuery(router.query)) {
+        invalidateCashRegisterQueries(queryClient);
+      }
       snackbar.showSuccess("Abono registrado");
       setLayawayAmount("");
     },
@@ -326,10 +343,18 @@ export default function VentaDetalle() {
     onError: (err: Error) => snackbar.showError(err.message),
   });
 
-  const primaryCoords = useMemo(() => {
-    if (!sale?.client?.primaryAddress) return null;
-    const { latitude, longitude } = sale.client.primaryAddress;
-    if (!latitude || !longitude) return null;
+  const deliveryAddressCoords = useMemo(() => {
+    if (sale?.deliveryType !== "ADDRESS") return null;
+    const hasPersistedDeliveryCoords =
+      sale.deliveryAddressLatitude != null &&
+      sale.deliveryAddressLongitude != null;
+    const latitude = hasPersistedDeliveryCoords
+      ? sale.deliveryAddressLatitude
+      : sale.client?.primaryAddress?.latitude;
+    const longitude = hasPersistedDeliveryCoords
+      ? sale.deliveryAddressLongitude
+      : sale.client?.primaryAddress?.longitude;
+    if (latitude == null || longitude == null) return null;
     const lat = Number(latitude);
     const lng = Number(longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -338,11 +363,11 @@ export default function VentaDetalle() {
 
   if (isLoading) {
     return (
-      <DetailPageShell sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} mb={3}>
+      <DetailPageShell>
+        <DetailHeader>
           <Skeleton variant="circular" width={32} height={32} />
           <Skeleton variant="text" width={220} height={36} />
-        </Stack>
+        </DetailHeader>
         <DetailGrid>
           <Skeleton variant="rounded" height={200} />
           <Skeleton variant="rounded" height={300} />
@@ -353,25 +378,43 @@ export default function VentaDetalle() {
 
   if (isError || !sale) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">No se pudo cargar la venta.</Alert>
-      </Box>
+      <DetailPageShell>
+        <DetailHeader>
+          <InlineMobileMenuButton />
+          <Typography variant="h6" fontWeight={700}>
+            Detalle de la venta
+          </Typography>
+        </DetailHeader>
+        <DetailGrid>
+          <Alert severity="error">No se pudo cargar la venta.</Alert>
+        </DetailGrid>
+      </DetailPageShell>
     );
   }
 
-  // Venta ya registrada por el vendedor (contado/crédito) o apartado activo
-  // aún en cobro: el cajero la completa en SaleBuilder modo cajero (carrito
-  // bloqueado, solo la sección de cobro es interactiva) en vez de la vista
-  // de solo-detalle de abajo.
-  const isPendingCashierWork =
-    sale.status === "PENDING_CASHIER" ||
-    (sale.status === "PENDING_PAYMENT" && sale.layaway != null);
+  const isPendingCashierWork = sale.status === "PENDING_CASHIER";
+  const canCollectFromCaja =
+    fromCajas && hasOpenCashierSession && isPendingCashierWork;
 
-  if (isPendingCashierWork) {
+  if (fromCajas && isPendingCashierWork && activeSessionQuery.isLoading) {
+    return (
+      <DetailPageShell>
+        <DetailHeader>
+          <Skeleton variant="circular" width={32} height={32} />
+          <Skeleton variant="text" width={220} height={36} />
+        </DetailHeader>
+        <DetailGrid>
+          <Skeleton variant="rounded" height={200} />
+        </DetailGrid>
+      </DetailPageShell>
+    );
+  }
+
+  if (canCollectFromCaja) {
     return (
       <SaleBuilder
         resumeSaleId={saleId}
-        onExit={() => void router.push("/ventas")}
+        onExit={() => void router.push("/cajas")}
         mode="cajero"
       />
     );
@@ -389,25 +432,25 @@ export default function VentaDetalle() {
   const isPendingLayaway = sale.layaway?.status === "ACTIVE";
   const isSaleCancelled = sale.status === "CANCELLED";
   const isDraftSale = sale.status === "DRAFT";
+  const creditInstallmentPlan = sale.credit
+    ? formatCreditInstallmentPlan(
+        sale.credit.installments ?? [],
+        formatCurrency,
+      )
+    : null;
 
   return (
-    <DetailPageShell sx={{ p: { xs: 2, md: 3 } }}>
+    <DetailPageShell>
       <DetailHeader>
         <InlineMobileMenuButton />
         <IconButton
-          size="medium"
-          onClick={() => router.push("/ventas")}
-          aria-label="Volver a ventas"
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1.5,
-            bgcolor: "background.paper",
-          }}
+          size="small"
+          onClick={() => router.push(fromCajas ? "/cajas" : "/ventas")}
+          aria-label={fromCajas ? "Volver a cajas" : "Volver a ventas"}
         >
           <X size={18} />
         </IconButton>
-        <Typography variant="h5" fontWeight={700}>
+        <Typography variant="h6" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
           Detalle de la venta
         </Typography>
         {isSaleCancelled && (
@@ -415,27 +458,40 @@ export default function VentaDetalle() {
         )}
       </DetailHeader>
 
-      <Divider sx={{ mb: 3, borderColor: "divider" }} />
-
       <DetailGrid>
         <Box>
-          {isNew && (
+          {isPendingCashierWork && !fromCajas && (
             <Alert
-              icon={<CheckCircle size={18} color={theme.palette.success.main} />}
+              severity="info"
+              sx={{ mb: 2 }}
+              action={
+                canAccessCashRegisters ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => void router.push("/cajas")}
+                  >
+                    Ir a caja
+                  </Button>
+                ) : undefined
+              }
+            >
+              Esta venta está pendiente de cobro en caja.
+            </Alert>
+          )}
+          {fromCajas && isPendingCashierWork && !hasOpenCashierSession && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Abre tu caja para procesar el cobro de esta venta.
+            </Alert>
+          )}
+          {isNew && (
+            <SaleSuccessAlert
               severity="success"
-              sx={{
-                mb: 3,
-                fontWeight: 500,
-                bgcolor: "success.light",
-                borderRadius: 2,
-                py: 1,
-                px: 1.5,
-                color: "text.primary",
-                "& .MuiAlert-icon": { color: "success.main", mr: 1 },
-              }}
+              variant="outlined"
+              icon={<CheckCircle size={18} aria-hidden />}
             >
               Venta registrada con éxito
-            </Alert>
+            </SaleSuccessAlert>
           )}
           <Card
             elevation={0}
@@ -540,14 +596,20 @@ export default function VentaDetalle() {
                   </Box>
                   <Box>
                     <Typography variant="body1" fontWeight={600}>
-                      {sale.deliveryType === 'BRANCH' ? 'Entrega en sucursal' : 'Entrega a domicilio'}
+                      {sale.deliveryType === 'BRANCH'
+                        ? 'Entrega en sucursal'
+                        : sale.deliveryType === 'ADDRESS'
+                          ? 'Entrega a domicilio'
+                          : 'Entrega'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {sale.deliveryType === 'BRANCH'
                         ? sale.deliveryBranchName ?? 'Sucursal no especificada'
-                        : sale.deliveryAddressFormatted ??
-                        sale.client?.primaryAddress?.formatted ??
-                        'Dirección del cliente'}
+                        : sale.deliveryType === 'ADDRESS'
+                          ? sale.deliveryAddressFormatted ??
+                            sale.client?.primaryAddress?.formatted ??
+                            'Dirección no especificada'
+                          : 'Tipo de entrega no definido'}
                     </Typography>
                     {sale.estimatedDeliveryDate && sale.deliveryStatus !== 'DELIVERED' && (
                       <Typography variant="body2" color="text.secondary">
@@ -619,13 +681,10 @@ export default function VentaDetalle() {
                           Cantidad: {item.quantity}
                         </Typography>
                         {item.backorderedQuantity > 0 && (
-                          <Chip
-                            icon={<AlertTriangle size={12} />}
-                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          <BackorderChip
+                            backorderedQuantity={item.backorderedQuantity}
+                            quantity={item.quantity}
+                            sx={{ mt: 0.5 }}
                           />
                         )}
                       </Box>
@@ -639,11 +698,11 @@ export default function VentaDetalle() {
                               border: "1px solid",
                               borderColor: "primary.main",
                               borderRadius: 1.5,
-                              px: 1.5,
-                              py: 0.75,
+                              px: 2,
+                              py: 1,
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: 1.25,
                               cursor: "pointer",
                               color: "primary.main",
                               fontWeight: 500,
@@ -697,7 +756,7 @@ export default function VentaDetalle() {
                     startIcon={<FileCode size={15} />}
                     disabled={downloadingType === "xml"}
                     onClick={() => handleDownloadInvoice("xml")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     XML
                   </Button>
@@ -709,7 +768,7 @@ export default function VentaDetalle() {
                     startIcon={<FileText size={15} />}
                     disabled={downloadingType === "pdf"}
                     onClick={() => handleDownloadInvoice("pdf")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     PDF
                   </Button>
@@ -721,7 +780,7 @@ export default function VentaDetalle() {
                     startIcon={<Archive size={15} />}
                     disabled={downloadingType === "zip"}
                     onClick={() => handleDownloadInvoice("zip")}
-                    sx={{ minHeight: 44 }}
+                    sx={invoiceDownloadButtonSx}
                   >
                     ZIP
                   </Button>
@@ -740,7 +799,7 @@ export default function VentaDetalle() {
             >
               <CardContent sx={{ p: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                  Artículos [{sale.items.length}]
+                  {`Artículos [${sale.items.reduce((sum, item) => sum + item.quantity, 0)}]`}
                 </Typography>
                 <Stack spacing={1.5}>
                   {sale.items.map((item) => (
@@ -789,13 +848,10 @@ export default function VentaDetalle() {
                           Cantidad: {item.quantity}
                         </Typography>
                         {item.backorderedQuantity > 0 && (
-                          <Chip
-                            icon={<AlertTriangle size={12} />}
-                            label={`${item.backorderedQuantity} de ${item.quantity} en backorder`}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            sx={{ mt: 0.5, height: 22, fontSize: "0.6875rem" }}
+                          <BackorderChip
+                            backorderedQuantity={item.backorderedQuantity}
+                            quantity={item.quantity}
+                            sx={{ mt: 0.5 }}
                           />
                         )}
                       </Box>
@@ -871,16 +927,40 @@ export default function VentaDetalle() {
                           {formatCurrency(sale.credit.downPayment)}
                         </Typography>
                       </Stack>
-                      <Box sx={{ bgcolor: "grey.100", borderRadius: 1, px: 2, py: 1 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                          Monto a financiar
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatCurrency(sale.credit.financedAmount)}
+                        </Typography>
+                      </Stack>
+                      {creditInstallmentPlan && (
+                        <Box sx={{ bgcolor: "grey.100", borderRadius: 1, px: 2, py: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            {sale.credit.termMonths} Meses de
+                            {creditInstallmentPlan}
                           </Typography>
-                          <Typography variant="body2" fontWeight={600}>
-                            {formatCurrency(sale.credit.installmentAmount)}
+                        </Box>
+                      )}
+                      {(sale.loyaltyPointsEarned ?? 0) > 0 ? (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            Folypuntos generados
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="success.dark">
+                            +{(sale.loyaltyPointsEarned ?? 0).toLocaleString("es-MX")} pts
                           </Typography>
                         </Stack>
-                      </Box>
+                      ) : sale.credit.status !== "PAID" ? (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            Folypuntos al liquidar
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="success.dark">
+                            +{(sale.loyaltyPointsToEarn ?? 0).toLocaleString("es-MX")} pts
+                          </Typography>
+                        </Stack>
+                      ) : null}
                     </>
                   )}
                 </Stack>
@@ -975,7 +1055,7 @@ export default function VentaDetalle() {
                     </Box>
                   )}
 
-                  {sale.layaway.status === "ACTIVE" && (
+                  {sale.layaway.status === "ACTIVE" && hasOpenCashierSession && (
                     <>
                       <Divider sx={{ mb: 2 }} />
                       <Typography variant="caption" color="text.secondary" display="block" mb={1}>
@@ -1122,12 +1202,14 @@ export default function VentaDetalle() {
                     </Typography>
                   )}
 
-                  {sale.client.primaryAddress && (
+                  {sale.deliveryType === "ADDRESS" &&
+                    (sale.deliveryAddressFormatted ||
+                      sale.client.primaryAddress) && (
                     <Box mt={2}>
-                      {primaryCoords && googleMapsBrowserApiKey ? (
+                      {deliveryAddressCoords && googleMapsBrowserApiKey ? (
                         <Box sx={{ mb: 1.5 }}>
                           <StaticLocationMap
-                            coords={primaryCoords}
+                            coords={deliveryAddressCoords}
                             apiKey={googleMapsBrowserApiKey}
                             height={160}
                             borderRadius={2}
@@ -1164,14 +1246,21 @@ export default function VentaDetalle() {
                         </Typography>
                         <Button
                           size="small"
-                          sx={{ textTransform: "none", minWidth: 0, p: 0, fontWeight: 500 }}
+                          sx={{
+                            textTransform: "none",
+                            minWidth: "auto",
+                            px: 1,
+                            py: 0.25,
+                            fontWeight: 500,
+                          }}
                           onClick={() => setAddressModalOpen(true)}
                         >
                           Cambiar
                         </Button>
                       </Stack>
                       <Typography variant="body2" mt={0.5}>
-                        {sale.deliveryAddressFormatted ?? sale.client.primaryAddress.formatted}
+                        {sale.deliveryAddressFormatted ??
+                          sale.client.primaryAddress?.formatted}
                       </Typography>
                       {sale.client.email && (
                         <Typography variant="caption" color="text.secondary" display="block" mt={0.25}>
@@ -1193,13 +1282,19 @@ export default function VentaDetalle() {
         branchId={sale?.branchId ?? undefined}
         value={sale?.deliveryDate ?? null}
         onConfirm={(date) => {
+          if (sale?.deliveryType === "BRANCH") {
+            setDateMutation.mutate({
+              delivery_date: date,
+              delivery_type: "BRANCH",
+              branch_id: sale.deliveryBranchId ?? undefined,
+            });
+            return;
+          }
           setDateMutation.mutate({
             delivery_date: date,
-            // Sin tipo/sucursal/dirección propios ya guardados en la
-            // venta (sale.deliveryType === null), este flujo asume
-            // domicilio a la dirección principal del cliente, igual
-            // que el comportamiento previo de esta pantalla.
-            address_id: sale?.client?.primaryAddress?.id,
+            delivery_type: "ADDRESS",
+            address_id:
+              sale?.deliveryAddressId ?? sale?.client?.primaryAddress?.id,
           });
         }}
         onRemove={sale?.deliveryDate ? () => removeDateMutation.mutate() : undefined}

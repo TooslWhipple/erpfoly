@@ -118,6 +118,11 @@ export interface CreditApplicationBiometrics {
   items: BiometricItem[];
 }
 
+export interface CreditApplicationFaceMatch {
+  status: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+  score: number | null;
+}
+
 export interface PurchaseIntentionItem {
   code: string;
   name: string;
@@ -139,6 +144,7 @@ export interface CreditApplicationPurchaseIntention {
 export interface CreditApplicationDetail {
   id: number;
   status: string;
+  rejectionReason?: string | null;
   approvedClientId: number | null;
   approvedBaseCreditLineAmount: number | null;
   riskScore: number;
@@ -150,6 +156,7 @@ export interface CreditApplicationDetail {
   references: CreditApplicationReferences;
   documentation: CreditApplicationDocumentation;
   creditBureau: CreditApplicationCreditBureau;
+  faceMatch: CreditApplicationFaceMatch;
   biometrics: CreditApplicationBiometrics;
   purchaseIntention: CreditApplicationPurchaseIntention;
 }

@@ -1,16 +1,24 @@
-import { Button, Stack, Table, TableBody, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Button, Stack, Table, TableBody, TableHead, TableRow, Typography } from "@mui/material";
 import numeral from "numeral";
+import { AlertTriangle } from "lucide-react";
+import { TabFilters } from "@/components";
 import {
-    DashboardContainer,
+    AdminActionsRow,
+    DashboardSplit,
+    DashboardColumn,
+    DashboardPanel,
     DashboardHistoryTableContainer,
-    StyledProgressBar,
     ViewAllLink,
     TableCell,
     TableHeaderCell,
 } from "@/styles/cajas.styles";
 
 import type { CashRegisterDashboardProps } from "./types";
+import type { CashierSalesTab } from "@/hooks/useCashierSales";
+import { getCashLimitLevel } from "@/utils/cashLimit";
+import { CashInDrawerMeter } from "./CashInDrawerMeter";
 import { CashRegisterSearchBar } from "./CashRegisterSearchBar";
+import { PendingCollectionsPanel } from "./PendingCollectionsPanel";
 import { MovementTypeCell } from "./MovementTypeCell";
 import { PaymentFormCell } from "./PaymentFormCell";
 import { formatDate } from "@/utils/date";
@@ -31,80 +39,135 @@ export function CashRegisterDashboard({
     movements = [],
     mode,
     onModeChange,
+    pendingSales = [],
+    pendingLoading = false,
+    collectionTabs,
+    activeCollectionTab,
+    onCollectionTabChange,
+    onProcessSale,
 }: CashRegisterDashboardProps) {
-    const progressPercentage = (cashRegister.currentCash / cashRegister.limit) * 100;
     const visibleMovements = movements.slice(0, DASHBOARD_MOVEMENTS_LIMIT);
     const shouldFadeHistory = movements.length > 1;
+    const isLimitExceeded =
+        getCashLimitLevel(cashRegister.currentCash, cashRegister.limit) === "exceeded";
 
     return (
-        <DashboardContainer>
-            <CashRegisterSearchBar
-                searchQuery={searchQuery}
-                isSearching={isSearching}
-                onSearchQueryChange={onSearchQueryChange}
-                onSearch={onSearch}
-                mode={mode}
-                onModeChange={onModeChange}
-            />
+        <DashboardSplit>
+            <DashboardColumn>
+                <CashRegisterSearchBar
+                    searchQuery={searchQuery}
+                    isSearching={isSearching}
+                    onSearchQueryChange={onSearchQueryChange}
+                    onSearch={onSearch}
+                    mode={mode}
+                    onModeChange={onModeChange}
+                />
 
-            <Stack spacing={0.4}>
-                <StyledProgressBar variant="determinate" value={progressPercentage} />
-                <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{numeral(cashRegister.currentCash).format("$0,0.00")}</Typography>
-                    <Typography variant="body2" color="text.secondary">{numeral(cashRegister.limit).format("$0,0.00")}</Typography>
+                <Stack spacing={1.5}>
+                    <Typography variant="subtitle1" fontWeight={600}>Cobros</Typography>
+                    <TabFilters
+                        tabs={collectionTabs}
+                        activeTab={activeCollectionTab}
+                        onTabChange={(value) =>
+                            onCollectionTabChange(value as CashierSalesTab)
+                        }
+                    />
+                    <PendingCollectionsPanel
+                        rows={pendingSales}
+                        loading={pendingLoading}
+                        activeTab={activeCollectionTab}
+                        onProcess={onProcessSale}
+                    />
                 </Stack>
-            </Stack>
+            </DashboardColumn>
 
-            {
-                (canCut || canWithdraw) && (
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" alignItems="center">
-                        {
-                            canCut &&
-                            <Button
-                                variant="option"
-                                color="inherit"
-                                onClick={onCut}
-                                sx={{ minWidth: { xs: "100%", sm: "144px" } }}>
-                                Realizar corte
-                            </Button>
-                        }
-                        {
-                            canWithdraw &&
-                            <Button
-                                variant="option"
-                                color="inherit"
-                                onClick={onWithdrawal}
-                                sx={{ minWidth: { xs: "100%", sm: "144px" } }}>
-                                Realizar retiro
-                            </Button>
-                        }
+            <DashboardColumn>
+                <DashboardPanel>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                        Efectivo en caja
+                    </Typography>
+                    <CashInDrawerMeter
+                        currentCash={cashRegister.currentCash}
+                        limit={cashRegister.limit}
+                    />
+                    {isLimitExceeded && (
+                        <Alert
+                            severity="error"
+                            icon={<AlertTriangle size={18} />}
+                        >
+                            Límite de efectivo excedido. Se sugiere realizar un retiro.
+                        </Alert>
+                    )}
+                </DashboardPanel>
+
+                {(canCut || canWithdraw) && (
+                    <DashboardPanel>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            Acciones administrativas
+                        </Typography>
+                        <AdminActionsRow>
+                            {canWithdraw && (
+                                <Button
+                                    variant="option"
+                                    color="inherit"
+                                    onClick={onWithdrawal}
+                                >
+                                    Realizar retiro
+                                </Button>
+                            )}
+                            {canCut && (
+                                <Button
+                                    variant="option"
+                                    color="inherit"
+                                    onClick={onCut}
+                                >
+                                    Realizar corte
+                                </Button>
+                            )}
+                        </AdminActionsRow>
+                    </DashboardPanel>
+                )}
+
+                <DashboardPanel>
+                    <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        spacing={1}
+                        minWidth={0}
+                    >
+                        <Typography variant="subtitle1" fontWeight={600} noWrap>
+                            Historial de actividad (Hoy)
+                        </Typography>
+                        <ViewAllLink onClick={onViewAllHistory} sx={{ flexShrink: 0 }}>
+                            Ver todo
+                        </ViewAllLink>
                     </Stack>
-                )
-            }
 
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">Historial de actividad de la caja</Typography>
-                <ViewAllLink onClick={onViewAllHistory}>Ver todo</ViewAllLink>
-            </Stack>
-
-            <DashboardHistoryTableContainer hasFade={shouldFadeHistory}>
-                <Table sx={{ minWidth: "672px" }}>
-                    <TableHead>
-                        <TableRow>
-                            <TableHeaderCell>Hora</TableHeaderCell>
-                            <TableHeaderCell>Tipo</TableHeaderCell>
-                            <TableHeaderCell>Forma</TableHeaderCell>
-                            <TableHeaderCell>Usuario</TableHeaderCell>
-                            <TableHeaderCell>Monto</TableHeaderCell>
-                        </TableRow>
-                    </TableHead>
-                    {
-                        movements.length === 0 ?
-                            <Typography variant="body2" color="text.secondary">Sin actividad aún</Typography>
-                            :
-                            <TableBody>
-                                {
-                                    visibleMovements.map((movement) => (
+                    <DashboardHistoryTableContainer hasFade={shouldFadeHistory}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableHeaderCell>Hora</TableHeaderCell>
+                                    <TableHeaderCell>Tipo</TableHeaderCell>
+                                    <TableHeaderCell>Forma</TableHeaderCell>
+                                    <TableHeaderCell>Usuario</TableHeaderCell>
+                                    <TableHeaderCell>Monto</TableHeaderCell>
+                                </TableRow>
+                            </TableHead>
+                            {movements.length === 0 ? (
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell colSpan={5}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Sin actividad aún
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            ) : (
+                                <TableBody>
+                                    {visibleMovements.map((movement) => (
                                         <TableRow key={movement.id}>
                                             <TableCell>{formatDate(movement.created_at, "HH:mm")}</TableCell>
                                             <TableCell>
@@ -116,13 +179,13 @@ export function CashRegisterDashboard({
                                             <TableCell>{movement.created_by_name}</TableCell>
                                             <TableCell>${numeral(movement.amount).format("0,0.00")}</TableCell>
                                         </TableRow>
-                                    ))
-                                }
-                            </TableBody>
-                    }
-
-                </Table>
-            </DashboardHistoryTableContainer>
-        </DashboardContainer>
+                                    ))}
+                                </TableBody>
+                            )}
+                        </Table>
+                    </DashboardHistoryTableContainer>
+                </DashboardPanel>
+            </DashboardColumn>
+        </DashboardSplit>
     );
 }

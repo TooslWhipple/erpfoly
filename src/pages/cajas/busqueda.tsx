@@ -1,17 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
+import { ArrowLeft } from "lucide-react";
+import { StatusChip } from "@/components";
 import {
   ClientSearchResults,
   type ClientSearchResult,
   type CashSearchMode,
 } from "@/components/CashRegister";
-import type { CashRegisterStatus } from "@/styles/cajas.styles";
+import { InlineMobileMenuButton } from "@/components/Layout";
+import { BackButton } from "@/components/Breadcrumbs/Breadcrumbs.styles";
+import { PageHeader, PageShell } from "@/components/SaleBuilder/styles";
+import {
+  type CashRegisterStatus,
+  CashRegisterPageContent,
+} from "@/styles/cajas.styles";
 import { useCashRegisterSession } from "@/hooks/useCashRegisterSession";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getApiErrorMessage } from "@/lib/axios";
 import {
   buildCashRegisterSearchUrl,
+  buildCashRegisterSaleUrl,
   getCashRegisterSearchQuery,
   getCashRegisterSearchMode,
 } from "@/lib/cashRegisterRoutes";
@@ -128,7 +137,7 @@ export default function CajasBusquedaPage() {
     router.push(`/clientes/${client.id}`);
   };
   const handleSaleRowClick = (sale: SaleListItem) => {
-    router.push(`/ventas/${sale.id}`);
+    router.push(buildCashRegisterSaleUrl(sale.id));
   };
   const handleModeChange = (nextMode: CashSearchMode) => {
     setMode(nextMode);
@@ -142,57 +151,75 @@ export default function CajasBusquedaPage() {
   };
   if (isLoading || !router.isReady) {
     return (
-      <Stack
-        justifyContent="center"
-        alignItems="center"
-        style={{
-          marginTop: "112px",
-          minHeight: "200px",
-        }}
+      <PageShell
+        sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       >
-        <Typography variant="body1">Cargando...</Typography>
-      </Stack>
+        <PageHeader>
+          <InlineMobileMenuButton />
+        </PageHeader>
+        <Stack flex={1} justifyContent="center" alignItems="center">
+          <Typography variant="body1">Cargando...</Typography>
+        </Stack>
+      </PageShell>
     );
   }
   if (!cashRegister) {
     return (
-      <Stack
-        justifyContent="center"
-        alignItems="center"
-        style={{
-          marginTop: "112px",
-          minHeight: "200px",
-        }}
+      <PageShell
+        sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       >
-        <Typography variant="h6" color="text.secondary">
-          No tienes una caja asignada
-        </Typography>
-      </Stack>
+        <PageHeader>
+          <InlineMobileMenuButton />
+        </PageHeader>
+        <Stack flex={1} justifyContent="center" alignItems="center" px={2}>
+          <Typography variant="h6" color="text.secondary">
+            No tienes una caja asignada
+          </Typography>
+        </Stack>
+      </PageShell>
     );
   }
   if (cashRegister.status === "closed") {
     return null;
   }
   return (
-    <Stack spacing={3} justifyContent="center" alignItems="stretch">
-      <ClientSearchResults
-        cashRegisterName={cashRegister.name}
-        cashRegisterStatusLabel={getCashRegisterStatusLabel(
-          cashRegister.status,
-        )}
-        cashRegisterStatus={cashRegister.status}
-        searchQuery={searchInput}
-        results={results}
-        saleResults={saleResults}
-        isSearching={isSearching || !hasSearched}
-        onSearchQueryChange={setSearchInput}
-        onSearch={handleSearch}
-        onBack={handleBack}
-        onRowClick={handleRowClick}
-        onSaleRowClick={handleSaleRowClick}
-        mode={mode}
-        onModeChange={handleModeChange}
-      />
-    </Stack>
+    <PageShell>
+      <PageHeader>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.5}
+          minWidth={0}
+          flex="1 1 auto"
+        >
+          <InlineMobileMenuButton />
+          <BackButton onClick={handleBack} size="small">
+            <ArrowLeft size={20} />
+          </BackButton>
+          <Typography variant="h6" fontWeight={700} noWrap>
+            {cashRegister.name}
+          </Typography>
+          <StatusChip
+            label={getCashRegisterStatusLabel(cashRegister.status)}
+            variant="success"
+            size="small"
+          />
+        </Stack>
+      </PageHeader>
+      <CashRegisterPageContent>
+        <ClientSearchResults
+          searchQuery={searchInput}
+          results={results}
+          saleResults={saleResults}
+          isSearching={isSearching || !hasSearched}
+          onSearchQueryChange={setSearchInput}
+          onSearch={handleSearch}
+          onRowClick={handleRowClick}
+          onSaleRowClick={handleSaleRowClick}
+          mode={mode}
+          onModeChange={handleModeChange}
+        />
+      </CashRegisterPageContent>
+    </PageShell>
   );
 }

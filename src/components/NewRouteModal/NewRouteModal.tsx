@@ -213,6 +213,8 @@ export function NewRouteModal({
     setSubmitting(true);
     try {
       await onConfirm(payload);
+    } catch {
+      // Error already shown by the mutation snackbar
     } finally {
       setSubmitting(false);
     }

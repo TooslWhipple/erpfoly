@@ -10,7 +10,12 @@ import {
   type PrinterProfile,
   type PrintReceptionLabelsOptions,
 } from "@/lib/printing";
-import { fetchLabelPdf, fetchReceptionLabelsPdf } from "@/services/labels.service";
+import {
+  fetchEtiquetaVentaPdf,
+  fetchLabelPdf,
+  fetchReceptionLabelsPdf,
+  type FetchEtiquetaVentaPdfPayload,
+} from "@/services/labels.service";
 
 export class PrinterNotConfiguredError extends Error {
   constructor(profile: PrinterProfile) {
@@ -34,6 +39,9 @@ export interface UseLabelPrinterResult {
   printReceptionLabels: (
     receptionId: number,
     options?: PrintReceptionLabelsOptions,
+  ) => Promise<PrintJobResult>;
+  printEtiquetaVenta: (
+    payload: FetchEtiquetaVentaPdfPayload,
   ) => Promise<PrintJobResult>;
 }
 
@@ -142,6 +150,33 @@ export function useLabelPrinter(): UseLabelPrinterResult {
     [printPdf, printerProfile],
   );
 
+  const printEtiquetaVenta = useCallback(
+    async (payload: FetchEtiquetaVentaPdfPayload): Promise<PrintJobResult> => {
+      if (!readPrinterConfigured(printerProfile.id)) {
+        throw new PrinterNotConfiguredError(printerProfile);
+      }
+      setStatus("fetching");
+      setProgress(8);
+      setError(null);
+      try {
+        const blob = await fetchEtiquetaVentaPdf(payload);
+        setProgress(30);
+        return await printPdf(blob);
+      } catch (err) {
+        if (err instanceof PrinterNotConfiguredError) throw err;
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Error al imprimir las etiquetas";
+        setError(message);
+        setStatus("error");
+        setProgress(null);
+        throw err;
+      }
+    },
+    [printPdf, printerProfile],
+  );
+
   return {
     status,
     progress,
@@ -152,5 +187,6 @@ export function useLabelPrinter(): UseLabelPrinterResult {
     printPdf,
     printLabel,
     printReceptionLabels,
+    printEtiquetaVenta,
   };
 }

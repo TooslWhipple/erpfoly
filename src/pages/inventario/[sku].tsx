@@ -19,7 +19,8 @@ import type {
   SalesData,
 } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
-import { Stack, Typography, Skeleton } from "@mui/material";
+import { Button, Stack, Typography, Skeleton } from "@mui/material";
+import { PrintProductLabelsModal } from "@/components/InventoryDetail";
 import {
   InventoryTab,
   ActivityTab,
@@ -91,6 +92,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
   const [gallery, setGallery] = useState<ProductGallery>(EMPTY_GALLERY);
   const [salesBranches, setSalesBranches] = useState<SalesBranchConfig[]>([]);
   const [savingBranchIds, setSavingBranchIds] = useState<string[]>([]);
+  const [printLabelsOpen, setPrintLabelsOpen] = useState(false);
 
   useEffect(() => {
     if (!sku) return;
@@ -117,7 +119,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
         const avgPrice =
           mapped.branchInventory.length > 0
             ? mapped.branchInventory.reduce((s, b) => s + b.price, 0) /
-              mapped.branchInventory.length
+            mapped.branchInventory.length
             : 0;
 
         const productId = Number(mapped.inventoryDetail.id);
@@ -182,9 +184,9 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
         prev.map((b) =>
           b.id === branchId
             ? {
-                ...b,
-                enabled,
-              }
+              ...b,
+              enabled,
+            }
             : b,
         ),
       );
@@ -202,7 +204,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
         setSalesBranches(previous);
         showError(
           result.error?.message ??
-            "No se pudo actualizar la sucursal de venta",
+          "No se pudo actualizar la sucursal de venta",
         );
         return;
       }
@@ -250,7 +252,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
       setSalesBranches(previous);
       showError(
         result.error?.message ??
-          "No se pudo actualizar las sucursales de venta",
+        "No se pudo actualizar las sucursales de venta",
       );
       return;
     }
@@ -268,6 +270,19 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
     { value: "configurations", label: "Configuraciones" },
     { value: "technical", label: "Ficha técnica" },
   ];
+
+  const labelListPrice = useMemo(() => {
+    const branchPrices = branchInventory
+      .map((b) => b.price)
+      .filter((p) => Number.isFinite(p) && p > 0);
+    if (branchPrices.length > 0) {
+      return Math.max(...branchPrices);
+    }
+    if (pricingStrategy.listPrice > 0) {
+      return pricingStrategy.listPrice;
+    }
+    return 0;
+  }, [branchInventory, pricingStrategy.listPrice]);
 
   if (!sku || loading || !inventoryDetail) {
     return (
@@ -292,16 +307,40 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
     },
   ];
 
+  const productIdNum = Number(inventoryDetail.id);
+
   return (
     <Stack spacing={3}>
-      <Breadcrumbs items={breadcrumbs} />
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between">
+        <Breadcrumbs items={breadcrumbs} />
+        <Stack direction="row" spacing={2} alignItems="center">
+          <StatusChip
+            status={inventoryDetail.status}
+            label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
+          />
+          <Button
+            variant="option"
+            size="small"
+            color="inherit"
+            onClick={() => setPrintLabelsOpen(true)}
+            sx={{ textTransform: "none", fontWeight: 600 }}>
+            Imprimir etiquetas
+          </Button>
+        </Stack>
+      </Stack>
 
       <Stack spacing={0.5}>
         <Typography variant="body2" color="text.secondary">
           {inventoryDetail.code}
         </Typography>
         <Typography variant="h5">{inventoryDetail.name}</Typography>
-        <Stack direction="row" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+        >
           <CategoryChip
             icon={<SettingsIcon />}
             label={`${inventoryDetail.department.code} - ${inventoryDetail.department.name}`}
@@ -311,10 +350,6 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
             icon={<LaundryIcon />}
             label={`${inventoryDetail.line.code} - ${inventoryDetail.line.name}`}
             size="small"
-          />
-          <StatusChip
-            status={inventoryDetail.status}
-            label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
           />
         </Stack>
       </Stack>
@@ -353,6 +388,18 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
           packages={packages}
           gallery={gallery}
           loading={loading}
+        />
+      )}
+
+      {Number.isFinite(productIdNum) && productIdNum > 0 && (
+        <PrintProductLabelsModal
+          open={printLabelsOpen}
+          onClose={() => setPrintLabelsOpen(false)}
+          productId={productIdNum}
+          productName={inventoryDetail.name}
+          productSku={inventoryDetail.code || inventoryDetail.sku}
+          listPrice={labelListPrice}
+          imageUrl={gallery.images[0] ?? null}
         />
       )}
     </Stack>

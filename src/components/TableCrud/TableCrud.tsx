@@ -93,6 +93,17 @@ export interface RowAction<T> {
   hidden?: boolean | ((row: T) => boolean);
 }
 
+function isRowActionHidden<T>(action: RowAction<T>, row: T): boolean {
+  return typeof action.hidden === "function" ? action.hidden(row) : Boolean(action.hidden);
+}
+
+function rowHasVisibleActions<T>(
+  actions: RowAction<T>[] | undefined,
+  row: T,
+): boolean {
+  return Boolean(actions?.some((action) => !isRowActionHidden(action, row)));
+}
+
 interface TableCrudProps<T> {
   columns: Column<T>[];
   rows: T[];
@@ -111,6 +122,7 @@ interface TableCrudProps<T> {
   selectable?: boolean;
   selectedRowKeys?: Set<string | number>;
   onSelectedRowKeysChange?: (keys: Set<string | number>) => void;
+  minTableWidth?: number;
 }
 
 export function TableCrud<T>({
@@ -131,6 +143,7 @@ export function TableCrud<T>({
   selectable = false,
   selectedRowKeys,
   onSelectedRowKeysChange,
+  minTableWidth = 650,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -268,7 +281,10 @@ export function TableCrud<T>({
             variant={column.buttonVariant || "outlined"}
             color={column.buttonColor || "primary"}
             size="small"
-            onClick={() => column.onButtonClick?.(row)}
+            onClick={(event) => {
+              event.stopPropagation();
+              column.onButtonClick?.(row);
+            }}
           >
             {column.buttonLabel || String(rawValue)}
           </Button>
@@ -452,7 +468,7 @@ export function TableCrud<T>({
   return (
     <TableWrapper>
       <StyledTableContainer>
-        <Table style={{ width: "100%", minWidth: 650 }}>
+        <Table style={{ width: "100%", minWidth: minTableWidth }}>
           {renderTableHeader()}
           <TableBody>
             {loading ? (
@@ -472,7 +488,9 @@ export function TableCrud<T>({
                 </StyledTableCell>
               </StyledTableRow>
             ) : (
-              rows?.map((row) => (
+              rows?.map((row) => {
+                const actionsDisabled = !rowHasVisibleActions(visibleActions, row);
+                return (
                 <StyledTableRow
                   key={String(row[rowKey])}
                   onClick={() => onRowClick?.(row)}
@@ -497,13 +515,20 @@ export function TableCrud<T>({
                   })}
                   {hasActions && (
                     <ActionsCell align="center" onClick={(e) => e.stopPropagation()}>
-                      <ActionsButton onClick={(e) => handleOpenMenu(e, row)}>
+                      <ActionsButton
+                        disabled={actionsDisabled}
+                        onClick={(e) => {
+                          if (actionsDisabled) return;
+                          handleOpenMenu(e, row);
+                        }}
+                      >
                         <MoreVertIcon />
                       </ActionsButton>
                     </ActionsCell>
                   )}
                 </StyledTableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

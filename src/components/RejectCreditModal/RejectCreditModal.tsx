@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +7,7 @@ import {
   Button,
   CircularProgress,
 } from "@mui/material";
+import { FormTextField } from "@/components/Form";
 import { rejectCreditApplication } from "@/services/creditApplications.service";
 import type { RejectCreditApplicationResponse } from "@/types/solicitud-credito-detail.types";
 
@@ -27,13 +28,14 @@ export function RejectCreditModal({
   onRejectSuccess,
 }: RejectCreditModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const [reason, setReason] = useState("");
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    setSubmitting(false);
-  }, [open, applicationId]);
+  const handleReasonChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setReason(event.target.value);
+    },
+    [],
+  );
 
   const handleDialogClose = useCallback(() => {
     if (submitting) {
@@ -43,9 +45,15 @@ export function RejectCreditModal({
   }, [onClose, submitting]);
 
   const handleConfirmReject = async () => {
+    const trimmed = reason.trim();
+    if (!trimmed || submitting) {
+      return;
+    }
     setSubmitting(true);
     try {
-      const response = await rejectCreditApplication(applicationId);
+      const response = await rejectCreditApplication(applicationId, {
+        comments: trimmed,
+      });
       if (response) {
         onRejectSuccess?.(response);
         onClose();
@@ -57,10 +65,18 @@ export function RejectCreditModal({
     }
   };
 
+  const isReasonValid = reason.trim().length > 0;
+
   return (
     <Dialog
       open={open}
       onClose={handleDialogClose}
+      TransitionProps={{
+        onEnter: () => {
+          setReason("");
+          setSubmitting(false);
+        },
+      }}
       maxWidth="xs"
       fullWidth
       sx={{
@@ -82,20 +98,36 @@ export function RejectCreditModal({
       <DialogContent sx={{ padding: "24px" }}>
         <Stack spacing={2.5}>
           <Stack spacing={0.5}>
-            <Typography variant="h5" fontWeight={600}>Rechazar solicitud</Typography>
+            <Typography variant="h5" fontWeight={600}>
+              Rechazar solicitud
+            </Typography>
             <Typography variant="body2" color="text.secondary">
-              Al realizar esta acción, esta persona no podrá volver a realizar una nueva solicitud en{" "}
-              {cooldownMonths} meses.
+              Al realizar esta acción, esta persona no podrá volver a realizar
+              una nueva solicitud en {cooldownMonths} meses. El motivo quedará
+              registrado en el historial de la solicitud.
             </Typography>
           </Stack>
-          <Typography variant="body2" color="text.primary">¿Estás seguro que deseas realizar esta acción?</Typography>
+          <FormTextField
+            multiline
+            minRows={4}
+            fullWidth
+            placeholder="Ingresar motivo aquí..."
+            value={reason}
+            onChange={handleReasonChange}
+            disabled={submitting}
+          />
           <Button
             variant="contained"
             color="error"
             sx={{ width: "208px" }}
             onClick={() => void handleConfirmReject()}
-            disabled={submitting}
-            startIcon={submitting ? <CircularProgress color="inherit" size={18} /> : undefined}>
+            disabled={!isReasonValid || submitting}
+            startIcon={
+              submitting ? (
+                <CircularProgress color="inherit" size={18} />
+              ) : undefined
+            }
+          >
             {submitting ? "Rechazando…" : "Sí, rechazar solicitud"}
           </Button>
         </Stack>

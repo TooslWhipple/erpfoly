@@ -36,6 +36,11 @@ export { ProductPromotionModal } from "./ProductPromotionModal";
 export type { ProductPromotionModalProps } from "./ProductPromotionModal";
 export { AddDamagedGoodsModal } from "./AddDamagedGoodsModal";
 export type { AddDamagedGoodsModalProps, AddDamagedGoodsFormValues } from "./AddDamagedGoodsModal";
+export { MarkDamagedGoodsDiscountedModal } from "./MarkDamagedGoodsDiscountedModal";
+export type {
+  MarkDamagedGoodsDiscountedModalProps,
+  MarkDamagedGoodsDiscountedFormValues,
+} from "./MarkDamagedGoodsDiscountedModal";
 export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
 export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";
@@ -149,6 +154,8 @@ export { InvoiceSelectorModal } from "./InvoiceSelector";
 export type { InvoiceSelectorModalProps } from "./InvoiceSelector";
 export { ReceptionForm } from "./ReceptionForm";
 export type { ReceptionFormProps } from "./ReceptionForm";
+export { SupplierReturnForm } from "./SupplierReturnForm";
+export type { SupplierReturnFormProps } from "./SupplierReturnForm";
 export { PrinterSetupDialog } from "./printing";
 export type { PrinterSetupDialogProps } from "./printing";
 export type {
@@ -169,6 +176,11 @@ export { PriceSuggestionsSidebar } from "./PriceSuggestionsSidebar";
 export type { PriceSuggestionsSidebarProps } from "./PriceSuggestionsSidebar";
 export { LiquidationRuleCard } from "./LiquidationRuleCard";
 export type { LiquidationRuleCardProps } from "./LiquidationRuleCard";
+export { LiquidationRuleFormModal } from "./LiquidationRuleFormModal";
+export type {
+  LiquidationRuleFormModalProps,
+  LiquidationRuleFormValues,
+} from "./LiquidationRuleFormModal";
 export { BranchMonthlyGoalsTable } from "./BranchMonthlyGoalsTable";
 export type {
   BranchMonthlyGoalsTableProps,
@@ -207,6 +219,8 @@ export type { TrackSliderProps, TrackSliderMiddleLabel } from "./TrackSlider";
 export { MonthlySalesGoalsModal } from "./Sellers";
 export type { MonthlySalesGoalsModalProps } from "./Sellers";
 export { CreditApplicationIntakeModal } from "./CreditApplicationIntakeModal";
+export { ProductCodeScannerDialog } from "./ProductCodeScannerDialog";
+export type { ProductCodeScannerDialogProps } from "./ProductCodeScannerDialog";
 export {
   CreditApplicationFormPage,
   BasicInformationTab,
@@ -249,4 +263,11 @@ export { ShippingZonesMap } from "./ShippingZonesMap";
 export { ShippingMunicipalityAutocomplete } from "./ShippingMunicipalityAutocomplete";
 export { MapMarker } from "./MapMarker";
 export type { MapMarkerProps } from "./MapMarker";
+export { DateRangeFilter, DateRangeFilterPopover } from "./DateRangePopover";
+export type {
+  DateRangeFilterProps,
+  DateRangePopoverProps,
+  DateRangeValue,
+  PresetFechaId,
+} from "./DateRangePopover";
 

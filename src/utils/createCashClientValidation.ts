@@ -40,9 +40,14 @@ export type BillingFormErrors = Partial<
 
 export function validateBasicInfo(
   values: BasicInfoFormValues,
-  isSecurityCodeValid: boolean | null,
+  options: {
+    requirePhoneVerification?: boolean;
+    isSecurityCodeValid?: boolean | null;
+  } = {},
 ): BasicInfoFormErrors {
   const errors: BasicInfoFormErrors = {};
+  const requirePhoneVerification = options.requirePhoneVerification === true;
+  const isSecurityCodeValid = options.isSecurityCodeValid ?? false;
 
   if (!values.firstName.trim()) {
     errors.firstName = "Nombre(s) es requerido";
@@ -52,7 +57,9 @@ export function validateBasicInfo(
   }
 
   const phone = values.phoneNumber.trim();
-  if (phone) {
+  if (!phone) {
+    errors.phoneNumber = "El teléfono es requerido";
+  } else if (requirePhoneVerification) {
     if (!isValidMxPhone(phone)) {
       errors.phoneNumber = "El número de Whatsapp debe tener 10 dígitos";
     } else if (isSecurityCodeValid !== true) {
@@ -73,15 +80,26 @@ export function validateBasicInfo(
   return errors;
 }
 
-/** Address is optional; only validate format when the user started filling fields. */
 export function validateAddressInfo(
   values: AddressFormValues,
 ): AddressFormErrors {
   const errors: AddressFormErrors = {};
   const postalCode = values.postalCode.trim();
 
-  if (postalCode && !isValidMxPostalCode(postalCode)) {
+  if (!postalCode) {
+    errors.postalCode = "El código postal es requerido";
+  } else if (!isValidMxPostalCode(postalCode)) {
     errors.postalCode = "El código postal debe tener 5 dígitos";
+  }
+
+  if (!values.neighborhoodFullCode.trim()) {
+    errors.neighborhoodFullCode = "La colonia es requerida";
+  }
+  if (!values.street.trim()) {
+    errors.street = "La calle es requerida";
+  }
+  if (!values.externalNumber.trim()) {
+    errors.externalNumber = "El número es requerido";
   }
 
   const receiverPhone = values.receiverPhone.trim();
@@ -101,9 +119,12 @@ export function validateBillingInfo(
 
 export function isBasicTabComplete(
   values: BasicInfoFormValues,
-  isSecurityCodeValid: boolean | null,
+  options?: {
+    requirePhoneVerification?: boolean;
+    isSecurityCodeValid?: boolean | null;
+  },
 ): boolean {
-  return Object.keys(validateBasicInfo(values, isSecurityCodeValid)).length === 0;
+  return Object.keys(validateBasicInfo(values, options)).length === 0;
 }
 
 export function isAddressTabComplete(values: AddressFormValues): boolean {
@@ -116,18 +137,23 @@ export function isBillingTabComplete(_values: BillingFormValues): boolean {
 
 // ponytail: smallest runnable check — fails if required-field rules regress
 if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
-  const namesOnly = validateBasicInfo(
-    {
-      firstName: "Jose",
-      lastSurname: "Test",
-      secondSurname: "",
-      email: "",
-      phoneNumber: "",
-      securityCode: "",
-    },
-    false,
-  );
-  const phoneWithoutOtp = validateBasicInfo(
+  const namesOnly = validateBasicInfo({
+    firstName: "Jose",
+    lastSurname: "Test",
+    secondSurname: "",
+    email: "",
+    phoneNumber: "",
+    securityCode: "",
+  });
+  const cashPhoneNoOtp = validateBasicInfo({
+    firstName: "Jose",
+    lastSurname: "Test",
+    secondSurname: "",
+    email: "",
+    phoneNumber: "5512345678",
+    securityCode: "",
+  });
+  const creditPhoneWithoutOtp = validateBasicInfo(
     {
       firstName: "Jose",
       lastSurname: "Test",
@@ -136,11 +162,41 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
       phoneNumber: "5512345678",
       securityCode: "",
     },
-    false,
+    { requirePhoneVerification: true, isSecurityCodeValid: false },
   );
+  const addressOk = validateAddressInfo({
+    postalCode: "01234",
+    neighborhoodFullCode: "09-001-0001",
+    state: "CDMX",
+    city: "Benito Juárez",
+    street: "Insurgentes",
+    externalNumber: "123",
+    internalNumber: "",
+    betweenStreets: "",
+    receiverPhone: "",
+    receiverName: "",
+    useClientPhone: false,
+  });
+  const addressMissing = validateAddressInfo({
+    postalCode: "",
+    neighborhoodFullCode: "",
+    state: "",
+    city: "",
+    street: "",
+    externalNumber: "",
+    internalNumber: "",
+    betweenStreets: "",
+    receiverPhone: "",
+    receiverName: "",
+    useClientPhone: false,
+  });
   if (
-    Object.keys(namesOnly).length > 0 ||
-    !phoneWithoutOtp.securityCode
+    !namesOnly.phoneNumber ||
+    Object.keys(cashPhoneNoOtp).length > 0 ||
+    !creditPhoneWithoutOtp.securityCode ||
+    Object.keys(addressOk).length > 0 ||
+    !addressMissing.postalCode ||
+    !addressMissing.street
   ) {
     throw new Error("createCashClientValidation self-check failed");
   }

@@ -18,6 +18,7 @@ import {
   type ProductDetailDto,
 } from "@/services/productos.service";
 import { getBranchesCatalog } from "@/services/branches.service";
+import { formatInventoryActivityDescription } from "@/utils/inventory-activity-description";
 
 const INVENTORY_BASE = "/inventory";
 
@@ -302,12 +303,30 @@ export async function getInventoryActivity(
   sku: string,
   params?: { page?: number; limit?: number },
 ): Promise<ApiResult<PaginatedRowsResponse<ActivityLogEntry>>> {
-  return get<PaginatedRowsResponse<InventoryActivityApiRow>>(
+  const result = await get<PaginatedRowsResponse<InventoryActivityApiRow>>(
     buildListUrl(
       `${INVENTORY_BASE}/${encodeURIComponent(sku)}/activity`,
       params ?? {},
     ),
   );
+
+  if (result.error || result.data === null) {
+    return { data: null, error: result.error };
+  }
+
+  return {
+    data: {
+      ...result.data,
+      rows: result.data.rows.map((row) => ({
+        ...row,
+        description:
+          row.type === "inventory"
+            ? formatInventoryActivityDescription(row.description)
+            : row.description,
+      })),
+    },
+    error: null,
+  };
 }
 
 /**

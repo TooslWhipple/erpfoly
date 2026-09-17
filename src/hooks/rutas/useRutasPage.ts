@@ -35,6 +35,8 @@ import {
 } from "@/pages/rutas/components/constants";
 import type { RouteType } from "@/types/rutas.types";
 
+const ROUTES_POLL_INTERVAL_MS = 20_000;
+
 export function useRutasPage() {
   const { hasPermission } = usePermissions();
   const canUpdateRoute = hasPermission(ROUTES_UPDATE);
@@ -115,6 +117,8 @@ export function useRutasPage() {
       });
       return unwrapOrThrow(res);
     },
+    refetchInterval: ROUTES_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   const routes: RouteSummary[] = useMemo(() => {
@@ -140,6 +144,8 @@ export function useRutasPage() {
       return unwrapOrThrow(res);
     },
     enabled: resolvedRouteId != null,
+    refetchInterval: ROUTES_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   const routeDetail: RouteDetailView | null = useMemo(() => {
@@ -166,6 +172,7 @@ export function useRutasPage() {
     uploadCartaMutation,
     deleteCartaMutation,
     assignDriverMutation,
+    assignVehicleMutation,
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
@@ -196,6 +203,7 @@ export function useRutasPage() {
       return {
         suggested: data.suggested.map(mapRow),
         orders: data.orders.map(mapRow),
+        recoveries: (data.recoveries ?? []).map(mapRow),
         suggestedCount: data.suggested_count,
         ordersCount: data.orders_count,
         recoveriesCount: data.recoveries_count,
@@ -306,6 +314,14 @@ export function useRutasPage() {
     });
   };
 
+  const handleAssignVehicle = async (vehicleId: number | null) => {
+    if (!resolvedRouteId) return;
+    await assignVehicleMutation.mutateAsync({
+      routeId: resolvedRouteId,
+      vehicleId,
+    });
+  };
+
   const handleSaveCartaPorte = async () => {
     if (!resolvedRouteId || !pendingCartaLocalFile) return;
     await uploadCartaMutation.mutateAsync({
@@ -343,26 +359,30 @@ export function useRutasPage() {
 
   const handleConfirmRemove = async () => {
     if (!pendingRemoval || !resolvedRouteId) return;
-    if (pendingRemoval.kind === "assistant") {
-      await removeAssistantMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        userId: pendingRemoval.id,
-      });
-    } else if (pendingRemoval.kind === "driver") {
-      await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
-    } else if (pendingRemoval.kind === "routeOrder") {
-      await removeRoutePointMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        pointId: pendingRemoval.pointId,
-      });
-    } else if (pendingRemoval.kind === "routeItem") {
-      await removeRoutePointItemMutation.mutateAsync({
-        routeId: resolvedRouteId,
-        pointId: pendingRemoval.pointId,
-        itemId: pendingRemoval.itemId,
-      });
+    try {
+      if (pendingRemoval.kind === "assistant") {
+        await removeAssistantMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          userId: pendingRemoval.id,
+        });
+      } else if (pendingRemoval.kind === "driver") {
+        await removeDriverMutation.mutateAsync({ routeId: resolvedRouteId });
+      } else if (pendingRemoval.kind === "routeOrder") {
+        await removeRoutePointMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          pointId: pendingRemoval.pointId,
+        });
+      } else if (pendingRemoval.kind === "routeItem") {
+        await removeRoutePointItemMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          pointId: pendingRemoval.pointId,
+          itemId: pendingRemoval.itemId,
+        });
+      }
+      setPendingRemoval(null);
+    } catch {
+      // Error already shown by the mutation snackbar
     }
-    setPendingRemoval(null);
   };
 
   const handleRequestRemoveRouteOrder = (
@@ -432,6 +452,7 @@ export function useRutasPage() {
     handleConfirmAddOrders,
     handleConfirmAssignDriver,
     handleConfirmAddAssistant,
+    handleAssignVehicle,
     handleSaveCartaPorte,
     handleRemoveCartaServerDocument,
     handleRequestRemoveAssistant,
@@ -445,6 +466,7 @@ export function useRutasPage() {
     createRouteMutation,
     uploadCartaMutation,
     assignDriverMutation,
+    assignVehicleMutation,
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,

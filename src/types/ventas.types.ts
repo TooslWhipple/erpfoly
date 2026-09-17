@@ -12,10 +12,13 @@ export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
 
 export type SaleStatusTab =
   | "all"
-  | "completed"
-  | "pending"
+  | "pendingCollection"
+  | "pendingPayment"
+  | "paid"
+  | "cancelled"
   | "pendingCashier"
-  | "finalized";
+  | "processedCashier"
+  | "cashierAll";
 
 export interface SaleListItem {
   id: number;
@@ -23,8 +26,11 @@ export interface SaleListItem {
   status: SaleStatus;
   paymentType: SalePaymentType;
   clientName: string | null;
+  sellerName?: string | null;
   productName: string | null;
   productImageUrl: string | null;
+  itemCount: number;
+  totalAmount: number;
   createdAt: string;
 }
 
@@ -33,6 +39,10 @@ export interface GetSalesParams {
   limit: number;
   search?: string;
   statusTab?: SaleStatusTab;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: SaleStatus;
+  client_id?: number;
   created_by?: number;
   branch_id?: number;
   amount?: number;
@@ -44,6 +54,7 @@ export interface ProductSearchResult {
   name: string;
   imageUrl: string | null;
   finalPrice: number;
+  isLiquidation?: boolean;
 }
 
 export interface InventorySource {
@@ -69,6 +80,7 @@ export interface ProductDetail {
   finalPrice: number;
   inventorySources: InventorySource[];
   hasOtherBranches?: boolean;
+  isLiquidation?: boolean;
 }
 
 export interface CartItem {
@@ -85,12 +97,11 @@ export interface CartItem {
   /** Set when this line was hydrated from an existing DRAFT sale being resumed. */
   saleItemId?: number;
   /**
-   * Portion of `quantity` without stock backing it, resolved later when
-   * merchandise arrives. Recomputed locally from `sources` whenever they're
-   * known (fresh line); for resumed lines (`sources: []`) it keeps the
-   * value the backend last computed until the sale is re-synced.
+   * Pieces covered by warehouse `ordered` (supplier PO), plus any leftover
+   * the backend still tracks as uncovered. Shown as the backorder chip.
    */
   backorderedQuantity: number;
+  isLiquidation?: boolean;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -100,13 +111,17 @@ export interface SaleDetailItem {
   quantity: number;
   backorderedQuantity: number;
   unitPrice: number;
+  listPrice?: number;
   discountAmount: number;
   totalAmount: number;
+  cancelledAt?: string | null;
+  inventorySources: InventorySource[];
   product: {
     id: number;
     code: string;
     name: string;
     imageUrl: string | null;
+    isLiquidation?: boolean;
   };
 }
 
@@ -129,12 +144,23 @@ export interface SaleDetailPayment {
   amount: number;
   receivedAmount: number | null;
   changeAmount: number | null;
+  createdAt?: string;
+}
+
+export interface SaleDetailCreditInstallment {
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
 }
 
 export interface SaleDetailCredit {
+  status?: string;
   downPayment: number;
+  financedAmount: number;
   termMonths: number;
   installmentAmount: number;
+  paymentFrequency: "MONTHLY";
+  installments: SaleDetailCreditInstallment[];
 }
 
 export interface SaleDetailLayawayPayment {
@@ -186,9 +212,19 @@ export interface SaleDetail {
   status: string;
   subtotal: number;
   discountAmount: number;
+  shippingAmount?: number;
+  shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
+  economicRevision?: number;
+  dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsToEarn?: number;
+  loyaltyEarnAmountToSpend?: number | null;
+  loyaltyEarnPointsAwarded?: number | null;
   purchaseType: string | null;
+  identityVerifiedAt?: string | null;
+  identityVerificationAuthorizedBy?: number | null;
   layawayTermId?: number | null;
   createdAt: string;
   branchId?: number | null;
@@ -198,13 +234,23 @@ export interface SaleDetail {
   deliveryType?: string | null;
   deliveryBranchId?: number | null;
   deliveryBranchName?: string | null;
+  deliveryAddressId?: number | null;
   deliveryAddressFormatted?: string | null;
+  deliveryAddressLatitude?: string | null;
+  deliveryAddressLongitude?: string | null;
   client: SaleDetailClient | null;
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];
   credit: SaleDetailCredit | null;
   layaway: SaleDetailLayaway | null;
   discountRequest: SaleDiscountRequest | null;
+  statusHistory?: Array<{
+    id: number;
+    previousStatus: string | null;
+    newStatus: string;
+    comments: string | null;
+    createdAt: string;
+  }>;
 }
 
 export type DeliveryAvailability = "available" | "low" | "none";

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import type { NextRouter } from "next/router";
+import { isSameRouteNavigation } from "./unsavedChangesNavigation";
 
 interface UseUnsavedChangesGuardProps {
   isDirty: boolean;
@@ -12,30 +13,6 @@ type PendingNavigation =
   | { kind: "replace"; args: Parameters<NextRouter["replace"]> }
   | { kind: "back" };
 
-function resolveAsPath(
-  url: Parameters<NextRouter["push"]>[0],
-  as?: Parameters<NextRouter["push"]>[1]
-): string {
-  if (typeof as === "string") {
-    return as;
-  }
-  if (as && typeof as === "object" && "pathname" in as && as.pathname) {
-    return String(as.pathname);
-  }
-  if (typeof url === "string") {
-    return url;
-  }
-  if (url && typeof url === "object" && "pathname" in url && url.pathname) {
-    return String(url.pathname);
-  }
-  return "";
-}
-
-function pathMatchesTarget(currentPath: string, targetPath: string): boolean {
-  const normalize = (value: string) => value.split("?")[0]?.split("#")[0] ?? value;
-  return normalize(currentPath) === normalize(targetPath);
-}
-
 export function useUnsavedChangesGuard({
   isDirty,
   confirmLeave,
@@ -46,10 +23,14 @@ export function useUnsavedChangesGuard({
   const confirmLeaveRef = useRef(confirmLeave);
   const isDirtyRef = useRef(isDirty);
   const routerAsPathRef = useRef(router.asPath);
+  const routerPathnameRef = useRef(router.pathname);
+  const routerQueryRef = useRef(router.query);
 
   confirmLeaveRef.current = confirmLeave;
   isDirtyRef.current = isDirty;
   routerAsPathRef.current = router.asPath;
+  routerPathnameRef.current = router.pathname;
+  routerQueryRef.current = router.query;
 
   const navigateWithoutGuard = useCallback(
     (url: string, as?: string, options?: Parameters<NextRouter["push"]>[2]) => {
@@ -88,17 +69,7 @@ export function useUnsavedChangesGuard({
       }
     };
 
-    const confirmAndNavigate = (
-      pending: PendingNavigation,
-      targetPath: string
-    ): Promise<boolean> => {
-      if (
-        pending.kind !== "back" &&
-        pathMatchesTarget(routerAsPathRef.current, targetPath)
-      ) {
-        return runPendingNavigation(pending);
-      }
-
+    const confirmAndNavigate = (pending: PendingNavigation): Promise<boolean> => {
       pendingNavigationRef.current = pending;
 
       return confirmLeaveRef.current().then((allow) => {
@@ -120,12 +91,19 @@ export function useUnsavedChangesGuard({
         return originalPush(url, as, options);
       }
 
-      const targetPath = resolveAsPath(url, as);
-      if (pathMatchesTarget(routerAsPathRef.current, targetPath)) {
+      if (
+        isSameRouteNavigation(
+          routerPathnameRef.current,
+          routerAsPathRef.current,
+          routerQueryRef.current,
+          url,
+          as
+        )
+      ) {
         return originalPush(url, as, options);
       }
 
-      return confirmAndNavigate({ kind: "push", args: [url, as, options] }, targetPath);
+      return confirmAndNavigate({ kind: "push", args: [url, as, options] });
     };
 
     const guardedReplace = (
@@ -141,15 +119,22 @@ export function useUnsavedChangesGuard({
         return originalReplace(url, as, options);
       }
 
-      const targetPath = resolveAsPath(url, as);
-      if (pathMatchesTarget(routerAsPathRef.current, targetPath)) {
+      if (
+        isSameRouteNavigation(
+          routerPathnameRef.current,
+          routerAsPathRef.current,
+          routerQueryRef.current,
+          url,
+          as
+        )
+      ) {
         return originalReplace(url, as, options);
       }
 
-      return confirmAndNavigate(
-        { kind: "replace", args: [url, as, options] },
-        targetPath
-      );
+      return confirmAndNavigate({
+        kind: "replace",
+        args: [url, as, options],
+      });
     };
 
     const guardedBack = () => {
@@ -163,7 +148,7 @@ export function useUnsavedChangesGuard({
         return;
       }
 
-      void confirmAndNavigate({ kind: "back" }, "");
+      void confirmAndNavigate({ kind: "back" });
     };
 
     router.push = guardedPush as NextRouter["push"];

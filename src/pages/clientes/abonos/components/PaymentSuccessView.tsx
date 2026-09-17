@@ -1,4 +1,4 @@
-import { Button, Divider, Stack, Typography } from "@mui/material";
+import { Button, CircularProgress, Divider, Stack, Typography } from "@mui/material";
 import { Check, Download } from "lucide-react";
 import numeral from "numeral";
 import type { ClientPaymentResult } from "@/types/clientPayment.types";
@@ -12,13 +12,18 @@ import {
 export interface PaymentSuccessViewProps {
   result: ClientPaymentResult;
   onDownloadReceipt: () => void;
+  isDownloadingReceipt?: boolean;
 }
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
 
-export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccessViewProps) {
+export function PaymentSuccessView({
+  result,
+  onDownloadReceipt,
+  isDownloadingReceipt = false,
+}: PaymentSuccessViewProps) {
   return (
     <SuccessCard>
       <SuccessIconWrapper>
@@ -63,8 +68,8 @@ export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccess
           </Stack>
 
           {
-            result.allocations.map((allocation) => (
-              <Stack key={allocation.label} direction="row" justifyContent="space-between">
+            result.allocations.map((allocation, index) => (
+              <Stack key={`${allocation.label}-${index}`} direction="row" justifyContent="space-between">
                 <Typography variant="body2" color="text.secondary">{allocation.label}</Typography>
                 <Typography variant="body2">{formatCurrency(allocation.amount)}</Typography>
               </Stack>
@@ -86,11 +91,16 @@ export function PaymentSuccessView({ result, onDownloadReceipt }: PaymentSuccess
 
       <Button
         variant="outlined"
-        startIcon={<Download size={16} />}
+        startIcon={
+          isDownloadingReceipt
+            ? <CircularProgress size={16} color="inherit" />
+            : <Download size={16} />
+        }
         onClick={onDownloadReceipt}
+        disabled={isDownloadingReceipt || result.paymentIds.length === 0}
         sx={{ textTransform: "none" }}
       >
-        Descargar comprobante
+        {isDownloadingReceipt ? "Generando PDF..." : "Descargar comprobante"}
       </Button>
     </SuccessCard>
   );

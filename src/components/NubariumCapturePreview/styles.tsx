@@ -14,31 +14,40 @@ export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
 }));
 
 export const CaptureViewport = styled("div")(({ theme }) => ({
+  boxSizing: "border-box",
+  position: "relative",
   width: "min(100%, calc(min(68dvh, 560px) * 4 / 3))",
   maxWidth: "100%",
   aspectRatio: "4 / 3",
   height: "auto",
-  flex: "0 1 auto",
+  flex: "0 0 auto",
   minWidth: 0,
-  minHeight: 180,
   marginInline: "auto",
   borderRadius: 16,
   overflow: "hidden",
   backgroundColor: theme.palette.background.default,
   border: `1px solid ${theme.palette.app.border}`,
-  [theme.breakpoints.up("md")]: {
-    minHeight: 220,
-  },
   "@media (orientation: landscape)": {
     width: "min(100%, calc(min(72dvh, 480px) * 4 / 3))",
-    minHeight: 140,
   },
   "@media (orientation: landscape) and (max-height: 500px)": {
     width: "min(100%, calc(min(78dvh, 360px) * 4 / 3))",
-    minHeight: 120,
     borderRadius: 12,
   },
+  maxHeight: "min(68dvh, 560px)",
 }));
+
+export const CaptureHost = styled("div")({
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  "& video, & canvas, & iframe": {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+});
 
 export const PreviewRoot = styled(Stack)(({ theme }) => ({
   width: "100%",

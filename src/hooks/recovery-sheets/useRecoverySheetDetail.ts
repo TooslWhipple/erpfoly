@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getInvoiceDetail } from "@/data/atencion-cliente.mockData";
+import { getInvoiceDetail } from "@/services/customer-support.service";
 import {
+  downloadRecoverySheetPdf,
   getRecoverySheetDetail,
   receiveRecoveryItem,
   updateRecoverySheetStatus,
@@ -165,9 +166,15 @@ export function useRecoverySheetDetail() {
     [receiveMutation],
   );
 
-  const handleDownload = useCallback(() => {
-    showSuccess("La descarga estará disponible próximamente.");
-  }, [showSuccess]);
+  const handleDownload = useCallback(async () => {
+    if (!sheetId) return;
+    try {
+      await downloadRecoverySheetPdf(sheetId);
+    } catch (downloadError) {
+      console.error("[RecoverySheetDetail] Download error:", downloadError);
+      showError("No se pudo descargar la hoja de recuperación.");
+    }
+  }, [sheetId, showError]);
 
   const closeReceiveModal = useCallback(() => {
     if (receiveMutation.isPending) return;

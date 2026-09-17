@@ -116,8 +116,14 @@ export function useCreateCashClientForm() {
   }, []);
 
   const validateBasicTab = useCallback(
-    (isSecurityCodeValid: boolean | null, silent = false) => {
-      const nextErrors = validateBasicInfo(values.basic, isSecurityCodeValid);
+    (
+      options: {
+        requirePhoneVerification?: boolean;
+        isSecurityCodeValid?: boolean | null;
+      } = {},
+      silent = false,
+    ) => {
+      const nextErrors = validateBasicInfo(values.basic, options);
       if (!silent) {
         setBasicErrors(nextErrors);
       }

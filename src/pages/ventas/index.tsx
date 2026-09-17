@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Stack } from "@mui/material";
-import { Title, TabFilters, TableCrud, StatusChip } from "@/components";
+import { Title, TabFilters, TableCrud, StatusChip, DateRangeFilter } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { StatusChipVariant } from "@/components/StatusChip/styles";
+import {
+  PRESET_HOY,
+  PRESET_PERIODO,
+  PRESET_SEMANA,
+} from "@/components/DateRangePopover";
+import type { DateRangeSelectOption } from "@/components/DateRangePopover";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales, cancelSale } from "@/services/ventas.service";
@@ -13,7 +19,6 @@ import type {
   SalePaymentType,
   SaleStatusTab,
 } from "@/types/ventas.types";
-import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 import { SALES_CREATE } from "@/lib/permissions";
 import {
@@ -23,24 +28,23 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const MEXICO_CITY_TZ = "America/Mexico_City";
 const STATUS_TABS: TabOption[] = [
-  {
-    label: "Todas",
-    value: "all",
-  },
-  {
-    label: "Finalizadas",
-    value: "finalized",
-  },
-  {
-    label: "Realizadas",
-    value: "completed",
-  },
-  {
-    label: "Pendientes",
-    value: "pending",
-  },
+  { label: "Todas", value: "all" },
+  { label: "Pendiente de cobro", value: "pendingCollection" },
+  { label: "En apartado", value: "pendingPayment" },
+  { label: "Pagada", value: "paid" },
+  { label: "Cancelada", value: "cancelled" },
 ];
+const SALES_DATE_OPTIONS: DateRangeSelectOption[] = [
+  { value: PRESET_HOY, label: "Hoy" },
+  { value: PRESET_SEMANA, label: "Esta semana" },
+  { value: PRESET_PERIODO, label: "Fecha personalizable" },
+];
+
+function todayInMexicoCity(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: MEXICO_CITY_TZ });
+}
 const PAYMENT_TYPE_LABELS: Record<SalePaymentType, string> = {
   CREDIT: "Crédito",
   CASH: "Contado",
@@ -51,29 +55,34 @@ const PAYMENT_TYPE_CHIP_VARIANTS: Record<SalePaymentType, StatusChipVariant> = {
   CASH: "success",
   LAYAWAY: "infoAlt",
 };
-function formatRelativeDate(value: unknown): string {
-  const d = value == null ? dayjs() : dayjs(value as string | number | Date);
-  if (!d.isValid()) return "—";
-  const now = dayjs();
-  const diffMin = now.diff(d, "minute");
-  const diffHours = now.diff(d, "hour");
-  const diffDays = now.diff(d, "day");
-  if (diffMin < 60) return `Hace ${diffMin} min`;
-  if (diffHours < 24) return `Hace ${diffHours} h`;
-  if (diffDays === 1) return "Ayer";
-  return formatDate(d, "D MMM");
+
+function formatAbsoluteListDate(value: unknown): string {
+  const d = value == null ? null : dayjs(value as string | number | Date);
+  if (!d?.isValid()) return "—";
+  const day = d.format("D");
+  const month = d.format("MMM");
+  const year = d.format("YYYY");
+  const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${day} ${capitalizedMonth} ${year}`;
 }
+
+function formatItemCount(count: number): string {
+  if (count === 1) return "1 artículo";
+  return `${count} artículos`;
+}
+
 export default function Ventas() {
   const router = useRouter();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
   const [activeTab, setActiveTab] = useState("all");
-  const statusTabExtra =
-    activeTab === "all"
-      ? undefined
-      : {
-          statusTab: activeTab as SaleStatusTab,
-        };
+  const [dateFrom, setDateFrom] = useState(todayInMexicoCity);
+  const [dateTo, setDateTo] = useState(todayInMexicoCity);
+  const statusTabExtra = {
+    statusTab: activeTab as SaleStatusTab,
+    dateFrom,
+    dateTo,
+  };
   const {
     data: ventas,
     total: totalRows,
@@ -104,6 +113,12 @@ export default function Ventas() {
     setActiveTab(value);
     setPage(0);
   };
+  const handleDateRangeChange = (range: { startDate: string; endDate: string }) => {
+    const today = todayInMexicoCity();
+    setDateFrom(range.startDate || today);
+    setDateTo(range.endDate || range.startDate || today);
+    setPage(0);
+  };
   const handleCancelSale = async (row: SaleListItem) => {
     const res = await cancelSale(row.id);
     if (res.error) {
@@ -122,6 +137,12 @@ export default function Ventas() {
   };
   const columns: Column<SaleListItem>[] = [
     {
+      id: "folio",
+      label: "Folio",
+      size: "sm",
+      format: (value) => String(value ?? "—"),
+    },
+    {
       id: "status",
       label: "Estatus",
       size: "sm",
@@ -130,45 +151,22 @@ export default function Ventas() {
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
-      id: "folio",
-      label: "Folio",
-      size: "sm",
-      format: (value) => String(value ?? "—"),
-    },
-    {
-      id: "productName",
-      label: "Artículo",
-      size: "xl",
-      format: (value, row) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box
-            component="img"
-            src={row.productImageUrl ?? "/placeholder-product.png"}
-            alt={String(value ?? "")}
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 1,
-              objectFit: "cover",
-              flexShrink: 0,
-              bgcolor: "grey.100",
-            }}
-          />
-          <span>{String(value ?? "—")}</span>
-        </Stack>
-      ),
-    },
-    {
       id: "clientName",
       label: "Cliente",
       size: "lg",
       format: (value) => String(value ?? "—"),
     },
     {
+      id: "itemCount",
+      label: "Nº artículos",
+      size: "sm",
+      format: (value) => formatItemCount(typeof value === "number" ? value : 0),
+    },
+    {
       id: "createdAt",
       label: "Fecha",
       size: "md",
-      format: (value) => formatRelativeDate(value),
+      format: (value) => formatAbsoluteListDate(value),
     },
     {
       id: "paymentType",
@@ -186,6 +184,13 @@ export default function Ventas() {
         );
       },
     },
+    {
+      id: "totalAmount",
+      label: "Total",
+      size: "md",
+      type: "currency",
+      align: "right",
+    },
   ];
   const actions: RowAction<SaleListItem>[] = [
     {
@@ -199,14 +204,30 @@ export default function Ventas() {
   return (
     <Stack direction="column" spacing={3}>
       <Title
-        title="Ventas"
+        title={
+          <>
+            <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+              Órdenes de ventas de
+            </Box>
+            <DateRangeFilter
+              variant="title"
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onChange={handleDateRangeChange}
+              options={SALES_DATE_OPTIONS}
+              timeZone={MEXICO_CITY_TZ}
+              label="Hoy"
+            />
+          </>
+        }
         actions={[
           {
             id: "nueva-venta",
-            label: "Nueva",
+            label: "Nueva venta",
             onClick: () => void router.push("/ventas/nueva"),
             variant: "contained",
             color: "primary",
+            size: "large",
             permission: SALES_CREATE,
           },
         ]}
@@ -233,7 +254,7 @@ export default function Ventas() {
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
         onRowClick={handleRowClick}
-        emptyMessage="No hay ventas registradas"
+        emptyMessage="No hay órdenes registradas"
       />
     </Stack>
   );

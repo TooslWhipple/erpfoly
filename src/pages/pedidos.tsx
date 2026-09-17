@@ -17,9 +17,12 @@ import type { Supplier } from "@/types/pedidos.types";
 import type { OrderListItem } from "@/types/orders.types";
 import { getOrders, getSuggestions } from "@/services/orders.service";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { SidebarPanel } from "@/styles/pedidos.styles";
 import { ORDERS_CREATE } from "@/lib/permissions";
 import dayjs from "@/lib/dayjs";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 type OrderStatus = "pending" | "scheduled" | "in_progress" | "received";
 
@@ -60,6 +63,8 @@ export default function Pedidos() {
     const router = useRouter();
 
     const [activeTab, setActiveTab] = useState("all");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(true);
     const [supplierModalOpen, setSupplierModalOpen] = useState(false);
@@ -79,24 +84,47 @@ export default function Pedidos() {
         return undefined;
     }, [activeTab]);
 
+    const extraParams = useMemo(
+        () => ({
+            order_type: "external" as const,
+            ...(statusFilter ? { status: statusFilter } : {}),
+            ...(dateFrom ? { date_from: dateFrom } : {}),
+            ...(dateTo ? { date_to: dateTo } : {}),
+        }),
+        [statusFilter, dateFrom, dateTo],
+    );
+
     const {
         data: orderRows,
         total,
         page,
         setPage,
+        search: searchValue,
+        setSearch,
         isLoading: loading,
     } = usePaginatedList<OrderListItem>({
-        queryKey: ["orders", activeTab],
+        queryKey: ["orders", activeTab, dateFrom, dateTo],
         queryFn: getOrders,
         initialPage: 0,
         initialRowsPerPage: 10,
-        extraParams: statusFilter ? { status: statusFilter } : undefined,
+        extraParams,
     });
+
+    const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
+        searchValue,
+        SEARCH_DEBOUNCE_MS,
+    );
+
+    useEffect(() => {
+        setSearch(debouncedSearch);
+    }, [debouncedSearch, setSearch]);
 
     const orders = useMemo(
         () => orderRows.map(mapBackendOrderToCardData),
-        [orderRows]
+        [orderRows],
     );
+
+    const hasActiveFilters = Boolean(searchValue.trim() || dateFrom || dateTo);
 
     const fetchSuggestions = useCallback(async () => {
         setSuggestionsLoading(true);
@@ -118,6 +146,12 @@ export default function Pedidos() {
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
+        setPage(0);
+    };
+
+    const handleDateRangeChange = (range: { startDate: string; endDate: string }) => {
+        setDateFrom(range.startDate);
+        setDateTo(range.endDate);
         setPage(0);
     };
 
@@ -164,13 +198,27 @@ export default function Pedidos() {
                         tabs={tabs}
                         activeTab={activeTab}
                         onTabChange={handleTabChange}
+                        showSearch
+                        searchValue={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder="Buscar por proveedor o sucursal destino"
+                        dateRangeFilter={{
+                            dateFrom,
+                            dateTo,
+                            onChange: handleDateRangeChange,
+                            label: "Fecha del pedido",
+                        }}
                     />
 
                     <OrderList
                         orders={orders}
                         onOrderClick={handleOrderClick}
                         loading={loading}
-                        emptyMessage="No hay pedidos"
+                        emptyMessage={
+                            hasActiveFilters
+                                ? "No hay pedidos con los filtros aplicados"
+                                : "No hay pedidos"
+                        }
                     />
 
                     <CardListPagination

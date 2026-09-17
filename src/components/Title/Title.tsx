@@ -17,6 +17,7 @@ export interface TitleAction {
   permission?: string;
   disabled?: boolean;
   loading?: boolean;
+  size?: "small" | "medium" | "large";
 }
 
 interface TitleProps {
@@ -49,7 +50,17 @@ export function Title({ title, description, actions }: TitleProps) {
           <Typography variant="h2">{title}</Typography>
         ) : (
           <Box sx={{ "& .MuiTypography-h2": { margin: 0 } }}>
-            <Typography variant="h2" component="div" sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Typography
+              variant="h2"
+              component="div"
+              sx={{
+                display: "flex",
+                alignItems: "baseline",
+                flexWrap: "wrap",
+                columnGap: 1,
+                rowGap: 0.5,
+              }}
+            >
               {title}
             </Typography>
           </Box>
@@ -76,6 +87,7 @@ export function Title({ title, description, actions }: TitleProps) {
               loading={action.loading}
               onClick={() => handleAction(action)}
               startIcon={action.icon}
+              size={action.size}
             >
               {action.label}
             </Button>

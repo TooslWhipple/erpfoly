@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   CircularProgress,
+  Divider,
   Grid,
   Stack,
   Typography,
 } from "@mui/material";
-import { ImagePlus, Settings2, X } from "lucide-react";
+import { CircleDotDashed, ImagePlus, Settings2, X } from "lucide-react";
 import { SideModal, FormSelect, FormTextField, StatusChip } from "@/components";
 import { createServiceOrder } from "@/services/service-orders.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -15,6 +16,7 @@ import type {
   InvoiceDetail,
   ServiceOrder,
 } from "@/types/atencion-cliente.types";
+import { paymentTypeLabel } from "@/types/atencion-cliente.types";
 import {
   ArticleMetaInfo,
   EvidenceAddButton,
@@ -28,6 +30,7 @@ import {
   ModalInvoiceLink,
   ModalMetaRow,
 } from "@/styles/atencion-cliente.styles";
+import { theme } from "@/styles/theme";
 
 const MAX_EVIDENCE_FILES = 4;
 
@@ -35,6 +38,8 @@ export interface CreateServiceOrderModalProps {
   open: boolean;
   invoice: InvoiceDetail;
   initialArticleId?: string;
+  /** Prefills the complaint field when opening (e.g. cancel-article flow). */
+  defaultComplaint?: string;
   onClose: () => void;
   onSuccess?: (order: ServiceOrder) => void;
 }
@@ -49,6 +54,7 @@ export function CreateServiceOrderModal({
   open,
   invoice,
   initialArticleId,
+  defaultComplaint,
   onClose,
   onSuccess,
 }: CreateServiceOrderModalProps) {
@@ -92,14 +98,19 @@ export function CreateServiceOrderModal({
       invoice.articles[0];
     setQuantity(String(article?.quantity ?? 1));
     setSerialNumber(article?.serialNumber ?? "");
-    setComplaint("");
+    setComplaint(defaultComplaint ?? "");
     setObservations("");
     setEvidence((prev) => {
       revokeEvidenceUrls(prev);
       return [];
     });
     setSubmitting(false);
-  }, [initialArticleId, invoice.articles, revokeEvidenceUrls]);
+  }, [
+    defaultComplaint,
+    initialArticleId,
+    invoice.articles,
+    revokeEvidenceUrls,
+  ]);
 
   useEffect(() => {
     if (open) {
@@ -183,8 +194,7 @@ export function CreateServiceOrderModal({
     }
   };
 
-  const paymentTypeLabel =
-    invoice.paymentType === "credito" ? "Crédito" : "Contado";
+  const paymentTypeLabelText = paymentTypeLabel(invoice.paymentType);
 
   return (
     <SideModal
@@ -193,51 +203,48 @@ export function CreateServiceOrderModal({
       disableClose={submitting}
       maxWidth="md"
       title="Crear Órden de Servicio"
+      headerActionsPosition="top"
       headerActions={
         <Button
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={!canSubmit}
-          startIcon={
-            submitting ? <CircularProgress size={16} color="inherit" /> : undefined
-          }
-        >
-          Crear órden
+          sx={{ whiteSpace: "nowrap" }}
+          disabled={!canSubmit}>
+          {(submitting) ? <CircularProgress size={16} color="inherit" /> : 'Crear órden'}
         </Button>
       }
       headerContent={
-        <ModalMetaRow>
-          <ModalInvoiceLink>Factura: {invoice.invoiceNumber}</ModalInvoiceLink>
-          <Typography variant="body2" color="text.secondary">
-            {invoice.purchaseDate}
-          </Typography>
-          <StatusChip
-            label={paymentTypeLabel}
-            variant="info"
-            size="small"
-            startIcon={<Settings2 size={12} />}
-          />
-        </ModalMetaRow>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          divider={<Divider orientation="vertical" flexItem sx={{ height: "12px", alignSelf: "center" }} />}>
+          <Typography variant="body1" color="primary">Factura: {invoice.invoiceNumber}</Typography>
+          <Typography variant="body2" color="text.secondary">{invoice.purchaseDate}</Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <CircleDotDashed size={16} color={theme.palette.text.secondary} />
+            <Typography variant="body2" color="text.secondary">{paymentTypeLabelText}</Typography>
+          </Stack>
+        </Stack>
       }
-      contentSx={{ display: "flex", flexDirection: "column", minHeight: 0 }}
-    >
+      contentSx={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Stack spacing={2.5} sx={{ flex: 1, overflow: "auto", minHeight: 0, pb: 1 }}>
-        <InfoGrid>
-          <InfoField>
-            <InfoLabel>Cliente</InfoLabel>
-            <InfoValue>{invoice.customerName}</InfoValue>
-          </InfoField>
-          <InfoField>
+        <Stack direction="row" spacing={1}>
+          <Stack flex={1}>
+            <Typography variant="body2" color="text.secondary">Cliente</Typography>
+            <Typography variant="body1">{invoice.customerName}</Typography>
+          </Stack>
+          <Stack flex={1}>
             <InfoLabel>Teléfono</InfoLabel>
             <InfoValue>{invoice.customerPhone}</InfoValue>
-          </InfoField>
-        </InfoGrid>
+          </Stack>
+        </Stack>
 
-        <InfoField>
-          <InfoLabel>Dirección</InfoLabel>
-          <InfoValue>{invoice.customerAddress}</InfoValue>
-        </InfoField>
+        <Stack>
+          <Typography variant="body2" color="text.secondary">Dirección</Typography>
+          <Typography variant="body1">{invoice.customerAddress}</Typography>
+        </Stack>
 
         <Stack spacing={0.5}>
           <FormSelect
@@ -248,16 +255,13 @@ export function CreateServiceOrderModal({
             disabled={submitting}
             required
           />
-          {selectedArticle && (
-            <ArticleMetaInfo>
-              <Typography variant="body2" color="text.secondary">
-                Proveedor: {selectedArticle.supplier ?? "—"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Forma de entrega: {selectedArticle.deliveryMethod ?? "—"}
-              </Typography>
-            </ArticleMetaInfo>
-          )}
+          {
+            selectedArticle &&
+            <Stack direction="row" spacing={1}>
+              <Typography variant="body2" color="text.secondary">Proveedor: {selectedArticle.supplier}</Typography>
+              <Typography variant="body2" color="text.secondary">Forma de entrega: {selectedArticle.deliveryMethod}</Typography>
+            </Stack>
+          }
         </Stack>
 
         <Grid container spacing={2}>
@@ -304,9 +308,7 @@ export function CreateServiceOrderModal({
                 <EvidenceRemoveButton
                   size="small"
                   onClick={() => handleRemoveEvidence(item.id)}
-                  disabled={submitting}
-                  aria-label="Eliminar evidencia"
-                >
+                  disabled={submitting}>
                   <X size={12} />
                 </EvidenceRemoveButton>
               </EvidenceThumb>
@@ -315,9 +317,7 @@ export function CreateServiceOrderModal({
               <EvidenceAddButton
                 type="button"
                 onClick={handleAddEvidenceClick}
-                disabled={submitting}
-                aria-label="Agregar evidencia"
-              >
+                disabled={submitting}>
                 <ImagePlus size={22} strokeWidth={1.75} />
               </EvidenceAddButton>
             )}

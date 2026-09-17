@@ -84,6 +84,7 @@ export interface AddressTabErrors {
   residenceTimeValue?: string;
   residenceTimeUnit?: string;
   previousAddress?: string;
+  previousResidenceTimeValue?: string;
   betweenStreets?: string;
   housingType?: string;
 }
@@ -194,6 +195,7 @@ export interface DocumentationTabValues {
   employmentProofLetterFiles: CreditApplicationDocumentFile[];
   ineFrontFiles: CreditApplicationDocumentFile[];
   ineBackFiles: CreditApplicationDocumentFile[];
+  faceCaptureFiles?: CreditApplicationDocumentFile[];
 }
 
 export interface CreditApplicationDocumentFile {

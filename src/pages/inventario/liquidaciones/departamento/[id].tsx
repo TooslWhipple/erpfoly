@@ -1,16 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   Title,
   Breadcrumbs,
-  Tabs,
   PriceSuggestionCard,
   LiquidationRuleCard,
   LiquidationRuleActivityModal,
+  LiquidationRuleFormModal,
   ConfirmPriceChangeModal,
+  ConfirmModal,
   TabFilters,
 } from "@/components";
+import type { ActionButtonConfig } from "@/components/TabFilters";
 import { useLiquidationRuleActivity } from "@/hooks/useLiquidationRuleActivity";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import type { TabItem } from "@/components/Tabs";
 import type {
   DepartmentDetail,
@@ -19,17 +22,43 @@ import type {
   LiquidationRuleOperator,
   LiquidationRulePeriod,
 } from "@/types/liquidaciones.types";
+import type { LiquidationRuleFormValues } from "@/components/LiquidationRuleFormModal";
 import {
-  getDepartmentDetail,
   applyPriceSuggestion,
-} from "@/data/liquidaciones.mockData";
+  getDepartmentDetail,
+  saveDepartmentRules,
+} from "@/services/liquidaciones.service";
 import {
   ArticlesGrid,
   RulesList,
 } from "@/styles/inventario/departamento.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { INVENTORY_LIQUIDATIONS_UPDATE } from "@/lib/permissions";
 import { Box, Skeleton, Stack, Typography } from "@mui/material";
+
 type PageState = "loading" | "success" | "empty" | "error" | "not_found";
+
+function serializeRules(rules: LiquidationRule[]): string {
+  return JSON.stringify(
+    rules.map((rule) => ({
+      id: rule.id,
+      operator: rule.operator,
+      value: rule.value,
+      periodDays: rule.periodDays,
+      promotionPercent: rule.promotionPercent,
+      redLabelEnabled: rule.redLabelEnabled,
+    })),
+  );
+}
+
+function withRuleOrder(rules: LiquidationRule[]): LiquidationRule[] {
+  return rules.map((rule, index) => ({ ...rule, order: index + 1 }));
+}
+
+function ruleMatchKey(rule: Pick<LiquidationRule, "operator" | "value" | "periodDays">): string {
+  return `${rule.operator}:${rule.value}:${rule.periodDays}`;
+}
+
 export default function DepartamentoLiquidacionesPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -38,11 +67,19 @@ export default function DepartamentoLiquidacionesPage() {
   const [state, setState] = useState<PageState>("loading");
   const [department, setDepartment] = useState<DepartmentDetail | null>(null);
   const [rules, setRules] = useState<LiquidationRule[]>([]);
+  const [savedRulesSnapshot, setSavedRulesSnapshot] = useState("");
   const [activeTab, setActiveTab] = useState("articulos");
+  const [createRuleOpen, setCreateRuleOpen] = useState(false);
   const [confirmModalItem, setConfirmModalItem] =
     useState<PriceSuggestionItem | null>(null);
+  const [confirmPrice, setConfirmPrice] = useState<number | null>(null);
   const [applyLoading, setApplyLoading] = useState(false);
+  const [savingRules, setSavingRules] = useState(false);
   const [activityRuleId, setActivityRuleId] = useState<string | null>(null);
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+  const [confirmLeaveResolver, setConfirmLeaveResolver] = useState<
+    ((value: boolean) => void) | null
+  >(null);
   const {
     data: ruleActivity,
     isLoading: activityLoading,
@@ -50,6 +87,17 @@ export default function DepartamentoLiquidacionesPage() {
     refetch: refetchActivity,
   } = useLiquidationRuleActivity(activityRuleId, activityRuleId !== null);
   const departmentId = typeof id === "string" ? id : "";
+  const isDirty = useMemo(
+    () => savedRulesSnapshot !== "" && serializeRules(rules) !== savedRulesSnapshot,
+    [rules, savedRulesSnapshot],
+  );
+
+  const applyLoadedRules = useCallback((nextRules: LiquidationRule[]) => {
+    const ordered = withRuleOrder(nextRules);
+    setRules(ordered);
+    setSavedRulesSnapshot(serializeRules(ordered));
+  }, []);
+
   const fetchDetail = useCallback(async () => {
     if (!departmentId) return;
     setState("loading");
@@ -60,42 +108,38 @@ export default function DepartamentoLiquidacionesPage() {
         return;
       }
       setDepartment(data);
-      setRules(data.rules);
-      setState(
-        data.articles.length === 0 && data.rules.length === 0
-          ? "empty"
-          : "success",
-      );
+      applyLoadedRules(data.rules);
+      setState("success");
     } catch {
       setState("error");
     }
-  }, [departmentId]);
+  }, [departmentId, applyLoadedRules]);
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
   const handleApplyClick = useCallback(
-    (item: PriceSuggestionItem, _price: number) => {
+    (item: PriceSuggestionItem, price: number) => {
       setConfirmModalItem(item);
+      setConfirmPrice(price);
     },
     [],
   );
   const handleConfirmPriceChange = useCallback(async () => {
     if (!confirmModalItem) return;
+    const price = confirmPrice ?? confirmModalItem.suggestedPrice;
     setApplyLoading(true);
     try {
-      await applyPriceSuggestion(
-        confirmModalItem.id,
-        confirmModalItem.suggestedPrice,
-      );
+      await applyPriceSuggestion(confirmModalItem.id, price);
       showSuccess("Precio aplicado correctamente");
       setConfirmModalItem(null);
+      setConfirmPrice(null);
       fetchDetail();
     } catch {
       showError("No se pudo aplicar el precio");
     } finally {
       setApplyLoading(false);
     }
-  }, [confirmModalItem, showSuccess, showError, fetchDetail]);
+  }, [confirmModalItem, confirmPrice, showSuccess, showError, fetchDetail]);
   const previousPriceFromItem = confirmModalItem
     ? confirmModalItem.direction === "down"
       ? confirmModalItem.suggestedPrice /
@@ -176,8 +220,71 @@ export default function DepartamentoLiquidacionesPage() {
     [],
   );
   const handleRuleDelete = useCallback((ruleId: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    setRules((prev) => withRuleOrder(prev.filter((r) => r.id !== ruleId)));
   }, []);
+  const handleCreateRule = useCallback(
+    async (values: LiquidationRuleFormValues) => {
+      const key = ruleMatchKey(values);
+      if (rules.some((rule) => ruleMatchKey(rule) === key)) {
+        showError(
+          "Ya existe una regla con el mismo operador, umbral y periodo.",
+        );
+        return;
+      }
+      setRules((prev) =>
+        withRuleOrder([
+          ...prev,
+          {
+            id: `tmp-${Date.now()}`,
+            order: prev.length + 1,
+            operator: values.operator,
+            value: values.value,
+            periodDays: values.periodDays,
+            promotionPercent: values.promotionPercent,
+            redLabelEnabled: values.redLabelEnabled,
+          },
+        ]),
+      );
+      setCreateRuleOpen(false);
+    },
+    [rules, showError],
+  );
+  const handleSaveRules = useCallback(async () => {
+    if (!departmentId) return;
+    setSavingRules(true);
+    try {
+      const saved = await saveDepartmentRules(departmentId, rules);
+      setDepartment(saved);
+      applyLoadedRules(saved.rules);
+      showSuccess("Reglas guardadas");
+    } catch {
+      showError("No se pudieron guardar las reglas");
+    } finally {
+      setSavingRules(false);
+    }
+  }, [departmentId, rules, applyLoadedRules, showSuccess, showError]);
+  const resolveConfirmLeave = useCallback(
+    (allow: boolean) => {
+      setConfirmLeaveOpen(false);
+      confirmLeaveResolver?.(allow);
+      setConfirmLeaveResolver(null);
+    },
+    [confirmLeaveResolver],
+  );
+  const requestLeaveConfirmation = useCallback(() => {
+    if (!isDirty) {
+      return Promise.resolve(true);
+    }
+    return new Promise<boolean>((resolve) => {
+      setConfirmLeaveResolver(() => resolve);
+      setConfirmLeaveOpen(true);
+    });
+  }, [isDirty]);
+  useUnsavedChangesGuard({
+    isDirty,
+    confirmLeave: requestLeaveConfirmation,
+  });
+
   const tabs: TabItem[] = [
     {
       value: "articulos",
@@ -188,6 +295,31 @@ export default function DepartamentoLiquidacionesPage() {
       label: "Ajustes",
     },
   ];
+  const tabActions = useMemo((): ActionButtonConfig[] => {
+    if (state !== "success" || activeTab !== "ajustes") {
+      return [];
+    }
+    const actions: ActionButtonConfig[] = [
+      {
+        label: "Agregar regla",
+        onClick: () => setCreateRuleOpen(true),
+        variant: "outlined",
+        showIcon: true,
+        permission: INVENTORY_LIQUIDATIONS_UPDATE,
+      },
+    ];
+    if (isDirty) {
+      actions.push({
+        label: savingRules ? "Guardando…" : "Guardar ajustes",
+        onClick: () => void handleSaveRules(),
+        variant: "contained",
+        color: "primary",
+        disabled: savingRules,
+        permission: INVENTORY_LIQUIDATIONS_UPDATE,
+      });
+    }
+    return actions;
+  }, [state, activeTab, isDirty, savingRules, handleSaveRules]);
   const breadcrumbItems = [
     {
       label: "Estrategia de baja rotación",
@@ -225,7 +357,7 @@ export default function DepartamentoLiquidacionesPage() {
   }
   return (
     <>
-      <Stack spacing={3}>
+      <Stack spacing={3} sx={{ width: "100%", minWidth: 0 }}>
         <Breadcrumbs
           items={breadcrumbItems}
           onBack={() => router.push("/inventario/liquidaciones")}
@@ -239,34 +371,34 @@ export default function DepartamentoLiquidacionesPage() {
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          actions={tabActions}
         />
 
         {state === "loading" && (
-          <Stack
+          <Box
             sx={{
-              mt: 3,
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+              },
+              gap: 2,
+              minWidth: 0,
             }}
           >
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 2,
-              }}
-            >
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton
-                  key={i}
-                  variant="rectangular"
-                  height={220}
-                  sx={{
-                    borderRadius: 2,
-                  }}
-                  animation="wave"
-                />
-              ))}
-            </Box>
-          </Stack>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton
+                key={i}
+                variant="rectangular"
+                height={220}
+                sx={{
+                  borderRadius: 2,
+                }}
+                animation="wave"
+              />
+            ))}
+          </Box>
         )}
 
         {state === "error" && (
@@ -295,13 +427,20 @@ export default function DepartamentoLiquidacionesPage() {
           <>
             {activeTab === "articulos" && (
               <ArticlesGrid>
-                {department.articles.map((item) => (
-                  <PriceSuggestionCard
-                    key={item.id}
-                    item={item}
-                    onApply={handleApplyClick}
-                  />
-                ))}
+                {department.articles.length === 0 ? (
+                  <Typography color="text.secondary">
+                    No hay sugerencias. Configura reglas con un porcentaje mayor
+                    a 0 para artículos de lento movimiento.
+                  </Typography>
+                ) : (
+                  department.articles.map((item) => (
+                    <PriceSuggestionCard
+                      key={item.id}
+                      item={item}
+                      onApply={handleApplyClick}
+                    />
+                  ))
+                )}
               </ArticlesGrid>
             )}
 
@@ -323,8 +462,11 @@ export default function DepartamentoLiquidacionesPage() {
                       onPromotionChange={handleRulePromotionChange}
                       onRedLabelChange={handleRuleRedLabelChange}
                       onDelete={handleRuleDelete}
-                      onViewActivity={setActivityRuleId}
-                      onDrag={() => {}}
+                      onViewActivity={
+                        rule.id.startsWith("tmp-")
+                          ? undefined
+                          : setActivityRuleId
+                      }
                     />
                   ))
                 )}
@@ -333,6 +475,12 @@ export default function DepartamentoLiquidacionesPage() {
           </>
         )}
       </Stack>
+
+      <LiquidationRuleFormModal
+        open={createRuleOpen}
+        onClose={() => setCreateRuleOpen(false)}
+        onSubmit={handleCreateRule}
+      />
 
       <LiquidationRuleActivityModal
         open={activityRuleId !== null}
@@ -347,17 +495,31 @@ export default function DepartamentoLiquidacionesPage() {
       <ConfirmPriceChangeModal
         open={!!confirmModalItem}
         onClose={() => {
-          if (!applyLoading) setConfirmModalItem(null);
+          if (!applyLoading) {
+            setConfirmModalItem(null);
+            setConfirmPrice(null);
+          }
         }}
         productName={confirmModalItem?.productName ?? ""}
         sku={confirmModalItem?.sku ?? ""}
         imageUrl={confirmModalItem?.imageUrl}
         previousPrice={previousPriceFromItem}
-        newPrice={confirmModalItem?.suggestedPrice ?? 0}
+        newPrice={confirmPrice ?? confirmModalItem?.suggestedPrice ?? 0}
         changePercent={confirmModalItem?.changePercent ?? 0}
         direction={confirmModalItem?.direction ?? "down"}
         onConfirm={handleConfirmPriceChange}
         loading={applyLoading}
+      />
+
+      <ConfirmModal
+        open={confirmLeaveOpen}
+        onClose={() => resolveConfirmLeave(false)}
+        onConfirm={() => resolveConfirmLeave(true)}
+        title="Cambios sin guardar"
+        description="Tienes cambios sin guardar. Si sales ahora, se perderán. ¿Deseas salir?"
+        cancelLabel="Quedarme"
+        confirmLabel="Salir sin guardar"
+        type="warning"
       />
     </>
   );

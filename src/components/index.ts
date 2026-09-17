@@ -176,6 +176,11 @@ export { PriceSuggestionsSidebar } from "./PriceSuggestionsSidebar";
 export type { PriceSuggestionsSidebarProps } from "./PriceSuggestionsSidebar";
 export { LiquidationRuleCard } from "./LiquidationRuleCard";
 export type { LiquidationRuleCardProps } from "./LiquidationRuleCard";
+export { LiquidationRuleFormModal } from "./LiquidationRuleFormModal";
+export type {
+  LiquidationRuleFormModalProps,
+  LiquidationRuleFormValues,
+} from "./LiquidationRuleFormModal";
 export { BranchMonthlyGoalsTable } from "./BranchMonthlyGoalsTable";
 export type {
   BranchMonthlyGoalsTableProps,

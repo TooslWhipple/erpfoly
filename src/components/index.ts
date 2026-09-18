@@ -1,5 +1,6 @@
 export { Sidebar } from "./Sidebar";
 export { AuthGuard } from "./AuthGuard";
+export { InstallAppControl } from "./InstallAppControl";
 export { Title } from "./Title";
 export { Breadcrumbs } from "./Breadcrumbs";
 export type { BreadcrumbsProps, BreadcrumbItem } from "./Breadcrumbs";

@@ -22,10 +22,21 @@ export const StyledDrawer = styled(Drawer, {
       boxSizing: "border-box",
       display: "flex",
       flexDirection: "column",
-      height: isMobile ? "100vh" : `calc(100vh - 32px)`,
-      marginTop: isMobile ? 0 : "16px",
-      marginLeft: isMobile ? 0 : "16px",
+      height: isMobile
+        ? "100dvh"
+        : "calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+      marginTop: isMobile ? 0 : "calc(16px + env(safe-area-inset-top))",
+      marginLeft: isMobile ? 0 : "calc(16px + env(safe-area-inset-left))",
       padding: theme.spacing(1.5),
+      paddingTop: isMobile
+        ? `calc(${theme.spacing(1.5)} + env(safe-area-inset-top))`
+        : theme.spacing(1.5),
+      paddingBottom: isMobile
+        ? `calc(${theme.spacing(1.5)} + env(safe-area-inset-bottom))`
+        : theme.spacing(1.5),
+      paddingLeft: isMobile
+        ? `calc(${theme.spacing(1.5)} + env(safe-area-inset-left))`
+        : theme.spacing(1.5),
       overflowX: "hidden",
       overflowY: "visible",
       backgroundColor: theme.palette.background.paper,

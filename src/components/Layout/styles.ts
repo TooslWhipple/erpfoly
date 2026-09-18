@@ -6,14 +6,20 @@ import { CONTENT_PADDING } from "@/styles/theme";
 
 export const LayoutContainer = styled(Box)({
   display: "flex",
-  minHeight: "100vh",
+  minHeight: "100dvh",
+  height: "100dvh",
+  boxSizing: "border-box",
+  paddingTop: "env(safe-area-inset-top)",
+  paddingRight: "env(safe-area-inset-right)",
+  paddingBottom: "env(safe-area-inset-bottom)",
+  paddingLeft: "env(safe-area-inset-left)",
 });
 
 export const MainContent = styled(Box)({
   flexGrow: 1,
   display: "flex",
   flexDirection: "column",
-  height: "100vh",
+  height: "100%",
   minHeight: 0,
   width: "100%",
   overflow: "hidden",

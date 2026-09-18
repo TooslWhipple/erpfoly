@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { LogOut, PanelLeft } from "lucide-react";
 import { Plus } from "@/components/Icons";
+import { InstallAppControl } from "@/components/InstallAppControl";
 import { useAppNav } from "@/components/Layout";
 import {
   StyledDrawer,
@@ -206,6 +207,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </UserInfoContainer>
             </>
           )}
+          <InstallAppControl />
           <IconButton
             size="small"
             color="inherit"

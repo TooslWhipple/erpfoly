@@ -49,14 +49,28 @@ export const PANEL_WIDTHS: Record<string, number> = {
   xl: 960,
 };
 
+const paperFlexColumn = {
+  display: "flex",
+  flexDirection: "column" as const,
+  overflow: "hidden",
+  minHeight: 0,
+};
+
 export function getDefaultPaperSx(
   theme: Theme,
   fullScreen: boolean,
   panelWidth: number,
   fullWidth: boolean,
 ) {
-  if (fullScreen) return undefined;
+  if (fullScreen) {
+    return {
+      ...paperFlexColumn,
+      height: "100%",
+      maxHeight: "100%",
+    };
+  }
   return {
+    ...paperFlexColumn,
     position: "fixed" as const,
     right: theme.spacing(2),
     top: theme.spacing(2),
@@ -66,7 +80,7 @@ export function getDefaultPaperSx(
     maxHeight: "none",
     width: fullWidth ? panelWidth : "auto",
     minWidth: fullWidth ? panelWidth : 320,
-    borderRadius: '24px',
+    borderRadius: "24px",
     boxShadow:
       "-8px 0 32px rgba(0, 0, 0, 0.12), -4px 0 16px rgba(0, 0, 0, 0.08)",
   };

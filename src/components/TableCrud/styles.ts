@@ -11,21 +11,41 @@ import {
   TablePagination,
 } from "@mui/material";
 
-export const TableWrapper = styled("div")(({ theme }) => ({
+export const TableWrapper = styled("div", {
+  shouldForwardProp: (prop) => prop !== "fillHeight",
+})<{ fillHeight?: boolean }>(({ theme, fillHeight }) => ({
   width: "100%",
   backgroundColor: theme.palette.app.background.sidebar,
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: theme.shape.borderRadius,
   overflow: "hidden",
+  ...(fillHeight
+    ? {
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        height: "100%",
+      }
+    : {}),
 }));
 
-export const StyledTableContainer = styled(TableContainer)({
+export const StyledTableContainer = styled(TableContainer, {
+  shouldForwardProp: (prop) => prop !== "fillHeight",
+})<{ fillHeight?: boolean }>(({ fillHeight }) => ({
   overflow: "auto",
   position: "relative",
   maxWidth: "100%",
   width: "100%",
   boxShadow: "none",
-});
+  WebkitOverflowScrolling: "touch",
+  ...(fillHeight
+    ? {
+        flex: 1,
+        minHeight: 0,
+      }
+    : {}),
+}));
 
 export const StyledTableHead = styled(TableHead)(({ theme }) => ({
   backgroundColor: theme.palette.app.background.main,
@@ -167,6 +187,7 @@ export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
   overflow: "hidden",
   display: "flex",
   justifyContent: "flex-end",
+  flexShrink: 0,
   "& .MuiTablePagination-toolbar": {
     minHeight: 52,
     flexWrap: "wrap",

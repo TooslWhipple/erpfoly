@@ -4612,6 +4612,7 @@ export function SaleBuilder({
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
             fullScreenBreakpoint={SALES_POS_BREAKPOINT}
+            contentSx={{ overflow: "hidden" }}
             headerActions={
               <Button
                 variant="outlined"
@@ -4638,11 +4639,12 @@ export function SaleBuilder({
                   <Search size={16} />
                 </InputAdornment>
               }
-              sx={{ mb: 2 }}
+              sx={{ flexShrink: 0 }}
               autoFocus
             />
 
             <TableCrud<Client>
+              fillHeight
               columns={[
                 { id: "id", label: "ID", type: "id", size: "xs" },
                 {

@@ -18,6 +18,7 @@ import {
 } from "@/services/promociones.service";
 import type { ProductPromotionDraft } from "@/types/productos.types";
 import type { FormErrors, PromotionFormState } from "@/types/promociones.types";
+import { EMPTY_PRODUCT_SELECTION } from "@/types/promociones.types";
 import { LiquidationNoticeLeft, LiquidationNoticeRoot } from "./ProductPromotionModal.styles";
 
 const productPromotionModalFields = defineFormFields<Record<string, never>>()([]);
@@ -37,6 +38,7 @@ function emptyFormBase(): PromotionFormState {
     selectedDepartmentIds: [],
     selectedLineIds: [],
     selectedProductIds: [],
+    productSelection: EMPTY_PRODUCT_SELECTION,
     selectedBranchIds: [],
     suppliers: [],
   };
@@ -87,6 +89,7 @@ function mapPayloadToFormState(
     selectedDepartmentIds: [],
     selectedLineIds: [],
     selectedProductIds: productIds,
+    productSelection: EMPTY_PRODUCT_SELECTION,
     selectedBranchIds: [...(normalized.branchIds ?? [])],
     suppliers: (normalized.supplierIds ?? []).map((sid, i) => ({
       id: i + 1,

@@ -71,7 +71,16 @@ export interface PromotionDetail {
 		percentage: number;
 	}>;
 	product_ids: number[];
-	products: Array<{
+	department_ids: number[];
+	line_ids: number[];
+	product_selection: {
+		select_all: boolean;
+		line_ids: number[];
+		department_ids: number[];
+		excluded_product_ids: number[];
+		included_product_ids: number[];
+	};
+  products?: Array<{
 		id: number;
 		department_id: number;
 		line_id: number;
@@ -97,6 +106,12 @@ export interface SavePromotionPayload {
 		percentage: number;
 	}>;
 	productIds?: number[];
+	productSelection?: {
+		selectAll: boolean;
+		lineIds: number[];
+		excludedProductIds?: number[];
+		includedProductIds?: number[];
+	};
 	branchIds?: number[];
 	supplierIds?: number[];
 }
@@ -116,6 +131,12 @@ export interface CreatePromotionApiPayload {
 		percentage: number;
 	}>;
 	product_ids?: number[];
+	product_selection?: {
+		select_all: boolean;
+		line_ids: number[];
+		excluded_product_ids?: number[];
+		included_product_ids?: number[];
+	};
 	branch_ids?: number[];
 	supplier_ids?: number[];
 }
@@ -154,6 +175,16 @@ function mapSavePromotionPayloadToApi(
 			})
 		),
 		product_ids: normalized.productIds ?? [],
+		product_selection: normalized.productSelection
+			? {
+					select_all: normalized.productSelection.selectAll,
+					line_ids: normalized.productSelection.lineIds,
+					excluded_product_ids:
+						normalized.productSelection.excludedProductIds ?? [],
+					included_product_ids:
+						normalized.productSelection.includedProductIds ?? [],
+				}
+			: undefined,
 		branch_ids: normalized.branchIds ?? [],
 		supplier_ids: normalized.supplierIds ?? [],
 	};

@@ -15,6 +15,7 @@ export interface PaginatedListPayload<T> {
     page: number;
     limit: number;
     totalPages: number;
+    scopeTotal?: number;
 }
 
 export interface PaginatedListResult<T> {
@@ -28,9 +29,11 @@ export interface PaginatedListResult<T> {
     setRowsPerPage: (rowsPerPage: number) => void;
     setSearch: (search: string) => void;
     isLoading: boolean;
+    isFetching: boolean;
     isError: boolean;
     error: Error | null;
     refetch: () => void;
+    scopeTotal: number;
 }
 
 export interface UsePaginatedListOptions<T> {
@@ -73,7 +76,7 @@ export function usePaginatedList<T>({
     const apiPage = page + 1;
     const extraKey = extraParams ? Object.entries(extraParams).flat() : [];
 
-    const { data, isLoading, isError, error, refetch } = useQuery({
+    const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
         queryKey: [...queryKey, apiPage, rowsPerPage, search, ...extraKey],
         enabled,
         queryFn: async () => {
@@ -108,8 +111,10 @@ export function usePaginatedList<T>({
         setRowsPerPage: setRowsPerPageAndResetPage,
         setSearch: setSearchAndResetPage,
         isLoading,
+        isFetching,
         isError,
         error: error ?? null,
         refetch,
+        scopeTotal: data?.scopeTotal ?? data?.total ?? 0,
     };
 }

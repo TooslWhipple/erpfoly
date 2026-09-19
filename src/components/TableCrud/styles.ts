@@ -25,7 +25,7 @@ export const TableWrapper = styled("div", {
         flexDirection: "column",
         flex: 1,
         minHeight: 0,
-        height: "100%",
+        alignSelf: "stretch",
       }
     : {}),
 }));
@@ -43,6 +43,11 @@ export const StyledTableContainer = styled(TableContainer, {
     ? {
         flex: 1,
         minHeight: 0,
+        "& thead th": {
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+        },
       }
     : {}),
 }));
@@ -188,6 +193,10 @@ export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
   flexShrink: 0,
+  position: "sticky",
+  bottom: 0,
+  zIndex: 2,
+  backgroundColor: theme.palette.app.background.sidebar,
   "& .MuiTablePagination-toolbar": {
     minHeight: 52,
     flexWrap: "wrap",

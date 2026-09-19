@@ -4612,7 +4612,11 @@ export function SaleBuilder({
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
             fullScreenBreakpoint={SALES_POS_BREAKPOINT}
-            contentSx={{ overflow: "hidden" }}
+            contentSx={{
+              overflow: "hidden",
+              overflowX: "hidden",
+              overflowY: "hidden",
+            }}
             headerActions={
               <Button
                 variant="outlined"
@@ -4628,20 +4632,29 @@ export function SaleBuilder({
               </Button>
             }
           >
-            <OutlinedInput
-              fullWidth
-              size="small"
-              placeholder="Ingresa el nombre del cliente"
-              value={clientModalSearch}
-              onChange={(e) => setClientModalSearch(e.target.value)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <Search size={16} />
-                </InputAdornment>
-              }
-              sx={{ flexShrink: 0 }}
-              autoFocus
-            />
+            <Box
+              sx={(theme) => ({
+                position: "sticky",
+                top: 0,
+                zIndex: 3,
+                flexShrink: 0,
+                backgroundColor: theme.palette.background.content,
+              })}
+            >
+              <OutlinedInput
+                fullWidth
+                size="small"
+                placeholder="Ingresa el nombre del cliente"
+                value={clientModalSearch}
+                onChange={(e) => setClientModalSearch(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Search size={16} />
+                  </InputAdornment>
+                }
+                autoFocus
+              />
+            </Box>
 
             <TableCrud<Client>
               fillHeight

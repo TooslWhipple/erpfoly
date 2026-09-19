@@ -116,6 +116,8 @@ export function SideModal({
           flex: 1,
           minHeight: 0,
           overflow: "hidden",
+          overflowX: "hidden",
+          overflowY: "hidden",
         }}>
         <SideModalHeader>
           <Stack direction="column" alignItems="flex-start" spacing={2}>

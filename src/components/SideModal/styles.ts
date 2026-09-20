@@ -24,13 +24,15 @@ export const SideModalHeader = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const SideModalContent = styled(Stack)(({ theme }) => ({
-  flex: 1,
+export const SideModalContent = styled(Stack, {
+  shouldForwardProp: (prop) => prop !== "lockOverflow",
+})<{ lockOverflow?: boolean }>(({ theme, lockOverflow }) => ({
+  flex: lockOverflow ? "1 1 0%" : 1,
   minHeight: 0,
   width: "100%",
-  overflow: "auto",
+  overflow: lockOverflow ? "hidden" : "auto",
   overflowX: "hidden",
-  overflowY: "auto",
+  overflowY: lockOverflow ? "hidden" : "auto",
   backgroundColor: theme.palette.background.content,
   padding: theme.spacing(2, 3, 3),
   borderBottomLeftRadius: 24,
@@ -68,6 +70,11 @@ export function getDefaultPaperSx(
       ...paperFlexColumn,
       height: "100%",
       maxHeight: "100%",
+      overscrollBehavior: "none",
+      "@supports (height: 100dvh)": {
+        height: "100dvh",
+        maxHeight: "100dvh",
+      },
     };
   }
   return {

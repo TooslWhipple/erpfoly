@@ -32,6 +32,11 @@ export interface SideModalProps {
   fullScreenBreakpoint?: "sm" | "md" | "lg";
   /** When true, always fullscreen regardless of breakpoint (tablets / camera capture). */
   forceFullScreen?: boolean;
+  /**
+   * Lock the content pane (no outer scroll). Use with a child that scrolls internally
+   * so sticky search / pagination chrome stay in view.
+   */
+  lockContentScroll?: boolean;
 }
 
 export function SideModal({
@@ -52,6 +57,7 @@ export function SideModal({
   paperSx,
   fullScreenBreakpoint = "md",
   forceFullScreen = false,
+  lockContentScroll = false,
 }: SideModalProps) {
   const theme = useTheme();
   const matchesBreakpoint = useMediaQuery(
@@ -141,7 +147,12 @@ export function SideModal({
             {header ?? defaultHeader}
           </Stack>
         </SideModalHeader>
-        <SideModalContent direction="column" spacing={2} sx={contentSx}>
+        <SideModalContent
+          direction="column"
+          spacing={2}
+          lockOverflow={lockContentScroll}
+          sx={contentSx}
+        >
           {children}
         </SideModalContent>
       </DialogContent>

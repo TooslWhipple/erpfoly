@@ -23,8 +23,9 @@ export const TableWrapper = styled("div", {
     ? {
         display: "flex",
         flexDirection: "column",
-        flex: 1,
+        flex: "1 1 0%",
         minHeight: 0,
+        height: 0,
         alignSelf: "stretch",
       }
     : {}),
@@ -41,13 +42,10 @@ export const StyledTableContainer = styled(TableContainer, {
   WebkitOverflowScrolling: "touch",
   ...(fillHeight
     ? {
-        flex: 1,
+        flex: "1 1 0%",
         minHeight: 0,
-        "& thead th": {
-          position: "sticky",
-          top: 0,
-          zIndex: 2,
-        },
+        overflowY: "auto",
+        overscrollBehavior: "contain",
       }
     : {}),
 }));
@@ -192,6 +190,7 @@ export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
   overflow: "hidden",
   display: "flex",
   justifyContent: "flex-end",
+  flex: "0 0 auto",
   flexShrink: 0,
   position: "sticky",
   bottom: 0,

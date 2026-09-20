@@ -2452,7 +2452,7 @@ export function SaleBuilder({
   if (view === "search") {
     return (
       <>
-      <PageShell>
+      <PageShell contained>
         <SearchHeader>
           <InlineMobileMenuButton />
           <IconButton size="medium" onClick={() => setView("form")} aria-label="Cerrar">
@@ -2487,6 +2487,7 @@ export function SaleBuilder({
 
         <PageContent>
           <TableCrud<ProductSearchResult>
+            fillHeight
             columns={[
               {
                 id: "imageUrl",
@@ -4612,11 +4613,7 @@ export function SaleBuilder({
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
             fullScreenBreakpoint={SALES_POS_BREAKPOINT}
-            contentSx={{
-              overflow: "hidden",
-              overflowX: "hidden",
-              overflowY: "hidden",
-            }}
+            lockContentScroll
             headerActions={
               <Button
                 variant="outlined"
@@ -4637,7 +4634,7 @@ export function SaleBuilder({
                 position: "sticky",
                 top: 0,
                 zIndex: 3,
-                flexShrink: 0,
+                flex: "0 0 auto",
                 backgroundColor: theme.palette.background.content,
               })}
             >

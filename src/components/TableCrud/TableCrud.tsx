@@ -471,7 +471,10 @@ export function TableCrud<T>({
   return (
     <TableWrapper fillHeight={fillHeight}>
       <StyledTableContainer fillHeight={fillHeight}>
-        <Table style={{ width: "100%", minWidth: minTableWidth }}>
+        <Table
+          stickyHeader={fillHeight}
+          style={{ width: "100%", minWidth: minTableWidth }}
+        >
           {renderTableHeader()}
           <TableBody>
             {loading ? (

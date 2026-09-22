@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import {
-	authService,
-	type RequestPasswordRecoveryRequest,
-} from "@/services/auth.service";
-import { parseLoginIdentifier } from "@/utils/login-identifier";
-import { getIdentifierValidationError } from "@/utils/auth-credentials";
+import { authService } from "@/services/auth.service";
+import { getCellphoneValidationError } from "@/utils/auth-credentials";
 
 export function usePasswordRecovery() {
 	const router = useRouter();
@@ -14,23 +10,18 @@ export function usePasswordRecovery() {
 
 	const clearError = () => setError(null);
 
-	const requestRecovery = async (identifier: string) => {
-		const trimmed = identifier.trim();
-		const identifierError = getIdentifierValidationError(trimmed);
-		if (!trimmed || identifierError) {
-			setError(identifierError ?? "Ingresa tu número de celular");
+	const requestRecovery = async (cellphone: string) => {
+		const trimmed = cellphone.trim();
+		const cellphoneError = getCellphoneValidationError(trimmed);
+		if (!trimmed || cellphoneError) {
+			setError(cellphoneError ?? "Ingresa tu número de celular");
 			return;
 		}
 
 		setIsLoading(true);
 		setError(null);
 
-		const parsed = parseLoginIdentifier(trimmed);
-		const payload: RequestPasswordRecoveryRequest = parsed.cellphone
-			? { cellphone: parsed.cellphone }
-			: { username: parsed.username ?? trimmed };
-
-		const result = await authService.requestPasswordRecovery(payload);
+		const result = await authService.requestPasswordRecovery({ cellphone: trimmed });
 
 		if (result.error) {
 			setError(result.error.message);

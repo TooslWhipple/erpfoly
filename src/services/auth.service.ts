@@ -26,8 +26,7 @@ export interface LoginResponse {
 }
 
 export interface RequestPasswordRecoveryRequest {
-	username?: string;
-	cellphone?: string;
+	cellphone: string;
 }
 
 export interface ResetPasswordRequest {

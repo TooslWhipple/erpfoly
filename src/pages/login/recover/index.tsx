@@ -8,13 +8,13 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
-import { ArrowLeft, IdCard } from "lucide-react";
+import { ArrowLeft, Phone } from "lucide-react";
 import { usePasswordRecovery } from "@/hooks/usePasswordRecovery";
 import {
-	getIdentifierValidationError,
-	isValidIdentifier,
-	sanitizeIdentifierInput,
-	USERNAME_MAX_LENGTH,
+	CELLPHONE_LENGTH,
+	getCellphoneValidationError,
+	isValidCellphone,
+	sanitizeCellphoneInput,
 } from "@/utils/auth-credentials";
 import {
 	PageContainer,
@@ -31,12 +31,12 @@ export default function RecoverPasswordPage() {
 	const router = useRouter();
 	const theme = useTheme();
 	const { requestRecovery, isLoading, error, clearError } = usePasswordRecovery();
-	const [identifier, setIdentifier] = useState("");
+	const [cellphone, setCellphone] = useState("");
 
-	const trimmedIdentifier = identifier.trim();
-	const identifierValidationError = getIdentifierValidationError(trimmedIdentifier) ?? "";
-	const identifierFieldError = identifierValidationError || error || "";
-	const canSubmit = isValidIdentifier(trimmedIdentifier) && !isLoading;
+	const trimmedCellphone = cellphone.trim();
+	const cellphoneValidationError = getCellphoneValidationError(trimmedCellphone) ?? "";
+	const cellphoneFieldError = cellphoneValidationError || error || "";
+	const canSubmit = isValidCellphone(trimmedCellphone) && !isLoading;
 
 	const handleBackToLogin = (event: React.MouseEvent<HTMLAnchorElement>) => {
 		event.preventDefault();
@@ -46,7 +46,7 @@ export default function RecoverPasswordPage() {
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!canSubmit) return;
-		await requestRecovery(trimmedIdentifier);
+		await requestRecovery(trimmedCellphone);
 	};
 
 	return (
@@ -75,24 +75,27 @@ export default function RecoverPasswordPage() {
 
 					<Form onSubmit={handleSubmit}>
 						<StyledTextField
-							label="Número de empleado o celular *"
-							placeholder="Ingresa tu número de empleado o celular"
-							type="text"
-							value={identifier}
+							label="Número de celular *"
+							placeholder="Ingresa tu número de celular"
+							type="tel"
+							value={cellphone}
 							onChange={(event) => {
 								clearError();
-								setIdentifier(sanitizeIdentifierInput(event.target.value));
+								setCellphone(sanitizeCellphoneInput(event.target.value));
 							}}
-							error={!!identifierFieldError}
-							helperText={identifierFieldError}
+							error={!!cellphoneFieldError}
+							helperText={cellphoneFieldError}
 							fullWidth
 							autoFocus
 							disabled={isLoading}
-							inputProps={{ maxLength: USERNAME_MAX_LENGTH }}
+							inputProps={{
+								maxLength: CELLPHONE_LENGTH,
+								inputMode: "numeric",
+							}}
 							InputProps={{
 								startAdornment: (
 									<InputAdornment position="start">
-										<IdCard size={20} color={theme.palette.text.secondary} />
+										<Phone size={20} color={theme.palette.text.secondary} />
 									</InputAdornment>
 								),
 							}}

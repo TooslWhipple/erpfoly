@@ -22,6 +22,25 @@ export function isCellphoneIdentifier(value: string): boolean {
 	return CELLPHONE_PATTERN.test(value.trim());
 }
 
+export function sanitizeCellphoneInput(value: string): string {
+	return value.replace(/\D/g, "").slice(0, CELLPHONE_LENGTH);
+}
+
+export function getCellphoneValidationError(value: string): string | null {
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+
+	if (!CELLPHONE_PATTERN.test(trimmed)) {
+		return `El celular debe tener ${CELLPHONE_LENGTH} dígitos`;
+	}
+
+	return null;
+}
+
+export function isValidCellphone(value: string): boolean {
+	return CELLPHONE_PATTERN.test(value.trim());
+}
+
 export function getIdentifierValidationError(value: string): string | null {
 	const trimmed = value.trim();
 	if (!trimmed) return null;

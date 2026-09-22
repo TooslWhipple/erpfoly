@@ -550,6 +550,16 @@ export function SaleBuilder({
     productSearch,
     SEARCH_DEBOUNCE_MS,
   );
+  const [productPageSearch, setProductPageSearch] = useState(
+    debouncedProductSearch,
+  );
+  // Same render as the new term, so the request never goes out on a stale page.
+  const productSearchChanged = productPageSearch !== debouncedProductSearch;
+  if (productSearchChanged) {
+    setProductPageSearch(debouncedProductSearch);
+    setProductPage(0);
+  }
+  const effectiveProductPage = productSearchChanged ? 0 : productPage;
 
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null,
@@ -561,7 +571,7 @@ export function SaleBuilder({
     queryKey: [
       "product-search",
       debouncedProductSearch,
-      productPage,
+      effectiveProductPage,
       productLimit,
     ],
     enabled: view === "search",
@@ -571,7 +581,7 @@ export function SaleBuilder({
           debouncedProductSearch.trim().length > 1
             ? debouncedProductSearch
             : undefined,
-        page: productPage + 1,
+        page: effectiveProductPage + 1,
         limit: productLimit,
       });
       if (result.error) throw new Error(result.error.message);
@@ -2540,7 +2550,7 @@ export function SaleBuilder({
             loading={searchLoading}
             emptyMessage="No se encontraron artículos"
             rowKey="id"
-            page={productPage}
+            page={effectiveProductPage}
             rowsPerPage={productLimit}
             totalRows={productSearchData?.total ?? 0}
             onPageChange={setProductPage}

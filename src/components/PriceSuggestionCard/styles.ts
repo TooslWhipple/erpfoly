@@ -34,17 +34,22 @@ export const PriceList = styled('div')({
   gap: 0,
 });
 
-export const PriceListItem = styled('div')<{ isSuggested?: boolean }>(({ theme, isSuggested }) => ({
+export const PriceListItem = styled("div")<{ isSuggested?: boolean }>(({ theme, isSuggested }) => ({
   display: "flex",
   flexDirection: "row",
-  gap: "8px",
-  padding: "8px",
+  gap: theme.spacing(1),
+  padding: theme.spacing(1),
   alignItems: "center",
+  minWidth: 0,
   ...(isSuggested && {
     justifyContent: "space-between",
     backgroundColor: theme.palette.background.lowerBlue,
-    borderRadius: "12px",
-  })
+    borderRadius: 12,
+    [theme.breakpoints.down("sm")]: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+  }),
 }));
 
 export const TimelineDot = styled('div')(({ theme }) => ({

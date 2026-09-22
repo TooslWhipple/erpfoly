@@ -1,11 +1,12 @@
 import { styled } from "@mui/material/styles";
 
-export const SidebarIcon = styled('div')({
-  width: "32px",
-  height: "32px",
-  borderRadius: "6px",
-  backgroundColor: "#FEF3C7",
+export const SidebarIcon = styled("div")(({ theme }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 6,
+  backgroundColor: theme.palette.app.chip.variants.infoAlt.background,
+  color: theme.palette.app.chip.variants.infoAlt.color,
   display: "flex",
   alignItems: "center",
-  justifyContent: "center"
-});
+  justifyContent: "center",
+}));

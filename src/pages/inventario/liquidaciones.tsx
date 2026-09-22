@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Typography, Skeleton, Stack, Divider } from "@mui/material";
+import { Typography, Skeleton, Stack, Divider, Button } from "@mui/material";
 import {
   FilterList as FilterListIcon,
   InfoOutlined as InfoIcon,
@@ -121,14 +121,25 @@ export default function LiquidacionesPage() {
 
   return (
     <>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={3} divider={<Divider orientation="vertical" flexItem />}>
-        <Stack direction="column" spacing={3} flex="1 1 768px">
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={3}
+        sx={{ minWidth: 0, width: "100%" }}
+        divider={
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={{ display: { xs: "none", md: "block" } }}
+          />
+        }
+      >
+        <Stack direction="column" spacing={3} flex="1 1 768px" sx={{ minWidth: 0 }}>
           <Title title="Estrategia de baja rotación" />
           <StatsCardGroup cards={statsCards} loading={state === "loading"} columns={3} />
-          <Stack spacing={1}>
+          <Stack spacing={1} sx={{ minWidth: 0 }}>
             <Typography variant="body1" color="text.secondary" fontWeight={700}>Departamentos</Typography>
             {
-              (state === "loading") ?
+              state === "loading" ? (
                 [1, 2, 3, 4].map((i) => (
                   <Skeleton
                     key={i}
@@ -138,7 +149,20 @@ export default function LiquidacionesPage() {
                     style={{ borderRadius: "16px" }}
                   />
                 ))
-                :
+              ) : state === "error" ? (
+                <Stack spacing={1.5} alignItems="flex-start">
+                  <Typography variant="body2" color="text.secondary">
+                    No se pudo cargar la estrategia.
+                  </Typography>
+                  <Button variant="outlined" onClick={() => void fetchData()}>
+                    Reintentar
+                  </Button>
+                </Stack>
+              ) : departments.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No hay departamentos para mostrar.
+                </Typography>
+              ) : (
                 departments.map((item) => (
                   <DepartmentCard
                     key={item.id}
@@ -146,6 +170,7 @@ export default function LiquidacionesPage() {
                     onClick={handleDepartmentClick}
                   />
                 ))
+              )
             }
           </Stack>
         </Stack>

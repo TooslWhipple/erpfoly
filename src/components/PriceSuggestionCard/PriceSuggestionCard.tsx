@@ -54,31 +54,31 @@ export function PriceSuggestionCard({ item, onApply }: PriceSuggestionCardProps)
 
   return (
     <CardContainer>
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
         {
           (item.imageUrl) ?
             <ProductImage src={item.imageUrl} alt={item.productName} />
             :
             <ImagePlaceholder />
         }
-        <Stack spacing={0.5}>
-          <Typography variant="body1" fontWeight={700}>{item.productName}</Typography>
-          <Typography variant="body2" color="text.secondary">{item.sku}</Typography>
+        <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+          <Typography variant="body1" fontWeight={700} sx={{ overflowWrap: "anywhere" }}>{item.productName}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>{item.sku}</Typography>
         </Stack>
       </Stack>
 
       <PriceList>
         <TimelineLine />
         {
-          priceRows.map((row, index) => (
-            <PriceListItem isSuggested={row.isSuggested}>
-              <Stack direction="row" spacing={1} alignItems="center">
+          priceRows.map((row) => (
+            <PriceListItem key={`${row.changePercent}-${row.isSuggested}`} isSuggested={row.isSuggested}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
                 <TimelineDot />
-                <Stack direction="row" spacing={0.5} alignItems="center">
+                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
                   {
                     row.isSuggested ?
-                      <Stack>
-                        <Typography variant="body2" color="text.secondary">Nuevo precio sugerido</Typography>
+                      <Stack sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>Nuevo precio sugerido</Typography>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Typography variant="body1" fontWeight={600}>{formatPrice(row.price)}</Typography>
                           {
@@ -110,7 +110,9 @@ export function PriceSuggestionCard({ item, onApply }: PriceSuggestionCardProps)
                   variant="contained"
                   color="primary"
                   size="small"
-                  onClick={handleApply}>
+                  onClick={handleApply}
+                  sx={{ minHeight: 44, width: { xs: "100%", sm: "auto" }, flexShrink: 0 }}
+                >
                   Aplicar
                 </Button>
               }

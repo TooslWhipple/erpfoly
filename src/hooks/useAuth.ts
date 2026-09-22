@@ -3,12 +3,13 @@ import { useRouter } from "next/router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, LoginCredentials } from "@/services/auth.service";
 import { saveTempPasswordChangeContext } from "@/utils/temp-password-change";
-import { canAccessPath, getFirstAllowedRoute, normalizePathname } from "@/lib/routeAccess";
+import { resolvePostLoginPath } from "@/lib/routeAccess";
+import { logoutToLogin } from "@/lib/authSession";
 
 export function useAuth() {
 	const router = useRouter();
 
-	const { token, user, isAuthenticated, setAuth, logout: clearAuth, setLoading } = useAuthStore();
+	const { token, user, isAuthenticated, setAuth, setLoading } = useAuthStore();
 
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -31,11 +32,8 @@ export function useAuth() {
 		if ("token" in data) {
 			// Usuario con requires_otp = false: login directo, sin pasar por OTP.
 			setAuth(data.token, data.user);
-			const redirect = typeof router.query.redirect === "string" ? normalizePathname(router.query.redirect) : "";
-			const nextPath = redirect && canAccessPath(redirect, data.user)
-				? redirect
-				: getFirstAllowedRoute(data.user);
-			router.push(nextPath);
+			const redirect = typeof router.query.redirect === "string" ? router.query.redirect : undefined;
+			void router.push(resolvePostLoginPath(data.user, redirect));
 			setIsLoading(false);
 			setLoading(false);
 			return;
@@ -67,10 +65,7 @@ export function useAuth() {
 	};
 
 	const logout = async () => {
-		await authService.logout();
-		clearAuth();
-		
-		router.push("/login");
+		await logoutToLogin(router);
 	};
 
 	return {

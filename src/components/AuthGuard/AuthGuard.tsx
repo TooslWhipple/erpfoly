@@ -6,13 +6,14 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { shouldBypassAccessControl, DEV_MOCK_USER } from "@/lib/accessControl";
 import {
   canAccessPath,
-  FORBIDDEN_ROUTE,
   getFirstAllowedRoute,
   isPublicRoute,
   isAuthEntryPublicRoute,
   normalizePathname,
+  resolvePostLoginPath,
   shouldUseAppLayout,
 } from "@/lib/routeAccess";
+import { consumeExplicitLogout } from "@/lib/authSession";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -86,19 +87,26 @@ export function AuthGuard({ children }: AuthGuardProps) {
     if (!token) {
       if (!publicRoute) {
         clearAuth();
-        void router.replace(buildLoginUrl(currentPath));
+        const skipRedirect = consumeExplicitLogout();
+        void router.replace(
+          skipRedirect ? "/login" : buildLoginUrl(currentPath),
+        );
       }
       return;
     }
 
     if (validatedToken === token && user) {
       if (authEntryRoute || currentPath === "/") {
-        void router.replace(getFirstAllowedRoute(user));
+        const redirect =
+          typeof router.query.redirect === "string"
+            ? router.query.redirect
+            : undefined;
+        void router.replace(resolvePostLoginPath(user, redirect));
         return;
       }
 
-      if (!canAccessPath(currentPath, user) && currentPath !== FORBIDDEN_ROUTE) {
-        void router.replace(FORBIDDEN_ROUTE);
+      if (!canAccessPath(currentPath, user)) {
+        void router.replace(getFirstAllowedRoute(user));
       }
       return;
     }
@@ -124,12 +132,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
       setValidatedToken(token);
 
       if (authEntryRoute || currentPath === "/") {
-        void router.replace(getFirstAllowedRoute(nextUser));
+        const redirect =
+          typeof router.query.redirect === "string"
+            ? router.query.redirect
+            : undefined;
+        void router.replace(resolvePostLoginPath(nextUser, redirect));
         return;
       }
 
-      if (!canAccessPath(currentPath, nextUser) && currentPath !== FORBIDDEN_ROUTE) {
-        void router.replace(FORBIDDEN_ROUTE);
+      if (!canAccessPath(currentPath, nextUser)) {
+        void router.replace(getFirstAllowedRoute(nextUser));
       }
     }
 
@@ -173,7 +185,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  if (!canAccessPath(currentPath, user) && currentPath !== FORBIDDEN_ROUTE) {
+  if (!canAccessPath(currentPath, user)) {
     return (
       <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
         <CircularProgress />

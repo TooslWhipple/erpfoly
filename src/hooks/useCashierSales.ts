@@ -1,23 +1,30 @@
 import { useMemo, useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getSales } from "@/services/ventas.service";
+import { unwrapOrThrow } from "@/lib/axios";
 import { CASHIER_SALES_KEY } from "@/lib/cashRegisterQueries";
-import type { SaleListItem, SaleStatusTab } from "@/types/ventas.types";
+import type {
+  CashierSalesTab,
+  CashierSalesTabCounts,
+  SaleListItem,
+  SaleStatusTab,
+} from "@/types/ventas.types";
+
+export type { CashierSalesTab, CashierSalesTabCounts };
 
 const CASHIER_SALES_LIMIT = 50;
-const REFETCH_INTERVAL_MS = 5_000;
-
-export type CashierSalesTab = "all" | "pending" | "processed";
+const REFETCH_INTERVAL_MS = 10_000;
+const EMPTY_TAB_COUNTS: CashierSalesTabCounts = {
+  all: 0,
+  pending: 0,
+  processed: 0,
+};
 
 const TAB_TO_STATUS: Record<CashierSalesTab, SaleStatusTab> = {
   all: "cashierAll",
   pending: "pendingCashier",
   processed: "processedCashier",
 };
-
-const COUNT_TABS: CashierSalesTab[] = ["all", "pending", "processed"];
-
-export type CashierSalesTabCounts = Record<CashierSalesTab, number>;
 
 export function useCashierSales(options: {
   enabled: boolean;
@@ -30,51 +37,29 @@ export function useCashierSales(options: {
   const listQuery = useQuery({
     queryKey: [...CASHIER_SALES_KEY, "list", activeTab, search ?? ""],
     enabled: options.enabled,
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? false : REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
-      const res = await getSales({
-        page: 1,
-        limit: CASHIER_SALES_LIMIT,
-        statusTab,
-        search,
-      });
-      if (res.error) throw new Error(res.error.message);
+      const data = unwrapOrThrow(
+        await getSales({
+          page: 1,
+          limit: CASHIER_SALES_LIMIT,
+          statusTab,
+          search,
+        }),
+      );
       return {
-        rows: res.data?.rows ?? [],
-        total: res.data?.total ?? 0,
+        rows: data.rows ?? [],
+        total: data.total ?? 0,
+        tabCounts: data.cashierTabCounts ?? EMPTY_TAB_COUNTS,
       };
     },
   });
 
-  const countQueries = useQueries({
-    queries: COUNT_TABS.map((tab) => ({
-      queryKey: [...CASHIER_SALES_KEY, "count", tab, search ?? ""],
-      enabled: options.enabled,
-      refetchInterval: REFETCH_INTERVAL_MS,
-      queryFn: async () => {
-        const res = await getSales({
-          page: 1,
-          limit: 1,
-          statusTab: TAB_TO_STATUS[tab],
-          search,
-        });
-        if (res.error) throw new Error(res.error.message);
-        return res.data?.total ?? 0;
-      },
-    })),
-  });
-
-  const allCount = countQueries[0]?.data ?? 0;
-  const pendingCount = countQueries[1]?.data ?? 0;
-  const processedCount = countQueries[2]?.data ?? 0;
-
   const tabCounts = useMemo<CashierSalesTabCounts>(
-    () => ({
-      all: allCount,
-      pending: pendingCount,
-      processed: processedCount,
-    }),
-    [allCount, pendingCount, processedCount],
+    () => listQuery.data?.tabCounts ?? EMPTY_TAB_COUNTS,
+    [listQuery.data?.tabCounts],
   );
   const rows: SaleListItem[] = listQuery.data?.rows ?? [];
 

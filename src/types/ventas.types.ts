@@ -20,6 +20,9 @@ export type SaleStatusTab =
   | "processedCashier"
   | "cashierAll";
 
+export type CashierSalesTab = "all" | "pending" | "processed";
+export type CashierSalesTabCounts = Record<CashierSalesTab, number>;
+
 export interface SaleListItem {
   id: number;
   folio: string;

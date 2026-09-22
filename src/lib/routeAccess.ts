@@ -1,5 +1,6 @@
 import type { User } from "@/store/useAuthStore";
 import { shouldBypassAccessControl } from "@/lib/accessControl";
+import { clearExplicitLogoutFlag } from "@/lib/authSession";
 import { ROLE_CODES } from "@/constants/role-codes";
 import {
   CASH_REGISTERS_READ,
@@ -336,4 +337,26 @@ export function getFirstAllowedRoute(user: User | null): string {
   );
 
   return firstAllowed?.path ?? FORBIDDEN_ROUTE;
+}
+
+export function resolvePostLoginPath(
+  user: User | null,
+  intendedPath?: string,
+): string {
+  clearExplicitLogoutFlag();
+  if (!user) return "/login";
+
+  const intended = intendedPath?.trim()
+    ? normalizePathname(intendedPath)
+    : "";
+  if (
+    intended &&
+    intended !== "/" &&
+    !isPublicRoute(intended) &&
+    canAccessPath(intended, user)
+  ) {
+    return intended;
+  }
+
+  return getFirstAllowedRoute(user);
 }

@@ -5,6 +5,7 @@ import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 import { Breadcrumbs, Title, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
+import { EMPTY_PRODUCT_SELECTION } from "@/types/promociones.types";
 import {
   getPromotionFormConfiguration,
   getPromotionById,
@@ -47,6 +48,7 @@ function emptyForm(): PromotionFormState {
     selectedDepartmentIds: [],
     selectedLineIds: [],
     selectedProductIds: [],
+    productSelection: EMPTY_PRODUCT_SELECTION,
     selectedBranchIds: [],
     suppliers: [],
   };
@@ -65,12 +67,18 @@ function mapDetailToForm(
   detail: PromotionDetail,
   configuration: PromotionFormConfiguration,
 ): PromotionFormState {
-  const deptIds = [...new Set(detail.products.map((p) => p.department_id))];
-  const lineIds = [...new Set(detail.products.map((p) => p.line_id))];
+  const snapshots = detail.products ?? [];
+  const deptIds = detail.department_ids?.length
+    ? [...detail.department_ids]
+    : [...new Set(snapshots.map((p) => p.department_id))];
+  const lineIds = detail.line_ids?.length
+    ? [...detail.line_ids]
+    : [...new Set(snapshots.map((p) => p.line_id))];
   const purchaseType = configuration.purchaseTypes.find(
     (p) => p.id === detail.purchase_type_id,
   );
   const isApartado = purchaseType?.code === "APARTADO";
+  const selection = detail.product_selection;
   return {
     name: detail.name,
     percentage: String(detail.discount_rate),
@@ -87,7 +95,16 @@ function mapDetailToForm(
     hasEndDate: Boolean(detail.end_date),
     selectedDepartmentIds: deptIds,
     selectedLineIds: lineIds,
-    selectedProductIds: [...detail.product_ids],
+    selectedProductIds: selection?.select_all
+      ? []
+      : [...(selection?.included_product_ids ?? detail.product_ids)],
+    productSelection: {
+      selectAll: Boolean(selection?.select_all),
+      excludedIds: [...(selection?.excluded_product_ids ?? [])],
+      includedIds: selection?.select_all
+        ? []
+        : [...(selection?.included_product_ids ?? detail.product_ids)],
+    },
     selectedBranchIds: [...detail.branch_ids],
     suppliers: detail.supplier_ids.map((sid, i) => ({
       id: i + 1,
@@ -110,7 +127,6 @@ export default function PromotionFormPage() {
   const [formState, setFormState] = useState<PromotionFormState>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const lastHydratedDetailAtRef = useRef<number | null>(null);
-  const lastFetchedProductIdsRef = useRef<number[]>([]);
   const prefillAppliedRef = useRef(false);
   const configurationQuery = useQuery({
     queryKey: ["promotion-form-configuration"],
@@ -131,7 +147,6 @@ export default function PromotionFormPage() {
   const branchesCatalogQuery = usePromotionBranchesCatalog(router.isReady);
   useEffect(() => {
     lastHydratedDetailAtRef.current = null;
-    lastFetchedProductIdsRef.current = [];
   }, [promotionId]);
   useEffect(() => {
     if (!configurationQuery.data || !isNew) return;
@@ -175,7 +190,6 @@ export default function PromotionFormPage() {
       return;
     }
     lastHydratedDetailAtRef.current = promotionQuery.dataUpdatedAt;
-    lastFetchedProductIdsRef.current = [];
     setFormState(mapDetailToForm(promotionQuery.data, configurationQuery.data));
   }, [
     isNew,
@@ -189,36 +203,6 @@ export default function PromotionFormPage() {
   const purchaseTypeMeta = configuration?.purchaseTypes.find(
     (p) => p.id === formState.purchaseTypeId,
   );
-  useEffect(() => {
-    if (formState.selectedLineIds.length === 0) {
-      lastFetchedProductIdsRef.current = [];
-    }
-  }, [formState.selectedLineIds.length]);
-  const handleProductsFetched = useCallback((productIds: number[]) => {
-    setFormState((prev) => {
-      const fetchedSet = new Set(productIds);
-      const previousFetchSet = new Set(lastFetchedProductIdsRef.current);
-      lastFetchedProductIdsRef.current = productIds;
-      const kept = prev.selectedProductIds.filter((id) => fetchedSet.has(id));
-      const toAdd =
-        previousFetchSet.size === 0
-          ? prev.selectedProductIds.length > 0
-            ? []
-            : productIds
-          : productIds.filter((id) => !previousFetchSet.has(id));
-      const next = [...new Set([...kept, ...toAdd])];
-      const same =
-        next.length === prev.selectedProductIds.length &&
-        next.every((id) => prev.selectedProductIds.includes(id));
-      if (same) return prev;
-      return {
-        ...prev,
-        selectedProductIds: next,
-      };
-    });
-  }, []);
-
-  // No bloquear toda la página por la configuración: el tab de configuración muestra carga local.
   const loading =
     !router.isReady ||
     (!isNew &&
@@ -277,7 +261,9 @@ export default function PromotionFormPage() {
           "Los porcentajes por nivel deben estar entre 0 y 100";
       }
     }
-    const hasProducts = formState.selectedProductIds.length > 0;
+    const hasProducts =
+      formState.productSelection.selectAll ||
+      formState.productSelection.includedIds.length > 0;
     const hasBranches = formState.selectedBranchIds.length > 0;
     const hasSuppliers = (formState.suppliers?.length ?? 0) > 0;
     if (!hasProducts && !hasBranches && !hasSuppliers) {
@@ -315,7 +301,20 @@ export default function PromotionFormPage() {
               percentage: r.percentage,
             }))
           : [],
-      productIds: formState.selectedProductIds,
+      productSelection:
+        formState.selectedLineIds.length > 0 &&
+        (formState.productSelection.selectAll ||
+          formState.productSelection.includedIds.length > 0)
+          ? {
+              selectAll: formState.productSelection.selectAll,
+              lineIds: formState.selectedLineIds,
+              excludedProductIds: formState.productSelection.excludedIds,
+              includedProductIds: formState.productSelection.includedIds,
+            }
+          : undefined,
+      productIds: formState.productSelection.selectAll
+        ? []
+        : formState.productSelection.includedIds,
       branchIds: formState.selectedBranchIds,
       supplierIds: formState.suppliers.map((s) => s.supplierId),
     };
@@ -378,7 +377,7 @@ export default function PromotionFormPage() {
         [field]: value,
       }));
       if (
-        field === "selectedProductIds" ||
+        field === "productSelection" ||
         field === "selectedBranchIds" ||
         field === "suppliers"
       ) {
@@ -504,7 +503,6 @@ export default function PromotionFormPage() {
           <DepartmentsTab
             formState={formState}
             onFieldChange={handleFieldChange}
-            onProductsFetched={handleProductsFetched}
             departmentCatalog={departmentsCatalogQuery.data ?? []}
             departmentsCatalogLoading={departmentsCatalogQuery.isPending}
             departmentsCatalogError={

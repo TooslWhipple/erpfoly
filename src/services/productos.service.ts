@@ -779,11 +779,19 @@ export async function getProductsCatalog(): Promise<
     return get<ProductsCatalogData>(`${PRODUCTS_BASE}/catalog`);
 }
 
-export async function getProductsByLineIds(lineIds: number[]): Promise<ProductListItem[]> {
-    return unwrapOrThrow(
-        await post<ProductListItem[]>(`${PRODUCTS_BASE}/by-lines`, {
-            lineIds,
-        })
-    );
+export async function getProductsByLineIds(params: {
+	page: number;
+	limit: number;
+	search?: string;
+	lineIds?: number[];
+	[key: string]: unknown;
+}): Promise<ApiResult<PaginatedRowsResponse<ProductListItem> & { scopeTotal: number }>> {
+	const lineIds = Array.isArray(params.lineIds) ? params.lineIds : [];
+	return post(`${PRODUCTS_BASE}/by-lines`, {
+		lineIds,
+		page: params.page,
+		limit: params.limit,
+		search: params.search,
+	});
 }
 

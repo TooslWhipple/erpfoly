@@ -2452,7 +2452,7 @@ export function SaleBuilder({
   if (view === "search") {
     return (
       <>
-      <PageShell>
+      <PageShell contained>
         <SearchHeader>
           <InlineMobileMenuButton />
           <IconButton size="medium" onClick={() => setView("form")} aria-label="Cerrar">
@@ -2487,6 +2487,7 @@ export function SaleBuilder({
 
         <PageContent>
           <TableCrud<ProductSearchResult>
+            fillHeight
             columns={[
               {
                 id: "imageUrl",
@@ -4612,6 +4613,7 @@ export function SaleBuilder({
             description="Ingresa el nombre o número de teléfono del cliente para buscar."
             maxWidth="xl"
             fullScreenBreakpoint={SALES_POS_BREAKPOINT}
+            lockContentScroll
             headerActions={
               <Button
                 variant="outlined"
@@ -4627,22 +4629,32 @@ export function SaleBuilder({
               </Button>
             }
           >
-            <OutlinedInput
-              fullWidth
-              size="small"
-              placeholder="Ingresa el nombre del cliente"
-              value={clientModalSearch}
-              onChange={(e) => setClientModalSearch(e.target.value)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <Search size={16} />
-                </InputAdornment>
-              }
-              sx={{ mb: 2 }}
-              autoFocus
-            />
+            <Box
+              sx={(theme) => ({
+                position: "sticky",
+                top: 0,
+                zIndex: 3,
+                flex: "0 0 auto",
+                backgroundColor: theme.palette.background.content,
+              })}
+            >
+              <OutlinedInput
+                fullWidth
+                size="small"
+                placeholder="Ingresa el nombre del cliente"
+                value={clientModalSearch}
+                onChange={(e) => setClientModalSearch(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Search size={16} />
+                  </InputAdornment>
+                }
+                autoFocus
+              />
+            </Box>
 
             <TableCrud<Client>
+              fillHeight
               columns={[
                 { id: "id", label: "ID", type: "id", size: "xs" },
                 {

@@ -123,6 +123,8 @@ interface TableCrudProps<T> {
   selectedRowKeys?: Set<string | number>;
   onSelectedRowKeysChange?: (keys: Set<string | number>) => void;
   minTableWidth?: number;
+  /** Fill the parent flex height; only the table body scrolls. */
+  fillHeight?: boolean;
 }
 
 export function TableCrud<T>({
@@ -144,6 +146,7 @@ export function TableCrud<T>({
   selectedRowKeys,
   onSelectedRowKeysChange,
   minTableWidth = 650,
+  fillHeight = false,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -466,9 +469,12 @@ export function TableCrud<T>({
   );
 
   return (
-    <TableWrapper>
-      <StyledTableContainer>
-        <Table style={{ width: "100%", minWidth: minTableWidth }}>
+    <TableWrapper fillHeight={fillHeight}>
+      <StyledTableContainer fillHeight={fillHeight}>
+        <Table
+          stickyHeader={fillHeight}
+          style={{ width: "100%", minWidth: minTableWidth }}
+        >
           {renderTableHeader()}
           <TableBody>
             {loading ? (

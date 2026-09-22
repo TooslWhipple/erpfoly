@@ -2,12 +2,23 @@ import { Box, Button, OutlinedInput, Stack } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 
-export const PageShell = styled(Box)(({ theme }) => ({
+export const PageShell = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "contained",
+})<{ contained?: boolean }>(({ theme, contained }) => ({
   minHeight: "100%",
   width: "100%",
   maxWidth: "100%",
   backgroundColor: theme.palette.background.default,
   boxSizing: "border-box",
+  ...(contained
+    ? {
+        display: "flex",
+        flexDirection: "column",
+        flex: "1 1 0%",
+        minHeight: 0,
+        overflow: "hidden",
+      }
+    : {}),
 }));
 
 export const PageHeader = styled(Box)(({ theme }) => ({
@@ -56,11 +67,15 @@ export const SearchHeader = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing(1.5),
   padding: theme.spacing(2, 3),
+  flexShrink: 0,
+  position: "sticky",
+  top: 0,
+  zIndex: 3,
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.app.border}`,
   [theme.breakpoints.up(SALES_POS_BREAKPOINT)]: {
     padding: theme.spacing(0, 0, 2),
-    backgroundColor: "transparent",
+    backgroundColor: theme.palette.background.default,
     borderBottom: "none",
   },
   [theme.breakpoints.down(SALES_POS_BREAKPOINT)]: {
@@ -80,6 +95,11 @@ export const SearchInputWrap = styled(Box)({
 
 export const PageContent = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
+  flex: "1 1 0%",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
   [theme.breakpoints.down("md")]: {
     padding: theme.spacing(2),
   },

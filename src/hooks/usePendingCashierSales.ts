@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSales } from "@/services/ventas.service";
+import { unwrapOrThrow } from "@/lib/axios";
 import { PENDING_CASHIER_SALES_KEY } from "@/lib/cashRegisterQueries";
 import type { SaleListItem } from "@/types/ventas.types";
 
 const PENDING_CASHIER_LIMIT = 50;
-const REFETCH_INTERVAL_MS = 5_000;
+const REFETCH_INTERVAL_MS = 10_000;
 
 /** Pending cashier queue only. Prefer `useCashierSales` on the main caja screen. */
 export function usePendingCashierSales(options: {
@@ -16,16 +17,19 @@ export function usePendingCashierSales(options: {
   return useQuery<SaleListItem[]>({
     queryKey: [...PENDING_CASHIER_SALES_KEY, search ?? ""],
     enabled: options.enabled,
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? false : REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
-      const res = await getSales({
-        page: 1,
-        limit: PENDING_CASHIER_LIMIT,
-        statusTab: "pendingCashier",
-        search,
-      });
-      if (res.error) throw new Error(res.error.message);
-      return res.data?.rows ?? [];
+      const data = unwrapOrThrow(
+        await getSales({
+          page: 1,
+          limit: PENDING_CASHIER_LIMIT,
+          statusTab: "pendingCashier",
+          search,
+        }),
+      );
+      return data.rows ?? [];
     },
   });
 }

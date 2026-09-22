@@ -3,15 +3,14 @@ import Head from "next/head";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { AuthGuard, BackendIndicator, GlobalSnackbar } from "@/components";
 import { AppLayoutGate } from "@/components/Layout";
+import { queryClient } from "@/lib/queryClient";
 import "@/lib/dayjs";
 import { theme } from "@/styles/theme";
-
-const queryClient = new QueryClient();
 
 export default function App({ Component, pageProps }: AppProps) {
   return (

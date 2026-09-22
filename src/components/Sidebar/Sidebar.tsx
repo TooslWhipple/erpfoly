@@ -20,9 +20,9 @@ import {
   CREDIT_APPLICATIONS_CREATE,
 } from "@/lib/permissions";
 import { hasAccessRequirement } from "@/lib/routeAccess";
-import { authService } from "@/services/auth.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { logoutToLogin } from "@/lib/authSession";
 import NotificationInbox from "@/components/NotificationInbox/NotificationInbox";
 import { CashInDrawerWidget } from "@/components/CashRegister";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
@@ -41,7 +41,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const theme = useTheme();
   const { isDrawerNav, isSidebarCollapsed, toggleSidebarCollapse } = useAppNav();
   const user = useAuthStore((state) => state.user);
-  const clearAuth = useAuthStore((state) => state.logout);
   const showError = useSnackbarStore((state) => state.showError);
   const visibleNavItems = useMemo(() => filterNavItemsByAccess(NAV_ITEMS, user), [user]);
   const canCreateCreditApplication = hasAccessRequirement(user, { permission: CREDIT_APPLICATIONS_CREATE });
@@ -103,9 +102,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const handleLogout = async () => {
-    await authService.logout();
-    clearAuth();
-    await router.push("/login");
+    await logoutToLogin(router);
   };
 
   return (

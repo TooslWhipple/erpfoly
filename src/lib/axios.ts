@@ -44,26 +44,7 @@ type BackendBody<T> =
 
 type RetryableAxiosRequestConfig = AxiosRequestConfig & {
 	_retry?: boolean;
-	_rateLimitRetryCount?: number;
 };
-
-const MAX_RATE_LIMIT_RETRIES = 3;
-const DEFAULT_RATE_LIMIT_RETRY_DELAY_MS = 1000;
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function getRateLimitRetryDelayMs(error: AxiosError): number {
-	const retryAfter = error.response?.headers?.["retry-after"];
-	if (typeof retryAfter === "string" && retryAfter.trim()) {
-		const seconds = Number(retryAfter);
-		if (!Number.isNaN(seconds) && seconds > 0) {
-			return seconds * 1000;
-		}
-	}
-	return DEFAULT_RATE_LIMIT_RETRY_DELAY_MS;
-}
 
 function isRefreshRequest(config: AxiosRequestConfig | undefined): boolean {
 	const url = config?.url ?? "";
@@ -146,21 +127,6 @@ api.interceptors.response.use(
 	},
 	async (error: AxiosError) => {
 		const originalRequest = error.config as RetryableAxiosRequestConfig | undefined;
-
-		if (error.response?.status === 429 && originalRequest) {
-			const retryCount = originalRequest._rateLimitRetryCount ?? 0;
-
-			if (retryCount < MAX_RATE_LIMIT_RETRIES) {
-				originalRequest._rateLimitRetryCount = retryCount + 1;
-				await sleep(getRateLimitRetryDelayMs(error));
-				return api.request(originalRequest);
-			}
-
-			if (shouldShowGlobalErrorToast(originalRequest)) {
-				useSnackbarStore.getState().showError(getErrorMessage(error));
-			}
-			return Promise.reject(error);
-		}
 
 		if (error.response?.status !== 401) {
 			if (shouldShowGlobalErrorToast(originalRequest)) {
@@ -247,6 +213,7 @@ export interface ApiResponse<T> {
 
 export interface ApiError {
 	message: string;
+	status?: number;
 	errors?: Record<string, string[]>;
 	validationMessages?: string[];
 }
@@ -311,9 +278,13 @@ function messageFromPayload(data: unknown): string | null {
 
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
+	const status = error.response?.status;
 	const message = messageFromPayload(data);
 	if (message) {
-		const apiError: ApiError = { message: mapApiErrorToUserMessage(message) };
+		const apiError: ApiError = {
+			message: mapApiErrorToUserMessage(message),
+			status,
+		};
 		if (data && typeof data === "object" && "message" in data) {
 			const rawMessage = (data as { message: unknown }).message;
 			if (Array.isArray(rawMessage)) {
@@ -337,6 +308,7 @@ function apiErrorFromAxios(error: AxiosError): ApiError {
 	}
 	return {
 		message: mapApiErrorToUserMessage(error.message || "Network or server error"),
+		status,
 	};
 }
 

@@ -21,6 +21,7 @@ import { downloadBlob, printPdfBlob } from "@/lib/printing";
 import type {
   SaleListItem,
   GetSalesParams,
+  CashierSalesTabCounts,
   ProductSearchResult,
   ProductDetail,
   SaleDetail,
@@ -55,7 +56,9 @@ async function postPosSaleAction<T>(
   }
 }
 
-export type GetSalesResponse = PaginatedRowsResponse<SaleListItem>;
+export type GetSalesResponse = PaginatedRowsResponse<SaleListItem> & {
+  cashierTabCounts?: CashierSalesTabCounts;
+};
 
 export async function getSales(
   params: GetSalesParams,

@@ -111,7 +111,10 @@ export default function TraspasosPage() {
         { label: "Agendados", value: SCHEDULED_TAB },
         { label: "En curso", value: IN_PROGRESS_TAB },
         { label: "Entregados", value: DELIVERED_TAB },
-    ];
+    ].map((t) => ({
+        ...t,
+        count: t.value === activeTab ? totalRows : undefined,
+    }));
 
     const getStatusFilter = useCallback((): "all" | BranchOrderStatus => {
         return activeTab as "all" | BranchOrderStatus;

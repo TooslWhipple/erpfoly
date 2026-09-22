@@ -11,11 +11,7 @@ import {
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService, type ResendOtpRequest } from "@/services/auth.service";
-import {
-  canAccessPath,
-  getFirstAllowedRoute,
-  normalizePathname,
-} from "@/lib/routeAccess";
+import { resolvePostLoginPath } from "@/lib/routeAccess";
 import {
 	PageContainer,
 	LeftPanel,
@@ -87,11 +83,9 @@ export default function ValidateOtpPage() {
 		}
 
 		setAuth(result.data!.token, result.data!.user);
-		const redirect = typeof router.query.redirect === "string" ? normalizePathname(router.query.redirect) : "";
-		const nextPath = redirect && canAccessPath(redirect, result.data!.user)
-			? redirect
-			: getFirstAllowedRoute(result.data!.user);
-		router.push(nextPath);
+		const redirect =
+			typeof router.query.redirect === "string" ? router.query.redirect : undefined;
+		void router.push(resolvePostLoginPath(result.data!.user, redirect));
 		setLoading(false);
 	};
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Box, Stack } from "@mui/material";
 import { Title, TabFilters, TableCrud, StatusChip, DateRangeFilter } from "@/components";
@@ -78,11 +78,14 @@ export default function Ventas() {
   const [activeTab, setActiveTab] = useState("all");
   const [dateFrom, setDateFrom] = useState(todayInMexicoCity);
   const [dateTo, setDateTo] = useState(todayInMexicoCity);
-  const statusTabExtra = {
-    statusTab: activeTab as SaleStatusTab,
-    dateFrom,
-    dateTo,
-  };
+  const extraParams = useMemo(
+    () => ({
+      statusTab: activeTab as SaleStatusTab,
+      dateFrom,
+      dateTo,
+    }),
+    [activeTab, dateFrom, dateTo],
+  );
   const {
     data: ventas,
     total: totalRows,
@@ -100,7 +103,7 @@ export default function Ventas() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    extraParams: statusTabExtra,
+    extraParams,
   });
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,

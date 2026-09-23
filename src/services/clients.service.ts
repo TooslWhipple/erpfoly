@@ -14,6 +14,7 @@ import type {
   SaleCancelReason,
 } from "@/types/cancelPurchase.types";
 import type { ClientPurchaseDetailApi } from "@/types/clientPurchase.types";
+import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
 
 export type ClientStatus = "active" | "inactive" | "blocked";
@@ -57,6 +58,7 @@ export interface Client {
   clientType: ClientType;
   creditStatus: ClientCreditStatus | null;
   creditAvailable?: number | null;
+  biometricsPending?: boolean;
   addresses: ClientAddressItem[];
   primaryAddressFormatted: string | null;
   rfc?: string | null;
@@ -107,6 +109,71 @@ export async function getClientDetail(
   clientId: number
 ): Promise<ApiResult<ClientDetailHeader>> {
   return get<ClientDetailHeader>(`${BASE}/${clientId}/detail`);
+}
+
+export interface EnrollClientBiometricsPayload {
+  ineFrontImage: string;
+  ineBackImage: string;
+  selfieImage: string;
+  ineExecutionId?: string | null;
+  livenessExecutionId?: string | null;
+}
+
+export interface EnrollClientBiometricsResponse {
+  success: true;
+  message: string;
+  ocrStatus: "SUCCESS" | "FAILED";
+  faceMatch: {
+    status: "SUCCESS";
+    score: number;
+  };
+  biometricsEnrolled: true;
+}
+
+const ENROLL_BIOMETRICS_TIMEOUT_MS = 120_000;
+
+export async function enrollClientBiometrics(
+  clientId: number,
+  payload: EnrollClientBiometricsPayload,
+): Promise<EnrollClientBiometricsResponse> {
+  const ineFront = payload.ineFrontImage.trim();
+  const ineBack = payload.ineBackImage.trim();
+  const faceCapture = payload.selfieImage.trim();
+  if (!ineFront || !ineBack || !faceCapture) {
+    throw new Error(
+      "Faltan la INE y la selfie para actualizar la biometría del cliente.",
+    );
+  }
+
+  const formData = new FormData();
+  const ineExecutionId = payload.ineExecutionId?.trim();
+  if (ineExecutionId) {
+    formData.append("ineExecutionId", ineExecutionId);
+  }
+  const livenessExecutionId = payload.livenessExecutionId?.trim();
+  if (livenessExecutionId) {
+    formData.append("livenessExecutionId", livenessExecutionId);
+  }
+  formData.append("ineFront", dataUrlToFile(ineFront, "ine-front"));
+  formData.append("ineBack", dataUrlToFile(ineBack, "ine-back"));
+  formData.append("faceCapture", dataUrlToFile(faceCapture, "face-capture"));
+
+  const result = await post<EnrollClientBiometricsResponse>(
+    `${BASE}/${clientId}/biometrics/enroll`,
+    formData,
+    {
+      timeout: ENROLL_BIOMETRICS_TIMEOUT_MS,
+      headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
+    },
+  );
+  if (result.error || !result.data) {
+    throw new Error(
+      result.error?.message
+        ?? "No se pudo actualizar la biometría. Intenta nuevamente.",
+    );
+  }
+  return result.data;
 }
 
 export async function getClientInformationSection(

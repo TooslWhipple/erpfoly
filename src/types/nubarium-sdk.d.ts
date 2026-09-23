@@ -69,8 +69,15 @@ export interface NubariumFaceCaptureInitConfig {
   [key: string]: unknown;
 }
 
+/** Métodos internos del SDK legacy que fuerzan portrait en tablets/teléfonos. */
+interface NubariumLandscapeGate {
+  showRotate?: () => void;
+  closeRotate?: () => void;
+  isCapturing?: boolean;
+}
+
 declare global {
-  class IdCapture {
+  class IdCapture implements NubariumLandscapeGate {
     init(config: NubariumIdCaptureInitConfig): void;
     setToken(token: string): void;
     load(onLoaded?: () => void): void;
@@ -81,9 +88,12 @@ declare global {
     onSuccess(callback: (data: NubariumIdCaptureSuccessData) => void): IdCapture;
     onFail(callback: (data: NubariumIdCaptureFailData) => void): IdCapture;
     onError(callback: (error: NubariumSdkErrorData) => void): IdCapture;
+    showRotate?: () => void;
+    closeRotate?: () => void;
+    isCapturing?: boolean;
   }
 
-  class FaceCapture {
+  class FaceCapture implements NubariumLandscapeGate {
     init(config: NubariumFaceCaptureInitConfig): void;
     setToken(token: string): void;
     load(onLoaded?: () => void): void;
@@ -94,6 +104,9 @@ declare global {
     onSuccess(callback: (data: NubariumFaceCaptureSuccessData) => void): FaceCapture;
     onFail(callback: (data: NubariumFaceCaptureFailData) => void): FaceCapture;
     onError(callback: (error: NubariumSdkErrorData) => void): FaceCapture;
+    showRotate?: () => void;
+    closeRotate?: () => void;
+    isCapturing?: boolean;
   }
 }
 

@@ -73,6 +73,94 @@ function isCameraAccessErrorMessage(message: string): boolean {
  * En desktop: `default` primero — las PCs no tienen cámara trasera y pedir `back`
  * deja el preview vacío aunque el navegador sí conceda permisos.
  */
+/**
+ * Teléfono o tablet. El SDK legacy trata ambos como "phablet" y bloquea landscape.
+ * `(pointer: coarse)` cubre iPad aunque el user agent diga desktop.
+ */
+export function isTouchCaptureDevice(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const coarsePointer =
+    typeof window.matchMedia === "function"
+    && window.matchMedia("(pointer: coarse)").matches;
+  if (coarsePointer) return true;
+
+  const ua = navigator.userAgent;
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+
+  return (
+    navigator.maxTouchPoints > 1
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(max-width: 1366px)").matches
+  );
+}
+
+interface NubariumLandscapeCapture {
+  showRotate?: () => void;
+  closeRotate?: () => void;
+  isCapturing?: boolean;
+}
+
+const landscapeRestorers = new WeakMap<object, () => void>();
+
+function hideNubariumRotateOverlay(): void {
+  if (typeof document === "undefined") return;
+  const overlay = document.getElementById("NUBSDK_modal_rotate");
+  if (!overlay) return;
+  overlay.setAttribute("aria-hidden", "true");
+  overlay.classList.remove("open");
+}
+
+function unlockNubariumLandscape(capture: NubariumLandscapeCapture): void {
+  try {
+    capture.closeRotate?.();
+  } catch {
+    // The SDK throws if the rotate modal was never mounted.
+  }
+  capture.isCapturing = false;
+  hideNubariumRotateOverlay();
+}
+
+/**
+ * nubSdk@latest calls showRotate() and then sets isCapturing = true whenever a
+ * touch device is landscape. There is no public init option to allow landscape.
+ * Replace showRotate so the overlay never stays up, and clear isCapturing on the
+ * next turn because the SDK sets it after showRotate() returns.
+ */
+export function patchNubariumLandscapeCapture(
+  capture: NubariumLandscapeCapture | null | undefined,
+): void {
+  if (!capture || typeof capture.showRotate !== "function") return;
+  if (!isTouchCaptureDevice()) return;
+  if (landscapeRestorers.has(capture)) return;
+
+  const originalShowRotate = capture.showRotate.bind(capture);
+  capture.showRotate = () => {
+    unlockNubariumLandscape(capture);
+    window.setTimeout(() => unlockNubariumLandscape(capture), 0);
+  };
+
+  landscapeRestorers.set(capture, () => {
+    capture.showRotate = originalShowRotate;
+  });
+  unlockNubariumLandscape(capture);
+}
+
+export function releaseNubariumLandscapeCapture(
+  capture: NubariumLandscapeCapture | null | undefined,
+): void {
+  if (!capture) return;
+  const restore = landscapeRestorers.get(capture);
+  restore?.();
+  landscapeRestorers.delete(capture);
+  try {
+    capture.closeRotate?.();
+  } catch {
+    // Ignore teardown races with the SDK DOM.
+  }
+  hideNubariumRotateOverlay();
+}
+
 export function getNubariumCameraOptions(): NubariumCameraOption[] {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return ["default", "front", "back"];

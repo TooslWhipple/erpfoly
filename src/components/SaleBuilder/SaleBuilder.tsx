@@ -100,6 +100,7 @@ import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import type { ShippingQuote } from "@/services/ventas.service";
 import type { UpdateSalePurchaseTypeResult } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
+import { BiometricCreditRequiredDialog } from "./BiometricCreditRequiredDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSessionSummary } from "@/services/cash-register.service";
@@ -493,6 +494,8 @@ export function SaleBuilder({
   );
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
+  const [biometricRequiredModalOpen, setBiometricRequiredModalOpen] = useState(false);
+  const biometricPromptClientIdRef = useRef<number | null>(null);
   const [identityMarkedOk, setIdentityOk] = useState(false);
   const [saleEconomicRevision, setSaleEconomicRevision] = useState<
     number | null
@@ -917,6 +920,13 @@ export function SaleBuilder({
     setSelectedClient(resumeClientData);
     if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
       setPaymentType("CASH");
+    } else if (
+      resumeClientData.biometricsPending &&
+      paymentType === "CREDIT" &&
+      biometricPromptClientIdRef.current !== resumeClientData.id
+    ) {
+      biometricPromptClientIdRef.current = resumeClientData.id;
+      setBiometricRequiredModalOpen(true);
     }
   }
 
@@ -2104,6 +2114,10 @@ export function SaleBuilder({
 
   const handlePaymentTypeChange = (value: SalePaymentType) => {
     if (isMorosoClient && value !== "CASH") return;
+    if (value === "CREDIT" && selectedClient?.biometricsPending) {
+      setBiometricRequiredModalOpen(true);
+      return;
+    }
     if (value === paymentType) return;
     if (purchaseTypeMutation.isPending) return;
     if (isCajeroMode) {
@@ -2253,9 +2267,13 @@ export function SaleBuilder({
         ? isPickupReady
         : false;
 
+  const creditBlockedByMissingBiometrics =
+    paymentType === "CREDIT" && Boolean(selectedClient?.biometricsPending);
+
   const canProceed =
     totalCartQty > 0 &&
     !isClientWithoutActiveCredit &&
+    !creditBlockedByMissingBiometrics &&
     deliveryType !== null &&
     isDeliveryInfoReady &&
     (deliveryType !== "delivery" || shippingQuote?.coverage === "IN_ZONE");
@@ -2427,6 +2445,18 @@ export function SaleBuilder({
         void executeSaleOperation(() =>
           acceptRevisionMutation.mutateAsync(revisionPreview),
         );
+      }}
+    />
+  );
+
+  const biometricCreditDialog = (
+    <BiometricCreditRequiredDialog
+      open={biometricRequiredModalOpen}
+      onClose={() => setBiometricRequiredModalOpen(false)}
+      onGoToProfile={() => {
+        if (!selectedClient) return;
+        setBiometricRequiredModalOpen(false);
+        void router.push(`/clientes/${selectedClient.id}?enrollBiometrics=1`);
       }}
     />
   );
@@ -3051,7 +3081,8 @@ export function SaleBuilder({
       !saleOperationPending &&
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
-      (paymentType !== "CREDIT" || identityOk) &&
+      (paymentType !== "CREDIT" ||
+        (identityOk && !selectedClient?.biometricsPending)) &&
       (paymentType !== "LAYAWAY" ||
         (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
@@ -3730,6 +3761,7 @@ export function SaleBuilder({
         </SideModal>
         {discountInvalidateModal}
         {economicRevisionModal}
+        {biometricCreditDialog}
       </PageShell>
     );
   }
@@ -4065,19 +4097,40 @@ export function SaleBuilder({
               Tipo de venta
             </Typography>
             <PaymentTypeRow>
-              {PAYMENT_OPTIONS.map((opt) => (
-                <PaymentTypeButton
-                  key={opt.value}
-                  active={paymentType === opt.value}
-                  disabled={
-                    purchaseTypeMutation.isPending ||
-                    (isMorosoClient && opt.value !== "CASH")
-                  }
-                  onClick={() => handlePaymentTypeChange(opt.value)}
-                >
-                  {opt.label}
-                </PaymentTypeButton>
-              ))}
+              {PAYMENT_OPTIONS.map((opt) => {
+                const creditBiometricsBlocked =
+                  opt.value === "CREDIT" &&
+                  Boolean(selectedClient?.biometricsPending);
+                return (
+                  <Box
+                    key={opt.value}
+                    sx={{ flex: "1 1 0", minWidth: 0, display: "flex" }}
+                    onClick={
+                      creditBiometricsBlocked
+                        ? () => handlePaymentTypeChange(opt.value)
+                        : undefined
+                    }
+                  >
+                    <PaymentTypeButton
+                      active={paymentType === opt.value}
+                      disabled={
+                        purchaseTypeMutation.isPending ||
+                        (isMorosoClient && opt.value !== "CASH") ||
+                        creditBiometricsBlocked
+                      }
+                      onClick={() => handlePaymentTypeChange(opt.value)}
+                      sx={{
+                        width: "100%",
+                        ...(creditBiometricsBlocked
+                          ? { pointerEvents: "none" }
+                          : {}),
+                      }}
+                    >
+                      {opt.label}
+                    </PaymentTypeButton>
+                  </Box>
+                );
+              })}
             </PaymentTypeRow>
           </SidebarCard>
 
@@ -4616,6 +4669,8 @@ export function SaleBuilder({
             onClose={handleIdentityDialogClose}
           />
 
+          {biometricCreditDialog}
+
           <SideModal
             open={clientModalOpen}
             onClose={() => setClientModalOpen(false)}
@@ -4751,6 +4806,9 @@ export function SaleBuilder({
                 setClientModalOpen(false);
                 if (row.creditStatus === "MOROSO") {
                   setPaymentType("CASH");
+                } else if (row.biometricsPending && paymentType === "CREDIT") {
+                  biometricPromptClientIdRef.current = row.id;
+                  setBiometricRequiredModalOpen(true);
                 }
               }}
             />

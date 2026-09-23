@@ -36,6 +36,7 @@ interface DocumentationTabProps {
   onSave: () => Promise<boolean>;
   saving: boolean;
   applicationId?: string;
+  clientDisplayName?: string;
   canEditBiometrics?: boolean;
   faceMatchStatus?: "SUCCESS" | "FAILED" | "NOT_VERIFIED" | null;
   faceMatchScore?: number | null;
@@ -431,6 +432,7 @@ export function DocumentationTab({
   onSave,
   saving,
   applicationId,
+  clientDisplayName,
   canEditBiometrics = false,
   faceMatchStatus = null,
   faceMatchScore = null,
@@ -588,6 +590,7 @@ export function DocumentationTab({
           open={biometricModal.open}
           mode={biometricModal.mode}
           applicationId={applicationId}
+          clientDisplayName={clientDisplayName}
           existingIneFrontUrl={existingIneFrontUrl}
           onClose={() => setBiometricModal((current) => ({ ...current, open: false }))}
           onSuccess={async () => {

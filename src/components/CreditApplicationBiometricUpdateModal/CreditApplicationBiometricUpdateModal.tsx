@@ -1,19 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
-import { Button, CircularProgress, Typography, useMediaQuery } from "@mui/material";
+import { Button, CircularProgress, Typography } from "@mui/material";
 import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
-import { SideModal } from "@/components/SideModal";
-import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
-import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
-import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
-import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
-  FooterActions,
+  BiometricCaptureFooter,
+  BiometricCaptureModalShell,
   SdkBootstrapState,
   StepContainer,
   StepContent,
-  StepProgress,
-  StepProgressRow,
-} from "@/components/CreditApplicationIntakeModal/styles";
+  type BiometricStep,
+} from "@/components/BiometricCaptureModal";
+import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
+import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
+import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import { useCameraDevices } from "@/hooks/useCameraDevices";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import { compareIneFace } from "@/services/nubarium.service";
@@ -31,10 +29,16 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export type BiometricUpdateMode = "ine" | "face";
 
+const STEPS: BiometricStep[] = [
+  { id: "ine", label: "Identificación oficial" },
+  { id: "face", label: "Prueba de vida" },
+];
+
 interface CreditApplicationBiometricUpdateModalProps {
   open: boolean;
   mode: BiometricUpdateMode;
   applicationId: string;
+  clientDisplayName?: string;
   /** Signed URL of the current INE front image; required for face mode client-side compare. */
   existingIneFrontUrl?: string | null;
   onClose: () => void;
@@ -45,11 +49,11 @@ export function CreditApplicationBiometricUpdateModal({
   open,
   mode,
   applicationId,
+  clientDisplayName,
   existingIneFrontUrl,
   onClose,
   onSuccess,
 }: CreditApplicationBiometricUpdateModalProps) {
-  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
@@ -99,11 +103,12 @@ export function CreditApplicationBiometricUpdateModal({
     && !faceMatchError
     && (livenessCaptureStarted || canAutoStartCapture);
 
-  const title = mode === "ine" ? "Actualizar INE" : "Actualizar prueba de vida";
+  const activeStepIndex = mode === "ine" ? 0 : 1;
+  const title = mode === "ine" ? "Identificación oficial" : "Prueba de vida";
   const subtitle =
     mode === "ine"
-      ? "Vuelve a capturar la identificación oficial del cliente"
-      : "Confirma la identidad del cliente contra el INE frontal";
+      ? "Captura la INE del cliente por ambos lados."
+      : "Confirma que el rostro coincide con la INE.";
 
   const canSave = useMemo(() => {
     if (mode === "ine") return Boolean(ineFrontImage && ineBackImage);
@@ -251,6 +256,8 @@ export function CreditApplicationBiometricUpdateModal({
   );
 
   const captureLive = ineCaptureLive || livenessCaptureLive;
+  const missingIneFrontForFace = mode === "face" && !existingIneFrontUrl?.trim();
+  const existingIneFront = existingIneFrontUrl?.trim();
 
   const startIneCapture = () => {
     cameras.commitPreferredDevice();
@@ -261,22 +268,6 @@ export function CreditApplicationBiometricUpdateModal({
     cameras.commitPreferredDevice();
     setLivenessCaptureStarted(true);
   };
-
-  const stepProgressHeader = (
-    <StepProgressRow>
-      <StepProgress variant="body2">
-        {mode === "ine" ? "Identificación oficial" : "Prueba de vida"}
-      </StepProgress>
-      {captureLive ? (
-        <CameraSwitchControl
-          devices={cameras.devices}
-          value={cameras.selectedDeviceId}
-          onChange={cameras.selectAndRemember}
-          disabled={saving}
-        />
-      ) : null}
-    </StepProgressRow>
-  );
 
   const renderCameraSelect = (onStart: () => void, helperText: string, startLabel: string) => (
     <CameraDeviceSelect
@@ -296,35 +287,37 @@ export function CreditApplicationBiometricUpdateModal({
     />
   );
 
-  const missingIneFrontForFace = mode === "face" && !existingIneFrontUrl?.trim();
-
   return (
-    <SideModal
+    <BiometricCaptureModalShell
       open={open}
       onClose={handleCloseModal}
+      disableClose={saving || verifyingFaceMatch}
+      clientDisplayName={clientDisplayName}
       title={title}
-      description={subtitle}
-      headerContent={stepProgressHeader}
-      disableClose={saving}
-      maxWidth="lg"
-      fullWidth
-      fullScreenBreakpoint={SALES_POS_BREAKPOINT}
-      forceFullScreen={isCoarsePointer}
-      contentSx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      subtitle={subtitle}
+      steps={STEPS}
+      activeStepIndex={activeStepIndex}
+      headerActions={
+        captureLive ? (
+          <CameraSwitchControl
+            devices={cameras.devices}
+            value={cameras.selectedDeviceId}
+            onChange={cameras.selectAndRemember}
+            disabled={saving}
+          />
+        ) : null
+      }
+      footer={
+        <BiometricCaptureFooter
+          error={submitError}
+          primaryLabel="Guardar biometría"
+          onPrimary={() => void handleSave()}
+          primaryDisabled={!canSave || saving || verifyingFaceMatch || missingIneFrontForFace}
+          primaryLoading={saving || verifyingFaceMatch}
+        />
+      }
     >
-      <StepContainer
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: "hidden",
-        }}
-      >
+      <StepContainer sx={{ overflowY: "hidden" }}>
         {missingIneFrontForFace ? (
           <StepContent>
             <CaptureErrorState>
@@ -424,6 +417,11 @@ export function CreditApplicationBiometricUpdateModal({
                         }
                         : null
                     }
+                    comparisonImage={
+                      existingIneFront
+                        ? { src: existingIneFront, label: "INE frontal", alt: "INE frontal" }
+                        : null
+                    }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
                     onSuccess={(result) => {
@@ -436,35 +434,7 @@ export function CreditApplicationBiometricUpdateModal({
             )}
           </StepContent>
         ) : null}
-
-        {submitError ? (
-          <Typography variant="body2" color="error.main" sx={{ px: 2, pb: 1 }}>
-            {submitError}
-          </Typography>
-        ) : null}
       </StepContainer>
-
-      <FooterActions>
-        <Button
-          variant="outlined"
-          onClick={handleCloseModal}
-          disabled={saving || verifyingFaceMatch}
-        >
-          Cancelar
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => void handleSave()}
-          disabled={!canSave || saving || verifyingFaceMatch || missingIneFrontForFace}
-          sx={{ minWidth: 140 }}
-        >
-          {saving ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            "Guardar captura"
-          )}
-        </Button>
-      </FooterActions>
-    </SideModal>
+    </BiometricCaptureModalShell>
   );
 }

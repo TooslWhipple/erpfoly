@@ -77,7 +77,7 @@ const columns: Column<Client>[] = [
     id: "fullName",
     label: "Nombre",
     type: "text",
-    size: "lg",
+    size: "xl",
   },
   {
     id: "phoneNumber",

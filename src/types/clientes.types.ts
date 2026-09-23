@@ -52,6 +52,8 @@ export interface ClientDetailHeader {
     available: number | null;
     availablePercentage: number | null;
   };
+  biometricsEnrolled: boolean;
+  biometricsPending: boolean;
 }
 
 export type ClientStatus = "active" | "inactive" | "blocked";

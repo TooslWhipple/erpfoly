@@ -138,9 +138,47 @@ export const ErrorState = styled('div')(({ theme }) => ({
 export const CreditBalanceBox = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
+  alignItems: "flex-end",
   gap: theme.spacing(0.25),
+}));
+
+export const ClientAvatarWrap = styled("div")({
+  position: "relative",
+  width: 56,
+  height: 56,
+  flexShrink: 0,
+});
+
+export const ClientAvatarPresence = styled("span")(({ theme }) => ({
+  position: "absolute",
+  right: 2,
+  bottom: 2,
+  width: 12,
+  height: 12,
+  borderRadius: "50%",
+  backgroundColor: theme.palette.app.chip.variants.success.color,
+  border: `2px solid ${theme.palette.background.default}`,
+}));
+
+export const BiometricsPendingBanner = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: theme.spacing(2),
   padding: theme.spacing(1.5, 2),
   borderRadius: 12,
-  backgroundColor: theme.palette.background.lowGray,
-  minWidth: 148,
+  backgroundColor: theme.palette.app.chip.variants.error.background,
+}));
+
+export const BiometricsPendingIcon = styled("div")(({ theme }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: "50%",
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.palette.error.main,
+  backgroundColor: theme.palette.app.promotionLiquidationBanner,
 }));

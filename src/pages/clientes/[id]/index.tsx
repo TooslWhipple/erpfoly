@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Skeleton, Typography, Button, Stack, Divider, Box } from "@mui/material";
+import { Skeleton, Typography, Button, Stack, Divider, Avatar, Box } from "@mui/material";
 import numeral from "numeral";
-import { Breadcrumbs, CreditLimitBar, TabFilters } from "@/components";
+import { Fingerprint, Plus } from "lucide-react";
+import { Breadcrumbs, CreditLimitBar, StatusChip, TabFilters } from "@/components";
+import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   ActivityTab,
@@ -13,7 +15,7 @@ import {
   PaymentsTab,
   InformationTab,
 } from "../components";
-import { Card, CreditBalanceBox, ErrorState } from "@/styles/clientes/detalle.styles";
+import { Card, ErrorState, ClientAvatarWrap, BiometricsPendingBanner, BiometricsPendingIcon } from "@/styles/clientes/detalle.styles";
 import { useTheme } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -37,10 +39,38 @@ import {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMERS_DELETE } from "@/lib/permissions";
-import type { ClientStatus } from "@/types/clientes.types";
+import type { ClientStatus, ClientType } from "@/types/clientes.types";
+import { ClientBiometricEnrollModal } from "@/components/ClientBiometricEnrollModal/ClientBiometricEnrollModal";
 
 function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
+}
+
+const STATUS_LABELS: Record<ClientStatus, string> = {
+  active: "Activo",
+  inactive: "Inactivo",
+  blocked: "Bloqueado",
+};
+
+const STATUS_VARIANTS: Record<ClientStatus, StatusChipVariant> = {
+  active: "success",
+  inactive: "default",
+  blocked: "error",
+};
+
+const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
+  CASH: "Contado",
+  CREDIT: "Crédito",
+};
+
+function clientInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+  if (parts.length === 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return `${parts[0][0]}${parts[parts.length - 2][0]}`.toUpperCase();
 }
 
 const TABS = [
@@ -136,11 +166,13 @@ export default function ClientDetailPage() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const showWarning = useSnackbarStore((s) => s.showWarning);
+  const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const { hasPermission } = usePermissions();
   const { id } = router.query;
   const [activeTab, setActiveTab] = useState("actividad");
   const [validatingPayment, setValidatingPayment] = useState(false);
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const numericClientId =
     typeof id === "string" && Number.isFinite(Number(id)) ? Number(id) : null;
 
@@ -152,6 +184,34 @@ export default function ClientDetailPage() {
       return unwrapOrThrow(result);
     },
   });
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (
+      router.query.enrollBiometrics === "1" &&
+      clientHeaderQuery.data?.biometricsPending &&
+      clientHeaderQuery.data.status === "active"
+    ) {
+      setEnrollModalOpen(true);
+    }
+  }, [
+    router.isReady,
+    router.query.enrollBiometrics,
+    clientHeaderQuery.data?.biometricsPending,
+    clientHeaderQuery.data?.status,
+  ]);
+
+  const closeEnrollModal = () => {
+    setEnrollModalOpen(false);
+    if (router.query.enrollBiometrics == null) return;
+    const nextQuery = { ...router.query };
+    delete nextQuery.enrollBiometrics;
+    void router.replace(
+      { pathname: router.pathname, query: nextQuery },
+      undefined,
+      { shallow: true },
+    );
+  };
 
   const isCreditClient = checkIsCreditClient({
     creditApplicationId: clientHeaderQuery.data?.creditApplicationId ?? null,
@@ -363,72 +423,125 @@ export default function ClientDetailPage() {
     }
   };
 
+  const canEnrollBiometrics = header.biometricsPending && isClientActive;
+  const clientType: ClientType = isCreditClient ? "CREDIT" : "CASH";
+
   return (
     <Stack spacing={3}>
       <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={{ xs: 1, sm: 0 }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-      >
-        <Stack spacing={0.5} flex={1}>
-          <Typography variant="body2" color="text.secondary">
-            {header.curp}
-          </Typography>
-          <Typography variant="h5">{header.fullName}</Typography>
-          {isCreditClient && (
-            <Typography variant="body2" color="text.secondary">
-              Línea de crédito:{" "}
-              <Box
-                component="span"
-                sx={{ color: theme.palette.primary.main }}
-              >
-                {formatCurrency(creditAuthorized)}
-              </Box>
-            </Typography>
-          )}
-        </Stack>
+      <Stack spacing={2}>
         <Stack
-          spacing={1.5}
-          alignItems={{ xs: "flex-start", sm: "flex-end" }}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
         >
-          <ClientDetailActions
-            status={clientStatus}
-            clientType={isCreditClient ? "CREDIT" : "CASH"}
-            showDeactivateAction={canDeactivateClient}
-            deactivateDisabled={!isClientActive}
-            onDeactivateClick={() => setDeactivateModalOpen(true)}
-          />
-          {(isCreditClient || hasCreditBalance) && (
-            <Stack
-              direction="row"
-              spacing={2}
-              alignItems="flex-end"
-              flexWrap="wrap"
-              useFlexGap
-            >
-              {isCreditClient && (
-                <CreditLimitBar
-                  creditLimit={creditAuthorized}
-                  creditUsed={creditUsed}
-                  creditAvailable={creditAvailable}
+          <Stack direction="row" spacing={2} alignItems="center" flex={1}>
+            <ClientAvatarWrap>
+              <Avatar
+                sx={{
+                  width: 56,
+                  height: 56,
+                  bgcolor: (muiTheme) => muiTheme.palette.app.chip.variants.info.background,
+                  color: "primary.main",
+                  fontWeight: 700,
+                  fontSize: 18,
+                }}
+              >
+                {clientInitials(header.fullName)}
+              </Avatar>
+
+            </ClientAvatarWrap>
+            <Stack spacing={0.5}>
+              <Typography variant="h5" fontWeight={700}>
+                {header.fullName}
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <StatusChip
+                  label={STATUS_LABELS[clientStatus]}
+                  variant={STATUS_VARIANTS[clientStatus]}
+                  size="small"
                 />
-              )}
-              {hasCreditBalance && (
-                <CreditBalanceBox>
-                  <Typography variant="body2" fontWeight={600}>
-                    {formatCurrency(creditBalance)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Saldo a favor
-                  </Typography>
-                </CreditBalanceBox>
+                <StatusChip
+                  label={CLIENT_TYPE_LABELS[clientType]}
+                  variant={clientType === "CREDIT" ? "warning" : "info"}
+                  size="small"
+                />
+              </Stack>
+              {isCreditClient && (
+                <Typography variant="body2" color="text.secondary">
+                  Línea de crédito:{" "}
+                  <Box
+                    component="span"
+                    sx={{ color: theme.palette.primary.main }}
+                  >
+                    {formatCurrency(creditAuthorized)}
+                  </Box>
+                </Typography>
               )}
             </Stack>
-          )}
+          </Stack>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ width: { xs: "100%", sm: "auto" }, justifyContent: "flex-end" }}
+          >
+            {isCreditClient && (
+              <CreditLimitBar
+                creditLimit={creditAuthorized}
+                creditUsed={creditUsed}
+                creditAvailable={creditAvailable}
+              />
+            )}
+            {hasCreditBalance && (
+              <Stack alignItems="flex-end" spacing={0}>
+                <Typography variant="caption" color="text.secondary">
+                  Saldo a favor
+                </Typography>
+                <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                  {formatCurrency(creditBalance)}
+                </Typography>
+              </Stack>
+            )}
+            <ClientDetailActions
+              showDeactivateAction={canDeactivateClient}
+              deactivateDisabled={!isClientActive}
+              onDeactivateClick={() => setDeactivateModalOpen(true)}
+            />
+          </Stack>
         </Stack>
+        {canEnrollBiometrics ? (
+          <BiometricsPendingBanner>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <BiometricsPendingIcon>
+                <Fingerprint size={18} />
+              </BiometricsPendingIcon>
+              <Stack spacing={0}>
+                <Typography variant="body2" fontWeight={700} color="error.main">
+                  Biométricos pendientes
+                </Typography>
+                <Typography variant="caption" color="error.main">
+                  El cliente aún no tiene huella ni rostro registrados.
+                </Typography>
+              </Stack>
+            </Stack>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Plus size={16} />}
+              onClick={() => setEnrollModalOpen(true)}
+              sx={{
+                textTransform: "none",
+                borderRadius: 2,
+                flexShrink: 0,
+                bgcolor: "background.paper",
+              }}
+            >
+              Dar de alta
+            </Button>
+          </BiometricsPendingBanner>
+        ) : null}
       </Stack>
       <DeactivateClientModal
         open={deactivateModalOpen}
@@ -446,6 +559,17 @@ export default function ClientDetailPage() {
               queryKey: ["sale-credits", "active", numericClientId],
             }),
           ]);
+        }}
+      />
+      <ClientBiometricEnrollModal
+        open={enrollModalOpen}
+        clientId={header.id}
+        onClose={closeEnrollModal}
+        onSuccess={async () => {
+          showSuccess("Biometría del cliente actualizada.");
+          await queryClient.invalidateQueries({
+            queryKey: ["clients", "detail", numericClientId],
+          });
         }}
       />
       <Divider />

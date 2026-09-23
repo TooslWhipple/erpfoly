@@ -11,6 +11,8 @@ import {
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   NUBARIUM_ID_CAPTURE_CONFIG,
+  patchNubariumLandscapeCapture,
+  releaseNubariumLandscapeCapture,
   safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
@@ -105,6 +107,7 @@ export function NubariumIdCapture({
             : getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
+        patchNubariumLandscapeCapture(capture);
 
         capture.setToken(token);
 
@@ -153,6 +156,7 @@ export function NubariumIdCapture({
 
     return () => {
       cancelled = true;
+      releaseNubariumLandscapeCapture(captureRef.current);
       safeClearNubariumCapture(captureRef.current, rootElementId);
       captureRef.current = null;
       releaseCameraHardware();

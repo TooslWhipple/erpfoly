@@ -10,6 +10,8 @@ import {
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   NUBARIUM_FACE_CAPTURE_CONFIG,
+  patchNubariumLandscapeCapture,
+  releaseNubariumLandscapeCapture,
   safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
@@ -108,6 +110,7 @@ export function NubariumFaceCapture({
             : getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
+        patchNubariumLandscapeCapture(capture);
 
         capture.setToken(sessionToken);
 
@@ -179,6 +182,7 @@ export function NubariumFaceCapture({
     return () => {
       cancelled = true;
       window.clearTimeout(startTimer);
+      releaseNubariumLandscapeCapture(captureRef.current);
       safeClearNubariumCapture(captureRef.current, rootElementId);
       captureRef.current = null;
       releaseCameraHardware();

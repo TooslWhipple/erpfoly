@@ -1,6 +1,8 @@
 import { styled } from "@mui/material/styles";
 import { Stack, Typography } from "@mui/material";
 
+const touchLandscape = "@media (orientation: landscape) and (pointer: coarse)";
+
 export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
   flex: 1,
   minHeight: 0,
@@ -8,8 +10,13 @@ export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
   height: "100%",
   gap: theme.spacing(1.5),
   alignItems: "stretch",
+  containerType: "size",
   "@media (orientation: landscape) and (max-height: 560px)": {
     gap: theme.spacing(1),
+  },
+  [touchLandscape]: {
+    gap: theme.spacing(1),
+    justifyContent: "center",
   },
 }));
 
@@ -35,6 +42,15 @@ export const CaptureViewport = styled("div")({
     borderRadius: 12,
   },
   maxHeight: "min(68dvh, 560px)",
+  "@container (min-height: 1px)": {
+    [touchLandscape]: {
+      width: "min(100cqi, calc((100cqb - 36px) * 4 / 3))",
+      maxWidth: "100%",
+      maxHeight: "calc(100cqb - 36px)",
+      height: "auto",
+      aspectRatio: "4 / 3",
+    },
+  },
 });
 
 export const CaptureHost = styled("div")({
@@ -66,6 +82,9 @@ export const PreviewGrid = styled("div")(({ theme }) => ({
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: theme.spacing(1.5),
   },
+  [touchLandscape]: {
+    gap: theme.spacing(1),
+  },
 }));
 
 export const PreviewItem = styled(Stack)(({ theme }) => ({
@@ -89,6 +108,10 @@ export const PreviewImageFrame = styled("div")(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   "@media (orientation: landscape) and (max-height: 560px)": {
     aspectRatio: "16 / 9",
+  },
+  [touchLandscape]: {
+    aspectRatio: "16 / 9",
+    maxHeight: "min(28dvh, 220px)",
   },
 }));
 

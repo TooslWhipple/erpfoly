@@ -1,11 +1,18 @@
 import { alpha, styled } from "@mui/material/styles";
 import { Stack, Typography } from "@mui/material";
 
+const touchLandscape = "@media (orientation: landscape) and (pointer: coarse)";
+
 export const ShellBody = styled(Stack)(({ theme }) => ({
   flex: 1,
   minHeight: 0,
   overflow: "auto",
   gap: theme.spacing(2),
+  containerType: "size",
+  [touchLandscape]: {
+    overflow: "hidden",
+    gap: theme.spacing(1),
+  },
 }));
 
 export const HeaderBlock = styled("div")(({ theme }) => ({
@@ -14,6 +21,9 @@ export const HeaderBlock = styled("div")(({ theme }) => ({
   justifyContent: "space-between",
   gap: theme.spacing(2),
   flexShrink: 0,
+  [touchLandscape]: {
+    gap: theme.spacing(1),
+  },
 }));
 
 export const HeaderText = styled("div")({
@@ -35,6 +45,10 @@ export const Eyebrow = styled(Typography)(({ theme }) => ({
   fontSize: 13,
   lineHeight: 1.4,
   marginBottom: theme.spacing(0.75),
+  [touchLandscape]: {
+    marginBottom: theme.spacing(0.25),
+    fontSize: 12,
+  },
 }));
 
 export const StepTitle = styled(Typography)(({ theme }) => ({
@@ -42,6 +56,9 @@ export const StepTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   lineHeight: 1.25,
   color: theme.palette.text.primary,
+  [touchLandscape]: {
+    fontSize: "1.05rem",
+  },
 }));
 
 export const StepSubtitle = styled(Typography)(({ theme }) => ({
@@ -49,6 +66,11 @@ export const StepSubtitle = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
   fontSize: 14,
   lineHeight: 1.45,
+  [touchLandscape]: {
+    marginTop: 0,
+    fontSize: 12,
+    lineHeight: 1.3,
+  },
 }));
 
 export const StepperRoot = styled("div")(({ theme }) => ({
@@ -57,6 +79,9 @@ export const StepperRoot = styled("div")(({ theme }) => ({
   gap: theme.spacing(1.5),
   flexShrink: 0,
   width: "100%",
+  [touchLandscape]: {
+    gap: theme.spacing(0.75),
+  },
 }));
 
 export const TrackRow = styled("div")(({ theme }) => ({
@@ -138,6 +163,13 @@ export const StepLabel = styled(Typography, {
     textOverflow: "unset",
     lineHeight: 1.2,
   },
+  [touchLandscape]: {
+    fontSize: 12,
+    whiteSpace: "normal",
+    overflow: "visible",
+    textOverflow: "unset",
+    lineHeight: 1.2,
+  },
 }));
 
 export const SuccessBanner = styled("div")(({ theme }) => ({
@@ -195,6 +227,13 @@ export const HintRow = styled("div")(({ theme }) => ({
   gap: theme.spacing(1),
   color: theme.palette.text.secondary,
   flexShrink: 0,
+  [touchLandscape]: {
+    gap: theme.spacing(0.75),
+    "& .MuiTypography-root": {
+      fontSize: 12,
+      lineHeight: 1.3,
+    },
+  },
 }));
 
 export const FooterRoot = styled("div")(({ theme }) => ({
@@ -204,6 +243,10 @@ export const FooterRoot = styled("div")(({ theme }) => ({
   flexShrink: 0,
   paddingTop: theme.spacing(2),
   borderTop: `1px solid ${theme.palette.divider}`,
+  [touchLandscape]: {
+    gap: theme.spacing(1),
+    paddingTop: theme.spacing(1),
+  },
 }));
 
 export const FooterActions = styled("div")(({ theme }) => ({

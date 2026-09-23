@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Dialog, DialogContent, useMediaQuery, useTheme } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CloseButton } from "@/components/ModalForm/styles";
+import { isTouchCaptureDevice } from "@/utils/nubariumSdk";
 import { BiometricStepper, type BiometricStep } from "./BiometricStepper";
 import { Eyebrow, HeaderBlock, HeaderSide, HeaderText, ShellBody, StepSubtitle, StepTitle } from "./styles";
 
@@ -44,6 +45,17 @@ export function BiometricCaptureModalShell({
   const compact = useMediaQuery(theme.breakpoints.down("md"));
   const coarsePointer = useMediaQuery("(pointer: coarse)");
   const fullScreen = compact || coarsePointer;
+
+  useEffect(() => {
+    if (!open || !isTouchCaptureDevice()) return;
+    const style = document.createElement("style");
+    style.dataset.biometricLandscape = "true";
+    style.textContent = "#NUBSDK_modal_rotate{display:none !important;}";
+    document.head.appendChild(style);
+    return () => {
+      style.remove();
+    };
+  }, [open]);
 
   const handleClose = (_event: object, reason: string) => {
     if (reason === "backdropClick") return;
@@ -88,6 +100,10 @@ export function BiometricCaptureModalShell({
           minHeight: 0,
           overflow: "hidden",
           padding: fullScreen ? 2 : 3,
+          "@media (orientation: landscape) and (pointer: coarse)": {
+            gap: 1.25,
+            padding: 1.5,
+          },
         }}
       >
         <HeaderBlock>

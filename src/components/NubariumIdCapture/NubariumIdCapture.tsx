@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Typography } from "@mui/material";
+import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureErrorState, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
 import {
@@ -171,12 +172,12 @@ export function NubariumIdCapture({
   if (showPreview && completedResult) {
     return (
       <NubariumCapturePreview
-        title="INE capturada"
+        bannerTitle="INE capturada"
+        bannerSubtitle="Verifica que ambos lados se lean con claridad."
         images={[
           { label: "Frontal", alt: "INE frontal", src: completedResult.frontDataUrl },
           { label: "Posterior", alt: "INE posterior", src: completedResult.backDataUrl },
         ]}
-        retryLabel="Volver a capturar INE"
         onRetry={handleRetry}
       />
     );
@@ -185,6 +186,12 @@ export function NubariumIdCapture({
   return (
     <CaptureStepRoot>
       <CaptureViewport id={rootElementId} />
+
+      {!errorMessage ? (
+        <BiometricCaptureHint>
+          Coloca la INE dentro del marco, con buena luz y sin reflejos.
+        </BiometricCaptureHint>
+      ) : null}
 
       {errorMessage ? (
         <CaptureErrorState>

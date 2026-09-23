@@ -396,6 +396,14 @@ export function CreditApplicationFormPage({
           onSave={handleContinueToNextTab}
           saving={saving}
           applicationId={applicationId}
+          clientDisplayName={[
+            basicInformationTab.values.firstName,
+            basicInformationTab.values.lastName,
+            basicInformationTab.values.secondLastName,
+          ]
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .join(" ")}
           canEditBiometrics={canEditBiometrics}
           faceMatchStatus={faceMatch?.status ?? null}
           faceMatchScore={faceMatch?.score ?? null}

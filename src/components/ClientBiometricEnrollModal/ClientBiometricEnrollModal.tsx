@@ -1,19 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
-import { Button, CircularProgress, Typography, useMediaQuery } from "@mui/material";
+import { Button, CircularProgress, Typography } from "@mui/material";
 import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
-import { SideModal } from "@/components/SideModal";
-import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
-import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
-import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
-import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import {
-  FooterActions,
+  BiometricCaptureFooter,
+  BiometricCaptureModalShell,
   SdkBootstrapState,
   StepContainer,
   StepContent,
-  StepProgress,
-  StepProgressRow,
-} from "@/components/CreditApplicationIntakeModal/styles";
+  type BiometricStep,
+} from "@/components/BiometricCaptureModal";
+import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
+import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
+import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import { useCameraDevices } from "@/hooks/useCameraDevices";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
 import { compareIneFace } from "@/services/nubarium.service";
@@ -27,6 +25,7 @@ import {
 interface ClientBiometricEnrollModalProps {
   open: boolean;
   clientId: number;
+  clientDisplayName?: string;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -35,26 +34,29 @@ type EnrollStepId = "ine-capture" | "liveness";
 
 const STEP_ORDER: EnrollStepId[] = ["ine-capture", "liveness"];
 
-const STEP_TITLES: Record<EnrollStepId, { title: string; subtitle: string; progressLabel: string }> = {
+const STEPS: BiometricStep[] = [
+  { id: "ine-capture", label: "Identificación oficial" },
+  { id: "liveness", label: "Prueba de vida" },
+];
+
+const STEP_TITLES: Record<EnrollStepId, { title: string; subtitle: string }> = {
   "ine-capture": {
     title: "Identificación oficial",
-    subtitle: "Captura la INE del cliente",
-    progressLabel: "Identificación oficial",
+    subtitle: "Captura la INE del cliente por ambos lados.",
   },
   liveness: {
     title: "Prueba de vida",
-    subtitle: "Confirma que el rostro coincide con la INE",
-    progressLabel: "Prueba de vida",
+    subtitle: "Confirma que el rostro coincide con la INE.",
   },
 };
 
 export function ClientBiometricEnrollModal({
   open,
   clientId,
+  clientDisplayName,
   onClose,
   onSuccess,
 }: ClientBiometricEnrollModalProps) {
-  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
   const [activeStep, setActiveStep] = useState<EnrollStepId>("ine-capture");
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
@@ -201,6 +203,11 @@ export function ClientBiometricEnrollModal({
     [ineFrontImage],
   );
 
+  const goToPreviousStep = () => {
+    if (currentStepIndex <= 0 || saving || verifyingFaceMatch) return;
+    setActiveStep(STEP_ORDER[currentStepIndex - 1]);
+  };
+
   const goToNextStep = async (): Promise<void> => {
     if (!canContinue || verifyingFaceMatch) return;
 
@@ -267,22 +274,6 @@ export function ClientBiometricEnrollModal({
     setLivenessCaptureStarted(true);
   };
 
-  const stepProgressHeader = (
-    <StepProgressRow>
-      <StepProgress variant="body2">
-        {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
-      </StepProgress>
-      {captureLive ? (
-        <CameraSwitchControl
-          devices={cameras.devices}
-          value={cameras.selectedDeviceId}
-          onChange={cameras.selectAndRemember}
-          disabled={saving}
-        />
-      ) : null}
-    </StepProgressRow>
-  );
-
   const renderCameraSelect = (onStart: () => void, helperText: string, startLabel: string) => (
     <CameraDeviceSelect
       devices={cameras.devices}
@@ -302,32 +293,39 @@ export function ClientBiometricEnrollModal({
   );
 
   return (
-    <SideModal
+    <BiometricCaptureModalShell
       open={open}
       onClose={handleCloseModal}
+      disableClose={saving || verifyingFaceMatch}
+      clientDisplayName={clientDisplayName}
       title={stepContent.title}
-      description={stepContent.subtitle}
-      headerContent={stepProgressHeader}
-      disableClose={saving}
-      maxWidth="lg"
-      fullWidth
-      fullScreenBreakpoint={SALES_POS_BREAKPOINT}
-      forceFullScreen={isCoarsePointer}
-      contentSx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      subtitle={stepContent.subtitle}
+      steps={STEPS}
+      activeStepIndex={currentStepIndex}
+      headerActions={
+        captureLive ? (
+          <CameraSwitchControl
+            devices={cameras.devices}
+            value={cameras.selectedDeviceId}
+            onChange={cameras.selectAndRemember}
+            disabled={saving}
+          />
+        ) : null
+      }
+      footer={
+        <BiometricCaptureFooter
+          error={submitError}
+          showBack={currentStepIndex > 0}
+          onBack={goToPreviousStep}
+          backDisabled={saving || verifyingFaceMatch}
+          primaryLabel={isLastStep ? "Guardar biometría" : "Siguiente"}
+          onPrimary={() => void goToNextStep()}
+          primaryDisabled={!canContinue || saving || verifyingFaceMatch || sdkLoading}
+          primaryLoading={saving || verifyingFaceMatch}
+        />
+      }
     >
-      <StepContainer
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "hidden",
-        }}
-      >
+      <StepContainer sx={{ overflow: "hidden" }}>
         {activeStep === "ine-capture" && (
           <StepContent>
             {!sdkReady || !sdkToken ? (
@@ -417,6 +415,11 @@ export function ClientBiometricEnrollModal({
                         }
                         : null
                     }
+                    comparisonImage={
+                      ineFrontImage
+                        ? { src: ineFrontImage, label: "INE frontal", alt: "INE frontal" }
+                        : null
+                    }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
                     onSuccess={handleLivenessSuccess}
@@ -428,26 +431,6 @@ export function ClientBiometricEnrollModal({
           </StepContent>
         )}
       </StepContainer>
-
-      <FooterActions>
-        {submitError ? (
-          <Typography variant="body2" color="error.main" textAlign="center" sx={{ width: "100%" }}>
-            {submitError}
-          </Typography>
-        ) : null}
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={() => void goToNextStep()}
-          disabled={!canContinue || saving || verifyingFaceMatch || sdkLoading}
-        >
-          {saving || verifyingFaceMatch ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            isLastStep ? "Guardar biometría" : "Siguiente"
-          )}
-        </Button>
-      </FooterActions>
-    </SideModal>
+    </BiometricCaptureModalShell>
   );
 }

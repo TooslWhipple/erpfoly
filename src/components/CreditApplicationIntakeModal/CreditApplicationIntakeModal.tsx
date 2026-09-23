@@ -1,10 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Button, CircularProgress, Typography, useMediaQuery } from "@mui/material";
+import { Button, CircularProgress, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { PenSquare } from "lucide-react";
 import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
-import { SideModal } from "@/components/SideModal";
-import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
+import {
+  BiometricCaptureFooter,
+  BiometricCaptureModalShell,
+  SdkBootstrapState,
+  StepContainer,
+  StepContent,
+  type BiometricStep,
+} from "@/components/BiometricCaptureModal";
 import { NubariumFaceCapture } from "@/components/NubariumFaceCapture";
 import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/NubariumIdCapture";
 import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
@@ -18,21 +24,16 @@ import {
 } from "@/utils/creditApplicationFaceMatch";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import {
-  FooterActions,
-  SdkBootstrapState,
   SignatureCanvas,
   SignatureCanvasWrapper,
   SignatureLegalText,
   SignatureSection,
-  StepContainer,
-  StepContent,
-  StepProgress,
-  StepProgressRow,
 } from "./styles";
 
 interface CreditApplicationIntakeModalProps {
   open: boolean;
   onClose: () => void;
+  clientDisplayName?: string;
   /** Persist intake to the server; on failure, throw so the modal stays open for retry. */
   onFinalize: (payload: CreditApplicationBiometricsData) => Promise<void>;
 }
@@ -45,31 +46,34 @@ const STEP_ORDER: IntakeStepId[] = [
   "signature",
 ];
 
-const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string; progressLabel: string }> = {
+const STEPS: BiometricStep[] = [
+  { id: "ine-capture", label: "Identificación oficial" },
+  { id: "liveness", label: "Prueba de vida" },
+  { id: "signature", label: "Autorización de Buró" },
+];
+
+const STEP_TITLES: Record<IntakeStepId, { title: string; subtitle: string }> = {
   "ine-capture": {
     title: "Identificación oficial",
-    subtitle: "Verifica la INE del cliente",
-    progressLabel: "Identificación oficial",
+    subtitle: "Captura la INE del cliente por ambos lados.",
   },
   liveness: {
     title: "Prueba de vida",
-    subtitle: "Confirma la identidad del cliente",
-    progressLabel: "Prueba de vida",
+    subtitle: "Confirma que el rostro coincide con la INE.",
   },
   signature: {
     title: "Autorización de Buró",
-    subtitle: "Firma del cliente para consulta crediticia",
-    progressLabel: "Autorización de Buró",
+    subtitle: "Firma del cliente para consulta crediticia.",
   },
 };
 
 export function CreditApplicationIntakeModal({
   open,
   onClose,
+  clientDisplayName,
   onFinalize,
 }: CreditApplicationIntakeModalProps) {
   const theme = useTheme();
-  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
@@ -238,6 +242,11 @@ export function CreditApplicationIntakeModal({
     [ineFrontImage],
   );
 
+  const goToPreviousStep = () => {
+    if (currentStepIndex <= 0 || saving || verifyingFaceMatch) return;
+    setActiveStep(STEP_ORDER[currentStepIndex - 1]);
+  };
+
   const goToNextStep = async (): Promise<void> => {
     if (!canContinue || verifyingFaceMatch) return;
 
@@ -358,22 +367,6 @@ export function CreditApplicationIntakeModal({
     setLivenessCaptureStarted(true);
   };
 
-  const stepProgressHeader = (
-    <StepProgressRow>
-      <StepProgress variant="body2">
-        {`Paso ${currentStepIndex + 1} de ${STEP_ORDER.length} · ${stepContent.progressLabel}`}
-      </StepProgress>
-      {captureLive ? (
-        <CameraSwitchControl
-          devices={cameras.devices}
-          value={cameras.selectedDeviceId}
-          onChange={cameras.selectAndRemember}
-          disabled={saving}
-        />
-      ) : null}
-    </StepProgressRow>
-  );
-
   const renderCameraSelect = (onStart: () => void, helperText: string, startLabel: string) => (
     <CameraDeviceSelect
       devices={cameras.devices}
@@ -393,24 +386,42 @@ export function CreditApplicationIntakeModal({
   );
 
   return (
-    <SideModal
+    <BiometricCaptureModalShell
       open={open}
       onClose={handleCloseModal}
+      disableClose={saving || verifyingFaceMatch}
+      clientDisplayName={clientDisplayName}
       title={stepContent.title}
-      description={stepContent.subtitle}
-      headerContent={stepProgressHeader}
-      disableClose={saving}
-      maxWidth="lg"
-      fullWidth
-      fullScreenBreakpoint={SALES_POS_BREAKPOINT}
-      forceFullScreen={isCoarsePointer}
-      contentSx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      subtitle={stepContent.subtitle}
+      steps={STEPS}
+      activeStepIndex={currentStepIndex}
+      headerActions={
+        captureLive ? (
+          <CameraSwitchControl
+            devices={cameras.devices}
+            value={cameras.selectedDeviceId}
+            onChange={cameras.selectAndRemember}
+            disabled={saving}
+          />
+        ) : null
+      }
+      footer={
+        <BiometricCaptureFooter
+          error={finalizeError}
+          showBack={currentStepIndex > 0}
+          onBack={goToPreviousStep}
+          backDisabled={saving || verifyingFaceMatch}
+          primaryLabel={isLastStep ? "Finalizar" : "Siguiente"}
+          onPrimary={() => void goToNextStep()}
+          primaryDisabled={
+            !canContinue
+            || saving
+            || verifyingFaceMatch
+            || (activeStep !== "signature" && sdkLoading)
+          }
+          primaryLoading={saving || verifyingFaceMatch}
+        />
+      }
     >
       <StepContainer
         sx={{
@@ -508,6 +519,11 @@ export function CreditApplicationIntakeModal({
                         }
                         : null
                     }
+                    comparisonImage={
+                      ineFrontImage
+                        ? { src: ineFrontImage, label: "INE frontal", alt: "INE frontal" }
+                        : null
+                    }
                     videoDeviceId={cameras.selectedDeviceId}
                     cameraFacing={cameras.selectedDevice?.facing}
                     onSuccess={handleLivenessSuccess}
@@ -553,31 +569,6 @@ export function CreditApplicationIntakeModal({
           </SignatureSection>
         )}
       </StepContainer>
-
-      <FooterActions>
-        {finalizeError ? (
-          <Typography variant="body2" color="error.main" textAlign="center" sx={{ width: "100%" }}>
-            {finalizeError}
-          </Typography>
-        ) : null}
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={goToNextStep}
-          disabled={
-            !canContinue
-            || saving
-            || verifyingFaceMatch
-            || (activeStep !== "signature" && sdkLoading)
-          }
-        >
-          {saving || verifyingFaceMatch ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            isLastStep ? "Finalizar" : "Siguiente"
-          )}
-        </Button>
-      </FooterActions>
-    </SideModal>
+    </BiometricCaptureModalShell>
   );
 }

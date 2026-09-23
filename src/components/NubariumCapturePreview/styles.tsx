@@ -13,7 +13,7 @@ export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
   },
 }));
 
-export const CaptureViewport = styled("div")(({ theme }) => ({
+export const CaptureViewport = styled("div")({
   boxSizing: "border-box",
   position: "relative",
   width: "min(100%, calc(min(68dvh, 560px) * 4 / 3))",
@@ -25,8 +25,8 @@ export const CaptureViewport = styled("div")(({ theme }) => ({
   marginInline: "auto",
   borderRadius: 16,
   overflow: "hidden",
-  backgroundColor: theme.palette.background.default,
-  border: `1px solid ${theme.palette.app.border}`,
+  backgroundColor: "#000",
+  border: "none",
   "@media (orientation: landscape)": {
     width: "min(100%, calc(min(72dvh, 480px) * 4 / 3))",
   },
@@ -35,7 +35,7 @@ export const CaptureViewport = styled("div")(({ theme }) => ({
     borderRadius: 12,
   },
   maxHeight: "min(68dvh, 560px)",
-}));
+});
 
 export const CaptureHost = styled("div")({
   position: "absolute",
@@ -54,16 +54,12 @@ export const PreviewRoot = styled(Stack)(({ theme }) => ({
   gap: theme.spacing(2),
 }));
 
-export const PreviewTitle = styled(Typography)({
-  textAlign: "center",
-});
-
 export const PreviewGrid = styled("div")(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr",
   gap: theme.spacing(2),
   width: "100%",
-  [theme.breakpoints.up("md")]: {
+  [theme.breakpoints.up("sm")]: {
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   },
   "@media (orientation: landscape)": {
@@ -77,34 +73,32 @@ export const PreviewItem = styled(Stack)(({ theme }) => ({
   minWidth: 0,
 }));
 
-export const PreviewLabel = styled(Typography)({
-  textAlign: "center",
-});
+export const PreviewLabel = styled(Typography)(({ theme }) => ({
+  textAlign: "left",
+  color: theme.palette.text.secondary,
+  fontSize: 13,
+}));
 
 export const PreviewImageFrame = styled("div")(({ theme }) => ({
+  position: "relative",
   width: "100%",
-  minHeight: 240,
+  aspectRatio: "4 / 3",
   borderRadius: 12,
   overflow: "hidden",
-  backgroundColor: theme.palette.background.paper,
+  backgroundColor: theme.palette.app.background.lowerGray,
   border: `1px solid ${theme.palette.app.border}`,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
   "@media (orientation: landscape) and (max-height: 560px)": {
-    minHeight: 140,
+    aspectRatio: "16 / 9",
   },
 }));
 
 export const PreviewImage = styled("img")({
+  position: "absolute",
+  inset: 0,
   width: "100%",
   height: "100%",
-  maxHeight: 240,
   objectFit: "contain",
   display: "block",
-  "@media (orientation: landscape) and (max-height: 560px)": {
-    maxHeight: 140,
-  },
 });
 
 export const CaptureErrorState = styled(Stack)(({ theme }) => ({

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Typography } from "@mui/material";
+import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import { CaptureErrorState, CaptureHost, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
 import {
@@ -26,11 +27,18 @@ export interface NubariumFaceCaptureResult {
   faceDataUrl: string;
 }
 
+export interface NubariumFaceComparisonImage {
+  src: string;
+  label?: string;
+  alt?: string;
+}
+
 interface NubariumFaceCaptureProps {
   token: string;
   active: boolean;
   completed?: boolean;
   completedResult?: NubariumFaceCaptureResult | null;
+  comparisonImage?: NubariumFaceComparisonImage | null;
   videoDeviceId?: string | null;
   cameraFacing?: CameraFacingHint;
   acceptFailedLiveness?: boolean;
@@ -45,6 +53,7 @@ export function NubariumFaceCapture({
   active,
   completed = false,
   completedResult = null,
+  comparisonImage = null,
   videoDeviceId = null,
   cameraFacing,
   acceptFailedLiveness = false,
@@ -188,17 +197,26 @@ export function NubariumFaceCapture({
   const showPreview = Boolean(completed && completedResult?.faceDataUrl);
 
   if (showPreview && completedResult) {
+    const images = [
+      {
+        label: "Selfie",
+        alt: "Rostro capturado",
+        src: completedResult.faceDataUrl,
+      },
+    ];
+    if (comparisonImage?.src) {
+      images.push({
+        label: comparisonImage.label ?? "INE frontal",
+        alt: comparisonImage.alt ?? "INE frontal",
+        src: comparisonImage.src,
+      });
+    }
+
     return (
       <NubariumCapturePreview
-        title="Rostro capturado"
-        images={[
-          {
-            label: "Selfie",
-            alt: "Rostro capturado",
-            src: completedResult.faceDataUrl,
-          },
-        ]}
-        retryLabel="Repetir captura"
+        bannerTitle="Rostro capturado"
+        bannerSubtitle="Compara la selfie con la foto de la INE."
+        images={images}
         onRetry={handleRetry}
       />
     );
@@ -213,6 +231,12 @@ export function NubariumFaceCapture({
       <CaptureViewport>
         {host}
       </CaptureViewport>
+
+      {!errorMessage ? (
+        <BiometricCaptureHint>
+          Pide al cliente que mire a la cámara y se mantenga quieto.
+        </BiometricCaptureHint>
+      ) : null}
 
       {errorMessage ? (
         <CaptureErrorState>

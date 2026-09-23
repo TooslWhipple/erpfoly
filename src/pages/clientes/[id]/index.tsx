@@ -522,7 +522,7 @@ export default function ClientDetailPage() {
                   Biométricos pendientes
                 </Typography>
                 <Typography variant="caption" color="error.main">
-                  El cliente aún no tiene huella ni rostro registrados.
+                  El cliente aún no cuenta con identificación ni biometrícos registrados.
                 </Typography>
               </Stack>
             </Stack>
@@ -564,6 +564,7 @@ export default function ClientDetailPage() {
       <ClientBiometricEnrollModal
         open={enrollModalOpen}
         clientId={header.id}
+        clientDisplayName={header.fullName}
         onClose={closeEnrollModal}
         onSuccess={async () => {
           showSuccess("Biometría del cliente actualizada.");

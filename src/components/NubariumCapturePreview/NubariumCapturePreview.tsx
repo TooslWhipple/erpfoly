@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@mui/material";
+import { BiometricCaptureSuccessBanner } from "@/components/BiometricCaptureModal";
 import {
   PreviewGrid,
   PreviewImage,
@@ -8,7 +8,6 @@ import {
   PreviewItem,
   PreviewLabel,
   PreviewRoot,
-  PreviewTitle,
 } from "./styles";
 
 export interface NubariumCapturePreviewImage {
@@ -18,21 +17,28 @@ export interface NubariumCapturePreviewImage {
 }
 
 interface NubariumCapturePreviewProps {
-  title?: string;
+  bannerTitle: string;
+  bannerSubtitle?: string;
   images: NubariumCapturePreviewImage[];
-  retryLabel: string;
+  retryLabel?: string;
   onRetry: () => void;
 }
 
 export function NubariumCapturePreview({
-  title,
+  bannerTitle,
+  bannerSubtitle,
   images,
-  retryLabel,
+  retryLabel = "Repetir",
   onRetry,
 }: NubariumCapturePreviewProps) {
   return (
     <PreviewRoot>
-      {title ? <PreviewTitle variant="subtitle1">{title}</PreviewTitle> : null}
+      <BiometricCaptureSuccessBanner
+        title={bannerTitle}
+        subtitle={bannerSubtitle}
+        retryLabel={retryLabel}
+        onRetry={onRetry}
+      />
       <PreviewGrid
         sx={{
           gridTemplateColumns: images.length > 1 ? undefined : "1fr",
@@ -40,16 +46,13 @@ export function NubariumCapturePreview({
       >
         {images.map((image) => (
           <PreviewItem key={image.label}>
-            <PreviewLabel variant="caption">{image.label}</PreviewLabel>
             <PreviewImageFrame>
               <PreviewImage src={image.src} alt={image.alt} />
             </PreviewImageFrame>
+            <PreviewLabel variant="caption">{image.label}</PreviewLabel>
           </PreviewItem>
         ))}
       </PreviewGrid>
-      <Button variant="outlined" onClick={onRetry} fullWidth>
-        {retryLabel}
-      </Button>
     </PreviewRoot>
   );
 }

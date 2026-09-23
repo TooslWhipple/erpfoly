@@ -68,6 +68,9 @@ export interface ClientPaymentResult {
   creditsAffectedCount: number;
   receiptUrl: string;
   paymentIds: number[];
+  folio?: string;
+  clientName?: string;
+  receiptId?: number;
 }
 
 export interface BackendSaleCreditInstallment {

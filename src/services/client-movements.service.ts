@@ -18,6 +18,8 @@ export interface ClientMovementItem {
   credit_status?: string | null;
   sale_credit_id?: number;
   installment_number?: number | null;
+  receipt_id?: number | null;
+  receipt_folio?: string | null;
 }
 
 export type ClientMovementsResponse = PaginatedRowsResponse<ClientMovementItem>;

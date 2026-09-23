@@ -20,12 +20,10 @@ import type {
   ClientCreditAccount,
   ClientPaymentContext,
   ClientPaymentMethod,
-  ClientPaymentResult,
   PendingInstallment,
   BackendSaleCreditActiveItem,
 } from "@/types/clientPayment.types";
 import { formatDate } from "@/utils/date";
-import dayjs from "@/lib/dayjs";
 import {
   calculateCascadePreview,
   calculateAmountForInstallmentCount,
@@ -52,7 +50,6 @@ interface UseClientPaymentResult {
   isCashDeposit: boolean;
   paymentAmount: number;
   isSubmitting: boolean;
-  paymentResult: ClientPaymentResult | null;
   totalOutstanding: number;
   change: number;
   hasPartialInstallmentRemainder: boolean;
@@ -185,7 +182,6 @@ export function useClientPayment(): UseClientPaymentResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentResult, setPaymentResult] = useState<ClientPaymentResult | null>(null);
 
   const routerReady = router.isReady;
   const clientId = typeof id === "string" ? id : null;
@@ -494,65 +490,23 @@ export function useClientPayment(): UseClientPaymentResult {
 
       const result = await registerCascadePayment(numericClientId, backendPayload);
       const backendResult = unwrapOrThrow(result) as CascadePaymentResult;
-
-      const allocations: { label: string; amount: number }[] = [];
-      let paidInstallmentsDelta = 0;
-      let firstAffectedAccount: ClientCreditAccount | undefined;
-
-      for (const creditResult of backendResult.credits) {
-        const account = context.creditAccounts.find(
-          (a) => a.id === String(creditResult.credit_id),
-        );
-        firstAffectedAccount ??= account;
-
-        for (const installmentResult of creditResult.installments) {
-          const installment = account?.pendingInstallments.find(
-            (i) => i.id === String(installmentResult.id),
-          );
-          const totalInstallments = installment?.totalInstallments ?? account?.totalInstallments ?? 0;
-          const isFullPayment = installmentResult.status === "PAID";
-          if (isFullPayment) paidInstallmentsDelta += 1;
-
-          const label = isFullPayment
-            ? `Pago de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`
-            : `Abono de parcialidad ${installmentResult.installment_number} de ${totalInstallments}`;
-          if (installmentResult.principal_applied > 0) {
-            allocations.push({ label, amount: installmentResult.principal_applied });
-          }
-          if (installmentResult.late_fee_applied > 0) {
-            allocations.push({
-              label: `Mora de parcialidad ${installmentResult.installment_number}`,
-              amount: installmentResult.late_fee_applied,
-            });
-          }
-        }
+      if (!backendResult.receipt?.id) {
+        throw new Error("El abono se registró, pero no se generó el comprobante.");
       }
-
-      const now = new Date();
-      const dateLabel = dayjs(now).format("D [de] MMMM, YYYY");
-
-      setPaymentResult({
-        id: String(backendResult.credits[0]?.payment_id ?? ""),
-        totalAmount: backendResult.amount_applied,
-        dateLabel,
-        allocations: allocations.length > 0
-          ? allocations
-          : [{ label: "Abono a cuenta", amount: paymentAmount }],
-        clientPhone: context.clientPhone,
-        paidInstallments: (firstAffectedAccount?.paidInstallments ?? 0) + paidInstallmentsDelta,
-        totalInstallments: firstAffectedAccount?.totalInstallments ?? 0,
-        creditsAffectedCount: backendResult.credits.length,
-        receiptUrl: "",
-        paymentIds: backendResult.credits
-          .map((credit) => credit.payment_id)
-          .filter((id) => Number.isInteger(id) && id > 0),
-      });
 
       if (fromCashRegister) {
         invalidateCashRegisterQueries(queryClient);
       }
 
-      await fetchContext();
+      const params = new URLSearchParams();
+      if (fromCashRegister) {
+        params.set("from", "cajas");
+        if (typeof caja === "string") params.set("caja", caja);
+      }
+      const query = params.toString();
+      await router.replace(
+        `/clientes/${clientId}/abonos/comprobantes/${backendResult.receipt.id}${query ? `?${query}` : ""}`,
+      );
     } catch (err) {
       console.error("[useClientPayment] Error submitting payment:", err);
       const message = err instanceof Error ? err.message : "No se pudo registrar el cobro. Intenta de nuevo.";
@@ -574,10 +528,11 @@ export function useClientPayment(): UseClientPaymentResult {
     partialRemainderDecision,
     paymentAmount,
     paymentMethod,
+    caja,
     paymentTerminalId,
     queryClient,
+    router,
     totalOutstanding,
-    fetchContext,
   ]);
 
   return {
@@ -593,7 +548,6 @@ export function useClientPayment(): UseClientPaymentResult {
     isCashDeposit,
     paymentAmount,
     isSubmitting,
-    paymentResult,
     totalOutstanding,
     change,
     hasPartialInstallmentRemainder,

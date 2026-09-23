@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -14,22 +14,16 @@ import { useClientPayment } from "@/hooks/clientes/useClientPayment";
 import {
   CreditAccountCard,
   PaymentCapturePanel,
-  PaymentSuccessView,
   PaymentSummaryPanel,
 } from "../../abonos/components";
 import { ErrorState } from "@/styles/clientes/detalle.styles";
 import { Card } from "@/styles/clientes/abonos.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getClientPaymentAccessDenialMessage } from "@/utils/clientPaymentAccess";
-import { downloadClientPaymentReceiptPdf } from "@/services/sale-credit.service";
-import { downloadBlob } from "@/lib/printing";
-import { getApiErrorMessage } from "@/lib/axios";
 
 export default function ClientPaymentPage() {
   const router = useRouter();
   const showWarning = useSnackbarStore((s) => s.showWarning);
-  const showError = useSnackbarStore((s) => s.showError);
-  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
   const {
     routerReady,
     clientId,
@@ -43,7 +37,6 @@ export default function ClientPaymentPage() {
     isCashDeposit,
     paymentAmount,
     isSubmitting,
-    paymentResult,
     totalOutstanding,
     change,
     hasPartialInstallmentRemainder,
@@ -69,7 +62,7 @@ export default function ClientPaymentPage() {
   } = useClientPayment();
 
   useEffect(() => {
-    if (!routerReady || loading || !accessDeniedReason || paymentResult) return;
+    if (!routerReady || loading || !accessDeniedReason) return;
 
     const message = getClientPaymentAccessDenialMessage(accessDeniedReason);
     if (message) showWarning(message);
@@ -86,7 +79,6 @@ export default function ClientPaymentPage() {
     clientId,
     fromCashRegister,
     loading,
-    paymentResult,
     router,
     routerReady,
     showWarning,
@@ -142,25 +134,7 @@ export default function ClientPaymentPage() {
     }
     router.push("/clientes");
   };
-  const handleDownloadReceipt = async () => {
-    if (!clientId || !paymentResult?.paymentIds.length) {
-      showError("No se pudo generar el comprobante");
-      return;
-    }
-    setIsDownloadingReceipt(true);
-    try {
-      const blob = await downloadClientPaymentReceiptPdf(
-        Number(clientId),
-        paymentResult.paymentIds,
-      );
-      downloadBlob(blob, `comprobante-abono-${paymentResult.paymentIds[0]}.pdf`);
-    } catch (err) {
-      showError(getApiErrorMessage(err) || "No se pudo generar el comprobante");
-    } finally {
-      setIsDownloadingReceipt(false);
-    }
-  };
-  if (!routerReady || loading || (accessDeniedReason && !paymentResult)) {
+  if (!routerReady || loading || accessDeniedReason) {
     return (
       <Stack spacing={3}>
         <Skeleton variant="text" width="60%" height={32} />
@@ -194,18 +168,6 @@ export default function ClientPaymentPage() {
   }
   if (!context) {
     return null;
-  }
-  if (paymentResult) {
-    return (
-      <Stack spacing={3}>
-        <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-        <PaymentSuccessView
-          result={paymentResult}
-          onDownloadReceipt={() => void handleDownloadReceipt()}
-          isDownloadingReceipt={isDownloadingReceipt}
-        />
-      </Stack>
-    );
   }
   return (
     <Stack spacing={3}>

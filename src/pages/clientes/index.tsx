@@ -23,6 +23,7 @@ import {
   getClients,
   type Client,
   type ClientStatus,
+  type ClientType,
 } from "@/services/clients.service";
 import { Stack } from "@mui/material";
 const SEARCH_DEBOUNCE_MS = 300;
@@ -57,6 +58,14 @@ const STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   inactive: "default",
   blocked: "error",
 };
+const CLIENT_TYPE_CHIP_LABELS: Record<ClientType, string> = {
+  CASH: "Contado",
+  CREDIT: "Crédito",
+};
+const CLIENT_TYPE_CHIP_VARIANTS: Record<ClientType, StatusChipVariant> = {
+  CASH: "info",
+  CREDIT: "warning",
+};
 const columns: Column<Client>[] = [
   {
     id: "id",
@@ -81,6 +90,14 @@ const columns: Column<Client>[] = [
     label: "Correo electrónico",
     type: "text",
     size: "lg",
+  },
+  {
+    id: "clientType",
+    label: "Tipo",
+    type: "chip",
+    size: "sm",
+    chipLabelMap: CLIENT_TYPE_CHIP_LABELS,
+    chipVariantMap: CLIENT_TYPE_CHIP_VARIANTS,
   },
   {
     id: "status",

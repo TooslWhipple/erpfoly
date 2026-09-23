@@ -3,7 +3,7 @@ import { IconButton, Menu, MenuItem, Stack } from "@mui/material";
 import { MoreVertical } from "lucide-react";
 import { StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
-import type { ClientStatus } from "@/types/clientes.types";
+import type { ClientStatus, ClientType } from "@/types/clientes.types";
 
 const STATUS_LABELS: Record<ClientStatus, string> = {
   active: "Activo",
@@ -17,8 +17,19 @@ const STATUS_VARIANTS: Record<ClientStatus, StatusChipVariant> = {
   blocked: "error",
 };
 
+const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
+  CASH: "Contado",
+  CREDIT: "Crédito",
+};
+
+const CLIENT_TYPE_VARIANTS: Record<ClientType, StatusChipVariant> = {
+  CASH: "info",
+  CREDIT: "warning",
+};
+
 export interface ClientDetailActionsProps {
   status: ClientStatus | null;
+  clientType: ClientType;
   showDeactivateAction: boolean;
   deactivateDisabled: boolean;
   onDeactivateClick: () => void;
@@ -26,6 +37,7 @@ export interface ClientDetailActionsProps {
 
 export function ClientDetailActions({
   status,
+  clientType,
   showDeactivateAction,
   deactivateDisabled,
   onDeactivateClick,
@@ -49,6 +61,11 @@ export function ClientDetailActions({
 
   return (
     <Stack direction="row" alignItems="center" spacing={1.5}>
+      <StatusChip
+        label={CLIENT_TYPE_LABELS[clientType]}
+        variant={CLIENT_TYPE_VARIANTS[clientType]}
+        size="small"
+      />
       <StatusChip
         label={STATUS_LABELS[resolvedStatus]}
         variant={STATUS_VARIANTS[resolvedStatus]}

@@ -13,7 +13,7 @@ const MOVEMENT_TYPE_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   purchase: "default",
 };
 
-const COLUMNS: DataTableColumn<ClientMovementItem>[] = [
+const BASE_COLUMNS: DataTableColumn<ClientMovementItem>[] = [
   {
     id: "type",
     label: "Tipo",
@@ -32,16 +32,36 @@ const COLUMNS: DataTableColumn<ClientMovementItem>[] = [
   { id: "amount", label: "Monto", type: "currency", align: "right" },
 ];
 
+const RECEIPT_COLUMN: DataTableColumn<ClientMovementItem> = {
+  id: "receipt_folio",
+  label: "Comprobante",
+  format: (value) => (value ? String(value) : "—"),
+};
+
 export interface MovementsTableProps {
   movements: ClientMovementItem[];
   loading?: boolean;
+  showReceiptColumn?: boolean;
   onRowClick?: (movement: ClientMovementItem) => void;
 }
 
-export function MovementsTable({ movements, loading, onRowClick }: MovementsTableProps) {
+export function MovementsTable({
+  movements,
+  loading,
+  showReceiptColumn = false,
+  onRowClick,
+}: MovementsTableProps) {
+  const columns = showReceiptColumn
+    ? [
+        ...BASE_COLUMNS.slice(0, 4),
+        RECEIPT_COLUMN,
+        ...BASE_COLUMNS.slice(4),
+      ]
+    : BASE_COLUMNS;
+
   return (
     <DataTable<ClientMovementItem>
-      columns={COLUMNS}
+      columns={columns}
       rows={movements}
       rowKey="id"
       emptyMessage="No hay registros"

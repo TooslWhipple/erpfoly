@@ -14,7 +14,7 @@ export function PriceSuggestionsSidebar({ suggestions, loading = false, onApply 
   return (
     <Stack spacing={2}>
       <Stack spacing={1}>
-        <SidebarIcon><Sparkle size={16} color="#F59E0B" /></SidebarIcon>
+        <SidebarIcon><Sparkle size={16} /></SidebarIcon>
         <Typography variant="body1" fontWeight={700}>Sugerencias [{suggestions.length}]</Typography>
         <Typography variant="body2" color="text.secondary">Precios sugeridos para artículos identificados con lento movimiento.</Typography>
       </Stack>

@@ -16,7 +16,7 @@ export const RuleCardContainer = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   marginBottom: theme.spacing(2),
   minWidth: 0,
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",
   },
@@ -48,7 +48,7 @@ export const RuleOperatorSelect = styled(Select)(({ theme }) => ({
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     minWidth: 0,
     width: "100%",
   },
@@ -61,7 +61,7 @@ export const RuleValueInput = styled(TextField)(({ theme }) => ({
     fontSize: 14,
     textAlign: "center",
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     width: "100%",
   },
 }));
@@ -72,7 +72,7 @@ export const RulePeriodSelect = styled(Select)(({ theme }) => ({
   "& .MuiSelect-select": {
     padding: theme.spacing(1, 2),
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     minWidth: 0,
     width: "100%",
   },
@@ -84,7 +84,7 @@ export const RulePromotionInput = styled(TextField)(({ theme }) => ({
     padding: theme.spacing(1, 1.5),
     fontSize: 14,
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     width: "100%",
   },
 }));
@@ -95,7 +95,7 @@ export const RuleActions = styled(Box)(({ theme }) => ({
   gap: theme.spacing(0.5),
   marginLeft: "auto",
   flexShrink: 0,
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     marginLeft: 0,
     justifyContent: "flex-end",
     width: "100%",

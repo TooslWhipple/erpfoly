@@ -336,6 +336,7 @@ export default function ClientDetailPage() {
       case "movimientos":
         return (
           <MovementsTab
+            clientId={numericClientId}
             movements={movementsQuery.data?.rows ?? []}
             loading={movementsQuery.isLoading}
           />
@@ -350,6 +351,7 @@ export default function ClientDetailPage() {
       case "abonos":
         return (
           <PaymentsTab
+            clientId={numericClientId}
             payments={paymentsQuery.data?.rows ?? []}
             loading={paymentsQuery.isLoading}
           />
@@ -394,6 +396,7 @@ export default function ClientDetailPage() {
         >
           <ClientDetailActions
             status={clientStatus}
+            clientType={isCreditClient ? "CREDIT" : "CASH"}
             showDeactivateAction={canDeactivateClient}
             deactivateDisabled={!isClientActive}
             onDeactivateClick={() => setDeactivateModalOpen(true)}

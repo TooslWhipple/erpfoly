@@ -20,6 +20,8 @@ export type ClientStatus = "active" | "inactive" | "blocked";
 
 export type ClientCreditStatus = "ACTIVE" | "MOROSO";
 
+export type ClientType = "CASH" | "CREDIT";
+
 export type ClientInformationSection =
   | "basic"
   | "family"
@@ -52,6 +54,7 @@ export interface Client {
   phoneNumber: string | null;
   email: string | null;
   status: string | null;
+  clientType: ClientType;
   creditStatus: ClientCreditStatus | null;
   creditAvailable?: number | null;
   addresses: ClientAddressItem[];

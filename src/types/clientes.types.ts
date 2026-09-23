@@ -56,6 +56,8 @@ export interface ClientDetailHeader {
 
 export type ClientStatus = "active" | "inactive" | "blocked";
 
+export type ClientType = "CASH" | "CREDIT";
+
 export interface ClientDeactivationReason {
   id: number;
   code: string;

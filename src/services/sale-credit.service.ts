@@ -189,6 +189,21 @@ export interface CascadePaymentResult {
   late_fee_applied: number;
   credits: CascadePaymentCreditResult[];
   message: string;
+  receipt?: { id: number; folio: string } | null;
+}
+
+export interface ClientPaymentReceiptDetail {
+  id: number;
+  folio: string;
+  totalAmount: number;
+  dateLabel: string;
+  clientName: string;
+  clientPhone: string;
+  paidInstallments: number;
+  totalInstallments: number;
+  creditsAffectedCount: number;
+  allocations: { label: string; amount: number }[];
+  payment_ids: number[];
 }
 
 export async function registerCascadePayment(
@@ -223,6 +238,29 @@ async function blobFromPdfResponse(data: unknown, fallbackMessage: string): Prom
   }
 
   return new Blob([data as BlobPart], { type: "application/pdf" });
+}
+
+export async function getClientPaymentReceipt(
+  clientId: number,
+  receiptId: number,
+): Promise<ApiResult<ClientPaymentReceiptDetail>> {
+  return get<ClientPaymentReceiptDetail>(
+    `/sale-credits/client/${clientId}/receipts/${receiptId}`,
+  );
+}
+
+export async function downloadClientPaymentReceiptById(
+  clientId: number,
+  receiptId: number,
+): Promise<Blob> {
+  const response = await api.get(
+    `/sale-credits/client/${clientId}/receipts/${receiptId}/pdf`,
+    {
+      responseType: "blob",
+      skipGlobalErrorToast: true,
+    } as AxiosConfigWithSkipToast,
+  );
+  return blobFromPdfResponse(response.data, "No se pudo descargar el comprobante");
 }
 
 export async function downloadClientPaymentReceiptPdf(

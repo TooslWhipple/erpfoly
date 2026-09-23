@@ -32,6 +32,11 @@ export function PaymentSuccessView({
 
       <Stack spacing={0.5} alignItems="center">
         <Typography variant="h5" fontWeight={700}>¡Pago registrado!</Typography>
+        {result.folio ? (
+          <Typography variant="body2" color="text.secondary">
+            Folio {result.folio}
+          </Typography>
+        ) : null}
         <Typography variant="h3" fontWeight={700}>{formatCurrency(result.totalAmount)}</Typography>
       </Stack>
 
@@ -62,6 +67,13 @@ export function PaymentSuccessView({
         </Stack>
 
         <Stack spacing={1}>
+          {result.clientName ? (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">Cliente</Typography>
+              <Typography variant="body2">{result.clientName}</Typography>
+            </Stack>
+          ) : null}
+
           <Stack direction="row" justifyContent="space-between">
             <Typography variant="body2" color="text.secondary">Fecha</Typography>
             <Typography variant="body2">{result.dateLabel}</Typography>
@@ -86,7 +98,7 @@ export function PaymentSuccessView({
       </ReceiptDetailsCard>
 
       <Typography variant="caption" color="text.secondary" textAlign="center">
-        Un comprobante de pago digital fue enviado a {result.clientPhone}
+        Conserve este comprobante. Puede volver a abrirlo desde el historial de abonos.
       </Typography>
 
       <Button
@@ -97,7 +109,7 @@ export function PaymentSuccessView({
             : <Download size={16} />
         }
         onClick={onDownloadReceipt}
-        disabled={isDownloadingReceipt || result.paymentIds.length === 0}
+        disabled={isDownloadingReceipt || (!result.receiptId && result.paymentIds.length === 0)}
         sx={{ textTransform: "none" }}
       >
         {isDownloadingReceipt ? "Generando PDF..." : "Descargar comprobante"}

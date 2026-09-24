@@ -442,6 +442,17 @@ export async function validateSupervisor(
   );
 }
 
+export async function authorizeMissingBiometrics(
+  saleId: number,
+  credentials: { username: string; password: string },
+): Promise<ApiResult<VerifySaleIdentityResult>> {
+  return post<VerifySaleIdentityResult>(
+    `${BASE}/sales/${saleId}/identity-verification/authorize-missing-biometrics`,
+    credentials,
+    { skipGlobalErrorToast: true },
+  );
+}
+
 export async function skipSaleIdentityVerification(
   saleId: number,
   reason: string,

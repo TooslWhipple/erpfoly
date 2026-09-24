@@ -104,6 +104,7 @@ import type { ShippingQuote } from "@/services/ventas.service";
 import type { UpdateSalePurchaseTypeResult } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { BiometricCreditRequiredDialog } from "./BiometricCreditRequiredDialog";
+import { MissingBiometricsAuthorizationDialog } from "./MissingBiometricsAuthorizationDialog";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSessionSummary } from "@/services/cash-register.service";
@@ -151,6 +152,7 @@ import {
   toInventorySourcesPayload,
   inventorySourcesMatch,
   cartPendingSupplyTotal,
+  liveLineBackorderedQuantity,
 } from "@/utils/saleCartCoverage";
 import {
   cartLineDiscounts,
@@ -500,6 +502,7 @@ export function SaleBuilder({
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [identityVerificationModalOpen, setIdentityVerificationModalOpen] = useState(false);
   const [biometricRequiredModalOpen, setBiometricRequiredModalOpen] = useState(false);
+  const [missingBiometricsAuthOpen, setMissingBiometricsAuthOpen] = useState(false);
   const biometricPromptClientIdRef = useRef<number | null>(null);
   const [identityMarkedOk, setIdentityOk] = useState(false);
   const [saleEconomicRevision, setSaleEconomicRevision] = useState<
@@ -936,6 +939,7 @@ export function SaleBuilder({
     if (!isCajeroMode && resumeClientData.creditStatus === "MOROSO") {
       setPaymentType("CASH");
     } else if (
+      !isCajeroMode &&
       resumeClientData.biometricsPending &&
       paymentType === "CREDIT" &&
       biometricPromptClientIdRef.current !== resumeClientData.id
@@ -1021,6 +1025,22 @@ export function SaleBuilder({
       setShippingQuote(null);
       setLastSyncedDelivery(snapshot);
     }
+  };
+
+  const applyQuotedPrices = (result: UpdateSalePurchaseTypeResult) => {
+    setSaleEconomicRevision(result.economicRevision);
+    setCheckoutRule(result.checkout);
+    setCart((prev) =>
+      patchCartLinePrices(
+        prev,
+        result.items.map((item) => ({
+          productId: item.productId,
+          originalPrice: item.listPrice,
+          discountAmount: item.discountAmount,
+          totalAmount: item.totalAmount,
+        })),
+      ),
+    );
   };
 
   const ensureSaleSynced = async (): Promise<{
@@ -1118,7 +1138,7 @@ export function SaleBuilder({
             throw new Error(purchaseTypeRes.error.message);
           lastPatchedPurchaseTypeRef.current = pt.id;
           if (purchaseTypeRes.data) {
-            setSaleEconomicRevision(purchaseTypeRes.data.economicRevision);
+            applyQuotedPrices(purchaseTypeRes.data);
           }
         } else {
           lastPatchedPurchaseTypeRef.current = pt.id;
@@ -1590,19 +1610,7 @@ export function SaleBuilder({
   ) => {
     setPaymentType(nextPaymentType);
     lastPatchedPurchaseTypeRef.current = result.purchaseType.id;
-    setSaleEconomicRevision(result.economicRevision);
-    setCheckoutRule(result.checkout);
-    setCart((prev) =>
-      patchCartLinePrices(
-        prev,
-        result.items.map((item) => ({
-          productId: item.productId,
-          originalPrice: item.listPrice,
-          discountAmount: item.discountAmount,
-          totalAmount: item.totalAmount,
-        })),
-      ),
-    );
+    applyQuotedPrices(result);
     if (result.discountInvalidated) {
       void queryClient.invalidateQueries({
         queryKey: ["resume-sale-draft", resumeSaleId],
@@ -1821,6 +1829,19 @@ export function SaleBuilder({
     },
     staleTime: 30_000,
   });
+
+  const coverageCart = useMemo(() => {
+    if (isCajeroMode || !hydratedLiveSources) return cart;
+    return cart.map((item) => {
+      const backorderedQuantity = liveLineBackorderedQuantity(
+        item,
+        hydratedLiveSources[item.productId],
+      );
+      return backorderedQuantity === item.backorderedQuantity
+        ? item
+        : { ...item, backorderedQuantity };
+    });
+  }, [cart, hydratedLiveSources, isCajeroMode]);
 
   const isApprovedSpecialDiscount =
     resumeSaleData?.discountRequest?.status === "APPROVED";
@@ -2137,11 +2158,10 @@ export function SaleBuilder({
 
   const handlePaymentTypeChange = (value: SalePaymentType) => {
     if (isMorosoClient && value !== "CASH") return;
+    if (value === paymentType) return;
     if (value === "CREDIT" && selectedClient?.biometricsPending) {
       setBiometricRequiredModalOpen(true);
-      return;
     }
-    if (value === paymentType) return;
     if (purchaseTypeMutation.isPending) return;
     if (isCajeroMode) {
       if (isApprovedSpecialDiscount) {
@@ -2247,7 +2267,7 @@ export function SaleBuilder({
         }
         lastPatchedPurchaseTypeRef.current = purchaseTypeId;
         if (res.data) {
-          setSaleEconomicRevision(res.data.economicRevision);
+          applyQuotedPrices(res.data);
         }
       }
 
@@ -2290,13 +2310,9 @@ export function SaleBuilder({
         ? isPickupReady
         : false;
 
-  const creditBlockedByMissingBiometrics =
-    paymentType === "CREDIT" && Boolean(selectedClient?.biometricsPending);
-
   const canProceed =
     totalCartQty > 0 &&
     !isClientWithoutActiveCredit &&
-    !creditBlockedByMissingBiometrics &&
     deliveryType !== null &&
     isDeliveryInfoReady &&
     (deliveryType !== "delivery" || shippingQuote?.coverage === "IN_ZONE");
@@ -2339,7 +2355,7 @@ export function SaleBuilder({
       ? Math.max(0, quotedServerTotal - loyaltyPointsUsed)
       : payableMerchandise + shippingAmount,
   );
-  const totalPending = cartPendingSupplyTotal(cart);
+  const totalPending = cartPendingSupplyTotal(coverageCart);
   const showPendingSupplyAlert = totalPending > 0;
   const showShippingInSummary =
     deliveryType === "delivery" &&
@@ -3187,6 +3203,14 @@ export function SaleBuilder({
     const grouped = Number(whole || "0").toLocaleString("es-MX");
     return fraction != null ? `${grouped}.${fraction}` : grouped;
   })();
+  const creditLineShortageAlert = () =>
+    creditLineExceeded && creditAvailable != null ? (
+      <Alert severity="error">
+        Línea de crédito insuficiente. Disponible:{" "}
+        {formatCurrency(creditAvailable)}, Requerido:{" "}
+        {formatCurrency(montoAFinanciar)}.
+      </Alert>
+    ) : null;
   const creditDownPaymentField =
     paymentType === "CREDIT" ? (
       <Stack spacing={0.5} py={1.25}>
@@ -3259,6 +3283,7 @@ export function SaleBuilder({
             </Button>
           )}
         </Stack>
+        {creditLineShortageAlert()}
       </Stack>
     ) : null;
 
@@ -3268,9 +3293,7 @@ export function SaleBuilder({
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" ||
-        (identityOk &&
-          !selectedClient?.biometricsPending &&
-          !creditDownPaymentInvalid)) &&
+        (identityOk && !creditDownPaymentInvalid && !creditLineExceeded)) &&
       (paymentType !== "LAYAWAY" ||
         (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
@@ -3308,7 +3331,7 @@ export function SaleBuilder({
                 Confirma los artículos para este cliente
               </Typography>
               <Stack spacing={1.5}>
-                {cart.map((item) => (
+                {coverageCart.map((item) => (
                   <Box
                     key={item.productId}
                     sx={{
@@ -3988,7 +4011,11 @@ export function SaleBuilder({
         }
         onProceedToCheckout={() => {
           if (paymentType === "CREDIT" && !identityOk) {
-            setIdentityVerificationModalOpen(true);
+            if (selectedClient?.biometricsPending) {
+              setMissingBiometricsAuthOpen(true);
+            } else {
+              setIdentityVerificationModalOpen(true);
+            }
           } else {
             setView("checkout");
           }
@@ -4003,13 +4030,6 @@ export function SaleBuilder({
           {branchUnresolved && (
             <Alert severity="warning">
               No se pudo determinar tu sucursal.
-            </Alert>
-          )}
-          {creditLineExceeded && creditAvailable != null && (
-            <Alert severity="error">
-              Línea de crédito insuficiente. Disponible:{" "}
-              {formatCurrency(creditAvailable)}, Requerido:{" "}
-              {formatCurrency(montoAFinanciar)}.
             </Alert>
           )}
           {isCajeroMode && paymentType === "CREDIT" && !identityOk && (
@@ -4088,7 +4108,7 @@ export function SaleBuilder({
             ) : (
               <>
                 <Stack spacing={1.5}>
-                  {cart.map((item) => (
+                  {coverageCart.map((item) => (
                     <SaleCartItemRow
                       key={item.productId}
                       item={item}
@@ -4265,40 +4285,24 @@ export function SaleBuilder({
               Tipo de venta
             </Typography>
             <PaymentTypeRow>
-              {PAYMENT_OPTIONS.map((opt) => {
-                const creditBiometricsBlocked =
-                  opt.value === "CREDIT" &&
-                  Boolean(selectedClient?.biometricsPending);
-                return (
-                  <Box
-                    key={opt.value}
-                    sx={{ flex: "1 1 0", minWidth: 0, display: "flex" }}
-                    onClick={
-                      creditBiometricsBlocked
-                        ? () => handlePaymentTypeChange(opt.value)
-                        : undefined
+              {PAYMENT_OPTIONS.map((opt) => (
+                <Box
+                  key={opt.value}
+                  sx={{ flex: "1 1 0", minWidth: 0, display: "flex" }}
+                >
+                  <PaymentTypeButton
+                    active={paymentType === opt.value}
+                    disabled={
+                      purchaseTypeMutation.isPending ||
+                      (isMorosoClient && opt.value !== "CASH")
                     }
+                    onClick={() => handlePaymentTypeChange(opt.value)}
+                    sx={{ width: "100%" }}
                   >
-                    <PaymentTypeButton
-                      active={paymentType === opt.value}
-                      disabled={
-                        purchaseTypeMutation.isPending ||
-                        (isMorosoClient && opt.value !== "CASH") ||
-                        creditBiometricsBlocked
-                      }
-                      onClick={() => handlePaymentTypeChange(opt.value)}
-                      sx={{
-                        width: "100%",
-                        ...(creditBiometricsBlocked
-                          ? { pointerEvents: "none" }
-                          : {}),
-                      }}
-                    >
-                      {opt.label}
-                    </PaymentTypeButton>
-                  </Box>
-                );
-              })}
+                    {opt.label}
+                  </PaymentTypeButton>
+                </Box>
+              ))}
             </PaymentTypeRow>
           </SidebarCard>
 
@@ -4803,6 +4807,23 @@ export function SaleBuilder({
             saleId={activeSaleId}
             onVerified={handleIdentityVerified}
             onClose={handleIdentityDialogClose}
+          />
+
+          <MissingBiometricsAuthorizationDialog
+            open={missingBiometricsAuthOpen}
+            saleId={activeSaleId}
+            onClose={() => setMissingBiometricsAuthOpen(false)}
+            onAuthorized={() => {
+              setMissingBiometricsAuthOpen(false);
+              handleIdentityVerified();
+            }}
+            onEnroll={() => {
+              if (!selectedClient) return;
+              setMissingBiometricsAuthOpen(false);
+              void router.push(
+                `/clientes/${selectedClient.id}?enrollBiometrics=1`,
+              );
+            }}
           />
 
           {biometricCreditDialog}

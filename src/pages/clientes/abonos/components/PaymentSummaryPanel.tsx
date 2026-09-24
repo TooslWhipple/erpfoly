@@ -5,6 +5,7 @@ import { InnerCard } from "@/styles/clientes/abonos.styles";
 export interface PaymentSummaryPanelProps {
   totalOutstanding: number;
   paymentAmount: number;
+  collectableAmount?: number;
 }
 
 function formatCurrency(value: number): string {
@@ -14,9 +15,14 @@ function formatCurrency(value: number): string {
 export function PaymentSummaryPanel({
   totalOutstanding,
   paymentAmount,
+  collectableAmount,
 }: PaymentSummaryPanelProps) {
-  const amountToApply = Math.min(Math.max(paymentAmount, 0), totalOutstanding);
-  const remainingAfterPayment = Math.max(totalOutstanding - amountToApply, 0);
+  const cap = collectableAmount ?? totalOutstanding;
+  const amountToApply = Math.min(Math.max(paymentAmount, 0), cap);
+  const remainingAfterPayment = Math.max(
+    totalOutstanding - Math.min(amountToApply, totalOutstanding),
+    0,
+  );
 
   return (
     <InnerCard gap="8px">

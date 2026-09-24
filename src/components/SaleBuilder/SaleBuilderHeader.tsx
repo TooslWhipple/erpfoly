@@ -60,12 +60,21 @@ export function SaleBuilderHeader({
       >
         <InlineMobileMenuButton />
         <IconButton
-          size="small"
           disabled={operationPending}
           onClick={onExit}
           aria-label="Cerrar"
+          sx={{
+            width: 44,
+            height: 44,
+            flexShrink: 0,
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1.5,
+            "&:hover": { bgcolor: "action.hover" },
+          }}
         >
-          <X size={18} />
+          <X size={20} />
         </IconButton>
         <Typography
           variant="h6"

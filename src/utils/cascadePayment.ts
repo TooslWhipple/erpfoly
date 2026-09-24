@@ -1,5 +1,5 @@
-import type { ClientCreditAccount } from "@/types/clientPayment.types";
-import { roundToCents } from "@/utils/number";
+import type { ClientCreditAccount } from "../types/clientPayment.types";
+import { roundToCents } from "./number";
 
 export interface CascadeInstallmentPreview {
   purchaseId: string;
@@ -90,6 +90,27 @@ export function getTotalPendingInstallmentsCount(
 }
 
 /**
+ * Tope cobrable de las cuentas incluidas: capital pendiente de la cuenta
+ * más la mora de cada parcialidad. El saldo de la cuenta no incluye mora,
+ * así que usarlo solo como tope recortaba el abono al seleccionar varias
+ * parcialidades vencidas.
+ */
+export function getTotalCollectableAmount(
+  accounts: ClientCreditAccount[],
+  excludedCreditIds: string[],
+): number {
+  const flattened = flattenPendingInstallments(accounts, excludedCreditIds);
+  const principalOutstanding = accounts
+    .filter((account) => !excludedCreditIds.includes(account.id))
+    .reduce((sum, account) => sum + account.remaining, 0);
+  const lateFeeOutstanding = flattened.reduce(
+    (sum, { installment }) => sum + Math.max(0, installment.overdueAmount),
+    0,
+  );
+  return roundToCents(principalOutstanding + lateFeeOutstanding);
+}
+
+/**
  * Monto exacto (mora + principal) de las primeras `count` parcialidades
  * pendientes, cruzando cuentas incluidas y ordenadas por `dueDateRaw`, igual
  * que `calculateCascadePreview`. Se usa para autollenar el campo de monto
@@ -106,20 +127,18 @@ export function calculateAmountForInstallmentCount(
     .slice(0, count)
     .reduce(
       (sum, { installment }) =>
-        sum + installment.overdueAmount + installment.totalAmount,
+        sum + Math.max(0, installment.overdueAmount) + installment.totalAmount,
       0,
     );
 
   // La suma de las parcialidades individuales puede exceder por unos
   // centavos el saldo real de la cuenta (redondeo del backend al dividir el
-  // total entre parcialidades). Se acota al saldo pendiente real para que
-  // "seleccionar todas" siempre pueda registrarse sin bloquear el envío.
-  const outstandingBalance = accounts
-    .filter((account) => !excludedCreditIds.includes(account.id))
-    .reduce((sum, account) => sum + account.remaining, 0);
+  // total entre parcialidades). Se acota al capital pendiente más la mora,
+  // no solo al capital, para que "seleccionar todas" incluya moratorios.
+  const collectable = getTotalCollectableAmount(accounts, excludedCreditIds);
 
   // Sumar montos en punto flotante puede dejar residuos (p. ej.
   // 1076.4450000000002); se redondea a centavos antes de usarlo como monto
   // a enviar al backend, no solo para mostrarlo en el input.
-  return roundToCents(Math.min(rawAmount, outstandingBalance));
+  return roundToCents(Math.min(rawAmount, collectable));
 }

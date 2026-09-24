@@ -27,9 +27,11 @@ import { formatDate } from "@/utils/date";
 import {
   calculateCascadePreview,
   calculateAmountForInstallmentCount,
+  getTotalCollectableAmount,
   getTotalPendingInstallmentsCount,
   type CascadeInstallmentPreview,
 } from "@/utils/cascadePayment";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   getClientPaymentAccessDenial,
   type ClientPaymentAccessDenialReason,
@@ -51,6 +53,7 @@ interface UseClientPaymentResult {
   paymentAmount: number;
   isSubmitting: boolean;
   totalOutstanding: number;
+  totalCollectable: number;
   change: number;
   hasPartialInstallmentRemainder: boolean;
   partialInstallmentRemainderAmount: number;
@@ -345,6 +348,11 @@ export function useClientPayment(): UseClientPaymentResult {
     [orderedCreditAccounts, excludedCreditIds],
   );
 
+  const totalCollectable = useMemo(
+    () => getTotalCollectableAmount(orderedCreditAccounts, excludedCreditIds),
+    [orderedCreditAccounts, excludedCreditIds],
+  );
+
   const canExceedOutstandingForChange = paymentMethod === "cash" && !isCashDeposit;
 
   const partialCascadeEntry = useMemo(
@@ -410,8 +418,8 @@ export function useClientPayment(): UseClientPaymentResult {
     if (partialRemainderDecision === "give-change") {
       return Math.max(parseFloat((paymentAmount - fullyCoveredCascadeAmount).toFixed(2)), 0);
     }
-    return Math.max(parseFloat((paymentAmount - totalOutstanding).toFixed(2)), 0);
-  }, [paymentAmount, canExceedOutstandingForChange, totalOutstanding, partialRemainderDecision, fullyCoveredCascadeAmount]);
+    return Math.max(parseFloat((paymentAmount - totalCollectable).toFixed(2)), 0);
+  }, [paymentAmount, canExceedOutstandingForChange, totalCollectable, partialRemainderDecision, fullyCoveredCascadeAmount]);
 
   const isCardPayment = paymentMethod === "card";
 
@@ -436,7 +444,7 @@ export function useClientPayment(): UseClientPaymentResult {
   const canRegister =
     totalOutstanding > 0 &&
     paymentAmount > 0 &&
-    (paymentAmount <= totalOutstanding || canExceedOutstandingForChange) &&
+    (paymentAmount <= totalCollectable || canExceedOutstandingForChange) &&
     !(isCardPayment && !paymentTerminalId) &&
     !(hasPartialInstallmentRemainder && !partialRemainderDecision) &&
     !isSubmitting;
@@ -479,7 +487,7 @@ export function useClientPayment(): UseClientPaymentResult {
           partialRemainderDecision === "give-change"
             ? fullyCoveredCascadeAmount
             : canExceedOutstandingForChange
-              ? Math.min(paymentAmount, totalOutstanding)
+              ? Math.min(paymentAmount, totalCollectable)
               : paymentAmount,
         payment_method: mapFrontendToBackendMethod(paymentMethod),
         reference: isCashDeposit ? "Depósito en efectivo" : undefined,
@@ -491,7 +499,12 @@ export function useClientPayment(): UseClientPaymentResult {
       const result = await registerCascadePayment(numericClientId, backendPayload);
       const backendResult = unwrapOrThrow(result) as CascadePaymentResult;
       if (!backendResult.receipt?.id) {
-        throw new Error("El abono se registró, pero no se generó el comprobante.");
+        useSnackbarStore.getState().showError(
+          backendResult.message ||
+            "El abono se registró, pero no se pudo generar el comprobante. No lo cobres de nuevo.",
+        );
+        await fetchContext();
+        return;
       }
 
       if (fromCashRegister) {
@@ -520,6 +533,7 @@ export function useClientPayment(): UseClientPaymentResult {
     clientId,
     context,
     excludedCreditIds,
+    fetchContext,
     fromCashRegister,
     fullyCoveredCascadeAmount,
     isCardPayment,
@@ -532,7 +546,7 @@ export function useClientPayment(): UseClientPaymentResult {
     paymentTerminalId,
     queryClient,
     router,
-    totalOutstanding,
+    totalCollectable,
   ]);
 
   return {
@@ -549,6 +563,7 @@ export function useClientPayment(): UseClientPaymentResult {
     paymentAmount,
     isSubmitting,
     totalOutstanding,
+    totalCollectable,
     change,
     hasPartialInstallmentRemainder,
     partialInstallmentRemainderAmount,

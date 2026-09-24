@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Title,
   Breadcrumbs,
@@ -10,6 +11,7 @@ import {
   ConfirmPriceChangeModal,
   ConfirmModal,
   TabFilters,
+  CardListPagination,
 } from "@/components";
 import type { ActionButtonConfig } from "@/components/TabFilters";
 import { useLiquidationRuleActivity } from "@/hooks/useLiquidationRuleActivity";
@@ -26,6 +28,7 @@ import type { LiquidationRuleFormValues } from "@/components/LiquidationRuleForm
 import {
   applyPriceSuggestion,
   getDepartmentDetail,
+  getPriceSuggestions,
   saveDepartmentRules,
 } from "@/services/liquidaciones.service";
 import {
@@ -34,9 +37,11 @@ import {
 } from "@/styles/inventario/departamento.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { INVENTORY_LIQUIDATIONS_UPDATE } from "@/lib/permissions";
-import { Box, Skeleton, Stack, Typography } from "@mui/material";
+import { Box, Button, Skeleton, Stack, TextField, Typography } from "@mui/material";
 
 type PageState = "loading" | "success" | "empty" | "error" | "not_found";
+
+const SUGGESTION_PAGE_SIZE = 10;
 
 function serializeRules(rules: LiquidationRule[]): string {
   return JSON.stringify(
@@ -66,6 +71,9 @@ export default function DepartamentoLiquidacionesPage() {
   const showError = useSnackbarStore((s) => s.showError);
   const [state, setState] = useState<PageState>("loading");
   const [department, setDepartment] = useState<DepartmentDetail | null>(null);
+  const [articlePage, setArticlePage] = useState(0);
+  const [articleSearchInput, setArticleSearchInput] = useState("");
+  const [articleSearch, setArticleSearch] = useState("");
   const [rules, setRules] = useState<LiquidationRule[]>([]);
   const [savedRulesSnapshot, setSavedRulesSnapshot] = useState("");
   const [activeTab, setActiveTab] = useState("articulos");
@@ -98,11 +106,11 @@ export default function DepartamentoLiquidacionesPage() {
     setSavedRulesSnapshot(serializeRules(ordered));
   }, []);
 
-  const fetchDetail = useCallback(async () => {
+  useEffect(() => {
     if (!departmentId) return;
-    setState("loading");
-    try {
-      const data = await getDepartmentDetail(departmentId);
+    let cancelled = false;
+    void getDepartmentDetail(departmentId).then((data) => {
+      if (cancelled) return;
       if (!data) {
         setState("not_found");
         return;
@@ -110,13 +118,59 @@ export default function DepartamentoLiquidacionesPage() {
       setDepartment(data);
       applyLoadedRules(data.rules);
       setState("success");
-    } catch {
-      setState("error");
-    }
+    }).catch(() => {
+      if (!cancelled) setState("error");
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [departmentId, applyLoadedRules]);
+
+  const articleSearchRef = useRef(articleSearch);
+  const [articlesDepartmentId, setArticlesDepartmentId] = useState(departmentId);
+  if (departmentId !== articlesDepartmentId) {
+    setArticlesDepartmentId(departmentId);
+    setArticleSearchInput("");
+    setArticleSearch("");
+    setArticlePage(0);
+    if (departmentId) setState("loading");
+  }
   useEffect(() => {
-    fetchDetail();
-  }, [fetchDetail]);
+    const timer = setTimeout(() => {
+      const next = articleSearchInput.trim();
+      if (articleSearchRef.current === next) return;
+      articleSearchRef.current = next;
+      setArticleSearch(next);
+      setArticlePage(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [articleSearchInput]);
+
+  const articlesQuery = useQuery({
+    queryKey: ["liquidation-suggestions", departmentId, articlePage, articleSearch],
+    enabled: departmentId.length > 0,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      getPriceSuggestions({
+        page: articlePage + 1,
+        limit: SUGGESTION_PAGE_SIZE,
+        departmentId,
+        search: articleSearch || undefined,
+      }),
+  });
+  const articleRows = articlesQuery.data?.data ?? [];
+  const refetchArticles = articlesQuery.refetch;
+  const articlePagerPage = articlesQuery.isPlaceholderData
+    ? Math.max(0, (articlesQuery.data?.page ?? 1) - 1)
+    : articlePage;
+  if (
+    articlesQuery.isSuccess &&
+    !articlesQuery.isFetching &&
+    articleRows.length === 0 &&
+    articlePage > 0
+  ) {
+    setArticlePage(articlePage - 1);
+  }
   const handleApplyClick = useCallback(
     (item: PriceSuggestionItem, price: number) => {
       setConfirmModalItem(item);
@@ -133,13 +187,13 @@ export default function DepartamentoLiquidacionesPage() {
       showSuccess("Precio aplicado correctamente");
       setConfirmModalItem(null);
       setConfirmPrice(null);
-      fetchDetail();
+      void refetchArticles();
     } catch {
       showError("No se pudo aplicar el precio");
     } finally {
       setApplyLoading(false);
     }
-  }, [confirmModalItem, confirmPrice, showSuccess, showError, fetchDetail]);
+  }, [confirmModalItem, confirmPrice, showSuccess, showError, refetchArticles]);
   const previousPriceFromItem = confirmModalItem
     ? confirmModalItem.direction === "down"
       ? confirmModalItem.suggestedPrice /
@@ -257,12 +311,13 @@ export default function DepartamentoLiquidacionesPage() {
       setDepartment(saved);
       applyLoadedRules(saved.rules);
       showSuccess("Reglas guardadas");
+      void refetchArticles();
     } catch {
       showError("No se pudieron guardar las reglas");
     } finally {
       setSavingRules(false);
     }
-  }, [departmentId, rules, applyLoadedRules, showSuccess, showError]);
+  }, [departmentId, rules, applyLoadedRules, showSuccess, showError, refetchArticles]);
   const resolveConfirmLeave = useCallback(
     (allow: boolean) => {
       setConfirmLeaveOpen(false);
@@ -426,22 +481,66 @@ export default function DepartamentoLiquidacionesPage() {
         {state === "success" && department && (
           <>
             {activeTab === "articulos" && (
-              <ArticlesGrid>
-                {department.articles.length === 0 ? (
+              <Stack spacing={2} sx={{ mt: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder="Buscar por nombre o SKU"
+                  value={articleSearchInput}
+                  onChange={(event) => setArticleSearchInput(event.target.value)}
+                  fullWidth
+                />
+                {articlesQuery.isFetching && articleRows.length === 0 ? (
+                  <ArticlesGrid sx={{ mt: 0 }}>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <Skeleton
+                        key={i}
+                        variant="rectangular"
+                        height={220}
+                        sx={{ borderRadius: 2 }}
+                        animation="wave"
+                      />
+                    ))}
+                  </ArticlesGrid>
+                ) : articlesQuery.isError && articleRows.length === 0 ? (
+                  <Stack spacing={1.5} alignItems="flex-start">
+                    <Typography color="text.secondary">
+                      No se pudieron cargar las sugerencias.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      onClick={() => void refetchArticles()}
+                    >
+                      Reintentar
+                    </Button>
+                  </Stack>
+                ) : articleRows.length === 0 ? (
                   <Typography color="text.secondary">
-                    No hay sugerencias. Configura reglas con un porcentaje mayor
-                    a 0 para artículos de lento movimiento.
+                    {articleSearch
+                      ? "No hay sugerencias que coincidan con la búsqueda."
+                      : "No hay sugerencias. Configura reglas con un porcentaje mayor a 0 para artículos de lento movimiento."}
                   </Typography>
                 ) : (
-                  department.articles.map((item) => (
-                    <PriceSuggestionCard
-                      key={item.id}
-                      item={item}
-                      onApply={handleApplyClick}
-                    />
-                  ))
+                  <ArticlesGrid sx={{ mt: 0 }}>
+                    {articleRows.map((item) => (
+                      <PriceSuggestionCard
+                        key={item.id}
+                        item={item}
+                        onApply={handleApplyClick}
+                      />
+                    ))}
+                  </ArticlesGrid>
                 )}
-              </ArticlesGrid>
+                {!(articlesQuery.isError && articleRows.length === 0) ? (
+                  <CardListPagination
+                    variant="compact"
+                    page={articlePagerPage}
+                    total={articlesQuery.data?.total ?? 0}
+                    rowsPerPage={SUGGESTION_PAGE_SIZE}
+                    disabled={articlesQuery.isFetching}
+                    onPageChange={setArticlePage}
+                  />
+                ) : null}
+              </Stack>
             )}
 
             {activeTab === "ajustes" && (

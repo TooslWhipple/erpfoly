@@ -4,6 +4,7 @@ import type {
   LiquidationRule,
   LiquidationRuleActivityResponse,
   LowRotationStrategyResponse,
+  PaginatedPriceSuggestions,
 } from "@/types/liquidaciones.types";
 
 const BASE = "/liquidations";
@@ -11,6 +12,29 @@ const BASE = "/liquidations";
 export async function getLowRotationStrategy(): Promise<LowRotationStrategyResponse> {
   return unwrapOrThrow(
     await get<LowRotationStrategyResponse>(`${BASE}/strategy`),
+  );
+}
+
+export async function getPriceSuggestions(params: {
+  page: number;
+  limit?: number;
+  departmentId?: string;
+  search?: string;
+}): Promise<PaginatedPriceSuggestions> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    limit: String(params.limit ?? 10),
+  });
+  if (params.departmentId) {
+    query.set("departmentId", params.departmentId);
+  }
+  if (params.search) {
+    query.set("search", params.search);
+  }
+  return unwrapOrThrow(
+    await get<PaginatedPriceSuggestions>(
+      `${BASE}/suggestions?${query.toString()}`,
+    ),
   );
 }
 

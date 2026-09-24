@@ -37,7 +37,14 @@ export interface PriceSuggestionItem {
 export interface LowRotationStrategyResponse {
   summary: LowRotationSummaryStats;
   departments: DepartmentLowRotation[];
-  priceSuggestions: PriceSuggestionItem[];
+}
+
+export interface PaginatedPriceSuggestions {
+  data: PriceSuggestionItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ============================================================================
@@ -60,7 +67,6 @@ export interface LiquidationRule {
 export interface DepartmentDetail {
   id: string;
   name: string;
-  articles: PriceSuggestionItem[];
   rules: LiquidationRule[];
 }
 

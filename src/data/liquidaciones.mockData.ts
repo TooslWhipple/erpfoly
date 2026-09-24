@@ -175,7 +175,6 @@ export async function getDepartmentDetail(departmentId: string): Promise<Departm
   return {
     id: department.id,
     name: department.name,
-    articles: MOCK_PRICE_SUGGESTIONS,
     rules: [...rules].sort((a, b) => a.order - b.order),
   };
 }
@@ -185,7 +184,6 @@ export async function getLowRotationStrategy(): Promise<LowRotationStrategyRespo
   return {
     summary: MOCK_SUMMARY,
     departments: MOCK_DEPARTMENTS,
-    priceSuggestions: MOCK_PRICE_SUGGESTIONS,
   };
 }
 

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Typography, Skeleton, Stack, Divider, Button } from "@mui/material";
 import {
   FilterList as FilterListIcon,
@@ -12,52 +13,79 @@ import type { PriceSuggestionItem } from "@/types/liquidaciones.types";
 import {
   applyPriceSuggestion,
   getLowRotationStrategy,
+  getPriceSuggestions,
 } from "@/services/liquidaciones.service";
 import { SidebarPanel } from "@/styles/inventario/liquidaciones.styles";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 type PageState = "loading" | "success" | "empty" | "error";
 
+const SUGGESTION_PAGE_SIZE = 10;
+
 export default function LiquidacionesPage() {
   const router = useRouter();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
 
-  const [state, setState] = useState<PageState>("loading");
-  const [summary, setSummary] = useState<{
-    slowMovement: number;
-    inLiquidation: number;
-    totalInventory: number;
-  } | null>(null);
-  const [departments, setDepartments] = useState<
-    Awaited<ReturnType<typeof getLowRotationStrategy>>["departments"]
-  >([]);
-  const [suggestions, setSuggestions] = useState<PriceSuggestionItem[]>([]);
+  const [suggestionPage, setSuggestionPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalItem, setConfirmModalItem] = useState<PriceSuggestionItem | null>(null);
   const [confirmPrice, setConfirmPrice] = useState<number | null>(null);
   const [applyLoading, setApplyLoading] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setState("loading");
-    try {
-      const response = await getLowRotationStrategy();
-      setSummary(response.summary);
-      setDepartments(response.departments);
-      setSuggestions(response.priceSuggestions);
-      setState(
-        response.departments.length === 0 && response.priceSuggestions.length === 0
-          ? "empty"
-          : "success"
-      );
-    } catch {
-      setState("error");
-    }
-  }, []);
+  const strategyQuery = useQuery({
+    queryKey: ["liquidation-strategy"],
+    queryFn: getLowRotationStrategy,
+  });
+  const summary = strategyQuery.data?.summary ?? null;
+  const departments = strategyQuery.data?.departments ?? [];
+  const state: PageState = strategyQuery.isPending
+    ? "loading"
+    : strategyQuery.isError
+      ? "error"
+      : departments.length === 0
+        ? "empty"
+        : "success";
+
+  const searchRef = useRef(search);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const timer = setTimeout(() => {
+      const next = searchInput.trim();
+      if (searchRef.current === next) return;
+      searchRef.current = next;
+      setSearch(next);
+      setSuggestionPage(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const suggestionsQuery = useQuery({
+    queryKey: ["liquidation-suggestions", suggestionPage, search],
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      getPriceSuggestions({
+        page: suggestionPage + 1,
+        limit: SUGGESTION_PAGE_SIZE,
+        search: search || undefined,
+      }),
+  });
+  const suggestionRows = suggestionsQuery.data?.data ?? [];
+  const refetchSuggestions = suggestionsQuery.refetch;
+  const refetchStrategy = strategyQuery.refetch;
+  const suggestionPagerPage = suggestionsQuery.isPlaceholderData
+    ? Math.max(0, (suggestionsQuery.data?.page ?? 1) - 1)
+    : suggestionPage;
+  if (
+    suggestionsQuery.isSuccess &&
+    !suggestionsQuery.isFetching &&
+    suggestionRows.length === 0 &&
+    suggestionPage > 0
+  ) {
+    setSuggestionPage(suggestionPage - 1);
+  }
 
   const handleApplyClick = useCallback((item: PriceSuggestionItem, price: number) => {
     setConfirmModalItem(item);
@@ -75,13 +103,14 @@ export default function LiquidacionesPage() {
       setConfirmModalOpen(false);
       setConfirmModalItem(null);
       setConfirmPrice(null);
-      fetchData();
+      void refetchStrategy();
+      void refetchSuggestions();
     } catch {
       showError("No se pudo aplicar el precio");
     } finally {
       setApplyLoading(false);
     }
-  }, [confirmModalItem, confirmPrice, showSuccess, showError, fetchData]);
+  }, [confirmModalItem, confirmPrice, showSuccess, showError, refetchStrategy, refetchSuggestions]);
 
   const handleDepartmentClick = useCallback(
     (department: { id: string }) => {
@@ -154,7 +183,7 @@ export default function LiquidacionesPage() {
                   <Typography variant="body2" color="text.secondary">
                     No se pudo cargar la estrategia.
                   </Typography>
-                  <Button variant="outlined" onClick={() => void fetchData()}>
+                  <Button variant="outlined" onClick={() => void refetchStrategy()}>
                     Reintentar
                   </Button>
                 </Stack>
@@ -176,8 +205,16 @@ export default function LiquidacionesPage() {
         </Stack>
         <SidebarPanel>
           <PriceSuggestionsSidebar
-            suggestions={suggestions}
-            loading={state === "loading"}
+            suggestions={suggestionRows}
+            total={suggestionsQuery.data?.total ?? 0}
+            page={suggestionPagerPage}
+            rowsPerPage={SUGGESTION_PAGE_SIZE}
+            loading={suggestionsQuery.isFetching}
+            error={suggestionsQuery.isError}
+            search={searchInput}
+            onSearchChange={setSearchInput}
+            onPageChange={setSuggestionPage}
+            onRetry={() => void refetchSuggestions()}
             onApply={handleApplyClick}
           />
         </SidebarPanel>

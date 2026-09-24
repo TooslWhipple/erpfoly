@@ -1,4 +1,4 @@
-import { Box, Button, OutlinedInput, Stack } from "@mui/material";
+import { Button, OutlinedInput, Stack } from "@mui/material";
 import { alpha, styled, type SxProps, type Theme } from "@mui/material/styles";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 
@@ -12,9 +12,9 @@ export const saleInputSx: SxProps<Theme> = {
       borderColor: "divider",
     },
     "&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline":
-      {
-        borderColor: "text.secondary",
-      },
+    {
+      borderColor: "text.secondary",
+    },
     "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
       borderColor: "primary.main",
       borderWidth: 1,
@@ -49,7 +49,7 @@ export const saleFieldTriggerSx: SxProps<Theme> = {
   },
 };
 
-export const PageShell = styled(Box, {
+export const PageShell = styled('div', {
   shouldForwardProp: (prop) => prop !== "contained",
 })<{ contained?: boolean }>(({ theme, contained }) => ({
   minHeight: "100%",
@@ -59,16 +59,16 @@ export const PageShell = styled(Box, {
   boxSizing: "border-box",
   ...(contained
     ? {
-        display: "flex",
-        flexDirection: "column",
-        flex: "1 1 0%",
-        minHeight: 0,
-        overflow: "hidden",
-      }
+      display: "flex",
+      flexDirection: "column",
+      flex: "1 1 0%",
+      minHeight: 0,
+      overflow: "hidden",
+    }
     : {}),
 }));
 
-export const PageHeader = styled(Box)(({ theme }) => ({
+export const PageHeader = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -109,7 +109,7 @@ export const HeaderActions = styled(Stack)(({ theme }) => ({
   },
 }));
 
-export const SearchHeader = styled(Box)(({ theme }) => ({
+export const SearchHeader = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
@@ -135,24 +135,20 @@ export const SearchHeader = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const SearchInputWrap = styled(Box)({
+export const SearchInputWrap = styled('div')({
   flex: 1,
   minWidth: 0,
 });
 
-export const PageContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
+export const PageContent = styled('div')(({ theme }) => ({
   flex: "1 1 0%",
   minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
-  [theme.breakpoints.down("md")]: {
-    padding: theme.spacing(2),
-  },
+  overflow: "hidden"
 }));
 
-export const MainGrid = styled(Box)(({ theme }) => ({
+export const MainGrid = styled('div')(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr",
   gap: theme.spacing(3),
@@ -174,7 +170,7 @@ export const MainGrid = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const CheckoutGrid = styled(Box)(({ theme }) => ({
+export const CheckoutGrid = styled('div')(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr",
   gap: theme.spacing(3),
@@ -204,7 +200,7 @@ export const StickySidebar = styled(Stack)(({ theme }) => ({
   },
 }));
 
-export const Card = styled(Box)(({ theme }) => ({
+export const Card = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(2),
@@ -214,7 +210,7 @@ export const Card = styled(Box)(({ theme }) => ({
   borderRadius: 16,
 }));
 
-export const GrayCard = styled(Box)(({ theme }) => ({
+export const GrayCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(1.5),
@@ -230,30 +226,30 @@ export const SidebarCard = styled(Card)(({ theme }) => ({
   gap: theme.spacing(1.5),
 }));
 
-export const EmptyCartBox = styled(Box)(({ theme }) => ({
+export const EmptyCartBox = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.lowerGray,
   borderRadius: 12,
   padding: theme.spacing(5, 2),
   textAlign: "center",
 }));
 
-export const CartItemCard = styled(Box)(({ theme }) => ({
+export const CartItemCard = styled('div')(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 12,
   padding: theme.spacing(2),
   backgroundColor: theme.palette.background.paper,
 }));
 
-export const CartItemThumb = styled(Box)(({ theme }) => ({
+export const CartItemThumb = styled('img')(({ theme }) => ({
   width: 56,
   height: 56,
   borderRadius: 8,
   objectFit: "cover",
   flexShrink: 0,
   backgroundColor: theme.palette.background.lowerGray,
-})) as typeof Box;
+}));
 
-export const PriceSummaryRow = styled(Box)(({ theme }) => ({
+export const PriceSummaryRow = styled('div')(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr 1fr 1fr",
   gap: theme.spacing(1.5),
@@ -263,11 +259,11 @@ export const PriceSummaryRow = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const PriceField = styled(Box)({
+export const PriceField = styled('div')({
   minWidth: 0,
 });
 
-export const TotalBar = styled(Box)(({ theme }) => ({
+export const TotalBar = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.lowerGray,
   borderRadius: 8,
   padding: theme.spacing(1.25, 1.5),
@@ -301,9 +297,8 @@ export const PaymentTypeButton = styled(Button, {
   color: active
     ? theme.palette.primary.contrastText
     : theme.palette.text.primary,
-  border: `1px solid ${
-    active ? theme.palette.primary.main : theme.palette.app.border
-  }`,
+  border: `1px solid ${active ? theme.palette.primary.main : theme.palette.app.border
+    }`,
   "&:hover": {
     backgroundColor: active
       ? theme.palette.primary.dark
@@ -335,9 +330,8 @@ export const TermPill = styled(Button, {
   color: active
     ? theme.palette.primary.contrastText
     : theme.palette.text.primary,
-  border: `1px solid ${
-    active ? theme.palette.primary.main : theme.palette.app.border
-  }`,
+  border: `1px solid ${active ? theme.palette.primary.main : theme.palette.app.border
+    }`,
   "&:hover": {
     backgroundColor: active
       ? theme.palette.primary.dark
@@ -345,7 +339,7 @@ export const TermPill = styled(Button, {
   },
 }));
 
-export const ProductDetailLayout = styled(Box)(({ theme }) => ({
+export const ProductDetailLayout = styled('div')(({ theme }) => ({
   display: "flex",
   gap: theme.spacing(3),
   padding: theme.spacing(3),
@@ -360,7 +354,7 @@ export const ProductDetailLayout = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const ProductGallery = styled(Box)(({ theme }) => ({
+export const ProductGallery = styled('div')(({ theme }) => ({
   flex: "0 0 36%",
   minWidth: 240,
   maxWidth: 400,
@@ -372,14 +366,14 @@ export const ProductGallery = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const ProductDetailPanel = styled(Box)({
+export const ProductDetailPanel = styled('div')({
   flex: 1,
   minWidth: 0,
   width: "100%",
   overflow: "hidden",
 });
 
-export const InventorySourceCard = styled(Box)(({ theme }) => ({
+export const InventorySourceCard = styled('div')(({ theme }) => ({
   border: `1px solid ${theme.palette.app.border}`,
   borderRadius: 12,
   padding: theme.spacing(1.75, 2),
@@ -388,7 +382,7 @@ export const InventorySourceCard = styled(Box)(({ theme }) => ({
   overflow: "hidden",
 }));
 
-export const InventorySourceRow = styled(Box)(({ theme }) => ({
+export const InventorySourceRow = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -402,7 +396,7 @@ export const InventorySourceRow = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const InventorySourceMeta = styled(Box)(({ theme }) => ({
+export const InventorySourceMeta = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(1.5),
@@ -411,7 +405,7 @@ export const InventorySourceMeta = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
 }));
 
-export const InventorySourceActions = styled(Box)(({ theme }) => ({
+export const InventorySourceActions = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-end",
@@ -425,7 +419,7 @@ export const InventorySourceActions = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const CaptureCard = styled(Box)(({ theme }) => ({
+export const CaptureCard = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(3),
@@ -448,7 +442,7 @@ export const PaymentMethodRow = styled(Stack)(({ theme }) => ({
   paddingBottom: theme.spacing(1.5),
 }));
 
-export const PaymentIconBadge = styled(Box)(({ theme }) => ({
+export const PaymentIconBadge = styled('div')(({ theme }) => ({
   width: 28,
   height: 28,
   borderRadius: "50%",
@@ -470,9 +464,9 @@ export const PaymentAmountInput = styled(OutlinedInput)(({ theme }) => ({
     borderColor: theme.palette.app.border,
   },
   "&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline":
-    {
-      borderColor: theme.palette.text.secondary,
-    },
+  {
+    borderColor: theme.palette.text.secondary,
+  },
   "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
     borderColor: theme.palette.primary.main,
     borderWidth: 1,
@@ -495,7 +489,7 @@ export const PaymentAmountInput = styled(OutlinedInput)(({ theme }) => ({
   },
 }));
 
-export const PaymentErrorBanner = styled(Box)(({ theme }) => ({
+export const PaymentErrorBanner = styled('div')(({ theme }) => ({
   backgroundColor: alpha(theme.palette.error.main, 0.08),
   color: theme.palette.error.main,
   borderRadius: 12,
@@ -505,7 +499,7 @@ export const PaymentErrorBanner = styled(Box)(({ theme }) => ({
   lineHeight: 1.5,
 }));
 
-export const ChangeRow = styled(Box)(({ theme }) => ({
+export const ChangeRow = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.mediumGray,
   borderRadius: 12,
   padding: theme.spacing(1.5, 2),

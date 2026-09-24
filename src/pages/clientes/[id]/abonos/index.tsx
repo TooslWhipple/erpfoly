@@ -38,6 +38,7 @@ export default function ClientPaymentPage() {
     paymentAmount,
     isSubmitting,
     totalOutstanding,
+    totalCollectable,
     change,
     hasPartialInstallmentRemainder,
     partialRemainderDecision,
@@ -211,6 +212,7 @@ export default function ClientPaymentPage() {
           <Stack width="100%" spacing={2}>
             <PaymentSummaryPanel
               totalOutstanding={totalOutstanding}
+              collectableAmount={totalCollectable}
               paymentAmount={paymentAmount}
             />
             <PaymentCapturePanel

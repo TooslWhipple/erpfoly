@@ -1,26 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Button, OutlinedInput } from "@mui/material";
 
-const StackColumn = styled("div")(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(2),
-}));
-
-export const PageLayout = styled("div")(({ theme }) => ({
-  display: "grid",
-  gridTemplateColumns: "1fr",
-  gap: theme.spacing(3),
-  [theme.breakpoints.up("lg")]: {
-    gridTemplateColumns: "1fr 360px",
-    alignItems: "start",
-  },
-}));
-
-export const SidebarColumn = styled(StackColumn)(({ theme }) => ({
-  gap: theme.spacing(2),
-}));
-
 export const Card = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -201,17 +181,75 @@ export const PaymentMethodButton = styled(Button, {
   },
 }));
 
+export const ReceiptStage = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  gap: theme.spacing(2),
+  width: "100%",
+  maxWidth: 560,
+  margin: "0 auto",
+}));
+
 export const SuccessCard = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  width: "100%",
+  overflow: "hidden",
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: 16,
+}));
+
+export const SuccessCardBody = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   gap: theme.spacing(2.5),
-  maxWidth: 560,
-  margin: "0 auto",
-  padding: theme.spacing(4),
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${theme.palette.app.border}`,
-  borderRadius: 16,
+  width: "100%",
+  padding: theme.spacing(4, 4, 2.5),
+}));
+
+export const SuccessCardFooter = styled("div")(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  width: "100%",
+  borderTop: `1px solid ${theme.palette.app.border}`,
+  [theme.breakpoints.up("sm")]: {
+    gridTemplateColumns: "1fr 1fr",
+  },
+}));
+
+export const SuccessCardFooterAction = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing(1),
+  minHeight: 52,
+  padding: theme.spacing(1.5, 2),
+  border: "none",
+  backgroundColor: "transparent",
+  color: theme.palette.text.secondary,
+  fontFamily: theme.typography.fontFamily,
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
+  "&:hover:not(:disabled)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:disabled": {
+    cursor: "default",
+    opacity: 0.72,
+  },
+  "&:first-of-type": {
+    borderBottom: `1px solid ${theme.palette.app.border}`,
+  },
+  [theme.breakpoints.up("sm")]: {
+    "&:first-of-type": {
+      borderBottom: "none",
+      borderRight: `1px solid ${theme.palette.app.border}`,
+    },
+  },
 }));
 
 export const SuccessIconWrapper = styled("div")(({ theme }) => ({

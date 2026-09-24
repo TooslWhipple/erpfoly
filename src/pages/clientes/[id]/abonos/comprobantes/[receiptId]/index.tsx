@@ -5,6 +5,7 @@ import { Button, Skeleton, Stack, Typography } from "@mui/material";
 import { Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { PaymentSuccessView } from "../../../../abonos/components";
+import { ReceiptStage } from "@/styles/clientes/abonos.styles";
 import { ErrorState } from "@/styles/clientes/detalle.styles";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
@@ -54,19 +55,6 @@ export default function ClientPaymentReceiptPage() {
     void router.push("/clientes");
   };
 
-  const handleNewPayment = () => {
-    if (!clientId) return;
-    const params = new URLSearchParams();
-    if (fromCashRegister) {
-      params.set("from", "cajas");
-      if (typeof router.query.caja === "string") {
-        params.set("caja", router.query.caja);
-      }
-    }
-    const query = params.toString();
-    void router.push(`/clientes/${clientId}/abonos${query ? `?${query}` : ""}`);
-  };
-
   const downloadPdf = async () => {
     if (!clientId || !receiptId || !receiptQuery.data) {
       throw new Error("No se pudo descargar el comprobante");
@@ -102,20 +90,20 @@ export default function ClientPaymentReceiptPage() {
   const clientName = clientQuery.data?.fullName ?? receiptQuery.data?.clientName ?? "...";
   const breadcrumbs: BreadcrumbItem[] = fromCashRegister
     ? [
-        { label: cashRegisterName, href: "/cajas" },
-        { label: "Clientes", href: "/clientes" },
-        { label: clientName, href: clientId ? `/clientes/${clientId}` : undefined },
-        { label: "Comprobante" },
-      ]
+      { label: cashRegisterName, href: "/cajas" },
+      { label: "Clientes", href: "/clientes" },
+      { label: clientName, href: clientId ? `/clientes/${clientId}` : undefined },
+      { label: "Comprobante" },
+    ]
     : [
-        { label: "Clientes", href: "/clientes" },
-        { label: clientName, href: clientId ? `/clientes/${clientId}` : undefined },
-        {
-          label: "Abono",
-          href: clientId ? `/clientes/${clientId}/abonos` : undefined,
-        },
-        { label: receiptQuery.data?.folio ?? "Comprobante" },
-      ];
+      { label: "Clientes", href: "/clientes" },
+      { label: clientName, href: clientId ? `/clientes/${clientId}` : undefined },
+      {
+        label: "Abono",
+        href: clientId ? `/clientes/${clientId}/abonos` : undefined,
+      },
+      { label: receiptQuery.data?.folio ?? "Comprobante" },
+    ];
 
   if (!router.isReady || receiptQuery.isLoading) {
     return (
@@ -164,21 +152,15 @@ export default function ClientPaymentReceiptPage() {
   return (
     <Stack spacing={3}>
       <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-      <PaymentSuccessView
-        result={result}
-        onDownloadReceipt={() => void handleDownload()}
-        isDownloadingReceipt={isDownloading}
-      />
-      <Stack direction="row" spacing={1} justifyContent="center">
-        <Button variant="outlined" onClick={() => void handlePrint()} disabled={isDownloading}>
-          Imprimir
-        </Button>
-        <Button variant="outlined" onClick={handleNewPayment}>
-          Nuevo abono
-        </Button>
-        <Button variant="contained" onClick={handleBack}>
-          {fromCashRegister ? "Volver a caja" : "Volver al cliente"}
-        </Button>
+      <Stack width="100%" alignItems='center'>
+        <ReceiptStage>
+          <PaymentSuccessView
+            result={result}
+            onDownloadReceipt={() => void handleDownload()}
+            onPrintReceipt={() => void handlePrint()}
+            isDownloadingReceipt={isDownloading}
+          />
+        </ReceiptStage>
       </Stack>
     </Stack>
   );

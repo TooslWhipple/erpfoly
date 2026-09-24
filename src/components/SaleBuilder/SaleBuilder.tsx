@@ -176,7 +176,8 @@ import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
 import { DiscountRequestModal } from "@/components/DiscountRequestModal";
 import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
-import {  getDiscountRequestReasonLabel,
+import {
+  getDiscountRequestReasonLabel,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
 
@@ -1268,18 +1269,18 @@ export function SaleBuilder({
       const billingPayload: SaleInvoiceBillingPayload | undefined =
         wantsInvoice && billingConfirmed
           ? {
-              rfc: billing.values.rfc,
-              business_name: billing.values.businessName,
-              tax_regime_id: billing.values.taxRegimeId,
-              cfdi_use_id: billing.values.cfdiUseId,
-              neighborhood_code: billing.values.fiscalNeighborhoodFullCode,
-              street: billing.values.fiscalStreet,
-              external_number: billing.values.fiscalExternalNumber,
-              postal_code: billing.values.fiscalPostalCode,
-              email: billing.values.sendInvoiceByEmail
-                ? billing.values.invoiceEmail
-                : undefined,
-            }
+            rfc: billing.values.rfc,
+            business_name: billing.values.businessName,
+            tax_regime_id: billing.values.taxRegimeId,
+            cfdi_use_id: billing.values.cfdiUseId,
+            neighborhood_code: billing.values.fiscalNeighborhoodFullCode,
+            street: billing.values.fiscalStreet,
+            external_number: billing.values.fiscalExternalNumber,
+            postal_code: billing.values.fiscalPostalCode,
+            email: billing.values.sendInvoiceByEmail
+              ? billing.values.invoiceEmail
+              : undefined,
+          }
           : undefined;
 
       if (deliveryType === "delivery") {
@@ -1378,11 +1379,11 @@ export function SaleBuilder({
         cards: [
           ...(cardAmtNum > 0
             ? [
-                {
-                  amount: cardAmtNum,
-                  payment_terminal_id: selectedTerminal ?? undefined,
-                },
-              ]
+              {
+                amount: cardAmtNum,
+                payment_terminal_id: selectedTerminal ?? undefined,
+              },
+            ]
             : []),
           ...extraCardTenders.map((card) => ({
             amount: card.amount,
@@ -1394,12 +1395,12 @@ export function SaleBuilder({
         allocatedTenders.length > 0
           ? allocatedTenders
           : [
-              {
-                payment_method: "CASH" as const,
-                amount: roundToCents(tenderDue),
-                received_amount: cashAmtNum || roundToCents(tenderDue),
-              },
-            ];
+            {
+              payment_method: "CASH" as const,
+              amount: roundToCents(tenderDue),
+              received_amount: cashAmtNum || roundToCents(tenderDue),
+            },
+          ];
 
       if (paymentType === "CREDIT") {
         if (!identityOk) {
@@ -1413,14 +1414,14 @@ export function SaleBuilder({
           tenders.length > 0
             ? tenders
             : [
-                {
-                  payment_method: (isCardPayment ? "CARD" : "CASH") as
-                    | "CASH"
-                    | "CARD",
-                  amount: enganche,
-                  payment_terminal_id: selectedTerminal ?? undefined,
-                },
-              ];
+              {
+                payment_method: (isCardPayment ? "CARD" : "CASH") as
+                  | "CASH"
+                  | "CARD",
+                amount: enganche,
+                payment_terminal_id: selectedTerminal ?? undefined,
+              },
+            ];
         const creditRes = await confirmCreditSale(saleId, {
           term_months: selectedTermMonths,
           down_payment: enganche,
@@ -1444,14 +1445,14 @@ export function SaleBuilder({
             ? tenders
             : depositAmount > 0
               ? [
-                  {
-                    payment_method: (isCardPayment ? "CARD" : "CASH") as
-                      | "CASH"
-                      | "CARD",
-                    amount: depositAmount,
-                    payment_terminal_id: selectedTerminal ?? undefined,
-                  },
-                ]
+                {
+                  payment_method: (isCardPayment ? "CARD" : "CASH") as
+                    | "CASH"
+                    | "CARD",
+                  amount: depositAmount,
+                  payment_terminal_id: selectedTerminal ?? undefined,
+                },
+              ]
               : [];
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
@@ -2309,7 +2310,7 @@ export function SaleBuilder({
   const specialDiscountAmount = approvedDiscountRequest
     ? (approvedDiscountRequest.approvedDiscountAmount ??
       (subtotalOriginal - totalDiscounts) *
-        ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
+      ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
     : 0;
   const merchandiseNet = merchandiseTotal(cart, specialDiscountAmount);
   const shippingAmount =
@@ -2324,9 +2325,9 @@ export function SaleBuilder({
   const loyaltyPointsUsed =
     paymentType === "CREDIT"
       ? Math.min(
-          Math.max(0, Math.floor(loyaltyPointsToRedeem)),
-          maxLoyaltyRedeem,
-        )
+        Math.max(0, Math.floor(loyaltyPointsToRedeem)),
+        maxLoyaltyRedeem,
+      )
       : 0;
   const payableMerchandise = roundToCents(merchandiseNet - loyaltyPointsUsed);
   const quotedServerTotal =
@@ -2389,7 +2390,7 @@ export function SaleBuilder({
       ? 0
       : earnAmountToSpend != null && earnAmountToSpend > 0
         ? Math.floor(payableMerchandise / earnAmountToSpend) *
-          (earnPointsAwarded ?? 1)
+        (earnPointsAwarded ?? 1)
         : (resumeSaleData?.loyaltyPointsToEarn ?? 0);
   const creditAvailable =
     checkoutRule?.type === "CREDIT"
@@ -2446,10 +2447,10 @@ export function SaleBuilder({
     value: "CREDIT" | "CASH" | "LAYAWAY";
     label: string;
   }[] = [
-    { value: "CREDIT", label: "Crédito" },
-    { value: "CASH", label: "Contado" },
-    { value: "LAYAWAY", label: "Apartado" },
-  ];
+      { value: "CREDIT", label: "Crédito" },
+      { value: "CASH", label: "Contado" },
+      { value: "LAYAWAY", label: "Apartado" },
+    ];
 
   const discountInvalidateModal = (
     <ConfirmModal
@@ -2539,108 +2540,170 @@ export function SaleBuilder({
   if (view === "search") {
     return (
       <>
-      <PageShell contained>
-        <SearchHeader>
-          <InlineMobileMenuButton />
-          <IconButton size="medium" onClick={() => setView("form")} aria-label="Cerrar">
-            <X size={20} />
-          </IconButton>
-          <SearchInputWrap>
-            <OutlinedInput
-              autoFocus
-              fullWidth
-              size="small"
-              placeholder="Búsqueda de artículos..."
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <Search size={16} color={theme.palette.text.secondary} />
-                </InputAdornment>
-              }
-              sx={{ bgcolor: "background.paper" }}
-            />
-          </SearchInputWrap>
-          {!isCajeroMode && (
-            <TouchButton
-              variant="outlined"
-              startIcon={<ScanLine size={16} />}
-              onClick={() => setProductScannerOpen(true)}
+        <PageShell contained>
+          <SearchHeader>
+            <InlineMobileMenuButton />
+            <IconButton
+              onClick={() => setView("form")}
+              aria-label="Cerrar"
+              sx={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1.5,
+                "&:hover": { bgcolor: "action.hover" },
+              }}
             >
-              Escanear artículos
-            </TouchButton>
-          )}
-        </SearchHeader>
+              <X size={20} />
+            </IconButton>
+            <SearchInputWrap>
+              <OutlinedInput
+                autoFocus
+                fullWidth
+                placeholder="Buscar por código o nombre..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Search size={16} color={theme.palette.text.secondary} />
+                  </InputAdornment>
+                }
+                endAdornment={
+                  !isCajeroMode ? (
+                    <InputAdornment position="end" sx={{ mr: -1.5 }}>
+                      <Button
+                        color="primary"
+                        startIcon={<ScanLine size={16} />}
+                        onClick={() => setProductScannerOpen(true)}
+                        aria-label="Escanear código de producto"
+                        sx={{
+                          minHeight: 28,
+                          px: 1.75,
+                          borderLeft: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 0,
+                          fontWeight: 600,
+                          textTransform: "none",
+                          whiteSpace: "nowrap",
+                        }}>
+                        Escanear
+                      </Button>
+                    </InputAdornment>
+                  ) : undefined
+                }
+                sx={{
+                  height: 44,
+                  bgcolor: "background.paper",
+                  borderRadius: 1.5,
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "divider",
+                  },
+                }}
+              />
+            </SearchInputWrap>
+          </SearchHeader>
 
-        <PageContent>
-          <TableCrud<ProductSearchResult>
-            fillHeight
-            columns={[
-              {
-                id: "imageUrl",
-                label: "Img",
-                type: "text",
-                size: "xs",
-                format: (value) => (
-                  <Box
-                    component="img"
-                    src={(value as string | null) ?? "/placeholder-product.png"}
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 1,
-                      objectFit: "cover",
-                    }}
-                  />
-                ),
-              },
-              {
-                id: "name",
-                label: "Nombre",
-                type: "text",
-                size: "lg",
-                truncate: true,
-                format: (value, row) => (
-                  <Stack spacing={0.5} minWidth={0}>
-                    <Typography noWrap title={String(value ?? "")}>
-                      {String(value ?? "")}
-                    </Typography>
-                    {row.isLiquidation && (
-                      <Chip
-                        size="small"
-                        color="error"
-                        label="Liquidación"
-                        sx={{ width: "fit-content", height: 20 }}
-                      />
-                    )}
-                  </Stack>
-                ),
-              },
-              {
-                id: "finalPrice",
-                label: "Precio Final",
-                type: "currency",
-                size: "md",
-              },
-            ]}
-            rows={productSearchData?.rows ?? []}
-            loading={searchLoading}
-            emptyMessage="No se encontraron artículos"
-            rowKey="id"
-            page={effectiveProductPage}
-            rowsPerPage={productLimit}
-            totalRows={productSearchData?.total ?? 0}
-            onPageChange={setProductPage}
-            onRowsPerPageChange={setProductLimit}
-            onRowClick={handleSelectProduct}
-          />
-        </PageContent>
-      </PageShell>
-      <ProductCodeScannerDialog
-        open={productScannerOpen}
-        onClose={() => setProductScannerOpen(false)}
-        onCodeScanned={handleProductCodeScanned}
-      />
+          <PageContent>
+            <TableCrud<ProductSearchResult>
+              fillHeight
+              columns={[
+                {
+                  id: "imageUrl",
+                  label: "",
+                  type: "text",
+                  size: "xs",
+                  format: (value) => (
+                    <Box
+                      component="img"
+                      src={(value as string | null) ?? "/placeholder-product.png"}
+                      alt=""
+                      sx={{
+                        display: "block",
+                        width: 40,
+                        height: 40,
+                        borderRadius: 1,
+                        objectFit: "cover",
+                        bgcolor: "action.hover",
+                      }}
+                    />
+                  ),
+                },
+                {
+                  id: "code",
+                  label: "Código",
+                  type: "text",
+                  size: "xs",
+                },
+                {
+                  id: "name",
+                  label: "Nombre",
+                  type: "text",
+                  size: "xl",
+                  truncate: true,
+                },
+                {
+                  id: "finalPrice",
+                  label: "Precio final",
+                  type: "currency",
+                  size: "md",
+                  align: "right",
+                  format: (value, row) => (
+                    <Stack spacing={0.25} alignItems="flex-end">
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        fontWeight={700}
+                        color={row.isLiquidation ? "error.main" : "text.primary"}
+                      >
+                        {formatCurrency(Number(value))}
+                      </Typography>
+                      {row.isLiquidation && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              bgcolor: "error.main",
+                            }}
+                          />
+                          <Typography
+                            component="span"
+                            variant="caption"
+                            fontWeight={600}
+                            color="error.main"
+                            lineHeight={1.2}
+                          >
+                            Liquidación
+                          </Typography>
+                        </Stack>
+                      )}
+                    </Stack>
+                  ),
+                },
+              ]}
+              rows={productSearchData?.rows ?? []}
+              loading={searchLoading}
+              emptyMessage="No se encontraron artículos"
+              rowKey="id"
+              page={effectiveProductPage}
+              rowsPerPage={productLimit}
+              totalRows={productSearchData?.total ?? 0}
+              onPageChange={setProductPage}
+              onRowsPerPageChange={setProductLimit}
+              onRowClick={handleSelectProduct}
+            />
+          </PageContent>
+        </PageShell>
+        <ProductCodeScannerDialog
+          open={productScannerOpen}
+          onClose={() => setProductScannerOpen(false)}
+          onCodeScanned={handleProductCodeScanned}
+        />
       </>
     );
   }
@@ -2650,365 +2713,227 @@ export function SaleBuilder({
 
     return (
       <>
-      <PageShell>
-        <PageHeader>
-          <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
-            <InlineMobileMenuButton />
-            <IconButton
-              size="medium"
-              onClick={() => {
-                setShowOtherBranches(false);
-                setView("search");
-              }}
-              aria-label="Volver"
-            >
-              <ArrowLeft size={20} />
-            </IconButton>
-            <Typography variant="subtitle1" fontWeight={600} noWrap>
-              {productDetail?.name ?? "Cargando…"}
-            </Typography>
-          </Stack>
-          <TouchButton
-            variant="contained"
-            disabled={totalQty === 0 || !productDetail}
-            onClick={handleAddToCart}
-          >
-            Continuar
-          </TouchButton>
-        </PageHeader>
-
-        {detailLoading || !productDetail ? (
-          <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <ProductDetailLayout>
-            <ProductGallery>
-            <Paper
-              variant="outlined"
-              sx={{
-                width: "100%",
-                borderRadius: 2,
-                bgcolor: "background.paper",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                p: 3,
-                gap: 2,
-              }}
-            >
-              <Box
-                sx={{
-                  width: "100%",
-                  height: 340,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+        <PageShell>
+          <PageHeader>
+            <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
+              <InlineMobileMenuButton />
+              <IconButton
+                size="medium"
+                onClick={() => {
+                  setShowOtherBranches(false);
+                  setView("search");
                 }}
+                aria-label="Volver"
               >
-                <Box
-                  component="img"
-                  src={
-                    productDetail.images?.[selectedImageIndex]?.imageUrl ??
-                    productDetail.imageUrl ??
-                    "/placeholder-product.png"
-                  }
-                  alt={productDetail.name}
+                <ArrowLeft size={20} />
+              </IconButton>
+              <Typography variant="subtitle1" fontWeight={600} noWrap>
+                {productDetail?.name ?? "Cargando…"}
+              </Typography>
+            </Stack>
+            <TouchButton
+              variant="contained"
+              disabled={totalQty === 0 || !productDetail}
+              onClick={handleAddToCart}
+            >
+              Continuar
+            </TouchButton>
+          </PageHeader>
+
+          {detailLoading || !productDetail ? (
+            <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ProductDetailLayout>
+              <ProductGallery>
+                <Paper
+                  variant="outlined"
                   sx={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                  }}
-                />
-              </Box>
-              {(productDetail.images?.length ?? 0) > 1 && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1,
                     width: "100%",
-                    overflowX: "auto",
-                    pb: 0.5,
+                    borderRadius: 2,
+                    bgcolor: "background.paper",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    p: 3,
+                    gap: 2,
                   }}
                 >
-                  {productDetail.images?.map((image, index) => (
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: 340,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     <Box
-                      key={image.imageUrl}
                       component="img"
-                      src={image.imageUrl}
-                      alt={`${productDetail.name} ${index + 1}`}
-                      onClick={() => setSelectedImageIndex(index)}
+                      src={
+                        productDetail.images?.[selectedImageIndex]?.imageUrl ??
+                        productDetail.imageUrl ??
+                        "/placeholder-product.png"
+                      }
+                      alt={productDetail.name}
                       sx={{
-                        width: 56,
-                        height: 56,
-                        flexShrink: 0,
+                        maxWidth: "100%",
+                        maxHeight: "100%",
                         objectFit: "contain",
-                        borderRadius: 1,
-                        cursor: "pointer",
-                        border: "2px solid",
-                        borderColor:
-                          index === selectedImageIndex
-                            ? "primary.main"
-                            : "divider",
-                        p: 0.5,
                       }}
                     />
-                  ))}
-                </Box>
-              )}
-            </Paper>
-            </ProductGallery>
+                  </Box>
+                  {(productDetail.images?.length ?? 0) > 1 && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        width: "100%",
+                        overflowX: "auto",
+                        pb: 0.5,
+                      }}
+                    >
+                      {productDetail.images?.map((image, index) => (
+                        <Box
+                          key={image.imageUrl}
+                          component="img"
+                          src={image.imageUrl}
+                          alt={`${productDetail.name} ${index + 1}`}
+                          onClick={() => setSelectedImageIndex(index)}
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            flexShrink: 0,
+                            objectFit: "contain",
+                            borderRadius: 1,
+                            cursor: "pointer",
+                            border: "2px solid",
+                            borderColor:
+                              index === selectedImageIndex
+                                ? "primary.main"
+                                : "divider",
+                            p: 0.5,
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Paper>
+              </ProductGallery>
 
-            <ProductDetailPanel>
-            <Paper
-              variant="outlined"
-              sx={{
-                width: "100%",
-                borderRadius: 2,
-                bgcolor: "background.paper",
-                p: { xs: 2.5, md: 4 },
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                Código: {productDetail.sku}
-              </Typography>
-              <Typography variant="h5" fontWeight={700} mt={0.5} mb={0.25}>
-                {productDetail.name}
-              </Typography>
-              {productDetail.isLiquidation && (
-                <Chip
-                  size="small"
-                  color="error"
-                  label="Liquidación"
-                  sx={{ mt: 0.5, mb: 1 }}
-                />
-              )}
-              {productDetail.brandName && (
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                  {productDetail.brandName}
-                </Typography>
-              )}
-
-              <Stack
-                direction="row"
-                spacing={{ xs: 2, md: 4 }}
-                mb={3}
-                mt={1.5}
-                flexWrap="wrap"
-                useFlexGap
-              >
-                <Box minWidth={100}>
-                  <Typography variant="caption" color="text.secondary">
-                    Precio original
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700}>
-                    {formatCurrency(productDetail.originalPrice)}
-                  </Typography>
-                </Box>
-                <Box minWidth={100}>
-                  <Typography variant="caption" color="text.secondary">
-                    Descuento
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700} color="error.main">
-                    -{formatCurrency(productDetail.discountAmount)}
-                  </Typography>
-                </Box>
-                <Box minWidth={100}>
-                  <Typography variant="caption" color="text.secondary">
-                    Total
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700}>
-                    {formatCurrency(productDetail.finalPrice)}
-                  </Typography>
-                </Box>
-              </Stack>
-
-              <Typography variant="body2" fontWeight={600} mb={1.5}>
-                Selecciona el origen del artículo a entregar al cliente
-              </Typography>
-
-              {lockedBranch && lockedBranch.id !== currentBranchId && (
-                <Box
+              <ProductDetailPanel>
+                <Paper
+                  variant="outlined"
                   sx={{
-                    bgcolor: "warning.50",
-                    border: "1px solid",
-                    borderColor: "warning.light",
+                    width: "100%",
                     borderRadius: 2,
-                    px: 2,
-                    py: 1.25,
-                    mb: 2,
+                    bgcolor: "background.paper",
+                    p: { xs: 2.5, md: 4 },
                   }}
                 >
-                  <Typography variant="caption" color="warning.dark">
-                    Este ticket ya tiene artículos de &quot;{lockedBranch.label}
-                    &quot;. Solo puedes seguir agregando artículos de esa
-                    sucursal. Para agregar de otra, primero quita los artículos
-                    actuales del carrito.
+                  <Typography variant="caption" color="text.secondary">
+                    Código: {productDetail.sku}
                   </Typography>
-                </Box>
-              )}
-
-              {/* Orígenes principales: sucursal actual + bodega (existencia + por surtir) */}
-              <Stack spacing={1.5}>
-                {productSources
-                  .filter(
-                    (src) =>
-                      src.sourceType === "warehouse" ||
-                      src.branchId === currentBranchId,
-                  )
-                  .map((src) => {
-                    const isWarehouse = src.sourceType === "warehouse";
-                    const isCurrentBranch =
-                      src.sourceType === "branch" &&
-                      src.branchId === currentBranchId;
-
-                    const sourceLabel = isCurrentBranch
-                      ? `Ésta sucursal (${src.label})`
-                      : "Bodega";
-
-                    const SourceIcon = isCurrentBranch ? Store : Warehouse;
-
-                    const branchLocked = isBranchSourceLocked(src);
-
-                    return (
-                      <InventorySourceCard
-                        key={src.sourceKey}
-                        sx={{ opacity: branchLocked ? 0.6 : 1 }}
-                      >
-                        <InventorySourceRow>
-                          <InventorySourceMeta>
-                            <Box
-                              sx={{
-                                color: "text.secondary",
-                                display: "flex",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <SourceIcon size={16} />
-                            </Box>
-                            <Typography
-                              variant="body2"
-                              sx={{ minWidth: 0, wordBreak: "break-word" }}
-                            >
-                              {sourceLabel}
-                            </Typography>
-                          </InventorySourceMeta>
-
-                          <InventorySourceActions>
-                            {(isWarehouse || isCurrentBranch) && (
-                              <>
-                                <Stack spacing={0.25} flexShrink={0}>
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={0.75}
-                                  >
-                                    <Truck
-                                      size={13}
-                                      color={theme.palette.text.disabled}
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      noWrap
-                                    >
-                                      En tránsito: {src.inTransit ?? 0}
-                                    </Typography>
-                                  </Stack>
-                                  {src.estimatedArrival ? (
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      noWrap
-                                    >
-                                      Llegada estimada:{" "}
-                                      {formatDateOnly(
-                                        src.estimatedArrival,
-                                        "DD/MM/YYYY",
-                                      )}
-                                    </Typography>
-                                  ) : null}
-                                </Stack>
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                  flexShrink={0}
-                                >
-                                  <Package
-                                    size={13}
-                                    color={theme.palette.text.disabled}
-                                  />
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    noWrap
-                                  >
-                                    Existencia: {src.available}
-                                  </Typography>
-                                </Stack>
-                              </>
-                            )}
-                            <Box sx={{ flexShrink: 0 }}>
-                              <NumberSpinner
-                                value={src.quantity}
-                                onChange={(val: number) =>
-                                  handleQtyChange(
-                                    src.sourceKey,
-                                    val - src.quantity,
-                                  )
-                                }
-                                min={0}
-                                max={sourceSellableMax(src)}
-                                disabled={branchLocked}
-                                size="medium"
-                                iconSize={14}
-                              />
-                            </Box>
-                          </InventorySourceActions>
-                        </InventorySourceRow>
-                        {branchLocked && lockedBranch && (
-                          <Typography
-                            variant="caption"
-                            color="text.disabled"
-                            display="block"
-                            mt={0.75}
-                          >
-                            No disponible: ya tienes artículos de &quot;
-                            {lockedBranch.label}&quot; en este ticket.
-                          </Typography>
-                        )}
-                      </InventorySourceCard>
-                    );
-                  })}
-              </Stack>
-
-              {!showOtherBranches && productDetail?.hasOtherBranches && (
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => setShowOtherBranches(true)}
-                  sx={{ mt: 1.5, px: 1 }}
-                >
-                  Consultar existencia en otras sucursales
-                </Button>
-              )}
-
-              {showOtherBranches && (
-                <>
-                  <Typography variant="body2" fontWeight={600} mt={2} mb={1.5}>
-                    Existencia en otras sucursales
+                  <Typography variant="h5" fontWeight={700} mt={0.5} mb={0.25}>
+                    {productDetail.name}
                   </Typography>
+                  {productDetail.isLiquidation && (
+                    <Chip
+                      size="small"
+                      color="error"
+                      label="Liquidación"
+                      sx={{ mt: 0.5, mb: 1 }}
+                    />
+                  )}
+                  {productDetail.brandName && (
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      {productDetail.brandName}
+                    </Typography>
+                  )}
+
+                  <Stack
+                    direction="row"
+                    spacing={{ xs: 2, md: 4 }}
+                    mb={3}
+                    mt={1.5}
+                    flexWrap="wrap"
+                    useFlexGap
+                  >
+                    <Box minWidth={100}>
+                      <Typography variant="caption" color="text.secondary">
+                        Precio original
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(productDetail.originalPrice)}
+                      </Typography>
+                    </Box>
+                    <Box minWidth={100}>
+                      <Typography variant="caption" color="text.secondary">
+                        Descuento
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700} color="error.main">
+                        -{formatCurrency(productDetail.discountAmount)}
+                      </Typography>
+                    </Box>
+                    <Box minWidth={100}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(productDetail.finalPrice)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Typography variant="body2" fontWeight={600} mb={1.5}>
+                    Selecciona el origen del artículo a entregar al cliente
+                  </Typography>
+
+                  {lockedBranch && lockedBranch.id !== currentBranchId && (
+                    <Box
+                      sx={{
+                        bgcolor: "warning.50",
+                        border: "1px solid",
+                        borderColor: "warning.light",
+                        borderRadius: 2,
+                        px: 2,
+                        py: 1.25,
+                        mb: 2,
+                      }}
+                    >
+                      <Typography variant="caption" color="warning.dark">
+                        Este ticket ya tiene artículos de &quot;{lockedBranch.label}
+                        &quot;. Solo puedes seguir agregando artículos de esa
+                        sucursal. Para agregar de otra, primero quita los artículos
+                        actuales del carrito.
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Orígenes principales: sucursal actual + bodega (existencia + por surtir) */}
                   <Stack spacing={1.5}>
                     {productSources
                       .filter(
                         (src) =>
-                          src.sourceType === "branch" &&
-                          src.branchId !== currentBranchId,
+                          src.sourceType === "warehouse" ||
+                          src.branchId === currentBranchId,
                       )
                       .map((src) => {
+                        const isWarehouse = src.sourceType === "warehouse";
+                        const isCurrentBranch =
+                          src.sourceType === "branch" &&
+                          src.branchId === currentBranchId;
+
+                        const sourceLabel = isCurrentBranch
+                          ? `Ésta sucursal (${src.label})`
+                          : "Bodega";
+
+                        const SourceIcon = isCurrentBranch ? Store : Warehouse;
+
                         const branchLocked = isBranchSourceLocked(src);
+
                         return (
                           <InventorySourceCard
                             key={src.sourceKey}
@@ -3023,34 +2948,71 @@ export function SaleBuilder({
                                     flexShrink: 0,
                                   }}
                                 >
-                                  <Store size={16} />
+                                  <SourceIcon size={16} />
                                 </Box>
                                 <Typography
                                   variant="body2"
                                   sx={{ minWidth: 0, wordBreak: "break-word" }}
                                 >
-                                  {src.label}
+                                  {sourceLabel}
                                 </Typography>
                               </InventorySourceMeta>
+
                               <InventorySourceActions>
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                  flexShrink={0}
-                                >
-                                  <Package
-                                    size={13}
-                                    color={theme.palette.text.disabled}
-                                  />
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    noWrap
-                                  >
-                                    Existencia: {src.available}
-                                  </Typography>
-                                </Stack>
+                                {(isWarehouse || isCurrentBranch) && (
+                                  <>
+                                    <Stack spacing={0.25} flexShrink={0}>
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        spacing={0.75}
+                                      >
+                                        <Truck
+                                          size={13}
+                                          color={theme.palette.text.disabled}
+                                        />
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                          noWrap
+                                        >
+                                          En tránsito: {src.inTransit ?? 0}
+                                        </Typography>
+                                      </Stack>
+                                      {src.estimatedArrival ? (
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                          noWrap
+                                        >
+                                          Llegada estimada:{" "}
+                                          {formatDateOnly(
+                                            src.estimatedArrival,
+                                            "DD/MM/YYYY",
+                                          )}
+                                        </Typography>
+                                      ) : null}
+                                    </Stack>
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={0.75}
+                                      flexShrink={0}
+                                    >
+                                      <Package
+                                        size={13}
+                                        color={theme.palette.text.disabled}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        noWrap
+                                      >
+                                        Existencia: {src.available}
+                                      </Typography>
+                                    </Stack>
+                                  </>
+                                )}
                                 <Box sx={{ flexShrink: 0 }}>
                                   <NumberSpinner
                                     value={src.quantity}
@@ -3061,7 +3023,7 @@ export function SaleBuilder({
                                       )
                                     }
                                     min={0}
-                                    max={src.available}
+                                    max={sourceSellableMax(src)}
                                     disabled={branchLocked}
                                     size="medium"
                                     iconSize={14}
@@ -3084,23 +3046,124 @@ export function SaleBuilder({
                         );
                       })}
                   </Stack>
-                </>
-              )}
-            </Paper>
-            </ProductDetailPanel>
-          </ProductDetailLayout>
-        )}
-      </PageShell>
-      {discountInvalidateModal}
-      {economicRevisionModal}
+
+                  {!showOtherBranches && productDetail?.hasOtherBranches && (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => setShowOtherBranches(true)}
+                      sx={{ mt: 1.5, px: 1 }}
+                    >
+                      Consultar existencia en otras sucursales
+                    </Button>
+                  )}
+
+                  {showOtherBranches && (
+                    <>
+                      <Typography variant="body2" fontWeight={600} mt={2} mb={1.5}>
+                        Existencia en otras sucursales
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {productSources
+                          .filter(
+                            (src) =>
+                              src.sourceType === "branch" &&
+                              src.branchId !== currentBranchId,
+                          )
+                          .map((src) => {
+                            const branchLocked = isBranchSourceLocked(src);
+                            return (
+                              <InventorySourceCard
+                                key={src.sourceKey}
+                                sx={{ opacity: branchLocked ? 0.6 : 1 }}
+                              >
+                                <InventorySourceRow>
+                                  <InventorySourceMeta>
+                                    <Box
+                                      sx={{
+                                        color: "text.secondary",
+                                        display: "flex",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      <Store size={16} />
+                                    </Box>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ minWidth: 0, wordBreak: "break-word" }}
+                                    >
+                                      {src.label}
+                                    </Typography>
+                                  </InventorySourceMeta>
+                                  <InventorySourceActions>
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={0.75}
+                                      flexShrink={0}
+                                    >
+                                      <Package
+                                        size={13}
+                                        color={theme.palette.text.disabled}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        noWrap
+                                      >
+                                        Existencia: {src.available}
+                                      </Typography>
+                                    </Stack>
+                                    <Box sx={{ flexShrink: 0 }}>
+                                      <NumberSpinner
+                                        value={src.quantity}
+                                        onChange={(val: number) =>
+                                          handleQtyChange(
+                                            src.sourceKey,
+                                            val - src.quantity,
+                                          )
+                                        }
+                                        min={0}
+                                        max={src.available}
+                                        disabled={branchLocked}
+                                        size="medium"
+                                        iconSize={14}
+                                      />
+                                    </Box>
+                                  </InventorySourceActions>
+                                </InventorySourceRow>
+                                {branchLocked && lockedBranch && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.disabled"
+                                    display="block"
+                                    mt={0.75}
+                                  >
+                                    No disponible: ya tienes artículos de &quot;
+                                    {lockedBranch.label}&quot; en este ticket.
+                                  </Typography>
+                                )}
+                              </InventorySourceCard>
+                            );
+                          })}
+                      </Stack>
+                    </>
+                  )}
+                </Paper>
+              </ProductDetailPanel>
+            </ProductDetailLayout>
+          )}
+        </PageShell>
+        {discountInvalidateModal}
+        {economicRevisionModal}
       </>
     );
   }
 
   const creditDownPaymentErrorText =
     paymentType === "CREDIT" &&
-    creditDownPaymentText != null &&
-    creditDownPaymentInvalid
+      creditDownPaymentText != null &&
+      creditDownPaymentInvalid
       ? typedEnganche != null && typedEnganche > totalFinal + 0.001
         ? "El enganche no puede ser mayor al total de la venta"
         : `El enganche no puede ser menor al 10% (${formatCurrency(minimumEnganche)})`
@@ -3115,8 +3178,8 @@ export function SaleBuilder({
     Math.abs(creditDownPaymentParsed - minimumEnganche) < 0.001;
   const creditDownPaymentShare =
     creditDownPaymentParsed != null &&
-    totalFinal > 0 &&
-    !creditDownPaymentAtMinimum
+      totalFinal > 0 &&
+      !creditDownPaymentAtMinimum
       ? `${Math.round((creditDownPaymentParsed / totalFinal) * 100)}%`
       : null;
   const creditDownPaymentDisplay = (() => {
@@ -3180,8 +3243,7 @@ export function SaleBuilder({
             color={creditDownPaymentErrorText ? "error" : "text.secondary"}
           >
             {creditDownPaymentErrorText ??
-              `Mínimo ${formatCurrency(minimumEnganche)} (10%)${
-                creditDownPaymentShare ? ` · ${creditDownPaymentShare}` : ""
+              `Mínimo ${formatCurrency(minimumEnganche)} (10%)${creditDownPaymentShare ? ` · ${creditDownPaymentShare}` : ""
               }`}
           </Typography>
           {!creditDownPaymentAtMinimum && (
@@ -3841,11 +3903,11 @@ export function SaleBuilder({
               lockedFields={
                 useClientBillingData
                   ? {
-                      businessName: true,
-                      rfc: true,
-                      fiscalStreet: true,
-                      fiscalExternalNumber: true,
-                    }
+                    businessName: true,
+                    rfc: true,
+                    fiscalStreet: true,
+                    fiscalExternalNumber: true,
+                  }
                   : undefined
               }
               beforeFields={
@@ -4126,20 +4188,20 @@ export function SaleBuilder({
 
                   {paymentType === "CREDIT" && (
                     <>
-                    {creditDownPaymentField}
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      py={1.25}
-                    >
-                      <Typography variant="body2" fontWeight={700}>
-                        Monto a financiar
-                      </Typography>
-                      <Typography variant="body2" fontWeight={700}>
-                        {formatCurrency(montoAFinanciar)}
-                      </Typography>
-                    </Stack>
+                      {creditDownPaymentField}
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        py={1.25}
+                      >
+                        <Typography variant="body2" fontWeight={700}>
+                          Monto a financiar
+                        </Typography>
+                        <Typography variant="body2" fontWeight={700}>
+                          {formatCurrency(montoAFinanciar)}
+                        </Typography>
+                      </Stack>
                     </>
                   )}
 
@@ -4465,11 +4527,10 @@ export function SaleBuilder({
                       label="Sucursal de entrega"
                       value={
                         effectiveDeliveryBranch
-                          ? `${effectiveDeliveryBranch.label}${
-                              effectiveDeliveryBranch.id === currentBranchId
-                                ? " [Actual]"
-                                : ""
-                            }`
+                          ? `${effectiveDeliveryBranch.label}${effectiveDeliveryBranch.id === currentBranchId
+                            ? " [Actual]"
+                            : ""
+                          }`
                           : undefined
                       }
                     />
@@ -4477,195 +4538,194 @@ export function SaleBuilder({
                 </>
               ) : (
                 <>
-              {showCheckoutDeliveryDateField && (
-                <Box sx={{ mb: 1.5 }}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                    mb={0.5}
-                  >
-                    Fecha de entrega (opcional)
-                  </Typography>
-                  <Box
-                    onClick={() => setCheckoutDeliveryDateModalOpen(true)}
-                    sx={{
-                      ...saleFieldTriggerSx,
-                      color: checkoutDeliveryDate
-                        ? "text.primary"
-                        : "text.secondary",
+                  {showCheckoutDeliveryDateField && (
+                    <Box sx={{ mb: 1.5 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        mb={0.5}
+                      >
+                        Fecha de entrega (opcional)
+                      </Typography>
+                      <Box
+                        onClick={() => setCheckoutDeliveryDateModalOpen(true)}
+                        sx={{
+                          ...saleFieldTriggerSx,
+                          color: checkoutDeliveryDate
+                            ? "text.primary"
+                            : "text.secondary",
+                        }}
+                      >
+                        {checkoutDeliveryDate
+                          ? formatCheckoutDeliveryDate(checkoutDeliveryDate)
+                          : "Asignar fecha de entrega"}
+                        <Calendar size={16} />
+                      </Box>
+                    </Box>
+                  )}
+
+                  <Select
+                    fullWidth
+                    size="small"
+                    displayEmpty
+                    value={deliveryType ?? ""}
+                    onChange={(e) =>
+                      setDeliveryType(
+                        (e.target.value || null) as "delivery" | "pickup" | null,
+                      )
+                    }
+                    sx={{ mb: 1.5, ...saleInputSx }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          mt: 0.5,
+                          boxShadow: 2,
+                        },
+                      },
                     }}
                   >
-                    {checkoutDeliveryDate
-                      ? formatCheckoutDeliveryDate(checkoutDeliveryDate)
-                      : "Asignar fecha de entrega"}
-                    <Calendar size={16} />
-                  </Box>
-                </Box>
-              )}
+                    <MenuItem value="" disabled>
+                      <Typography variant="body2" color="text.secondary">
+                        Selecciona un tipo de entrega
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem value="delivery">A domicilio</MenuItem>
+                    <MenuItem value="pickup">En tienda o bodega</MenuItem>
+                  </Select>
 
-              <Select
-                fullWidth
-                size="small"
-                displayEmpty
-                value={deliveryType ?? ""}
-                onChange={(e) =>
-                  setDeliveryType(
-                    (e.target.value || null) as "delivery" | "pickup" | null,
-                  )
-                }
-                sx={{ mb: 1.5, ...saleInputSx }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      borderRadius: 2,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      mt: 0.5,
-                      boxShadow: 2,
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="" disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    Selecciona un tipo de entrega
-                  </Typography>
-                </MenuItem>
-                <MenuItem value="delivery">A domicilio</MenuItem>
-                <MenuItem value="pickup">En tienda o bodega</MenuItem>
-              </Select>
+                  {deliveryType === "delivery" && (
+                    <>
+                      <DeliveryMapPreview
+                        coords={deliveryCoords}
+                        apiKey={GOOGLE_MAPS_API_KEY}
+                      />
+                      {shippingQuote && shippingQuote.coverage !== "IN_ZONE" ? (
+                        <Alert severity="error" sx={{ mb: 1.5 }}>
+                          No hay cobertura de envío para esta dirección. Cambia a
+                          recoger en sucursal o elige otro domicilio que sí esté en
+                          zona.
+                        </Alert>
+                      ) : null}
 
-              {deliveryType === "delivery" && (
-                <>
-                  <DeliveryMapPreview
-                    coords={deliveryCoords}
-                    apiKey={GOOGLE_MAPS_API_KEY}
-                  />
-                  {shippingQuote && shippingQuote.coverage !== "IN_ZONE" ? (
-                    <Alert severity="error" sx={{ mb: 1.5 }}>
-                      No hay cobertura de envío para esta dirección. Cambia a
-                      recoger en sucursal o elige otro domicilio que sí esté en
-                      zona.
-                    </Alert>
-                  ) : null}
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        mb={0.5}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Dirección de entrega
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{
+                            ...CHANGE_LINK_SX,
+                            fontSize: "0.75rem",
+                          }}
+                          onClick={() => setDeliveryAddressModalOpen(true)}
+                        >
+                          Cambiar
+                        </Button>
+                      </Stack>
+                      <Typography variant="body2" mb={0.5}>
+                        {useCustomDeliveryAddress
+                          ? (customDeliveryAddress?.formatted ??
+                            "Sin dirección capturada")
+                          : (selectedClient.primaryAddressFormatted ??
+                            "Sin dirección registrada")}
+                      </Typography>
+                      {useCustomDeliveryAddress && (
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{
+                            ...CHANGE_LINK_SX,
+                            fontSize: "0.75rem",
+                            mb: 1,
+                          }}
+                          onClick={() => {
+                            setUseCustomDeliveryAddress(false);
+                            setCustomDeliveryAddress(null);
+                          }}
+                        >
+                          Usar dirección del cliente
+                        </Button>
+                      )}
+                      {selectedClient.email && (
+                        <Typography variant="body2" color="text.secondary" mb={1.5}>
+                          {selectedClient.email}
+                        </Typography>
+                      )}
 
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    mb={0.5}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Dirección de entrega
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      sx={{
-                        ...CHANGE_LINK_SX,
-                        fontSize: "0.75rem",
-                      }}
-                      onClick={() => setDeliveryAddressModalOpen(true)}
-                    >
-                      Cambiar
-                    </Button>
-                  </Stack>
-                  <Typography variant="body2" mb={0.5}>
-                    {useCustomDeliveryAddress
-                      ? (customDeliveryAddress?.formatted ??
-                        "Sin dirección capturada")
-                      : (selectedClient.primaryAddressFormatted ??
-                        "Sin dirección registrada")}
-                  </Typography>
-                  {useCustomDeliveryAddress && (
-                    <Button
-                      size="small"
-                      variant="text"
-                      sx={{
-                        ...CHANGE_LINK_SX,
-                        fontSize: "0.75rem",
-                        mb: 1,
-                      }}
-                      onClick={() => {
-                        setUseCustomDeliveryAddress(false);
-                        setCustomDeliveryAddress(null);
-                      }}
-                    >
-                      Usar dirección del cliente
-                    </Button>
-                  )}
-                  {selectedClient.email && (
-                    <Typography variant="body2" color="text.secondary" mb={1.5}>
-                      {selectedClient.email}
-                    </Typography>
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        mb={1.5}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Teléfono de quién recibe
+                        </Typography>
+                      </Stack>
+                      {selectedClient.phoneNumber && (
+                        <Typography variant="body2" color="text.secondary">
+                          {selectedClient.phoneNumber}
+                        </Typography>
+                      )}
+                    </>
                   )}
 
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    mb={1.5}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Teléfono de quién recibe
-                    </Typography>
-                  </Stack>
-                  {selectedClient.phoneNumber && (
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedClient.phoneNumber}
-                    </Typography>
-                  )}
-                </>
-              )}
-
-              {deliveryType === "pickup" && (
-                <>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    mb={0.5}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Sucursal de entrega
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      sx={{
-                        ...CHANGE_LINK_SX,
-                        fontSize: "0.75rem",
-                      }}
-                      onClick={() => setBranchPickerOpen(true)}
-                    >
-                      Cambiar
-                    </Button>
-                  </Stack>
-                  <Typography variant="body2" fontWeight={600} mb={1.5}>
-                    {effectiveDeliveryBranch
-                      ? `${effectiveDeliveryBranch.label}${
-                          effectiveDeliveryBranch.id === currentBranchId
+                  {deliveryType === "pickup" && (
+                    <>
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        mb={0.5}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Sucursal de entrega
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="text"
+                          sx={{
+                            ...CHANGE_LINK_SX,
+                            fontSize: "0.75rem",
+                          }}
+                          onClick={() => setBranchPickerOpen(true)}
+                        >
+                          Cambiar
+                        </Button>
+                      </Stack>
+                      <Typography variant="body2" fontWeight={600} mb={1.5}>
+                        {effectiveDeliveryBranch
+                          ? `${effectiveDeliveryBranch.label}${effectiveDeliveryBranch.id === currentBranchId
                             ? " [Actual]"
                             : ""
-                        }`
-                      : "Selecciona una sucursal"}
-                  </Typography>
-
-                  {effectiveDeliveryBranch &&
-                    hasStockAtDeliveryBranch === undefined && (
-                      <Typography variant="caption" color="text.secondary">
-                        Verificando existencia en esta sucursal...
+                          }`
+                          : "Selecciona una sucursal"}
                       </Typography>
-                    )}
 
-                  {isSameDayPickup && (
-                    <Alert severity="success" sx={{ mb: 1 }}>
-                      Entrega hoy mismo en tienda.
-                    </Alert>
+                      {effectiveDeliveryBranch &&
+                        hasStockAtDeliveryBranch === undefined && (
+                          <Typography variant="caption" color="text.secondary">
+                            Verificando existencia en esta sucursal...
+                          </Typography>
+                        )}
+
+                      {isSameDayPickup && (
+                        <Alert severity="success" sx={{ mb: 1 }}>
+                          Entrega hoy mismo en tienda.
+                        </Alert>
+                      )}
+                    </>
                   )}
-                </>
-              )}
                 </>
               )}
             </SidebarCard>

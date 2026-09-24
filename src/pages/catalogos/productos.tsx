@@ -160,7 +160,13 @@ export default function Productos() {
         id: "code",
         label: "Código",
         type: "text",
-        size: "sm",
+        size: "md",
+      },
+      {
+        id: "name",
+        label: "Nombre",
+        size: "xl",
+        truncate: true,
       },
       {
         id: "status",
@@ -171,25 +177,20 @@ export default function Productos() {
         chipVariantMap: PRODUCT_STATUS_CHIP_VARIANTS,
       },
       {
-        id: "name",
-        label: "Nombre",
-        size: "xl",
-        truncate: true,
-      },
-      {
         id: "department",
         label: "Departamento",
-        size: "lg",
+        size: "md"
       },
       {
         id: "line",
         label: "Línea",
-        size: "lg",
+        size: "lg"
+
       },
       {
         id: "supplier",
         label: "Proveedor",
-        size: "lg",
+        size: "xl"
       },
     ],
     [],

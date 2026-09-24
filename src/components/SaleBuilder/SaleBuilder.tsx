@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -69,6 +69,8 @@ import {
   TotalBar,
   TouchButton,
   CheckoutGrid,
+  saleFieldTriggerSx,
+  saleInputSx,
 } from "./styles";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -80,6 +82,7 @@ import {
   updateSaleClient,
   updateSalePurchaseType,
   updateSaleLayawayTerm,
+  updateSaleCreditDownPayment,
   addSaleItem,
   updateSaleItem,
   removeSaleItem,
@@ -136,6 +139,7 @@ import { EconomicRevisionDialog } from "@/components/SaleBuilder/EconomicRevisio
 import { BillingFieldsForm } from "@/components/BillingFieldsForm";
 import { useBillingFieldsForm } from "@/hooks/useBillingFieldsForm";
 import { formatStreetAddressLine } from "@/utils/address";
+import { formatDateOnly } from "@/utils/date";
 import {
   backorderedFromSources,
   hydratedLineQtyMax,
@@ -159,7 +163,7 @@ import {
   allocateCheckoutTenders,
   cashChangeDue,
 } from "@/utils/saleCheckoutTenders";
-import { creditMinimumDownPayment, roundToCents } from "@/utils/number";
+import { creditInstallmentAmount, creditMinimumDownPayment, parseCreditDownPayment, roundToCents, sanitizeCreditDownPaymentInput } from "@/utils/number";
 import {
   EconomicRevisionRequiredError,
   chargeFromAcceptedRevision,
@@ -504,6 +508,11 @@ export function SaleBuilder({
     useState<EconomicRevisionPreview | null>(null);
   const [checkoutRule, setCheckoutRule] =
     useState<UpdateSalePurchaseTypeResult["checkout"] | null>(null);
+  const [creditDownPaymentText, setCreditDownPaymentText] = useState<
+    string | null
+  >(null);
+  const [creditDownPaymentFocused, setCreditDownPaymentFocused] =
+    useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
@@ -797,6 +806,11 @@ export function SaleBuilder({
 
     if (resumeSaleData.layawayTermId != null) {
       setSelectedLayawayTermId(resumeSaleData.layawayTermId);
+    }
+    if (resumeSaleData.creditDownPaymentAmount != null) {
+      setCreditDownPaymentText(
+        resumeSaleData.creditDownPaymentAmount.toFixed(2),
+      );
     }
 
     if (resumeSaleData.deliveryType === "ADDRESS") {
@@ -1203,6 +1217,11 @@ export function SaleBuilder({
     // Cajero cobra el ticket ya registrado: envío y entrega no se recotizan.
     if (!isCajeroMode) {
       await syncDeliverySelection(saleId);
+      const downPaymentRes = await updateSaleCreditDownPayment(
+        saleId,
+        paymentType === "CREDIT" ? Number(enganche.toFixed(2)) : null,
+      );
+      if (downPaymentRes.error) throw new Error(downPaymentRes.error.message);
     }
     return { id: saleId, folio };
   };
@@ -1499,6 +1518,9 @@ export function SaleBuilder({
       }
       const registerRes = await registerSale(saleId, {
         economic_revision: revision,
+        ...(paymentType === "CREDIT"
+          ? { credit_down_payment_amount: enganche }
+          : {}),
       });
       throwIfSaleError(registerRes.error);
       return saleId;
@@ -2340,9 +2362,22 @@ export function SaleBuilder({
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
   const totalPaid = roundToCents(cashAmtNum + cardAmtNum + extraCardAmtNum);
+  const minimumEnganche = creditMinimumDownPayment(totalFinal);
+  const typedEnganche =
+    creditDownPaymentText == null
+      ? null
+      : parseCreditDownPayment(creditDownPaymentText);
+  const creditDownPaymentInvalid =
+    paymentType === "CREDIT" &&
+    creditDownPaymentText != null &&
+    (typedEnganche == null ||
+      typedEnganche < minimumEnganche - 0.001 ||
+      typedEnganche > totalFinal + 0.001);
   const enganche =
     paymentType === "CREDIT"
-      ? creditMinimumDownPayment(totalFinal)
+      ? typedEnganche != null && !creditDownPaymentInvalid
+        ? typedEnganche
+        : minimumEnganche
       : checkoutRule?.type === "CREDIT"
         ? checkoutRule.minimumDownPayment
         : creditMinimumDownPayment(totalFinal);
@@ -2364,6 +2399,18 @@ export function SaleBuilder({
     paymentType === "CREDIT" &&
     creditAvailable != null &&
     montoAFinanciar > creditAvailable + 0.009;
+
+  const previousMinimumEnganche = useRef(minimumEnganche);
+  useEffect(() => {
+    const previous = previousMinimumEnganche.current;
+    previousMinimumEnganche.current = minimumEnganche;
+    if (paymentType !== "CREDIT" || creditDownPaymentText == null) return;
+    if (minimumEnganche <= previous) return;
+    const parsed = parseCreditDownPayment(creditDownPaymentText);
+    if (parsed != null && parsed < minimumEnganche) {
+      setCreditDownPaymentText(minimumEnganche.toFixed(2));
+    }
+  }, [paymentType, creditDownPaymentText, minimumEnganche]);
 
   const handleIdentityVerified = () => {
     setIdentityOk(true);
@@ -2849,25 +2896,39 @@ export function SaleBuilder({
                           </InventorySourceMeta>
 
                           <InventorySourceActions>
-                            {isWarehouse && (
+                            {(isWarehouse || isCurrentBranch) && (
                               <>
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={0.75}
-                                  flexShrink={0}
-                                >
-                                  <Truck
-                                    size={13}
-                                    color={theme.palette.text.disabled}
-                                  />
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    noWrap
+                                <Stack spacing={0.25} flexShrink={0}>
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={0.75}
                                   >
-                                    En tránsito: {src.inTransit ?? 0}
-                                  </Typography>
+                                    <Truck
+                                      size={13}
+                                      color={theme.palette.text.disabled}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      noWrap
+                                    >
+                                      En tránsito: {src.inTransit ?? 0}
+                                    </Typography>
+                                  </Stack>
+                                  {src.estimatedArrival ? (
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      noWrap
+                                    >
+                                      Llegada estimada:{" "}
+                                      {formatDateOnly(
+                                        src.estimatedArrival,
+                                        "DD/MM/YYYY",
+                                      )}
+                                    </Typography>
+                                  ) : null}
                                 </Stack>
                                 <Stack
                                   direction="row"
@@ -2887,47 +2948,7 @@ export function SaleBuilder({
                                     Existencia: {src.available}
                                   </Typography>
                                 </Stack>
-                                {(src.pendingOrdered ?? 0) > 0 && (
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={0.75}
-                                    flexShrink={0}
-                                  >
-                                    <Package
-                                      size={13}
-                                      color={theme.palette.text.disabled}
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      noWrap
-                                    >
-                                      Por surtir: {src.pendingOrdered}
-                                    </Typography>
-                                  </Stack>
-                                )}
                               </>
-                            )}
-                            {isCurrentBranch && (
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={0.75}
-                                flexShrink={0}
-                              >
-                                <Package
-                                  size={13}
-                                  color={theme.palette.text.disabled}
-                                />
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  noWrap
-                                >
-                                  Existencia: {src.available}
-                                </Typography>
-                              </Stack>
                             )}
                             <Box sx={{ flexShrink: 0 }}>
                               <NumberSpinner
@@ -3076,13 +3097,118 @@ export function SaleBuilder({
     );
   }
 
+  const creditDownPaymentErrorText =
+    paymentType === "CREDIT" &&
+    creditDownPaymentText != null &&
+    creditDownPaymentInvalid
+      ? typedEnganche != null && typedEnganche > totalFinal + 0.001
+        ? "El enganche no puede ser mayor al total de la venta"
+        : `El enganche no puede ser menor al 10% (${formatCurrency(minimumEnganche)})`
+      : null;
+  const creditDownPaymentShown =
+    creditDownPaymentText ?? minimumEnganche.toFixed(2);
+  const creditDownPaymentParsed = parseCreditDownPayment(
+    creditDownPaymentShown,
+  );
+  const creditDownPaymentAtMinimum =
+    creditDownPaymentParsed != null &&
+    Math.abs(creditDownPaymentParsed - minimumEnganche) < 0.001;
+  const creditDownPaymentShare =
+    creditDownPaymentParsed != null &&
+    totalFinal > 0 &&
+    !creditDownPaymentAtMinimum
+      ? `${Math.round((creditDownPaymentParsed / totalFinal) * 100)}%`
+      : null;
+  const creditDownPaymentDisplay = (() => {
+    const [whole, fraction] = creditDownPaymentShown.split(".");
+    const grouped = Number(whole || "0").toLocaleString("es-MX");
+    return fraction != null ? `${grouped}.${fraction}` : grouped;
+  })();
+  const creditDownPaymentField =
+    paymentType === "CREDIT" ? (
+      <Stack spacing={0.5} py={1.25}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={2}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Enganche
+          </Typography>
+          <OutlinedInput
+            size="small"
+            value={
+              creditDownPaymentFocused
+                ? creditDownPaymentShown
+                : creditDownPaymentDisplay
+            }
+            onFocus={() => setCreditDownPaymentFocused(true)}
+            onChange={(event) =>
+              setCreditDownPaymentText(
+                sanitizeCreditDownPaymentInput(event.target.value),
+              )
+            }
+            onBlur={() => {
+              setCreditDownPaymentFocused(false);
+              if (creditDownPaymentText == null) return;
+              const parsed = parseCreditDownPayment(creditDownPaymentText);
+              if (parsed == null) return;
+              setCreditDownPaymentText(parsed.toFixed(2));
+            }}
+            error={creditDownPaymentErrorText != null}
+            inputProps={{
+              inputMode: "decimal",
+              autoComplete: "off",
+              "aria-label": "Enganche solicitado",
+              style: { textAlign: "right" },
+            }}
+            startAdornment={
+              <InputAdornment position="start">$</InputAdornment>
+            }
+            sx={{ width: 168, flexShrink: 0, ...saleInputSx }}
+          />
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={1}
+        >
+          <Typography
+            variant="caption"
+            color={creditDownPaymentErrorText ? "error" : "text.secondary"}
+          >
+            {creditDownPaymentErrorText ??
+              `Mínimo ${formatCurrency(minimumEnganche)} (10%)${
+                creditDownPaymentShare ? ` · ${creditDownPaymentShare}` : ""
+              }`}
+          </Typography>
+          {!creditDownPaymentAtMinimum && (
+            <Button
+              size="small"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() =>
+                setCreditDownPaymentText(minimumEnganche.toFixed(2))
+              }
+              sx={{ minWidth: 0, px: 0.5, py: 0, textTransform: "none" }}
+            >
+              Usar mínimo
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+    ) : null;
+
   if (view === "checkout") {
     const canRegister =
       !saleOperationPending &&
       totalPaid >= amountToPay &&
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" ||
-        (identityOk && !selectedClient?.biometricsPending)) &&
+        (identityOk &&
+          !selectedClient?.biometricsPending &&
+          !creditDownPaymentInvalid)) &&
       (paymentType !== "LAYAWAY" ||
         (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
@@ -3548,23 +3674,12 @@ export function SaleBuilder({
                         </Stack>
                       </Stack>
                     </Box>
+                    {creditDownPaymentField}
                     <Stack
                       direction="row"
                       justifyContent="space-between"
                       alignItems="center"
                       mt={1}
-                    >
-                      <Typography variant="h6" fontWeight={700}>
-                        Enganche:
-                      </Typography>
-                      <Typography variant="h6" fontWeight={700}>
-                        {formatCurrency(enganche)}
-                      </Typography>
-                    </Stack>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
                     >
                       <Typography variant="h6" fontWeight={700}>
                         Monto a financiar
@@ -3585,7 +3700,7 @@ export function SaleBuilder({
                         onChange={(e) =>
                           setSelectedTermMonths(e.target.value as 12 | 18 | 24)
                         }
-                        sx={{ minWidth: 110 }}
+                        sx={{ minWidth: 110, ...saleInputSx }}
                       >
                         <MenuItem value={12}>12 meses</MenuItem>
                         <MenuItem value={18}>18 meses</MenuItem>
@@ -3593,7 +3708,10 @@ export function SaleBuilder({
                       </Select>
                       <Typography variant="body2" fontWeight={600}>
                         {formatCurrency(
-                          montoAFinanciar / selectedTermMonths,
+                          creditInstallmentAmount(
+                            montoAFinanciar,
+                            selectedTermMonths,
+                          ),
                         )}
                       </Typography>
                     </Stack>
@@ -3622,7 +3740,7 @@ export function SaleBuilder({
                       onChange={(e) =>
                         setSelectedLayawayTermId(Number(e.target.value))
                       }
-                      sx={{ minWidth: 140 }}
+                      sx={{ minWidth: 140, ...saleInputSx }}
                     >
                       {layawayTerms.map((term) => (
                         <MenuItem key={term.id} value={term.id}>
@@ -3800,7 +3918,7 @@ export function SaleBuilder({
         onRegisterSale={() =>
           void executeSaleOperation(() => registerSaleMutation.mutateAsync())
         }
-        creditLineExceeded={creditLineExceeded}
+        creditLineExceeded={creditLineExceeded || creditDownPaymentInvalid}
         proceedLabel={
           paymentType === "CREDIT" && !identityOk
             ? "Validar identidad"
@@ -4008,19 +4126,7 @@ export function SaleBuilder({
 
                   {paymentType === "CREDIT" && (
                     <>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      py={1.25}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        Enganche solicitado (10%)
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatCurrency(enganche)}
-                      </Typography>
-                    </Stack>
+                    {creditDownPaymentField}
                     <Stack
                       direction="row"
                       justifyContent="space-between"
@@ -4285,7 +4391,7 @@ export function SaleBuilder({
                       <Search size={16} />
                     </InputAdornment>
                   }
-                  sx={{ mb: 1.5, cursor: "pointer" }}
+                  sx={{ mb: 1.5, cursor: "pointer", ...saleInputSx }}
                 />
 
                 {(paymentType === "CASH" || paymentType === "LAYAWAY") && (
@@ -4384,20 +4490,10 @@ export function SaleBuilder({
                   <Box
                     onClick={() => setCheckoutDeliveryDateModalOpen(true)}
                     sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1.5,
-                      px: 2,
-                      py: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      cursor: "pointer",
+                      ...saleFieldTriggerSx,
                       color: checkoutDeliveryDate
                         ? "text.primary"
-                        : "primary.main",
-                      fontWeight: 500,
-                      fontSize: "0.85rem",
+                        : "text.secondary",
                     }}
                   >
                     {checkoutDeliveryDate
@@ -4418,27 +4514,7 @@ export function SaleBuilder({
                     (e.target.value || null) as "delivery" | "pickup" | null,
                   )
                 }
-                sx={{
-                  mb: 1.5,
-                  minHeight: 44,
-                  borderRadius: 1,
-                  bgcolor: "background.paper",
-                  "& .MuiSelect-select": {
-                    py: 1.25,
-                    display: "flex",
-                    alignItems: "center",
-                  },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "divider",
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "text.secondary",
-                  },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "primary.main",
-                    borderWidth: 1,
-                  },
-                }}
+                sx={{ mb: 1.5, ...saleInputSx }}
                 MenuProps={{
                   PaperProps: {
                     sx: {

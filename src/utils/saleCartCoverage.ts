@@ -71,12 +71,16 @@ export function reallocInventorySources(
 export function sourceSellableMax(src: {
   available: number;
   pendingOrdered?: number;
+  inTransit?: number;
   sourceType?: string;
 }): number {
-  return (
-    src.available +
-    (src.sourceType === "warehouse" ? (src.pendingOrdered ?? 0) : 0)
-  );
+  const incoming =
+    src.inTransit != null
+      ? src.inTransit
+      : src.sourceType === "warehouse"
+        ? (src.pendingOrdered ?? 0)
+        : 0;
+  return src.available + incoming;
 }
 
 export function pendingSupplyBreakdown(
@@ -180,6 +184,7 @@ export function overlayLiveInventoryOnSources(
       available: match.available,
       pendingOrdered: match.pendingOrdered,
       inTransit: match.inTransit,
+      estimatedArrival: match.estimatedArrival,
     };
   });
 }
@@ -234,6 +239,15 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   };
   if (sourceSellableMax(warehouse) !== 5) {
     throw new Error("saleCartCoverage: warehouse max");
+  }
+  if (
+    sourceSellableMax({
+      available: 1,
+      inTransit: 4,
+      sourceType: "branch",
+    }) !== 5
+  ) {
+    throw new Error("saleCartCoverage: branch incoming max");
   }
   if (backorderedFromSources([warehouse], 4) !== 2) {
     throw new Error("saleCartCoverage: warehouse backorder");

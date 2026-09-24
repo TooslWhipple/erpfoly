@@ -68,6 +68,7 @@ export interface InventorySource {
   available: number;
   pendingOrdered?: number;
   inTransit?: number;
+  estimatedArrival?: string | null;
   quantity: number;
 }
 
@@ -219,6 +220,7 @@ export interface SaleDetail {
   shippingCoverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED" | null;
   totalAmount: number;
   economicRevision?: number;
+  creditDownPaymentAmount?: number | null;
   dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   loyaltyPointsEarned?: number;

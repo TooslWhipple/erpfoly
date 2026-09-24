@@ -18,6 +18,7 @@ import {
   CaptureCard,
   ChangeRow,
   PaymentAmountInput,
+  saleInputSx,
   PaymentErrorBanner,
   PaymentIconBadge,
   PaymentMethodRow,
@@ -190,26 +191,7 @@ export function SaleCheckoutPaymentPanel({
               fullWidth
               size="small"
               disabled={terminalsLoading}
-              sx={{
-                minHeight: 44,
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                "& .MuiSelect-select": {
-                  py: 1.25,
-                  display: "flex",
-                  alignItems: "center",
-                },
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "divider",
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "text.secondary",
-                },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "primary.main",
-                  borderWidth: 1,
-                },
-              }}
+              sx={saleInputSx}
               MenuProps={{
                 PaperProps: {
                   sx: {

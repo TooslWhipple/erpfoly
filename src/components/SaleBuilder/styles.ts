@@ -32,6 +32,8 @@ export {
   PaymentMethodRow,
   PaymentIconBadge,
   PaymentAmountInput,
+  saleInputSx,
+  saleFieldTriggerSx,
   PaymentErrorBanner,
   ChangeRow,
   TouchButton,

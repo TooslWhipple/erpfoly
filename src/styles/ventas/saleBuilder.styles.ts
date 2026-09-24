@@ -240,7 +240,7 @@ export const CartItemCard = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
 }));
 
-export const CartItemThumb = styled('div')(({ theme }) => ({
+export const CartItemThumb = styled('img')(({ theme }) => ({
   width: 56,
   height: 56,
   borderRadius: 8,

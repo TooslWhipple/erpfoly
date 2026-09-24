@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ../folysoft-backend/node_modules/ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts",
     "prepare": "husky"
   },
   "dependencies": {

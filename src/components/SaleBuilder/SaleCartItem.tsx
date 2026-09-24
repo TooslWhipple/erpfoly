@@ -110,7 +110,6 @@ export function SaleCartItemRow({
     <CartItemCard>
       <Stack direction="row" alignItems="flex-start" spacing={1.5}>
         <CartItemThumb
-          component="img"
           src={item.imageUrl ?? "/placeholder-product.png"}
           alt={item.productName}
         />

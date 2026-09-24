@@ -165,6 +165,25 @@ export function hydratedLineQtyMax(
   return Math.max(currentQty, sellableCeiling);
 }
 
+/**
+ * Saved split until live stock arrives, then the same backorder math as a
+ * quantity change. Caller keeps the saved split for cashier tickets.
+ */
+export function liveLineBackorderedQuantity(
+  item: {
+    quantity: number;
+    backorderedQuantity: number;
+    sources: InventorySource[];
+  },
+  live: InventorySource[] | undefined,
+): number {
+  if (!live?.length || item.sources.length === 0) return item.backorderedQuantity;
+  return backorderedFromSources(
+    overlayLiveInventoryOnSources(item.sources, live),
+    item.quantity,
+  );
+}
+
 /** Keep ticket allocation; replace on-hand fields with live product detail. */
 export function overlayLiveInventoryOnSources(
   sources: InventorySource[],
@@ -319,6 +338,29 @@ if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
   );
   if (overlaid[0].quantity !== 2 || overlaid[0].available !== 10) {
     throw new Error("saleCartCoverage: overlay keeps allocation, uses live stock");
+  }
+  const savedAllocation = {
+    sourceKey: "branch-5",
+    sourceType: "branch" as const,
+    branchId: 5,
+    label: "Centro",
+    available: 2,
+    quantity: 3,
+  };
+  const staleLine = {
+    quantity: 3,
+    backorderedQuantity: 1,
+    sources: [savedAllocation],
+  };
+  if (liveLineBackorderedQuantity(staleLine, undefined) !== 1) {
+    throw new Error("saleCartCoverage: live backorder keeps saved split without stock");
+  }
+  if (
+    liveLineBackorderedQuantity(staleLine, [
+      { ...savedAllocation, available: 0, quantity: 0, inTransit: 3 },
+    ]) !== 3
+  ) {
+    throw new Error("saleCartCoverage: live backorder replaces stale split");
   }
   const mixed = pendingSupplyBreakdown(3, 2);
   if (

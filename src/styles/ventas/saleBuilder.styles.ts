@@ -1,6 +1,53 @@
 import { Box, Button, OutlinedInput, Stack } from "@mui/material";
-import { alpha, styled } from "@mui/material/styles";
+import { alpha, styled, type SxProps, type Theme } from "@mui/material/styles";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
+
+/** Outlined fields in the sale flow: same radius, height and border. */
+export const saleInputSx: SxProps<Theme> = {
+  "& .MuiOutlinedInput-root, &.MuiOutlinedInput-root": {
+    borderRadius: 1,
+    backgroundColor: "background.paper",
+    minHeight: 40,
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "divider",
+    },
+    "&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline":
+      {
+        borderColor: "text.secondary",
+      },
+    "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
+      borderColor: "primary.main",
+      borderWidth: 1,
+    },
+  },
+  "& .MuiSelect-select": {
+    display: "flex",
+    alignItems: "center",
+    minHeight: 40,
+    boxSizing: "border-box",
+  },
+};
+
+/** Click targets that should read as the same field (fecha de entrega). */
+export const saleFieldTriggerSx: SxProps<Theme> = {
+  minHeight: 40,
+  boxSizing: "border-box",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: 1,
+  px: 1.75,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 1,
+  cursor: "pointer",
+  bgcolor: "background.paper",
+  fontSize: "0.875rem",
+  fontWeight: 400,
+  "&:hover": {
+    borderColor: "text.secondary",
+  },
+};
 
 export const PageShell = styled(Box, {
   shouldForwardProp: (prop) => prop !== "contained",
@@ -415,7 +462,7 @@ export const PaymentIconBadge = styled(Box)(({ theme }) => ({
 export const PaymentAmountInput = styled(OutlinedInput)(({ theme }) => ({
   width: 180,
   maxWidth: "100%",
-  borderRadius: 12,
+  borderRadius: theme.shape.borderRadius,
   "&:not(.Mui-disabled)": {
     backgroundColor: theme.palette.background.paper,
   },

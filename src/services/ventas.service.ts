@@ -267,6 +267,15 @@ export async function updateSaleLayawayTerm(
   });
 }
 
+export async function updateSaleCreditDownPayment(
+  saleId: number,
+  amount: number | null,
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/credit-down-payment`, {
+    credit_down_payment_amount: amount,
+  });
+}
+
 export interface AddSaleItemPayload {
   product_id: number;
   quantity: number;
@@ -447,7 +456,11 @@ export async function skipSaleIdentityVerification(
 
 export async function registerSale(
   saleId: number,
-  payload?: { economic_revision?: number; accept_revision?: boolean },
+  payload?: {
+    economic_revision?: number;
+    accept_revision?: boolean;
+    credit_down_payment_amount?: number;
+  },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return postPosSaleAction<{ id: number; folio: string; status: string }>(
     `${BASE}/sales/${saleId}/register`,

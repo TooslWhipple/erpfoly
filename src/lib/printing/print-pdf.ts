@@ -16,28 +16,28 @@ function attachHiddenIframe(): HTMLIFrameElement {
 
 /**
  * Opens the browser print dialog for a PDF blob via a hidden iframe.
- * Resolves when the dialog closes (`afterprint`) or when `print()` returns.
+ * Resolves as soon as `print()` is called. The iframe stays until
+ * `afterprint` or a cleanup timeout, so the dialog is not blanked.
  * Browsers cannot report whether the user selected a specific printer.
  */
 export function printPdfBlob(
   blob: Blob,
   options: PrintJobOptions = {},
 ): Promise<PrintJobResult> {
-  const timeoutMs = options.timeoutMs ?? 120_000;
   const blobUrl = window.URL.createObjectURL(blob);
   const iframe = attachHiddenIframe();
 
   return new Promise<PrintJobResult>((resolve, reject) => {
     let settled = false;
-    let printed = false;
-    let timer: number | undefined;
+    let cleaned = false;
+    let cleanupTimer: number | undefined;
 
     const cleanup = () => {
-      if (timer != null) window.clearTimeout(timer);
-      window.removeEventListener("beforeprint", onBeforePrint);
+      if (cleaned) return;
+      cleaned = true;
+      if (cleanupTimer != null) window.clearTimeout(cleanupTimer);
       window.removeEventListener("afterprint", onAfterPrint);
       try {
-        iframe.contentWindow?.removeEventListener("beforeprint", onBeforePrint);
         iframe.contentWindow?.removeEventListener("afterprint", onAfterPrint);
       } catch {
         // iframe may already be detached
@@ -46,52 +46,30 @@ export function printPdfBlob(
       window.URL.revokeObjectURL(blobUrl);
     };
 
-    const finish = (result: PrintJobResult) => {
-      if (settled) return;
-      settled = true;
+    const onAfterPrint = () => {
+      options.onProgress?.(100);
       cleanup();
-      resolve(result);
     };
 
     const fail = (error: Error) => {
+      cleanup();
       if (settled) return;
       settled = true;
-      cleanup();
       reject(error);
     };
 
-    const onBeforePrint = () => {
-      printed = true;
-      options.onProgress?.(70);
-    };
-
-    const onAfterPrint = () => {
-      options.onProgress?.(100);
-      finish({ success: true, printed: true });
-    };
-
-    timer = window.setTimeout(() => {
-      finish({ success: true, printed, timedOut: true });
-    }, timeoutMs);
-
     iframe.onload = () => {
       try {
-        window.addEventListener("beforeprint", onBeforePrint);
         window.addEventListener("afterprint", onAfterPrint);
-        iframe.contentWindow?.addEventListener("beforeprint", onBeforePrint);
         iframe.contentWindow?.addEventListener("afterprint", onAfterPrint);
         options.onProgress?.(50);
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
-        // Blocking print() (Chromium) returns after the dialog closes.
-        // If beforeprint already ran and afterprint never did, finish shortly.
-        if (!settled && printed) {
-          window.setTimeout(() => {
-            if (settled) return;
-            options.onProgress?.(100);
-            finish({ success: true, printed: true });
-          }, 500);
-        }
+        options.onProgress?.(100);
+        cleanupTimer = window.setTimeout(cleanup, options.timeoutMs ?? 120_000);
+        if (settled) return;
+        settled = true;
+        resolve({ success: true, printed: true });
       } catch (error) {
         fail(
           error instanceof Error

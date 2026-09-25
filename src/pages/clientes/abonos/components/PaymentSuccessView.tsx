@@ -17,6 +17,7 @@ export interface PaymentSuccessViewProps {
   onDownloadReceipt: () => void;
   onPrintReceipt: () => void;
   isDownloadingReceipt?: boolean;
+  isPrintingReceipt?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -28,8 +29,10 @@ export function PaymentSuccessView({
   onDownloadReceipt,
   onPrintReceipt,
   isDownloadingReceipt = false,
+  isPrintingReceipt = false,
 }: PaymentSuccessViewProps) {
   const receiptUnavailable = !result.receiptId && result.paymentIds.length === 0;
+  const receiptBusy = isDownloadingReceipt || isPrintingReceipt;
 
   return (
     <SuccessCard>
@@ -114,7 +117,7 @@ export function PaymentSuccessView({
         <SuccessCardFooterAction
           type="button"
           onClick={onDownloadReceipt}
-          disabled={isDownloadingReceipt || receiptUnavailable}
+          disabled={receiptBusy || receiptUnavailable}
         >
           {isDownloadingReceipt ? <CircularProgress size={16} color="inherit" /> : <Download size={16} />}
           {isDownloadingReceipt ? "Generando PDF..." : "Descargar comprobante"}
@@ -122,9 +125,9 @@ export function PaymentSuccessView({
         <SuccessCardFooterAction
           type="button"
           onClick={onPrintReceipt}
-          disabled={isDownloadingReceipt || receiptUnavailable}>
-          <Printer size={16} />
-          Imprimir
+          disabled={receiptBusy || receiptUnavailable}>
+          {isPrintingReceipt ? <CircularProgress size={16} color="inherit" /> : <Printer size={16} />}
+          {isPrintingReceipt ? "Generando PDF..." : "Imprimir"}
         </SuccessCardFooterAction>
       </SuccessCardFooter>
     </SuccessCard>

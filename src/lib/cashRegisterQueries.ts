@@ -13,6 +13,8 @@ export const PENDING_CASHIER_SALES_KEY = ["pending-cashier-sales"] as const;
 
 export const CASHIER_SALES_KEY = ["cashier-sales"] as const;
 
+export const CASH_REGISTER_CLOSINGS_KEY = ["cash-register-closings"] as const;
+
 /** Invalidates session summary, history, and cashier sales lists after a cobro. */
 export function invalidateCashRegisterQueries(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({
@@ -26,5 +28,8 @@ export function invalidateCashRegisterQueries(queryClient: QueryClient): void {
   });
   void queryClient.invalidateQueries({
     queryKey: PENDING_CASHIER_SALES_KEY,
+  });
+  void queryClient.invalidateQueries({
+    queryKey: CASH_REGISTER_CLOSINGS_KEY,
   });
 }

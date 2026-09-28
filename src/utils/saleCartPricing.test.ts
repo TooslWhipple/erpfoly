@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   cartLineDiscounts,
   cartListSubtotal,
+  approvedSpecialDiscount,
   lineTotal,
   merchandiseTotal,
   patchCartLinePrices,
@@ -21,6 +22,19 @@ const two = { originalPrice: 1000, discountAmount: 300, quantity: 2 };
 assert.equal(lineTotal(two), 1700);
 assert.equal(cartLineDiscounts([two]), 300);
 assert.equal(merchandiseTotal([two], 100), 1600);
+
+const partial = approvedSpecialDiscount({
+  lines: [
+    { saleItemId: 1, originalPrice: 500, discountAmount: 0, quantity: 2 },
+    { saleItemId: 2, originalPrice: 800, discountAmount: 0, quantity: 1 },
+  ],
+  approvedDiscountPct: 10,
+  approvedDiscountAmount: null,
+  items: [{ saleItemId: 1, quantity: 1, allocatedAmount: null }],
+});
+assert.equal(partial.bySaleItemId[1], 50);
+assert.equal(partial.bySaleItemId[2], undefined);
+assert.equal(partial.total, 50);
 
 const patched = patchCartLinePrices(
   [

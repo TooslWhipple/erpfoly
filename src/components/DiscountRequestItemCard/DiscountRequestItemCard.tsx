@@ -32,7 +32,11 @@ export function DiscountRequestItemCard({ item }: DiscountRequestItemCardProps) 
       >
         <Stack spacing={1}>
           <Typography variant="body2" color="text.secondary">Cantidad</Typography>
-          <Typography variant="body1" fontWeight={600}>{item.quantity}</Typography>
+          <Typography variant="body1" fontWeight={600}>
+            {item.lineQuantity != null && item.lineQuantity > item.quantity
+              ? `${item.quantity} de ${item.lineQuantity}`
+              : item.quantity}
+          </Typography>
         </Stack>
         <Stack spacing={1}>
           <Typography variant="body2" color="text.secondary">Precio original</Typography>

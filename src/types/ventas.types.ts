@@ -198,6 +198,12 @@ export type DiscountRequestStatus =
   | "REJECTED"
   | "INVALIDATED";
 
+export interface SaleDiscountRequestItem {
+  saleItemId: number;
+  quantity: number;
+  allocatedAmount: number | null;
+}
+
 export interface SaleDiscountRequest {
   id: number;
   status: DiscountRequestStatus;
@@ -208,6 +214,7 @@ export interface SaleDiscountRequest {
   approvedDiscountAmount: number | null;
   notes: string | null;
   rejectionReason: string | null;
+  items?: SaleDiscountRequestItem[];
 }
 
 export interface SaleDetail {

@@ -151,10 +151,12 @@ import {
   sourceSellableMax,
   toInventorySourcesPayload,
   inventorySourcesMatch,
+  quoteCartMatchesSaved,
   cartPendingSupplyTotal,
   liveLineBackorderedQuantity,
 } from "@/utils/saleCartCoverage";
 import {
+  approvedSpecialDiscount,
   cartLineDiscounts,
   cartListSubtotal,
   lineTotal,
@@ -1251,12 +1253,14 @@ export function SaleBuilder({
     mutationFn: async () => {
       await ensureSaleSynced();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       if (resumeSaleId !== null) {
         showSuccess("Cotización actualizada.");
-        void queryClient.invalidateQueries({
-          queryKey: ["resume-sale-draft", resumeSaleId],
-        });
+        await queryClient
+          .invalidateQueries({
+            queryKey: ["resume-sale-draft", resumeSaleId],
+          })
+          .catch(() => undefined);
         void queryClient.invalidateQueries({ queryKey: ["sale-drafts"] });
       } else {
         showSuccess(
@@ -2323,11 +2327,15 @@ export function SaleBuilder({
     resumeSaleData?.discountRequest?.status === "APPROVED"
       ? resumeSaleData.discountRequest
       : null;
-  const specialDiscountAmount = approvedDiscountRequest
-    ? (approvedDiscountRequest.approvedDiscountAmount ??
-      (subtotalOriginal - totalDiscounts) *
-      ((approvedDiscountRequest.approvedDiscountPct ?? 0) / 100))
-    : 0;
+  const specialDiscount = approvedDiscountRequest
+    ? approvedSpecialDiscount({
+        lines: cart,
+        approvedDiscountPct: approvedDiscountRequest.approvedDiscountPct,
+        approvedDiscountAmount: approvedDiscountRequest.approvedDiscountAmount,
+        items: approvedDiscountRequest.items,
+      })
+    : { total: 0, bySaleItemId: {} as Record<number, number> };
+  const specialDiscountAmount = specialDiscount.total;
   const merchandiseNet = merchandiseTotal(cart, specialDiscountAmount);
   const shippingAmount =
     deliveryType === "delivery" && shippingQuote?.coverage === "IN_ZONE"
@@ -3415,7 +3423,10 @@ export function SaleBuilder({
                             {formatCurrency(item.originalPrice)}
                           </Typography>
                         </Box>
-                        {item.discountAmount > 0 && (
+                        {item.discountAmount +
+                          (specialDiscount.bySaleItemId[item.saleItemId ?? -1] ??
+                            0) >
+                          0 && (
                           <Box textAlign="right">
                             <Typography
                               variant="caption"
@@ -3428,7 +3439,13 @@ export function SaleBuilder({
                               fontWeight={600}
                               color="error.main"
                             >
-                              -{formatCurrency(item.discountAmount)}
+                              -
+                              {formatCurrency(
+                                item.discountAmount +
+                                  (specialDiscount.bySaleItemId[
+                                    item.saleItemId ?? -1
+                                  ] ?? 0),
+                              )}
                             </Typography>
                           </Box>
                         )}
@@ -3437,7 +3454,12 @@ export function SaleBuilder({
                             Total
                           </Typography>
                           <Typography variant="body2" fontWeight={600}>
-                            {formatCurrency(lineTotal(item))}
+                            {formatCurrency(
+                              lineTotal(item) -
+                                (specialDiscount.bySaleItemId[
+                                  item.saleItemId ?? -1
+                                ] ?? 0),
+                            )}
                           </Typography>
                         </Box>
                       </Stack>
@@ -3984,8 +4006,9 @@ export function SaleBuilder({
         canProceed={canProceed}
         showDiscountButton={resumeSaleId !== null}
         discountDisabled={
-          resumeSaleData?.discountRequest != null &&
-          resumeSaleData.discountRequest.status !== "INVALIDATED"
+          resumeSaleData == null ||
+          (resumeSaleData.discountRequest != null &&
+            resumeSaleData.discountRequest.status !== "INVALIDATED")
         }
         operationPending={saleOperationPending}
         savePending={guardarCotizacionMutation.isPending}
@@ -3999,7 +4022,18 @@ export function SaleBuilder({
             guardarCotizacionMutation.mutateAsync(),
           )
         }
-        onDiscount={() => setDiscountRequestModalOpen(true)}
+        onDiscount={() => {
+          if (
+            resumeSaleData != null &&
+            quoteCartMatchesSaved(cart, resumeSaleData.items)
+          ) {
+            setDiscountRequestModalOpen(true);
+            return;
+          }
+          snackbar.showWarning(
+            "Actualiza la cotización para solicitar el descuento con las piezas actuales.",
+          );
+        }}
         onRegisterSale={() =>
           void executeSaleOperation(() => registerSaleMutation.mutateAsync())
         }
@@ -4114,6 +4148,9 @@ export function SaleBuilder({
                       item={item}
                       isLayaway={paymentType === "LAYAWAY"}
                       isCajeroMode={isCajeroMode}
+                      specialDiscountAmount={
+                        specialDiscount.bySaleItemId[item.saleItemId ?? -1] ?? 0
+                      }
                       currentBranchId={currentBranchId}
                       qtyMax={qtyMaxForCartItem(
                         item,
@@ -5023,6 +5060,18 @@ export function SaleBuilder({
               open={discountRequestModalOpen}
               onClose={() => setDiscountRequestModalOpen(false)}
               saleId={resumeSaleId}
+              lines={cart.flatMap((item) =>
+                item.saleItemId == null
+                  ? []
+                  : [
+                      {
+                        saleItemId: item.saleItemId,
+                        name: item.productName,
+                        quantity: item.quantity,
+                        total: lineTotal(item),
+                      },
+                    ],
+              )}
               existingRequest={
                 resumeSaleData?.discountRequest?.status === "INVALIDATED"
                   ? null

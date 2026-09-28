@@ -179,7 +179,7 @@ export function ApproveDiscountRequestModal({
         <Stack spacing={3}>
           <Stack spacing={0.5}>
             <Typography variant="h5" fontWeight={600}>Aprobar descuento especial</Typography>
-            <Typography variant="body2" color="text.secondary">Selecciona el descuento a aplicar para esta venta.</Typography>
+            <Typography variant="body2" color="text.secondary">El porcentaje o el monto se calculan sobre las piezas seleccionadas.</Typography>
           </Stack>
 
           <ToggleButtonGroup
@@ -244,7 +244,7 @@ export function ApproveDiscountRequestModal({
               <Grid size={{ xs: "grow" }}>
                 <Typography variant="body2" fontWeight={600}>Monto de descuento:</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Máximo {formatCurrency(maxAmount)} ({MAX_SPECIAL_DISCOUNT_PCT}% del total)
+                  Máximo {formatCurrency(maxAmount)} ({MAX_SPECIAL_DISCOUNT_PCT}% de las piezas)
                 </Typography>
               </Grid>
               <Grid size={{ xs: 4 }}>

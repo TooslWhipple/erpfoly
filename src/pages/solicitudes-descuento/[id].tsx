@@ -248,7 +248,7 @@ export default function DiscountRequestDetailPage() {
       <ApproveDiscountRequestModal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
-        saleTotal={detail.totalBeforeSpecialDiscount}
+        saleTotal={detail.discountBaseAmount}
         suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />

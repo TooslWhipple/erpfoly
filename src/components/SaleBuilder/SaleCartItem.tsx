@@ -85,6 +85,7 @@ export interface SaleCartItemProps {
   currentBranchId: number | null;
   /** Techo de cantidad: existencia viva de las fuentes elegidas. */
   qtyMax?: number;
+  specialDiscountAmount?: number;
   onRemove: (productId: number) => void;
   onQtyChange: (productId: number, delta: number) => void;
 }
@@ -95,6 +96,7 @@ export function SaleCartItemRow({
   isCajeroMode,
   currentBranchId,
   qtyMax,
+  specialDiscountAmount = 0,
   onRemove,
   onQtyChange,
 }: SaleCartItemProps) {
@@ -221,7 +223,7 @@ export function SaleCartItemRow({
                 Descuento
               </Typography>
               <Typography variant="body2" fontWeight={500} color="error.main">
-                -{formatCurrency(item.discountAmount)}
+                -{formatCurrency(item.discountAmount + specialDiscountAmount)}
               </Typography>
             </PriceField>
             <PriceField>
@@ -229,7 +231,7 @@ export function SaleCartItemRow({
                 Total
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {formatCurrency(lineTotal(item))}
+                {formatCurrency(lineTotal(item) - specialDiscountAmount)}
               </Typography>
             </PriceField>
           </PriceSummaryRow>

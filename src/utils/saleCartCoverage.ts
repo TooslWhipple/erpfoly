@@ -41,6 +41,26 @@ export function inventorySourcesMatch(
   return inventorySourcesKey(a) === inventorySourcesKey(b);
 }
 
+/**
+ * A special-discount request binds to the saved quote. The local cart can
+ * move ahead of that snapshot (qty, new line, removed line) until the seller
+ * updates the quote.
+ */
+export function quoteCartMatchesSaved(
+  cart: Array<{ saleItemId?: number; quantity: number }>,
+  savedItems: Array<{ id: number; quantity: number }>,
+): boolean {
+  if (cart.length !== savedItems.length) return false;
+  const savedById = new Map(savedItems.map((item) => [item.id, item]));
+  const seen = new Set<number>();
+  return cart.every((item) => {
+    if (item.saleItemId == null || seen.has(item.saleItemId)) return false;
+    seen.add(item.saleItemId);
+    const saved = savedById.get(item.saleItemId);
+    return saved != null && item.quantity === saved.quantity;
+  });
+}
+
 /** Cart +/- only changes line qty; picked sources must be resized to match. */
 export function reallocInventorySources(
   sources: InventorySource[],

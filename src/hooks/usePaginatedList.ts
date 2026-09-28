@@ -16,6 +16,7 @@ export interface PaginatedListPayload<T> {
     limit: number;
     totalPages: number;
     scopeTotal?: number;
+    totalDebtAmount?: number;
 }
 
 export interface PaginatedListResult<T> {
@@ -34,6 +35,7 @@ export interface PaginatedListResult<T> {
     error: Error | null;
     refetch: () => void;
     scopeTotal: number;
+    totalDebtAmount: number;
 }
 
 export interface UsePaginatedListOptions<T> {
@@ -116,5 +118,6 @@ export function usePaginatedList<T>({
         error: error ?? null,
         refetch,
         scopeTotal: data?.scopeTotal ?? data?.total ?? 0,
+        totalDebtAmount: data?.totalDebtAmount ?? 0,
     };
 }

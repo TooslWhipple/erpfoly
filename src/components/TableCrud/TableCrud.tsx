@@ -122,6 +122,12 @@ interface TableCrudProps<T> {
   selectable?: boolean;
   selectedRowKeys?: Set<string | number>;
   onSelectedRowKeysChange?: (keys: Set<string | number>) => void;
+  /** When set, the header checkbox selects the full filtered result, not only the visible page. */
+  headerSelection?: {
+    checked: boolean;
+    indeterminate: boolean;
+    onToggle: () => void;
+  };
   minTableWidth?: number;
   /** Fill the parent flex height; only the table body scrolls. */
   fillHeight?: boolean;
@@ -145,6 +151,7 @@ export function TableCrud<T>({
   selectable = false,
   selectedRowKeys,
   onSelectedRowKeysChange,
+  headerSelection,
   minTableWidth = 650,
   fillHeight = false,
 }: TableCrudProps<T>) {
@@ -434,9 +441,11 @@ export function TableCrud<T>({
           <StyledHeaderCell align="center" style={{ minWidth: 48, width: 48 }}>
             <Checkbox
               size="small"
-              checked={allVisibleSelected}
-              indeterminate={someVisibleSelected}
-              onChange={handleToggleAllVisible}
+              checked={headerSelection ? headerSelection.checked : allVisibleSelected}
+              indeterminate={
+                headerSelection ? headerSelection.indeterminate : someVisibleSelected
+              }
+              onChange={headerSelection ? headerSelection.onToggle : handleToggleAllVisible}
               onClick={(event) => event.stopPropagation()}
             />
           </StyledHeaderCell>

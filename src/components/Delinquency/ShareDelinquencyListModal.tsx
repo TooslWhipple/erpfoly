@@ -19,8 +19,10 @@ import {
   createDelinquencySharedList,
   removeDelinquencySharedListAccess,
 } from "@/services/delinquency-shared-list.service";
-import type { DelinquencySharedListSummary } from "@/types/delinquency-shared-list.types";
-import type { DelinquentCustomer } from "@/types/delinquency.types";
+import type {
+  CreateDelinquencySharedListPayload,
+  DelinquencySharedListSummary,
+} from "@/types/delinquency-shared-list.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const MAX_FIELD_LENGTH = 64;
@@ -28,7 +30,9 @@ const MAX_FIELD_LENGTH = 64;
 export interface ShareDelinquencyListModalProps {
   open: boolean;
   onClose: () => void;
-  selectedCustomers?: DelinquentCustomer[];
+  clientCount?: number;
+  totalDebt?: number;
+  selectionPayload?: Pick<CreateDelinquencySharedListPayload, "clientIds" | "selection">;
   existingList?: DelinquencySharedListSummary | null;
   onSuccess?: () => void;
 }
@@ -40,7 +44,9 @@ function createEmptyEmailField(): string {
 export function ShareDelinquencyListModal({
   open,
   onClose,
-  selectedCustomers = [],
+  clientCount: selectedClientCount = 0,
+  totalDebt: selectedTotalDebt = 0,
+  selectionPayload,
   existingList = null,
   onSuccess,
 }: ShareDelinquencyListModalProps) {
@@ -48,12 +54,8 @@ export function ShareDelinquencyListModal({
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
   const isExisting = existingList != null;
-  const clientCount = isExisting
-    ? existingList.clientCount
-    : selectedCustomers.length;
-  const totalDebt = isExisting
-    ? existingList.totalDebtAmount
-    : selectedCustomers.reduce((sum, customer) => sum + customer.debtAmount, 0);
+  const clientCount = isExisting ? existingList.clientCount : selectedClientCount;
+  const totalDebt = isExisting ? existingList.totalDebtAmount : selectedTotalDebt;
 
   const [clientName, setClientName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -103,7 +105,7 @@ export function ShareDelinquencyListModal({
 
   const canShare = isExisting
     ? pendingEmails.length > 0
-    : selectedCustomers.length > 0 &&
+    : selectedClientCount > 0 &&
       clientName.trim().length > 0 &&
       isValidEmail(contactEmail);
 
@@ -187,8 +189,8 @@ export function ShareDelinquencyListModal({
       const result = await createDelinquencySharedList({
         clientName: clientName.trim(),
         contactEmail: contactEmail.trim(),
-        clientIds: selectedCustomers.map((customer) => customer.id),
         emails: pendingEmails,
+        ...selectionPayload,
       });
 
       if (result.error) {
@@ -220,7 +222,7 @@ export function ShareDelinquencyListModal({
     onClose,
     onSuccess,
     pendingEmails,
-    selectedCustomers,
+    selectionPayload,
     showError,
     showSuccess,
   ]);

@@ -1,5 +1,6 @@
-import { useRouter } from "next/router";
 import { MovementsTable } from "./MovementsTable";
+import { PaymentRowOptionsMenu } from "./PaymentRowOptionsMenu";
+import { useReprintClientPaymentReceipt } from "@/hooks/clientes/useReprintClientPaymentReceipt";
 import type { ClientMovementItem } from "@/services/client-movements.service";
 
 export interface PaymentsTabProps {
@@ -9,19 +10,25 @@ export interface PaymentsTabProps {
 }
 
 export function PaymentsTab({ clientId, payments, loading }: PaymentsTabProps) {
-  const router = useRouter();
+  const { canPrintReceipt, printingPaymentId, reprintReceipt } =
+    useReprintClientPaymentReceipt(clientId);
 
   return (
     <MovementsTable
       movements={payments}
       loading={loading}
-      showReceiptColumn
-      onRowClick={(payment) => {
-        if (!payment.receipt_id) return;
-        void router.push(
-          `/clientes/${clientId}/abonos/comprobantes/${payment.receipt_id}`,
-        );
-      }}
+      renderRowOptions={
+        canPrintReceipt
+          ? (payment) => (
+              <PaymentRowOptionsMenu
+                payment={payment}
+                canPrintReceipt={canPrintReceipt}
+                isPrinting={printingPaymentId === payment.id}
+                onPrintReceipt={(row) => void reprintReceipt(row)}
+              />
+            )
+          : undefined
+      }
     />
   );
 }

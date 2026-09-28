@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { DataTable } from "@/components";
 import type { DataTableColumn } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
@@ -42,6 +43,7 @@ export interface MovementsTableProps {
   movements: ClientMovementItem[];
   loading?: boolean;
   showReceiptColumn?: boolean;
+  renderRowOptions?: (movement: ClientMovementItem) => ReactNode;
   onRowClick?: (movement: ClientMovementItem) => void;
 }
 
@@ -49,15 +51,28 @@ export function MovementsTable({
   movements,
   loading,
   showReceiptColumn = false,
+  renderRowOptions,
   onRowClick,
 }: MovementsTableProps) {
-  const columns = showReceiptColumn
+  let columns = showReceiptColumn
     ? [
         ...BASE_COLUMNS.slice(0, 4),
         RECEIPT_COLUMN,
         ...BASE_COLUMNS.slice(4),
       ]
-    : BASE_COLUMNS;
+    : [...BASE_COLUMNS];
+
+  if (renderRowOptions) {
+    columns = [
+      ...columns,
+      {
+        id: "_options",
+        label: "Opciones",
+        align: "right",
+        format: (_value, row) => renderRowOptions(row),
+      },
+    ];
+  }
 
   return (
     <DataTable<ClientMovementItem>

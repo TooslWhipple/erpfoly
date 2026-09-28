@@ -10,6 +10,8 @@ export { PurchasesTab } from "./PurchasesTab";
 export type { PurchasesTabProps } from "./PurchasesTab";
 export { PaymentsTab } from "./PaymentsTab";
 export type { PaymentsTabProps } from "./PaymentsTab";
+export { PaymentRowOptionsMenu } from "./PaymentRowOptionsMenu";
+export type { PaymentRowOptionsMenuProps } from "./PaymentRowOptionsMenu";
 export { InformationTab } from "./InformationTab";
 export { MovementsTable } from "./MovementsTable";
 export type { MovementsTableProps } from "./MovementsTable";

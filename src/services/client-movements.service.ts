@@ -20,6 +20,7 @@ export interface ClientMovementItem {
   installment_number?: number | null;
   receipt_id?: number | null;
   receipt_folio?: string | null;
+  receipt_payment_ids?: number[];
 }
 
 export type ClientMovementsResponse = PaginatedRowsResponse<ClientMovementItem>;

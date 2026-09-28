@@ -14,7 +14,6 @@ import {
   useLabelPrinter,
   PrinterNotConfiguredError,
 } from "@/hooks/printing/useLabelPrinter";
-import { getApiErrorMessage } from "@/lib/axios";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export default function CajasCortesPage() {
@@ -67,7 +66,11 @@ export default function CajasCortesPage() {
           setPrinterSetupOpen(true);
           return;
         }
-        showError(getApiErrorMessage(err, "No se pudo imprimir el ticket"));
+        showError(
+          err instanceof Error
+            ? err.message
+            : "No se pudo imprimir el ticket",
+        );
       } finally {
         setPrintingClosingId(null);
       }

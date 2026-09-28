@@ -21,6 +21,7 @@ export default function ClientPaymentReceiptPage() {
   const router = useRouter();
   const showError = useSnackbarStore((s) => s.showError);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const clientId = typeof router.query.id === "string" ? Number(router.query.id) : null;
   const receiptId =
     typeof router.query.receiptId === "string" ? Number(router.query.receiptId) : null;
@@ -76,14 +77,14 @@ export default function ClientPaymentReceiptPage() {
   };
 
   const handlePrint = async () => {
-    setIsDownloading(true);
+    setIsPrinting(true);
     try {
       const { blob } = await downloadPdf();
       await printPdfBlob(blob);
     } catch (error) {
       showError(getApiErrorMessage(error) || "No se pudo imprimir el comprobante");
     } finally {
-      setIsDownloading(false);
+      setIsPrinting(false);
     }
   };
 
@@ -159,6 +160,7 @@ export default function ClientPaymentReceiptPage() {
             onDownloadReceipt={() => void handleDownload()}
             onPrintReceipt={() => void handlePrint()}
             isDownloadingReceipt={isDownloading}
+            isPrintingReceipt={isPrinting}
           />
         </ReceiptStage>
       </Stack>

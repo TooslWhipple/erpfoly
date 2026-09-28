@@ -36,6 +36,7 @@ export function CashRegisterDashboard({
     onCut,
     onWithdrawal,
     onViewAllHistory,
+    onViewClosings,
     movements = [],
     mode,
     onModeChange,
@@ -100,31 +101,51 @@ export function CashRegisterDashboard({
                     )}
                 </DashboardPanel>
 
-                {(canCut || canWithdraw) && (
+                {(canCut || canWithdraw || onViewClosings) && (
                     <DashboardPanel>
                         <Typography variant="subtitle1" fontWeight={600}>
                             Acciones administrativas
                         </Typography>
-                        <AdminActionsRow>
-                            {canWithdraw && (
-                                <Button
-                                    variant="option"
-                                    color="inherit"
-                                    onClick={onWithdrawal}
-                                >
-                                    Realizar retiro
-                                </Button>
-                            )}
-                            {canCut && (
-                                <Button
-                                    variant="option"
-                                    color="inherit"
-                                    onClick={onCut}
-                                >
-                                    Realizar corte
-                                </Button>
-                            )}
-                        </AdminActionsRow>
+                        {(canCut || canWithdraw) && (
+                            <AdminActionsRow>
+                                {canWithdraw && (
+                                    <Button
+                                        variant="option"
+                                        color="inherit"
+                                        onClick={onWithdrawal}
+                                    >
+                                        Realizar retiro
+                                    </Button>
+                                )}
+                                {canCut && (
+                                    <Button
+                                        variant="option"
+                                        color="inherit"
+                                        onClick={onCut}
+                                    >
+                                        Realizar corte
+                                    </Button>
+                                )}
+                            </AdminActionsRow>
+                        )}
+                        {onViewClosings && (
+                            <Typography
+                                component="button"
+                                variant="body2"
+                                color="primary"
+                                onClick={onViewClosings}
+                                sx={{
+                                    alignSelf: "flex-start",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    p: 0,
+                                    textDecoration: "underline",
+                                }}
+                            >
+                                Ver historial de cortes
+                            </Typography>
+                        )}
                     </DashboardPanel>
                 )}
 
@@ -139,7 +160,7 @@ export function CashRegisterDashboard({
                         <Typography variant="subtitle1" fontWeight={600} noWrap>
                             Historial de actividad (Hoy)
                         </Typography>
-                        <ViewAllLink onClick={onViewAllHistory} sx={{ flexShrink: 0 }}>
+                        <ViewAllLink onClick={onViewAllHistory}>
                             Ver todo
                         </ViewAllLink>
                     </Stack>

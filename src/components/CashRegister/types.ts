@@ -87,6 +87,7 @@ export interface CashRegisterDashboardProps {
   onCut: () => void;
   onWithdrawal: () => void;
   onViewAllHistory: () => void;
+  onViewClosings?: () => void;
   movements?: CashMovement[];
   mode: CashSearchMode;
   onModeChange: (mode: CashSearchMode) => void;

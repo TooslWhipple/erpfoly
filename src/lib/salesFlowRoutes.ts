@@ -8,6 +8,7 @@ export function isSalesFlowRoute(pathname: string): boolean {
     pathname === "/cajas" ||
     pathname === "/cajas/busqueda" ||
     pathname === "/cajas/historial" ||
+    pathname === "/cajas/cortes" ||
     pathname === "/solicitudes-descuento/[id]"
   );
 }

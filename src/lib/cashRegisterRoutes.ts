@@ -1,6 +1,7 @@
 import type { CashSearchMode } from "@/components/CashRegister";
 
 export const CASH_REGISTER_HISTORY_PATH = "/cajas/historial";
+export const CASH_REGISTER_CLOSINGS_PATH = "/cajas/cortes";
 
 export const CASH_REGISTER_SEARCH_QUERY_KEY = "q";
 export const CASH_REGISTER_MODE_QUERY_KEY = "mode";

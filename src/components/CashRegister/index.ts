@@ -11,6 +11,8 @@ export { CashRegisterSearchBar } from "./CashRegisterSearchBar";
 export { ClientSearchResults } from "./ClientSearchResults";
 export { CutModal } from "./CutModal";
 export { CashWithdrawalModal } from "./CashWithdrawalModal";
+export { CashRegisterClosingsTable } from "./CashRegisterClosingsTable";
+export type { CashRegisterClosingsTableProps } from "./CashRegisterClosingsTable";
 export type {
   CashRegisterState,
   OpenCashRegisterFormProps,

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Stack, Typography } from "@mui/material";
 import { StatusChip } from "@/components";
@@ -13,6 +13,7 @@ import {
   buildCashRegisterSearchUrl,
   buildCashRegisterSaleUrl,
   CASH_REGISTER_HISTORY_PATH,
+  CASH_REGISTER_CLOSINGS_PATH,
 } from "@/lib/cashRegisterRoutes";
 import {
   CashMovementType,
@@ -27,6 +28,11 @@ import {
   type Denomination,
   type CashSearchMode,
 } from "@/components/CashRegister";
+import { PrinterSetupDialog } from "@/components/printing";
+import {
+  useLabelPrinter,
+  PrinterNotConfiguredError,
+} from "@/hooks/printing/useLabelPrinter";
 import {
   type CashRegisterStatus,
   CashRegisterIconContainer,
@@ -42,6 +48,8 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useCashierSales } from "@/hooks/useCashierSales";
 import type { SaleListItem } from "@/types/ventas.types";
 import type { TabOption } from "@/components/TabFilters";
+import { useQueryClient } from "@tanstack/react-query";
+import { CASH_REGISTER_CLOSINGS_KEY } from "@/lib/cashRegisterQueries";
 
 export default function Cajas() {
   const router = useRouter();
@@ -50,6 +58,7 @@ export default function Cajas() {
   const canUpdateCashRegister = hasPermission(CASH_REGISTERS_UPDATE);
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const queryClient = useQueryClient();
   const {
     cashRegister,
     setCashRegister,
@@ -59,6 +68,11 @@ export default function Cajas() {
   } = useCashRegisterSession({
     loadMovementsOnOpen: true,
   });
+  const {
+    printerProfile,
+    acknowledgePrinterSetup,
+    printFinalCutTicket,
+  } = useLabelPrinter();
   const [isOpening, setIsOpening] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isCutting, setIsCutting] = useState(false);
@@ -66,6 +80,10 @@ export default function Cajas() {
   const [pendingSearch, setPendingSearch] = useState("");
   const [searchMode, setSearchMode] = useState<CashSearchMode>("ventas");
   const [cutModalOpen, setCutModalOpen] = useState(false);
+  const [pendingPrintClosingId, setPendingPrintClosingId] = useState<
+    number | null
+  >(null);
+  const [printerSetupOpen, setPrinterSetupOpen] = useState(false);
   const isRegisterOpen = cashRegister?.status === "open";
   const {
     rows: pendingSales,
@@ -184,6 +202,37 @@ export default function Cajas() {
   const handleCut = () => {
     setCutModalOpen(true);
   };
+
+  const printClosingTicket = useCallback(
+    async (closingId: number) => {
+      try {
+        await printFinalCutTicket(closingId);
+      } catch (err) {
+        if (err instanceof PrinterNotConfiguredError) {
+          setPendingPrintClosingId(closingId);
+          setPrinterSetupOpen(true);
+          return;
+        }
+        showError(
+          err instanceof Error
+            ? err.message
+            : "No se pudo imprimir el ticket de corte",
+        );
+      }
+    },
+    [printFinalCutTicket, showError],
+  );
+
+  const handlePrinterSetupConfirm = () => {
+    acknowledgePrinterSetup();
+    setPrinterSetupOpen(false);
+    if (pendingPrintClosingId != null) {
+      const id = pendingPrintClosingId;
+      setPendingPrintClosingId(null);
+      void printClosingTicket(id);
+    }
+  };
+
   const handleCutConfirm = async (
     cutType: CutType,
     withdrawalData?: Record<number, number>,
@@ -208,8 +257,11 @@ export default function Cajas() {
         });
         showSuccess("Corte parcial registrado");
         await loadAssignedCashRegister();
+        void queryClient.invalidateQueries({
+          queryKey: CASH_REGISTER_CLOSINGS_KEY,
+        });
       } else {
-        await createFinalCut({
+        const closing = await createFinalCut({
           total_counted: cashRegister.currentCash,
           cash: cutModalData.cash,
           credit_card: cutModalData.creditCard,
@@ -229,6 +281,10 @@ export default function Cajas() {
         setExchangeRate("17.6");
         showSuccess("Corte final realizado, caja cerrada");
         await loadAssignedCashRegister();
+        void queryClient.invalidateQueries({
+          queryKey: CASH_REGISTER_CLOSINGS_KEY,
+        });
+        void printClosingTicket(closing.id);
       }
       setCutModalOpen(false);
     } catch (err) {
@@ -318,6 +374,9 @@ export default function Cajas() {
   const handleViewAllHistory = () => {
     router.push(CASH_REGISTER_HISTORY_PATH);
   };
+  const handleViewClosings = () => {
+    router.push(CASH_REGISTER_CLOSINGS_PATH);
+  };
   const handleSearchClient = () => {
     const query = searchQuery.trim();
     if (cashRegister?.status === "closed") {
@@ -406,8 +465,7 @@ export default function Cajas() {
             alignItems="center"
             spacing={3}
             px={2}
-            py={3}
-          >
+            py={3}>
             {identity}
             <OpenCashRegisterForm
               initialFund={initialFund}
@@ -418,6 +476,19 @@ export default function Cajas() {
               onExchangeRateChange={setExchangeRate}
               onOpen={handleOpenCashRegister}
             />
+            <Typography
+              component="button"
+              variant="body2"
+              color="primary"
+              onClick={handleViewClosings}
+              sx={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "underline"
+              }}>
+              Ver historial de cortes
+            </Typography>
           </Stack>
         </PageShell>
       ) : (
@@ -454,6 +525,7 @@ export default function Cajas() {
               onCut={handleCut}
               onWithdrawal={handleWithdrawal}
               onViewAllHistory={handleViewAllHistory}
+              onViewClosings={handleViewClosings}
               movements={movements}
               mode={searchMode}
               onModeChange={setSearchMode}
@@ -494,6 +566,16 @@ export default function Cajas() {
         currentCash={cashRegister.currentCash}
         banks={banks}
         isLoading={isWithdrawing}
+      />
+
+      <PrinterSetupDialog
+        open={printerSetupOpen}
+        onClose={() => {
+          setPrinterSetupOpen(false);
+          setPendingPrintClosingId(null);
+        }}
+        onConfirm={handlePrinterSetupConfirm}
+        printerProfile={printerProfile}
       />
     </>
   );

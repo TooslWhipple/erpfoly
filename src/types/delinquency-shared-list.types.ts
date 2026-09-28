@@ -106,11 +106,19 @@ export interface ApplyDelinquencyNegotiationPayload {
   negotiatedInterestAmount: number;
 }
 
+export interface DelinquencyClientSelectionPayload {
+  selectAll: true;
+  period?: DelinquencyPeriod;
+  search?: string;
+  excludedClientIds: number[];
+}
+
 export interface CreateDelinquencySharedListPayload {
   clientName: string;
   contactEmail: string;
-  clientIds: number[];
   emails: string[];
+  clientIds?: number[];
+  selection?: DelinquencyClientSelectionPayload;
 }
 
 export interface GetDelinquencySharedListsParams {

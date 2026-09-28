@@ -186,15 +186,13 @@ export const StyledMenuItem = styled(MenuItem)({
 });
 
 export const StyledTablePagination = styled(TablePagination)(({ theme }) => ({
-  borderTop: `1px solid ${theme.palette.app.border}`,
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: "8px",
   overflow: "hidden",
   display: "flex",
   justifyContent: "flex-end",
   flex: "0 0 auto",
   flexShrink: 0,
-  position: "sticky",
-  bottom: 0,
-  zIndex: 2,
   backgroundColor: theme.palette.app.background.sidebar,
   "& .MuiTablePagination-toolbar": {
     minHeight: 52,

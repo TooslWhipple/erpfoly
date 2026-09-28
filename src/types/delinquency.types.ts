@@ -31,6 +31,15 @@ export interface DelinquencySummary {
   hasComparison: boolean;
 }
 
+export interface DelinquentCustomersResponse {
+  rows: DelinquentCustomer[];
+  total: number;
+  totalDebtAmount: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface GetDelinquentCustomersParams {
   page: number;
   limit: number;

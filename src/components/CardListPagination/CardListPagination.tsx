@@ -35,24 +35,18 @@ export function CardListPagination({
         justifyContent="space-between"
         sx={{ borderTop: 1, borderColor: "divider", pt: 1 }}
       >
-        <Typography variant="body2" color="text.secondary">
-          {from}–{to} de {total}
-        </Typography>
+        <Typography variant="body2" color="text.secondary">{from}–{to} de {total}</Typography>
         <Stack direction="row" spacing={0.5}>
           <IconButton
             size="small"
-            aria-label="Página anterior"
             disabled={disabled || safePage <= 0}
-            onClick={() => onPageChange(safePage - 1)}
-          >
+            onClick={() => onPageChange(safePage - 1)}>
             <ChevronLeft size={18} />
           </IconButton>
           <IconButton
             size="small"
-            aria-label="Página siguiente"
             disabled={disabled || safePage >= lastPage}
-            onClick={() => onPageChange(safePage + 1)}
-          >
+            onClick={() => onPageChange(safePage + 1)}>
             <ChevronRight size={18} />
           </IconButton>
         </Stack>

@@ -68,6 +68,7 @@ export default function DelinquencySharedListDetailPage() {
         id: "fullName",
         label: "CLIENTE",
         size: "xl",
+        truncate: true,
       },
       {
         id: "phone",
@@ -84,7 +85,7 @@ export default function DelinquencySharedListDetailPage() {
       {
         id: "lastPaymentDate",
         label: "ÚLTIMO PAGO",
-        size: "md",
+        size: "lg",
         format: (value) => (value ? formatDate(value, DATE_FORMAT) : "—"),
       },
       {

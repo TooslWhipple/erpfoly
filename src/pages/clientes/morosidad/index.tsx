@@ -11,6 +11,7 @@ import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useServerSelection } from "@/hooks/useServerSelection";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { CUSTOMER_DELINQUENCY_CREATE } from "@/lib/permissions";
 import {
@@ -28,6 +29,8 @@ import { formatDate, formatDateOnly } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const CUSTOMER_ROWS_PER_PAGE = 50;
+const CUSTOMER_ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 const SHARED_LISTS_TAB = "shared_lists";
 const DATE_FORMAT = "D [de] MMMM, YYYY";
 
@@ -74,14 +77,13 @@ export default function ClientesMorosidad() {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
   const [activeTab, setActiveTab] = useState("all");
-  const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [existingListForModal, setExistingListForModal] =
     useState<DelinquencySharedListSummary | null>(null);
 
   const isSharedLists = activeTab === SHARED_LISTS_TAB;
 
-  const listExtraParams = useMemo(() => {
+  const listExtraParams = useMemo((): { period?: DelinquencyPeriod } => {
     if (activeTab === "all" || isSharedLists) {
       return {};
     }
@@ -95,43 +97,21 @@ export default function ClientesMorosidad() {
 
   const {
     data: customers,
+    total: customersTotal,
+    totalDebtAmount: customersDebtAmount,
+    page: customersPage,
+    rowsPerPage: customersRowsPerPage,
+    setPage: setCustomersPage,
+    setRowsPerPage: setCustomersRowsPerPage,
+    setSearch: setCustomersSearch,
     isLoading: listLoading,
-  } = useQuery({
-    queryKey: [
-      "clients",
-      "delinquency",
-      "list",
-      "all",
-      listExtraParams,
-      debouncedSearch,
-    ],
+  } = usePaginatedList<DelinquentCustomer>({
+    queryKey: ["clients", "delinquency", "list"],
+    queryFn: getDelinquentCustomers,
+    initialPage: 0,
+    initialRowsPerPage: CUSTOMER_ROWS_PER_PAGE,
+    extraParams: listExtraParams,
     enabled: !isSharedLists,
-    queryFn: async () => {
-      const countResult = await getDelinquentCustomers({
-        page: 1,
-        limit: 1,
-        search: debouncedSearch || undefined,
-        ...listExtraParams,
-      });
-      if (countResult.error) {
-        throw new Error(countResult.error.message);
-      }
-      const total = countResult.data?.total ?? 0;
-      if (total === 0) {
-        return [] as DelinquentCustomer[];
-      }
-
-      const fullResult = await getDelinquentCustomers({
-        page: 1,
-        limit: total,
-        search: debouncedSearch || undefined,
-        ...listExtraParams,
-      });
-      if (fullResult.error) {
-        throw new Error(fullResult.error.message);
-      }
-      return fullResult.data?.rows ?? [];
-    },
   });
 
   const {
@@ -155,8 +135,28 @@ export default function ClientesMorosidad() {
   useEffect(() => {
     if (isSharedLists) {
       setSharedListsSearch(debouncedSearch);
+      return;
     }
-  }, [debouncedSearch, isSharedLists, setSharedListsSearch]);
+    setCustomersSearch(debouncedSearch);
+  }, [debouncedSearch, isSharedLists, setCustomersSearch, setSharedListsSearch]);
+
+  const selection = useServerSelection({
+    resetKey: `${activeTab}|${debouncedSearch}`,
+    total: customersTotal,
+    totalDebtAmount: customersDebtAmount,
+    period: listExtraParams.period,
+    search: debouncedSearch,
+  });
+
+  const selectedRowKeys = useMemo(() => {
+    const keys = new Set<number>();
+    for (const customer of customers) {
+      if (selection.isRowSelected(customer.id)) {
+        keys.add(customer.id);
+      }
+    }
+    return keys;
+  }, [customers, selection]);
 
   const { data: summary } = useQuery({
     queryKey: ["clients", "delinquency", "summary"],
@@ -175,12 +175,13 @@ export default function ClientesMorosidad() {
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
-      setSelectedClientIds(new Set());
       if (value === SHARED_LISTS_TAB) {
         setSharedListsPage(0);
+        return;
       }
+      setCustomersPage(0);
     },
-    [setSharedListsPage],
+    [setCustomersPage, setSharedListsPage],
   );
 
   const handleSearchChange = useCallback(
@@ -197,9 +198,16 @@ export default function ClientesMorosidad() {
     [router],
   );
 
-  const selectedCustomers = useMemo(
-    () => (customers ?? []).filter((customer) => selectedClientIds.has(customer.id)),
-    [customers, selectedClientIds],
+  const handleCustomerSelectionChange = useCallback(
+    (keys: Set<string | number>) => {
+      for (const customer of customers) {
+        const selected = keys.has(customer.id);
+        if (selected !== selection.isRowSelected(customer.id)) {
+          selection.toggleRow(customer.id, customer.debtAmount);
+        }
+      }
+    },
+    [customers, selection],
   );
 
   const handleOpenShareModal = useCallback(() => {
@@ -237,31 +245,31 @@ export default function ClientesMorosidad() {
 
   const statsCards: StatsCardData[] = summary
     ? [
-        {
-          id: "one_day",
-          label: "1 día",
-          value: summary.oneDay.count,
-          comparison: toComparison(summary.oneDay, summary.hasComparison),
-        },
-        {
-          id: "one_week",
-          label: "1 semana",
-          value: summary.oneWeek.count,
-          comparison: toComparison(summary.oneWeek, summary.hasComparison),
-        },
-        {
-          id: "one_month",
-          label: "1 mes",
-          value: summary.oneMonth.count,
-          comparison: toComparison(summary.oneMonth, summary.hasComparison),
-        },
-        {
-          id: "two_months",
-          label: "2 meses",
-          value: summary.twoMonths.count,
-          comparison: toComparison(summary.twoMonths, summary.hasComparison),
-        },
-      ]
+      {
+        id: "one_day",
+        label: "1 día",
+        value: summary.oneDay.count,
+        comparison: toComparison(summary.oneDay, summary.hasComparison),
+      },
+      {
+        id: "one_week",
+        label: "1 semana",
+        value: summary.oneWeek.count,
+        comparison: toComparison(summary.oneWeek, summary.hasComparison),
+      },
+      {
+        id: "one_month",
+        label: "1 mes",
+        value: summary.oneMonth.count,
+        comparison: toComparison(summary.oneMonth, summary.hasComparison),
+      },
+      {
+        id: "two_months",
+        label: "2 meses",
+        value: summary.twoMonths.count,
+        comparison: toComparison(summary.twoMonths, summary.hasComparison),
+      },
+    ]
     : [];
 
   const customerColumns: Column<DelinquentCustomer>[] = useMemo(
@@ -270,6 +278,7 @@ export default function ClientesMorosidad() {
         id: "fullName",
         label: "CLIENTE",
         size: "xl",
+        truncate: true,
         format: (value, row) => (
           <Link
             component="button"
@@ -286,8 +295,7 @@ export default function ClientesMorosidad() {
               "&:hover": {
                 color: "primary.main",
               },
-            }}
-          >
+            }}>
             {String(value)}
           </Link>
         ),
@@ -301,7 +309,7 @@ export default function ClientesMorosidad() {
       {
         id: "lastPaymentDate",
         label: "ÚLTIMO PAGO",
-        size: "md",
+        size: "lg",
         format: (value) =>
           value ? formatDate(value, DATE_FORMAT) : "—",
       },
@@ -422,50 +430,59 @@ export default function ClientesMorosidad() {
         actions={
           !isSharedLists
             ? [
-                {
-                  label: "Compartir",
-                  onClick: handleOpenShareModal,
-                  disabled: selectedClientIds.size === 0,
-                  permission: CUSTOMER_DELINQUENCY_CREATE,
-                },
-              ]
+              {
+                label: "Compartir",
+                onClick: handleOpenShareModal,
+                disabled: selection.selectedCount === 0,
+                permission: CUSTOMER_DELINQUENCY_CREATE,
+              },
+            ]
             : undefined
         }
       />
 
-      {isSharedLists ? (
-        <TableCrud
-          columns={sharedListColumns}
-          rows={sharedLists}
-          loading={sharedListsLoading}
-          rowKey="id"
-          page={sharedListsPage}
-          rowsPerPage={sharedListsRowsPerPage}
-          totalRows={sharedListsTotal}
-          onPageChange={setSharedListsPage}
-          onRowsPerPageChange={setSharedListsRowsPerPage}
-          actions={sharedListActions}
-          onRowClick={handleViewSharedListDetail}
-          emptyMessage="No hay listas compartidas"
-        />
-      ) : (
-        <TableCrud
-          columns={customerColumns}
-          rows={customers ?? []}
-          loading={listLoading}
-          rowKey="id"
-          hidePagination
-          selectable
-          selectedRowKeys={selectedClientIds}
-          onSelectedRowKeysChange={(keys) => {
-            setSelectedClientIds(new Set([...keys].map(Number)));
-          }}
-          onRowClick={(row) => {
-            void router.push(`/clientes/${row.id}`);
-          }}
-          emptyMessage="No hay clientes con morosidad"
-        />
-      )}
+      {
+        (isSharedLists) ?
+          <TableCrud
+            columns={sharedListColumns}
+            rows={sharedLists}
+            loading={sharedListsLoading}
+            rowKey="id"
+            page={sharedListsPage}
+            rowsPerPage={sharedListsRowsPerPage}
+            totalRows={sharedListsTotal}
+            onPageChange={setSharedListsPage}
+            onRowsPerPageChange={setSharedListsRowsPerPage}
+            actions={sharedListActions}
+            onRowClick={handleViewSharedListDetail}
+            emptyMessage="No hay listas compartidas"
+          />
+          :
+          <TableCrud
+            columns={customerColumns}
+            rows={customers}
+            loading={listLoading}
+            rowKey="id"
+            page={customersPage}
+            rowsPerPage={customersRowsPerPage}
+            totalRows={customersTotal}
+            onPageChange={setCustomersPage}
+            onRowsPerPageChange={setCustomersRowsPerPage}
+            rowsPerPageOptions={CUSTOMER_ROWS_PER_PAGE_OPTIONS}
+            selectable
+            selectedRowKeys={selectedRowKeys}
+            onSelectedRowKeysChange={handleCustomerSelectionChange}
+            headerSelection={{
+              checked: selection.isAllSelected,
+              indeterminate: selection.isIndeterminate,
+              onToggle: selection.toggleAll,
+            }}
+            onRowClick={(row) => {
+              void router.push(`/clientes/${row.id}`);
+            }}
+            emptyMessage="No hay clientes con morosidad"
+          />
+      }
 
       <ShareDelinquencyListModal
         open={shareModalOpen}
@@ -473,7 +490,9 @@ export default function ClientesMorosidad() {
           setShareModalOpen(false);
           setExistingListForModal(null);
         }}
-        selectedCustomers={selectedCustomers}
+        clientCount={selection.selectedCount}
+        totalDebt={selection.selectedDebt}
+        selectionPayload={selection.payload}
         existingList={existingListForModal}
         onSuccess={handleShareSuccess}
       />

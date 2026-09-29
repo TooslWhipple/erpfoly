@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   Stack,
@@ -24,12 +25,28 @@ import type {
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { ReasonCard, ReasonCheckIcon, FooterActions } from "./styles";
 
+export interface DiscountRequestLineOption {
+  saleItemId: number;
+  name: string;
+  quantity: number;
+  total: number;
+}
+
 export interface DiscountRequestModalProps {
   open: boolean;
   onClose: () => void;
   saleId: number;
+  lines: DiscountRequestLineOption[];
   existingRequest: SaleDiscountRequest | null;
   onSuccess?: () => void;
+}
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+  }).format(value);
 }
 
 interface DiscountReasonOption {
@@ -69,6 +86,7 @@ export function DiscountRequestModal({
   open,
   onClose,
   saleId,
+  lines,
   existingRequest,
   onSuccess,
 }: DiscountRequestModalProps) {
@@ -77,24 +95,37 @@ export function DiscountRequestModal({
   const [selectedReason, setSelectedReason] =
     useState<DiscountRequestReason | null>(null);
   const [otherReasonText, setOtherReasonText] = useState("");
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   const resetForm = useCallback(() => {
     setSelectedReason(null);
     setOtherReasonText("");
+    setQuantities({});
   }, []);
 
   const isOtherSelected = selectedReason === "OTHER";
   const trimmedOtherReason = otherReasonText.trim();
+  const selectedItems = lines.flatMap((line) => {
+    const quantity = quantities[line.saleItemId] ?? 0;
+    return quantity > 0
+      ? [{ saleItemId: line.saleItemId, quantity }]
+      : [];
+  });
   const canSubmit =
+    selectedItems.length > 0 &&
     selectedReason !== null &&
     (!isOtherSelected || trimmedOtherReason.length > 0);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!selectedReason) throw new Error("Selecciona un motivo");
+      if (selectedItems.length === 0) {
+        throw new Error("Selecciona al menos una pieza");
+      }
       const result = await requestSaleDiscount(saleId, {
         reason: selectedReason,
         notes: isOtherSelected ? trimmedOtherReason : undefined,
+        items: selectedItems,
       });
       if (result.error) throw new Error(result.error.message);
       return result.data;
@@ -147,6 +178,71 @@ export function DiscountRequestModal({
             <CloseIcon size={16} />
           </CloseButton>
         </ModalHeader>
+
+        <Typography variant="subtitle2" color="text.secondary">
+          Piezas con descuento
+        </Typography>
+        <Stack spacing={1} sx={{ mt: 1, mb: 2 }}>
+          {lines.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Guarda los artículos de la cotización para elegir las piezas.
+            </Typography>
+          ) : (
+            lines.map((line) => {
+              const selectedQty = quantities[line.saleItemId] ?? 0;
+              const checked = selectedQty > 0;
+              return (
+                <Stack
+                  key={line.saleItemId}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                >
+                  <Checkbox
+                    checked={checked}
+                    onChange={(_, next) => {
+                      setQuantities((current) => ({
+                        ...current,
+                        [line.saleItemId]: next ? 1 : 0,
+                      }));
+                    }}
+                    inputProps={{
+                      "aria-label": `Aplicar descuento a ${line.name}`,
+                    }}
+                  />
+                  <Stack flex={1} minWidth={0}>
+                    <Typography variant="body2" fontWeight={600} noWrap>
+                      {line.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {line.quantity} en la cotización · {formatMoney(line.total)}
+                    </Typography>
+                  </Stack>
+                  {checked && line.quantity > 1 && (
+                    <FormTextField
+                      type="number"
+                      size="small"
+                      value={String(selectedQty)}
+                      onChange={(event) => {
+                        const next = Number(event.target.value);
+                        if (!Number.isInteger(next)) return;
+                        setQuantities((current) => ({
+                          ...current,
+                          [line.saleItemId]: Math.min(
+                            line.quantity,
+                            Math.max(1, next),
+                          ),
+                        }));
+                      }}
+                      inputProps={{ min: 1, max: line.quantity, step: 1 }}
+                      sx={{ width: 88 }}
+                    />
+                  )}
+                </Stack>
+              );
+            })
+          )}
+        </Stack>
 
         <Typography variant="subtitle2" color="text.secondary">
           Selecciona una opción:

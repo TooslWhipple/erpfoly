@@ -57,6 +57,8 @@ export interface DiscountRequestLineItem {
   brand?: string;
   imageUrl?: string;
   quantity: number;
+  /** Full line quantity when `quantity` is only the discounted pieces. */
+  lineQuantity?: number;
   originalPrice: number;
   discountAmount: number;
   /** originalPrice * quantity - discountAmount */
@@ -93,6 +95,8 @@ export interface DiscountRequestDetail {
   subtotal: number;
   shipping: number;
   totalBeforeSpecialDiscount: number;
+  /** Merchandise the percentage or fixed amount is calculated on. */
+  discountBaseAmount: number;
   specialDiscountAmount: number;
   totalAfterSpecialDiscount: number;
   downPaymentPct: number;

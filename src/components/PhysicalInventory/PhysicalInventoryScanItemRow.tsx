@@ -26,7 +26,7 @@ export function PhysicalInventoryScanItemRow({
         borderBottom: `1px solid ${theme.palette.divider}`,
       }}
     >
-      {item.wasScanned ? (
+      {item.countedQuantity >= 0 || item.wasScanned ? (
         <CheckCircle2 size={18} color={theme.palette.success.main} />
       ) : (
         <Clock3 size={18} color={theme.palette.text.disabled} />
@@ -61,7 +61,7 @@ export function PhysicalInventoryScanItemRow({
       <QuantityStepper
         value={item.countedQuantity}
         onChange={(value) => onChangeQuantity(item.productId, value)}
-        min={0}
+        min={-1}
       />
     </Stack>
   );

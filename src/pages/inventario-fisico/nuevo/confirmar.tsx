@@ -86,11 +86,20 @@ export default function ConfirmarInventarioFisicoPage() {
   const handleSave = async () => {
     if (!draft) return;
     setStatus("saving");
+    const reviewedItems = draft.items.filter(
+      (item) => item.countedQuantity >= 0,
+    );
+    if (!reviewedItems.length) {
+      setStatus("ready");
+      showError("Debes revisar al menos un artículo antes de guardar");
+      return;
+    }
+
     const result = await createPhysicalInventory({
       branchId: draft.branchId,
       captureMethod: draft.captureMethod,
       capturedAt: draft.capturedAt,
-      items: draft.items.map((item) => ({
+      items: reviewedItems.map((item) => ({
         productId: item.productId,
         systemQuantity: item.systemQuantity,
         countedQuantity: item.countedQuantity,

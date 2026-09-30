@@ -13,7 +13,8 @@ import { Breadcrumbs } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   Card,
-  PhysicalInventoryScanItemRow,
+  PhysicalInventoryLastScannedCard,
+  PhysicalInventoryScanList,
   PhysicalInventoryScanner,
 } from "@/components/PhysicalInventory";
 import { FormTextField } from "@/components/Form";
@@ -39,13 +40,19 @@ export default function NuevoInventarioFisicoPage() {
 
   const {
     branch,
-    items,
-    filteredItems,
+    visibleItems,
+    reviewedItems,
+    catalogTotal,
+    lastScanned,
     search,
     setSearch,
     isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     updateCountedQuantity,
     handleCodeScanned,
+    removeLastScanned,
   } = usePhysicalInventoryScan(branchId);
 
   const breadcrumbs: BreadcrumbItem[] = useMemo(
@@ -62,7 +69,7 @@ export default function NuevoInventarioFisicoPage() {
   };
 
   const handleFinish = () => {
-    if (!branchId || !branch) return;
+    if (!branchId || !branch || reviewedItems.length === 0) return;
 
     const draft: PhysicalInventoryScanDraft = {
       branchId,
@@ -70,7 +77,7 @@ export default function NuevoInventarioFisicoPage() {
       captureMethod: "device_camera",
       capturedAt: new Date().toISOString(),
       responsibleUser: user?.name ?? "Usuario",
-      items,
+      items: reviewedItems,
     };
     sessionStorage.setItem(PHYSICAL_INVENTORY_DRAFT_KEY, JSON.stringify(draft));
     void router.push("/inventario-fisico/nuevo/confirmar");
@@ -117,7 +124,7 @@ export default function NuevoInventarioFisicoPage() {
           variant="contained"
           color="primary"
           onClick={handleFinish}
-          disabled={isLoading || items.length === 0}>
+          disabled={isLoading || reviewedItems.length === 0}>
           Finalizar escaneo
         </Button>
       </Stack>
@@ -129,9 +136,17 @@ export default function NuevoInventarioFisicoPage() {
         direction={{ xs: "column", lg: "row" }}
         spacing={2}
         alignItems="stretch">
-        <Card sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}>
-          <PhysicalInventoryScanner onCodeScanned={handleCodeScanned} />
-        </Card>
+        <Stack spacing={2} sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}>
+          <Card>
+            <PhysicalInventoryScanner onCodeScanned={handleCodeScanned} />
+          </Card>
+          {lastScanned ? (
+            <PhysicalInventoryLastScannedCard
+              product={lastScanned}
+              onRemove={removeLastScanned}
+            />
+          ) : null}
+        </Stack>
 
         <Card sx={{ flex: 1, minWidth: 0 }}>
           <Stack
@@ -139,7 +154,15 @@ export default function NuevoInventarioFisicoPage() {
             justifyContent="space-between"
             alignItems={{ xs: "stretch", sm: "center" }}
             spacing={2}>
-            <Typography variant="h6" fontWeight={700}>Artículos a verificar</Typography>
+            <Stack spacing={0.25}>
+              <Typography variant="h6" fontWeight={700}>Artículos a verificar</Typography>
+              {!isLoading && catalogTotal > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  {visibleItems.length} de {catalogTotal} cargados ·{" "}
+                  {reviewedItems.length} revisados
+                </Typography>
+              )}
+            </Stack>
             <FormTextField
               placeholder="Buscar"
               value={search}
@@ -161,60 +184,20 @@ export default function NuevoInventarioFisicoPage() {
             <Stack alignItems="center" justifyContent="center" minHeight={240}>
               <CircularProgress />
             </Stack>
-          ) : filteredItems.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <Stack alignItems="center" justifyContent="center" minHeight={240}>
               <Typography color="text.secondary">
                 No hay artículos para mostrar
               </Typography>
             </Stack>
           ) : (
-            <Stack
-              sx={{
-                maxHeight: { lg: "calc(100vh - 260px)" },
-                overflowY: "auto",
-              }}
-            >
-              <Stack
-                direction="row"
-                spacing={1.5}
-                sx={{ px: 1, pb: 1 }}
-                alignItems="center"
-              >
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ width: 18 }}
-                />
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ minWidth: 36, textAlign: "center" }}
-                >
-                  Cant.
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ flex: 1 }}
-                >
-                  Artículo
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ width: 96, textAlign: "center" }}
-                >
-                  Inventario
-                </Typography>
-              </Stack>
-              {filteredItems.map((item) => (
-                <PhysicalInventoryScanItemRow
-                  key={item.productId}
-                  item={item}
-                  onChangeQuantity={updateCountedQuantity}
-                />
-              ))}
-            </Stack>
+            <PhysicalInventoryScanList
+              items={visibleItems}
+              onChangeQuantity={updateCountedQuantity}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onLoadMore={fetchNextPage}
+            />
           )}
         </Card>
       </Stack>

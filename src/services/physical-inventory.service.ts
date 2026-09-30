@@ -7,6 +7,7 @@ import type {
 import type {
   CreatePhysicalInventoryPayload,
   HasVarianceFilter,
+  PhysicalInventoryBranchProduct,
   PhysicalInventoryBranchProductsResponse,
   PhysicalInventoryDetail,
   PhysicalInventoryListItem,
@@ -48,11 +49,31 @@ export async function getPhysicalInventoryDetail(
   return get<PhysicalInventoryDetail>(`${BASE}/${id}`);
 }
 
+export interface GetPhysicalInventoryBranchProductsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 export async function getPhysicalInventoryBranchProducts(
   branchId: number,
+  params: GetPhysicalInventoryBranchProductsParams = {},
 ): Promise<ApiResult<PhysicalInventoryBranchProductsResponse>> {
   return get<PhysicalInventoryBranchProductsResponse>(
-    `${BASE}/branches/${branchId}/products`,
+    buildListUrl(`${BASE}/branches/${branchId}/products`, {
+      page: params.page ?? 1,
+      limit: params.limit ?? 50,
+      search: params.search,
+    }),
+  );
+}
+
+export async function getPhysicalInventoryBranchProductByCode(
+  branchId: number,
+  code: string,
+): Promise<ApiResult<PhysicalInventoryBranchProduct>> {
+  return get<PhysicalInventoryBranchProduct>(
+    buildListUrl(`${BASE}/branches/${branchId}/products/by-code`, { code }),
   );
 }
 

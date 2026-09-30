@@ -42,10 +42,17 @@ export default function InventarioFisicoDetailPage() {
     enabled: Boolean(id),
   });
 
-  const summary = useMemo(
-    () => computePhysicalInventorySummary(data?.items ?? []),
-    [data?.items],
-  );
+  const summary = useMemo(() => {
+    const fromItems = computePhysicalInventorySummary(data?.items ?? []);
+    if (!data) return fromItems;
+    return {
+      ...fromItems,
+      totalProducts: data.totalProducts,
+      totalItems: data.totalItems,
+      missingUnits: data.missingUnits,
+      surplusUnits: data.surplusUnits,
+    };
+  }, [data]);
 
   const breadcrumbs: BreadcrumbItem[] = useMemo(
     () => [

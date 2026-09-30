@@ -4,6 +4,7 @@ export function computePhysicalInventorySummary(
   items: PhysicalInventoryItem[],
 ): PhysicalInventorySummary {
   let totalProducts = 0;
+  let totalItems = 0;
   let missingUnits = 0;
   let surplusUnits = 0;
   const missingItems: PhysicalInventoryItem[] = [];
@@ -11,6 +12,9 @@ export function computePhysicalInventorySummary(
   const scannedItems: PhysicalInventoryItem[] = [];
 
   for (const item of items) {
+    if (item.countedQuantity < 0) continue;
+
+    totalItems += 1;
     totalProducts += item.countedQuantity;
     const diff = item.countedQuantity - item.systemQuantity;
 
@@ -37,7 +41,7 @@ export function computePhysicalInventorySummary(
 
   return {
     totalProducts,
-    totalItems: items.length,
+    totalItems,
     missingUnits,
     surplusUnits,
     missingItems,

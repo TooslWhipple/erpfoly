@@ -20,6 +20,7 @@ export interface PhysicalInventoryItem {
   name: string;
   categoryPath?: string;
   systemQuantity: number;
+  /** -1 = sin revisar; 0+ = conteo real comparado contra existencia */
   countedQuantity: number;
   wasScanned: boolean;
   isSurplus: boolean;
@@ -47,11 +48,30 @@ export interface PhysicalInventoryBranchProduct {
   line: string;
   categoryPath: string;
   systemQuantity: number;
+  description?: string | null;
+  supplierName?: string;
+  imageUrl?: string | null;
+}
+
+export interface PhysicalInventoryLastScannedProduct {
+  productId: number;
+  code: string;
+  name: string;
+  description: string | null;
+  supplierName: string;
+  department: string;
+  line: string;
+  imageUrl: string | null;
+  isSurplus: boolean;
 }
 
 export interface PhysicalInventoryBranchProductsResponse {
   branch: { id: number; name: string };
-  products: PhysicalInventoryBranchProduct[];
+  rows: PhysicalInventoryBranchProduct[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface CreatePhysicalInventoryPayload {
@@ -94,3 +114,8 @@ export const PHYSICAL_INVENTORY_CAPTURE_METHOD_LABELS: Record<
 };
 
 export const PHYSICAL_INVENTORY_DRAFT_KEY = "physicalInventoryDraft";
+
+/** Valor inicial: producto aún no revisado */
+export const PHYSICAL_INVENTORY_UNREVIEWED = -1;
+
+export const PHYSICAL_INVENTORY_PAGE_SIZE = 50;

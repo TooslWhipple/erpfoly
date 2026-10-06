@@ -103,6 +103,8 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"inventario-inventario-fisico-confirmar": "inventario.inventario_fisico",
 	"inventario-inventario-fisico-detalle": "inventario.inventario_fisico",
 	"inventario-liquidaciones": "inventario.liquidaciones",
+	"entregas": "entregas",
+	"entregas-resguardo": "entregas.resguardo",
 	"recepcion-mercancias": "recepcion_mercancias",
 	"costeos": "costeos",
 	"facturas": "facturas",

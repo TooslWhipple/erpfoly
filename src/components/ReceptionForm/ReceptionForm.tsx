@@ -227,6 +227,7 @@ export function ReceptionForm({
 }: ReceptionFormProps) {
   const router = useRouter();
   const showError = useSnackbarStore((state) => state.showError);
+  const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const {
     progress: printProgress,
     isConfigured,
@@ -435,6 +436,13 @@ export function ReceptionForm({
           return;
         }
         const detail = result.data;
+        if (detail.reservedSales?.length) {
+          showSuccess(
+            `Apartado por venta: ${detail.reservedSales
+              .map((row) => `${row.folio}, ${row.clientName}, ${row.quantity}`)
+              .join(" · ")}`,
+          );
+        }
         setCurrentReceptionId(detail.id);
         setStatus(mapReceptionDetailStatus(detail.status));
         setBaselineLabels(getBaselineLabelsFromDetail(detail));

@@ -28,6 +28,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { StatusChip } from "@/components";
+import { fetchSaleTicketPdf } from "@/services/sale-handover.service";
+import { printPdfBlob } from "@/lib/printing/print-pdf";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import type { StatusChipVariant } from "@/components/StatusChip/styles";
 import {
@@ -456,6 +458,21 @@ export default function VentaDetalle() {
         {isSaleCancelled && (
           <StatusChip label="Cancelada" size="small" variant="error" />
         )}
+        {sale?.holdLabel && (
+          <StatusChip label={sale.holdLabel} size="small" variant="warning" />
+        )}
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            if (saleId == null) return;
+            void fetchSaleTicketPdf(saleId)
+              .then((blob) => printPdfBlob(blob))
+              .catch((error: Error) => snackbar.showError(error.message));
+          }}
+        >
+          Reimprimir ticket
+        </Button>
       </DetailHeader>
 
       <DetailGrid>

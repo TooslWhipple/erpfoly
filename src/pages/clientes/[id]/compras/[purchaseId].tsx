@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Button, Divider, Skeleton, Stack, Typography } from "@mui/material";
+import { Button, Chip, Divider, Skeleton, Stack, Typography } from "@mui/material";
+import { fetchHandoverPdf } from "@/services/sale-handover.service";
 import { Breadcrumbs, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useClientPurchaseDetail } from "@/hooks/clientes/useClientPurchaseDetail";
@@ -110,18 +111,32 @@ export default function ClientPurchaseDetailPage() {
         spacing={2}
       >
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-        <PurchaseDetailActions
+        <Stack spacing={1} alignItems={{ xs: "flex-start", lg: "flex-end" }}>
+          {purchase.holdLabel && <Chip label={purchase.holdLabel} />}
+          {(purchase.handoverReceipts ?? []).map((receipt) => (
+            <Button
+              key={receipt.id}
+              size="small"
+              onClick={() => {
+                void fetchHandoverPdf(receipt.id).then((blob) => {
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, "_blank");
+                });
+              }}
+            >
+              Comprobante de entrega
+            </Button>
+          ))}
+          <PurchaseDetailActions
           status={purchase.status}
           clientId={Number(purchase.clientId)}
           saleId={Number(purchase.id)}
           canCancel={purchase.canCancel}
           cancelBlockReason={purchase.cancelBlockReason}
           totalPaid={purchase.totalPaid}
-          productName={purchase.productName}
-          productSku={purchase.productSku}
-          productImageUrl={purchase.productImageUrl}
           onSuccess={refetch}
         />
+        </Stack>
       </Stack>
 
       <PurchaseDetailSummary purchase={purchase} />

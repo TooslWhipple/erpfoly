@@ -27,6 +27,7 @@ export interface SaleListItem {
   id: number;
   folio: string;
   status: SaleStatus;
+  holdLabel?: string | null;
   paymentType: SalePaymentType;
   clientName: string | null;
   sellerName?: string | null;
@@ -221,6 +222,7 @@ export interface SaleDetail {
   id: number;
   folio: string;
   status: string;
+  holdLabel?: string | null;
   subtotal: number;
   discountAmount: number;
   shippingAmount?: number;

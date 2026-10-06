@@ -1,6 +1,4 @@
 export { CancelPurchaseModal } from "./CancelPurchaseModal";
-export { DeliverPurchaseModal } from "./DeliverPurchaseModal";
-export type { DeliverPurchaseModalProps } from "./DeliverPurchaseModal";
 export type { CancelPurchaseModalProps } from "./CancelPurchaseModal";
 export { PurchaseDetailActions } from "./PurchaseDetailActions";
 export type { PurchaseDetailActionsProps } from "./PurchaseDetailActions";

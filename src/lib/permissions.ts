@@ -59,6 +59,8 @@ export type PermissionModule =
   | "catalogos.polizas-sistema"
   | "catalogos.polizas"
   | "ventas"
+  | "entregas"
+  | "entregas.resguardo"
   | "cotizaciones"
   | "reportes";
 
@@ -152,6 +154,14 @@ export const RECOVERY_SHEETS_CREATE = RECOVERY_SHEETS_PERMISSIONS.create;
 export const RECOVERY_SHEETS_READ = RECOVERY_SHEETS_PERMISSIONS.read;
 export const RECOVERY_SHEETS_UPDATE = RECOVERY_SHEETS_PERMISSIONS.update;
 export const RECOVERY_SHEETS_DELETE = RECOVERY_SHEETS_PERMISSIONS.delete;
+
+export const DELIVERY_HANDOVER_PERMISSIONS = createCrudPermissions("entregas");
+export const DELIVERY_HANDOVER_READ = DELIVERY_HANDOVER_PERMISSIONS.read;
+export const DELIVERY_HANDOVER_UPDATE = DELIVERY_HANDOVER_PERMISSIONS.update;
+
+export const DELIVERY_HOLD_PERMISSIONS = createCrudPermissions("entregas.resguardo");
+export const DELIVERY_HOLD_READ = DELIVERY_HOLD_PERMISSIONS.read;
+export const DELIVERY_HOLD_UPDATE = DELIVERY_HOLD_PERMISSIONS.update;
 
 export const PHYSICAL_INVENTORY_PERMISSIONS = createCrudPermissions("inventario.inventario_fisico");
 export const PHYSICAL_INVENTORY_CREATE = PHYSICAL_INVENTORY_PERMISSIONS.create;

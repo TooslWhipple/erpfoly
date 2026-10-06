@@ -55,6 +55,8 @@ export interface ClientPurchaseDetailApi {
     purchaseBranch: string;
     deliveryBranch: string | null;
   };
+  holdLabel?: string | null;
+  handoverReceipts?: Array<{ id: number; createdAt: string }>;
 }
 
 export interface ClientPurchaseDetail {
@@ -79,4 +81,6 @@ export interface ClientPurchaseDetail {
   cancelBlockReason: SaleCancelBlockReason | null;
   payments: ClientPurchasePayment[];
   purchaseInfo: ClientPurchaseInfo;
+  holdLabel?: string | null;
+  handoverReceipts?: Array<{ id: number; createdAt: string }>;
 }

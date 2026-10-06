@@ -56,6 +56,12 @@ export interface ReceptionDetail extends ReceptionListItem {
   items: ReceptionDetailItem[];
   invoices: ReceptionDetailInvoice[];
   costeo: { id: number } | null;
+  reservedSales?: Array<{
+    saleId: number;
+    folio: string;
+    clientName: string;
+    quantity: number;
+  }>;
 }
 
 export interface SupplierWithPendingOrdersApi {

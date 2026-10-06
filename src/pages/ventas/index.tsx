@@ -154,6 +154,12 @@ export default function Ventas() {
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
     },
     {
+      id: "holdLabel",
+      label: "Resguardo",
+      size: "md",
+      format: (value) => String(value ?? "—"),
+    },
+    {
       id: "clientName",
       label: "Cliente",
       size: "lg",

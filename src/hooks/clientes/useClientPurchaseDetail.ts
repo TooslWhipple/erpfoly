@@ -66,6 +66,8 @@ function mapPurchaseDetail(data: ClientPurchaseDetailApi): ClientPurchaseDetail 
       purchaseBranch: data.purchaseInfo.purchaseBranch,
       deliveryBranch: data.purchaseInfo.deliveryBranch ?? "—",
     },
+    holdLabel: data.holdLabel ?? null,
+    handoverReceipts: data.handoverReceipts ?? [],
   };
 }
 

@@ -74,6 +74,8 @@ import {
   ROUTES_READ,
   SALES_READ,
   SALES_CREATE,
+  DELIVERY_HANDOVER_READ,
+  DELIVERY_HOLD_READ,
   QUOTATIONS_READ,
   type PermissionCode,
 } from "@/lib/permissions";
@@ -114,6 +116,8 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/ventas\/nueva$/, permission: SALES_CREATE },
   { pattern: /^\/ventas\/en-rojo$/, roles: [ROLE_CODES.ADMINISTRADOR] },
   { pattern: /^\/ventas(\/.*)?$/, permission: SALES_READ },
+  { pattern: /^\/entregas\/resguardo$/, permission: DELIVERY_HOLD_READ },
+  { pattern: /^\/entregas(\/.*)?$/, permission: DELIVERY_HANDOVER_READ },
   { pattern: /^\/cotizaciones-guardadas(\/.*)?$/, permission: QUOTATIONS_READ },
   { pattern: /^\/cotizaciones(\/.*)?$/, permission: QUOTATIONS_READ },
 
@@ -214,6 +218,7 @@ export const routeAccessRules: RouteAccessRule[] = [
 export const authorizedHomeOptions: Array<{ path: string; requirement: AccessRequirement }> = [
   { path: "/solicitudes-credito", requirement: { permission: CREDIT_APPLICATIONS_READ } },
   { path: "/cajas", requirement: { permission: CASH_REGISTERS_READ } },
+  { path: "/entregas", requirement: { permission: DELIVERY_HANDOVER_READ } },
   { path: "/clientes", requirement: { permission: CUSTOMERS_READ } },
   { path: "/pedidos", requirement: { permission: ORDERS_READ } },
   { path: "/traspasos", requirement: { permission: TRASPASOS_READ } },

@@ -14,6 +14,8 @@ import { BanknoteArrowDown, Calculator, LifeBuoy, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
+  DELIVERY_HANDOVER_READ,
+  DELIVERY_HOLD_READ,
   TRASPASOS_READ,
   CASH_REGISTERS_READ,
   CATALOG_BRANCHES_READ,
@@ -101,6 +103,16 @@ export const NAV_ITEMS: NavItem[] = [
     requirement: { permission: QUOTATIONS_READ },
   },
   { label: "Cajas", path: "/cajas", icon: <Monitor size={ICON_SIZE} />, requirement: { permission: CASH_REGISTERS_READ } },
+  {
+    label: "Entregas",
+    path: "/entregas",
+    icon: <Package size={ICON_SIZE} />,
+    requirement: { permission: DELIVERY_HANDOVER_READ },
+    subItems: [
+      { label: "Mostrador", path: "/entregas", requirement: { permission: DELIVERY_HANDOVER_READ } },
+      { label: "Resguardo", path: "/entregas/resguardo", requirement: { permission: DELIVERY_HOLD_READ } },
+    ],
+  },
   {
     label: "Clientes",
     path: "/clientes",

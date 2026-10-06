@@ -7,8 +7,8 @@ export const SALE_STATUS_CHIP_LABELS: Record<SaleStatus, string> = {
   PENDING_CASHIER: "Pendiente de cobro",
   PENDING_PAYMENT: "Pago pendiente",
   PAID: "Pagada",
-  PARTIALLY_DELIVERED: "Parcialmente entregada",
-  DELIVERED: "Entregada",
+  PARTIALLY_DELIVERED: "Entrega parcial",
+  DELIVERED: "Entregada completa",
   CANCELLED: "Cancelada",
 };
 

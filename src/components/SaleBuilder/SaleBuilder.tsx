@@ -132,6 +132,8 @@ import { createCreditApplicationFromIntake } from "@/services/creditApplications
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 import { getBranchesCatalog } from "@/services/branches.service";
+import { fetchSaleTicketPdf } from "@/services/sale-handover.service";
+import { printPdfBlob } from "@/lib/printing/print-pdf";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import type { DeliveryAddressSelection } from "@/components/DeliveryAddressModal";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
@@ -1078,7 +1080,14 @@ export function SaleBuilder({
 
       const createdIds: Array<{ productId: number; saleItemId: number }> = [];
       for (const item of cart) {
-        const inventorySources = toInventorySourcesPayload(item.sources);
+        const inventorySources =
+          deliveryType === "pickup" &&
+          deliveryBranchOverridden &&
+          deliveryBranch?.id != null &&
+          currentBranchId != null &&
+          deliveryBranch.id !== currentBranchId
+            ? [{ branch_id: deliveryBranch.id, quantity: item.quantity }]
+            : toInventorySourcesPayload(item.sources);
         const itemRes = await addSaleItem(saleId, {
           product_id: item.productId,
           quantity: item.quantity,
@@ -1169,7 +1178,14 @@ export function SaleBuilder({
         );
         const addedIds: Array<{ productId: number; saleItemId: number }> = [];
         for (const item of cart) {
-          const inventorySources = toInventorySourcesPayload(item.sources);
+          const inventorySources =
+          deliveryType === "pickup" &&
+          deliveryBranchOverridden &&
+          deliveryBranch?.id != null &&
+          currentBranchId != null &&
+          deliveryBranch.id !== currentBranchId
+            ? [{ branch_id: deliveryBranch.id, quantity: item.quantity }]
+            : toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
             const hydrated = hydratedById.get(item.saleItemId);
             const unchanged =
@@ -1518,6 +1534,11 @@ export function SaleBuilder({
       invalidateCashRegisterQueries(queryClient);
       void queryClient.invalidateQueries({ queryKey: ["sales"] });
       checkoutIdempotencyKeyRef.current = null;
+      if (data.status !== "ACTIVE") {
+        void fetchSaleTicketPdf(data.id)
+          .then((blob) => printPdfBlob(blob))
+          .catch(() => undefined);
+      }
       void router.push(`/ventas/${data.id}?nuevo=1`);
     },
     onError: (err: Error) => {
@@ -1781,8 +1802,7 @@ export function SaleBuilder({
   const { data: branchesCatalog = [] } = useQuery({
     queryKey: ["branches-catalog-pickup"],
     queryFn: async () => {
-      const branches = await getBranchesCatalog();
-      return branches.filter((b) => !b.is_main_warehouse);
+      return getBranchesCatalog();
     },
     enabled: branchPickerOpen || deliveryType === "pickup",
     staleTime: 5 * 60 * 1000,
@@ -2305,7 +2325,17 @@ export function SaleBuilder({
     ],
   );
 
-  const isPickupReady = deliveryType === "pickup" && !!effectiveDeliveryBranch;
+  const remotePickupBlocked =
+    deliveryType === "pickup" &&
+    effectiveDeliveryBranch != null &&
+    currentBranchId != null &&
+    effectiveDeliveryBranch.id !== currentBranchId &&
+    hasStockAtDeliveryBranch !== true;
+
+  const isPickupReady =
+    deliveryType === "pickup" &&
+    !!effectiveDeliveryBranch &&
+    !remotePickupBlocked;
 
   const isDeliveryInfoReady =
     deliveryType === "delivery"
@@ -4757,6 +4787,13 @@ export function SaleBuilder({
                         hasStockAtDeliveryBranch === undefined && (
                           <Typography variant="caption" color="text.secondary">
                             Verificando existencia en esta sucursal...
+                          </Typography>
+                        )}
+                      {effectiveDeliveryBranch &&
+                        effectiveDeliveryBranch.id !== currentBranchId &&
+                        hasStockAtDeliveryBranch === false && (
+                          <Typography variant="caption" color="error">
+                            Esta sucursal no cubre todas las piezas. No se puede prometer el retiro aquí.
                           </Typography>
                         )}
 

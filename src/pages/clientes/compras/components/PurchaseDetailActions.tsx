@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, IconButton, Menu, MenuItem, Stack } from "@mui/material";
+import { IconButton, Menu, MenuItem, Stack } from "@mui/material";
 import { MoreVertical } from "lucide-react";
 import { StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
@@ -8,7 +8,6 @@ import type { ClientPurchaseStatus } from "@/types/clientPurchase.types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMERS_UPDATE } from "@/lib/permissions";
 import { CancelPurchaseModal } from "./CancelPurchaseModal";
-import { DeliverPurchaseModal } from "./DeliverPurchaseModal";
 
 const STATUS_LABELS: Record<ClientPurchaseStatus, string> = {
   AL_CORRIENTE: "Al corriente",
@@ -31,9 +30,6 @@ export interface PurchaseDetailActionsProps {
   canCancel: boolean;
   cancelBlockReason: SaleCancelBlockReason | null;
   totalPaid: number;
-  productName: string;
-  productSku: string;
-  productImageUrl?: string | null;
   onSuccess?: () => void;
 }
 
@@ -44,16 +40,11 @@ export function PurchaseDetailActions({
   canCancel,
   cancelBlockReason,
   totalPaid,
-  productName,
-  productSku,
-  productImageUrl,
   onSuccess,
 }: PurchaseDetailActionsProps) {
   const { hasPermission } = usePermissions();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [deliverModalOpen, setDeliverModalOpen] = useState(false);
-  const isDeliveryPending = status === "ENTREGA_PENDIENTE";
   const alreadyCancelled = status === "CANCELADA";
   const canShowCancelMenu = hasPermission(CUSTOMERS_UPDATE);
 
@@ -74,14 +65,6 @@ export function PurchaseDetailActions({
     setCancelModalOpen(false);
   };
 
-  const handleOpenDeliverModal = () => {
-    setDeliverModalOpen(true);
-  };
-
-  const handleCloseDeliverModal = () => {
-    setDeliverModalOpen(false);
-  };
-
   return (
     <Stack direction="row" alignItems="center" spacing={1.5}>
       <StatusChip
@@ -90,57 +73,41 @@ export function PurchaseDetailActions({
         size="small"
       />
 
-      {isDeliveryPending && false ? (
+      {canShowCancelMenu && (
         <>
-          <Button variant="contained" color="primary" onClick={handleOpenDeliverModal}>
-            Entregar
-          </Button>
-          <DeliverPurchaseModal
-            open={deliverModalOpen}
-            purchaseId={String(saleId)}
-            productName={productName}
-            productSku={productSku}
-            productImageUrl={productImageUrl}
-            onClose={handleCloseDeliverModal}
+          <IconButton
+            aria-label="Opciones de la compra"
+            onClick={handleOpenMenu}
+            size="small"
+          >
+            <MoreVertical size={18} />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={handleCloseMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <MenuItem
+              disabled={alreadyCancelled}
+              onClick={handleOpenCancelModal}
+              sx={{ color: alreadyCancelled ? undefined : "error.main" }}
+            >
+              Cancelar cuenta
+            </MenuItem>
+          </Menu>
+
+          <CancelPurchaseModal
+            open={cancelModalOpen}
+            clientId={clientId}
+            saleId={saleId}
+            totalPaid={totalPaid}
+            blockReason={canCancel ? null : cancelBlockReason}
+            onClose={handleCloseCancelModal}
+            onSuccess={onSuccess}
           />
         </>
-      ) : (
-        canShowCancelMenu && (
-          <>
-            <IconButton
-              aria-label="Opciones de la compra"
-              onClick={handleOpenMenu}
-              size="small"
-            >
-              <MoreVertical size={18} />
-            </IconButton>
-            <Menu
-              anchorEl={menuAnchor}
-              open={Boolean(menuAnchor)}
-              onClose={handleCloseMenu}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-              <MenuItem
-                disabled={alreadyCancelled}
-                onClick={handleOpenCancelModal}
-                sx={{ color: alreadyCancelled ? undefined : "error.main" }}
-              >
-                Cancelar cuenta
-              </MenuItem>
-            </Menu>
-
-            <CancelPurchaseModal
-              open={cancelModalOpen}
-              clientId={clientId}
-              saleId={saleId}
-              totalPaid={totalPaid}
-              blockReason={canCancel ? null : cancelBlockReason}
-              onClose={handleCloseCancelModal}
-              onSuccess={onSuccess}
-            />
-          </>
-        )
       )}
     </Stack>
   );

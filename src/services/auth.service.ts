@@ -29,6 +29,10 @@ export interface RequestPasswordRecoveryRequest {
 	cellphone: string;
 }
 
+export interface VerifyPasswordRecoveryRequest extends RequestPasswordRecoveryRequest {
+	otp: string;
+}
+
 export interface ResetPasswordRequest {
 	token: string;
 	newPassword: string;
@@ -390,6 +394,12 @@ export const authService = {
 		data: RequestPasswordRecoveryRequest
 	): Promise<ApiResult<ApiSuccessPayload>> {
 		return post<ApiSuccessPayload>("/auth/password/recovery", data);
+	},
+
+	async verifyPasswordRecovery(
+		data: VerifyPasswordRecoveryRequest
+	): Promise<ApiResult<ApiSuccessPayload>> {
+		return post<ApiSuccessPayload>("/auth/password/recovery/verify", data);
 	},
 
 	async replaceTemporaryPassword(

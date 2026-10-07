@@ -1,3 +1,5 @@
+import type { RemoteDocumentFile } from "@/types/document-file.types";
+
 export interface CreditApplicationBasicInfo {
   firstName: string;
   firstSurname: string;
@@ -86,8 +88,7 @@ export interface DocumentItem {
   id: string;
   name: string;
   verifiedBy: string;
-  thumbnailUrl: string;
-  fullImageUrl: string;
+  file: RemoteDocumentFile;
 }
 
 export interface CreditApplicationDocumentation {
@@ -101,7 +102,7 @@ export interface CreditApplicationCreditBureau {
   scoreLabel: string;
   scoreLevel: "excellent" | "good" | "fair" | "poor";
   queriedAt: string | null;
-  signatureUrl?: string;
+  signatureFile?: RemoteDocumentFile;
   canQueryNow: boolean;
   missingFields: string[];
 }
@@ -110,7 +111,7 @@ export interface BiometricItem {
   id: string;
   name: string;
   verifiedBy: string;
-  thumbnailUrl?: string;
+  file?: RemoteDocumentFile;
   type: "photo";
 }
 

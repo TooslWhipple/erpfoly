@@ -7,11 +7,10 @@ import {
   type BiometricUpdateMode,
 } from "@/components/CreditApplicationBiometricUpdateModal";
 import { DropZoneRoot } from "@/components/FileUpload/styles";
+import { SignedDocumentThumb } from "@/components/SignedDocumentThumb";
+import { useDocumentFileOpener } from "@/hooks/useSignedDocumentFileUrl";
 import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
-import {
-  isImageDocument,
-  resolveDocumentPreviewUrl,
-} from "@/utils/credit-application-documents";
+import { isImageDocument } from "@/utils/credit-application-documents";
 import { VerifiedCheck, VerifiedRow, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
 import { Card } from "./styles";
 
@@ -70,9 +69,9 @@ function isAccepted(file: File, accept: string[]): boolean {
   return false;
 }
 
-function useDocumentPreviewUrl(file: CreditApplicationDocumentFile | undefined): string | undefined {
+/** Object URL de un archivo local aún sin subir; los almacenados firman su URL aparte. */
+function useLocalPreviewUrl(file: CreditApplicationDocumentFile | undefined): string | undefined {
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | undefined>();
-  const remotePreviewUrl = resolveDocumentPreviewUrl(file);
 
   useEffect(() => {
     if (!file?.file) {
@@ -85,7 +84,7 @@ function useDocumentPreviewUrl(file: CreditApplicationDocumentFile | undefined):
     return () => URL.revokeObjectURL(objectUrl);
   }, [file?.file, file?.id]);
 
-  return remotePreviewUrl ?? localPreviewUrl;
+  return localPreviewUrl;
 }
 
 interface DocumentationDocumentSlotProps {
@@ -115,13 +114,15 @@ function DocumentationDocumentSlot({
 }: DocumentationDocumentSlotProps) {
   const theme = useTheme();
   const inputId = useId();
-  const previewUrl = useDocumentPreviewUrl(file);
+  const localPreviewUrl = useLocalPreviewUrl(file);
+  const { openWithUrl, openInNewTab } = useDocumentFileOpener();
   const [isDragActive, setIsDragActive] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const displayError = error ?? validationError;
   const subtitle = file?.uploadedAt ?? VERIFIED_BY_LABEL;
-  const showImagePreview = Boolean(file && previewUrl && isImageDocument(file, { imageOnlySlot }));
+  const isImage = Boolean(file && isImageDocument(file, { imageOnlySlot }));
+  const canOpen = Boolean(localPreviewUrl || file?.remote);
 
   const addFile = useCallback(
     (newFiles: File[]) => {
@@ -175,15 +176,23 @@ function DocumentationDocumentSlot({
   );
 
   const handleOpenPreview = useCallback(() => {
-    if (!file || !previewUrl) return;
-
-    if (isImageDocument(file, { imageOnlySlot })) {
-      onOpenPreview(label, subtitle, previewUrl);
+    if (localPreviewUrl) {
+      if (isImage) {
+        onOpenPreview(label, subtitle, localPreviewUrl);
+        return;
+      }
+      window.open(localPreviewUrl, "_blank", "noopener,noreferrer");
       return;
     }
 
-    window.open(previewUrl, "_blank", "noopener,noreferrer");
-  }, [file, imageOnlySlot, label, onOpenPreview, previewUrl, subtitle]);
+    const remote = file?.remote;
+    if (!remote) return;
+    if (isImage) {
+      void openWithUrl(remote, (url) => onOpenPreview(label, subtitle, url));
+      return;
+    }
+    void openInNewTab(remote);
+  }, [file?.remote, isImage, label, localPreviewUrl, onOpenPreview, openInNewTab, openWithUrl, subtitle]);
 
   const handleRemove = useCallback(
     (event: React.MouseEvent) => {
@@ -244,8 +253,8 @@ function DocumentationDocumentSlot({
   return (
     <Stack spacing={0.75}>
       <VerifiedRow
-        style={{ cursor: previewUrl ? "pointer" : "default", marginBottom: 0 }}
-        onClick={previewUrl ? handleOpenPreview : undefined}
+        style={{ cursor: canOpen ? "pointer" : "default", marginBottom: 0 }}
+        onClick={canOpen ? handleOpenPreview : undefined}
       >
         <VerifiedCheck>
           <Check size={18} color="#059669" strokeWidth={2} />
@@ -269,8 +278,10 @@ function DocumentationDocumentSlot({
               <Trash2 size={16} color={theme.palette.text.secondary} />
             </IconButton>
           )}
-          {showImagePreview ? (
-            <VerifiedThumb src={previewUrl} alt={label} />
+          {isImage && localPreviewUrl ? (
+            <VerifiedThumb src={localPreviewUrl} alt={label} />
+          ) : isImage && file.remote ? (
+            <SignedDocumentThumb file={file.remote} alt={label} />
           ) : (
             <Box
               sx={{
@@ -326,9 +337,9 @@ function BiometricDocumentSlot({
   onOpenPreview,
 }: BiometricDocumentSlotProps) {
   const theme = useTheme();
-  const previewUrl = useDocumentPreviewUrl(file);
+  const { openWithUrl } = useDocumentFileOpener();
   const subtitle = statusCaption ?? file?.uploadedAt ?? VERIFIED_BY_LABEL;
-  const showImagePreview = Boolean(file && previewUrl);
+  const remote = file?.remote;
 
   if (!file) {
     return (
@@ -361,8 +372,12 @@ function BiometricDocumentSlot({
   return (
     <Stack spacing={0.75}>
       <VerifiedRow
-        style={{ cursor: previewUrl ? "pointer" : "default", marginBottom: 0 }}
-        onClick={previewUrl ? () => onOpenPreview(label, subtitle, previewUrl) : undefined}
+        style={{ cursor: remote ? "pointer" : "default", marginBottom: 0 }}
+        onClick={
+          remote
+            ? () => void openWithUrl(remote, (url) => onOpenPreview(label, subtitle, url))
+            : undefined
+        }
       >
         <VerifiedCheck>
           <Check size={18} color="#059669" strokeWidth={2} />
@@ -388,9 +403,7 @@ function BiometricDocumentSlot({
           >
             Actualizar
           </Button>
-          {showImagePreview ? (
-            <VerifiedThumb src={previewUrl} alt={label} />
-          ) : null}
+          {remote ? <SignedDocumentThumb file={remote} alt={label} /> : null}
         </Stack>
       </VerifiedRow>
       {error && (
@@ -481,7 +494,6 @@ export function DocumentationTab({
   const ineBackFile = values.ineBackFiles[0];
   const faceCaptureFile = values.faceCaptureFiles?.[0];
   const hasIneFront = Boolean(ineFrontFile);
-  const existingIneFrontUrl = resolveDocumentPreviewUrl(ineFrontFile);
 
   const openBiometricModal = (mode: BiometricUpdateMode) => {
     if (!canEditBiometrics || !applicationId || saving) return;
@@ -591,7 +603,7 @@ export function DocumentationTab({
           mode={biometricModal.mode}
           applicationId={applicationId}
           clientDisplayName={clientDisplayName}
-          existingIneFrontUrl={existingIneFrontUrl}
+          existingIneFrontFile={ineFrontFile?.remote}
           onClose={() => setBiometricModal((current) => ({ ...current, open: false }))}
           onSuccess={async () => {
             await onBiometricsUpdated?.();

@@ -29,8 +29,38 @@ export function usePasswordRecovery() {
 			return;
 		}
 
+		await router.push({
+			pathname: "/login/recover/verify",
+			query: { cellphone: trimmed },
+		});
+		setIsLoading(false);
+	};
+
+	const verifyRecovery = async (cellphone: string, otp: string) => {
+		setIsLoading(true);
+		setError(null);
+
+		const result = await authService.verifyPasswordRecovery({ cellphone, otp });
+
+		if (result.error) {
+			setError(result.error.message);
+			setIsLoading(false);
+			return;
+		}
+
 		await router.push("/login/recover/sent");
 		setIsLoading(false);
+	};
+
+	/** Reenvía el código; devuelve si la petición se aceptó. */
+	const resendRecoveryCode = async (cellphone: string): Promise<boolean> => {
+		setError(null);
+		const result = await authService.requestPasswordRecovery({ cellphone });
+		if (result.error) {
+			setError(result.error.message);
+			return false;
+		}
+		return true;
 	};
 
 	return {
@@ -38,5 +68,7 @@ export function usePasswordRecovery() {
 		error,
 		clearError,
 		requestRecovery,
+		verifyRecovery,
+		resendRecoveryCode,
 	};
 }

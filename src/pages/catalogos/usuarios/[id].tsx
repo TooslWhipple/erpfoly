@@ -41,9 +41,14 @@ import {
   getBranches,
   createUser,
   updateUser,
+  updateUserRole,
+  updateUserCellphone,
+  updateUserOtpRequirement,
   type RoleItem,
   type BranchItem,
+  type UserDetail,
 } from "@/services/users.service";
+import type { ApiResult, ApiSuccessPayload } from "@/lib/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
@@ -87,6 +92,19 @@ const initialUser: UserFormState = {
   branchIds: [],
   requiresOtp: true,
 };
+/**
+ * One request of the edit save. Role, cellphone and OTP requirement have their
+ * own endpoints, so an edit is a sequence that stops at the first failure.
+ */
+type SaveStep = {
+  /** What the step saves, as it reads in "Se guardaron …". */
+  label: string;
+  run: () => Promise<ApiResult<ApiSuccessPayload>>;
+};
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} y ${labels[labels.length - 1]}`;
+}
 export default function UserFormPage() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
@@ -106,12 +124,14 @@ export default function UserFormPage() {
   const [driverForm, setDriverForm] =
     useState<DriverFormState>(initialDriverForm);
   const [driverErrors, setDriverErrors] = useState<DriverFormErrors>({});
-  const [savedUsername, setSavedUsername] = useState<string | null>(null);
+  /** The user as the back last returned it; edits are diffed against it. */
+  const [savedUser, setSavedUser] = useState<UserFormState | null>(null);
   const selectedRole = roles.find((role) => role.id === user.roleId);
   const selectedRoleCode = selectedRole?.code;
   const usernameChanged =
     isNew ||
-    (savedUsername !== null && user.username.trim() !== savedUsername.trim());
+    (savedUser !== null &&
+      user.username.trim() !== savedUser.username.trim());
   const { exists: usernameExists, isChecking: isCheckingUsername } =
     useUsernameAvailability(user.username, {
       excludeUserId: userId,
@@ -128,30 +148,23 @@ export default function UserFormPage() {
     },
     [isNew],
   );
-  useAsyncEffect(
-    async (isCancelled) => {
-      if (isNew || userId == null) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const result = await loadUser(userId);
-      if (isCancelled()) return;
-      if (!result.error && result.data) {
-        const data = result.data;
-        const loadedUsername = data.username ?? "";
-        setSavedUsername(loadedUsername);
-        setUser({
-          firstName: data.firstName ?? "",
-          lastName: data.lastName ?? "",
-          username: loadedUsername,
-          cellphone: data.cellphone ?? "",
-          roleId: data.roleId,
-          branchIds: data.branchIds,
-          requiresOtp: data.requiresOtp,
-        });
-        if (data.driverDetails) {
-          setDriverForm({
+  const applyLoadedUser = (data: UserDetail) => {
+    const loaded: UserFormState = {
+      firstName: data.firstName ?? "",
+      lastName: data.lastName ?? "",
+      username: data.username ?? "",
+      cellphone: data.cellphone ?? "",
+      roleId: data.roleId,
+      branchIds: data.branchIds,
+      requiresOtp: data.requiresOtp,
+    };
+    setSavedUser(loaded);
+    setUser(loaded);
+    setErrors({});
+    setDriverErrors({});
+    setDriverForm(
+      data.driverDetails
+        ? {
             licenseNumber: data.driverDetails.licenseNumber ?? "",
             postalCode: data.driverDetails.address?.postalCode ?? "",
             neighborhoodFullCode:
@@ -161,9 +174,20 @@ export default function UserFormPage() {
             street: data.driverDetails.address?.street ?? "",
             externalNumber: data.driverDetails.address?.externalNumber ?? "",
             internalNumber: data.driverDetails.address?.internalNumber ?? "",
-          });
-        }
+          }
+        : initialDriverForm,
+    );
+  };
+  useAsyncEffect(
+    async (isCancelled) => {
+      if (isNew || userId == null) {
+        setLoading(false);
+        return;
       }
+      setLoading(true);
+      const result = await loadUser(userId);
+      if (isCancelled()) return;
+      if (!result.error && result.data) applyLoadedUser(result.data);
       if (!isCancelled()) setLoading(false);
     },
     [isNew, userId],
@@ -305,43 +329,108 @@ export default function UserFormPage() {
       !(usernameChanged && usernameExists)
     );
   };
+  const handleCreate = async (
+    driverDetails: UserDriverDetailsPayload | undefined,
+  ) => {
+    const result = await createUser({
+      firstName: user.firstName.trim(),
+      lastName: user.lastName.trim(),
+      username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
+      cellphone: user.cellphone.trim(),
+      roleId: user.roleId as number,
+      branchIds: user.branchIds,
+      requiresOtp: user.requiresOtp,
+      driverDetails,
+    });
+    if (result.error) {
+      showError(result.error.message);
+      return;
+    }
+    showSuccess(
+      result.data?.message ?? "Se ha enviado una invitación al usuario.",
+    );
+    router.push("/catalogos/usuarios");
+  };
+  /**
+   * Saves an edit in order: basic data, then role, cellphone and OTP
+   * requirement only if they changed. Stops at the first failure, says what
+   * was saved and what not, and reloads the user so the form never shows a
+   * state that does not exist in the back.
+   */
+  const handleUpdate = async (
+    id: number,
+    saved: UserFormState,
+    driverDetails: UserDriverDetailsPayload | undefined,
+  ) => {
+    const roleId = user.roleId as number;
+    const roleChanged = roleId !== saved.roleId;
+    const cellphone = user.cellphone.trim();
+    const steps: SaveStep[] = [
+      {
+        label: "los datos",
+        run: () =>
+          updateUser(id, {
+            firstName: user.firstName.trim(),
+            lastName: user.lastName.trim(),
+            username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
+            branchIds: user.branchIds,
+            // Driver details belong to the role they are sent with.
+            ...(roleChanged ? {} : { driverDetails }),
+          }),
+      },
+    ];
+    if (roleChanged) {
+      steps.push({
+        label: "el rol",
+        run: () => updateUserRole(id, { roleId, driverDetails }),
+      });
+    }
+    if (cellphone !== saved.cellphone) {
+      steps.push({
+        label: "el celular",
+        run: () => updateUserCellphone(id, cellphone),
+      });
+    }
+    if (user.requiresOtp !== saved.requiresOtp) {
+      steps.push({
+        label: "la verificación OTP",
+        run: () => updateUserOtpRequirement(id, user.requiresOtp),
+      });
+    }
+    const messages: string[] = [];
+    for (const [index, step] of steps.entries()) {
+      const result = await step.run();
+      if (result.error) {
+        if (index === 0) {
+          showError(result.error.message);
+          return;
+        }
+        const savedLabels = joinLabels(steps.slice(0, index).map((s) => s.label));
+        showError(
+          `Se guardaron ${savedLabels}; ${step.label} no se pudo cambiar: ${result.error.message}`,
+        );
+        const reloaded = await loadUser(id);
+        if (!reloaded.error && reloaded.data) applyLoadedUser(reloaded.data);
+        return;
+      }
+      if (result.data?.message) messages.push(result.data.message);
+    }
+    showSuccess(
+      messages.length > 0
+        ? messages.join(" ")
+        : "Usuario actualizado correctamente.",
+    );
+    router.push("/catalogos/usuarios");
+  };
   const handleConfirm = async () => {
     if (!validateForm()) return;
     const driverDetails = buildDriverDetailsPayload();
     setSendingInvite(true);
-    const result = isNew
-      ? await createUser({
-          firstName: user.firstName.trim(),
-          lastName: user.lastName.trim(),
-          username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
-          cellphone: user.cellphone.trim(),
-          roleId: user.roleId as number,
-          branchIds: user.branchIds,
-          requiresOtp: user.requiresOtp,
-          driverDetails,
-        })
-      : await updateUser(userId!, {
-          firstName: user.firstName.trim(),
-          lastName: user.lastName.trim(),
-          username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
-          cellphone: user.cellphone.trim(),
-          roleId: user.roleId as number,
-          branchIds: user.branchIds,
-          requiresOtp: user.requiresOtp,
-          driverDetails,
-        });
-    if (result.error) {
-      showError(result.error.message);
-      setSendingInvite(false);
-      return;
+    if (isNew) {
+      await handleCreate(driverDetails);
+    } else if (userId != null && savedUser) {
+      await handleUpdate(userId, savedUser, driverDetails);
     }
-    showSuccess(
-      result.data?.message ??
-        (isNew
-          ? "Se ha enviado una invitación al usuario."
-          : "Usuario actualizado correctamente."),
-    );
-    router.push("/catalogos/usuarios");
     setSendingInvite(false);
   };
   const handleBranchChange = (selectedIds: (string | number)[]) => {
@@ -412,7 +501,9 @@ export default function UserFormPage() {
         <Button
           variant="contained"
           onClick={handleConfirm}
-          disabled={sendingInvite || !canSaveUser}
+          disabled={
+            sendingInvite || !canSaveUser || (!isNew && savedUser === null)
+          }
         >
           {sendingInvite ? (
             <CircularProgress size={20} color="inherit" />

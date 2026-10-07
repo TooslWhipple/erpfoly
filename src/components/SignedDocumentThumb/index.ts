@@ -1,0 +1,1 @@
+export { SignedDocumentThumb } from "./SignedDocumentThumb";

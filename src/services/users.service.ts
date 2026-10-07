@@ -106,15 +106,22 @@ export interface CreateUserPayload {
     driverDetails?: UserDriverDetailsPayload;
 }
 
+/**
+ * Generic edit (`PATCH /users/:id`). Role, cellphone and OTP requirement are not
+ * accepted here: they go through `updateUserRole`, `updateUserCellphone` and
+ * `updateUserOtpRequirement`. `driverDetails` applies to the user's CURRENT role.
+ */
 export interface UpdateUserPayload {
     firstName?: string;
     lastName?: string;
     username?: string;
-    cellphone?: string;
-    email?: string;
-    roleId?: number;
     branchIds?: number[];
-    requiresOtp?: boolean;
+    driverDetails?: UserDriverDetailsPayload;
+}
+
+export interface UpdateUserRolePayload {
+    roleId: number;
+    /** Required when the target role is a driver role. */
     driverDetails?: UserDriverDetailsPayload;
 }
 
@@ -168,13 +175,35 @@ export async function updateUser(
     if (payload.firstName !== undefined) body.firstName = payload.firstName;
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
     if (payload.username !== undefined) body.username = payload.username;
-    if (payload.cellphone !== undefined) body.cellphone = payload.cellphone;
-    if (payload.email !== undefined) body.email = payload.email;
-    if (payload.roleId !== undefined) body.roleId = payload.roleId;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
-    if (payload.requiresOtp !== undefined) body.requiresOtp = payload.requiresOtp;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
+}
+
+/** Changes the role; the affected user's active sessions are invalidated. */
+export async function updateUserRole(
+    id: number,
+    payload: UpdateUserRolePayload
+): Promise<ApiResult<ApiSuccessPayload>> {
+    return patch<ApiSuccessPayload>(`${BASE}/${id}/role`, {
+        roleId: payload.roleId,
+        ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
+    });
+}
+
+/** Changes the cellphone; the previous number is notified by WhatsApp. */
+export async function updateUserCellphone(
+    id: number,
+    cellphone: string
+): Promise<ApiResult<ApiSuccessPayload>> {
+    return patch<ApiSuccessPayload>(`${BASE}/${id}/cellphone`, { cellphone });
+}
+
+export async function updateUserOtpRequirement(
+    id: number,
+    requiresOtp: boolean
+): Promise<ApiResult<ApiSuccessPayload>> {
+    return patch<ApiSuccessPayload>(`${BASE}/${id}/otp-requirement`, { requiresOtp });
 }
 
 export async function deleteUser(id: number): Promise<ApiResult<{ id: number; message: string }>> {

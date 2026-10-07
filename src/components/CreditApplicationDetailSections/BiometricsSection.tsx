@@ -1,5 +1,7 @@
 import { Divider, Stack, Typography } from "@mui/material";
-import { VerifiedRow, VerifiedCheck, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
+import { SignedDocumentThumb } from "@/components/SignedDocumentThumb";
+import { useDocumentFileOpener } from "@/hooks/useSignedDocumentFileUrl";
+import { VerifiedRow, VerifiedCheck } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { Check } from "lucide-react";
 import { theme } from "@/styles/theme";
@@ -16,6 +18,7 @@ interface BiometricsSectionProps {
 
 export function BiometricsSection({ detail, onOpenImageViewer }: BiometricsSectionProps) {
   const { biometrics } = detail;
+  const { openWithUrl } = useDocumentFileOpener();
   return (
     <Stack width="100%" spacing={3}>
       <Stack>
@@ -28,17 +31,18 @@ export function BiometricsSection({ detail, onOpenImageViewer }: BiometricsSecti
       <Divider />
       <Stack spacing={2}>
         {biometrics.items.map((item) => {
-          const hasImage = Boolean(item.thumbnailUrl);
+          const { file } = item;
           return (
             <VerifiedRow
               key={item.id}
               style={{
                 marginBottom: 0,
-                cursor: hasImage ? "pointer" : "default",
+                cursor: file ? "pointer" : "default",
               }}
               onClick={
-                hasImage && item.thumbnailUrl
-                  ? () => onOpenImageViewer(item.name, item.verifiedBy, item.thumbnailUrl!)
+                file
+                  ? () =>
+                    void openWithUrl(file, (url) => onOpenImageViewer(item.name, item.verifiedBy, url))
                   : undefined
               }
             >
@@ -53,8 +57,8 @@ export function BiometricsSection({ detail, onOpenImageViewer }: BiometricsSecti
                   {item.verifiedBy}
                 </Typography>
               </Stack>
-              {item.thumbnailUrl ? (
-                <VerifiedThumb src={item.thumbnailUrl} alt={item.name} />
+              {file ? (
+                <SignedDocumentThumb file={file} alt={item.name} />
               ) : (
                 <div
                   style={{

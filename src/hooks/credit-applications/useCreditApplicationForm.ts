@@ -19,6 +19,9 @@ import { hasValidGuarantorInformation, useGuarantorTab } from "./tabs/useGuarant
 import { useReferencesTab } from "./tabs/useReferencesTab";
 import { creditApplicationTabIdToSection, type CreditApplicationSectionKey } from "@/utils/credit-application-form";
 import { toDateOnlyString } from "@/utils/date";
+import { toRemoteDocumentFile } from "@/services/files.service";
+import { collectOwnFileIds, toStoredDocumentFile } from "@/utils/credit-application-documents";
+import type { DocumentFileReference } from "@/types/document-file.types";
 import type {
   AddressTabValues,
   BasicInformationFormValues,
@@ -141,6 +144,7 @@ const EMPTY_DOCUMENTATION_VALUES: DocumentationTabValues = {
   ineFrontFiles: [],
   ineBackFiles: [],
   faceCaptureFiles: [],
+  persistedFileIds: [],
 };
 
 const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
@@ -160,6 +164,7 @@ const EMPTY_GUARANTOR_VALUES: GuarantorTabValues = {
   phone: "",
   identificationFrontFiles: [],
   identificationBackFiles: [],
+  persistedFileIds: [],
   hasSpouse: false,
 };
 
@@ -323,38 +328,33 @@ function mapCreditApplicationToFormValues(
         : [{ id: "reference-1", name: "", relationshipId: "", address: "", phone: "" }],
   };
 
-  const mapDocumentItems = (
-    list:
-      | Array<{
-        id: number;
-        typeCode: string;
-        typeName: string;
-        filePath: string;
-        fileUrl: string;
-      }>
-      | undefined
-  ) =>
-    (list ?? []).map((item) => {
-      const fileNameFromPath = item.filePath.split("/").pop()?.split("?")[0]?.trim();
-      return {
-        id: String(item.id),
-        name: fileNameFromPath || item.typeName,
-        filePath: item.filePath,
-        url: item.fileUrl,
-        uploadedAt: "Cargado",
-      };
-    });
+  const owner = { applicationId: creditApplication.id };
+  const mapDocumentItems = (list: DocumentFileReference[] | undefined) =>
+    (list ?? []).map((reference) => toStoredDocumentFile(toRemoteDocumentFile(reference, owner)));
+
+  const incomeProofFiles = mapDocumentItems(creditApplication.documentation?.incomeProofFiles);
+  const employmentProofLetterFiles = mapDocumentItems(
+    creditApplication.documentation?.employmentProofLetterFiles
+  );
+  const identificationFrontFiles = mapDocumentItems(
+    creditApplication.documentation?.guarantorIneFrontFiles
+  );
+  const identificationBackFiles = mapDocumentItems(
+    creditApplication.documentation?.guarantorIneBackFiles
+  );
 
   const documentation: DocumentationTabValues = {
     requiredAlertVisible: true,
     requiredAlertMessage: "Agrega la documentación solicitada para continuar con la solicitud.",
-    incomeProofFiles: mapDocumentItems(creditApplication.documentation?.incomeProofFiles),
-    employmentProofLetterFiles: mapDocumentItems(
-      creditApplication.documentation?.employmentProofLetterFiles
-    ),
+    incomeProofFiles,
+    employmentProofLetterFiles,
     ineFrontFiles: mapDocumentItems(creditApplication.documentation?.ineFrontFiles),
     ineBackFiles: mapDocumentItems(creditApplication.documentation?.ineBackFiles),
     faceCaptureFiles: mapDocumentItems(creditApplication.documentation?.faceCaptureFiles),
+    persistedFileIds: collectOwnFileIds(
+      [incomeProofFiles, employmentProofLetterFiles],
+      "supporting"
+    ),
   };
 
   const guarantor: GuarantorTabValues = {
@@ -375,11 +375,11 @@ function mapCreditApplicationToFormValues(
     curp: creditApplication.guarantor?.curp ?? "",
     rfc: creditApplication.guarantor?.rfc ?? "",
     phone: creditApplication.guarantor?.phone ?? "",
-    identificationFrontFiles: mapDocumentItems(
-      creditApplication.documentation?.guarantorIneFrontFiles
-    ),
-    identificationBackFiles: mapDocumentItems(
-      creditApplication.documentation?.guarantorIneBackFiles
+    identificationFrontFiles,
+    identificationBackFiles,
+    persistedFileIds: collectOwnFileIds(
+      [identificationFrontFiles, identificationBackFiles],
+      "supporting"
     ),
     hasSpouse: Boolean(creditApplication.guarantor?.hasSpouse),
   };

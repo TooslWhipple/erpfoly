@@ -83,6 +83,7 @@ export const PUBLIC_ROUTES = [
 	"/login/validate-otp",
 	"/login/change-password",
 	"/login/recover",
+	"/login/recover/verify",
 	"/login/recover/sent",
 ] as const;
 export const CHANGE_PASSWORD_ROUTE = "/login/change-password";

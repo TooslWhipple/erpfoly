@@ -6,12 +6,20 @@ import type { CreditApplicationBiometricsData } from "@/types/credit-application
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { sanitizeFormValues } from "@/utils/sanitizeInput";
 import type {
+  CreditApplicationDocumentFile,
   CreditApplicationFormPayload,
   FamilyReference,
 } from "@/types/credit-application-form.types";
+import type { DocumentFileReference } from "@/types/document-file.types";
 import type {
   RejectCreditApplicationResponse,
 } from "@/types/solicitud-credito-detail.types";
+import { toRemoteDocumentFile } from "@/services/files.service";
+import {
+  collectOwnFileIds,
+  collectRemovedFileIds,
+  toDocumentFileReferencePayload,
+} from "@/utils/credit-application-documents";
 
 interface CreditApplicationCatalogItem {
   id: number | null;
@@ -107,23 +115,15 @@ interface CreditApplicationReferencesResponse {
   }>;
 }
 
-interface CreditApplicationDocumentItemResponse {
-  id: number;
-  typeCode: string;
-  typeName: string;
-  filePath: string;
-  fileUrl: string;
-}
-
 interface CreditApplicationDocumentationResponse {
-  incomeProofFiles: CreditApplicationDocumentItemResponse[];
-  employmentProofLetterFiles: CreditApplicationDocumentItemResponse[];
-  ineFrontFiles: CreditApplicationDocumentItemResponse[];
-  ineBackFiles: CreditApplicationDocumentItemResponse[];
-  guarantorIneFrontFiles: CreditApplicationDocumentItemResponse[];
-  guarantorIneBackFiles: CreditApplicationDocumentItemResponse[];
-  bureauAuthorizationSignatureFiles?: CreditApplicationDocumentItemResponse[];
-  faceCaptureFiles?: CreditApplicationDocumentItemResponse[];
+  incomeProofFiles: DocumentFileReference[];
+  employmentProofLetterFiles: DocumentFileReference[];
+  ineFrontFiles: DocumentFileReference[];
+  ineBackFiles: DocumentFileReference[];
+  guarantorIneFrontFiles: DocumentFileReference[];
+  guarantorIneBackFiles: DocumentFileReference[];
+  bureauAuthorizationSignatureFiles?: DocumentFileReference[];
+  faceCaptureFiles?: DocumentFileReference[];
 }
 
 interface CreditApplicationGuarantorResponse {
@@ -197,7 +197,7 @@ export interface CreditApplicationDetailResponse {
     scoreLabel: string;
     scoreLevel: "excellent" | "good" | "fair" | "poor";
     queriedAt: string | null;
-    signatureUrl?: string;
+    signatureFile?: DocumentFileReference;
     canQueryNow?: boolean;
     missingFields?: string[];
   };
@@ -279,8 +279,7 @@ type UploadDocumentResponse = {
   success: boolean;
   message: string;
   documentId: number;
-  filePath: string;
-  fileUrl: string;
+  file: DocumentFileReference;
   documentTypeCode: string;
 };
 
@@ -453,15 +452,22 @@ function buildSectionPayload(
           familyReferences: mapFamilyReferences(payload.references.familyReferences),
         },
       };
-    case "documentation":
+    case "documentation": {
+      const supportingLists = getDocumentationSupportingLists(payload);
       return {
         documentation: {
-          incomeProofFiles: payload.documentation.incomeProofFiles,
-          employmentProofLetterFiles: payload.documentation.employmentProofLetterFiles,
-          ineFrontFiles: payload.documentation.ineFrontFiles,
-          ineBackFiles: payload.documentation.ineBackFiles,
+          incomeProofFiles: toDocumentFileReferencePayload(payload.documentation.incomeProofFiles),
+          employmentProofLetterFiles: toDocumentFileReferencePayload(
+            payload.documentation.employmentProofLetterFiles
+          ),
+          removeFileIds: collectRemovedFileIds(
+            payload.documentation.persistedFileIds,
+            supportingLists,
+            CREDIT_APPLICATION_SECTION_FILE_SOURCE
+          ),
         },
       };
+    }
     case "guarantor": {
       const maritalStatusId = Number.parseInt(payload.guarantor.maritalStatus, 10);
       return {
@@ -481,12 +487,42 @@ function buildSectionPayload(
           rfc: payload.guarantor.rfc.trim(),
           phone: payload.guarantor.phone.trim(),
           hasSpouse: payload.guarantor.hasSpouse,
-          identificationFrontFiles: payload.guarantor.identificationFrontFiles,
-          identificationBackFiles: payload.guarantor.identificationBackFiles,
+          identificationFrontFiles: toDocumentFileReferencePayload(
+            payload.guarantor.identificationFrontFiles
+          ),
+          identificationBackFiles: toDocumentFileReferencePayload(
+            payload.guarantor.identificationBackFiles
+          ),
+          removeFileIds: collectRemovedFileIds(
+            payload.guarantor.persistedFileIds,
+            getGuarantorLists(payload),
+            CREDIT_APPLICATION_SECTION_FILE_SOURCE
+          ),
         },
       };
     }
   }
+}
+
+/**
+ * Tabla propia de las secciones de documentación y aval de la solicitud: solo
+ * reconcilian archivos de apoyo. INE, selfie y firma se actualizan por su
+ * propio endpoint (biometría), nunca desde el guardado de la sección.
+ */
+const CREDIT_APPLICATION_SECTION_FILE_SOURCE = "supporting" as const;
+
+function getDocumentationSupportingLists(payload: CreditApplicationFormPayload) {
+  return [
+    payload.documentation.incomeProofFiles,
+    payload.documentation.employmentProofLetterFiles,
+  ];
+}
+
+function getGuarantorLists(payload: CreditApplicationFormPayload) {
+  return [
+    payload.guarantor.identificationFrontFiles,
+    payload.guarantor.identificationBackFiles,
+  ];
 }
 
 async function uploadCreditApplicationFile(
@@ -508,34 +544,32 @@ async function uploadCreditApplicationFile(
   return result.data;
 }
 
+/**
+ * Sube los archivos locales de una lista y los sustituye por su referencia
+ * (`documentId` + `file` de la respuesta). Los ya almacenados se conservan tal
+ * cual: su referencia es lo que mantiene vivo el archivo al guardar.
+ */
 async function ensureDocumentFilesUploaded(
   applicationId: string,
-  files: Array<{ id: string; name: string; file?: File; filePath?: string; url?: string; uploadedAt?: string }>,
+  files: CreditApplicationDocumentFile[],
   type: CreditApplicationDocumentTypeCode
-) {
-  const resolved = [];
+): Promise<CreditApplicationDocumentFile[]> {
+  const owner = { applicationId: Number(applicationId) };
+  const resolved: CreditApplicationDocumentFile[] = [];
   for (const item of files) {
     if (item.file) {
       const uploaded = await uploadCreditApplicationFile(applicationId, type, item.file);
       if (!uploaded) continue;
       resolved.push({
-        id: String(uploaded.documentId ?? item.id),
+        id: String(uploaded.documentId),
         name: item.name,
-        filePath: uploaded.filePath,
-        url: uploaded.fileUrl,
+        remote: toRemoteDocumentFile(uploaded.file, owner),
         uploadedAt: item.uploadedAt ?? "Cargado",
       });
       continue;
     }
-    const existingPath = item.filePath?.trim();
-    if (existingPath) {
-      resolved.push({
-        id: item.id,
-        name: item.name,
-        filePath: existingPath,
-        url: item.url,
-        uploadedAt: item.uploadedAt,
-      });
+    if (item.remote) {
+      resolved.push(item);
     }
   }
   return resolved;
@@ -592,19 +626,16 @@ export async function createCreditApplicationFromIntake(
   return result.data;
 }
 
+interface StoredBiometricDocument {
+  documentId: number;
+  file: DocumentFileReference;
+}
+
 export interface UpdateIneBiometricsResponse {
   success: true;
   message: string;
-  ineFront: {
-    documentId: number;
-    filePath: string;
-    fileUrl: string;
-  };
-  ineBack: {
-    documentId: number;
-    filePath: string;
-    fileUrl: string;
-  };
+  ineFront: StoredBiometricDocument;
+  ineBack: StoredBiometricDocument;
   ocrStatus: "SUCCESS" | "FAILED";
   faceMatchInvalidated: true;
 }
@@ -612,11 +643,7 @@ export interface UpdateIneBiometricsResponse {
 export interface UpdateFaceBiometricsResponse {
   success: true;
   message: string;
-  faceCapture: {
-    documentId: number;
-    filePath: string;
-    fileUrl: string;
-  };
+  faceCapture: StoredBiometricDocument;
   faceMatch: {
     status: "SUCCESS";
     score: number;
@@ -898,16 +925,6 @@ export async function saveCreditApplicationSection(
         payload.documentation.employmentProofLetterFiles,
         "EMPLOYMENT_PROOF_LETTER"
       ),
-      ineFrontFiles: await ensureDocumentFilesUploaded(
-        applicationId,
-        payload.documentation.ineFrontFiles,
-        "INE_FRONT"
-      ),
-      ineBackFiles: await ensureDocumentFilesUploaded(
-        applicationId,
-        payload.documentation.ineBackFiles,
-        "INE_BACK"
-      ),
     };
   }
 
@@ -932,6 +949,19 @@ export async function saveCreditApplicationSection(
     skipGlobalErrorToast: true,
   });
   if (result.error) return null;
+
+  if (section === "documentation") {
+    payload.documentation.persistedFileIds = collectOwnFileIds(
+      getDocumentationSupportingLists(payload),
+      CREDIT_APPLICATION_SECTION_FILE_SOURCE
+    );
+  }
+  if (section === "guarantor") {
+    payload.guarantor.persistedFileIds = collectOwnFileIds(
+      getGuarantorLists(payload),
+      CREDIT_APPLICATION_SECTION_FILE_SOURCE
+    );
+  }
   return result.data;
 }
 

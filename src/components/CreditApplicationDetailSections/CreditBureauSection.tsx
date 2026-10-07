@@ -1,6 +1,8 @@
 import { Button, Divider, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
-import { VerifiedRow, VerifiedCheck, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
+import { SignedDocumentThumb } from "@/components/SignedDocumentThumb";
+import { useDocumentFileOpener } from "@/hooks/useSignedDocumentFileUrl";
+import { VerifiedRow, VerifiedCheck } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { AlertCircle, Check, Clock3 } from "lucide-react";
 
@@ -111,9 +113,10 @@ export function CreditBureauSection({
   isConsultingBuro = false,
 }: CreditBureauSectionProps) {
   const { creditBureau } = detail;
-  const signatureUrl = creditBureau.signatureUrl;
+  const { signatureFile } = creditBureau;
+  const { openWithUrl } = useDocumentFileOpener();
   const hasSignature = Boolean(
-    creditBureau.clientAuthorized || signatureUrl,
+    creditBureau.clientAuthorized || signatureFile,
   );
   const signatureSubtitle = hasSignature
     ? "Firma capturada por el sistema"
@@ -170,16 +173,18 @@ export function CreditBureauSection({
         <VerifiedRow
           style={{
             marginBottom: 0,
-            cursor: signatureUrl ? "pointer" : "default",
+            cursor: signatureFile ? "pointer" : "default",
           }}
           onClick={
-            signatureUrl
+            signatureFile
               ? () =>
-                  onOpenImageViewer(
-                    "Firma de autorización de buró",
-                    signatureSubtitle,
-                    signatureUrl,
-                    "#fff",
+                  void openWithUrl(signatureFile, (url) =>
+                    onOpenImageViewer(
+                      "Firma de autorización de buró",
+                      signatureSubtitle,
+                      url,
+                      "#fff",
+                    ),
                   )
               : undefined
           }
@@ -201,9 +206,9 @@ export function CreditBureauSection({
               {signatureSubtitle}
             </Typography>
           </Stack>
-          {signatureUrl ? (
-            <VerifiedThumb
-              src={signatureUrl}
+          {signatureFile ? (
+            <SignedDocumentThumb
+              file={signatureFile}
               alt="Firma de autorización de buró"
               style={{ objectFit: "contain", backgroundColor: "#fff" }}
             />

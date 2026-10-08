@@ -87,6 +87,7 @@ export async function getProductDetail(
   currentBranchId?: number,
   includeOthers?: boolean,
   purchaseTypeId?: number,
+  config?: AxiosConfigWithSkipToast,
 ): Promise<ApiResult<ProductDetail>> {
   const params = new URLSearchParams();
   if (currentBranchId !== undefined) {
@@ -101,6 +102,7 @@ export async function getProductDetail(
   const query = params.toString();
   return get<ProductDetail>(
     `${BASE}/products/${productId}/detail${query ? `?${query}` : ""}`,
+    config,
   );
 }
 

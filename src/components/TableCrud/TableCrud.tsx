@@ -131,6 +131,8 @@ interface TableCrudProps<T> {
   minTableWidth?: number;
   /** Fill the parent flex height; only the table body scrolls. */
   fillHeight?: boolean;
+  /** Share the row by column size instead of letting some cells swallow the width. */
+  balanced?: boolean;
 }
 
 export function TableCrud<T>({
@@ -154,6 +156,7 @@ export function TableCrud<T>({
   headerSelection,
   minTableWidth = 650,
   fillHeight = false,
+  balanced = false,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -314,14 +317,22 @@ export function TableCrud<T>({
       CellComponent = StickyCell;
     } else if (isNumericType) {
       CellComponent = NumberCell;
-    } else if (column.truncate) {
+    } else if (column.truncate && !balanced) {
       CellComponent = TruncatedCell;
     }
 
     const width = getColumnWidth(column);
     const maxWidth = getColumnMaxWidth(column);
-    const cellStyle: React.CSSProperties = { minWidth: width };
-    if (maxWidth !== undefined) {
+    const cellStyle: React.CSSProperties = balanced
+      ? {
+          width,
+          maxWidth: width,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }
+      : { minWidth: width };
+    if (!balanced && maxWidth !== undefined) {
       cellStyle.maxWidth = maxWidth;
       cellStyle.width = maxWidth;
     }
@@ -453,8 +464,10 @@ export function TableCrud<T>({
         {columns.map((column) => {
           const width = getColumnWidth(column);
           const maxWidth = getColumnMaxWidth(column);
-          const headerStyle: React.CSSProperties = { minWidth: width };
-          if (maxWidth !== undefined) {
+          const headerStyle: React.CSSProperties = balanced
+            ? { width, maxWidth: width }
+            : { minWidth: width };
+          if (!balanced && maxWidth !== undefined) {
             headerStyle.maxWidth = maxWidth;
             headerStyle.width = maxWidth;
           }
@@ -482,7 +495,11 @@ export function TableCrud<T>({
       <StyledTableContainer fillHeight={fillHeight}>
         <Table
           stickyHeader={fillHeight}
-          style={{ width: "100%", minWidth: minTableWidth }}
+          style={{
+            width: "100%",
+            minWidth: balanced ? undefined : minTableWidth,
+            tableLayout: balanced ? "fixed" : undefined,
+          }}
         >
           {renderTableHeader()}
           <TableBody>

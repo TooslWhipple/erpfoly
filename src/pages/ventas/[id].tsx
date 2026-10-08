@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Card,
   CardContent,
   Divider,
@@ -124,6 +125,7 @@ export default function VentaDetalle() {
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [downloadingType, setDownloadingType] = useState<"xml" | "pdf" | "zip" | null>(null);
+  const [printingTicket, setPrintingTicket] = useState(false);
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
@@ -464,14 +466,22 @@ export default function VentaDetalle() {
         <Button
           size="small"
           variant="outlined"
+          disabled={printingTicket || saleId == null}
+          startIcon={
+            printingTicket ? (
+              <CircularProgress size={14} color="inherit" />
+            ) : undefined
+          }
           onClick={() => {
-            if (saleId == null) return;
+            if (saleId == null || printingTicket) return;
+            setPrintingTicket(true);
             void fetchSaleTicketPdf(saleId)
               .then((blob) => printPdfBlob(blob))
-              .catch((error: Error) => snackbar.showError(error.message));
+              .catch((error: Error) => snackbar.showError(error.message))
+              .finally(() => setPrintingTicket(false));
           }}
         >
-          Reimprimir ticket
+          {printingTicket ? "Imprimiendo..." : "Reimprimir ticket"}
         </Button>
       </DetailHeader>
 

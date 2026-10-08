@@ -1870,25 +1870,41 @@ export function SaleBuilder({
   const isApprovedSpecialDiscount =
     resumeSaleData?.discountRequest?.status === "APPROVED";
 
-  const { data: hasStockAtDeliveryBranch } = useQuery({
+  const deliveryStockQuery = useQuery({
     queryKey: [
       "delivery-branch-stock",
+      coverageBranchId,
       effectiveDeliveryBranch?.id,
       cartProductIds,
     ],
     enabled:
-      deliveryType === "pickup" && !!effectiveDeliveryBranch && cart.length > 0,
+      deliveryType === "pickup" &&
+      !!effectiveDeliveryBranch &&
+      coverageBranchId != null &&
+      cart.length > 0,
+    retry: false,
     queryFn: async () => {
+      const operatingBranchId = coverageBranchId!;
+      const deliveryBranchId = effectiveDeliveryBranch!.id;
       const checks = await Promise.all(
         cart.map(async (item) => {
+          // La sucursal que opera la venta autoriza la lectura. El retiro
+          // se busca dentro del inventario global.
           const res = await getProductDetail(
             item.productId,
-            effectiveDeliveryBranch!.id,
+            operatingBranchId,
             true,
+            undefined,
+            { skipGlobalErrorToast: true },
           );
+          if (res.error || !res.data) {
+            throw new Error(
+              res.error?.message ?? "No se pudo verificar la existencia",
+            );
+          }
           const available =
-            res.data?.inventorySources.find(
-              (s) => s.branchId === effectiveDeliveryBranch!.id,
+            res.data.inventorySources.find(
+              (s) => s.branchId === deliveryBranchId,
             )?.available ?? 0;
           return available >= item.quantity;
         }),
@@ -1896,6 +1912,7 @@ export function SaleBuilder({
       return checks.every(Boolean);
     },
   });
+  const hasStockAtDeliveryBranch = deliveryStockQuery.data;
 
   const isDeliveryBranchCurrent =
     effectiveDeliveryBranch?.id === currentBranchId;
@@ -4784,9 +4801,17 @@ export function SaleBuilder({
                       </Typography>
 
                       {effectiveDeliveryBranch &&
+                        deliveryStockQuery.isFetching &&
                         hasStockAtDeliveryBranch === undefined && (
                           <Typography variant="caption" color="text.secondary">
                             Verificando existencia en esta sucursal...
+                          </Typography>
+                        )}
+                      {effectiveDeliveryBranch &&
+                        effectiveDeliveryBranch.id !== currentBranchId &&
+                        deliveryStockQuery.isError && (
+                          <Typography variant="caption" color="error">
+                            No se pudo verificar la existencia en esta sucursal.
                           </Typography>
                         )}
                       {effectiveDeliveryBranch &&

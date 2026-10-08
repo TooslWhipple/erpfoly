@@ -1,4 +1,5 @@
 import { api, get, patch, post, unwrapOrThrow } from "@/lib/axios";
+import type { PaginatedListParams, PaginatedListPayload } from "@/hooks/usePaginatedList";
 
 export interface HandoverLine {
   saleItemId: number;
@@ -36,12 +37,24 @@ export interface PickupHoldRow {
 
 const BASE = "/sale-handovers";
 
-export async function listHandoverQueue(branchId: number, q?: string) {
-  return unwrapOrThrow(
-    await get<HandoverSale[]>(BASE, {
-      params: { branchId, ...(q?.trim() ? { q: q.trim() } : {}) },
-    }),
-  );
+export interface HandoverBranch {
+  id: number;
+  name: string;
+}
+
+export async function listHandoverBranches(): Promise<HandoverBranch[]> {
+  return unwrapOrThrow(await get<HandoverBranch[]>(`${BASE}/branches`));
+}
+
+export function listHandoverQueue(params: PaginatedListParams) {
+  return get<PaginatedListPayload<HandoverSale>>(BASE, {
+    params: {
+      branchId: params.branchId,
+      page: params.page,
+      limit: params.limit,
+      ...(params.search ? { q: params.search } : {}),
+    },
+  });
 }
 
 export async function getHandoverSale(saleId: number, branchId: number) {
@@ -105,10 +118,14 @@ export async function uploadHandoverFile(
   return uploaded.id;
 }
 
-export async function listExpiredHolds(branchId: number) {
-  return unwrapOrThrow(
-    await get<PickupHoldRow[]>(`${BASE}/holds`, { params: { branchId } }),
-  );
+export function listExpiredHolds(params: PaginatedListParams) {
+  return get<PaginatedListPayload<PickupHoldRow>>(`${BASE}/holds`, {
+    params: {
+      branchId: params.branchId,
+      page: params.page,
+      limit: params.limit,
+    },
+  });
 }
 
 export async function getHoldDays() {

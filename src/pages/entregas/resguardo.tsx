@@ -1,160 +1,222 @@
 import { useState } from "react";
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Stack,
-  TextField,
-  Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
+import { FormSelect, FormTextField, TableCrud, Title } from "@/components";
+import type { Column, RowAction } from "@/components/TableCrud";
+import { useHandoverBranches } from "@/hooks/useHandoverBranches";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { DELIVERY_HOLD_UPDATE } from "@/lib/permissions";
 import {
   extendHold,
   getHoldDays,
   listExpiredHolds,
   releaseHold,
   updateHoldDays,
+  type PickupHoldRow,
 } from "@/services/sale-handover.service";
-import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 export default function ResguardoPage() {
-  const user = useAuthStore((state) => state.user);
   const showError = useSnackbarStore((state) => state.showError);
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const queryClient = useQueryClient();
-  const { data: branches = [] } = useBranchesSelect();
-  const [branchId, setBranchId] = useState<number | "">(
-    user?.principalBranchId ?? "",
-  );
+  const {
+    branches,
+    branchId,
+    setBranchId,
+    isLoading: branchesLoading,
+    isError: branchesError,
+    error: branchesQueryError,
+  } = useHandoverBranches();
   const [holdDays, setHoldDays] = useState("");
-  const [action, setAction] = useState<{ id: number; kind: "extend" | "release" } | null>(
-    null,
-  );
+  const [action, setAction] = useState<{
+    id: number;
+    kind: "extend" | "release";
+  } | null>(null);
   const [expiresAt, setExpiresAt] = useState("");
   const [reason, setReason] = useState("");
+  const numericBranchId = branchId === "" ? 0 : branchId;
 
-  const holds = useQuery({
-    queryKey: ["expired-holds", branchId],
-    queryFn: () => listExpiredHolds(Number(branchId)),
-    enabled: branchId !== "",
-  });
   const config = useQuery({
-    queryKey: ["hold-days"],
+    queryKey: ["handover-config"],
     queryFn: getHoldDays,
+  });
+  const {
+    data: holds,
+    total,
+    page,
+    rowsPerPage,
+    setPage,
+    setRowsPerPage,
+    isLoading,
+    isError,
+    error,
+  } = usePaginatedList<PickupHoldRow>({
+    queryKey: ["handover-holds", String(numericBranchId)],
+    queryFn: listExpiredHolds,
+    initialRowsPerPage: 10,
+    extraParams: { branchId: numericBranchId },
+    enabled: branchId !== "",
   });
 
   const saveDays = useMutation({
-    mutationFn: () => updateHoldDays(Number(holdDays || config.data?.holdDays)),
+    mutationFn: () => updateHoldDays(Number(holdDays)),
     onSuccess: (result) => {
-      showSuccess(`El resguardo queda en ${result.holdDays} días.`);
-      void queryClient.invalidateQueries({ queryKey: ["hold-days"] });
+      setHoldDays(String(result.holdDays));
+      showSuccess("Días de resguardo actualizados.");
+      void queryClient.invalidateQueries({ queryKey: ["handover-config"] });
     },
-    onError: (error: Error) => showError(error.message),
+    onError: (saveError: Error) => showError(saveError.message),
   });
 
   const apply = useMutation({
     mutationFn: async () => {
-      if (!action) return;
+      if (!action) throw new Error("Selecciona un resguardo.");
       if (action.kind === "extend") {
-        await extendHold(action.id, {
-          expiresAt: `${expiresAt}T23:59:59`,
-          reason: reason.trim(),
+        return extendHold(action.id, {
+          expiresAt: new Date(expiresAt).toISOString(),
+          reason,
         });
-        return;
       }
-      await releaseHold(action.id, reason.trim());
+      return releaseHold(action.id, reason);
     },
-    onSuccess: () => {
-      showSuccess(action?.kind === "extend" ? "Resguardo prorrogado." : "Saldo regularizado.");
+    onSuccess: (result) => {
+      showSuccess(
+        typeof result === "object" && result && "message" in result
+          ? String(result.message)
+          : "Resguardo actualizado.",
+      );
       setAction(null);
-      setReason("");
-      setExpiresAt("");
-      void queryClient.invalidateQueries({ queryKey: ["expired-holds"] });
+      void queryClient.invalidateQueries({ queryKey: ["handover-holds"] });
     },
-    onError: (error: Error) => showError(error.message),
+    onError: (applyError: Error) => showError(applyError.message),
   });
 
+  const columns: Column<PickupHoldRow>[] = [
+    { id: "folio", label: "Folio", size: "lg" },
+    {
+      id: "clientName",
+      label: "Cliente",
+      size: "lg",
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
+    },
+    { id: "branchName", label: "Sucursal", size: "md" },
+    { id: "expiresAt", label: "Venció", size: "md", type: "date" },
+    {
+      id: "label",
+      label: "Estado",
+      size: "xl",
+      format: (value) => (value == null || value === "" ? "—" : String(value)),
+    },
+  ];
+  const actions: RowAction<PickupHoldRow>[] = [
+    {
+      id: "extend",
+      label: "Prorrogar",
+      permission: DELIVERY_HOLD_UPDATE,
+      onClick: (row) => {
+        setAction({ id: row.id, kind: "extend" });
+        setReason("");
+        setExpiresAt("");
+      },
+    },
+    {
+      id: "release",
+      label: "Regularizar",
+      permission: DELIVERY_HOLD_UPDATE,
+      onClick: (row) => {
+        setAction({ id: row.id, kind: "release" });
+        setReason("");
+      },
+    },
+  ];
+
   return (
-    <Stack spacing={2} sx={{ p: { xs: 2, md: 3 }, maxWidth: 860, mx: "auto" }}>
-      <Typography variant="h5" fontWeight={700}>
-        Resguardo vencido
-      </Typography>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        <TextField
-          select
-          label="Sucursal"
-          value={branchId}
-          onChange={(event) => setBranchId(Number(event.target.value))}
-          SelectProps={{ native: true }}
-          sx={{ minWidth: 220 }}
+    <Stack spacing={3}>
+      <Title
+        title="Resguardo vencido"
+        description="Ventas que ya cumplieron el plazo y siguen sin entregarse."
+      />
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        alignItems={{ md: "flex-end" }}
+      >
+        <Box sx={{ width: { xs: "100%", md: 280 } }}>
+          <FormSelect
+            label="Sucursal"
+            value={branchId}
+            options={branches.map((branch) => ({
+              value: branch.id,
+              label: branch.name,
+            }))}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              setBranchId(Number.isFinite(next) && next > 0 ? next : "");
+              setPage(0);
+            }}
+          />
+        </Box>
+        <Box sx={{ width: { xs: "100%", md: 180 } }}>
+          <FormTextField
+            label="Días de resguardo"
+            type="number"
+            value={holdDays || String(config.data?.holdDays ?? 15)}
+            onChange={(event) => setHoldDays(event.target.value)}
+            inputProps={{ min: 1 }}
+          />
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={() => saveDays.mutate()}
+          disabled={saveDays.isPending}
+          sx={{ mb: { md: 0.5 } }}
         >
-          <option value="" />
-          {branches.map((branch) => (
-            <option key={branch.id} value={branch.id}>
-              {branch.name}
-            </option>
-          ))}
-        </TextField>
-        <TextField
-          label="Días de resguardo"
-          type="number"
-          value={holdDays || String(config.data?.holdDays ?? 15)}
-          onChange={(event) => setHoldDays(event.target.value)}
-          inputProps={{ min: 1 }}
-        />
-        <Button variant="outlined" onClick={() => saveDays.mutate()}>
           Guardar días
         </Button>
       </Stack>
-      {holds.error instanceof Error && (
-        <Alert severity="error">{holds.error.message}</Alert>
+      {branchesError && (
+        <Alert severity="error">
+          {branchesQueryError instanceof Error
+            ? branchesQueryError.message
+            : "No se pudieron cargar tus sucursales."}
+        </Alert>
       )}
-      {(holds.data ?? []).map((hold) => (
-        <Stack
-          key={hold.id}
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          spacing={1}
-          sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2 }}
-        >
-          <div>
-            <Typography fontWeight={700}>
-              {hold.folio} · {hold.clientName}
-            </Typography>
-            <Typography color="text.secondary">{hold.label}</Typography>
-          </div>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setAction({ id: hold.id, kind: "extend" });
-                setReason("");
-                setExpiresAt("");
-              }}
-            >
-              Prorrogar
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              onClick={() => {
-                setAction({ id: hold.id, kind: "release" });
-                setReason("");
-              }}
-            >
-              Regularizar
-            </Button>
-          </Stack>
-        </Stack>
-      ))}
-      {holds.data?.length === 0 && (
-        <Typography color="text.secondary">No hay resguardos vencidos.</Typography>
+      {!branchesLoading && branches.length === 0 && !branchesError && (
+        <Alert severity="info">
+          No tienes sucursales asignadas. Pide que te vinculen a la tienda donde trabajas.
+        </Alert>
       )}
+      {isError && (
+        <Alert severity="error">
+          {error instanceof Error
+            ? error.message
+            : "No se pudieron cargar los resguardos."}
+        </Alert>
+      )}
+      <TableCrud
+        columns={columns}
+        rows={holds}
+        actions={actions}
+        loading={isLoading}
+        rowKey="id"
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalRows={total}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        balanced
+        emptyMessage="No hay resguardos vencidos"
+      />
 
       <Dialog open={action != null} onClose={() => setAction(null)} fullWidth>
         <DialogTitle>
@@ -163,7 +225,7 @@ export default function ResguardoPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {action?.kind === "extend" && (
-              <TextField
+              <FormTextField
                 label="Nueva fecha"
                 type="date"
                 value={expiresAt}
@@ -171,7 +233,7 @@ export default function ResguardoPage() {
                 InputLabelProps={{ shrink: true }}
               />
             )}
-            <TextField
+            <FormTextField
               label="Motivo"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
@@ -184,7 +246,11 @@ export default function ResguardoPage() {
           <Button onClick={() => setAction(null)}>Cancelar</Button>
           <Button
             variant="contained"
-            disabled={!reason.trim() || (action?.kind === "extend" && !expiresAt) || apply.isPending}
+            disabled={
+              !reason.trim() ||
+              (action?.kind === "extend" && !expiresAt) ||
+              apply.isPending
+            }
             onClick={() => apply.mutate()}
           >
             Confirmar

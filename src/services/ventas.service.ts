@@ -310,9 +310,12 @@ export async function removeSaleItem(
 }
 
 export interface RequestSaleDiscountPayload {
-  reason: DiscountRequestReason;
-  notes?: string;
-  items: Array<{ saleItemId: number; quantity: number }>;
+  items: Array<{
+    saleItemId: number;
+    quantity: number;
+    reason: DiscountRequestReason;
+    notes?: string;
+  }>;
 }
 
 export async function requestSaleDiscount(

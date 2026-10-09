@@ -24,6 +24,21 @@ export function getDiscountRequestReasonLabel(
   return formatDiscountRequestReasonList(label, reasonCode, notes);
 }
 
+export function formatSaleDiscountRequestReason(request: {
+  reason: string;
+  notes?: string | null;
+  items?: Array<{ reason?: string; notes?: string | null }>;
+}): string {
+  const detailed = (request.items ?? []).filter((item) => item.reason);
+  if (detailed.length === 0) {
+    return getDiscountRequestReasonLabel(request.reason, request.notes);
+  }
+  const labels = detailed.map((item) =>
+    getDiscountRequestReasonLabel(item.reason ?? "", item.notes),
+  );
+  return [...new Set(labels)].join(", ");
+}
+
 export const DISCOUNT_REQUEST_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pendiente de autorización",
   APPROVED: "Aprobado",

@@ -18,7 +18,10 @@ import {
   RejectDiscountRequestModal,
 } from "@/components";
 import { InlineMobileMenuButton } from "@/components/Layout";
-import type { ApproveDiscountRequestResult } from "@/components";
+import type {
+  ApproveDiscountLineInput,
+  ApproveDiscountRequestResult,
+} from "@/components";
 import type {
   ApproveDiscountRequestPayload,
   DiscountRequestDetail,
@@ -174,10 +177,26 @@ export default function DiscountRequestDetailPage() {
   );
   const handleApproveDiscountRequest = useCallback(
     (result: ApproveDiscountRequestResult) => {
+      if ("items" in result) {
+        approveMutation.mutate({
+          items: result.items.map((item) =>
+            item.mode === "amount"
+              ? {
+                  discountRequestItemId: item.discountRequestItemId,
+                  approvedDiscountAmount: item.value,
+                }
+              : {
+                  discountRequestItemId: item.discountRequestItemId,
+                  approvedDiscountPct: item.value,
+                },
+          ),
+        });
+        return;
+      }
       approveMutation.mutate(
         result.mode === "amount"
           ? { approvedDiscountAmount: result.value }
-          : { approvedDiscountPct: result.value }
+          : { approvedDiscountPct: result.value },
       );
     },
     [approveMutation],
@@ -222,6 +241,37 @@ export default function DiscountRequestDetailPage() {
     );
   }
   const isPending = detail.status === "pending";
+  const reasonLabels = [
+    ...new Set(
+      detail.lineItems
+        .map((item) => item.reasonLabel)
+        .filter((label): label is string => Boolean(label)),
+    ),
+  ];
+  const headerReason =
+    reasonLabels.length > 1
+      ? "Motivo por artículo"
+      : (reasonLabels[0] ?? detail.reasonLabel);
+  const singleLineNotes =
+    reasonLabels.length <= 1
+      ? detail.lineItems.find((item) => item.notes?.trim())?.notes ??
+        detail.notes
+      : null;
+  const approveLines: ApproveDiscountLineInput[] = detail.lineItems.flatMap(
+    (item) =>
+      item.discountRequestItemId == null
+        ? []
+        : [
+            {
+              discountRequestItemId: item.discountRequestItemId,
+              name: item.name,
+              quantity: item.quantity,
+              baseAmount: item.lineBase ?? item.total,
+              reasonLabel: item.reasonLabel ?? detail.reasonLabel,
+              notes: item.notes,
+            },
+          ],
+  );
   const deliveryLatitude =
     detail.delivery?.latitude != null
       ? Number(detail.delivery.latitude)
@@ -248,8 +298,8 @@ export default function DiscountRequestDetailPage() {
       <ApproveDiscountRequestModal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
+        lines={approveLines}
         saleTotal={detail.discountBaseAmount}
-        suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />
       <DetailHeader sx={{ flexWrap: { xs: "wrap", sm: "nowrap" } }}>
@@ -306,11 +356,11 @@ export default function DiscountRequestDetailPage() {
                   Descuento solicitado
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Motivo: {detail.reasonLabel}
+                  Motivo: {headerReason}
                 </Typography>
-                {detail.reason === "OTHER" && detail.notes && (
+                {reasonLabels.length <= 1 && singleLineNotes && (
                   <Typography variant="body2" color="text.secondary">
-                    Nota: {detail.notes}
+                    Nota: {singleLineNotes}
                   </Typography>
                 )}
               </Stack>

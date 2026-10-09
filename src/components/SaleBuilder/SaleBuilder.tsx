@@ -181,7 +181,7 @@ import { DiscountRequestModal } from "@/components/DiscountRequestModal";
 import { ProductCodeScannerDialog } from "@/components/ProductCodeScannerDialog";
 import { DiscountRequestStatusBanner } from "@/components/DiscountRequestStatusBanner";
 import {
-  getDiscountRequestReasonLabel,
+  formatSaleDiscountRequestReason,
   getDiscountRequestStatusLabel,
 } from "@/utils/discountRequest";
 
@@ -3423,30 +3423,57 @@ export function SaleBuilder({
                             {formatCurrency(item.originalPrice)}
                           </Typography>
                         </Box>
-                        {item.discountAmount +
+                        {(item.discountAmount > 0 ||
                           (specialDiscount.bySaleItemId[item.saleItemId ?? -1] ??
-                            0) >
-                          0 && (
+                            0) > 0) && (
                           <Box textAlign="right">
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Descuento
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              fontWeight={600}
-                              color="error.main"
-                            >
-                              -
-                              {formatCurrency(
-                                item.discountAmount +
-                                  (specialDiscount.bySaleItemId[
-                                    item.saleItemId ?? -1
-                                  ] ?? 0),
+                            <Stack spacing={0.75} alignItems="flex-end">
+                              {item.discountAmount > 0 && (
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {(specialDiscount.bySaleItemId[
+                                      item.saleItemId ?? -1
+                                    ] ?? 0) > 0
+                                      ? "Promoción"
+                                      : "Descuento"}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    color="error.main"
+                                  >
+                                    -{formatCurrency(item.discountAmount)}
+                                  </Typography>
+                                </Box>
                               )}
-                            </Typography>
+                              {(specialDiscount.bySaleItemId[
+                                item.saleItemId ?? -1
+                              ] ?? 0) > 0 && (
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    Descuento especial
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    color="error.main"
+                                  >
+                                    -
+                                    {formatCurrency(
+                                      specialDiscount.bySaleItemId[
+                                        item.saleItemId ?? -1
+                                      ] ?? 0,
+                                    )}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Stack>
                           </Box>
                         )}
                         <Box textAlign="right">
@@ -4074,9 +4101,8 @@ export function SaleBuilder({
           )}
           {resumeSaleData?.discountRequest != null && (
             <DiscountRequestStatusBanner
-              motivo={getDiscountRequestReasonLabel(
-                resumeSaleData.discountRequest.reason,
-                resumeSaleData.discountRequest.notes,
+              motivo={formatSaleDiscountRequestReason(
+                resumeSaleData.discountRequest,
               )}
               estado={getDiscountRequestStatusLabel(
                 resumeSaleData.discountRequest.status,

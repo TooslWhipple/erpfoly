@@ -202,6 +202,10 @@ export interface SaleDiscountRequestItem {
   saleItemId: number;
   quantity: number;
   allocatedAmount: number | null;
+  reason?: DiscountRequestReason;
+  notes?: string | null;
+  approvedDiscountPct?: number | null;
+  approvedDiscountAmount?: number | null;
 }
 
 export interface SaleDiscountRequest {

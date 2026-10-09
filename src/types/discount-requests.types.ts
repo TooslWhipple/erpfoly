@@ -25,9 +25,11 @@ export interface DiscountRequest {
   articleCount: number;
   /** Total amount in currency */
   amount: number;
-  /** Reason label for display */
+  /** Full reason text. The table uses it as the tooltip. */
   reason: string;
   reasonCode?: string;
+  /** Distinct reason labels. More than one renders as "y N más". */
+  reasonLabels?: string[];
   notes?: string | null;
   status: DiscountRequestStatus;
   requestedDiscountPct?: number | null;
@@ -63,6 +65,15 @@ export interface DiscountRequestLineItem {
   discountAmount: number;
   /** originalPrice * quantity - discountAmount */
   total: number;
+  discountRequestItemId?: number | null;
+  reason?: string | null;
+  reasonLabel?: string | null;
+  notes?: string | null;
+  approvedDiscountPct?: number | null;
+  approvedDiscountAmount?: number | null;
+  allocatedAmount?: number | null;
+  /** Portion the special discount is calculated on. */
+  lineBase?: number;
 }
 
 export type DeliveryOption = "a_domicilio" | "recoger_sucursal";
@@ -106,7 +117,14 @@ export interface DiscountRequestDetail {
   delivery: DiscountRequestDelivery | null;
 }
 
+export type ApproveDiscountLinePayload = {
+  discountRequestItemId: number;
+  approvedDiscountPct?: number;
+  approvedDiscountAmount?: number;
+};
+
 export type ApproveDiscountRequestPayload =
+  | { items: ApproveDiscountLinePayload[]; notes?: string }
   | { approvedDiscountPct: number; notes?: string }
   | { approvedDiscountAmount: number; notes?: string };
 

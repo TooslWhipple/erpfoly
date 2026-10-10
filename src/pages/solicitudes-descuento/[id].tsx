@@ -183,10 +183,12 @@ export default function DiscountRequestDetailPage() {
             item.mode === "amount"
               ? {
                   discountRequestItemId: item.discountRequestItemId,
+                  unitIndex: item.unitIndex,
                   approvedDiscountAmount: item.value,
                 }
               : {
                   discountRequestItemId: item.discountRequestItemId,
+                  unitIndex: item.unitIndex,
                   approvedDiscountPct: item.value,
                 },
           ),
@@ -243,9 +245,13 @@ export default function DiscountRequestDetailPage() {
   const isPending = detail.status === "pending";
   const reasonLabels = [
     ...new Set(
-      detail.lineItems
-        .map((item) => item.reasonLabel)
-        .filter((label): label is string => Boolean(label)),
+      detail.lineItems.flatMap((item) => {
+        const fromUnits = (item.units ?? [])
+          .map((unit) => unit.reasonLabel)
+          .filter((label): label is string => Boolean(label));
+        if (fromUnits.length > 0) return fromUnits;
+        return item.reasonLabel ? [item.reasonLabel] : [];
+      }),
     ),
   ];
   const headerReason =
@@ -254,23 +260,36 @@ export default function DiscountRequestDetailPage() {
       : (reasonLabels[0] ?? detail.reasonLabel);
   const singleLineNotes =
     reasonLabels.length <= 1
-      ? detail.lineItems.find((item) => item.notes?.trim())?.notes ??
+      ? detail.lineItems
+          .flatMap((item) => item.units ?? [])
+          .find((unit) => unit.notes?.trim())?.notes ??
+        detail.lineItems.find((item) => item.notes?.trim())?.notes ??
         detail.notes
       : null;
   const approveLines: ApproveDiscountLineInput[] = detail.lineItems.flatMap(
-    (item) =>
-      item.discountRequestItemId == null
-        ? []
-        : [
-            {
-              discountRequestItemId: item.discountRequestItemId,
-              name: item.name,
-              quantity: item.quantity,
-              baseAmount: item.lineBase ?? item.total,
-              reasonLabel: item.reasonLabel ?? detail.reasonLabel,
-              notes: item.notes,
-            },
-          ],
+    (item) => {
+      if (item.discountRequestItemId == null) return [];
+      const units =
+        item.units && item.units.length > 0
+          ? item.units
+          : [
+              {
+                index: 1,
+                baseAmount: item.lineBase ?? item.total,
+                reasonLabel: item.reasonLabel ?? detail.reasonLabel,
+                notes: item.notes,
+              },
+            ];
+      return units.map((unit) => ({
+        discountRequestItemId: item.discountRequestItemId as number,
+        unitIndex: unit.index,
+        sku: item.code,
+        name: item.name,
+        baseAmount: unit.baseAmount,
+        reasonLabel: unit.reasonLabel ?? item.reasonLabel ?? detail.reasonLabel,
+        notes: unit.notes ?? item.notes,
+      }));
+    },
   );
   const deliveryLatitude =
     detail.delivery?.latitude != null

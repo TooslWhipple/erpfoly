@@ -1,3 +1,59 @@
+/**
+ * Digits typed into the discount quantity field.
+ * `null` = the field was cleared. `undefined` = ignore the keystroke.
+ * A value above `max` is ignored: clamping "12" to 3 is what turns a typed 2 into 3.
+ */
+export function parseDiscountQuantityInput(
+  raw: string,
+  max: number,
+): number | null | undefined {
+  if (raw === "") return null;
+  if (!/^\d+$/.test(raw)) return undefined;
+  const next = Number(raw);
+  if (next < 1 || next > max) return undefined;
+  return next;
+}
+
+export function discountRequestPiecesReady(
+  pieces: Array<{ reason: string; notes?: string }>,
+): boolean {
+  return (
+    pieces.length > 0 &&
+    pieces.every(
+      (piece) =>
+        piece.reason.length > 0 &&
+        (piece.reason !== "OTHER" || (piece.notes?.trim().length ?? 0) > 0),
+    )
+  );
+}
+
+export function syncDiscountPieceSlots<T>(
+  slots: T[],
+  count: number,
+  create: () => T,
+): T[] {
+  if (count <= 0) return [];
+  const next = slots.slice(0, count);
+  while (next.length < count) next.push(create());
+  return next;
+}
+
+export function groupDiscountPiecesBySku<
+  T extends { sku: string; name: string },
+>(pieces: T[]): Array<{ sku: string; name: string; pieces: T[] }> {
+  const groups: Array<{ sku: string; name: string; pieces: T[] }> = [];
+  for (const piece of pieces) {
+    const sku = piece.sku.trim() || piece.name;
+    const existing = groups.find((group) => group.sku === sku);
+    if (existing) {
+      existing.pieces.push(piece);
+    } else {
+      groups.push({ sku, name: piece.name, pieces: [piece] });
+    }
+  }
+  return groups;
+}
+
 export function formatDiscountRequestReasonList(
   reason: string,
   reasonCode?: string,

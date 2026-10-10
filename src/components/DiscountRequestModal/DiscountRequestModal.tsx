@@ -29,6 +29,11 @@ import type {
   SaleDiscountRequest,
 } from "@/types/ventas.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import {
+  discountRequestPiecesReady,
+  parseDiscountQuantityInput,
+  syncDiscountPieceSlots,
+} from "@/utils/discountRequest";
 import { LineCard, ModalBody, ModalFooter } from "./styles";
 
 export interface DiscountRequestLineOption {
@@ -61,13 +66,27 @@ const DISCOUNT_REQUEST_REASONS: DiscountReasonOption[] = [
   { id: "OTHER", title: "Otro motivo" },
 ];
 
-type LineDraft = {
-  quantity: number;
+type PieceDraft = {
   reason: DiscountRequestReason | "";
   notes: string;
   reasonTouched: boolean;
   notesTouched: boolean;
 };
+
+type LineDraft = {
+  /** Null while the cashier has cleared the field and is still typing. */
+  quantity: number | null;
+  pieces: PieceDraft[];
+};
+
+function emptyPiece(): PieceDraft {
+  return {
+    reason: "",
+    notes: "",
+    reasonTouched: false,
+    notesTouched: false,
+  };
+}
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("es-MX", {
@@ -78,9 +97,9 @@ function formatMoney(value: number): string {
 }
 
 function lineIsComplete(draft: LineDraft): boolean {
-  if (!draft.reason) return false;
-  if (draft.reason === "OTHER" && draft.notes.trim().length === 0) return false;
-  return true;
+  if (draft.quantity == null || draft.quantity < 1) return false;
+  if (draft.pieces.length !== draft.quantity) return false;
+  return discountRequestPiecesReady(draft.pieces);
 }
 
 export function DiscountRequestModal({
@@ -106,12 +125,22 @@ export function DiscountRequestModal({
     const draft = drafts[line.saleItemId];
     return draft ? [{ line, draft }] : [];
   });
-  const missingReason = selected.filter(({ draft }) => !draft.reason).length;
-  const missingNotes = selected.filter(
-    ({ draft }) => draft.reason === "OTHER" && draft.notes.trim().length === 0,
-  ).length;
+  const missingReason = selected.reduce(
+    (sum, { draft }) =>
+      sum + draft.pieces.filter((piece) => !piece.reason).length,
+    0,
+  );
+  const missingNotes = selected.reduce(
+    (sum, { draft }) =>
+      sum +
+      draft.pieces.filter(
+        (piece) => piece.reason === "OTHER" && piece.notes.trim().length === 0,
+      ).length,
+    0,
+  );
   const canSubmit =
-    selected.length > 0 && missingReason === 0 && missingNotes === 0;
+    selected.length > 0 &&
+    selected.every(({ draft }) => lineIsComplete(draft));
 
   let hint = "";
   if (lines.length > 0 && selected.length === 0) {
@@ -137,10 +166,11 @@ export function DiscountRequestModal({
       const result = await requestSaleDiscount(saleId, {
         items: items.map(({ line, draft }) => ({
           saleItemId: line.saleItemId,
-          quantity: draft.quantity,
-          reason: draft.reason as DiscountRequestReason,
-          notes:
-            draft.reason === "OTHER" ? draft.notes.trim() : undefined,
+          pieces: draft.pieces.map((piece) => ({
+            reason: piece.reason as DiscountRequestReason,
+            notes:
+              piece.reason === "OTHER" ? piece.notes.trim() : undefined,
+          })),
         })),
       });
       if (result.error) throw new Error(result.error.message);
@@ -220,15 +250,6 @@ export function DiscountRequestModal({
               {lines.map((line) => {
                 const draft = drafts[line.saleItemId];
                 const checked = draft != null;
-                const reasonMissing = checked && !draft.reason;
-                const notesMissing =
-                  checked &&
-                  draft.reason === "OTHER" &&
-                  draft.notes.trim().length === 0;
-                const showReasonError = reasonMissing && draft.reasonTouched;
-                const showNotesError = notesMissing && draft.notesTouched;
-                const reasonFieldId = `discount-reason-${line.saleItemId}`;
-                const notesFieldId = `discount-notes-${line.saleItemId}`;
                 return (
                   <LineCard key={line.saleItemId} selected={checked}>
                     <Stack direction="row" alignItems="flex-start" spacing={0.5}>
@@ -246,10 +267,7 @@ export function DiscountRequestModal({
                               ...current,
                               [line.saleItemId]: {
                                 quantity: 1,
-                                reason: "",
-                                notes: "",
-                                reasonTouched: false,
-                                notesTouched: false,
+                                pieces: [emptyPiece()],
                               },
                             };
                           });
@@ -281,28 +299,60 @@ export function DiscountRequestModal({
                           {checked && line.quantity > 1 && (
                             <TextField
                               label="Cantidad"
-                              type="number"
+                              type="text"
                               size="small"
-                              value={String(draft.quantity)}
+                              value={
+                                draft.quantity == null
+                                  ? ""
+                                  : String(draft.quantity)
+                              }
+                              onFocus={(event) => {
+                                const input = event.target;
+                                requestAnimationFrame(() => input.select());
+                              }}
+                              onBlur={() => {
+                                setDrafts((current) => {
+                                  const row = current[line.saleItemId];
+                                  if (!row || row.quantity != null) return current;
+                                  return {
+                                    ...current,
+                                    [line.saleItemId]: {
+                                      ...row,
+                                      quantity: 1,
+                                      pieces: syncDiscountPieceSlots(
+                                        row.pieces,
+                                        1,
+                                        emptyPiece,
+                                      ),
+                                    },
+                                  };
+                                });
+                              }}
                               onChange={(event) => {
-                                const next = Number(event.target.value);
-                                if (!Number.isInteger(next)) return;
-                                setDrafts((current) => ({
-                                  ...current,
-                                  [line.saleItemId]: {
-                                    ...draft,
-                                    quantity: Math.min(
-                                      line.quantity,
-                                      Math.max(1, next),
-                                    ),
-                                  },
-                                }));
+                                const next = parseDiscountQuantityInput(
+                                  event.target.value,
+                                  line.quantity,
+                                );
+                                if (next === undefined) return;
+                                setDrafts((current) => {
+                                  const row = current[line.saleItemId];
+                                  if (!row) return current;
+                                  return {
+                                    ...current,
+                                    [line.saleItemId]: {
+                                      ...row,
+                                      quantity: next,
+                                      pieces: syncDiscountPieceSlots(
+                                        row.pieces,
+                                        next ?? 0,
+                                        emptyPiece,
+                                      ),
+                                    },
+                                  };
+                                });
                               }}
                               slotProps={{
                                 htmlInput: {
-                                  min: 1,
-                                  max: line.quantity,
-                                  step: 1,
                                   inputMode: "numeric",
                                   "aria-label": `Cantidad con descuento de ${line.name}`,
                                 },
@@ -314,136 +364,146 @@ export function DiscountRequestModal({
                             />
                           )}
                         </Stack>
-                        {checked && (
-                          <>
-                            <FormControl
-                              fullWidth
-                              size="small"
-                              error={showReasonError}
-                              sx={{ "& .MuiInputBase-root": { minHeight: 44 } }}
-                            >
-                              <Typography
-                                component="label"
-                                htmlFor={reasonFieldId}
-                                variant="body2"
-                                color={showReasonError ? "error.main" : "text.primary"}
-                                sx={{ mb: 0.5, display: "block", fontWeight: 500 }}
-                              >
-                                Motivo
-                              </Typography>
-                              <Select
-                                id={reasonFieldId}
-                                value={draft.reason}
-                                displayEmpty
-                                error={showReasonError}
-                                aria-invalid={showReasonError}
-                                onClose={() => {
-                                  setDrafts((current) => {
-                                    const row = current[line.saleItemId];
-                                    if (!row) return current;
-                                    return {
-                                      ...current,
-                                      [line.saleItemId]: {
-                                        ...row,
+                        {checked &&
+                          draft.pieces.map((piece, index) => {
+                            const reasonMissing = !piece.reason;
+                            const notesMissing =
+                              piece.reason === "OTHER" &&
+                              piece.notes.trim().length === 0;
+                            const showReasonError =
+                              reasonMissing && piece.reasonTouched;
+                            const showNotesError =
+                              notesMissing && piece.notesTouched;
+                            const reasonFieldId = `discount-reason-${line.saleItemId}-${index}`;
+                            const notesFieldId = `discount-notes-${line.saleItemId}-${index}`;
+                            const pieceLabel =
+                              draft.pieces.length > 1
+                                ? `Motivo de la pieza ${index + 1}`
+                                : "Motivo";
+                            const updatePiece = (next: PieceDraft) => {
+                              setDrafts((current) => {
+                                const row = current[line.saleItemId];
+                                if (!row) return current;
+                                const pieces = row.pieces.map((item, itemIndex) =>
+                                  itemIndex === index ? next : item,
+                                );
+                                return {
+                                  ...current,
+                                  [line.saleItemId]: { ...row, pieces },
+                                };
+                              });
+                            };
+                            return (
+                              <Stack key={reasonFieldId} spacing={1.5}>
+                                <FormControl
+                                  fullWidth
+                                  size="small"
+                                  error={showReasonError}
+                                  sx={{ "& .MuiInputBase-root": { minHeight: 44 } }}
+                                >
+                                  <Typography
+                                    component="label"
+                                    htmlFor={reasonFieldId}
+                                    variant="body2"
+                                    color={
+                                      showReasonError
+                                        ? "error.main"
+                                        : "text.primary"
+                                    }
+                                    sx={{ mb: 0.5, display: "block", fontWeight: 500 }}
+                                  >
+                                    {pieceLabel}
+                                  </Typography>
+                                  <Select
+                                    id={reasonFieldId}
+                                    value={piece.reason}
+                                    displayEmpty
+                                    error={showReasonError}
+                                    aria-invalid={showReasonError}
+                                    onClose={() =>
+                                      updatePiece({ ...piece, reasonTouched: true })
+                                    }
+                                    onChange={(event) => {
+                                      const reason = event.target
+                                        .value as DiscountRequestReason;
+                                      updatePiece({
+                                        ...piece,
+                                        reason,
+                                        notes:
+                                          reason === "OTHER" ? piece.notes : "",
+                                        notesTouched:
+                                          reason === "OTHER"
+                                            ? piece.notesTouched
+                                            : false,
                                         reasonTouched: true,
+                                      });
+                                    }}
+                                    renderValue={(selectedReason) => {
+                                      const option = DISCOUNT_REQUEST_REASONS.find(
+                                        (reason) => reason.id === selectedReason,
+                                      );
+                                      if (!option) {
+                                        return (
+                                          <Typography
+                                            component="span"
+                                            variant="body2"
+                                            color="text.secondary"
+                                          >
+                                            Selecciona un motivo
+                                          </Typography>
+                                        );
+                                      }
+                                      return option.title;
+                                    }}
+                                  >
+                                    <MenuItem value="" sx={{ display: "none" }}>
+                                      Selecciona un motivo
+                                    </MenuItem>
+                                    {DISCOUNT_REQUEST_REASONS.map((reason) => (
+                                      <MenuItem key={reason.id} value={reason.id}>
+                                        {reason.title}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                  {showReasonError && (
+                                    <FormHelperText>Elige un motivo.</FormHelperText>
+                                  )}
+                                </FormControl>
+                                {piece.reason === "OTHER" && (
+                                  <TextField
+                                    id={notesFieldId}
+                                    label="Describe el motivo"
+                                    placeholder="Ejemplo: rasguño en la orilla"
+                                    value={piece.notes}
+                                    multiline
+                                    minRows={2}
+                                    fullWidth
+                                    error={showNotesError}
+                                    helperText={
+                                      showNotesError
+                                        ? "Escribe el motivo."
+                                        : `${piece.notes.length}/${NOTES_MAX}`
+                                    }
+                                    onBlur={() =>
+                                      updatePiece({ ...piece, notesTouched: true })
+                                    }
+                                    onChange={(event) => {
+                                      updatePiece({
+                                        ...piece,
+                                        notes: event.target.value.slice(0, NOTES_MAX),
+                                      });
+                                    }}
+                                    slotProps={{
+                                      htmlInput: {
+                                        maxLength: NOTES_MAX,
+                                        "aria-invalid": showNotesError,
                                       },
-                                    };
-                                  });
-                                }}
-                                onChange={(event) => {
-                                  const reason = event.target
-                                    .value as DiscountRequestReason;
-                                  setDrafts((current) => ({
-                                    ...current,
-                                    [line.saleItemId]: {
-                                      ...draft,
-                                      reason,
-                                      notes: reason === "OTHER" ? draft.notes : "",
-                                      notesTouched:
-                                        reason === "OTHER" ? draft.notesTouched : false,
-                                      reasonTouched: true,
-                                    },
-                                  }));
-                                }}
-                                renderValue={(selected) => {
-                                  const option = DISCOUNT_REQUEST_REASONS.find(
-                                    (reason) => reason.id === selected,
-                                  );
-                                  if (!option) {
-                                    return (
-                                      <Typography
-                                        component="span"
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        Selecciona un motivo
-                                      </Typography>
-                                    );
-                                  }
-                                  return option.title;
-                                }}
-                              >
-                                <MenuItem value="" sx={{ display: "none" }}>
-                                  Selecciona un motivo
-                                </MenuItem>
-                                {DISCOUNT_REQUEST_REASONS.map((reason) => (
-                                  <MenuItem key={reason.id} value={reason.id}>
-                                    {reason.title}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                              {showReasonError && (
-                                <FormHelperText>Elige un motivo.</FormHelperText>
-                              )}
-                            </FormControl>
-                            {draft.reason === "OTHER" && (
-                              <TextField
-                                id={notesFieldId}
-                                label="Describe el motivo"
-                                placeholder="Ejemplo: rasguño en la orilla"
-                                value={draft.notes}
-                                multiline
-                                minRows={2}
-                                fullWidth
-                                error={showNotesError}
-                                helperText={
-                                  showNotesError
-                                    ? "Escribe el motivo."
-                                    : `${draft.notes.length}/${NOTES_MAX}`
-                                }
-                                onBlur={() => {
-                                  setDrafts((current) => {
-                                    const row = current[line.saleItemId];
-                                    if (!row) return current;
-                                    return {
-                                      ...current,
-                                      [line.saleItemId]: {
-                                        ...row,
-                                        notesTouched: true,
-                                      },
-                                    };
-                                  });
-                                }}
-                                onChange={(event) => {
-                                  const notes = event.target.value.slice(
-                                    0,
-                                    NOTES_MAX,
-                                  );
-                                  setDrafts((current) => ({
-                                    ...current,
-                                    [line.saleItemId]: { ...draft, notes },
-                                  }));
-                                }}
-                                slotProps={{
-                                  htmlInput: {
-                                    maxLength: NOTES_MAX,
-                                    "aria-invalid": showNotesError,
-                                  },
-                                }}
-                              />
-                            )}
-                          </>
-                        )}
+                                    }}
+                                  />
+                                )}
+                              </Stack>
+                            );
+                          })}
                       </Stack>
                     </Stack>
                   </LineCard>

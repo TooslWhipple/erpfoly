@@ -74,6 +74,15 @@ export interface DiscountRequestLineItem {
   allocatedAmount?: number | null;
   /** Portion the special discount is calculated on. */
   lineBase?: number;
+  units?: DiscountRequestLineUnit[];
+}
+
+export interface DiscountRequestLineUnit {
+  index: number;
+  baseAmount: number;
+  reason?: string | null;
+  reasonLabel?: string | null;
+  notes?: string | null;
 }
 
 export type DeliveryOption = "a_domicilio" | "recoger_sucursal";
@@ -119,6 +128,7 @@ export interface DiscountRequestDetail {
 
 export type ApproveDiscountLinePayload = {
   discountRequestItemId: number;
+  unitIndex: number;
   approvedDiscountPct?: number;
   approvedDiscountAmount?: number;
 };

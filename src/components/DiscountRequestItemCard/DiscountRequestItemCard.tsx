@@ -31,14 +31,37 @@ export function DiscountRequestItemCard({ item }: DiscountRequestItemCardProps) 
           {item.brand && (
             <Typography variant="caption" color="text.secondary">{item.brand}</Typography>
           )}
-          {item.reasonLabel && (
-            <Chip size="small" label={item.reasonLabel} sx={{ alignSelf: "flex-start", mt: 0.5 }} />
-          )}
-          {item.notes?.trim() && (
-            <Typography variant="body2" color="text.secondary">
-              {item.notes.trim()}
-            </Typography>
-          )}
+          {(item.units && item.units.length > 0
+            ? item.units
+            : item.reasonLabel
+              ? [
+                  {
+                    index: 1,
+                    reasonLabel: item.reasonLabel,
+                    notes: item.notes,
+                  },
+                ]
+              : []
+          ).map((unit) => (
+            <Stack key={unit.index} spacing={0.25}>
+              {unit.reasonLabel && (
+                <Chip
+                  size="small"
+                  label={
+                    (item.units?.length ?? 0) > 1
+                      ? `Pieza ${unit.index}: ${unit.reasonLabel}`
+                      : unit.reasonLabel
+                  }
+                  sx={{ alignSelf: "flex-start", mt: 0.5 }}
+                />
+              )}
+              {unit.notes?.trim() && (
+                <Typography variant="body2" color="text.secondary">
+                  {unit.notes.trim()}
+                </Typography>
+              )}
+            </Stack>
+          ))}
           {authorized && (
             <Typography variant="body2" color="text.secondary">
               Autorizado: {authorized}

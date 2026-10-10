@@ -1,9 +1,11 @@
 import { useId, useMemo, useState } from "react";
 import {
   Button,
+  Checkbox,
   Chip,
   Dialog,
   DialogContent,
+  FormControlLabel,
   InputAdornment,
   Stack,
   TextField,
@@ -13,6 +15,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { groupDiscountPiecesBySku } from "@/utils/discountRequest";
 import { LineCard, ModalBody, ModalFooter, PriceComparisonPanel } from "./styles";
 
 const MAX_SPECIAL_DISCOUNT_PCT = 40;
@@ -21,8 +24,9 @@ export type ApproveDiscountRequestMode = "pct" | "amount";
 
 export interface ApproveDiscountLineInput {
   discountRequestItemId: number;
+  unitIndex: number;
+  sku: string;
   name: string;
-  quantity: number;
   baseAmount: number;
   reasonLabel: string;
   notes?: string | null;
@@ -30,6 +34,7 @@ export interface ApproveDiscountLineInput {
 
 export type ApproveDiscountLineDecision = {
   discountRequestItemId: number;
+  unitIndex: number;
   mode: ApproveDiscountRequestMode;
   value: number;
 };
@@ -39,9 +44,14 @@ export type ApproveDiscountRequestResult =
   | { mode: ApproveDiscountRequestMode; value: number };
 
 type LineDraft = {
+  apply: boolean;
   mode: ApproveDiscountRequestMode;
   value: string;
 };
+
+function pieceKey(line: Pick<ApproveDiscountLineInput, "discountRequestItemId" | "unitIndex">): string {
+  return `${line.discountRequestItemId}:${line.unitIndex}`;
+}
 
 export interface ApproveDiscountRequestModalProps {
   open: boolean;
@@ -78,7 +88,7 @@ function parseDraft(raw: string): number | null {
 
 function evaluateDraft(
   base: number,
-  draft: LineDraft,
+  draft: Pick<LineDraft, "mode" | "value">,
 ): { amount: number; error: string | null; value: number | null } {
   const parsed = parseDraft(draft.value);
   if (parsed == null) {
@@ -110,11 +120,11 @@ function evaluateDraft(
   return { amount, error: null, value: amount };
 }
 
-function emptyDrafts(lines: ApproveDiscountLineInput[]): Record<number, LineDraft> {
+function emptyDrafts(lines: ApproveDiscountLineInput[]): Record<string, LineDraft> {
   return Object.fromEntries(
     lines.map((line) => [
-      line.discountRequestItemId,
-      { mode: "pct" as const, value: "" },
+      pieceKey(line),
+      { apply: true, mode: "pct" as const, value: "" },
     ]),
   );
 }
@@ -130,7 +140,7 @@ export function ApproveDiscountRequestModal({
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
   const titleId = useId();
   const granular = lines.length > 0;
-  const [drafts, setDrafts] = useState<Record<number, LineDraft>>(() =>
+  const [drafts, setDrafts] = useState<Record<string, LineDraft>>(() =>
     emptyDrafts(lines),
   );
   const [legacyMode, setLegacyMode] = useState<ApproveDiscountRequestMode>("pct");
@@ -138,36 +148,53 @@ export function ApproveDiscountRequestModal({
 
   const evaluated = useMemo(
     () =>
-      lines.map((line) => ({
-        line,
-        result: evaluateDraft(
-          line.baseAmount,
-          drafts[line.discountRequestItemId] ?? { mode: "pct", value: "" },
-        ),
-      })),
+      lines.map((line) => {
+        const draft = drafts[pieceKey(line)] ?? {
+          apply: true,
+          mode: "pct" as const,
+          value: "",
+        };
+        return {
+          line,
+          draft,
+          sku: line.sku,
+          name: line.name,
+          result: draft.apply
+            ? evaluateDraft(line.baseAmount, draft)
+            : { amount: 0, error: null, value: null },
+        };
+      }),
     [drafts, lines],
   );
-
-  const missing = evaluated.filter((row) => row.result.value == null && !row.result.error).length;
-  const invalid = evaluated.filter((row) => row.result.error).length;
+  const groups = useMemo(
+    () => groupDiscountPiecesBySku(evaluated),
+    [evaluated],
+  );
+  const applied = evaluated.filter((row) => row.draft.apply);
+  const missing = applied.filter(
+    (row) => row.result.value == null && !row.result.error,
+  ).length;
+  const invalid = applied.filter((row) => row.result.error).length;
   const discountTotal = roundCents(
-    evaluated.reduce((sum, row) => sum + row.result.amount, 0),
+    applied.reduce((sum, row) => sum + row.result.amount, 0),
   );
   const baseTotal = roundCents(
-    evaluated.reduce((sum, row) => sum + row.line.baseAmount, 0),
+    applied.reduce((sum, row) => sum + row.line.baseAmount, 0),
   );
   const canApprove = granular
-    ? evaluated.length > 0 && missing === 0 && invalid === 0
+    ? applied.length > 0 && missing === 0 && invalid === 0
     : evaluateDraft(saleTotal, { mode: legacyMode, value: legacyValue }).value != null;
 
   const hint = granular
-    ? missing > 0
-      ? missing === 1
-        ? "Falta el descuento de 1 artículo."
-        : `Falta el descuento de ${missing} artículos.`
-      : invalid > 0
-        ? "Revisa los montos marcados."
-        : ""
+    ? applied.length === 0
+      ? "Elige al menos una pieza."
+      : missing > 0
+        ? missing === 1
+          ? "Falta el descuento de 1 pieza."
+          : `Falta el descuento de ${missing} piezas.`
+        : invalid > 0
+          ? "Revisa los montos marcados."
+          : ""
     : "";
 
   const reset = () => {
@@ -176,17 +203,18 @@ export function ApproveDiscountRequestModal({
     setLegacyValue("");
   };
 
-  const updateDraft = (
-    id: number,
-    patch: Partial<LineDraft>,
-  ) => {
+  const updateDraft = (key: string, patch: Partial<LineDraft>) => {
     setDrafts((current) => {
-      const previous = current[id] ?? { mode: "pct" as const, value: "" };
+      const previous = current[key] ?? {
+        apply: true,
+        mode: "pct" as const,
+        value: "",
+      };
       const next = { ...previous, ...patch };
       if (patch.mode && patch.mode !== previous.mode) {
         next.value = "";
       }
-      return { ...current, [id]: next };
+      return { ...current, [key]: next };
     });
   };
 
@@ -194,13 +222,14 @@ export function ApproveDiscountRequestModal({
     if (!canApprove) return;
     if (granular) {
       onApprove?.({
-        items: evaluated.flatMap(({ line, result }) =>
+        items: applied.flatMap(({ line, draft, result }) =>
           result.value == null
             ? []
             : [
                 {
                   discountRequestItemId: line.discountRequestItemId,
-                  mode: drafts[line.discountRequestItemId]?.mode ?? "pct",
+                  unitIndex: line.unitIndex,
+                  mode: draft.mode,
                   value: result.value,
                 },
               ],
@@ -268,122 +297,155 @@ export function ApproveDiscountRequestModal({
             Aprobar descuento especial
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Cada artículo tiene su propio porcentaje o monto fijo.
+            Cada pieza tiene su propio porcentaje o monto. Puedes dejar alguna sin descuento.
           </Typography>
         </Stack>
 
         <ModalBody>
           {granular
-            ? evaluated.map(({ line, result }) => {
-                const draft = drafts[line.discountRequestItemId] ?? {
-                  mode: "pct" as const,
-                  value: "",
-                };
-                const after = roundCents(line.baseAmount - result.amount);
+            ? groups.map((group) => {
+                const groupInvalid = group.pieces.some((row) => row.result.error);
                 return (
-                  <LineCard key={line.discountRequestItemId} invalid={Boolean(result.error)}>
-                    <Stack spacing={1.5}>
-                      <Stack spacing={0.5}>
-                        <Typography variant="subtitle2" noWrap title={line.name}>
-                          {line.name}
+                  <LineCard key={group.sku} invalid={groupInvalid}>
+                    <Stack spacing={2}>
+                      <Stack spacing={0.25}>
+                        <Typography variant="subtitle2" noWrap title={group.name}>
+                          {group.name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {line.quantity}{" "}
-                          {line.quantity === 1 ? "pieza" : "piezas"} · Base{" "}
-                          {formatCurrency(line.baseAmount)}
+                          {group.sku}
                         </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                          <Chip size="small" label={line.reasonLabel} />
-                        </Stack>
-                        {line.notes?.trim() && (
-                          <Typography variant="body2" color="text.secondary">
-                            {line.notes.trim()}
-                          </Typography>
-                        )}
                       </Stack>
-                      <ToggleButtonGroup
-                        value={draft.mode}
-                        exclusive
-                        fullWidth
-                        size="small"
-                        onChange={(_event, next: ApproveDiscountRequestMode | null) => {
-                          if (!next) return;
-                          updateDraft(line.discountRequestItemId, { mode: next });
-                        }}
-                        sx={{
-                          "& .MuiToggleButton-root": { minHeight: 44 },
-                          "& .MuiToggleButtonGroup-grouped": {
-                            border: `1px solid ${theme.palette.app.border}`,
-                            "&.Mui-selected": {
-                              backgroundColor: theme.palette.app.sidebar.itemSelected,
-                              color: theme.palette.app.sidebar.textSelected,
-                            },
-                          },
-                        }}
-                      >
-                        <ToggleButton value="pct">Porcentaje</ToggleButton>
-                        <ToggleButton value="amount">Monto fijo</ToggleButton>
-                      </ToggleButtonGroup>
-                      <TextField
-                        label={draft.mode === "pct" ? "Porcentaje" : "Monto fijo"}
-                        value={draft.value}
-                        error={Boolean(result.error)}
-                        helperText={
-                          result.error ??
-                          (draft.mode === "pct"
-                            ? "Entre 2% y 40% de esta pieza."
-                            : `Máximo ${formatCurrency(maxAmountFor(line.baseAmount))} en esta pieza.`)
-                        }
-                        onChange={(event) =>
-                          updateDraft(line.discountRequestItemId, {
-                            value: event.target.value,
-                          })
-                        }
-                        slotProps={{
-                          htmlInput: {
-                            inputMode: "decimal",
-                            "aria-label":
-                              draft.mode === "pct"
-                                ? `Porcentaje de ${line.name}`
-                                : `Monto fijo de ${line.name}`,
-                          },
-                          input: {
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                {draft.mode === "pct" ? "%" : "$"}
-                              </InputAdornment>
-                            ),
-                          },
-                        }}
-                        sx={{ "& .MuiInputBase-root": { minHeight: 44 } }}
-                      />
-                      {result.value != null && (
-                        <PriceComparisonPanel>
-                          <Stack spacing={0.25} flex={1} minWidth={0}>
+                      {group.pieces.map((row) => {
+                        const { line, draft, result } = row;
+                        const key = pieceKey(line);
+                        const after = roundCents(line.baseAmount - result.amount);
+                        return (
+                          <Stack
+                            key={key}
+                            spacing={1.5}
+                            sx={{ opacity: draft.apply ? 1 : 0.45 }}
+                          >
+                            {group.pieces.length > 1 && (
+                              <Typography variant="body2" fontWeight={600}>
+                                Pieza {line.unitIndex}
+                              </Typography>
+                            )}
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                              <Chip size="small" label={line.reasonLabel} />
+                            </Stack>
+                            {line.notes?.trim() && (
+                              <Typography variant="body2" color="text.secondary">
+                                {line.notes.trim()}
+                              </Typography>
+                            )}
                             <Typography variant="caption" color="text.secondary">
-                              Antes
+                              Base {formatCurrency(line.baseAmount)}
                             </Typography>
-                            <Typography
-                              variant="body2"
-                              fontWeight={600}
-                              sx={{ textDecoration: "line-through" }}
-                            >
-                              {formatCurrency(line.baseAmount)}
-                            </Typography>
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={draft.apply}
+                                  onChange={(_, next) =>
+                                    updateDraft(key, { apply: next })
+                                  }
+                                  slotProps={{
+                                    input: {
+                                      "aria-label": `Aplicar descuento a ${line.name}, pieza ${line.unitIndex}`,
+                                    },
+                                  }}
+                                />
+                              }
+                              label="Aplicar descuento"
+                            />
+                            {draft.apply && (
+                              <>
+                                <ToggleButtonGroup
+                                  value={draft.mode}
+                                  exclusive
+                                  fullWidth
+                                  size="small"
+                                  onChange={(_event, next: ApproveDiscountRequestMode | null) => {
+                                    if (!next) return;
+                                    updateDraft(key, { mode: next });
+                                  }}
+                                  sx={{
+                                    "& .MuiToggleButton-root": { minHeight: 44 },
+                                    "& .MuiToggleButtonGroup-grouped": {
+                                      border: `1px solid ${theme.palette.app.border}`,
+                                      "&.Mui-selected": {
+                                        backgroundColor: theme.palette.app.sidebar.itemSelected,
+                                        color: theme.palette.app.sidebar.textSelected,
+                                      },
+                                    },
+                                  }}
+                                >
+                                  <ToggleButton value="pct">Porcentaje</ToggleButton>
+                                  <ToggleButton value="amount">Monto fijo</ToggleButton>
+                                </ToggleButtonGroup>
+                                <TextField
+                                  label={draft.mode === "pct" ? "Porcentaje" : "Monto fijo"}
+                                  value={draft.value}
+                                  error={Boolean(result.error)}
+                                  helperText={
+                                    result.error ??
+                                    (draft.mode === "pct"
+                                      ? "Entre 2% y 40% de esta pieza."
+                                      : `Máximo ${formatCurrency(maxAmountFor(line.baseAmount))} en esta pieza.`)
+                                  }
+                                  onChange={(event) =>
+                                    updateDraft(key, { value: event.target.value })
+                                  }
+                                  slotProps={{
+                                    htmlInput: {
+                                      inputMode: "decimal",
+                                      "aria-label":
+                                        draft.mode === "pct"
+                                          ? `Porcentaje de ${line.name}, pieza ${line.unitIndex}`
+                                          : `Monto fijo de ${line.name}, pieza ${line.unitIndex}`,
+                                    },
+                                    input: {
+                                      endAdornment: (
+                                        <InputAdornment position="end">
+                                          {draft.mode === "pct" ? "%" : "$"}
+                                        </InputAdornment>
+                                      ),
+                                    },
+                                  }}
+                                  sx={{ "& .MuiInputBase-root": { minHeight: 44 } }}
+                                />
+                                {result.value != null && (
+                                  <PriceComparisonPanel>
+                                    <Stack spacing={0.25} flex={1} minWidth={0}>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Antes
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                        sx={{ textDecoration: "line-through" }}
+                                      >
+                                        {formatCurrency(line.baseAmount)}
+                                      </Typography>
+                                    </Stack>
+                                    <Stack spacing={0.25} flex={1} minWidth={0} textAlign="right">
+                                      <Typography variant="caption" color="text.secondary">
+                                        Con descuento
+                                      </Typography>
+                                      <Typography variant="body2" fontWeight={700}>
+                                        {formatCurrency(after)}
+                                      </Typography>
+                                      <Typography variant="caption" color="error.main">
+                                        -{formatCurrency(result.amount)}
+                                      </Typography>
+                                    </Stack>
+                                  </PriceComparisonPanel>
+                                )}
+                              </>
+                            )}
                           </Stack>
-                          <Stack spacing={0.25} flex={1} minWidth={0} textAlign="right">
-                            <Typography variant="caption" color="text.secondary">
-                              Con descuento
-                            </Typography>
-                            <Typography variant="body2" fontWeight={700}>
-                              {formatCurrency(after)}
-                            </Typography>
-                            <Typography variant="caption" color="error.main">
-                              -{formatCurrency(result.amount)}
-                            </Typography>
-                          </Stack>
-                        </PriceComparisonPanel>
-                      )}
+                        );
+                      })}
                     </Stack>
                   </LineCard>
                 );
@@ -404,6 +466,12 @@ export function ApproveDiscountRequestModal({
 
         <ModalFooter>
           {granular && (
+            <Typography variant="body2" color="text.secondary">
+              {applied.length} de {evaluated.length}{" "}
+              {evaluated.length === 1 ? "pieza" : "piezas"}
+            </Typography>
+          )}
+          {granular && applied.length > 0 && (
             <PriceComparisonPanel>
               <Stack spacing={0.25} flex={1}>
                 <Typography variant="caption" color="text.secondary">

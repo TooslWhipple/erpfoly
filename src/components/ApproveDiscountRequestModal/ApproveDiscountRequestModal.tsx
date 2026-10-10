@@ -5,7 +5,6 @@ import {
   Chip,
   Dialog,
   DialogContent,
-  FormControlLabel,
   InputAdornment,
   Stack,
   TextField,
@@ -15,6 +14,8 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { X as CloseIcon } from "lucide-react";
+import { CloseButton } from "@/components/ModalForm/styles";
 import { groupDiscountPiecesBySku } from "@/utils/discountRequest";
 import { LineCard, ModalBody, ModalFooter, PriceComparisonPanel } from "./styles";
 
@@ -251,7 +252,7 @@ export function ApproveDiscountRequestModal({
       open={open}
       onClose={onClose}
       fullScreen={fullScreen}
-      maxWidth="sm"
+      maxWidth="md"
       fullWidth
       aria-labelledby={titleId}
       TransitionProps={{ onEnter: reset }}
@@ -272,8 +273,8 @@ export function ApproveDiscountRequestModal({
           m: 0,
           mt: fullScreen ? 0 : 2,
           mr: fullScreen ? 0 : 2,
-          width: fullScreen ? "100%" : 480,
-          maxWidth: fullScreen ? "100%" : 480,
+          width: fullScreen ? "100%" : "min(720px, calc(100vw - 32px))",
+          maxWidth: fullScreen ? "100%" : "min(720px, calc(100vw - 32px))",
           height: fullScreen ? "100%" : "auto",
           maxHeight: fullScreen ? "100%" : "calc(100dvh - 32px)",
           display: "flex",
@@ -283,8 +284,11 @@ export function ApproveDiscountRequestModal({
     >
       <DialogContent
         sx={{
-          padding: fullScreen ? 2 : 3,
-          paddingBottom: `calc(${theme.spacing(fullScreen ? 2 : 3)} + env(safe-area-inset-bottom))`,
+          padding: 2,
+          paddingTop: fullScreen
+            ? `calc(${theme.spacing(2)} + env(safe-area-inset-top))`
+            : 2,
+          paddingBottom: `calc(${theme.spacing(2)} + env(safe-area-inset-bottom))`,
           display: "flex",
           flexDirection: "column",
           flex: fullScreen ? 1 : "1 1 auto",
@@ -292,13 +296,25 @@ export function ApproveDiscountRequestModal({
           overflow: "hidden",
         }}
       >
-        <Stack spacing={0.5} sx={{ mb: 2, flexShrink: 0 }}>
-          <Typography id={titleId} variant="h5" fontWeight={600}>
-            Aprobar descuento especial
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cada pieza tiene su propio porcentaje o monto. Puedes dejar alguna sin descuento.
-          </Typography>
+        <Stack
+          direction="row"
+          alignItems="flex-start"
+          spacing={1}
+          sx={{ mb: 1.5, flexShrink: 0 }}
+        >
+          <Stack spacing={0.25} flex={1} minWidth={0}>
+            <Typography id={titleId} variant="h6" fontWeight={600}>
+              Aprobar descuento especial
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Marca cada pieza. El descuento es del 2% al 40% de su base, o un monto fijo.
+            </Typography>
+          </Stack>
+          {fullScreen && (
+            <CloseButton onClick={onClose} size="small" aria-label="Cerrar">
+              <CloseIcon size={16} />
+            </CloseButton>
+          )}
         </Stack>
 
         <ModalBody>
@@ -307,70 +323,88 @@ export function ApproveDiscountRequestModal({
                 const groupInvalid = group.pieces.some((row) => row.result.error);
                 return (
                   <LineCard key={group.sku} invalid={groupInvalid}>
-                    <Stack spacing={2}>
-                      <Stack spacing={0.25}>
-                        <Typography variant="subtitle2" noWrap title={group.name}>
+                    <Stack spacing={1.25}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="baseline"
+                        justifyContent="space-between"
+                      >
+                        <Typography variant="subtitle2" noWrap title={group.name} fontWeight={600}>
                           {group.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
                           {group.sku}
                         </Typography>
                       </Stack>
                       {group.pieces.map((row) => {
                         const { line, draft, result } = row;
                         const key = pieceKey(line);
-                        const after = roundCents(line.baseAmount - result.amount);
+                        const numbered = group.pieces.length > 1;
+                        const errorId = result.error
+                          ? `discount-piece-error-${line.discountRequestItemId}-${line.unitIndex}`
+                          : undefined;
+                        const notes = line.notes?.trim() ?? "";
                         return (
                           <Stack
                             key={key}
-                            spacing={1.5}
-                            sx={{ opacity: draft.apply ? 1 : 0.45 }}
+                            spacing={0.75}
+                            sx={{ opacity: draft.apply ? 1 : 0.72 }}
                           >
-                            {group.pieces.length > 1 && (
-                              <Typography variant="body2" fontWeight={600}>
-                                Pieza {line.unitIndex}
-                              </Typography>
-                            )}
-                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                              <Chip size="small" label={line.reasonLabel} />
-                            </Stack>
-                            {line.notes?.trim() && (
-                              <Typography variant="body2" color="text.secondary">
-                                {line.notes.trim()}
-                              </Typography>
-                            )}
-                            <Typography variant="caption" color="text.secondary">
-                              Base {formatCurrency(line.baseAmount)}
-                            </Typography>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={draft.apply}
-                                  onChange={(_, next) =>
-                                    updateDraft(key, { apply: next })
-                                  }
-                                  slotProps={{
-                                    input: {
-                                      "aria-label": `Aplicar descuento a ${line.name}, pieza ${line.unitIndex}`,
-                                    },
-                                  }}
-                                />
-                              }
-                              label="Aplicar descuento"
-                            />
-                            {draft.apply && (
-                              <>
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              spacing={1}
+                              flexWrap={{ xs: "wrap", sm: "nowrap" }}
+                            >
+                              <Checkbox
+                                checked={draft.apply}
+                                size="small"
+                                onChange={(_, next) => updateDraft(key, { apply: next })}
+                                slotProps={{
+                                  input: {
+                                    "aria-label": `Aplicar descuento a ${line.name}, pieza ${line.unitIndex}`,
+                                  },
+                                }}
+                                sx={{ p: 0.5, flexShrink: 0 }}
+                              />
+                              <Stack flex={1} minWidth={0} spacing={0}>
+                                {numbered && (
+                                  <Typography variant="body2" fontWeight={600}>
+                                    Pieza {line.unitIndex}
+                                  </Typography>
+                                )}
+                                <Typography variant="caption" color="text.secondary">
+                                  Base {formatCurrency(line.baseAmount)}
+                                </Typography>
+                              </Stack>
+                              {draft.apply && (
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                sx={{
+                                  flexShrink: 0,
+                                  width: { xs: "100%", sm: "auto" },
+                                  pl: { xs: 4.5, sm: 0 },
+                                  justifyContent: { xs: "flex-start", sm: "flex-end" },
+                                }}
+                              >
                                 <ToggleButtonGroup
                                   value={draft.mode}
                                   exclusive
-                                  fullWidth
                                   size="small"
                                   onChange={(_event, next: ApproveDiscountRequestMode | null) => {
                                     if (!next) return;
                                     updateDraft(key, { mode: next });
                                   }}
                                   sx={{
-                                    "& .MuiToggleButton-root": { minHeight: 44 },
+                                    flexShrink: 0,
+                                    "& .MuiToggleButton-root": {
+                                      minHeight: 40,
+                                      minWidth: 40,
+                                      px: 1,
+                                    },
                                     "& .MuiToggleButtonGroup-grouped": {
                                       border: `1px solid ${theme.palette.app.border}`,
                                       "&.Mui-selected": {
@@ -380,25 +414,26 @@ export function ApproveDiscountRequestModal({
                                     },
                                   }}
                                 >
-                                  <ToggleButton value="pct">Porcentaje</ToggleButton>
-                                  <ToggleButton value="amount">Monto fijo</ToggleButton>
+                                  <ToggleButton value="pct" aria-label="Porcentaje">
+                                    %
+                                  </ToggleButton>
+                                  <ToggleButton value="amount" aria-label="Monto fijo">
+                                    $
+                                  </ToggleButton>
                                 </ToggleButtonGroup>
                                 <TextField
-                                  label={draft.mode === "pct" ? "Porcentaje" : "Monto fijo"}
+                                  size="small"
                                   value={draft.value}
                                   error={Boolean(result.error)}
-                                  helperText={
-                                    result.error ??
-                                    (draft.mode === "pct"
-                                      ? "Entre 2% y 40% de esta pieza."
-                                      : `Máximo ${formatCurrency(maxAmountFor(line.baseAmount))} en esta pieza.`)
-                                  }
+                                  placeholder={draft.mode === "pct" ? "2–40" : "0.00"}
                                   onChange={(event) =>
                                     updateDraft(key, { value: event.target.value })
                                   }
                                   slotProps={{
                                     htmlInput: {
                                       inputMode: "decimal",
+                                      "aria-invalid": Boolean(result.error),
+                                      "aria-describedby": errorId,
                                       "aria-label":
                                         draft.mode === "pct"
                                           ? `Porcentaje de ${line.name}, pieza ${line.unitIndex}`
@@ -412,36 +447,60 @@ export function ApproveDiscountRequestModal({
                                       ),
                                     },
                                   }}
-                                  sx={{ "& .MuiInputBase-root": { minHeight: 44 } }}
+                                  sx={{
+                                    width: { xs: "100%", sm: 128 },
+                                    "& .MuiInputBase-root": { minHeight: 40 },
+                                  }}
                                 />
-                                {result.value != null && (
-                                  <PriceComparisonPanel>
-                                    <Stack spacing={0.25} flex={1} minWidth={0}>
-                                      <Typography variant="caption" color="text.secondary">
-                                        Antes
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight={600}
-                                        sx={{ textDecoration: "line-through" }}
-                                      >
-                                        {formatCurrency(line.baseAmount)}
-                                      </Typography>
-                                    </Stack>
-                                    <Stack spacing={0.25} flex={1} minWidth={0} textAlign="right">
-                                      <Typography variant="caption" color="text.secondary">
-                                        Con descuento
-                                      </Typography>
-                                      <Typography variant="body2" fontWeight={700}>
-                                        {formatCurrency(after)}
-                                      </Typography>
-                                      <Typography variant="caption" color="error.main">
-                                        -{formatCurrency(result.amount)}
-                                      </Typography>
-                                    </Stack>
-                                  </PriceComparisonPanel>
-                                )}
-                              </>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  color="error.main"
+                                  sx={{ minWidth: 84, textAlign: "right", flexShrink: 0 }}
+                                >
+                                  {result.value != null
+                                    ? `−${formatCurrency(result.amount)}`
+                                    : ""}
+                                </Typography>
+                              </Stack>
+                              )}
+                            </Stack>
+                            <Stack spacing={0.5} sx={{ pl: 4.5, minWidth: 0 }}>
+                              <Chip
+                                size="small"
+                                label={line.reasonLabel}
+                                sx={{
+                                  alignSelf: "flex-start",
+                                  height: "auto",
+                                  maxWidth: "100%",
+                                  "& .MuiChip-label": {
+                                    display: "block",
+                                    whiteSpace: "normal",
+                                    overflow: "visible",
+                                    textOverflow: "clip",
+                                    py: 0.5,
+                                  },
+                                }}
+                              />
+                              {notes && (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
+                                >
+                                  {notes}
+                                </Typography>
+                              )}
+                            </Stack>
+                            {result.error && (
+                              <Typography
+                                id={errorId}
+                                variant="caption"
+                                color="error.main"
+                                sx={{ pl: 4.5 }}
+                              >
+                                {result.error}
+                              </Typography>
                             )}
                           </Stack>
                         );
@@ -473,29 +532,29 @@ export function ApproveDiscountRequestModal({
           )}
           {granular && applied.length > 0 && (
             <PriceComparisonPanel>
-              <Stack spacing={0.25} flex={1}>
+              <Stack spacing={0} flex={1} minWidth={0}>
                 <Typography variant="caption" color="text.secondary">
                   Antes
                 </Typography>
-                <Typography variant="subtitle2" sx={{ textDecoration: "line-through" }}>
+                <Typography variant="body1" fontWeight={600} sx={{ textDecoration: "line-through" }}>
                   {formatCurrency(baseTotal)}
                 </Typography>
               </Stack>
-              <Stack spacing={0.25} flex={1} textAlign="right">
+              <Stack spacing={0} flex={1} minWidth={0} textAlign="right">
                 <Typography variant="caption" color="text.secondary">
                   Con descuento
                 </Typography>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography variant="body1" fontWeight={700}>
                   {formatCurrency(roundCents(baseTotal - discountTotal))}
                 </Typography>
-                <Typography variant="caption" color="error.main">
-                  -{formatCurrency(discountTotal)}
+                <Typography variant="caption" color="error.main" fontWeight={600}>
+                  −{formatCurrency(discountTotal)}
                 </Typography>
               </Stack>
             </PriceComparisonPanel>
           )}
           {hint && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="error.main">
               {hint}
             </Typography>
           )}
@@ -507,11 +566,11 @@ export function ApproveDiscountRequestModal({
             onClick={handleApproveClick}
             sx={{ minHeight: 44 }}
           >
-            {`Aprobar descuento [${formatCurrency(
+            {`Aprobar ${formatCurrency(
               granular
                 ? discountTotal
                 : evaluateDraft(saleTotal, { mode: legacyMode, value: legacyValue }).amount,
-            )}]`}
+            )}`}
           </Button>
         </ModalFooter>
       </DialogContent>
@@ -543,16 +602,17 @@ function LegacyApproval({
       <ToggleButtonGroup
         value={mode}
         exclusive
-        fullWidth
+        size="small"
         onChange={(_event, next: ApproveDiscountRequestMode | null) => {
           if (next) onMode(next);
         }}
-        sx={{ "& .MuiToggleButton-root": { minHeight: 44 } }}
+        sx={{ "& .MuiToggleButton-root": { minHeight: 40, px: 1.5 } }}
       >
-        <ToggleButton value="pct">Porcentaje</ToggleButton>
-        <ToggleButton value="amount">Monto fijo</ToggleButton>
+        <ToggleButton value="pct" aria-label="Porcentaje">%</ToggleButton>
+        <ToggleButton value="amount" aria-label="Monto fijo">$</ToggleButton>
       </ToggleButtonGroup>
       <TextField
+        size="small"
         label={mode === "pct" ? "Porcentaje" : "Monto fijo"}
         value={value}
         error={Boolean(result.error)}

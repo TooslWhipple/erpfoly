@@ -27,6 +27,17 @@ export function discountRequestPiecesReady(
   );
 }
 
+export function patchDiscountPieceAt<T>(
+  pieces: T[],
+  index: number,
+  patch: Partial<T>,
+): T[] {
+  if (!pieces[index]) return pieces;
+  return pieces.map((piece, pieceIndex) =>
+    pieceIndex === index ? { ...piece, ...patch } : piece,
+  );
+}
+
 export function syncDiscountPieceSlots<T>(
   slots: T[],
   count: number,

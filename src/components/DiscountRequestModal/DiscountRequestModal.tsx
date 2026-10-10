@@ -32,6 +32,7 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   discountRequestPiecesReady,
   parseDiscountQuantityInput,
+  patchDiscountPieceAt,
   syncDiscountPieceSlots,
 } from "@/utils/discountRequest";
 import { LineCard, ModalBody, ModalFooter } from "./styles";
@@ -380,12 +381,15 @@ export function DiscountRequestModal({
                               draft.pieces.length > 1
                                 ? `Motivo de la pieza ${index + 1}`
                                 : "Motivo";
-                            const updatePiece = (next: PieceDraft) => {
+                            const patchPiece = (patch: Partial<PieceDraft>) => {
                               setDrafts((current) => {
                                 const row = current[line.saleItemId];
-                                if (!row) return current;
-                                const pieces = row.pieces.map((item, itemIndex) =>
-                                  itemIndex === index ? next : item,
+                                const currentPiece = row?.pieces[index];
+                                if (!row || !currentPiece) return current;
+                                const pieces = patchDiscountPieceAt(
+                                  row.pieces,
+                                  index,
+                                  patch,
                                 );
                                 return {
                                   ...current,
@@ -421,16 +425,14 @@ export function DiscountRequestModal({
                                     error={showReasonError}
                                     aria-invalid={showReasonError}
                                     onClose={() =>
-                                      updatePiece({ ...piece, reasonTouched: true })
+                                      patchPiece({ reasonTouched: true })
                                     }
                                     onChange={(event) => {
                                       const reason = event.target
                                         .value as DiscountRequestReason;
-                                      updatePiece({
-                                        ...piece,
+                                      patchPiece({
                                         reason,
-                                        notes:
-                                          reason === "OTHER" ? piece.notes : "",
+                                        notes: reason === "OTHER" ? piece.notes : "",
                                         notesTouched:
                                           reason === "OTHER"
                                             ? piece.notesTouched
@@ -485,11 +487,10 @@ export function DiscountRequestModal({
                                         : `${piece.notes.length}/${NOTES_MAX}`
                                     }
                                     onBlur={() =>
-                                      updatePiece({ ...piece, notesTouched: true })
+                                      patchPiece({ notesTouched: true })
                                     }
                                     onChange={(event) => {
-                                      updatePiece({
-                                        ...piece,
+                                      patchPiece({
                                         notes: event.target.value.slice(0, NOTES_MAX),
                                       });
                                     }}

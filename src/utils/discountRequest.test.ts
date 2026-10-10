@@ -7,6 +7,7 @@ import {
   discountRequestPiecesReady,
   groupDiscountPiecesBySku,
   parseDiscountQuantityInput,
+  patchDiscountPieceAt,
   syncDiscountPieceSlots,
 } from "./discountRequest";
 
@@ -43,5 +44,14 @@ assert.equal(
   ]),
   true,
 );
+
+const chosen = patchDiscountPieceAt(
+  [{ reason: "", reasonTouched: false }],
+  0,
+  { reason: "LAST_UNIT", reasonTouched: true },
+);
+const closed = patchDiscountPieceAt(chosen, 0, { reasonTouched: true });
+assert.equal(closed[0].reason, "LAST_UNIT");
+assert.equal(closed[0].reasonTouched, true);
 
 console.log("discountRequest.test.ts: ok");

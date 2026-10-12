@@ -36,6 +36,8 @@ export interface ReceptionDetailItem {
   name: string;
   quantity: number;
   received: number;
+  orderedQuantity: number;
+  pendingQuantity: number;
   branchName: string | null;
   scheduledDeliveryDate: string | null;
 }
@@ -74,6 +76,8 @@ export interface PendingArticleApi {
   orderId: number;
   orderNumber: string;
   quantity: number;
+  orderedQuantity: number;
+  pendingQuantity: number;
   received: number;
   unitCost: number | null;
   scheduledDeliveryDate: string | null;

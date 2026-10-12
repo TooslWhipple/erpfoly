@@ -176,6 +176,7 @@ export function useRutasPage() {
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
   } = mutations;
@@ -378,6 +379,12 @@ export function useRutasPage() {
           pointId: pendingRemoval.pointId,
           itemId: pendingRemoval.itemId,
         });
+      } else if (pendingRemoval.kind === "scheduledStop") {
+        await removeScheduledStopMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          stopId: pendingRemoval.stopId,
+          branchId: pendingRemoval.branchId,
+        });
       }
       setPendingRemoval(null);
     } catch {
@@ -410,6 +417,19 @@ export function useRutasPage() {
       itemId,
       orderNumber,
       articleName,
+    });
+  };
+
+  const handleRequestRemoveScheduledStop = (
+    stopId: number,
+    branchId: number,
+    branchName: string,
+  ) => {
+    setPendingRemoval({
+      kind: "scheduledStop",
+      stopId,
+      branchId,
+      branchName,
     });
   };
 
@@ -460,6 +480,7 @@ export function useRutasPage() {
     handleConfirmRemove,
     handleRequestRemoveRouteOrder,
     handleRequestRemoveRouteItem,
+    handleRequestRemoveScheduledStop,
     fetchOrdersForModal,
     fetchDriversForModal,
     fetchAssistantsForModal,
@@ -470,6 +491,7 @@ export function useRutasPage() {
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
   };

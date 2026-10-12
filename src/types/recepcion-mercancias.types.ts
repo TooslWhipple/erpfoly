@@ -43,11 +43,17 @@ export type ReceptionStatus = "pre_captured" | "captured" | "costed";
 export interface ReceptionArticle {
     id: string;
     productId?: number;
+    /** ID real del OrderItem (para PATCH/POST). */
+    orderItemId?: number;
     name: string;
     sku: string;
     orderId?: number;
     orderNumber: string;
+    /** Total solicitado en el pedido. */
     quantity: number;
+    orderedQuantity: number;
+    /** Tope máximo capturable en esta recepción. */
+    pendingQuantity: number;
     received: number;
     branchName?: string;
     branchId?: number;

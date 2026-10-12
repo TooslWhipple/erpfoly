@@ -314,6 +314,15 @@ export const theme = createTheme({
         },
       ],
     },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-error, &.Mui-error.Mui-focused": {
+            color: theme.palette.error.main,
+          },
+        }),
+      },
+    },
     MuiOutlinedInput: {
       styleOverrides: {
         root: ({ theme }) => ({
@@ -336,36 +345,45 @@ export const theme = createTheme({
     },
     MuiTextField: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           "& .MuiOutlinedInput-root": {
             backgroundColor: appPalette.background.sidebar,
             "& fieldset": {
               borderColor: appPalette.border,
             },
-            "&:hover fieldset": {
+            "&:hover:not(.Mui-error) fieldset": {
               borderColor: appPalette.border,
             },
-            "&.Mui-focused fieldset": {
+            "&.Mui-focused:not(.Mui-error) fieldset": {
               borderColor: appPalette.sidebar.textSelected,
             },
+            "&.Mui-error fieldset, &.Mui-error.Mui-focused fieldset": {
+              borderColor: theme.palette.error.main,
+            },
           },
-        },
+          "& .MuiInputLabel-root.Mui-error, & .MuiInputLabel-root.Mui-error.Mui-focused": {
+            color: theme.palette.error.main,
+          },
+        }),
       },
     },
     MuiSelect: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundColor: appPalette.background.sidebar,
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: appPalette.border,
           },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
+          "&:hover:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
             borderColor: appPalette.border,
           },
-          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+          "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
             borderColor: appPalette.sidebar.textSelected,
           },
-        },
+          "&.Mui-error .MuiOutlinedInput-notchedOutline, &.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.palette.error.main,
+          },
+        }),
       },
     },
     MuiListItemButton: {

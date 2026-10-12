@@ -209,6 +209,7 @@ export { CreditApplicationStatusCard } from "./CreditApplicationStatusCard";
 export type { CreditApplicationStatusCardProps } from "./CreditApplicationStatusCard";
 export { ApproveDiscountRequestModal } from "./ApproveDiscountRequestModal";
 export type {
+  ApproveDiscountLineInput,
   ApproveDiscountRequestModalProps,
   ApproveDiscountRequestMode,
   ApproveDiscountRequestResult,

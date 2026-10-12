@@ -85,13 +85,13 @@ export const ItemCard = styled('div')(({ theme }) => ({
   gap: theme.spacing(2),
 }));
 
-export const ItemImage = styled('div')({
+export const ItemImage = styled("div")(({ theme }) => ({
   width: 64,
   height: 64,
-  backgroundColor: "#E5E7EB",
+  backgroundColor: theme.palette.action.hover,
   borderRadius: 8,
   flexShrink: 0,
-});
+}));
 
 export const SummaryCard = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,

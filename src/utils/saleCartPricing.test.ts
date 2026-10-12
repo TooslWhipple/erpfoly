@@ -36,6 +36,22 @@ assert.equal(partial.bySaleItemId[1], 50);
 assert.equal(partial.bySaleItemId[2], undefined);
 assert.equal(partial.total, 50);
 
+const granular = approvedSpecialDiscount({
+  lines: [
+    { saleItemId: 1, originalPrice: 1000, discountAmount: 0, quantity: 1 },
+    { saleItemId: 2, originalPrice: 1000, discountAmount: 0, quantity: 1 },
+  ],
+  approvedDiscountPct: 10,
+  approvedDiscountAmount: null,
+  items: [
+    { saleItemId: 1, quantity: 1, allocatedAmount: 100 },
+    { saleItemId: 2, quantity: 1, allocatedAmount: 50 },
+  ],
+});
+assert.equal(granular.bySaleItemId[1], 100);
+assert.equal(granular.bySaleItemId[2], 50);
+assert.equal(granular.total, 150);
+
 const patched = patchCartLinePrices(
   [
     {

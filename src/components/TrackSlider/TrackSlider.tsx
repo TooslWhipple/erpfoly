@@ -53,6 +53,8 @@ export interface TrackSliderProps {
   middleLabel?: TrackSliderMiddleLabel;
   /** Renders labels below the track for each entry in `marks`. */
   getMarkLabel?: (markValue: number, index: number) => ReactNode;
+  /** Accessible name for the range input. */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -70,6 +72,7 @@ export function TrackSlider({
   endLabel,
   middleLabel,
   getMarkLabel,
+  ariaLabel,
   className,
 }: TrackSliderProps) {
   const isDiscrete = Boolean(marks?.length);
@@ -151,6 +154,7 @@ export function TrackSlider({
           disabled={disabled}
           readOnly={readOnly}
           onChange={handleRangeChange}
+          aria-label={ariaLabel}
           aria-valuemin={isDiscrete ? marks![0] : min}
           aria-valuemax={isDiscrete ? marks![marks!.length - 1] : max}
           aria-valuenow={value}

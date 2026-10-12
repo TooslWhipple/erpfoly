@@ -122,8 +122,24 @@ export default function SolicitudesDescuentoPage() {
       label: "MOTIVO",
       size: "xl",
       truncate: true,
-      format: (_, row) =>
-        formatDiscountRequestReasonList(row.reason, row.reasonCode, row.notes),
+      format: (_, row) => {
+        const labels = row.reasonLabels ?? [];
+        if (labels.length > 1) {
+          return `${labels[0]} y ${labels.length - 1} más`;
+        }
+        if (labels.length === 1) {
+          return formatDiscountRequestReasonList(
+            labels[0],
+            row.reasonCode,
+            row.notes,
+          );
+        }
+        return formatDiscountRequestReasonList(
+          row.reason,
+          row.reasonCode,
+          row.notes,
+        );
+      },
     },
   ];
   return (

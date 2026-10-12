@@ -18,7 +18,10 @@ import {
   RejectDiscountRequestModal,
 } from "@/components";
 import { InlineMobileMenuButton } from "@/components/Layout";
-import type { ApproveDiscountRequestResult } from "@/components";
+import type {
+  ApproveDiscountLineInput,
+  ApproveDiscountRequestResult,
+} from "@/components";
 import type {
   ApproveDiscountRequestPayload,
   DiscountRequestDetail,
@@ -174,10 +177,28 @@ export default function DiscountRequestDetailPage() {
   );
   const handleApproveDiscountRequest = useCallback(
     (result: ApproveDiscountRequestResult) => {
+      if ("items" in result) {
+        approveMutation.mutate({
+          items: result.items.map((item) =>
+            item.mode === "amount"
+              ? {
+                  discountRequestItemId: item.discountRequestItemId,
+                  unitIndex: item.unitIndex,
+                  approvedDiscountAmount: item.value,
+                }
+              : {
+                  discountRequestItemId: item.discountRequestItemId,
+                  unitIndex: item.unitIndex,
+                  approvedDiscountPct: item.value,
+                },
+          ),
+        });
+        return;
+      }
       approveMutation.mutate(
         result.mode === "amount"
           ? { approvedDiscountAmount: result.value }
-          : { approvedDiscountPct: result.value }
+          : { approvedDiscountPct: result.value },
       );
     },
     [approveMutation],
@@ -222,6 +243,54 @@ export default function DiscountRequestDetailPage() {
     );
   }
   const isPending = detail.status === "pending";
+  const reasonLabels = [
+    ...new Set(
+      detail.lineItems.flatMap((item) => {
+        const fromUnits = (item.units ?? [])
+          .map((unit) => unit.reasonLabel)
+          .filter((label): label is string => Boolean(label));
+        if (fromUnits.length > 0) return fromUnits;
+        return item.reasonLabel ? [item.reasonLabel] : [];
+      }),
+    ),
+  ];
+  const headerReason =
+    reasonLabels.length > 1
+      ? "Motivo por artículo"
+      : (reasonLabels[0] ?? detail.reasonLabel);
+  const singleLineNotes =
+    reasonLabels.length <= 1
+      ? detail.lineItems
+          .flatMap((item) => item.units ?? [])
+          .find((unit) => unit.notes?.trim())?.notes ??
+        detail.lineItems.find((item) => item.notes?.trim())?.notes ??
+        detail.notes
+      : null;
+  const approveLines: ApproveDiscountLineInput[] = detail.lineItems.flatMap(
+    (item) => {
+      if (item.discountRequestItemId == null) return [];
+      const units =
+        item.units && item.units.length > 0
+          ? item.units
+          : [
+              {
+                index: 1,
+                baseAmount: item.lineBase ?? item.total,
+                reasonLabel: item.reasonLabel ?? detail.reasonLabel,
+                notes: item.notes,
+              },
+            ];
+      return units.map((unit) => ({
+        discountRequestItemId: item.discountRequestItemId as number,
+        unitIndex: unit.index,
+        sku: item.code,
+        name: item.name,
+        baseAmount: unit.baseAmount,
+        reasonLabel: unit.reasonLabel ?? item.reasonLabel ?? detail.reasonLabel,
+        notes: unit.notes ?? item.notes,
+      }));
+    },
+  );
   const deliveryLatitude =
     detail.delivery?.latitude != null
       ? Number(detail.delivery.latitude)
@@ -248,8 +317,8 @@ export default function DiscountRequestDetailPage() {
       <ApproveDiscountRequestModal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
+        lines={approveLines}
         saleTotal={detail.discountBaseAmount}
-        suggestedDiscountPercent={detail.requestedDiscountPct ?? 5}
         onApprove={handleApproveDiscountRequest}
       />
       <DetailHeader sx={{ flexWrap: { xs: "wrap", sm: "nowrap" } }}>
@@ -306,11 +375,11 @@ export default function DiscountRequestDetailPage() {
                   Descuento solicitado
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Motivo: {detail.reasonLabel}
+                  Motivo: {headerReason}
                 </Typography>
-                {detail.reason === "OTHER" && detail.notes && (
+                {reasonLabels.length <= 1 && singleLineNotes && (
                   <Typography variant="body2" color="text.secondary">
-                    Nota: {detail.notes}
+                    Nota: {singleLineNotes}
                   </Typography>
                 )}
               </Stack>

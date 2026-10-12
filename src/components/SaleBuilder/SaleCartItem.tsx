@@ -219,12 +219,35 @@ export function SaleCartItemRow({
               </Typography>
             </PriceField>
             <PriceField>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Descuento
-              </Typography>
-              <Typography variant="body2" fontWeight={500} color="error.main">
-                -{formatCurrency(item.discountAmount + specialDiscountAmount)}
-              </Typography>
+              {item.discountAmount > 0 && specialDiscountAmount > 0 ? (
+                <Stack spacing={0.75}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Promoción
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500} color="error.main">
+                      -{formatCurrency(item.discountAmount)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Descuento especial
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500} color="error.main">
+                      -{formatCurrency(specialDiscountAmount)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : (
+                <>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {specialDiscountAmount > 0 ? "Descuento especial" : "Descuento"}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500} color="error.main">
+                    -{formatCurrency(item.discountAmount + specialDiscountAmount)}
+                  </Typography>
+                </>
+              )}
             </PriceField>
             <PriceField>
               <Typography variant="caption" color="text.secondary" display="block">

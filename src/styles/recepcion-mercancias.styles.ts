@@ -13,6 +13,7 @@ const DEFAULT_CHIP_COLORS = { bg: "#e5e7eb", text: "#374151" } as const;
 
 export const StatusChip = styled(Chip)<{ statusType: ReceptionStatus }>(({ statusType }) => {
     const colors: Record<ReceptionStatus, { bg: string; text: string }> = {
+        pre_authorized: { bg: "#ffedd5", text: "#c2410c" },
         pre_captured: { bg: "#dcfce7", text: "#16a34a" },
         captured: { bg: "#dbeafe", text: "#2563eb" },
         costed: { bg: "#f3e8ff", text: "#9333ea" },

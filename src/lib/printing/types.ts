@@ -33,5 +33,7 @@ export type LabelPrintMode = "all" | "extra";
 export interface PrintReceptionLabelsOptions {
   mode?: LabelPrintMode;
   skip?: number;
+  username?: string;
+  password?: string;
   onProgress?: (progress: number) => void;
 }

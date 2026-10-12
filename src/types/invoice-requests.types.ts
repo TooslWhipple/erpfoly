@@ -33,6 +33,14 @@ export interface InvoiceRequestDetail extends InvoiceRequestListItem {
   paymentDueAt: string | null;
 }
 
+export interface ParsedInvoiceConcept {
+  description: string;
+  issuerSku: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
 export interface ParsedInvoiceFileData {
   invoiceNumber: string;
   concept: string;
@@ -48,6 +56,7 @@ export interface ParsedInvoiceFileData {
   cfdiId?: string;
   cfdiUuid?: string;
   alreadyExists?: boolean;
+  concepts?: ParsedInvoiceConcept[];
 }
 
 export interface CreateInvoiceRequestPayload {
@@ -60,6 +69,7 @@ export interface CreateInvoiceRequestPayload {
   paymentDetails?: string;
   cfdiId: string;
   cfdiUuid: string;
+  concepts?: ParsedInvoiceConcept[];
 }
 
 export interface GetInvoiceRequestsParams {

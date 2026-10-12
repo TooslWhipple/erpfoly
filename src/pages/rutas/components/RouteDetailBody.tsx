@@ -50,6 +50,11 @@ interface RouteDetailBodyProps {
     orderNumber: string,
     articleName: string,
   ) => void;
+  onRequestRemoveStop: (
+    stopId: number,
+    branchId: number,
+    branchName: string,
+  ) => void;
   onAddDriver: () => void;
   onAddAssistant: () => void;
   onRemoveDriver: () => void;
@@ -77,6 +82,7 @@ export function RouteDetailBody({
   onRemoveServerDocument,
   onRequestRemoveOrder,
   onRequestRemoveItem,
+  onRequestRemoveStop,
   onAddDriver,
   onAddAssistant,
   onRemoveDriver,
@@ -158,6 +164,7 @@ export function RouteDetailBody({
           orders={routeDetail.orders}
           canEdit={canEditArticles}
           onAddOrdersForBranch={onAddOrdersForBranch}
+          onRequestRemoveStop={onRequestRemoveStop}
           onRequestRemoveItem={onRequestRemoveItem}
         />
       )}

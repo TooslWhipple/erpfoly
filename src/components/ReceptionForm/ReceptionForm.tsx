@@ -77,17 +77,28 @@ export interface ReceptionFormProps {
   onSaved?: (receptionId: number) => void;
 }
 
+function orderItemIdFromPendingId(id: string): number | undefined {
+  if (!id.startsWith("order-item-")) return undefined;
+  const parsed = Number(id.replace("order-item-", ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function pendingArticleToReceptionArticle(
   item: PendingArticleApi,
 ): ReceptionArticle {
+  const orderedQuantity = item.orderedQuantity ?? item.quantity;
+  const pendingQuantity = item.pendingQuantity ?? orderedQuantity;
   return {
     id: item.id,
     productId: item.productId,
+    orderItemId: orderItemIdFromPendingId(item.id),
     name: item.name,
     sku: item.sku,
     orderId: item.orderId,
     orderNumber: item.orderNumber,
-    quantity: item.quantity,
+    quantity: orderedQuantity,
+    orderedQuantity,
+    pendingQuantity,
     // item.received es lo ya entregado históricamente del pedido (puede
     // venir de una recepción anterior en pedidos "En curso"), no lo
     // capturado en ESTA recepción nueva — arrancar en 0 para no
@@ -102,14 +113,19 @@ function pendingArticleToReceptionArticle(
 function detailItemToReceptionArticle(
   item: ReceptionDetailItem,
 ): ReceptionArticle {
+  const orderedQuantity = item.orderedQuantity ?? item.quantity;
+  const pendingQuantity = item.pendingQuantity ?? orderedQuantity;
   return {
     id: `reception-item-${item.id}`,
     productId: item.productId,
+    orderItemId: item.orderItemId,
     name: item.name,
     sku: item.sku,
     orderId: item.orderId,
     orderNumber: item.orderNumber,
-    quantity: item.quantity,
+    quantity: orderedQuantity,
+    orderedQuantity,
+    pendingQuantity,
     received: item.received,
     branchName: item.branchName ?? undefined,
     branchId: undefined,
@@ -143,7 +159,9 @@ function getInvoicesTotal(invoices: ReceptionInvoice[]): number {
 }
 
 function hasQuantityMismatch(articles: ReceptionArticle[]): boolean {
-  return articles.some((article) => article.received !== article.quantity);
+  return articles.some(
+    (article) => article.received !== article.pendingQuantity,
+  );
 }
 
 function getStatusChip(status: ReceptionDetailStatus): {
@@ -368,7 +386,10 @@ export function ReceptionForm({
         article.id === articleId
           ? {
               ...article,
-              received: Math.max(0, newQuantity),
+              received: Math.min(
+                article.pendingQuantity,
+                Math.max(0, newQuantity),
+              ),
             }
           : article,
       ),
@@ -397,11 +418,12 @@ export function ReceptionForm({
     items: articles.map((article) => ({
       order_id: article.orderId ?? 0,
       order_item_id:
-        article.id.startsWith("reception-item-")
-          ? Number(article.id.replace("reception-item-", ""))
-          : Number(article.id.replace("order-item-", "")),
+        article.orderItemId ??
+        (article.id.startsWith("order-item-")
+          ? Number(article.id.replace("order-item-", ""))
+          : 0),
       product_id: article.productId ?? 0,
-      quantity: article.quantity,
+      quantity: article.orderedQuantity ?? article.quantity,
       received: article.received,
     })),
     payable_invoice_ids: extractPayableIds(invoices),
@@ -479,7 +501,7 @@ export function ReceptionForm({
         const payload = {
           items: articles.map((article) => ({
             product_id: article.productId ?? 0,
-            quantity: article.quantity,
+            quantity: article.orderedQuantity ?? article.quantity,
             received: article.received,
           })),
         };
@@ -613,14 +635,15 @@ export function ReceptionForm({
                   <StyledTableCell>Nombre</StyledTableCell>
                   <StyledTableCell>SKU</StyledTableCell>
                   <StyledTableCell>Pedido</StyledTableCell>
-                  <StyledTableCell>Cantidad</StyledTableCell>
+                  <StyledTableCell>Total Pedido</StyledTableCell>
+                  <StyledTableCell>Pendiente por Recibir</StyledTableCell>
                   <StyledTableCell>Recibidos</StyledTableCell>
                 </TableRow>
               </StyledTableHead>
               <TableBody>
                 {loadingArticles ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={5} align="center">
+                    <StyledTableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary">
                         Cargando artículos...
                       </Typography>
@@ -628,7 +651,7 @@ export function ReceptionForm({
                   </StyledTableRow>
                 ) : articlesError ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={5} align="center">
+                    <StyledTableCell colSpan={6} align="center">
                       <Typography variant="body2" color="error">
                         {articlesError}
                       </Typography>
@@ -636,7 +659,7 @@ export function ReceptionForm({
                   </StyledTableRow>
                 ) : articles.length === 0 ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={5} align="center">
+                    <StyledTableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary">
                         Este proveedor no tiene artículos pendientes por recibir
                       </Typography>
@@ -648,7 +671,12 @@ export function ReceptionForm({
                       <ArticleNameCell>{article.name}</ArticleNameCell>
                       <StyledTableCell>{article.sku}</StyledTableCell>
                       <StyledTableCell>{article.orderNumber}</StyledTableCell>
-                      <StyledTableCell>{article.quantity}</StyledTableCell>
+                      <StyledTableCell>
+                        {article.orderedQuantity}
+                      </StyledTableCell>
+                      <StyledTableCell>
+                        {article.pendingQuantity}
+                      </StyledTableCell>
                       <StyledTableCell>
                         <NumberInput
                           value={article.received}
@@ -656,6 +684,7 @@ export function ReceptionForm({
                             handleQuantityChange(article.id, value)
                           }
                           min={0}
+                          max={article.pendingQuantity}
                           step={1}
                           width={80}
                           size="small"

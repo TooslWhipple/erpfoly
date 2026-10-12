@@ -63,6 +63,11 @@ export interface IdaTabProps {
   orders: RouteOrder[];
   canEdit: boolean;
   onAddOrdersForBranch: (branchId: number) => void;
+  onRequestRemoveStop: (
+    stopId: number,
+    branchId: number,
+    branchName: string,
+  ) => void;
   onRequestRemoveItem: (
     pointId: number,
     itemId: number,
@@ -77,6 +82,7 @@ export function IdaTab({
   orders,
   canEdit,
   onAddOrdersForBranch,
+  onRequestRemoveStop,
   onRequestRemoveItem,
 }: IdaTabProps) {
   const [itemMenu, setItemMenu] = useState<ItemMenuState>(null);
@@ -146,15 +152,26 @@ export function IdaTab({
                   {stop.name}
                 </Typography>
                 {canEdit && (
-                  <Button
-                    variant="option"
-                    color="primary"
-                    size="small"
-                    startIcon={<PlusCircle size={16} />}
-                    onClick={() => onAddOrdersForBranch(stop.branchId)}
-                  >
-                    Agregar
-                  </Button>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Button
+                      variant="option"
+                      color="primary"
+                      size="small"
+                      startIcon={<PlusCircle size={16} />}
+                      onClick={() => onAddOrdersForBranch(stop.branchId)}
+                    >
+                      Agregar
+                    </Button>
+                    <IconButton
+                      size="small"
+                      aria-label="Quitar sucursal"
+                      onClick={() =>
+                        onRequestRemoveStop(stop.id, stop.branchId, stop.name)
+                      }
+                    >
+                      <Trash2 size={16} />
+                    </IconButton>
+                  </Stack>
                 )}
               </BranchHeader>
 

@@ -93,6 +93,12 @@ export type PendingRemoval =
       orderNumber: string;
       articleName: string;
     }
+  | {
+      kind: "scheduledStop";
+      stopId: number;
+      branchId: number;
+      branchName: string;
+    }
   | null;
 
 const RouteConstantsPage = () => null;

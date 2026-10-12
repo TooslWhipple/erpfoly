@@ -130,7 +130,9 @@ export function RoutePageModals({
               ? "Remover artículo"
               : pendingRemoval?.kind === "driver"
                 ? "Quitar chofer"
-                : "Quitar ayudante"
+                : pendingRemoval?.kind === "scheduledStop"
+                  ? "Quitar sucursal"
+                  : "Quitar ayudante"
         }
         description={
           pendingRemoval?.kind === "routeOrder" ? (
@@ -146,6 +148,13 @@ export function RoutePageModals({
               <strong>{pendingRemoval.articleName}</strong> del pedido{" "}
               <strong>{pendingRemoval.orderNumber}</strong> de esta ruta. Esta
               acción no se puede deshacer.
+            </>
+          ) : pendingRemoval?.kind === "scheduledStop" ? (
+            <>
+              ¿Estás seguro de que deseas quitar{" "}
+              <strong>{pendingRemoval.branchName}</strong> de esta ruta? Los
+              pedidos asignados a esta sucursal volverán al listado de envíos
+              pendientes.
             </>
           ) : undefined
         }

@@ -102,6 +102,7 @@ export default function RutaPage() {
                 onRemoveServerDocument={r.handleRemoveCartaServerDocument}
                 onRequestRemoveOrder={r.handleRequestRemoveRouteOrder}
                 onRequestRemoveItem={r.handleRequestRemoveRouteItem}
+                onRequestRemoveStop={r.handleRequestRemoveScheduledStop}
                 onAddDriver={() => r.setAddDriverModalOpen(true)}
                 onAddAssistant={() => r.setAddAssistantModalOpen(true)}
                 onRemoveDriver={r.handleRequestRemoveDriver}
@@ -145,6 +146,7 @@ export default function RutaPage() {
         removalLoading={
           r.removeAssistantMutation.isPending ||
           r.removeDriverMutation.isPending ||
+          r.removeScheduledStopMutation.isPending ||
           r.removeRoutePointMutation.isPending ||
           r.removeRoutePointItemMutation.isPending
         }

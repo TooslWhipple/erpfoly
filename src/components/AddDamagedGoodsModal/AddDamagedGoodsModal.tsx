@@ -10,6 +10,7 @@ import {
     CircularProgress,
     Switch,
     FormControlLabel,
+    Button,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -25,6 +26,7 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
     getDamagedProductsCatalog,
     getDamagedProductBranchesWithStock,
+    getDamagedProductSupplierOptions,
     createDamagedProduct,
     getDamagedProduct,
     updateDamagedProduct,
@@ -36,6 +38,10 @@ import {
     type RepairCostAssignee,
 } from "@/services/damaged-products.service";
 import { getProductById } from "@/services/productos.service";
+import {
+    nextReturnSupplierValue,
+    returnSupplierIdForDisposition,
+} from "./returnSupplierSelection";
 import { getApiErrorMessage } from "@/lib/axios";
 import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
@@ -70,6 +76,7 @@ interface AddDamagedGoodsFormShape extends Record<string, unknown> {
     repairCost: string;
     repairCostAssignedTo: RepairCostAssignee | "";
     chargedSupplierId: string;
+    returnSupplierId: string;
     auctionPrice: string;
     acceptanceLetter: UploadedFileItem[];
 }
@@ -181,6 +188,13 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
         type: "select",
     },
     {
+        name: "returnSupplierId",
+        schema: z.string(),
+        label: "Regresar al proveedor",
+        placeholder: "Seleccione proveedor",
+        type: "select",
+    },
+    {
         name: "auctionPrice",
         schema: z.string(),
         label: "Precio de remate",
@@ -208,6 +222,7 @@ const EMPTY_DEFAULTS: AddDamagedGoodsFormShape = {
     repairCost: "",
     repairCostAssignedTo: "",
     chargedSupplierId: "",
+    returnSupplierId: "",
     auctionPrice: "",
     acceptanceLetter: [],
 };
@@ -241,6 +256,7 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
         repairCost: "",
         repairCostAssignedTo: "",
         chargedSupplierId: "",
+        returnSupplierId: "",
         auctionPrice: "",
         acceptanceLetter: [],
     };
@@ -272,6 +288,8 @@ function buildDefaultValuesFromFolio(folio: DamagedProductDetail): AddDamagedGoo
         repairCost: folio.repairCost != null ? String(folio.repairCost) : "",
         repairCostAssignedTo: folio.repairCostAssignedTo ?? "",
         chargedSupplierId: "",
+        returnSupplierId:
+            folio.returnSupplierId != null ? String(folio.returnSupplierId) : "",
         auctionPrice: folio.auctionPrice != null ? String(folio.auctionPrice) : "",
         acceptanceLetter: [],
     };
@@ -516,6 +534,146 @@ function DamagedGoodsChargedSupplierField({
     );
 }
 
+type ReturnSupplierFormApi = {
+    setFieldValue: (name: "returnSupplierId", value: string) => void;
+    validate: (cause: "change") => void;
+};
+
+/** The acceptance letter lives outside the form values, so uploading it never retriggers validation. */
+function RevalidateOnAcceptanceLetter({
+    form,
+    letterCount,
+}: {
+    form: { validate: (cause: "change") => void };
+    letterCount: number;
+}) {
+    const skipInitial = useRef(true);
+    useEffect(() => {
+        if (skipInitial.current) {
+            skipInitial.current = false;
+            return;
+        }
+        form.validate("change");
+    }, [form, letterCount]);
+    return null;
+}
+
+function DamagedGoodsReturnSupplierField({
+    form,
+    productId,
+    currentValue,
+    fetchEnabled,
+    disabled = false,
+}: {
+    form: ReturnSupplierFormApi & Parameters<typeof FormField>[0]["form"];
+    productId: number;
+    currentValue: string;
+    fetchEnabled: boolean;
+    disabled?: boolean;
+}) {
+    const suppliersQuery = useQuery({
+        queryKey: ["damaged-products", "supplier-options", productId, DISPOSITION_CODES.RETURN_TO_SUPPLIER],
+        queryFn: async () => {
+            const result = await getDamagedProductSupplierOptions(
+                productId,
+                DISPOSITION_CODES.RETURN_TO_SUPPLIER,
+            );
+            if (result.error != null) {
+                throw new Error(result.error.message);
+            }
+            return result.data ?? { kind: "commercial" as const, options: [] };
+        },
+        enabled: fetchEnabled && productId > 0,
+        staleTime: 30_000,
+    });
+
+    const supplierOptions: SelectOption[] = useMemo(
+        () =>
+            (suppliersQuery.data?.options ?? []).map((item) => ({
+                value: String(item.id),
+                label: item.label,
+            })),
+        [suppliersQuery.data],
+    );
+
+    const prevProductIdRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (prevProductIdRef.current == null) {
+            prevProductIdRef.current = productId;
+            return;
+        }
+        if (productId !== prevProductIdRef.current) {
+            prevProductIdRef.current = productId;
+            form.setFieldValue("returnSupplierId", "");
+        }
+    }, [productId, form]);
+
+    useEffect(() => {
+        if (!suppliersQuery.isSuccess || suppliersQuery.data == null) {
+            return;
+        }
+        const next = nextReturnSupplierValue(currentValue, suppliersQuery.data.options);
+        if (next !== currentValue) {
+            form.setFieldValue("returnSupplierId", next);
+        }
+        // setFieldValue validates the field only. A single supplier is applied
+        // without a user change, so the form-level check must run too.
+        form.validate("change");
+    }, [currentValue, suppliersQuery.isSuccess, suppliersQuery.data, form]);
+
+    const hasProduct = productId > 0;
+    const isLoading = hasProduct && suppliersQuery.isFetching;
+    const noSuppliers =
+        hasProduct &&
+        suppliersQuery.isSuccess &&
+        !suppliersQuery.isFetching &&
+        supplierOptions.length === 0;
+
+    let placeholder = "Seleccione proveedor";
+    if (!hasProduct) {
+        placeholder = "Seleccione un artículo";
+    } else if (isLoading) {
+        placeholder = "Cargando...";
+    } else if (suppliersQuery.isError) {
+        placeholder = "No se pudieron cargar los proveedores";
+    } else if (noSuppliers) {
+        placeholder = "El artículo no tiene proveedores registrados";
+    }
+
+    return (
+        <Stack spacing={1}>
+            <FormField
+                form={form}
+                name="returnSupplierId"
+                label="Regresar al proveedor"
+                placeholder={placeholder}
+                type="select"
+                options={supplierOptions}
+                disabled={
+                    disabled ||
+                    !hasProduct ||
+                    isLoading ||
+                    noSuppliers ||
+                    suppliersQuery.isError
+                }
+            />
+            {suppliersQuery.isError && (
+                <Alert
+                    severity="error"
+                    action={
+                        <Button color="inherit" size="small" onClick={() => suppliersQuery.refetch()}>
+                            Reintentar
+                        </Button>
+                    }
+                >
+                    No se pudieron cargar los proveedores del artículo.
+                </Alert>
+            )}
+        </Stack>
+    );
+}
+
 export function AddDamagedGoodsModal({
     open,
     onClose,
@@ -663,6 +821,17 @@ export function AddDamagedGoodsModal({
             }
         }
 
+        if (
+            data.damagedProductDisposition === DISPOSITION_CODES.RETURN_TO_SUPPLIER &&
+            !data.returnSupplierId
+        ) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: messages.required,
+                path: ["returnSupplierId"],
+            });
+        }
+
         if (data.damagedProductDisposition === DISPOSITION_CODES.AUCTION_SALE && !data.auctionPrice) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["auctionPrice"] });
         }
@@ -752,11 +921,15 @@ export function AddDamagedGoodsModal({
                         observations: values.observations || undefined,
                     };
 
-                    if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR ||
-                        dispositionCode === DISPOSITION_CODES.RETURN_TO_SUPPLIER) {
-                        if (values.assignedToId) {
-                            updatePayload.repairSupplierId = parseInt(values.assignedToId, 10);
-                        }
+                    if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR && values.assignedToId) {
+                        updatePayload.repairSupplierId = parseInt(values.assignedToId, 10);
+                    }
+                    const editedReturnSupplierId = returnSupplierIdForDisposition(
+                        dispositionCode,
+                        values.returnSupplierId,
+                    );
+                    if (editedReturnSupplierId != null) {
+                        updatePayload.returnSupplierId = editedReturnSupplierId;
                     }
 
                     if (values.includeCost && values.repairCost) {
@@ -805,6 +978,13 @@ export function AddDamagedGoodsModal({
                         formData.append("damageDescription", values.damageDetected);
                         if (values.serialNumber) formData.append("serialNumber", values.serialNumber);
                         if (values.observations) formData.append("observations", values.observations);
+                        const createdReturnSupplierId = returnSupplierIdForDisposition(
+                            dispositionCode,
+                            values.returnSupplierId,
+                        );
+                        if (createdReturnSupplierId != null) {
+                            formData.append("returnSupplierId", String(createdReturnSupplierId));
+                        }
 
                         const file = acceptanceLetter[0];
                         if (file.file) {
@@ -854,6 +1034,14 @@ export function AddDamagedGoodsModal({
                                     payload.chargedSupplierId = parseInt(values.chargedSupplierId, 10);
                                 }
                             }
+                        }
+
+                        const jsonReturnSupplierId = returnSupplierIdForDisposition(
+                            dispositionCode,
+                            values.returnSupplierId,
+                        );
+                        if (jsonReturnSupplierId != null) {
+                            payload.returnSupplierId = jsonReturnSupplierId;
                         }
 
                         if (dispositionCode === DISPOSITION_CODES.AUCTION_SALE && values.auctionPrice) {
@@ -925,6 +1113,10 @@ export function AddDamagedGoodsModal({
         >
             {({ form }) => (
                 <Stack spacing={2} sx={{ pt: 1 }}>
+                    <RevalidateOnAcceptanceLetter
+                        form={form}
+                        letterCount={acceptanceLetter.length}
+                    />
                     <TabFilters
                         tabs={MODAL_TABS}
                         activeTab={activeTab}
@@ -1179,6 +1371,20 @@ export function AddDamagedGoodsModal({
                                                                                     prev === "supplier" ? "" : prev,
                                                                             );
                                                                         }
+                                                                        if (
+                                                                            nextCode !==
+                                                                            DISPOSITION_CODES.RETURN_TO_SUPPLIER
+                                                                        ) {
+                                                                            form.setFieldValue("returnSupplierId", "");
+                                                                        }
+                                                                        if (
+                                                                            nextCode !==
+                                                                                DISPOSITION_CODES.INTERNAL_REPAIR &&
+                                                                            nextCode !==
+                                                                                DISPOSITION_CODES.SUPPLIER_REPAIR
+                                                                        ) {
+                                                                            form.setFieldValue("assignedToId", "");
+                                                                        }
                                                                     }}
                                                                 />
                                                             );
@@ -1379,46 +1585,87 @@ export function AddDamagedGoodsModal({
 
                                                 {isReturn && (
                                                     <Stack spacing={2} sx={{ mt: 1 }}>
-                                                        <FormField
-                                                            form={form}
-                                                            name="assignedToId"
-                                                            label="Regresar al proveedor"
-                                                            placeholder="Seleccione proveedor"
-                                                            type="select"
-                                                            options={repairSupplierOptions}
-                                                        />
+                                                        <form.Subscribe
+                                                            selector={(state) => {
+                                                                const values = (
+                                                                    state as {
+                                                                        values?: {
+                                                                            productId?: number;
+                                                                            returnSupplierId?: string;
+                                                                        };
+                                                                    }
+                                                                ).values;
+                                                                return {
+                                                                    productId: Number(values?.productId ?? 0),
+                                                                    returnSupplierId: values?.returnSupplierId ?? "",
+                                                                };
+                                                            }}
+                                                        >
+                                                            {(selected) => (
+                                                                <DamagedGoodsReturnSupplierField
+                                                                    form={form}
+                                                                    productId={selected.productId}
+                                                                    currentValue={selected.returnSupplierId}
+                                                                    fetchEnabled={open && selected.productId > 0}
+                                                                    disabled={submitting}
+                                                                />
+                                                            )}
+                                                        </form.Subscribe>
 
-                                                        <FormControl component="fieldset" variant="standard">
-                                                            <Typography
-                                                                variant="body2"
-                                                                color="text.secondary"
-                                                                sx={{ mb: 1 }}
-                                                            >
-                                                                Carta de aceptación
-                                                            </Typography>
-                                                            {/*
-                                                                El mismo componente en alta y en edición: el card se ve
-                                                                igual en los dos modos. En edición la papelera se oculta
-                                                                —un folio de devolución a proveedor no debe quedarse sin
-                                                                carta— y en su lugar aparece «Reemplazar», que sube un
-                                                                archivo nuevo por el mismo `PATCH` multipart. «Ver»
-                                                                muestra la carta dentro del ERP: en alta desde el
-                                                                archivo local y en edición desde
-                                                                `acceptanceLetterPreviewUrl`, que es la única firma sin
-                                                                `attachment` —la de «Descargar» bajaría el archivo en
-                                                                vez de mostrarlo.
-                                                            */}
-                                                            <FileUpload
-                                                                value={acceptanceLetter}
-                                                                onChange={setPickedLetter}
-                                                                accept={["image/*", "application/pdf"]}
-                                                                placeholder="Subir carta de aceptación"
-                                                                allowRemove={!isEditMode}
-                                                                allowReplace={isEditMode}
-                                                                urlForcesDownload
-                                                                allowPreview
-                                                            />
-                                                        </FormControl>
+                                                        <form.Subscribe
+                                                            selector={(state) =>
+                                                                formatFieldErrors(
+                                                                    (
+                                                                        state as {
+                                                                            fieldMeta?: Record<
+                                                                                string,
+                                                                                { errors?: unknown[] }
+                                                                            >;
+                                                                        }
+                                                                    ).fieldMeta?.acceptanceLetter
+                                                                        ?.errors ?? [],
+                                                                )
+                                                            }
+                                                        >
+                                                            {(letterError) => (
+                                                                <FormControl
+                                                                    component="fieldset"
+                                                                    variant="standard"
+                                                                    error={letterError != null}
+                                                                >
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        color="text.secondary"
+                                                                        sx={{ mb: 1 }}
+                                                                    >
+                                                                        Carta de aceptación
+                                                                    </Typography>
+                                                                    {/*
+                                                                        El mismo componente en alta y en edición: el card se ve
+                                                                        igual en los dos modos. En edición la papelera se oculta
+                                                                        —un folio de devolución a proveedor no debe quedarse sin
+                                                                        carta— y en su lugar aparece «Reemplazar», que sube un
+                                                                        archivo nuevo por el mismo `PATCH` multipart. «Ver»
+                                                                        muestra la carta dentro del ERP: en alta desde el
+                                                                        archivo local y en edición desde
+                                                                        `acceptanceLetterPreviewUrl`, que es la única firma sin
+                                                                        `attachment` —la de «Descargar» bajaría el archivo en
+                                                                        vez de mostrarlo.
+                                                                    */}
+                                                                    <FileUpload
+                                                                        value={acceptanceLetter}
+                                                                        onChange={setPickedLetter}
+                                                                        accept={["image/*", "application/pdf"]}
+                                                                        placeholder="Subir carta de aceptación"
+                                                                        allowRemove={!isEditMode}
+                                                                        allowReplace={isEditMode}
+                                                                        urlForcesDownload
+                                                                        allowPreview
+                                                                        error={letterError}
+                                                                    />
+                                                                </FormControl>
+                                                            )}
+                                                        </form.Subscribe>
                                                     </Stack>
                                                 )}
                                             </>

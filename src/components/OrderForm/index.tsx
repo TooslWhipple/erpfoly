@@ -50,6 +50,8 @@ import {
   StickySidebarGrid,
 } from "@/styles/pedidos/nuevo.styles";
 import { Search } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ORDERS_CREATE, TRASPASOS_CREATE } from "@/lib/permissions";
 interface ArticleRow extends Article {
   image?: string;
 }
@@ -104,6 +106,7 @@ export default function OrderForm({
   const router = useRouter();
   const theme = useTheme();
   const { showError } = useSnackbarStore();
+  const { hasPermission } = usePermissions();
   const orderType =
     propOrderType ??
     (router.query.orderType as "external" | "internal" | undefined) ??
@@ -140,6 +143,12 @@ export default function OrderForm({
     return orderType;
   }, [mode, originalOrder, orderType]);
   const isInternalOrder = effectiveOrderType === "internal";
+  // `pedidos-nuevo.view` opens the form to browse only: without the create
+  // permission of the order type there is no way to continue to confirmation.
+  const canSubmitOrder =
+    mode === "edit" ||
+    hasPermission(isInternalOrder ? TRASPASOS_CREATE : ORDERS_CREATE);
+
   const isEditLocked =
     mode === "edit" && !!originalOrder && originalOrder.status !== "pending";
   const resolvedSupplierId =
@@ -805,7 +814,7 @@ export default function OrderForm({
             items={selectedItems}
             onQuantityChange={handleQuantityChange}
             onRemove={handleRemoveItem}
-            onContinue={handleContinue}
+            onContinue={canSubmitOrder ? handleContinue : undefined}
             continueLabel={mode === "edit" ? "Guardar cambios" : "Continuar"}
             hidePrices={isInternalOrder}
             disabled={isEditLocked}

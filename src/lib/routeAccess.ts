@@ -66,6 +66,7 @@ import {
   GENERAL_EXPENSES_UPDATE,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
+  NEW_ORDER_READ,
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
@@ -130,7 +131,7 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/traspasos\/nuevo$/, permission: TRASPASOS_CREATE },
   { pattern: /^\/traspasos\/[^/]+\/editar$/, permission: TRASPASOS_UPDATE },
   { pattern: /^\/traspasos(\/.*)?$/, permission: TRASPASOS_READ },
-  { pattern: /^\/pedidos\/nuevo$/, permission: ORDERS_CREATE },
+  { pattern: /^\/pedidos\/nuevo$/, anyPermissions: [ORDERS_CREATE, NEW_ORDER_READ] },
   { pattern: /^\/pedidos(\/.*)?$/, permission: ORDERS_READ },
 
   { pattern: /^\/solicitudes-descuento\/nuevo$/, permission: DISCOUNT_REQUESTS_CREATE },

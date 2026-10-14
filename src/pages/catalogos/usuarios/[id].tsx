@@ -51,7 +51,11 @@ import {
 import type { ApiResult, ApiSuccessPayload } from "@/lib/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
+import {
+  CATALOG_ROLES_UPDATE,
+  CATALOG_USERS_CREATE,
+  CATALOG_USERS_UPDATE,
+} from "@/lib/permissions";
 import {
   filters,
   isValidPersonName,
@@ -114,6 +118,11 @@ export default function UserFormPage() {
   const canSaveUser = hasPermission(
     isNew ? CATALOG_USERS_CREATE : CATALOG_USERS_UPDATE,
   );
+  // Assigning roles needs the Roles permission: without it the role can be
+  // picked only when creating, and never a high-privilege one (the back
+  // answers 403 otherwise).
+  const canAssignRoles = hasPermission(CATALOG_ROLES_UPDATE);
+  const showRoleSelect = isNew || canAssignRoles;
   const userId = isNew ? null : Number(id);
   const [loading, setLoading] = useState(true);
   const [sendingInvite, setSendingInvite] = useState(false);
@@ -127,6 +136,9 @@ export default function UserFormPage() {
   /** The user as the back last returned it; edits are diffed against it. */
   const [savedUser, setSavedUser] = useState<UserFormState | null>(null);
   const selectedRole = roles.find((role) => role.id === user.roleId);
+  const assignableRoles = canAssignRoles
+    ? roles
+    : roles.filter((role) => !isHighPrivilegeRoleCode(role.code));
   const selectedRoleCode = selectedRole?.code;
   const usernameChanged =
     isNew ||
@@ -645,33 +657,37 @@ export default function UserFormPage() {
               }}
             />
           </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <FormSelect
-              label="Selecciona un rol"
-              placeholder="Selecciona un rol"
-              value={user.roleId}
-              onChange={(e) =>
-                handleRoleChange(
-                  e.target.value === "" ? "" : Number(e.target.value),
-                )
-              }
-              options={roles.map((role) => ({
-                value: role.id,
-                label: role.name,
-              }))}
-              error={Boolean(errors.roleId)}
-              helperText={errors.roleId || undefined}
-            />
-            <HelperTextLink>
-              Si deseas crear un rol nuevo, ve hacia el módulo{" "}
-              <Link href="/catalogos/roles">Roles</Link>
-            </HelperTextLink>
-          </Grid>
+          {showRoleSelect && (
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <FormSelect
+                label="Selecciona un rol"
+                placeholder="Selecciona un rol"
+                value={user.roleId}
+                onChange={(e) =>
+                  handleRoleChange(
+                    e.target.value === "" ? "" : Number(e.target.value),
+                  )
+                }
+                options={assignableRoles.map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                }))}
+                error={Boolean(errors.roleId)}
+                helperText={errors.roleId || undefined}
+              />
+              {canAssignRoles && (
+                <HelperTextLink>
+                  Si deseas crear un rol nuevo, ve hacia el módulo{" "}
+                  <Link href="/catalogos/roles">Roles</Link>
+                </HelperTextLink>
+              )}
+            </Grid>
+          )}
         </Grid>
         {canSaveUser && (
           <Box>

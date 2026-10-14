@@ -91,12 +91,21 @@ export async function fetchEtiquetaVentaPdf(
 
 export async function fetchReceptionLabelsPdf(
   receptionId: number,
-  options: { mode?: LabelPrintMode; skip?: number } = {},
+  options: {
+    mode?: LabelPrintMode;
+    skip?: number;
+    username?: string;
+    password?: string;
+  } = {},
 ): Promise<Blob> {
   try {
+    const body =
+      options.username != null && options.password != null
+        ? { username: options.username, password: options.password }
+        : undefined;
     const response = await api.post(
       `/merchandise-receptions/${receptionId}/labels/pdf`,
-      undefined,
+      body,
       {
         params: {
           mode: options.mode ?? "all",

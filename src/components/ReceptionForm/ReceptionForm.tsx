@@ -14,6 +14,7 @@ import type { StatusChipVariant } from "@/components/StatusChip";
 import { NumberInput } from "@/components/Folypuntos";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
 import type { ReceptionConfirmVariant } from "@/components/ReceptionOrdersModal/SendToCostingModal";
+import { ReprintLabelsAuthDialog } from "@/components/ReceptionOrdersModal/ReprintLabelsAuthDialog";
 import { PrinterSetupDialog } from "@/components/printing";
 import { useLabelPrinter } from "@/hooks/printing/useLabelPrinter";
 import type { SelectableInvoice } from "@/types/invoice-selector.types";
@@ -114,7 +115,8 @@ function detailItemToReceptionArticle(
   item: ReceptionDetailItem,
 ): ReceptionArticle {
   const orderedQuantity = item.orderedQuantity ?? item.quantity;
-  const pendingQuantity = item.pendingQuantity ?? orderedQuantity;
+  const authorizedQuantity = item.authorizedQuantity ?? item.pendingQuantity;
+  const pendingQuantity = item.pendingQuantity ?? authorizedQuantity ?? orderedQuantity;
   return {
     id: `reception-item-${item.id}`,
     productId: item.productId,
@@ -126,11 +128,43 @@ function detailItemToReceptionArticle(
     quantity: orderedQuantity,
     orderedQuantity,
     pendingQuantity,
+    authorizedQuantity,
     received: item.received,
     branchName: item.branchName ?? undefined,
     branchId: undefined,
     scheduledDeliveryDate: item.scheduledDeliveryDate,
   };
+}
+
+/** Agrupa partidas del mismo SKU para captura en rampa (tope = suma autorizada). */
+function groupArticlesBySku(articles: ReceptionArticle[]): ReceptionArticle[] {
+  const groups = new Map<number, ReceptionArticle>();
+  for (const article of articles) {
+    const productId = article.productId ?? 0;
+    const existing = groups.get(productId);
+    if (!existing) {
+      groups.set(productId, {
+        ...article,
+        id: `sku-${productId}`,
+        pendingQuantity: article.authorizedQuantity ?? article.pendingQuantity,
+        authorizedQuantity: article.authorizedQuantity ?? article.pendingQuantity,
+        orderedQuantity: article.orderedQuantity,
+        quantity: article.orderedQuantity,
+        received: article.received,
+      });
+      continue;
+    }
+    existing.pendingQuantity +=
+      article.authorizedQuantity ?? article.pendingQuantity;
+    existing.authorizedQuantity =
+      (existing.authorizedQuantity ?? 0) +
+      (article.authorizedQuantity ?? article.pendingQuantity);
+    existing.orderedQuantity += article.orderedQuantity;
+    existing.quantity += article.orderedQuantity;
+    existing.received += article.received;
+    existing.orderNumber = `${existing.orderNumber}, ${article.orderNumber}`;
+  }
+  return [...groups.values()];
 }
 
 function detailInvoiceToReceptionInvoice(
@@ -160,7 +194,9 @@ function getInvoicesTotal(invoices: ReceptionInvoice[]): number {
 
 function hasQuantityMismatch(articles: ReceptionArticle[]): boolean {
   return articles.some(
-    (article) => article.received !== article.pendingQuantity,
+    (article) =>
+      article.received !==
+      (article.authorizedQuantity ?? article.pendingQuantity),
   );
 }
 
@@ -169,6 +205,8 @@ function getStatusChip(status: ReceptionDetailStatus): {
   variant: StatusChipVariant;
 } | null {
   switch (status) {
+    case "pre_authorized":
+      return { label: "Preautorizado", variant: "warning" };
     case "pre_captured":
       return { label: "Precapturado", variant: "success" };
     case "in_costing":
@@ -183,15 +221,20 @@ function getStatusChip(status: ReceptionDetailStatus): {
 function getPrimaryActionLabel(
   status: ReceptionDetailStatus,
   extraLabels: number,
+  originalLabelsIssued: boolean,
 ): string {
   switch (status) {
     case "draft":
       return "Guardar e imprimir etiquetas";
+    case "pre_authorized":
+      return "Finalizar recepción / Enviar a costeo";
     case "pre_captured":
-      return extraLabels > 0 ? "Reimprimir etiquetas" : "Enviar a costeo";
+      return extraLabels > 0 || originalLabelsIssued
+        ? "Reimprimir etiquetas"
+        : "Enviar a costeo";
     case "in_costing":
     case "costed":
-      return "Guardar cambios";
+      return originalLabelsIssued ? "Reimprimir etiquetas" : "Guardar cambios";
     default:
       return "Guardar";
   }
@@ -205,6 +248,9 @@ function resolveConfirmVariant(
   status: ReceptionDetailStatus,
   extraLabels: number,
 ): ReceptionConfirmVariant {
+  if (status === "pre_authorized") {
+    return "send_to_costing";
+  }
   if (status === "pre_captured" && extraLabels > 0) {
     return "save_extra_labels";
   }
@@ -226,6 +272,7 @@ function mapReceptionDetailStatus(
   switch (status) {
     case "draft":
       return "draft";
+    case "pre_authorized":
     case "pre_captured":
     case "in_costing":
     case "costed":
@@ -269,6 +316,11 @@ export function ReceptionForm({
     receptionId ?? null,
   );
   const [supplierNameFromReception, setSupplierNameFromReception] = useState("");
+  const [lineItems, setLineItems] = useState<ReceptionArticle[]>([]);
+  const [originalLabelsIssued, setOriginalLabelsIssued] = useState(false);
+  const [reprintAuthOpen, setReprintAuthOpen] = useState(false);
+  const [reprintAuthLoading, setReprintAuthLoading] = useState(false);
+  const [reprintAuthError, setReprintAuthError] = useState<string | null>(null);
 
   const totalArticles = getTotalArticles(articles);
   const totalLabels = getTotalLabels(articles);
@@ -277,13 +329,17 @@ export function ReceptionForm({
   const invoicesExceedCost = invoices.length > 0 && invoicesTotal > totalLabels;
   const quantityMismatch = hasQuantityMismatch(articles);
   const statusChip = getStatusChip(status);
-  const canEditQuantities = status === "draft" || status === "pre_captured";
+  const canEditQuantities =
+    status === "draft" ||
+    status === "pre_captured" ||
+    status === "pre_authorized";
   const canManageInvoices = status === "draft" || status === "pre_captured";
   const confirmVariant = resolveConfirmVariant(status, extraLabels);
   const primaryDisabled =
     (status === "draft" && totalArticles === 0) ||
-    status === "in_costing" ||
-    status === "costed";
+    (status === "pre_authorized" && totalArticles === 0) ||
+    ((status === "in_costing" || status === "costed") &&
+      !originalLabelsIssued);
 
   const linkedInvoiceIds = useMemo(
     () => invoices.map((invoice) => invoice.id),
@@ -330,7 +386,13 @@ export function ReceptionForm({
             return;
           }
           const detail = result.data;
-          setArticles(detail.items.map(detailItemToReceptionArticle));
+          const mapped = detail.items.map(detailItemToReceptionArticle);
+          setLineItems(mapped);
+          setArticles(
+            detail.status === "pre_authorized"
+              ? groupArticlesBySku(mapped)
+              : mapped,
+          );
           const loadedInvoices = detail.invoices.map(detailInvoiceToReceptionInvoice);
           setInvoices(loadedInvoices);
           setOriginalPayableIds(
@@ -338,6 +400,7 @@ export function ReceptionForm({
           );
           setStatus(mapReceptionDetailStatus(detail.status));
           setBaselineLabels(getBaselineLabelsFromDetail(detail));
+          setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
           setSupplierNameFromReception(detail.supplier);
         })
         .catch((err) => {
@@ -397,9 +460,23 @@ export function ReceptionForm({
   };
 
   const handleOpenPrimaryAction = () => {
+    const needsReprintAuth =
+      originalLabelsIssued &&
+      (status === "pre_captured" ||
+        status === "in_costing" ||
+        status === "costed");
+    if (needsReprintAuth) {
+      setReprintAuthError(null);
+      setReprintAuthOpen(true);
+      return;
+    }
+
     if (status === "in_costing" || status === "costed") return;
+
     const willPrintLabels =
-      status === "draft" || (status === "pre_captured" && extraLabels > 0);
+      status === "draft" ||
+      status === "pre_authorized" ||
+      (status === "pre_captured" && extraLabels > 0);
     if (willPrintLabels && !isConfigured) {
       setPrinterSetupOpen(true);
       return;
@@ -413,21 +490,50 @@ export function ReceptionForm({
     setActivePanel("confirm");
   };
 
-  const buildSavePayload = () => ({
-    printed_labels_count: totalLabels,
-    items: articles.map((article) => ({
-      order_id: article.orderId ?? 0,
-      order_item_id:
-        article.orderItemId ??
-        (article.id.startsWith("order-item-")
-          ? Number(article.id.replace("order-item-", ""))
-          : 0),
-      product_id: article.productId ?? 0,
-      quantity: article.orderedQuantity ?? article.quantity,
-      received: article.received,
-    })),
-    payable_invoice_ids: extractPayableIds(invoices),
-  });
+  const buildSavePayload = () => {
+    if (status === "pre_authorized" && lineItems.length > 0) {
+      const receivedByProduct = new Map(
+        articles.map((article) => [article.productId ?? 0, article.received]),
+      );
+      const usedProducts = new Set<number>();
+      const items = lineItems.map((line) => {
+        const productId = line.productId ?? 0;
+        let received = 0;
+        if (!usedProducts.has(productId)) {
+          received = receivedByProduct.get(productId) ?? 0;
+          usedProducts.add(productId);
+        }
+        return {
+          order_id: line.orderId ?? 0,
+          order_item_id: line.orderItemId ?? 0,
+          product_id: productId,
+          quantity: line.orderedQuantity ?? line.quantity,
+          received,
+        };
+      });
+      return {
+        printed_labels_count: totalLabels,
+        items,
+        payable_invoice_ids: extractPayableIds(invoices),
+      };
+    }
+
+    return {
+      printed_labels_count: totalLabels,
+      items: articles.map((article) => ({
+        order_id: article.orderId ?? 0,
+        order_item_id:
+          article.orderItemId ??
+          (article.id.startsWith("order-item-")
+            ? Number(article.id.replace("order-item-", ""))
+            : 0),
+        product_id: article.productId ?? 0,
+        quantity: article.orderedQuantity ?? article.quantity,
+        received: article.received,
+      })),
+      payable_invoice_ids: extractPayableIds(invoices),
+    };
+  };
 
   const handleConfirmAction = async (_reason?: string) => {
     if (articles.length === 0) {
@@ -478,24 +584,29 @@ export function ReceptionForm({
         return;
       }
 
-      if (status === "pre_captured") {
+      if (status === "pre_authorized" || status === "pre_captured") {
         if (currentReceptionId == null) {
           setSubmitError("No se identificó la recepción");
           return;
         }
 
-        if (isInvoiceListDirty()) {
+        if (status === "pre_authorized" || isInvoiceListDirty()) {
           const updateResult = await updateReception(
             currentReceptionId,
             buildSavePayload(),
           );
           if (updateResult.error || !updateResult.data) {
             setSubmitError(
-              updateResult.error?.message ?? "Error al guardar facturas",
+              updateResult.error?.message ?? "Error al guardar captura",
             );
             return;
           }
           syncServerInvoiceState(updateResult.data.invoices);
+          const mapped = updateResult.data.items.map(detailItemToReceptionArticle);
+          setLineItems(mapped);
+          setArticles(
+            status === "pre_authorized" ? groupArticlesBySku(mapped) : mapped,
+          );
         }
 
         const payload = {
@@ -510,6 +621,20 @@ export function ReceptionForm({
           setSubmitError(result.error.message);
           return;
         }
+
+        if (status === "pre_authorized") {
+          try {
+            await printReceptionLabels(currentReceptionId, { mode: "all" });
+            setOriginalLabelsIssued(true);
+          } catch (printErr) {
+            const message =
+              printErr instanceof Error
+                ? printErr.message
+                : "La recepción se cerró, pero no se pudieron imprimir las etiquetas";
+            showError(message);
+          }
+        }
+
         setStatus("in_costing");
         setActivePanel(null);
         router.push("/recepcion-mercancias");
@@ -547,8 +672,38 @@ export function ReceptionForm({
 
   const extractPayableIds = (items: ReceptionInvoice[]): number[] =>
     items
-      .map((invoice) => Number(invoice.id.replace(/^payable-/, "")))
+      .map((invoice) =>
+        Number(invoice.id.replace(/^payable-invoice-/, "").replace(/^payable-/, "")),
+      )
       .filter((id) => Number.isFinite(id) && id > 0);
+
+  const handleReprintAuthorized = async (credentials: {
+    username: string;
+    password: string;
+  }) => {
+    if (currentReceptionId == null) return;
+    setReprintAuthLoading(true);
+    setReprintAuthError(null);
+    try {
+      if (!isConfigured) {
+        setReprintAuthOpen(false);
+        setPrinterSetupOpen(true);
+        return;
+      }
+      await printReceptionLabels(currentReceptionId, {
+        mode: "all",
+        username: credentials.username,
+        password: credentials.password,
+      });
+      setReprintAuthOpen(false);
+    } catch (err) {
+      setReprintAuthError(
+        err instanceof Error ? err.message : "No se pudo autorizar la reimpresión",
+      );
+    } finally {
+      setReprintAuthLoading(false);
+    }
+  };
 
   const isInvoiceListDirty = (): boolean => {
     const current = new Set(extractPayableIds(invoices));
@@ -592,7 +747,7 @@ export function ReceptionForm({
             onClick={handleOpenPrimaryAction}
             disabled={primaryDisabled}
           >
-            {getPrimaryActionLabel(status, extraLabels)}
+            {getPrimaryActionLabel(status, extraLabels, originalLabelsIssued)}
           </ActionButton>
         </HeaderActions>
       </PageHeader>
@@ -636,7 +791,11 @@ export function ReceptionForm({
                   <StyledTableCell>SKU</StyledTableCell>
                   <StyledTableCell>Pedido</StyledTableCell>
                   <StyledTableCell>Total Pedido</StyledTableCell>
-                  <StyledTableCell>Pendiente por Recibir</StyledTableCell>
+                  <StyledTableCell>
+                    {status === "pre_authorized"
+                      ? "Autorizado (factura)"
+                      : "Pendiente por Recibir"}
+                  </StyledTableCell>
                   <StyledTableCell>Recibidos</StyledTableCell>
                 </TableRow>
               </StyledTableHead>
@@ -793,6 +952,16 @@ export function ReceptionForm({
         onClose={() => setPrinterSetupOpen(false)}
         onConfirm={handlePrinterSetupConfirm}
         printerProfile={printerProfile}
+      />
+
+      <ReprintLabelsAuthDialog
+        open={reprintAuthOpen}
+        loading={reprintAuthLoading}
+        error={reprintAuthError}
+        onClose={() => {
+          if (!reprintAuthLoading) setReprintAuthOpen(false);
+        }}
+        onConfirm={handleReprintAuthorized}
       />
     </PageContainer>
   );

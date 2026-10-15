@@ -4,13 +4,19 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button, Typography } from "@mui/material";
 import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
-import { CaptureErrorState, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
+import {
+  CaptureErrorState,
+  CaptureHost,
+  CaptureStepRoot,
+  IdCaptureViewport,
+} from "@/components/NubariumCapturePreview/styles";
 import {
   extractIdCaptureImages,
   extractNubariumExecutionId,
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   NUBARIUM_ID_CAPTURE_CONFIG,
+  patchNubariumIdCaptureAutorotate,
   patchNubariumLandscapeCapture,
   releaseNubariumLandscapeCapture,
   safeClearNubariumCapture,
@@ -108,6 +114,7 @@ export function NubariumIdCapture({
           rootElement: rootElementId,
         });
         patchNubariumLandscapeCapture(capture);
+        patchNubariumIdCaptureAutorotate(capture);
 
         capture.setToken(token);
 
@@ -189,7 +196,9 @@ export function NubariumIdCapture({
 
   return (
     <CaptureStepRoot>
-      <CaptureViewport id={rootElementId} />
+      <IdCaptureViewport>
+        <CaptureHost id={rootElementId} />
+      </IdCaptureViewport>
 
       {!errorMessage ? (
         <BiometricCaptureHint>

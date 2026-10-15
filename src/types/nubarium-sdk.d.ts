@@ -76,6 +76,13 @@ interface NubariumLandscapeGate {
   isCapturing?: boolean;
 }
 
+/** Hooks we patch for landscape framing errors and retries. */
+interface NubariumFaceCaptureInternals extends NubariumLandscapeGate {
+  resetTask?: () => void;
+  lastReason?: string;
+  getMessage?: (key: string) => string;
+}
+
 declare global {
   class IdCapture implements NubariumLandscapeGate {
     init(config: NubariumIdCaptureInitConfig): void;
@@ -91,9 +98,17 @@ declare global {
     showRotate?: () => void;
     closeRotate?: () => void;
     isCapturing?: boolean;
+    rotate?: (
+      srcBase64: string | string[],
+      degrees: number,
+      callback: (resultBase64: string) => void,
+    ) => void;
+    getOrientation?: () => string | null;
+    videoElement?: HTMLVideoElement | null;
+    rootElementId?: string | null;
   }
 
-  class FaceCapture implements NubariumLandscapeGate {
+  class FaceCapture implements NubariumFaceCaptureInternals {
     init(config: NubariumFaceCaptureInitConfig): void;
     setToken(token: string): void;
     load(onLoaded?: () => void): void;
@@ -107,6 +122,19 @@ declare global {
     showRotate?: () => void;
     closeRotate?: () => void;
     isCapturing?: boolean;
+    resetTask?: () => void;
+    lastReason?: string;
+    getMessage?: (key: string) => string;
+  }
+
+  class NubSdkCanvasHelper {
+    static captureSnapshot(
+      rootElementId: string,
+      width?: number,
+      height?: number,
+      compression?: number,
+      preview?: boolean,
+    ): string;
   }
 }
 

@@ -20,7 +20,7 @@ import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
 import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
-import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
+// import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 import { formatDateOnly } from "@/utils/date";
 const IVA_RATE = 0.16;
 type DisplayStatus =
@@ -86,7 +86,7 @@ function mapOrderItemToConfirmItem(
     quantity,
     unitPrice,
     totalPrice: unitPrice * quantity,
-    onlinePrices: buildPlaceholderOnlinePrices(unitPrice),
+    // onlinePrices: buildPlaceholderOnlinePrices(unitPrice),
   };
 }
 export default function PedidoDetalle() {

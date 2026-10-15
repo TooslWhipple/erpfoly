@@ -436,7 +436,6 @@ export default function OrderForm({
     if (mode === "create") {
       if (effectiveOrderType === "external") {
         const orderData = {
-          orderType: "external" as const,
           supplierId: supplier?.id,
           supplierName: supplier?.name,
           items: selectedItems.map((item) => ({
@@ -451,15 +450,14 @@ export default function OrderForm({
           })),
           total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
         };
-        sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
-        router.push("/traspasos/nuevo/confirmar");
+        sessionStorage.setItem("newPedidoData", JSON.stringify(orderData));
+        router.push("/pedidos/nuevo/confirmar");
       } else {
         if (originBranch && branch && originBranch.id === Number(branch.id)) {
           showError("La sucursal de origen y destino deben ser distintas.");
           return;
         }
         const orderData = {
-          orderType: "internal" as const,
           branchId: branch?.id,
           branchName: branch?.name,
           originBranchId: originBranch ? String(originBranch.id) : undefined,
@@ -474,7 +472,7 @@ export default function OrderForm({
           })),
           total: selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
         };
-        sessionStorage.setItem("newOrderData", JSON.stringify(orderData));
+        sessionStorage.setItem("newTraspasoData", JSON.stringify(orderData));
         router.push("/traspasos/nuevo/confirmar");
       }
     } else if (mode === "edit" && orderId) {

@@ -142,6 +142,31 @@ export async function getDamagedProductBranchesWithStock(
     );
 }
 
+export interface DamagedProductSupplierOption {
+    id: number;
+    label: string;
+    isPrimary: boolean;
+}
+
+export interface DamagedProductSupplierOptions {
+    kind: "commercial" | "repair" | "none";
+    options: DamagedProductSupplierOption[];
+}
+
+/**
+ * GET /damaged-products/supplier-options
+ * Commercial suppliers of the SKU for a return, workshops for an external repair.
+ */
+export async function getDamagedProductSupplierOptions(
+    productId: number,
+    dispositionCode: string,
+): Promise<ApiResult<DamagedProductSupplierOptions>> {
+    return get<DamagedProductSupplierOptions>(
+        `${DAMAGED_PRODUCTS_BASE}/supplier-options`,
+        { params: { productId, dispositionCode } },
+    );
+}
+
 export const PRODUCT_SEARCH_DEFAULT_LIMIT = 100;
 
 export interface ProductSearchItem {
@@ -206,6 +231,8 @@ export interface CreateDamagedProductPayload {
     repairCost?: number;
     repairCostAssignedTo?: RepairCostAssignee;
     repairSupplierId?: number;
+    /** Commercial supplier that receives a RETURN_TO_SUPPLIER folio. */
+    returnSupplierId?: number;
     /**
      * Proveedor al que se le carga el costo de reparación. Solo aplica con
      * `dispositionCode` de reparación interna y `repairCostAssignedTo`
@@ -268,6 +295,8 @@ export interface DamagedProductDetail {
     repairCost: number | null;
     repairCostAssignedTo: RepairCostAssignee | null;
     repairSupplierId: number | null;
+    /** Commercial supplier that receives the returned goods. Null on legacy folios. */
+    returnSupplierId: number | null;
     /**
      * Ruta cruda del objeto en GCS. Es **estable entre lecturas**: úsala como
      * identidad del adjunto (memos, keys, comparaciones), nunca la URL.
@@ -327,6 +356,8 @@ export interface UpdateDamagedProductPayload {
     repairCost?: number;
     repairCostAssignedTo?: RepairCostAssignee;
     repairSupplierId?: number;
+    /** Commercial supplier that receives a RETURN_TO_SUPPLIER folio. */
+    returnSupplierId?: number;
     auctionPrice?: number;
 }
 

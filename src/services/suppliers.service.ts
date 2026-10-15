@@ -134,17 +134,29 @@ export interface SupplierSearchItem {
   id: number;
   name: string;
   businessName?: string | null;
-  score?: number;
 }
 
 export interface SupplierSearchParams {
   q: string;
   limit?: number;
+  page?: number;
 }
 
-function normalizeSupplierSearchResponse(data: unknown): SupplierSearchItem[] {
+export type SupplierSearchPage = PaginatedRowsResponse<SupplierSearchItem>;
+
+function normalizeSupplierSearchPage(
+  data: unknown,
+  fallbackLimit: number,
+): SupplierSearchPage | null {
   if (Array.isArray(data)) {
-    return data as SupplierSearchItem[];
+    const rows = data as SupplierSearchItem[];
+    return {
+      rows,
+      total: rows.length,
+      page: 1,
+      limit: fallbackLimit,
+      totalPages: 1,
+    };
   }
 
   if (
@@ -153,28 +165,45 @@ function normalizeSupplierSearchResponse(data: unknown): SupplierSearchItem[] {
     "rows" in data &&
     Array.isArray((data as { rows: unknown }).rows)
   ) {
-    return (data as { rows: SupplierSearchItem[] }).rows;
+    const page = data as Partial<SupplierSearchPage> & {
+      rows: SupplierSearchItem[];
+    };
+    const limit = page.limit ?? fallbackLimit;
+    const total = page.total ?? page.rows.length;
+    return {
+      rows: page.rows,
+      total,
+      page: page.page ?? 1,
+      limit,
+      totalPages: page.totalPages ?? (Math.ceil(total / limit) || 1),
+    };
   }
 
-  return [];
+  return null;
 }
 
 export async function searchSuppliers(
-  params: SupplierSearchParams
-): Promise<ApiResult<SupplierSearchItem[]>> {
+  params: SupplierSearchParams,
+): Promise<ApiResult<SupplierSearchPage>> {
   const limit = params.limit ?? SUPPLIER_SEARCH_DEFAULT_LIMIT;
+  const page = params.page ?? 1;
   const result = await get<unknown>(`${SUPPLIERS_BASE}/search`, {
-    params: { q: params.q.trim(), limit },
+    params: { q: params.q.trim(), limit, page },
   });
 
   if (result.error != null) {
     return { data: null, error: result.error };
   }
 
-  return {
-    data: normalizeSupplierSearchResponse(result.data),
-    error: null,
-  };
+  const normalized = normalizeSupplierSearchPage(result.data, limit);
+  if (normalized == null) {
+    return {
+      data: null,
+      error: { message: "No se pudieron cargar los proveedores" },
+    };
+  }
+
+  return { data: normalized, error: null };
 }
 
 export async function getSupplierById(

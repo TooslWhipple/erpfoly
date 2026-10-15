@@ -1,34 +1,55 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     InputAdornment,
     Button,
-    CircularProgress,
+    LinearProgress,
+    Skeleton,
     Typography,
     useTheme,
-    TableHead,
-    TableRow,
-    TableBody,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { Supplier } from "@/types/pedidos.types";
 import { unwrapOrThrow } from "@/lib/axios";
 import { SideModal } from "@/components/SideModal";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
-    SUPPLIER_SEARCH_DEFAULT_LIMIT,
     searchSuppliers,
     type SupplierSearchItem,
 } from "@/services/suppliers.service";
 import {
     SearchInput,
     Card,
-    SupplierTable,
-    SupplierTableCell,
-    SupplierTableHeaderCell,
-    SupplierNameTableCell,
+    SuppliersList,
+    StatusPane,
+    ListNotice,
+    SupplierListRow,
+    SupplierListHeader,
+    SupplierColumnLabel,
+    SupplierIdText,
+    SupplierNameText,
 } from "./styles";
 import { Search } from "lucide-react";
+
+const SUPPLIER_SEARCH_PAGE_SIZE = 50;
+const SUPPLIER_SEARCH_DEBOUNCE_MS = 400;
+const INITIAL_PLACEHOLDER_ROWS = 8;
+const SUPPLIERS_SEARCH_QUERY_KEY = ["suppliers-search"] as const;
+
+function SupplierPlaceholderRows({ count }: { count: number }) {
+    return (
+        <>
+            {Array.from({ length: count }, (_, index) => (
+                <SupplierListRow key={`placeholder-${index}`}>
+                    <Skeleton variant="text" width={28} />
+                    <Skeleton variant="text" width={`${52 + (index % 3) * 14}%`} />
+                    <Skeleton variant="rounded" width={120} height={36} />
+                </SupplierListRow>
+            ))}
+        </>
+    );
+}
 
 function mapSearchItemToSupplier(item: SupplierSearchItem): Supplier {
     const displayName =
@@ -53,48 +74,88 @@ export function SupplierSelectionModal({
     onSelect,
 }: SupplierSelectionModalProps) {
     const theme = useTheme();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
-
-    useEffect(() => {
-        if (!open) {
-            setSearchQuery("");
-        }
-    }, [open]);
+    const debouncedQuery = useDebouncedValue(
+        searchQuery.trim(),
+        SUPPLIER_SEARCH_DEBOUNCE_MS,
+    );
+    const queryText = searchQuery.trim() === "" ? "" : debouncedQuery;
+    const listRef = useRef<HTMLDivElement | null>(null);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
 
     const {
-        data: searchRows,
+        data,
         isFetching,
         isPending,
         isError,
-    } = useQuery({
-        queryKey: ["suppliers-search", "modal-open", SUPPLIER_SEARCH_DEFAULT_LIMIT],
-        queryFn: async () =>
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
+        refetch,
+    } = useInfiniteQuery({
+        queryKey: [...SUPPLIERS_SEARCH_QUERY_KEY, queryText],
+        queryFn: async ({ pageParam }) =>
             unwrapOrThrow(
                 await searchSuppliers({
-                    q: "",
-                    limit: SUPPLIER_SEARCH_DEFAULT_LIMIT,
+                    q: queryText,
+                    limit: SUPPLIER_SEARCH_PAGE_SIZE,
+                    page: pageParam,
                 }),
             ),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) =>
+            lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
         enabled: open,
         staleTime: 30_000,
     });
 
-    const allSuppliers = useMemo(
-        () => (searchRows ?? []).map(mapSearchItemToSupplier),
-        [searchRows],
+    const suppliers = useMemo(
+        () => (data?.pages ?? []).flatMap((page) => page.rows).map(mapSearchItemToSupplier),
+        [data],
     );
 
-    const filteredSuppliers = useMemo(() => {
-        const trimmed = searchQuery.trim();
-        if (!trimmed) {
-            return allSuppliers;
-        }
-        const q = trimmed.toLowerCase();
-        return allSuppliers.filter(
-            (supplier) =>
-                supplier.name.toLowerCase().includes(q) || supplier.id.toLowerCase().includes(q),
+    const pagingRef = useRef({
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage,
+    });
+
+    useEffect(() => {
+        pagingRef.current = { hasNextPage, isFetchingNextPage, fetchNextPage };
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const attachScrollObserver = useCallback(() => {
+        const root = listRef.current;
+        const sentinel = sentinelRef.current;
+        if (!open || !root || !sentinel) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const paging = pagingRef.current;
+                if (!paging.hasNextPage || paging.isFetchingNextPage) return;
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    void paging.fetchNextPage();
+                }
+            },
+            { root, rootMargin: "160px" },
         );
-    }, [allSuppliers, searchQuery]);
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) {
+            queryClient.removeQueries({ queryKey: SUPPLIERS_SEARCH_QUERY_KEY });
+            return;
+        }
+        listRef.current?.scrollTo({ top: 0 });
+    }, [open, queryText, queryClient]);
+
+    useEffect(() => {
+        if (!open) return;
+        return attachScrollObserver();
+    }, [open, attachScrollObserver, hasNextPage, suppliers.length]);
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
@@ -102,16 +163,18 @@ export function SupplierSelectionModal({
 
     const handleSelect = (supplier: Supplier) => {
         onSelect(supplier);
+        setSearchQuery("");
         onClose();
     };
 
     const handleClose = () => {
-        if (!isFetching) {
-            onClose();
-        }
+        setSearchQuery("");
+        onClose();
     };
 
-    const showInitialLoading = open && (isPending || (isFetching && searchRows === undefined));
+    const showInitialLoading = open && isPending && suppliers.length === 0;
+    const showSearchProgress = isFetching && !isFetchingNextPage && !showInitialLoading;
+    const showEmpty = !showInitialLoading && !isError && suppliers.length === 0;
 
     return (
         <SideModal
@@ -119,17 +182,16 @@ export function SupplierSelectionModal({
             onClose={handleClose}
             title="Proveedores"
             description="Selecciona un proveedor para continuar con el pedido"
-            maxWidth="md"
-            disableClose={isFetching && searchRows === undefined}
+            maxWidth="lg"
+            lockContentScroll
             contentSx={{ flex: 1, minHeight: 0 }}
         >
             <SearchInput
-                placeholder="Buscar"
+                placeholder="Buscar por nombre o ID"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 size="small"
                 fullWidth
-                disabled={showInitialLoading || isError}
                 InputProps={{
                     startAdornment: (
                         <InputAdornment position="start">
@@ -139,39 +201,67 @@ export function SupplierSelectionModal({
                 }}
             />
             <Card>
-                {
-                    showInitialLoading ?
-                        <CircularProgress size={24} />
-                        : filteredSuppliers.length === 0 ?
-                            <Typography variant="body2" color="text.secondary">
-                                No se encontraron proveedores
-                            </Typography>
-                            :
-                            <SupplierTable>
-                                <TableHead>
-                                    <TableRow>
-                                        <SupplierTableHeaderCell sx={{ width: "10%" }}>ID</SupplierTableHeaderCell>
-                                        <SupplierTableHeaderCell sx={{ width: "70%" }}>Proveedor</SupplierTableHeaderCell>
-                                        <SupplierTableHeaderCell sx={{ width: "20%" }} />
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {
-                                        filteredSuppliers.map((supplier) => (
-                                            <TableRow key={supplier.id}>
-                                                <SupplierTableHeaderCell>{supplier.id}</SupplierTableHeaderCell>
-                                                <SupplierNameTableCell>{supplier.name}</SupplierNameTableCell>
-                                                <SupplierTableCell>
-                                                    <Button color="primary" onClick={() => handleSelect(supplier)}>
-                                                        Seleccionar
-                                                    </Button>
-                                                </SupplierTableCell>
-                                            </TableRow>
-                                        ))
-                                    }
-                                </TableBody>
-                            </SupplierTable>
-                }
+                {showSearchProgress ? (
+                    <LinearProgress
+                        aria-label="Buscando proveedores"
+                        sx={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 2,
+                        }}
+                    />
+                ) : null}
+                {isError && suppliers.length === 0 ? (
+                    <StatusPane>
+                        <Typography variant="body2" color="text.secondary">
+                            No se pudieron cargar los proveedores
+                        </Typography>
+                        <Button color="primary" onClick={() => void refetch()}>
+                            Reintentar
+                        </Button>
+                    </StatusPane>
+                ) : showEmpty ? (
+                    <StatusPane>
+                        <Typography variant="body2" color="text.secondary">
+                            No se encontraron proveedores
+                        </Typography>
+                    </StatusPane>
+                ) : (
+                    <SuppliersList ref={listRef} aria-busy={isFetching}>
+                        <SupplierListHeader>
+                            <SupplierColumnLabel>ID</SupplierColumnLabel>
+                            <SupplierColumnLabel>Proveedor</SupplierColumnLabel>
+                            <span />
+                        </SupplierListHeader>
+                        {showInitialLoading ? (
+                            <SupplierPlaceholderRows count={INITIAL_PLACEHOLDER_ROWS} />
+                        ) : (
+                            suppliers.map((supplier) => (
+                                <SupplierListRow key={supplier.id}>
+                                    <SupplierIdText>{supplier.id}</SupplierIdText>
+                                    <SupplierNameText title={supplier.name}>{supplier.name}</SupplierNameText>
+                                    <Button color="primary" onClick={() => handleSelect(supplier)}>
+                                        Seleccionar
+                                    </Button>
+                                </SupplierListRow>
+                            ))
+                        )}
+                        {isFetchingNextPage ? <SupplierPlaceholderRows count={2} /> : null}
+                        <div ref={sentinelRef} style={{ height: 1 }} />
+                        {isError && suppliers.length > 0 ? (
+                            <ListNotice>
+                                <Typography variant="body2" color="text.secondary">
+                                    No se pudo cargar el resto de proveedores
+                                </Typography>
+                                <Button color="primary" onClick={() => void fetchNextPage()}>
+                                    Reintentar
+                                </Button>
+                            </ListNotice>
+                        ) : null}
+                    </SuppliersList>
+                )}
             </Card>
         </SideModal>
     );

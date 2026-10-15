@@ -1,6 +1,5 @@
-import { styled } from "@mui/material/styles";
-import { TextField, Button, Box, Table, TableCell } from "@mui/material";
-import { theme } from "@/styles/theme";
+import { alpha, styled } from "@mui/material/styles";
+import { TextField, Box, Typography } from "@mui/material";
 
 export const SupplierModalContainer = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -26,8 +25,12 @@ export const SearchInput = styled(TextField)(({ theme }) => ({
 }));
 
 export const Card = styled('div')(({ theme }) => ({
+    position: "relative",
     display: "flex",
     flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.app.border}`,
     borderRadius: "16px",
@@ -40,62 +43,67 @@ export const Card = styled('div')(({ theme }) => ({
     },
 }));
 
-export const SuppliersList = styled(Box)(({ theme }) => ({
+export const SuppliersList = styled(Box)({
     display: "flex",
     flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
+    overflowX: "hidden",
     overflowY: "auto",
-    maxHeight: 400,
-    backgroundColor: theme.palette.background.default,
-    border: `1px solid ${theme.palette.app.border}`,
-    borderRadius: 8,
-}));
-
-export const SupplierRow = styled(Box)<{ index: number }>(({ theme, index }) => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: theme.spacing(2),
-    borderTop: (index === 0) ? `none` : `1px solid ${theme.palette.app.border}`,
-}));
-
-export const SupplierId = styled(Box)(({ theme }) => ({
-    fontSize: 14,
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-}));
-
-export const SupplierName = styled(Box)(({ theme }) => ({
-    fontSize: 14,
-    color: theme.palette.text.secondary,
-}));
-
-export const SelectButton = styled(Button)(({ theme }) => ({
-    textTransform: "none",
-    fontWeight: 500,
-    color: theme.palette.primary.main,
-    "&:hover": {
-        backgroundColor: "transparent",
-        textDecoration: "underline",
-    },
-}));
-
-export const SupplierTable = styled(Table)({
-    tableLayout: "fixed",
-    width: "100%",
 });
 
-export const SupplierTableCell = styled(TableCell)(({ theme }) => ({
-    padding: "12px 8px",
+export const StatusPane = styled(Box)(({ theme }) => ({
+    flex: 1,
+    minHeight: 160,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(1),
+    textAlign: "center",
+    padding: theme.spacing(3),
 }));
 
-export const SupplierTableHeaderCell = styled(SupplierTableCell)(({ theme }) => ({
+export const ListNotice = styled(Box)(({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(2, 1),
+}));
+
+export const SupplierListRow = styled(Box)(({ theme }) => ({
+    display: "grid",
+    gridTemplateColumns: "max-content minmax(0, 1fr) max-content",
+    alignItems: "center",
+    columnGap: theme.spacing(2),
+    padding: theme.spacing(1.25, 0),
+    borderBottom: `1px solid ${alpha(theme.palette.app.border, 0.45)}`,
+}));
+
+export const SupplierListHeader = styled(SupplierListRow)(({ theme }) => ({
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+    backgroundColor: theme.palette.background.paper,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
+}));
+
+export const SupplierColumnLabel = styled(Typography)(({ theme }) => ({
+    fontSize: 14,
+    fontWeight: 600,
     color: theme.palette.text.secondary,
-    padding: "12px 8px"
 }));
 
-export const SupplierNameTableCell = styled(TableCell)({
-    padding: "12px 8px",
-    textOverflow: "ellipsis",
+export const SupplierIdText = styled(Typography)({
+    fontSize: 14,
+    fontVariantNumeric: "tabular-nums",
+});
+
+export const SupplierNameText = styled(Typography)({
+    fontSize: 14,
     overflow: "hidden",
+    textOverflow: "ellipsis",
     whiteSpace: "nowrap",
 });

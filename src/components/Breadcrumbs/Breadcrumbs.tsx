@@ -58,11 +58,16 @@ export function Breadcrumbs({
                         {index > 0 && <Separator>›</Separator>}
 
                         {isClickable ? (
-                            <BreadcrumbLink onClick={() => handleNavigate(item.href!)}>
+                            <BreadcrumbLink
+                                title={item.label}
+                                onClick={() => handleNavigate(item.href!)}
+                            >
                                 {item.label}
                             </BreadcrumbLink>
                         ) : (
-                            <BreadcrumbCurrent>{item.label}</BreadcrumbCurrent>
+                            <BreadcrumbCurrent title={item.label}>
+                                {item.label}
+                            </BreadcrumbCurrent>
                         )}
                     </Stack>
                 );

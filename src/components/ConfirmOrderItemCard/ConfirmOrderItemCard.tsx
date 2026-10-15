@@ -52,7 +52,7 @@ function formatCurrency(value: number): string {
 export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false, hidePrices = false }: ConfirmOrderItemCardProps) {
     return (
         <Card>
-            <Stack width="100%" direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between">
+            <Stack width="100%" direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "flex-start", lg: "center" }} justifyContent="space-between">
                 <Stack direction="row" spacing={1} alignItems="center">
                     <ImageWrapper>
                         {
@@ -74,11 +74,10 @@ export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false,
                         <Stack direction="column" spacing={0.5}>
                             <Typography variant="body2" color="text.secondary">Precio unitario</Typography>
                             <Typography variant="body1">{formatCurrency(item.unitPrice)}</Typography>
-                            {item.currency && item.currency !== "MXN" && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {item.currency} · TC {item.exchangeRate}
-                                </Typography>
-                            )}
+                            {
+                                item.currency && item.currency !== "MXN" &&
+                                <Typography variant="body2" color="text.secondary">{item.currency} · TC {item.exchangeRate}</Typography>
+                            }
                         </Stack>
                     )}
 
@@ -107,8 +106,8 @@ export function ConfirmOrderItemCard({ item, onQuantityChange, readOnly = false,
             </Stack>
 
             {
-                item.onlinePrices && !readOnly && !hidePrices &&
-                <OnlinePriceBar onlinePrices={item.onlinePrices} />
+                // item.onlinePrices && !readOnly && !hidePrices &&
+                // <OnlinePriceBar onlinePrices={item.onlinePrices} />
             }
 
         </Card>

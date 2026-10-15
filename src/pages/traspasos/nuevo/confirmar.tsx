@@ -107,9 +107,9 @@ export default function ConfirmarTraspasoPage() {
       query:
         orderData?.supplierId && orderData?.supplierName
           ? {
-              supplierId: orderData.supplierId,
-              supplierName: orderData.supplierName,
-            }
+            supplierId: orderData.supplierId,
+            supplierName: orderData.supplierName,
+          }
           : undefined,
     });
   };
@@ -119,10 +119,10 @@ export default function ConfirmarTraspasoPage() {
       prev.map((item) =>
         item.productId === productId
           ? {
-              ...item,
-              quantity,
-              totalPrice: item.unitPrice * quantity,
-            }
+            ...item,
+            quantity,
+            totalPrice: item.unitPrice * quantity,
+          }
           : item,
       ),
     );
@@ -210,41 +210,41 @@ export default function ConfirmarTraspasoPage() {
   };
   const breadcrumbs: BreadcrumbItem[] = orderData
     ? [
-        {
-          label: "Traspasos",
-          href: orderData.orderType === "internal" ? "/traspasos" : "/pedidos",
-        },
-        {
-          label:
-            orderData.orderType === "internal"
-              ? orderData.branchName
-                ? `Sucursal ${orderData.branchName}`
-                : "Sucursales"
-              : orderData.supplierName
-                ? `Proveedor ${orderData.supplierName}`
-                : "Proveedores",
-          href:
-            orderData.orderType === "internal"
-              ? orderData.branchId
-                ? `/traspasos?branch=${orderData.branchId}`
-                : "/traspasos"
-              : orderData.supplierId
-                ? `/pedidos?supplier=${orderData.supplierId}`
-                : "/pedidos",
-        },
-        {
-          label: "Nuevo traspaso",
-        },
-      ]
+      {
+        label: "Traspasos",
+        href: orderData.orderType === "internal" ? "/traspasos" : "/pedidos",
+      },
+      {
+        label:
+          orderData.orderType === "internal"
+            ? orderData.branchName
+              ? `Sucursal ${orderData.branchName}`
+              : "Sucursales"
+            : orderData.supplierName
+              ? `Proveedor ${orderData.supplierName}`
+              : "Proveedores",
+        href:
+          orderData.orderType === "internal"
+            ? orderData.branchId
+              ? `/traspasos?branch=${orderData.branchId}`
+              : "/traspasos"
+            : orderData.supplierId
+              ? `/pedidos?supplier=${orderData.supplierId}`
+              : "/pedidos",
+      },
+      {
+        label: "Nuevo traspaso",
+      },
+    ]
     : [
-        {
-          label: "Traspasos",
-          href: "/traspasos",
-        },
-        {
-          label: "Nuevo traspaso",
-        },
-      ];
+      {
+        label: "Traspasos",
+        href: "/traspasos",
+      },
+      {
+        label: "Nuevo traspaso",
+      },
+    ];
   if (status === "loading") {
     return (
       <Stack
@@ -325,7 +325,7 @@ export default function ConfirmarTraspasoPage() {
         >
           <SummaryCard>
             <Stack spacing={2}>
-              {isInternalOrder ? (
+              {(isInternalOrder) ?
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">
                     Total:
@@ -335,34 +335,22 @@ export default function ConfirmarTraspasoPage() {
                     {totalQuantity > 1 ? "Artículos" : "Artículo"}
                   </Typography>
                 </Stack>
-              ) : (
+                :
                 <>
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">
-                      Subtotal
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatCurrency(subtotal)}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                    <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">
-                      IVA
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatCurrency(iva)}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">IVA</Typography>
+                    <Typography variant="body1">{formatCurrency(iva)}</Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="h6" fontWeight={700}>
-                      Total:
-                    </Typography>
-                    <Typography variant="h6" fontWeight={700}>
-                      {formatCurrency(total)}
-                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>Total:</Typography>
+                    <Typography variant="h6" fontWeight={700}>{formatCurrency(total)}</Typography>
                   </Stack>
                 </>
-              )}
+              }
               <Button
                 variant="contained"
                 color="primary"
@@ -373,15 +361,11 @@ export default function ConfirmarTraspasoPage() {
                 sx={{
                   textTransform: "none",
                   fontWeight: 600,
-                }}
-              >
-                {status === "submitting" ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : isInternalOrder ? (
-                  "Solicitar traspaso"
-                ) : (
-                  "Guardar pedido"
-                )}
+                }}>
+                {
+                  (status === "submitting") ?
+                    <CircularProgress size={24} color="inherit" /> : (isInternalOrder) ? "Solicitar traspaso" : "Guardar pedido"
+                }
               </Button>
             </Stack>
           </SummaryCard>

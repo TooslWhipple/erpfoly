@@ -4,6 +4,7 @@ import { FileUpload } from "@/components/FileUpload";
 import type { UploadedFileItem } from "@/components/FileUpload";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
 import type { MaritalStatusCatalogItem } from "@/services/catalog.service";
+import { getSignedDocumentFileUrl } from "@/services/files.service";
 import type {
   CreditApplicationDocumentFile,
   GuarantorTabErrors,
@@ -36,22 +37,33 @@ export function GuarantorTab({
 }: GuarantorTabProps) {
   const neighborhoodsQuery = useNeighborhoodsByPostalCode(values.postalCode);
   const mapStoredToUploadItems = (files: CreditApplicationDocumentFile[]): UploadedFileItem[] =>
-    files.map((file) => ({
-      id: file.id,
-      name: file.name,
-      file: file.file,
-      url: file.url,
-      uploadedAt: file.uploadedAt,
-    }));
+    files.map((file) => {
+      const { remote } = file;
+      return {
+        id: file.id,
+        name: file.name,
+        file: file.file,
+        resolveUrl: remote ? () => getSignedDocumentFileUrl(remote) : undefined,
+        uploadedAt: file.uploadedAt,
+      };
+    });
 
-  const mapUploadToStoredItems = (files: UploadedFileItem[]): CreditApplicationDocumentFile[] =>
-    files.map((file) => ({
+  /**
+   * Los archivos que siguen en la lista recuperan su entrada original, con su
+   * referencia almacenada: sin ella el guardado los daría por quitados.
+   */
+  const mapUploadToStoredItems = (
+    files: UploadedFileItem[],
+    current: CreditApplicationDocumentFile[],
+  ): CreditApplicationDocumentFile[] => {
+    const currentById = new Map(current.map((file) => [file.id, file]));
+    return files.map((file) => currentById.get(file.id) ?? {
       id: file.id,
       name: file.name,
       file: file.file,
-      url: file.url,
       uploadedAt: file.uploadedAt,
-    }));
+    });
+  };
 
   return (
     <Card>
@@ -228,7 +240,12 @@ export function GuarantorTab({
         <Grid size={{ xs: 12, sm: 6 }}>
           <FileUpload
             value={mapStoredToUploadItems(values.identificationFrontFiles)}
-            onChange={(files) => onFieldChange("identificationFrontFiles", mapUploadToStoredItems(files))}
+            onChange={(files) =>
+              onFieldChange(
+                "identificationFrontFiles",
+                mapUploadToStoredItems(files, values.identificationFrontFiles),
+              )
+            }
             placeholder="INE frontal del aval"
             fileLabel="INE frontal del aval"
             disabled={saving}
@@ -239,7 +256,12 @@ export function GuarantorTab({
         <Grid size={{ xs: 12, sm: 6 }}>
           <FileUpload
             value={mapStoredToUploadItems(values.identificationBackFiles)}
-            onChange={(files) => onFieldChange("identificationBackFiles", mapUploadToStoredItems(files))}
+            onChange={(files) =>
+              onFieldChange(
+                "identificationBackFiles",
+                mapUploadToStoredItems(files, values.identificationBackFiles),
+              )
+            }
             placeholder="INE posterior del aval"
             fileLabel="INE posterior del aval"
             disabled={saving}

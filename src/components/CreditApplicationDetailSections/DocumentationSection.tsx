@@ -1,5 +1,7 @@
 import { Divider, Stack, Typography } from "@mui/material";
-import { VerifiedRow, VerifiedCheck, VerifiedThumb } from "@/styles/solicitudes-credito.styles";
+import { SignedDocumentThumb } from "@/components/SignedDocumentThumb";
+import { useDocumentFileOpener } from "@/hooks/useSignedDocumentFileUrl";
+import { VerifiedRow, VerifiedCheck } from "@/styles/solicitudes-credito.styles";
 import type { CreditApplicationDetail } from "@/types/solicitud-credito-detail.types";
 import { Check } from "lucide-react";
 
@@ -15,6 +17,7 @@ export interface DocumentationSectionProps {
 
 export function DocumentationSection({ detail, onOpenImageViewer }: DocumentationSectionProps) {
   const { documentation } = detail;
+  const { openWithUrl } = useDocumentFileOpener();
   const hasDocuments = documentation.documents.length > 0;
   return (
     <Stack width="100%" spacing={3}>
@@ -32,7 +35,9 @@ export function DocumentationSection({ detail, onOpenImageViewer }: Documentatio
               <VerifiedRow
                 key={doc.id}
                 style={{ cursor: "pointer", marginBottom: 0 }}
-                onClick={() => onOpenImageViewer(doc.name, doc.verifiedBy, doc.fullImageUrl)}>
+                onClick={() =>
+                  void openWithUrl(doc.file, (url) => onOpenImageViewer(doc.name, doc.verifiedBy, url))
+                }>
                 <VerifiedCheck>
                   <Check size={18} color="#059669" strokeWidth={2} />
                 </VerifiedCheck>
@@ -41,7 +46,7 @@ export function DocumentationSection({ detail, onOpenImageViewer }: Documentatio
                   <Typography variant="caption" color="text.secondary">{doc.verifiedBy}</Typography>
                 </Stack>
 
-                <VerifiedThumb src={doc.thumbnailUrl} alt={doc.name} />
+                <SignedDocumentThumb file={doc.file} alt={doc.name} />
               </VerifiedRow>
             ))
             :

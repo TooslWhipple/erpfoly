@@ -6,37 +6,26 @@ import type {
   FamilyTabValues,
   ReferencesTabValues,
 } from "@/types/credit-application-form.types";
+import type { DocumentFileReference } from "@/types/document-file.types";
+import { toRemoteDocumentFile } from "@/services/files.service";
+import { collectOwnFileIds, toStoredDocumentFile } from "@/utils/credit-application-documents";
 import { toDateOnlyString } from "@/utils/date";
 
 const VERIFIED_SECURITY_CODE_VALUE = "Verificado";
 
 type CatalogItem = { id: number | null; name: string };
 
-type DocumentFileApiItem = {
-  id: number;
-  typeCode: string;
-  typeName: string;
-  filePath: string;
-  fileUrl: string;
-};
-
+/**
+ * Las referencias de `ClientDocument` se descargan por la ruta del cliente; las
+ * del respaldo (tablas de la solicitud) traen su `applicationId`.
+ */
 function mapDocumentItems(
-  list: DocumentFileApiItem[] | undefined
+  list: DocumentFileReference[] | undefined,
+  clientId: number
 ): DocumentationTabValues["ineFrontFiles"] {
-  return (list ?? []).map((item) => {
-    const fileNameFromPath = item.filePath
-      .split("/")
-      .pop()
-      ?.split("?")[0]
-      ?.trim();
-    return {
-      id: String(item.id),
-      name: fileNameFromPath || item.typeName,
-      filePath: item.filePath,
-      url: item.fileUrl,
-      uploadedAt: "Cargado",
-    };
-  });
+  return (list ?? []).map((reference) =>
+    toStoredDocumentFile(toRemoteDocumentFile(reference, { clientId }))
+  );
 }
 
 export function mapClientBasicToFormValues(data: {
@@ -249,33 +238,41 @@ export function mapClientReferencesToFormValues(data: {
   };
 }
 
-export function mapClientDocumentationToFormValues(data: {
-  incomeProofFiles?: DocumentFileApiItem[];
-  employmentProofLetterFiles?: DocumentFileApiItem[];
-  ineFrontFiles?: DocumentFileApiItem[];
-  ineBackFiles?: DocumentFileApiItem[];
-  additionalInformationRequested?: Array<{
-    code: string;
-    requestFlag: boolean;
-  }>;
-}): {
+export function mapClientDocumentationToFormValues(
+  data: {
+    incomeProofFiles?: DocumentFileReference[];
+    employmentProofLetterFiles?: DocumentFileReference[];
+    ineFrontFiles?: DocumentFileReference[];
+    ineBackFiles?: DocumentFileReference[];
+    additionalInformationRequested?: Array<{
+      code: string;
+      requestFlag: boolean;
+    }>;
+  },
+  clientId: number
+): {
   documentation: DocumentationTabValues;
   additionalInformationRequested: Array<{
     code: string;
     requestFlag: boolean;
   }>;
 } {
+  const documentationFiles = {
+    incomeProofFiles: mapDocumentItems(data.incomeProofFiles, clientId),
+    employmentProofLetterFiles: mapDocumentItems(
+      data.employmentProofLetterFiles,
+      clientId
+    ),
+    ineFrontFiles: mapDocumentItems(data.ineFrontFiles, clientId),
+    ineBackFiles: mapDocumentItems(data.ineBackFiles, clientId),
+  };
   return {
     documentation: {
       requiredAlertVisible: true,
       requiredAlertMessage:
         "Agrega la documentación solicitada para continuar.",
-      incomeProofFiles: mapDocumentItems(data.incomeProofFiles),
-      employmentProofLetterFiles: mapDocumentItems(
-        data.employmentProofLetterFiles
-      ),
-      ineFrontFiles: mapDocumentItems(data.ineFrontFiles),
-      ineBackFiles: mapDocumentItems(data.ineBackFiles),
+      ...documentationFiles,
+      persistedFileIds: collectOwnFileIds(Object.values(documentationFiles), "client"),
     },
     additionalInformationRequested: data.additionalInformationRequested ?? [],
   };

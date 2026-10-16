@@ -24,9 +24,11 @@ import {
   mapClientReferencesToFormValues,
 } from "@/lib/clientInformationMapper";
 import { creditApplicationTabIdToSection } from "@/utils/credit-application-form";
+import { toRemoteDocumentFile } from "@/services/files.service";
 import type {
   AddressTabValues,
   BasicInformationFormValues,
+  CreditApplicationDocumentFile,
   CreditApplicationFormPayload,
   CreditApplicationTabId,
   DocumentationTabValues,
@@ -123,6 +125,7 @@ const EMPTY_DOCUMENTATION: DocumentationTabValues = {
   employmentProofLetterFiles: [],
   ineFrontFiles: [],
   ineBackFiles: [],
+  persistedFileIds: [],
 };
 
 const TAB_TO_API_SECTION: Record<
@@ -137,43 +140,30 @@ const TAB_TO_API_SECTION: Record<
   documentation: "documentation",
 };
 
-type DocFile = {
-  id: string;
-  name: string;
-  file?: File;
-  filePath?: string;
-  url?: string;
-  uploadedAt?: string;
-};
-
+/**
+ * Sube los archivos locales y los sustituye por la referencia que devuelve la
+ * subida (`documentId` + `file`); los ya almacenados se conservan tal cual.
+ */
 async function ensureClientDocumentFilesUploaded(
   clientId: number,
-  files: DocFile[],
+  files: CreditApplicationDocumentFile[],
   type: string
-): Promise<DocFile[]> {
-  const resolved: DocFile[] = [];
+): Promise<CreditApplicationDocumentFile[]> {
+  const resolved: CreditApplicationDocumentFile[] = [];
   for (const item of files) {
     if (item.file) {
       const result = await uploadClientDocument(clientId, type, item.file);
       if (result.error || !result.data) continue;
       resolved.push({
-        id: item.id,
+        id: String(result.data.documentId),
         name: item.name,
-        filePath: result.data.filePath,
-        url: result.data.fileUrl,
+        remote: toRemoteDocumentFile(result.data.file, { clientId }),
         uploadedAt: item.uploadedAt ?? "Cargado",
       });
       continue;
     }
-    const existingPath = item.filePath?.trim();
-    if (existingPath) {
-      resolved.push({
-        id: item.id,
-        name: item.name,
-        filePath: existingPath,
-        url: item.url,
-        uploadedAt: item.uploadedAt,
-      });
+    if (item.remote) {
+      resolved.push(item);
     }
   }
   return resolved;
@@ -283,7 +273,8 @@ export function useClientInformationForm(
             break;
           case "documentation": {
             const mapped = mapClientDocumentationToFormValues(
-              data as Parameters<typeof mapClientDocumentationToFormValues>[0]
+              data as Parameters<typeof mapClientDocumentationToFormValues>[0],
+              clientId
             );
             setDocumentation(mapped.documentation);
             const codes = new Set(
@@ -352,6 +343,7 @@ export function useClientInformationForm(
         phone: "",
         identificationFrontFiles: [],
         identificationBackFiles: [],
+        persistedFileIds: [],
         hasSpouse: false,
       },
       biometrics: null,
@@ -435,6 +427,19 @@ export function useClientInformationForm(
         body
       );
       unwrapOrThrow(result);
+      if (sectionKey === "documentation") {
+        // El guardado copia el respaldo de la solicitud a `ClientDocument`: se
+        // recargan las referencias para quedarse con los ids nuevos.
+        const refreshed = await getClientInformationSection(clientId, "documentation");
+        if (refreshed.data) {
+          setDocumentation(
+            mapClientDocumentationToFormValues(
+              refreshed.data.data as Parameters<typeof mapClientDocumentationToFormValues>[0],
+              clientId
+            ).documentation
+          );
+        }
+      }
       showSuccess(result.data?.message ?? "Información actualizada.");
       return true;
     } catch (saveError) {

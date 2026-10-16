@@ -4,15 +4,9 @@ import type {
   CreditApplicationDetail,
   DocumentItem,
 } from "@/types/solicitud-credito-detail.types";
+import type { DocumentFileOwner, DocumentFileReference } from "@/types/document-file.types";
+import { toRemoteDocumentFile } from "@/services/files.service";
 import { formatDateOnly } from "@/utils/date";
-
-type DocumentFileApiItem = {
-  id: number;
-  typeCode: string;
-  typeName: string;
-  filePath: string;
-  fileUrl: string;
-};
 
 /** Names used when rendering requested documents in the review screen. */
 const REQUESTED_DOCUMENT_LABELS: Record<string, string> = {
@@ -23,19 +17,19 @@ const REQUESTED_DOCUMENT_LABELS: Record<string, string> = {
 };
 
 function toDocumentItems(
-  files: DocumentFileApiItem[] | undefined,
+  files: DocumentFileReference[] | undefined,
   fallbackName: string,
   verifiedBy: string,
+  owner: DocumentFileOwner,
 ): DocumentItem[] {
   if (!files?.length) {
     return [];
   }
   return files.map((file, index) => ({
-    id: `${file.typeCode}-${file.id}`,
+    id: `${file.type}-${file.fileId}`,
     name: files.length > 1 ? `${fallbackName} (${index + 1})` : fallbackName,
     verifiedBy,
-    thumbnailUrl: file.fileUrl,
-    fullImageUrl: file.fileUrl,
+    file: toRemoteDocumentFile(file, owner),
   }));
 }
 
@@ -106,6 +100,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
   );
   const documentation = api.documentation;
   const verifiedByLabel = "Verificado por el sistema";
+  const owner = { applicationId };
 
   const requestedDocuments: DocumentItem[] = [];
   if (requestedCodes.has("INCOME_PROOF")) {
@@ -114,6 +109,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         documentation?.incomeProofFiles,
         REQUESTED_DOCUMENT_LABELS.INCOME_PROOF,
         verifiedByLabel,
+        owner,
       ),
     );
   }
@@ -123,6 +119,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         documentation?.employmentProofLetterFiles,
         REQUESTED_DOCUMENT_LABELS.EMPLOYMENT_PROOF_LETTER,
         verifiedByLabel,
+        owner,
       ),
     );
   }
@@ -132,6 +129,7 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         documentation?.guarantorIneFrontFiles,
         REQUESTED_DOCUMENT_LABELS.GUARANTOR_INE_FRONT,
         verifiedByLabel,
+        owner,
       ),
     );
     requestedDocuments.push(
@@ -139,21 +137,23 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
         documentation?.guarantorIneBackFiles,
         REQUESTED_DOCUMENT_LABELS.GUARANTOR_INE_BACK,
         verifiedByLabel,
+        owner,
       ),
     );
   }
 
-  const signatureFile = documentation?.bureauAuthorizationSignatureFiles?.[0];
+  const bureauSignatureFile =
+    api.creditBureau?.signatureFile ?? documentation?.bureauAuthorizationSignatureFiles?.[0];
   const faceCaptureFile = documentation?.faceCaptureFiles?.[0];
 
   const biometricItems: BiometricItem[] = [];
 
   if (faceCaptureFile) {
     biometricItems.push({
-      id: `FACE_CAPTURE-${faceCaptureFile.id}`,
+      id: `FACE_CAPTURE-${faceCaptureFile.fileId}`,
       name: "Foto facial",
       verifiedBy: verifiedByLabel,
-      thumbnailUrl: faceCaptureFile.fileUrl,
+      file: toRemoteDocumentFile(faceCaptureFile, owner),
       type: "photo",
     });
   }
@@ -222,13 +222,15 @@ export function mapCreditApplicationDetailResponseToReviewDetail(
     },
     documentation: { documents: requestedDocuments },
     creditBureau: {
-      clientAuthorized: api.creditBureau?.clientAuthorized ?? Boolean(signatureFile),
+      clientAuthorized: api.creditBureau?.clientAuthorized ?? Boolean(bureauSignatureFile),
       queryStatus: api.creditBureau?.queryStatus ?? "NOT_QUERIED",
       score: api.creditBureau?.score ?? null,
       scoreLabel: api.creditBureau?.scoreLabel ?? "No consultado",
       scoreLevel: api.creditBureau?.scoreLevel ?? "fair",
       queriedAt: api.creditBureau?.queriedAt ?? null,
-      signatureUrl: api.creditBureau?.signatureUrl ?? signatureFile?.fileUrl,
+      signatureFile: bureauSignatureFile
+        ? toRemoteDocumentFile(bureauSignatureFile, owner)
+        : undefined,
       canQueryNow: api.creditBureau?.canQueryNow ?? false,
       missingFields: api.creditBureau?.missingFields ?? [],
     },

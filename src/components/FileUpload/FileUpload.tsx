@@ -2,6 +2,7 @@ import { useCallback, useId, useState } from "react";
 import { Stack, Typography, IconButton, Button, useTheme } from "@mui/material";
 import { Upload, Trash2, Download, Eye, Image as ImageIcon, Clock9 } from "lucide-react";
 import { ImageViewerModal } from "@/components/ImageViewerModal";
+import { openResolvedUrlInNewTab } from "@/utils/open-resolved-url";
 import {
   DropZoneRoot,
   FileItemRow,
@@ -22,6 +23,11 @@ export interface UploadedFileItem {
    * cabecera hace que el visor descargue el archivo en vez de mostrarlo.
    */
   previewUrl?: string;
+  /**
+   * Para archivos cuya URL caduca (URLs firmadas): se llama al ver o descargar
+   * el archivo, en lugar de usar `url`. La URL devuelve el archivo en línea.
+   */
+  resolveUrl?: () => Promise<string>;
   uploadedAt?: string;
 }
 
@@ -284,6 +290,12 @@ export function FileUpload({
         URL.revokeObjectURL(url);
         return;
       }
+      if (item.resolveUrl) {
+        openResolvedUrlInNewTab(item.resolveUrl).catch(() => {
+          setValidationError(`No se pudo abrir ${item.name}. Intenta nuevamente.`);
+        });
+        return;
+      }
       if (!item.url) return;
 
       if (!urlForcesDownload) {
@@ -307,6 +319,7 @@ export function FileUpload({
   const canPreview = useCallback(
     (item: UploadedFileItem) =>
       item.file != null ||
+      item.resolveUrl != null ||
       resolveRemotePreviewUrl(item, urlForcesDownload) != null,
     [urlForcesDownload]
   );
@@ -319,6 +332,16 @@ export function FileUpload({
           name: item.name,
           isObjectUrl: true,
         });
+        return;
+      }
+      if (item.resolveUrl) {
+        item.resolveUrl()
+          .then((resolvedUrl) => {
+            setPreview({ url: resolvedUrl, name: item.name, isObjectUrl: false });
+          })
+          .catch(() => {
+            setValidationError(`No se pudo abrir ${item.name}. Intenta nuevamente.`);
+          });
         return;
       }
       const url = resolveRemotePreviewUrl(item, urlForcesDownload);

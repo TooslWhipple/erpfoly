@@ -1,24 +1,71 @@
-import type { CreditApplicationDocumentFile } from "@/types/credit-application-form.types";
+import type {
+  CreditApplicationDocumentFile,
+  DocumentationTabValues,
+} from "@/types/credit-application-form.types";
+import type { DocumentFileSource, RemoteDocumentFile } from "@/types/document-file.types";
 import { hasImageExtension, hasPdfExtension } from "@/utils/file-types";
 
-export function resolveDocumentPreviewUrl(
-  file: CreditApplicationDocumentFile | undefined,
-): string | undefined {
-  if (!file) {
-    return undefined;
-  }
+/** Referencia de archivo tal como la espera el guardado de una sección. */
+export interface DocumentFileReferencePayload {
+  fileId: number;
+  source: DocumentFileSource;
+}
 
-  const remoteUrl = file.url?.trim();
-  if (remoteUrl) {
-    return remoteUrl;
-  }
+export function toStoredDocumentFile(remote: RemoteDocumentFile): CreditApplicationDocumentFile {
+  return {
+    id: `${remote.reference.source}-${remote.reference.fileId}`,
+    name: remote.reference.filename,
+    remote,
+    uploadedAt: "Cargado",
+  };
+}
 
-  const remotePath = file.filePath?.trim();
-  if (remotePath?.startsWith("http")) {
-    return remotePath;
-  }
+/** Referencias de los archivos ya almacenados de una lista (los locales aún no tienen id). */
+export function toDocumentFileReferencePayload(
+  files: CreditApplicationDocumentFile[],
+): DocumentFileReferencePayload[] {
+  return files.flatMap((file) =>
+    file.remote
+      ? [{ fileId: file.remote.reference.fileId, source: file.remote.reference.source }]
+      : [],
+  );
+}
 
-  return undefined;
+/** Ids de las listas que pertenecen a la tabla propia de la sección. */
+export function collectOwnFileIds(
+  lists: CreditApplicationDocumentFile[][],
+  ownSource: DocumentFileSource,
+): number[] {
+  return lists.flatMap((files) =>
+    files.flatMap((file) =>
+      file.remote?.reference.source === ownSource ? [file.remote.reference.fileId] : [],
+    ),
+  );
+}
+
+/**
+ * `removeFileIds` de una sección: los ids cargados de su tabla propia que ya no
+ * están en ninguna de sus listas. Es la única vía de borrado del guardado.
+ */
+export function collectRemovedFileIds(
+  persistedFileIds: number[],
+  lists: CreditApplicationDocumentFile[][],
+  ownSource: DocumentFileSource,
+): number[] {
+  const keptFileIds = new Set(collectOwnFileIds(lists, ownSource));
+  return persistedFileIds.filter((fileId) => !keptFileIds.has(fileId));
+}
+
+/** Listas que reconcilia el guardado de documentación del cliente (sus 4 tipos). */
+export function getClientDocumentationLists(
+  documentation: DocumentationTabValues,
+): CreditApplicationDocumentFile[][] {
+  return [
+    documentation.incomeProofFiles,
+    documentation.employmentProofLetterFiles,
+    documentation.ineFrontFiles,
+    documentation.ineBackFiles,
+  ];
 }
 
 export function isImageDocument(
@@ -34,7 +81,7 @@ export function isImageDocument(
     }
   }
 
-  const reference = [file.url, file.filePath, file.name].filter(Boolean).join(" ");
+  const reference = [file.remote?.reference.filename, file.name].filter(Boolean).join(" ");
   if (hasPdfExtension(reference)) {
     return false;
   }

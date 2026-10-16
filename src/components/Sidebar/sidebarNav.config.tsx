@@ -53,6 +53,8 @@ import {
   GENERAL_EXPENSES_READ,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
+  NEW_ORDER_READ,
+  ORDERS_CREATE,
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
@@ -112,7 +114,20 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Cobranza automática", path: "/clientes/cobranza", requirement: { permission: CUSTOMER_COLLECTION_READ } },
     ],
   },
-  { label: "Pedidos", path: "/pedidos", icon: <Van size={ICON_SIZE} />, requirement: { permission: ORDERS_READ } },
+  {
+    label: "Pedidos",
+    path: "/pedidos",
+    icon: <Van size={ICON_SIZE} />,
+    requirement: { permission: ORDERS_READ },
+    subItems: [
+      { label: "Todos los pedidos", path: "/pedidos", requirement: { permission: ORDERS_READ } },
+      {
+        label: "Nuevo pedido",
+        path: "/pedidos/nuevo",
+        requirement: { anyPermissions: [ORDERS_CREATE, NEW_ORDER_READ] },
+      },
+    ],
+  },
   {
     label: "Traspasos",
     path: "/traspasos",

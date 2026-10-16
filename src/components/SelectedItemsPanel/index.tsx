@@ -10,7 +10,8 @@ interface SelectedItemsPanelProps {
   items: SelectedOrderItemType[];
   onQuantityChange: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
-  onContinue: () => void;
+  /** Without it the panel is read-only: no continue button. */
+  onContinue?: () => void;
   continueLabel?: string;
   hidePrices?: boolean;
   disabled?: boolean;
@@ -63,24 +64,28 @@ export default function SelectedItemsPanel({
         }
       </Stack>
 
-      <Divider />
+      {onContinue && (
+        <>
+          <Divider />
 
-      <ContinueButtonArea>
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          disabled={items.length === 0 || disabled}
-          onClick={onContinue}
-          sx={{ textTransform: 'none' }}>
-          <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant='body1' fontWeight={500}>{continueLabel}</Typography>
-            {!hidePrices && (
-              <Typography variant='body1' fontWeight={500} style={{ opacity: 0.6 }}>{formatCurrency(totalPrice)}</Typography>
-            )}
-          </Stack>
-        </Button>
-      </ContinueButtonArea>
+          <ContinueButtonArea>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              disabled={items.length === 0 || disabled}
+              onClick={onContinue}
+              sx={{ textTransform: 'none' }}>
+              <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant='body1' fontWeight={500}>{continueLabel}</Typography>
+                {!hidePrices && (
+                  <Typography variant='body1' fontWeight={500} style={{ opacity: 0.6 }}>{formatCurrency(totalPrice)}</Typography>
+                )}
+              </Stack>
+            </Button>
+          </ContinueButtonArea>
+        </>
+      )}
     </PanelContainer >
   );
 }

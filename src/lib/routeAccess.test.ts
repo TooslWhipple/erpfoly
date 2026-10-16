@@ -4,9 +4,9 @@
  */
 import assert from "node:assert/strict";
 import type { User } from "../store/useAuthStore";
-import { CASH_REGISTERS_READ, CUSTOMERS_READ } from "./permissions";
+import { CASH_REGISTERS_READ, CUSTOMERS_READ, NEW_ORDER_READ } from "./permissions";
 import { shouldBypassAccessControl } from "./accessControl";
-import { getFirstAllowedRoute, resolvePostLoginPath } from "./routeAccess";
+import { canAccessPath, getFirstAllowedRoute, resolvePostLoginPath } from "./routeAccess";
 
 function userWith(permissions: string[]): User {
   return {
@@ -39,6 +39,10 @@ if (!shouldBypassAccessControl) {
     ),
     "/cajas",
   );
+
+  // `pedidos-nuevo.view` opens the order form, not the order list.
+  assert.equal(canAccessPath("/pedidos/nuevo", userWith([NEW_ORDER_READ])), true);
+  assert.equal(canAccessPath("/pedidos", userWith([NEW_ORDER_READ])), false);
 }
 
 console.log("routeAccess.test.ts: ok");

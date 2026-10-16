@@ -19,6 +19,7 @@ export type PermissionModule =
   | "clientes.morosidad"
   | "clientes.cobranza"
   | "pedidos"
+  | "pedidos.nuevo"
   | "traspasos"
   | "solicitudes_descuento"
   | "inventario"
@@ -121,6 +122,11 @@ export const ORDERS_CREATE = ORDERS_PERMISSIONS.create;
 export const ORDERS_READ = ORDERS_PERMISSIONS.read;
 export const ORDERS_UPDATE = ORDERS_PERMISSIONS.update;
 export const ORDERS_DELETE = ORDERS_PERMISSIONS.delete;
+
+// New order screen (`pedidos-nuevo`): its read lets a role browse the order
+// form without `pedidos.create` (it cannot submit the order).
+export const NEW_ORDER_PERMISSIONS = createCrudPermissions("pedidos.nuevo");
+export const NEW_ORDER_READ = NEW_ORDER_PERMISSIONS.read;
 
 export const TRASPASOS_PERMISSIONS = createCrudPermissions("traspasos");
 export const TRASPASOS_CREATE = TRASPASOS_PERMISSIONS.create;
@@ -433,6 +439,7 @@ export const PERMISSIONS_BY_MODULE = {
   },
   orders: {
     orders: Object.values(ORDERS_PERMISSIONS),
+    newOrder: Object.values(NEW_ORDER_PERMISSIONS),
     traspasos: Object.values(TRASPASOS_PERMISSIONS),
     discountRequests: Object.values(DISCOUNT_REQUESTS_PERMISSIONS),
   },

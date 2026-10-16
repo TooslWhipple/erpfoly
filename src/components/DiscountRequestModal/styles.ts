@@ -34,4 +34,32 @@ export const FooterActions = styled("div")(({ theme }) => ({
   marginTop: "auto",
   paddingTop: theme.spacing(2),
   width: "100%",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+}));
+
+export const LineCard = styled("div", {
+  shouldForwardProp: (prop) => prop !== "selected",
+})<{ selected?: boolean }>(({ theme, selected }) => ({
+  border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.app.border}`,
+  borderRadius: 12,
+  padding: theme.spacing(1.5),
+  backgroundColor: theme.palette.background.paper,
+}));
+
+export const ModalBody = styled("div")(({ theme }) => ({
+  flex: 1,
+  minHeight: 0,
+  overflow: "auto",
+  padding: theme.spacing(0, 3, 2),
+}));
+
+export const ModalFooter = styled("div")(({ theme }) => ({
+  flexShrink: 0,
+  borderTop: `1px solid ${theme.palette.divider}`,
+  padding: theme.spacing(2, 3),
+  paddingBottom: `calc(${theme.spacing(2)} + env(safe-area-inset-bottom))`,
+  backgroundColor: theme.palette.background.paper,
 }));

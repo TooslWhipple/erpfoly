@@ -14,6 +14,7 @@ import {
   removeDriverFromRoute,
   removeRoutePoint,
   removeRoutePointItem,
+  removeScheduledStop,
   uploadCartaPorte,
 } from "@/services/rutas.service";
 import type { RouteDetailApi } from "@/types/rutas-api.types";
@@ -324,6 +325,64 @@ export function useRouteMutations({
     },
   });
 
+  const removeScheduledStopMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      stopId,
+    }: {
+      routeId: number;
+      stopId: number;
+      branchId: number;
+    }) => {
+      const res = await removeScheduledStop(routeId, stopId);
+      return unwrapOrThrow(res);
+    },
+    onMutate: async ({ routeId, stopId, branchId }) => {
+      await queryClient.cancelQueries({ queryKey: ["route-detail", routeId] });
+      const previous = queryClient.getQueryData<RouteDetailApi>([
+        "route-detail",
+        routeId,
+      ]);
+      if (previous) {
+        const nextOrders = previous.orders.filter(
+          (o) => o.destination_branch_id !== branchId,
+        );
+        queryClient.setQueryData<RouteDetailApi>(["route-detail", routeId], {
+          ...previous,
+          scheduled_stops: (previous.scheduled_stops ?? []).filter(
+            (stop) => stop.id !== stopId,
+          ),
+          orders: nextOrders,
+          article_count: nextOrders.reduce(
+            (sum, o) => sum + o.items.length,
+            0,
+          ),
+          point_count: nextOrders.length,
+        });
+      }
+      return { previous };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["route-detail", vars.routeId], ctx.previous);
+      }
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo quitar la sucursal: ${detail}`
+          : "No se pudo quitar la sucursal.",
+      );
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Sucursal quitada de la ruta.");
+    },
+  });
+
   const removeRoutePointMutation = useMutation({
     mutationFn: async ({
       routeId,
@@ -452,6 +511,7 @@ export function useRouteMutations({
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
   };

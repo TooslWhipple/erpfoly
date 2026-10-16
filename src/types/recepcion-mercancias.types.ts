@@ -24,11 +24,14 @@ export interface MerchandiseReception {
     branchId: number;
     costeoId: number | null;
     invoices: ReceptionDetailInvoice[];
+    hasShortage?: boolean;
+    originalLabelsIssued?: boolean;
 }
 
 /** Detail/edit workflow status on the reception page. */
 export type ReceptionDetailStatus =
     | "draft"
+    | "pre_authorized"
     | "pre_captured"
     | "in_costing"
     | "costed";
@@ -38,16 +41,28 @@ export type ReceptionDetailStatus =
  * Mirrors the backend `MerchandiseReceptionStatus` enum but keeps the
  * historical "captured" alias for the listing tab filter.
  */
-export type ReceptionStatus = "pre_captured" | "captured" | "costed";
+export type ReceptionStatus =
+    | "pre_authorized"
+    | "pre_captured"
+    | "captured"
+    | "costed";
 
 export interface ReceptionArticle {
     id: string;
     productId?: number;
+    /** ID real del OrderItem (para PATCH/POST). */
+    orderItemId?: number;
     name: string;
     sku: string;
     orderId?: number;
     orderNumber: string;
+    /** Total solicitado en el pedido. */
     quantity: number;
+    orderedQuantity: number;
+    /** Tope máximo capturable en esta recepción. */
+    pendingQuantity: number;
+    /** Tope autorizado por factura (folios preautorizados). */
+    authorizedQuantity?: number;
     received: number;
     branchName?: string;
     branchId?: number;

@@ -1,1 +1,1 @@
-export { CaptureViewport as CaptureRoot } from "@/components/NubariumCapturePreview/styles";
+export { IdCaptureViewport as CaptureRoot } from "@/components/NubariumCapturePreview/styles";

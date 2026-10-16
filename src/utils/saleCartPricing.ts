@@ -58,9 +58,11 @@ export function approvedSpecialDiscount(input: {
     if (!line || line.quantity <= 0) continue;
     const portion = lineTotal(line) * (selection.quantity / line.quantity);
     const amount =
-      input.approvedDiscountAmount != null
-        ? (selection.allocatedAmount ?? 0)
-        : portion * ((input.approvedDiscountPct ?? 0) / 100);
+      selection.allocatedAmount != null
+        ? selection.allocatedAmount
+        : input.approvedDiscountAmount != null
+          ? 0
+          : portion * ((input.approvedDiscountPct ?? 0) / 100);
     bySaleItemId[selection.saleItemId] = roundCents(Math.max(0, amount));
   }
   const total = roundCents(

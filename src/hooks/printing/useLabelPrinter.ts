@@ -133,6 +133,8 @@ export function useLabelPrinter(): UseLabelPrinterResult {
         const blob = await fetchReceptionLabelsPdf(receptionId, {
           mode,
           skip: options.skip,
+          username: options.username,
+          password: options.password,
         });
         setProgress(30);
         options.onProgress?.(30);

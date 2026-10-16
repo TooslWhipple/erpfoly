@@ -53,6 +53,7 @@ interface FormValues {
   issuedAt: string;
   cfdiId: string;
   cfdiUuid: string;
+  concepts: ParsedInvoiceFileData["concepts"];
 }
 
 export interface CreateInvoiceRequestModalProps {
@@ -83,6 +84,7 @@ const EMPTY_FORM: FormValues = {
   issuedAt: "",
   cfdiId: "",
   cfdiUuid: "",
+  concepts: [],
 };
 
 function mapParsedToForm(
@@ -108,6 +110,7 @@ function mapParsedToForm(
     issuedAt: parsed.issuedAt,
     cfdiId: parsed.cfdiId ?? "",
     cfdiUuid: parsed.cfdiUuid ?? "",
+    concepts: parsed.concepts ?? [],
   };
 }
 
@@ -278,6 +281,7 @@ export function CreateInvoiceRequestModal({
         : formValues.paymentDetails.trim(),
       cfdiId: formValues.cfdiId,
       cfdiUuid: formValues.cfdiUuid,
+      concepts: formValues.concepts ?? [],
     };
 
     setSaving(true);

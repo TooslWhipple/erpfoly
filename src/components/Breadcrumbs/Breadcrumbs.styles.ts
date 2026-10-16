@@ -1,10 +1,21 @@
 import { styled } from "@mui/material/styles";
 import { Box, IconButton, Typography } from "@mui/material";
 
+const breadcrumbLabel = {
+  maxWidth: 280,
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical" as const,
+  overflowWrap: "anywhere" as const,
+  lineHeight: 1.35,
+};
+
 export const Container = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 4,
+  minWidth: 0,
 });
 
 export const BackButton = styled(IconButton)(({ theme }) => ({
@@ -29,6 +40,7 @@ export const BackButton = styled(IconButton)(({ theme }) => ({
 }));
 
 export const BreadcrumbLink = styled(Typography)(({ theme }) => ({
+  ...breadcrumbLabel,
   fontSize: "0.875rem",
   color: theme.palette.text.secondary,
   cursor: "pointer",
@@ -39,6 +51,7 @@ export const BreadcrumbLink = styled(Typography)(({ theme }) => ({
 }));
 
 export const BreadcrumbCurrent = styled(Typography)(({ theme }) => ({
+  ...breadcrumbLabel,
   fontSize: "0.875rem",
   color: theme.palette.text.primary,
   fontWeight: 500,

@@ -139,8 +139,11 @@ export function NewRouteModal({
   );
 
   const branchChipsItems = useMemo(
-    () => branches.map((branch) => ({ id: branch.id, label: branch.name })),
-    [branches],
+    () =>
+      branches
+        .filter((branch) => branch.id !== originBranchId)
+        .map((branch) => ({ id: branch.id, label: branch.name })),
+    [branches, originBranchId],
   );
 
   const validate = (): NewRouteFormErrors => {
@@ -311,7 +314,13 @@ export function NewRouteModal({
           value={originBranchId === "" ? "" : String(originBranchId)}
           onChange={(e) => {
             const v = e.target.value;
-            setOriginBranchId(v === "" ? "" : Number(v));
+            const nextOriginId = v === "" ? "" : Number(v);
+            setOriginBranchId(nextOriginId);
+            if (nextOriginId !== "") {
+              setBranchesToVisit((prev) =>
+                prev.filter((id) => id !== nextOriginId),
+              );
+            }
           }}
           options={branchOptions}
           placeholder="Selecciona el origen"
@@ -337,6 +346,7 @@ export function NewRouteModal({
             </>
             :
             <>
+              {originBranchId !== "" && (
               <MultiSelectChips
                 label="Sucursales a visitar"
                 items={branchChipsItems}
@@ -349,6 +359,7 @@ export function NewRouteModal({
                 helperText={errors.branchesToVisit}
                 emptyText="No hay sucursales disponibles"
               />
+              )}
 
               <Stack spacing={1}>
                 <Typography variant="body1" fontWeight={500}>Programación</Typography>

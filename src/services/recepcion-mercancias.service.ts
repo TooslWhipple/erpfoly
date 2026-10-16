@@ -6,6 +6,7 @@ const BASE = "/merchandise-receptions";
 
 export type ReceptionStatusApi =
   | "draft"
+  | "pre_authorized"
   | "pre_captured"
   | "in_costing"
   | "costed"
@@ -23,6 +24,9 @@ export interface ReceptionListItem {
   supplierId: number;
   branchId: number;
   costeoId: number | null;
+  hasShortage?: boolean;
+  inventoryPostedAt?: string | null;
+  originalLabelsIssued?: boolean;
 }
 
 export interface ReceptionDetailItem {
@@ -36,6 +40,9 @@ export interface ReceptionDetailItem {
   name: string;
   quantity: number;
   received: number;
+  orderedQuantity: number;
+  pendingQuantity: number;
+  authorizedQuantity: number;
   branchName: string | null;
   scheduledDeliveryDate: string | null;
 }
@@ -74,6 +81,8 @@ export interface PendingArticleApi {
   orderId: number;
   orderNumber: string;
   quantity: number;
+  orderedQuantity: number;
+  pendingQuantity: number;
   received: number;
   unitCost: number | null;
   scheduledDeliveryDate: string | null;
@@ -188,6 +197,22 @@ export async function createReception(
   payload: CreateReceptionPayload,
 ): Promise<ApiResult<ReceptionDetail>> {
   return post<ReceptionDetail>(BASE, payload);
+}
+
+export interface PreauthorizeReceptionPayload {
+  supplier_id: number;
+  branch_id: number;
+  order_date: string;
+  payable_invoice_ids: number[];
+  notes?: string;
+}
+
+export async function preAuthorizeReception(
+  payload: PreauthorizeReceptionPayload,
+): Promise<ApiResult<ReceptionDetail>> {
+  return post<ReceptionDetail>(`${BASE}/pre-authorize`, payload, {
+    skipGlobalErrorToast: true,
+  });
 }
 
 export async function updateReception(

@@ -9,7 +9,9 @@ import {
   extractFaceCaptureImage,
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
+  installNubariumFaceCaptureSnapshotPatch,
   NUBARIUM_FACE_CAPTURE_CONFIG,
+  patchNubariumFaceCaptureErrors,
   patchNubariumLandscapeCapture,
   releaseNubariumLandscapeCapture,
   safeClearNubariumCapture,
@@ -110,7 +112,9 @@ export function NubariumFaceCapture({
             : getNubariumCameraOptions(),
           rootElement: rootElementId,
         });
+        installNubariumFaceCaptureSnapshotPatch();
         patchNubariumLandscapeCapture(capture);
+        patchNubariumFaceCaptureErrors(capture);
 
         capture.setToken(sessionToken);
 

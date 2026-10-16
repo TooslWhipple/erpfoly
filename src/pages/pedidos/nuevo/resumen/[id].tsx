@@ -13,10 +13,10 @@ import {
 import { Breadcrumbs, Pencil, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import { OnlinePriceBar } from "@/components/ConfirmOrderItemCard";
+// import { OnlinePriceBar } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
 import type { OrderFullDetail } from "@/types/orders.types";
-import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
+// import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 import { SummaryCard, ItemCard } from "@/styles/pedidos/styles";
 import { theme } from "@/styles/theme";
 function formatCurrency(value: number): string {
@@ -464,9 +464,9 @@ export default function ResumenPedido() {
                       </Stack>
                     </Stack>
 
-                    <OnlinePriceBar
+                    {/* <OnlinePriceBar
                       onlinePrices={buildPlaceholderOnlinePrices(unitPrice)}
-                    />
+                    /> */}
                   </Stack>
                 </ItemCard>
               );

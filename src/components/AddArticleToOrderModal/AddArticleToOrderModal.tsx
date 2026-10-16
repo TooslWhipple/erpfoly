@@ -141,7 +141,7 @@ export function AddArticleToOrderModal({
 
                 <HistorySection>
                     <UnitPriceSection>
-                        <TimelineDot style={{ top: "12px" }} />
+                        <TimelineDot style={{ top: "36px" }} />
 
                         <TextField
                             variant="outlined"
@@ -150,6 +150,13 @@ export function AddArticleToOrderModal({
                             value={unitPrice != null && unitPrice > 0 ? unitPrice.toString() : ""}
                             onChange={handlePriceChange}
                             placeholder="0.00"
+                            sx={{
+                                width: 168,
+                                flexShrink: 0,
+                                "& .MuiInputBase-root": {
+                                    height: 36,
+                                },
+                            }}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -163,7 +170,7 @@ export function AddArticleToOrderModal({
                                 inputMode: "decimal",
                             }}
                         />
-                        <Box sx={{ minWidth: 100, flexShrink: 0 }}>
+                        <Box sx={{ width: 148, flexShrink: 0 }}>
                             <FormSelect
                                 label="Moneda"
                                 value={currency}

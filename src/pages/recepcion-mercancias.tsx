@@ -58,6 +58,7 @@ function normalizeReceptionStatus(
       return "pre_captured";
     case "in_costing":
       return "captured";
+    case "pre_authorized":
     case "pre_captured":
     case "costed":
       return status;
@@ -80,6 +81,7 @@ function toApiStatusFilter(
 
 function getStatusLabel(status: ReceptionStatus): string {
   const labels: Record<ReceptionStatus, string> = {
+    pre_authorized: "Preautorizado",
     pre_captured: "Precapturado",
     captured: "Capturado",
     costed: "Costeado",
@@ -110,6 +112,10 @@ export default function RecepcionMercancias() {
     {
       label: "Todos",
       value: "all",
+    },
+    {
+      label: "Preautorizados",
+      value: "pre_authorized",
     },
     {
       label: "Capturados",
@@ -180,15 +186,11 @@ export default function RecepcionMercancias() {
       setModalOpen(false);
     }
   };
-  const handleConfirmOrders = async (supplierId: number, supplierName: string) => {
+  const handleConfirmOrders = async (receptionId: number) => {
     setSubmitting(true);
     try {
       setModalOpen(false);
-      const params = new URLSearchParams({ supplierId: String(supplierId) });
-      if (supplierName) {
-        params.set("supplierName", supplierName);
-      }
-      router.push(`/recepcion-mercancias/nuevo?${params.toString()}`);
+      router.push(`/recepcion-mercancias/${receptionId}/editar`);
     } catch (err) {
       console.error("[RecepcionMercancias] Error creating receptions:", err);
     } finally {

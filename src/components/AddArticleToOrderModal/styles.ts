@@ -49,7 +49,7 @@ export const UnitPriceSection = styled('div')({
     position: "relative",
     display: "flex",
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     gap: "8px",
     paddingLeft: "18px"
@@ -58,7 +58,7 @@ export const UnitPriceSection = styled('div')({
 export const TimelineLine = styled('div')({
     position: "absolute",
     left: "13px",
-    top: "12px",
+    top: "42px",
     bottom: "34px",
     width: "1px",
     backgroundColor: theme.palette.app.border,

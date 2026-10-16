@@ -14,7 +14,10 @@ import { NubariumIdCapture, type NubariumIdCaptureResult } from "@/components/Nu
 import { CaptureStepRoot, CaptureErrorState } from "@/components/NubariumCapturePreview/styles";
 import { useCameraDevices } from "@/hooks/useCameraDevices";
 import { useNubariumSdk } from "@/hooks/useNubariumSdk";
+import { useSignedDocumentFileUrl } from "@/hooks/useSignedDocumentFileUrl";
+import { getSignedDocumentFileUrl } from "@/services/files.service";
 import { compareIneFace } from "@/services/nubarium.service";
+import type { RemoteDocumentFile } from "@/types/document-file.types";
 import {
   updateCreditApplicationFaceBiometrics,
   updateCreditApplicationIneBiometrics,
@@ -39,8 +42,8 @@ interface CreditApplicationBiometricUpdateModalProps {
   mode: BiometricUpdateMode;
   applicationId: string;
   clientDisplayName?: string;
-  /** Signed URL of the current INE front image; required for face mode client-side compare. */
-  existingIneFrontUrl?: string | null;
+  /** Stored INE front image; required for face mode client-side compare. */
+  existingIneFrontFile?: RemoteDocumentFile;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -50,12 +53,16 @@ export function CreditApplicationBiometricUpdateModal({
   mode,
   applicationId,
   clientDisplayName,
-  existingIneFrontUrl,
+  existingIneFrontFile,
   onClose,
   onSuccess,
 }: CreditApplicationBiometricUpdateModalProps) {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
+  const existingIneFront = useSignedDocumentFileUrl(
+    existingIneFrontFile,
+    open && mode === "face",
+  );
 
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
@@ -163,8 +170,7 @@ export function CreditApplicationBiometricUpdateModal({
 
   const handleLivenessSuccess = useCallback(
     async (result: { executionId: string; faceDataUrl: string }) => {
-      const ineFrontForCompare = existingIneFrontUrl?.trim();
-      if (!ineFrontForCompare) {
+      if (!existingIneFrontFile) {
         setFaceMatchError(
           "Falta la captura del INE frontal para verificar la identidad.",
         );
@@ -176,7 +182,8 @@ export function CreditApplicationBiometricUpdateModal({
       setFaceMatchError(null);
       setFaceMatchScoreHint(null);
       try {
-        const ineFrontDataUrl = await imageUrlToDataUrl(ineFrontForCompare);
+        const ineFrontUrl = await getSignedDocumentFileUrl(existingIneFrontFile);
+        const ineFrontDataUrl = await imageUrlToDataUrl(ineFrontUrl);
         const match = await compareIneFace(ineFrontDataUrl, result.faceDataUrl);
         if (!match.isMatch) {
           setFaceMatchError(match.message ?? FACE_MATCH_FAILURE_MESSAGE);
@@ -200,7 +207,7 @@ export function CreditApplicationBiometricUpdateModal({
         setVerifyingFaceMatch(false);
       }
     },
-    [existingIneFrontUrl],
+    [existingIneFrontFile],
   );
 
   const handleSave = async () => {
@@ -256,8 +263,7 @@ export function CreditApplicationBiometricUpdateModal({
   );
 
   const captureLive = ineCaptureLive || livenessCaptureLive;
-  const missingIneFrontForFace = mode === "face" && !existingIneFrontUrl?.trim();
-  const existingIneFront = existingIneFrontUrl?.trim();
+  const missingIneFrontForFace = mode === "face" && !existingIneFrontFile;
 
   const startIneCapture = () => {
     cameras.commitPreferredDevice();

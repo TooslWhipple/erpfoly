@@ -19,6 +19,7 @@ export function useDocumentationTab(initialValues: DocumentationTabValues) {
       ineFrontFiles: nextValues.ineFrontFiles ?? [],
       ineBackFiles: nextValues.ineBackFiles ?? [],
       faceCaptureFiles: nextValues.faceCaptureFiles ?? [],
+      persistedFileIds: nextValues.persistedFileIds,
     });
   }, []);
 

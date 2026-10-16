@@ -71,7 +71,7 @@ export default function RecoverPasswordPage() {
 						Volver al inicio de sesión
 					</BackLink>
 
-					<Typography variant="body2" color="text.secondary" textAlign="center">Ingresa tu número de celular. Te enviaremos un enlace por WhatsApp para que crees una nueva contraseña.</Typography>
+					<Typography variant="body2" color="text.secondary" textAlign="center">Ingresa tu número de celular. Te enviaremos un código de verificación por WhatsApp y, al validarlo, una contraseña temporal.</Typography>
 
 					<Form onSubmit={handleSubmit}>
 						<StyledTextField

@@ -1,3 +1,5 @@
+import type { RemoteDocumentFile } from "@/types/document-file.types";
+
 export type CreditApplicationTabId =
   | "basic-information"
   | "family"
@@ -196,14 +198,20 @@ export interface DocumentationTabValues {
   ineFrontFiles: CreditApplicationDocumentFile[];
   ineBackFiles: CreditApplicationDocumentFile[];
   faceCaptureFiles?: CreditApplicationDocumentFile[];
+  /**
+   * Ids de los archivos de la tabla propia de la sección tal como se cargaron.
+   * Los que ya no estén en las listas al guardar viajan en `removeFileIds`.
+   */
+  persistedFileIds: number[];
 }
 
 export interface CreditApplicationDocumentFile {
   id: string;
   name: string;
+  /** Archivo local pendiente de subir. */
   file?: File;
-  filePath?: string;
-  url?: string;
+  /** Archivo ya almacenado; su URL firmada se pide al mostrarlo o abrirlo. */
+  remote?: RemoteDocumentFile;
   uploadedAt?: string;
 }
 
@@ -224,6 +232,8 @@ export interface GuarantorTabValues {
   phone: string;
   identificationFrontFiles: CreditApplicationDocumentFile[];
   identificationBackFiles: CreditApplicationDocumentFile[];
+  /** Ids de las INE del aval tal como se cargaron (ver `DocumentationTabValues`). */
+  persistedFileIds: number[];
   hasSpouse: boolean;
 }
 

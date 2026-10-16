@@ -29,6 +29,10 @@ export interface RequestPasswordRecoveryRequest {
 	cellphone: string;
 }
 
+export interface VerifyPasswordRecoveryRequest extends RequestPasswordRecoveryRequest {
+	otp: string;
+}
+
 export interface ResetPasswordRequest {
 	token: string;
 	newPassword: string;
@@ -94,6 +98,9 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"solicitudes-sucursales": "traspasos",
 	"pedidos-sucursales": "traspasos",
 	"traspasos": "traspasos",
+	// Own module, never folded into "pedidos" by the derived "-nuevo" suffix:
+	// `pedidos-nuevo.view` opens the order form, not the order list.
+	"pedidos-nuevo": "pedidos.nuevo",
 	"clientes-morosidad": "clientes.morosidad",
 	"clientes-cobranza": "clientes.cobranza",
 	"inventario-mercancia-danada": "inventario.mercancia_danada",
@@ -390,6 +397,12 @@ export const authService = {
 		data: RequestPasswordRecoveryRequest
 	): Promise<ApiResult<ApiSuccessPayload>> {
 		return post<ApiSuccessPayload>("/auth/password/recovery", data);
+	},
+
+	async verifyPasswordRecovery(
+		data: VerifyPasswordRecoveryRequest
+	): Promise<ApiResult<ApiSuccessPayload>> {
+		return post<ApiSuccessPayload>("/auth/password/recovery/verify", data);
 	},
 
 	async replaceTemporaryPassword(

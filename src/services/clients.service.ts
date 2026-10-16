@@ -16,6 +16,12 @@ import type {
 import type { ClientPurchaseDetailApi } from "@/types/clientPurchase.types";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import type { CreditApplicationFormPayload } from "@/types/credit-application-form.types";
+import type { DocumentFileReference } from "@/types/document-file.types";
+import {
+  collectRemovedFileIds,
+  getClientDocumentationLists,
+  toDocumentFileReferencePayload,
+} from "@/utils/credit-application-documents";
 
 export type ClientStatus = "active" | "inactive" | "blocked";
 
@@ -92,8 +98,8 @@ export type ClientInformationSectionResponse = {
 type ClientDocumentUploadResponse = {
   success: true;
   message: string;
-  filePath: string;
-  fileUrl: string;
+  documentId: number;
+  file: DocumentFileReference;
   documentTypeCode: string;
 };
 
@@ -359,16 +365,26 @@ export function buildClientSectionPayload(
           ),
         },
       };
-    case "documentation":
+    case "documentation": {
+      const { documentation } = payload;
       return {
         documentation: {
-          incomeProofFiles: payload.documentation.incomeProofFiles,
-          employmentProofLetterFiles:
-            payload.documentation.employmentProofLetterFiles,
-          ineFrontFiles: payload.documentation.ineFrontFiles,
-          ineBackFiles: payload.documentation.ineBackFiles,
+          incomeProofFiles: toDocumentFileReferencePayload(documentation.incomeProofFiles),
+          employmentProofLetterFiles: toDocumentFileReferencePayload(
+            documentation.employmentProofLetterFiles
+          ),
+          ineFrontFiles: toDocumentFileReferencePayload(documentation.ineFrontFiles),
+          ineBackFiles: toDocumentFileReferencePayload(documentation.ineBackFiles),
+          // Solo ids de `ClientDocument`: un respaldo de la solicitud se quita
+          // dejando de enviarlo, nunca por `removeFileIds`.
+          removeFileIds: collectRemovedFileIds(
+            documentation.persistedFileIds,
+            getClientDocumentationLists(documentation),
+            "client"
+          ),
         },
       };
+    }
   }
 }
 

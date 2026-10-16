@@ -176,7 +176,7 @@ export function CreateInvoiceRequestModal({
         setSuppliers([]);
         return;
       }
-      setSuppliers(result.data);
+      setSuppliers(result.data.rows);
     });
 
     return () => {

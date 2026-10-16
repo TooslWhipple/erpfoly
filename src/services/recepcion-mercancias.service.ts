@@ -147,6 +147,16 @@ export interface SendToCostingApiResponse {
   costeoId: number;
 }
 
+export interface AvailablePayableInvoiceLine {
+  id: number;
+  description: string;
+  issuerSku: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  productId: number | null;
+}
+
 export interface AvailablePayableInvoice {
   id: number;
   invoiceNumber: string;
@@ -159,6 +169,7 @@ export interface AvailablePayableInvoice {
   concept: string;
   supplierId: number | null;
   merchandiseReceptionId: number | null;
+  lines?: AvailablePayableInvoiceLine[];
 }
 
 function serializeListParams(

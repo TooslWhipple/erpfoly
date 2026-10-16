@@ -211,11 +211,25 @@ export interface ApiResponse<T> {
 	message?: string;
 }
 
+export interface ApiErrorBlock {
+	code?: string;
+	message: string;
+	productId?: number | null;
+	issuerSku?: string | null;
+	invoiceId?: number;
+	invoicedQuantity?: number;
+	pendingQuantity?: number;
+	invoiceUnitPrice?: number;
+	orderUnitPrice?: number;
+}
+
 export interface ApiError {
 	message: string;
 	status?: number;
 	errors?: Record<string, string[]>;
 	validationMessages?: string[];
+	errorCode?: string;
+	blocks?: ApiErrorBlock[];
 }
 
 export interface ApiSuccessPayload {
@@ -276,6 +290,57 @@ function messageFromPayload(data: unknown): string | null {
 	return null;
 }
 
+function extractBlocksFromPayload(data: unknown): ApiErrorBlock[] | undefined {
+	if (data == null || typeof data !== "object") return undefined;
+	const payload = data as { data?: unknown; blocks?: unknown };
+	const nested = payload.data;
+	const rawBlocks =
+		nested != null &&
+		typeof nested === "object" &&
+		"blocks" in nested &&
+		Array.isArray((nested as { blocks: unknown }).blocks)
+			? (nested as { blocks: unknown[] }).blocks
+			: Array.isArray(payload.blocks)
+				? payload.blocks
+				: null;
+	if (!rawBlocks?.length) return undefined;
+	return rawBlocks
+		.filter(
+			(block): block is Record<string, unknown> =>
+				block != null && typeof block === "object" && "message" in block,
+		)
+		.map((block) => ({
+			code: typeof block.code === "string" ? block.code : undefined,
+			message: String(block.message),
+			productId:
+				typeof block.productId === "number" || block.productId === null
+					? (block.productId as number | null)
+					: undefined,
+			issuerSku:
+				typeof block.issuerSku === "string" || block.issuerSku === null
+					? (block.issuerSku as string | null)
+					: undefined,
+			invoiceId:
+				typeof block.invoiceId === "number" ? block.invoiceId : undefined,
+			invoicedQuantity:
+				typeof block.invoicedQuantity === "number"
+					? block.invoicedQuantity
+					: undefined,
+			pendingQuantity:
+				typeof block.pendingQuantity === "number"
+					? block.pendingQuantity
+					: undefined,
+			invoiceUnitPrice:
+				typeof block.invoiceUnitPrice === "number"
+					? block.invoiceUnitPrice
+					: undefined,
+			orderUnitPrice:
+				typeof block.orderUnitPrice === "number"
+					? block.orderUnitPrice
+					: undefined,
+		}));
+}
+
 function apiErrorFromAxios(error: AxiosError): ApiError {
 	const data = error.response?.data;
 	const status = error.response?.status;
@@ -303,6 +368,16 @@ function apiErrorFromAxios(error: AxiosError): ApiError {
 			if (Array.isArray(rawMessage)) {
 				apiError.validationMessages = rawMessage.map(String);
 			}
+		}
+		if (data && typeof data === "object" && "errorCode" in data) {
+			const code = (data as { errorCode?: unknown }).errorCode;
+			if (typeof code === "string" && code.trim()) {
+				apiError.errorCode = code;
+			}
+		}
+		const blocks = extractBlocksFromPayload(data);
+		if (blocks?.length) {
+			apiError.blocks = blocks;
 		}
 		return apiError;
 	}

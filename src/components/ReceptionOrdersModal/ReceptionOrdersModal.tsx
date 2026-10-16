@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Checkbox,
+  Chip,
   CircularProgress,
-  FormControlLabel,
   Typography,
   Skeleton,
   InputAdornment,
@@ -11,8 +11,10 @@ import {
   useTheme,
 } from "@mui/material";
 import { Search } from "lucide-react";
+import numeral from "numeral";
 import { SideModal } from "@/components/SideModal";
 import type { SupplierWithPendingOrders } from "@/types/recepcion-mercancias.types";
+import { formatDateOnly } from "@/utils/date";
 import {
   getAvailablePayableInvoices,
   getPendingArticlesBySupplier,
@@ -30,7 +32,32 @@ import {
   SupplierCardMeta,
   CreateButton,
   EmptyStateContainer,
+  InvoiceList,
+  InvoiceSelectCard,
+  InvoiceCardBody,
+  InvoiceCardHeader,
+  InvoiceCardTitleRow,
+  InvoiceCardFolio,
+  InvoiceCardDate,
+  InvoiceCardConcept,
+  InvoiceCardAmounts,
+  InvoiceAmountItem,
+  InvoiceAmountLabel,
+  InvoiceAmountValue,
+  InvoiceLinesList,
+  InvoiceLineRow,
+  InvoiceLineInfo,
+  InvoiceLinePrimary,
+  InvoiceLineSecondary,
+  InvoiceLineMeta,
+  InvoiceCheckbox,
 } from "./styles";
+
+const MAX_VISIBLE_LINES = 4;
+
+function formatMoney(value: number): string {
+  return numeral(value).format("$0,0.00");
+}
 
 interface ReceptionOrdersModalProps {
   open: boolean;
@@ -66,6 +93,7 @@ export function ReceptionOrdersModal({
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorBlocks, setErrorBlocks] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -76,6 +104,7 @@ export function ReceptionOrdersModal({
       setSelectedInvoiceIds(new Set());
       setBranchId(null);
       setError(null);
+      setErrorBlocks([]);
       setSearchQuery("");
       setLoadingSuppliers(true);
       getSuppliersWithPendingOrders()
@@ -106,6 +135,7 @@ export function ReceptionOrdersModal({
     setStep("invoices");
     setLoadingInvoices(true);
     setError(null);
+    setErrorBlocks([]);
     setSelectedInvoiceIds(new Set());
     try {
       const [invoicesResult, articlesResult] = await Promise.all([
@@ -151,6 +181,7 @@ export function ReceptionOrdersModal({
 
     setSubmitting(true);
     setError(null);
+    setErrorBlocks([]);
     try {
       const result = await preAuthorizeReception({
         supplier_id: selectedSupplier.id,
@@ -159,14 +190,13 @@ export function ReceptionOrdersModal({
         payable_invoice_ids: [...selectedInvoiceIds],
       });
       if (result.error || !result.data) {
-        const blocks = (
-          result.error as { validationMessages?: string[] } | null
-        )?.validationMessages;
+        const blockMessages =
+          result.error?.blocks?.map((block) => block.message).filter(Boolean) ??
+          [];
         setError(
-          blocks?.length
-            ? blocks.join(". ")
-            : (result.error?.message ?? "No se pudo preautorizar la recepción"),
+          result.error?.message ?? "No se pudo preautorizar la recepción",
         );
+        setErrorBlocks(blockMessages);
         return;
       }
       await onConfirm(result.data.id);
@@ -174,6 +204,7 @@ export function ReceptionOrdersModal({
       setError(
         err instanceof Error ? err.message : "Error al preautorizar la recepción",
       );
+      setErrorBlocks([]);
     } finally {
       setSubmitting(false);
     }
@@ -204,7 +235,25 @@ export function ReceptionOrdersModal({
     >
       {error ? (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          <Typography variant="body2" fontWeight={600}>
+            {error}
+          </Typography>
+          {errorBlocks.length > 0 ? (
+            <Box
+              component="ul"
+              sx={{ m: 0, mt: 1, pl: 2.5, display: "flex", flexDirection: "column", gap: 0.5 }}
+            >
+              {errorBlocks.map((blockMessage, index) => (
+                <Typography
+                  key={`${index}-${blockMessage.slice(0, 24)}`}
+                  component="li"
+                  variant="body2"
+                >
+                  {blockMessage}
+                </Typography>
+              ))}
+            </Box>
+          ) : null}
         </Alert>
       ) : null}
 
@@ -282,21 +331,124 @@ export function ReceptionOrdersModal({
               </Typography>
             </EmptyStateContainer>
           ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {invoices.map((invoice) => (
-                <FormControlLabel
-                  key={invoice.id}
-                  control={
-                    <Checkbox
-                      checked={selectedInvoiceIds.has(invoice.id)}
-                      onChange={() => toggleInvoice(invoice.id)}
-                      disabled={submitting}
-                    />
-                  }
-                  label={`${invoice.invoiceNumber} · $${invoice.total.toLocaleString("es-MX")} · ${invoice.issuedAt}`}
-                />
-              ))}
-            </Box>
+            <InvoiceList>
+              {invoices.map((invoice) => {
+                const selected = selectedInvoiceIds.has(invoice.id);
+                const lines = invoice.lines ?? [];
+                const visibleLines = lines.slice(0, MAX_VISIBLE_LINES);
+                const hiddenCount = Math.max(
+                  0,
+                  lines.length - MAX_VISIBLE_LINES,
+                );
+
+                return (
+                  <InvoiceSelectCard
+                    key={invoice.id}
+                    selected={selected}
+                    onClick={() => {
+                      if (!submitting) toggleInvoice(invoice.id);
+                    }}
+                  >
+                    <InvoiceCheckbox>
+                      <Checkbox
+                        checked={selected}
+                        tabIndex={-1}
+                        disableRipple
+                        disabled={submitting}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={() => toggleInvoice(invoice.id)}
+                      />
+                    </InvoiceCheckbox>
+                    <InvoiceCardBody>
+                      <InvoiceCardHeader>
+                        <Box sx={{ minWidth: 0 }}>
+                          <InvoiceCardTitleRow>
+                            <InvoiceCardFolio>
+                              {invoice.invoiceNumber}
+                            </InvoiceCardFolio>
+                            <Chip
+                              label={invoice.paymentType}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 22, fontSize: "0.6875rem" }}
+                            />
+                          </InvoiceCardTitleRow>
+                          <InvoiceCardDate>
+                            {formatDateOnly(invoice.issuedAt, "D MMM YYYY")}
+                          </InvoiceCardDate>
+                        </Box>
+                      </InvoiceCardHeader>
+
+                      {invoice.concept ? (
+                        <InvoiceCardConcept>{invoice.concept}</InvoiceCardConcept>
+                      ) : null}
+
+                      <InvoiceCardAmounts>
+                        <InvoiceAmountItem>
+                          <InvoiceAmountLabel>Subtotal</InvoiceAmountLabel>
+                          <InvoiceAmountValue>
+                            {formatMoney(invoice.subtotal)}
+                          </InvoiceAmountValue>
+                        </InvoiceAmountItem>
+                        <InvoiceAmountItem>
+                          <InvoiceAmountLabel>IVA</InvoiceAmountLabel>
+                          <InvoiceAmountValue>
+                            {formatMoney(invoice.iva)}
+                          </InvoiceAmountValue>
+                        </InvoiceAmountItem>
+                        <InvoiceAmountItem>
+                          <InvoiceAmountLabel>Total</InvoiceAmountLabel>
+                          <InvoiceAmountValue emphasized>
+                            {formatMoney(invoice.total)}
+                          </InvoiceAmountValue>
+                        </InvoiceAmountItem>
+                      </InvoiceCardAmounts>
+
+                      {visibleLines.length > 0 ? (
+                        <InvoiceLinesList>
+                          {visibleLines.map((line) => (
+                            <InvoiceLineRow key={line.id}>
+                              <InvoiceLineInfo>
+                                <InvoiceLinePrimary component="div">
+                                  {line.issuerSku
+                                    ? `${line.issuerSku} · ${line.description}`
+                                    : line.description}
+                                  {line.productId == null ? (
+                                    <Box
+                                      component="span"
+                                      sx={{
+                                        ml: 0.75,
+                                        fontSize: "0.6875rem",
+                                        fontWeight: 600,
+                                        color: "warning.main",
+                                      }}
+                                    >
+                                      Sin producto
+                                    </Box>
+                                  ) : null}
+                                </InvoiceLinePrimary>
+                                <InvoiceLineSecondary>
+                                  {line.quantity} × {formatMoney(line.unitPrice)}
+                                </InvoiceLineSecondary>
+                              </InvoiceLineInfo>
+                              <InvoiceLineMeta>
+                                {formatMoney(line.amount)}
+                              </InvoiceLineMeta>
+                            </InvoiceLineRow>
+                          ))}
+                          {hiddenCount > 0 ? (
+                            <InvoiceLineSecondary>
+                              y {hiddenCount} concepto
+                              {hiddenCount === 1 ? "" : "s"} más
+                            </InvoiceLineSecondary>
+                          ) : null}
+                        </InvoiceLinesList>
+                      ) : null}
+                    </InvoiceCardBody>
+                  </InvoiceSelectCard>
+                );
+              })}
+            </InvoiceList>
           )}
 
           <Box sx={{ display: "flex", gap: 1, mt: "auto" }}>
@@ -306,6 +458,7 @@ export function ReceptionOrdersModal({
               onClick={() => {
                 setStep("suppliers");
                 setError(null);
+                setErrorBlocks([]);
               }}
             >
               Atrás

@@ -409,23 +409,13 @@ export function ReceptionOrdersModal({
                           {visibleLines.map((line) => (
                             <InvoiceLineRow key={line.id}>
                               <InvoiceLineInfo>
-                                <InvoiceLinePrimary component="div">
+                                <InvoiceLinePrimary>
                                   {line.issuerSku
                                     ? `${line.issuerSku} · ${line.description}`
                                     : line.description}
-                                  {line.productId == null ? (
-                                    <Box
-                                      component="span"
-                                      sx={{
-                                        ml: 0.75,
-                                        fontSize: "0.6875rem",
-                                        fontWeight: 600,
-                                        color: "warning.main",
-                                      }}
-                                    >
-                                      Sin producto
-                                    </Box>
-                                  ) : null}
+                                  {line.productId == null
+                                    ? " · Sin producto"
+                                    : null}
                                 </InvoiceLinePrimary>
                                 <InvoiceLineSecondary>
                                   {line.quantity} × {formatMoney(line.unitPrice)}

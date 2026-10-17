@@ -33,7 +33,11 @@ export interface InventorySummary {
 export interface BranchInventory {
     id: string;
     branchName: string;
-    stock: number;
+    physicalTotal: number;
+    available: number;
+    pendingDelivery: number;
+    inTransit: number;
+    damaged: number;
     creditPrice: number;
     price: number;
     tags?: string[];

@@ -103,6 +103,8 @@ export default function RutaPage() {
                 onRequestRemoveOrder={r.handleRequestRemoveRouteOrder}
                 onRequestRemoveItem={r.handleRequestRemoveRouteItem}
                 onRequestRemoveStop={r.handleRequestRemoveScheduledStop}
+                onAddScheduledStop={r.handleAddScheduledStop}
+                originBranchId={r.routeDetail.originBranch?.id ?? null}
                 onAddDriver={() => r.setAddDriverModalOpen(true)}
                 onAddAssistant={() => r.setAddAssistantModalOpen(true)}
                 onRemoveDriver={r.handleRequestRemoveDriver}

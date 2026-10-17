@@ -6,6 +6,7 @@ import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import {
   addAssistantToRoute,
   addOrdersToRoute,
+  addScheduledStop,
   assignDriverToRoute,
   assignVehicleToRoute,
   createRoute,
@@ -325,6 +326,66 @@ export function useRouteMutations({
     },
   });
 
+  const addScheduledStopMutation = useMutation({
+    mutationFn: async ({
+      routeId,
+      branchId,
+    }: {
+      routeId: number;
+      branchId: number;
+      branchName: string;
+    }) => {
+      const res = await addScheduledStop(routeId, branchId);
+      return unwrapOrThrow(res);
+    },
+    onMutate: async ({ routeId, branchId, branchName }) => {
+      await queryClient.cancelQueries({ queryKey: ["route-detail", routeId] });
+      const previous = queryClient.getQueryData<RouteDetailApi>([
+        "route-detail",
+        routeId,
+      ]);
+      if (previous) {
+        const activeStops = previous.scheduled_stops ?? [];
+        const maxSequence = activeStops.reduce(
+          (max, stop) => Math.max(max, stop.sequence),
+          0,
+        );
+        queryClient.setQueryData<RouteDetailApi>(["route-detail", routeId], {
+          ...previous,
+          scheduled_stops: [
+            ...activeStops,
+            {
+              id: -Date.now(),
+              branch_id: branchId,
+              name: branchName,
+              sequence: maxSequence + 1,
+            },
+          ],
+        });
+      }
+      return { previous };
+    },
+    onError: (err, vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["route-detail", vars.routeId], ctx.previous);
+      }
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo agregar la sucursal: ${detail}`
+          : "No se pudo agregar la sucursal.",
+      );
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Sucursal agregada a la ruta.");
+    },
+  });
+
   const removeScheduledStopMutation = useMutation({
     mutationFn: async ({
       routeId,
@@ -511,6 +572,7 @@ export function useRouteMutations({
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    addScheduledStopMutation,
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,

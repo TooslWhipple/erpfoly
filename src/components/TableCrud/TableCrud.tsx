@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Checkbox, Skeleton, Table, TableBody, Typography } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import numeral from "numeral";
@@ -22,10 +22,14 @@ import {
   EmptyStateContainer,
   StickyHeaderCell,
   StickyCell,
+  ColumnResizeHandle,
 } from "./styles";
 import { ChipGroup } from "../ChipGroup";
 import { StatusChip } from "../StatusChip";
 import type { StatusChipVariant } from "../StatusChip";
+
+const RESIZE_MAX_WIDTH = 720;
+const RESIZE_DEFAULT_MIN_WIDTH = 72;
 
 export type ColumnType = "text" | "number" | "currency" | "percentage" | "date" | "dateOnly" | "boolean" | "chip" | "chipGroup" | "button" | "id";
 
@@ -62,8 +66,21 @@ export interface Column<T> {
   type?: ColumnType;
   size?: ColumnSize;
   maxSize?: ColumnSize;
+  /** Explicit pixel width (used as default when resizable, or as minWidth otherwise). */
+  width?: number;
+  /** Minimum width when the column is resized. */
+  minWidth?: number;
+  /** When table resizable is on, this column can be dragged (default true if width is set). */
+  resizable?: boolean;
+  /**
+   * When the table is wider than the sum of column widths, this column absorbs leftover space.
+   * Only the first flexGrow column is used.
+   */
+  flexGrow?: boolean;
   align?: "left" | "center" | "right";
   truncate?: boolean;
+  /** Allow header label to wrap onto multiple lines. */
+  headerWrap?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
   sticky?: boolean;
   stickyPosition?: "left" | "right";
@@ -131,6 +148,19 @@ interface TableCrudProps<T> {
   minTableWidth?: number;
   /** Fill the parent flex height; only the table body scrolls. */
   fillHeight?: boolean;
+  /** Enable drag-to-resize on column headers (opt-in). */
+  resizable?: boolean;
+}
+
+function buildInitialColumnWidths<T>(columns: Column<T>[]): Record<string, number> {
+  const widths: Record<string, number> = {};
+  columns.forEach((column) => {
+    const id = String(column.id);
+    if (column.width != null) {
+      widths[id] = column.width;
+    }
+  });
+  return widths;
 }
 
 export function TableCrud<T>({
@@ -154,16 +184,29 @@ export function TableCrud<T>({
   headerSelection,
   minTableWidth = 650,
   fillHeight = false,
+  resizable = false,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() =>
+    buildInitialColumnWidths(columns),
+  );
+  const [flexColumnPinned, setFlexColumnPinned] = useState(false);
+  const resizeStateRef = useRef<{
+    columnId: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const { hasPermission } = usePermissions();
   const visibleActions = actions?.filter((action) => {
     if (!action.permission) return true;
     return hasPermission(action.permission);
   });
 
-  const getColumnWidth = (column: Column<T>): number => {
+  const getDefaultColumnWidth = (column: Column<T>): number => {
+    if (column.width != null) {
+      return column.width;
+    }
     if (column.size) {
       return COLUMN_SIZES[column.size];
     }
@@ -191,12 +234,106 @@ export function TableCrud<T>({
     }
   };
 
+  const getColumnWidth = (column: Column<T>): number => {
+    const id = String(column.id);
+    if (resizable && columnWidths[id] != null) {
+      return columnWidths[id];
+    }
+    return getDefaultColumnWidth(column);
+  };
+
   const getColumnMaxWidth = (column: Column<T>): number | undefined => {
     if (column.maxSize) {
       return COLUMN_SIZES[column.maxSize];
     }
     return undefined;
   };
+
+  const isColumnResizable = (column: Column<T>): boolean => {
+    if (!resizable) return false;
+    if (column.resizable === false) return false;
+    if (column.sticky) return false;
+    if (column.resizable === true) return true;
+    return column.width != null;
+  };
+
+  const flexColumnId = useMemo(() => {
+    if (!resizable) return null;
+    const flexCol = columns.find((column) => column.flexGrow);
+    return flexCol ? String(flexCol.id) : null;
+  }, [columns, resizable]);
+
+  const resolvedMinTableWidth = useMemo(() => {
+    if (!resizable) return minTableWidth;
+    const columnsTotal = columns.reduce((sum, column) => {
+      const id = String(column.id);
+      const width = columnWidths[id] ?? column.width ?? COLUMN_SIZES[column.size ?? "md"];
+      return sum + width;
+    }, 0);
+    const selectionWidth = selectable ? 48 : 0;
+    const actionsWidth = visibleActions && visibleActions.length > 0 ? 56 : 0;
+    return Math.max(minTableWidth, columnsTotal + selectionWidth + actionsWidth);
+  }, [resizable, columns, columnWidths, minTableWidth, selectable, visibleActions]);
+
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+  const columnWidthsRef = useRef(columnWidths);
+  columnWidthsRef.current = columnWidths;
+
+  const handleResizeMove = useCallback((event: MouseEvent) => {
+    const state = resizeStateRef.current;
+    if (!state) return;
+    const column = columnsRef.current.find((item) => String(item.id) === state.columnId);
+    if (!column) return;
+    const minWidth = column.minWidth ?? RESIZE_DEFAULT_MIN_WIDTH;
+    const nextWidth = Math.min(
+      RESIZE_MAX_WIDTH,
+      Math.max(minWidth, state.startWidth + (event.clientX - state.startX)),
+    );
+    setColumnWidths((prev) => ({ ...prev, [state.columnId]: nextWidth }));
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    resizeStateRef.current = null;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    window.removeEventListener("mousemove", handleResizeMove);
+    window.removeEventListener("mouseup", handleResizeEnd);
+  }, [handleResizeMove]);
+
+  const handleResizeStart = useCallback(
+    (event: React.MouseEvent, column: Column<T>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const columnId = String(column.id);
+      const currentWidth =
+        columnWidthsRef.current[columnId] ??
+        column.width ??
+        (column.size ? COLUMN_SIZES[column.size] : RESIZE_DEFAULT_MIN_WIDTH);
+      resizeStateRef.current = {
+        columnId,
+        startX: event.clientX,
+        startWidth: currentWidth,
+      };
+      if (flexColumnId === columnId) {
+        setFlexColumnPinned(true);
+      }
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", handleResizeMove);
+      window.addEventListener("mouseup", handleResizeEnd);
+    },
+    [flexColumnId, handleResizeEnd, handleResizeMove],
+  );
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("mousemove", handleResizeMove);
+      window.removeEventListener("mouseup", handleResizeEnd);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [handleResizeEnd, handleResizeMove]);
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, row: T) => {
     setAnchorEl(event.currentTarget);
@@ -305,6 +442,27 @@ export function TableCrud<T>({
     }
   };
 
+  const getCellStyle = (column: Column<T>): React.CSSProperties => {
+    const width = getColumnWidth(column);
+    const maxWidth = getColumnMaxWidth(column);
+    if (resizable) {
+      const isFlexColumn = flexColumnId === String(column.id) && !flexColumnPinned;
+      return {
+        width: isFlexColumn ? undefined : width,
+        minWidth: width,
+        // Override TruncatedCell's maxWidth: 0 so fixed/flex column widths apply.
+        maxWidth: isFlexColumn ? "none" : width,
+        overflow: column.truncate ? "hidden" : undefined,
+      };
+    }
+    const cellStyle: React.CSSProperties = { minWidth: width };
+    if (maxWidth !== undefined) {
+      cellStyle.maxWidth = maxWidth;
+      cellStyle.width = maxWidth;
+    }
+    return cellStyle;
+  };
+
   const renderCell = (value: T[keyof T], column: Column<T>, row: T) => {
     const formattedValue = formatValue(value, column, row);
     const isNumericType = column.type === "number" || column.type === "currency" || column.type === "percentage";
@@ -318,19 +476,11 @@ export function TableCrud<T>({
       CellComponent = TruncatedCell;
     }
 
-    const width = getColumnWidth(column);
-    const maxWidth = getColumnMaxWidth(column);
-    const cellStyle: React.CSSProperties = { minWidth: width };
-    if (maxWidth !== undefined) {
-      cellStyle.maxWidth = maxWidth;
-      cellStyle.width = maxWidth;
-    }
-
     const cellProps: React.ComponentProps<typeof StyledTableCell> & {
       position?: Column<T>["stickyPosition"];
     } = {
       align: column.align ?? "left",
-      style: cellStyle,
+      style: getCellStyle(column),
       title: column.truncate ? String(value ?? "") : undefined,
       className: column.sticky ? "sticky-cell" : undefined,
     };
@@ -401,30 +551,20 @@ export function TableCrud<T>({
             <Skeleton variant="circular" width={20} height={20} animation="wave" />
           </StyledTableCell>
         )}
-        {columns.map((column) => {
-          const width = getColumnWidth(column);
-          const maxWidth = getColumnMaxWidth(column);
-          const cellStyle: React.CSSProperties = { minWidth: width };
-          if (maxWidth !== undefined) {
-            cellStyle.maxWidth = maxWidth;
-            cellStyle.width = maxWidth;
-          }
-
-          return (
-            <StyledTableCell
-              key={`skeleton-${index}-${String(column.id)}`}
-              align={column.align ?? "left"}
-              style={cellStyle}
-            >
-              <Skeleton
-                variant="text"
-                width={column.type === "id" ? 30 : "80%"}
-                height={24}
-                animation="wave"
-              />
-            </StyledTableCell>
-          );
-        })}
+        {columns.map((column) => (
+          <StyledTableCell
+            key={`skeleton-${index}-${String(column.id)}`}
+            align={column.align ?? "left"}
+            style={getCellStyle(column)}
+          >
+            <Skeleton
+              variant="text"
+              width={column.type === "id" ? 30 : "80%"}
+              height={24}
+              animation="wave"
+            />
+          </StyledTableCell>
+        ))}
         {hasActions && (
           <ActionsCell align="center">
             <Skeleton variant="circular" width={24} height={24} animation="wave" />
@@ -451,24 +591,29 @@ export function TableCrud<T>({
           </StyledHeaderCell>
         )}
         {columns.map((column) => {
-          const width = getColumnWidth(column);
-          const maxWidth = getColumnMaxWidth(column);
-          const headerStyle: React.CSSProperties = { minWidth: width };
-          if (maxWidth !== undefined) {
-            headerStyle.maxWidth = maxWidth;
-            headerStyle.width = maxWidth;
-          }
-
+          const columnId = String(column.id);
+          const canResize = isColumnResizable(column);
+          const allowWrap = Boolean(column.headerWrap) || (resizable && column.type === "number");
           const HeaderCellComponent = column.sticky ? StickyHeaderCell : StyledHeaderCell;
 
           return (
             <HeaderCellComponent
-              key={String(column.id)}
+              key={columnId}
               align={column.align ?? "left"}
-              style={headerStyle}
+              style={getCellStyle(column)}
               position={column.stickyPosition}
+              allowWrap={allowWrap}
+              resizable={canResize}
             >
               {column.label}
+              {canResize && (
+                <ColumnResizeHandle
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Redimensionar columna ${column.label}`}
+                  onMouseDown={(event) => handleResizeStart(event, column)}
+                />
+              )}
             </HeaderCellComponent>
           );
         })}
@@ -482,8 +627,33 @@ export function TableCrud<T>({
       <StyledTableContainer fillHeight={fillHeight}>
         <Table
           stickyHeader={fillHeight}
-          style={{ width: "100%", minWidth: minTableWidth }}
+          style={{
+            width: "100%",
+            minWidth: resolvedMinTableWidth,
+            tableLayout: resizable ? "fixed" : undefined,
+          }}
         >
+          {resizable && (
+            <colgroup>
+              {selectionEnabled && <col style={{ width: 48 }} />}
+              {columns.map((column) => {
+                const columnId = String(column.id);
+                const width = getColumnWidth(column);
+                const isFlexColumn = flexColumnId === columnId && !flexColumnPinned;
+                return (
+                  <col
+                    key={columnId}
+                    style={
+                      isFlexColumn
+                        ? { minWidth: width }
+                        : { width, minWidth: width }
+                    }
+                  />
+                );
+              })}
+              {hasActions && <col style={{ width: 56 }} />}
+            </colgroup>
+          )}
           {renderTableHeader()}
           <TableBody>
             {loading ? (

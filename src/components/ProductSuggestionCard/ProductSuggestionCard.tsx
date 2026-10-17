@@ -25,15 +25,26 @@ export function ProductSuggestionCard({ product, onAdd }: ProductSuggestionCardP
 
     return (
         <SuggestionCard>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0 }}>
                 {product.imageUrl ? (
                     <ProductImage src={product.imageUrl} alt={product.name} />
                 ) : (
                     <ImagePlaceholder />
                 )}
-                <Stack>
-                    <Typography variant="body1" fontWeight={600}>{product.name}</Typography>
-                    <Typography variant="caption" fontWeight={400} color="text.secondary">{product.sku}</Typography>
+                <Stack sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                        variant="body1"
+                        fontWeight={600}
+                        sx={{
+                            overflowWrap: "anywhere",
+                            wordBreak: "break-word",
+                        }}
+                    >
+                        {product.name}
+                    </Typography>
+                    <Typography variant="caption" fontWeight={400} color="text.secondary">
+                        {product.sku}
+                    </Typography>
                 </Stack>
             </Stack>
             <Typography variant="subtitle2" fontWeight={600}>{product.currentStock} unidades</Typography>

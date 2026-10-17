@@ -31,11 +31,26 @@ export default function SelectedOrderItem({
 }: SelectedOrderItemProps) {
   return (
     <ItemContainer>
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{ minWidth: 0, flex: 1, pr: 4 }}
+      >
         <ItemImage src={item.previewImage ?? ""} alt={item.productName} />
-        <Stack spacing={0.5}>
-          <Typography variant="body2" color="text.secondary">{item.productCode}</Typography>
-          <Typography variant="body1">{item.productName}</Typography>
+        <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {item.productCode}
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+            }}
+          >
+            {item.productName}
+          </Typography>
           <QuantityStepper
             value={item.quantity}
             onChange={(qty) => onQuantityChange(item.productId, qty)}
@@ -43,7 +58,9 @@ export default function SelectedOrderItem({
         </Stack>
       </Stack>
       {!hidePrices && (
-        <Typography variant='subtitle2' fontWeight={600}>{formatCurrency(item.totalPrice)}</Typography>
+        <Typography variant="subtitle2" fontWeight={600} sx={{ flexShrink: 0 }}>
+          {formatCurrency(item.totalPrice)}
+        </Typography>
       )}
 
       <RemoveButton

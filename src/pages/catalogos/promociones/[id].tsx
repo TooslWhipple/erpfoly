@@ -28,6 +28,10 @@ import {
   resolvePromotionAdvanceRate,
 } from "@/lib/promotionFormValidation";
 import {
+  promotionPercentageError,
+  withSingleDownPayment,
+} from "@/lib/promotionDownPayment";
+import {
   CATALOG_PROMOTIONS_CREATE,
   CATALOG_PROMOTIONS_UPDATE,
 } from "@/lib/permissions";
@@ -224,8 +228,9 @@ export default function PromotionFormPage() {
     if (!formState.name.trim()) {
       newErrors.name = "El nombre es requerido";
     }
-    if (!formState.percentage || Number(formState.percentage) <= 0) {
-      newErrors.percentage = "El porcentaje debe ser mayor a 0";
+    const percentageError = promotionPercentageError(formState.percentage);
+    if (percentageError) {
+      newErrors.percentage = percentageError;
     }
     const advancePercentageError = validatePromotionAdvancePercentage(
       purchaseTypeMeta?.code,
@@ -305,10 +310,12 @@ export default function PromotionFormPage() {
       layawayTermIds: code === "APARTADO" ? formState.layawayTermIds : [],
       customerLevelDownPayments:
         code === "CREDITO" || code === "APARTADO"
-          ? formState.customerLevelDownPayments.map((r) => ({
-              customerLevelId: r.customer_level_id,
-              percentage: r.percentage,
-            }))
+          ? withSingleDownPayment(formState.customerLevelDownPayments).map(
+              (r) => ({
+                customerLevelId: r.customer_level_id,
+                percentage: r.percentage,
+              }),
+            )
           : [],
       productSelection:
         formState.selectedLineIds.length > 0 &&

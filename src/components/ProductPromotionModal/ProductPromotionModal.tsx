@@ -10,6 +10,7 @@ import { defineFormFields } from "@/forms";
 import { getApiErrorMessage } from "@/lib/axios";
 import { buildSelectedTermOptionLabels } from "@/lib/promotionTermOptionLabels";
 import { validatePromotionEndDate, validatePromotionAdvancePercentage, resolvePromotionAdvanceRate } from "@/lib/promotionFormValidation";
+import { promotionPercentageError, withSingleDownPayment } from "@/lib/promotionDownPayment";
 import {
   getPromotionFormConfiguration,
   normalizeSavePromotionPayload,
@@ -220,8 +221,9 @@ export function ProductPromotionModal({
       newErrors.name = "El nombre es requerido";
     }
 
-    if (!formState.percentage || Number(formState.percentage) <= 0) {
-      newErrors.percentage = "El porcentaje debe ser mayor a 0";
+    const percentageError = promotionPercentageError(formState.percentage);
+    if (percentageError) {
+      newErrors.percentage = percentageError;
     }
 
     const advancePercentageError = validatePromotionAdvancePercentage(
@@ -299,10 +301,12 @@ export function ProductPromotionModal({
       ...termLabels,
       customerLevelDownPayments:
         code === "CREDITO" || code === "APARTADO"
-          ? formState.customerLevelDownPayments.map((r) => ({
-              customerLevelId: r.customer_level_id,
-              percentage: r.percentage,
-            }))
+          ? withSingleDownPayment(formState.customerLevelDownPayments).map(
+              (r) => ({
+                customerLevelId: r.customer_level_id,
+                percentage: r.percentage,
+              }),
+            )
           : [],
       productIds,
       branchIds: formState.selectedBranchIds,

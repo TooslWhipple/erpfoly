@@ -575,13 +575,19 @@ export type PricePreviewLine = {
   totalAmount: number;
 };
 
+export type PricePreview = {
+  lines: PricePreviewLine[];
+  termMonths: number[];
+  minimumDownPaymentRate: number;
+};
+
 export async function previewCartPrices(payload: {
   branch_id: number;
   purchase_type_id: number;
   items: Array<{ product_id: number; quantity: number }>;
-}): Promise<PricePreviewLine[]> {
+}): Promise<PricePreview> {
   return unwrapOrThrow(
-    await post<PricePreviewLine[]>(`${BASE}/price-preview`, payload),
+    await post<PricePreview>(`${BASE}/price-preview`, payload),
   );
 }
 

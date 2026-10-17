@@ -3,9 +3,9 @@ export function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** 10% down payment, rounded up to the next cent. */
-export function creditMinimumDownPayment(total: number): number {
-  return Math.ceil(total * 10) / 100;
+/** Down payment rounded up to the next cent. Rate defaults to 10%. */
+export function creditMinimumDownPayment(total: number, rate = 0.1): number {
+  return Math.ceil(total * rate * 100) / 100;
 }
 
 /**

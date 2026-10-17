@@ -78,7 +78,10 @@ export interface InventoryDetailApiResponse {
     id: string;
     branchId: number;
     branchName: string;
-    stock: number;
+    stock?: number;
+    physicalTotal: number;
+    available: number;
+    pendingDelivery: number;
     ordered: number;
     inTransit: number;
     damaged: number;
@@ -160,7 +163,11 @@ export function mapInventoryDetailResponse(
     branchInventory: data.branches.map((b) => ({
       id: b.id,
       branchName: b.branchName,
-      stock: b.stock,
+      physicalTotal: b.physicalTotal,
+      available: b.available,
+      pendingDelivery: b.pendingDelivery,
+      inTransit: b.inTransit,
+      damaged: b.damaged,
       creditPrice: b.creditPrice,
       price: b.price,
     })),

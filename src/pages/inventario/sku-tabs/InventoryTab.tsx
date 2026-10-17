@@ -26,7 +26,7 @@ export function InventoryTab({ summary, branchInventory, loading }: InventoryTab
                     <SummaryCard>
                         <Typography variant="h5">En inventario</Typography>
                         <Typography variant="h3">{summary.inStock}</Typography>
-                        <Typography variant="body2" color="text.secondary">Total en todas las sucursales.</Typography>
+                        <Typography variant="body2" color="text.secondary">Unidades físicas en todas las sucursales</Typography>
                         <SummaryCardIcon>
                             <GridViewIcon />
                         </SummaryCardIcon>

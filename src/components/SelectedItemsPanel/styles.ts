@@ -17,7 +17,8 @@ export const ItemContainer = styled('div')({
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
-  padding: '12px 16px'
+  padding: '12px 16px',
+  minWidth: 0,
 });
 
 export const ItemImage = styled('img')(({ theme }) => ({

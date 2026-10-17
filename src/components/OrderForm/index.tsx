@@ -580,10 +580,18 @@ export default function OrderForm({
     {
       id: "name",
       label: "Nombre",
-      size: "lg",
+      width: 272,
+      minWidth: 272,
+      flexGrow: true,
+      resizable: true,
       truncate: true,
       format: (value, row) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.5}
+          sx={{ minWidth: 0, width: "100%" }}
+        >
           {row.image ? (
             <Box
               component="img"
@@ -612,8 +620,13 @@ export default function OrderForm({
           )}
           <Typography
             variant="body2"
+            noWrap
+            title={String(value)}
             sx={{
               flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {String(value)}
@@ -624,41 +637,58 @@ export default function OrderForm({
     {
       id: "folio",
       label: "Folio",
-      size: "sm",
+      width: 144,
+      minWidth: 144,
+      resizable: true,
     },
     {
       id: "salesYear",
       label: "Vtas en el año",
       type: "number",
-      size: "sm",
+      width: 112,
+      minWidth: 112,
+      headerWrap: true,
+      resizable: true,
       align: "center",
     },
     {
       id: "salesLastMonth",
       label: "Vtas Mes anterior",
       type: "number",
-      size: "sm",
+      width: 112,
+      minWidth: 112,
+      headerWrap: true,
+      resizable: true,
       align: "center",
     },
     {
       id: "salesCurrentMonth",
       label: "Vtas en el mes",
       type: "number",
-      size: "sm",
+      width: 112,
+      minWidth: 112,
+      headerWrap: true,
+      resizable: true,
       align: "center",
     },
     {
       id: "inRepair",
       label: "En reparación",
       type: "number",
-      size: "sm",
+      width: 112,
+      minWidth: 112,
+      headerWrap: true,
+      resizable: true,
       align: "center",
     },
     {
       id: "stock",
       label: "Existencia",
       type: "number",
-      size: "md",
+      width: 112,
+      minWidth: 112,
+      headerWrap: true,
+      resizable: true,
       align: "center",
       format: (value) => {
         const stock = Number(value);
@@ -670,14 +700,18 @@ export default function OrderForm({
       id: "pendingSupply",
       label: "Por surtir",
       type: "number",
-      size: "sm",
+      width: 88,
+      minWidth: 72,
+      headerWrap: true,
+      resizable: true,
       align: "center",
     },
     {
       id: "add",
       label: "Pedido",
       type: "button",
-      size: "md",
+      width: 120,
+      resizable: false,
       buttonLabel: "Agregar",
       buttonVariant: "white",
       onButtonClick: (row) => handleAddArticle(row),
@@ -798,6 +832,7 @@ export default function OrderForm({
               emptyMessage={emptyArticlesMessage}
               rowKey="id"
               hidePagination
+              resizable
             />
           </Stack>
         </Grid>

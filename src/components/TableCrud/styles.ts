@@ -54,17 +54,52 @@ export const StyledTableHead = styled(TableHead)(({ theme }) => ({
   backgroundColor: theme.palette.app.background.main,
 }));
 
-export const StyledHeaderCell = styled(TableCell)(({ theme }) => ({
+export const StyledHeaderCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== "allowWrap" && prop !== "resizable",
+})<{ allowWrap?: boolean; resizable?: boolean }>(({ theme, allowWrap, resizable }) => ({
   fontWeight: 600,
   fontSize: 14,
   color: theme.palette.text.primary,
   borderBottom: `1px solid ${theme.palette.app.border}`,
   padding: "12px 16px",
-  whiteSpace: "nowrap",
+  whiteSpace: allowWrap ? "normal" : "nowrap",
+  lineHeight: allowWrap ? 1.25 : undefined,
   backgroundColor: theme.palette.app.background.main,
+  ...(resizable
+    ? {
+        position: "relative",
+        userSelect: "none",
+      }
+    : {}),
   [theme.breakpoints.down("sm")]: {
     padding: "10px 12px",
     fontSize: 13,
+  },
+}));
+
+export const ColumnResizeHandle = styled("span")(({ theme }) => ({
+  position: "absolute",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: 8,
+  cursor: "col-resize",
+  userSelect: "none",
+  touchAction: "none",
+  zIndex: 2,
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    top: "20%",
+    bottom: "20%",
+    right: 2,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: "transparent",
+    transition: "background-color 0.15s ease",
+  },
+  "&:hover::after, &:active::after": {
+    backgroundColor: theme.palette.primary.main,
   },
 }));
 
@@ -132,16 +167,16 @@ export const ActionsCell = styled(TableCell)(({ theme }) => ({
   transition: "background-color 0.15s ease",
 }));
 
-export const StickyHeaderCell = styled(StyledHeaderCell)<{ position?: "left" | "right" }>(
-  ({ theme, position = "right" }) => ({
-    position: "sticky",
-    [position]: 0,
-    zIndex: 3,
-    backgroundColor: `${theme.palette.app.background.main} !important`,
-    boxShadow:
-      position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
-  }),
-);
+export const StickyHeaderCell = styled(StyledHeaderCell)<{
+  position?: "left" | "right";
+}>(({ theme, position = "right" }) => ({
+  position: "sticky",
+  [position]: 0,
+  zIndex: 3,
+  backgroundColor: `${theme.palette.app.background.main} !important`,
+  boxShadow:
+    position === "right" ? "-4px 0 8px rgba(0, 0, 0, 0.04)" : "4px 0 8px rgba(0, 0, 0, 0.04)",
+}));
 
 export const StickyCell = styled(StyledTableCell)<{ position?: "left" | "right" }>(
   ({ theme, position = "right" }) => ({

@@ -3,14 +3,15 @@ import { styled } from "@mui/material/styles";
 export const SuggestionCard = styled('div')(({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    padding: "16px 8px",
+    padding: "16px",
     borderRadius: "12px",
     border: `1px solid ${theme.palette.app.border}`,
     backgroundColor: theme.palette.background.paper,
     flex: "1 1 272px",
     gap: "16px",
     minWidth: "272px",
-    maxWidth: "272px"
+    maxWidth: "272px",
+    boxSizing: "border-box",
 }));
 
 export const ProductImage = styled('img')(({ theme }) => ({

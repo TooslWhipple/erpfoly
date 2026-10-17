@@ -16,6 +16,7 @@ import {
   UserRole,
 } from "./styles";
 import { CreditApplicationIntakeModal } from "@/components/CreditApplicationIntakeModal";
+import { SupplierSelectionModal } from "@/components/SupplierSelectionModal";
 import {
   CREDIT_APPLICATIONS_CREATE,
 } from "@/lib/permissions";
@@ -27,9 +28,12 @@ import NotificationInbox from "@/components/NotificationInbox/NotificationInbox"
 import { CashInDrawerWidget } from "@/components/CashRegister";
 import { createCreditApplicationFromIntake } from "@/services/creditApplications.service";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
+import type { Supplier } from "@/types/pedidos.types";
 import { NAV_ITEMS } from "./sidebarNav.config";
 import { SidebarNavList } from "./SidebarNavList";
 import { filterNavItemsByAccess, getInitialOpenMenus, getInitials } from "./sidebar.utils";
+
+const NEW_ORDER_PATH = "/pedidos/nuevo";
 
 interface SidebarProps {
   open: boolean;
@@ -48,6 +52,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     getInitialOpenMenus(router.pathname, visibleNavItems)
   );
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
 
   useEffect(() => {
     const newOpenMenus = getInitialOpenMenus(router.pathname, visibleNavItems);
@@ -62,7 +67,29 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     });
   }, [router.pathname, visibleNavItems]);
 
+  const handleOpenSupplierModal = () => {
+    if (isDrawerNav) {
+      onClose();
+    }
+    setSupplierModalOpen(true);
+  };
+
+  const handleSupplierSelect = (supplier: Supplier) => {
+    setSupplierModalOpen(false);
+    void router.push({
+      pathname: NEW_ORDER_PATH,
+      query: {
+        supplierId: supplier.id,
+        supplierName: supplier.name,
+      },
+    });
+  };
+
   const handleNavigation = (path: string) => {
+    if (path === NEW_ORDER_PATH) {
+      handleOpenSupplierModal();
+      return;
+    }
     if (path.startsWith("https://")) {
       window.open(path, "_blank", "noopener,noreferrer");
     } else {
@@ -221,6 +248,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         open={intakeModalOpen}
         onClose={() => setIntakeModalOpen(false)}
         onFinalize={handleIntakeFinalize}
+      />
+
+      <SupplierSelectionModal
+        open={supplierModalOpen}
+        onClose={() => setSupplierModalOpen(false)}
+        onSelect={handleSupplierSelect}
       />
     </>
   );

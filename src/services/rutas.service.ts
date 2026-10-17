@@ -88,6 +88,12 @@ export async function addOrdersToRoute(
   return post<RouteDetailApi>(`/routes/${routeId}/orders`, { points });
 }
 
+export async function addScheduledStop(routeId: number, branchId: number) {
+  return post<RouteDetailApi>(`/routes/${routeId}/scheduled-stops`, {
+    branch_id: branchId,
+  });
+}
+
 export async function removeScheduledStop(routeId: number, stopId: number) {
   return del<RouteDetailApi>(`/routes/${routeId}/scheduled-stops/${stopId}`);
 }

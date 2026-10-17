@@ -55,6 +55,8 @@ interface RouteDetailBodyProps {
     branchId: number,
     branchName: string,
   ) => void;
+  onAddScheduledStop: (branchId: number, branchName: string) => void;
+  originBranchId: number | null;
   onAddDriver: () => void;
   onAddAssistant: () => void;
   onRemoveDriver: () => void;
@@ -83,6 +85,8 @@ export function RouteDetailBody({
   onRequestRemoveOrder,
   onRequestRemoveItem,
   onRequestRemoveStop,
+  onAddScheduledStop,
+  originBranchId,
   onAddDriver,
   onAddAssistant,
   onRemoveDriver,
@@ -163,9 +167,11 @@ export function RouteDetailBody({
           scheduledStops={routeDetail.scheduledStops}
           orders={routeDetail.orders}
           canEdit={canEditArticles}
+          originBranchId={originBranchId}
           onAddOrdersForBranch={onAddOrdersForBranch}
           onRequestRemoveStop={onRequestRemoveStop}
           onRequestRemoveItem={onRequestRemoveItem}
+          onAddScheduledStop={onAddScheduledStop}
         />
       )}
 

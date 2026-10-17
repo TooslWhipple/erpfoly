@@ -176,6 +176,7 @@ export function useRutasPage() {
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    addScheduledStopMutation,
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
@@ -433,6 +434,22 @@ export function useRutasPage() {
     });
   };
 
+  const handleAddScheduledStop = useCallback(
+    async (branchId: number, branchName: string) => {
+      if (resolvedRouteId == null) return;
+      try {
+        await addScheduledStopMutation.mutateAsync({
+          routeId: resolvedRouteId,
+          branchId,
+          branchName,
+        });
+      } catch {
+        // Error already shown by the mutation snackbar
+      }
+    },
+    [resolvedRouteId, addScheduledStopMutation],
+  );
+
   const canEditArticles =
     canUpdateRoute && routeDetail?.status === "scheduled";
 
@@ -481,6 +498,7 @@ export function useRutasPage() {
     handleRequestRemoveRouteOrder,
     handleRequestRemoveRouteItem,
     handleRequestRemoveScheduledStop,
+    handleAddScheduledStop,
     fetchOrdersForModal,
     fetchDriversForModal,
     fetchAssistantsForModal,
@@ -491,6 +509,7 @@ export function useRutasPage() {
     removeDriverMutation,
     addAssistantMutation,
     removeAssistantMutation,
+    addScheduledStopMutation,
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,

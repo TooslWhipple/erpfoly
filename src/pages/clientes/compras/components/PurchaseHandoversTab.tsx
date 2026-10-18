@@ -19,3 +19,7 @@ export function PurchaseHandoversTab({ saleId }: PurchaseHandoversTabProps) {
     </ContentCard>
   );
 }
+
+const PurchaseHandoversTabPage = () => null;
+
+export default PurchaseHandoversTabPage;

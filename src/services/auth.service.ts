@@ -98,6 +98,8 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"solicitudes-sucursales": "traspasos",
 	"pedidos-sucursales": "traspasos",
 	"traspasos": "traspasos",
+	"traspasos-editar": "traspasos.editar",
+	"traspasos-incidencias": "traspasos.incidencias",
 	// Own module, never folded into "pedidos" by the derived "-nuevo" suffix:
 	// `pedidos-nuevo.view` opens the order form, not the order list.
 	"pedidos-nuevo": "pedidos.nuevo",
@@ -112,6 +114,8 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"inventario-liquidaciones": "inventario.liquidaciones",
 	"recepcion-mercancias": "recepcion_mercancias",
 	"costeos": "costeos",
+	"entregas": "entregas",
+	"entregas-resguardos": "entregas.resguardos",
 	"facturas": "facturas",
 	"facturas-solicitudes": "facturas.solicitudes",
 	"facturas-gastos-generales": "facturas.gastos_generales",

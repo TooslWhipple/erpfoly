@@ -344,6 +344,13 @@ export interface AddDamagedGoodsModalProps {
     onSuccess?: () => void;
     /** When set, the modal opens in edit mode, loading and updating this folio instead of creating a new one. */
     damagedProductId?: number | null;
+    /** Create mode only: opens the form with this product and branch already chosen. */
+    prefill?: AddDamagedGoodsPrefill;
+}
+
+export interface AddDamagedGoodsPrefill {
+    productId: number;
+    branchId: number;
 }
 
 type BranchFormApi = {
@@ -355,11 +362,13 @@ function DamagedGoodsBranchField({
     productId,
     fetchEnabled,
     disabled = false,
+    prefill,
 }: {
     form: BranchFormApi & Parameters<typeof FormField>[0]["form"];
     productId: number;
     fetchEnabled: boolean;
     disabled?: boolean;
+    prefill?: AddDamagedGoodsPrefill;
 }) {
     const branchesQuery = useQuery({
         queryKey: ["damaged-products", "branches-with-stock", productId],
@@ -383,7 +392,8 @@ function DamagedGoodsBranchField({
         [branchesQuery.data],
     );
 
-    const prevProductIdRef = useRef<number>(0);
+    const prevProductIdRef = useRef<number>(productId);
+    const prefillAppliedRef = useRef(false);
 
     useEffect(() => {
         if (productId !== prevProductIdRef.current) {
@@ -401,8 +411,20 @@ function DamagedGoodsBranchField({
         }
         if (branchesQuery.data.length === 1) {
             form.setFieldValue("branchId", String(branchesQuery.data[0].id));
+            return;
+        }
+        // The prefilled branch is applied only once its options are loaded, so the select never gets a value it cannot show.
+        if (
+            !prefillAppliedRef.current &&
+            prefill != null &&
+            prefill.productId === productId &&
+            branchesQuery.data.some((item) => item.id === prefill.branchId)
+        ) {
+            prefillAppliedRef.current = true;
+            form.setFieldValue("branchId", String(prefill.branchId));
         }
     }, [
+        prefill,
         productId,
         branchesQuery.isFetching,
         branchesQuery.isSuccess,
@@ -680,6 +702,7 @@ export function AddDamagedGoodsModal({
     onSubmit,
     onSuccess,
     damagedProductId = null,
+    prefill,
 }: AddDamagedGoodsModalProps) {
     const [activeTab, setActiveTab] = useState<string>("report");
     const [submitting, setSubmitting] = useState(false);
@@ -851,8 +874,11 @@ export function AddDamagedGoodsModal({
         if (isEditMode) {
             return folio != null ? buildDefaultValuesFromFolio(folio) : EMPTY_DEFAULTS;
         }
-        return buildDefaultValuesFromCatalog(catalog);
-    }, [catalog, isEditMode, folio]);
+        const catalogDefaults = buildDefaultValuesFromCatalog(catalog);
+        return prefill != null
+            ? { ...catalogDefaults, productId: prefill.productId }
+            : catalogDefaults;
+    }, [catalog, isEditMode, folio, prefill]);
 
     const damageTypeOptions: SelectOption[] = useMemo(() => {
         if (catalog == null) return [];
@@ -1191,6 +1217,7 @@ export function AddDamagedGoodsModal({
                                                 productId={productId}
                                                 fetchEnabled={open && productId > 0}
                                                 disabled={submitting}
+                                                prefill={prefill}
                                             />
                                         )}
                                     </form.Subscribe>

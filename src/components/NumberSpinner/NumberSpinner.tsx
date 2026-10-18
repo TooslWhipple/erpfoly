@@ -11,6 +11,9 @@ export interface NumberSpinnerProps {
   size?: "small" | "medium";
   iconSize?: number;
   inputWidth?: number;
+  decrementAriaLabel?: string;
+  incrementAriaLabel?: string;
+  inputAriaLabel?: string;
 }
 
 export default function NumberSpinner({
@@ -22,6 +25,9 @@ export default function NumberSpinner({
   size = "small",
   iconSize = 14,
   inputWidth = 40,
+  decrementAriaLabel,
+  incrementAriaLabel,
+  inputAriaLabel,
 }: NumberSpinnerProps) {
   const [draftValue, setDraftValue] = useState<string | null>(null);
   const displayValue = draftValue !== null ? draftValue : String(value);
@@ -93,6 +99,7 @@ export default function NumberSpinner({
       <IconButton
         size="small"
         onClick={handleDecrement}
+        aria-label={decrementAriaLabel}
         disabled={!canDecrement}
         sx={{
           borderRadius: 0,
@@ -115,6 +122,7 @@ export default function NumberSpinner({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={disabled}
+        aria-label={inputAriaLabel}
         sx={{
           width: inputWidth,
           height: btnSize,
@@ -138,6 +146,7 @@ export default function NumberSpinner({
       <IconButton
         size="small"
         onClick={handleIncrement}
+        aria-label={incrementAriaLabel}
         disabled={!canIncrement}
         sx={{
           borderRadius: 0,

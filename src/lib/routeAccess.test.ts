@@ -4,7 +4,13 @@
  */
 import assert from "node:assert/strict";
 import type { User } from "../store/useAuthStore";
-import { CASH_REGISTERS_READ, CUSTOMERS_READ, NEW_ORDER_READ } from "./permissions";
+import {
+  CASH_REGISTERS_READ,
+  CUSTOMERS_READ,
+  DELIVERY_HOLD_READ,
+  NEW_ORDER_READ,
+  TRASPASOS_INCIDENTS_READ,
+} from "./permissions";
 import { shouldBypassAccessControl } from "./accessControl";
 import { canAccessPath, getFirstAllowedRoute, resolvePostLoginPath } from "./routeAccess";
 
@@ -26,6 +32,15 @@ assert.equal(
 );
 assert.equal(resolvePostLoginPath(userWith([CUSTOMERS_READ]), "/"), "/clientes");
 assert.equal(resolvePostLoginPath(null, "/cajas"), "/login");
+assert.equal(getFirstAllowedRoute(userWith([DELIVERY_HOLD_READ])), "/entregas/resguardos");
+assert.equal(
+  getFirstAllowedRoute(userWith([TRASPASOS_INCIDENTS_READ])),
+  "/traspasos/incidencias",
+);
+assert.equal(
+  getFirstAllowedRoute(userWith([TRASPASOS_INCIDENTS_READ, DELIVERY_HOLD_READ])),
+  "/entregas/resguardos",
+);
 
 if (!shouldBypassAccessControl) {
   assert.equal(

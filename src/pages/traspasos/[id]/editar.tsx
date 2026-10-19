@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { CircularProgress, Stack } from "@mui/material";
 import OrderForm from "@/components/OrderForm";
-import { getBranchRequestFull } from "@/services/requests.service";
-import { mapBranchOrderStatus } from "@/utils/branchRequest";
+import { getTransfer } from "@/services/transfers.service";
+import { isBranchOrderEditable, mapBranchOrderStatus } from "@/utils/branchRequest";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 type Resolution =
@@ -45,7 +45,7 @@ export default function EditarTraspaso() {
 
         const checkStatus = async () => {
             try {
-                const result = await getBranchRequestFull(initialParsedId);
+                const result = await getTransfer(initialParsedId);
                 if (cancelled) return;
 
                 if (!result.data) {
@@ -54,7 +54,14 @@ export default function EditarTraspaso() {
                 }
 
                 const status = mapBranchOrderStatus(result.data.status);
-                if (status !== "pending") {
+                if (result.data.sale) {
+                    setResolution({
+                        kind: "invalid",
+                        reason: "Este traspaso está ligado a una venta y no puede editarse.",
+                    });
+                    return;
+                }
+                if (!isBranchOrderEditable(status, false)) {
                     setResolution({
                         kind: "invalid",
                         reason: "Este traspaso no puede editarse porque su estatus no es pendiente.",

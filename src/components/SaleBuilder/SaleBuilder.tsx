@@ -42,6 +42,15 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
+import {
+  HOLDER_RECEIVER_DRAFT,
+  PickupReceiverFields,
+  draftFromPickupReceiver,
+  getPickupReceiverError,
+  pickupReceiverKey,
+  toPickupReceiverPayload,
+} from "./PickupReceiverFields";
+import type { PickupReceiverDraft } from "./PickupReceiverFields";
 import { SaleCartItemRow, BackorderChip, PendingSupplyAlert } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
@@ -96,6 +105,7 @@ import {
   previewShippingQuote,
   previewCartPrices,
   getSaleDetail,
+  updatePickupReceiver,
   invalidateSaleDiscount,
   getClientLoyalty,
 } from "@/services/ventas.service";
@@ -492,6 +502,15 @@ export function SaleBuilder({
   >(null);
   const [lastSyncedDelivery, setLastSyncedDelivery] =
     useState<SyncedDeliverySnapshot | null>(null);
+  const [pickupReceiverErrorsVisible, setPickupReceiverErrorsVisible] =
+    useState(false);
+  const [pickupReceiver, setPickupReceiver] = useState<PickupReceiverDraft>(
+    HOLDER_RECEIVER_DRAFT,
+  );
+  // Último receptor confirmado en el back. El default de la venta es HOLDER.
+  const [lastSyncedReceiverKey, setLastSyncedReceiverKey] = useState(
+    pickupReceiverKey(HOLDER_RECEIVER_DRAFT),
+  );
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -868,6 +887,11 @@ export function SaleBuilder({
       setDeliveryType("pickup");
       setCustomDeliveryAddress(null);
       setUseCustomDeliveryAddress(false);
+      const savedReceiver = draftFromPickupReceiver(
+        resumeSaleData.pickupReceiver,
+      );
+      setPickupReceiver(savedReceiver);
+      setLastSyncedReceiverKey(pickupReceiverKey(savedReceiver));
       if (resumeSaleData.deliveryBranchId != null) {
         setDeliveryBranch({
           id: resumeSaleData.deliveryBranchId,
@@ -970,6 +994,22 @@ export function SaleBuilder({
     setView("form");
   }
 
+  // Guarda quién recoge (endpoint 15) solo si cambió. Debe correr después de
+  // setDeliveryDate (la venta ya es BRANCH) y antes de getSaleDetail.
+  // `force` reenvía un tercero cuando la entrega se reescribió en el back.
+  const syncPickupReceiver = async (saleId: number, force: boolean) => {
+    const key = pickupReceiverKey(pickupReceiver);
+    const changed = key !== lastSyncedReceiverKey;
+    if (!changed && !(force && pickupReceiver.type === "THIRD_PARTY")) return;
+    const validationError = getPickupReceiverError(pickupReceiver);
+    if (validationError) {
+      setPickupReceiverErrorsVisible(true);
+      throw new Error(validationError);
+    }
+    await updatePickupReceiver(saleId, toPickupReceiverPayload(pickupReceiver));
+    setLastSyncedReceiverKey(key);
+  };
+
   const syncDeliverySelection = async (saleId: number) => {
     const deliveryDate =
       deliveryType === "pickup"
@@ -1032,13 +1072,15 @@ export function SaleBuilder({
       );
       const dateUnchanged =
         lastSyncedDelivery?.deliveryDate === deliveryDateKey;
-      if (!placeUnchanged || !dateUnchanged) {
+      const deliveryRewritten = !placeUnchanged || !dateUnchanged;
+      if (deliveryRewritten) {
         await setDeliveryDate(saleId, {
           delivery_type: "BRANCH",
           branch_id: effectiveDeliveryBranch.id,
           ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
       }
+      await syncPickupReceiver(saleId, deliveryRewritten);
       setShippingQuote(null);
       setLastSyncedDelivery(snapshot);
     }
@@ -1383,7 +1425,8 @@ export function SaleBuilder({
           );
           const dateUnchanged =
             lastSyncedDelivery?.deliveryDate === snapshot.deliveryDate;
-          if (!placeUnchanged || !dateUnchanged) {
+          const deliveryRewritten = !placeUnchanged || !dateUnchanged;
+          if (deliveryRewritten) {
             await setDeliveryDate(saleId, {
               delivery_type: "BRANCH",
               branch_id: effectiveDeliveryBranch.id,
@@ -1391,6 +1434,9 @@ export function SaleBuilder({
             });
             setLastSyncedDelivery(snapshot);
           }
+          await syncPickupReceiver(saleId, deliveryRewritten);
+        } else {
+          await syncPickupReceiver(saleId, false);
         }
       }
 
@@ -4093,6 +4139,20 @@ export function SaleBuilder({
             : "Proceder al cobro"
         }
         onProceedToCheckout={() => {
+          // Mismo criterio que syncPickupReceiver: solo se valida lo que
+          // cambió, para no exigir el celular enmascarado de un tercero ya guardado.
+          if (
+            isCajeroMode &&
+            deliveryType === "pickup" &&
+            pickupReceiverKey(pickupReceiver) !== lastSyncedReceiverKey
+          ) {
+            const receiverError = getPickupReceiverError(pickupReceiver);
+            if (receiverError) {
+              setPickupReceiverErrorsVisible(true);
+              snackbar.showWarning(receiverError);
+              return;
+            }
+          }
           if (paymentType === "CREDIT" && !identityOk) {
             if (selectedClient?.biometricsPending) {
               setMissingBiometricsAuthOpen(true);
@@ -4624,6 +4684,14 @@ export function SaleBuilder({
                       }
                     />
                   )}
+                  {deliveryType === "pickup" && (
+                    <PickupReceiverFields
+                      value={pickupReceiver}
+                      onChange={setPickupReceiver}
+                      savedPhoneMasked={resumeSaleData?.pickupReceiver?.thirdPartyPhoneMasked}
+                      showErrors={pickupReceiverErrorsVisible}
+                    />
+                  )}
                 </>
               ) : (
                 <>
@@ -4813,6 +4881,13 @@ export function SaleBuilder({
                           Entrega hoy mismo en tienda.
                         </Alert>
                       )}
+
+                      <PickupReceiverFields
+                        value={pickupReceiver}
+                        onChange={setPickupReceiver}
+                        savedPhoneMasked={resumeSaleData?.pickupReceiver?.thirdPartyPhoneMasked}
+                        showErrors={pickupReceiverErrorsVisible}
+                      />
                     </>
                   )}
                 </>

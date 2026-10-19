@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, SyntheticEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Autocomplete,
     CircularProgress,
@@ -15,6 +15,7 @@ import { Search } from "lucide-react";
 import { FormTextField } from "@/components/Form/FormTextField";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { unwrapOrThrow } from "@/lib/axios";
+import { getProductById } from "@/services/productos.service";
 import {
     PRODUCT_SEARCH_DEFAULT_LIMIT,
     searchProducts,
@@ -102,6 +103,34 @@ function DamagedGoodsProductSearchFieldInner({
         }
     }, [productId]);
 
+    // A product that arrives already chosen (prefilled form) has no selection yet:
+    // load it to show its name.
+    const { data: prefilledProduct } = useQuery({
+        queryKey: ["damaged-products", "prefilled-product", productId],
+        queryFn: async () => unwrapOrThrow(await getProductById(productId)),
+        staleTime: 30_000,
+        enabled: queryEnabled && productId > 0 && committedSelection == null,
+    });
+
+    const prefilledSelection = useMemo<ProductSearchItem | null>(
+        () =>
+            prefilledProduct != null && prefilledProduct.id === productId
+                ? {
+                      id: prefilledProduct.id,
+                      code: prefilledProduct.code,
+                      shortName: prefilledProduct.shortName,
+                      description: prefilledProduct.description,
+                      listCost: "",
+                      score: 0,
+                  }
+                : null,
+        [prefilledProduct, productId],
+    );
+    const selection = committedSelection ?? prefilledSelection;
+    const shownInput = committedSelection == null && prefilledSelection != null && inputValue === ""
+        ? prefilledSelection.shortName
+        : inputValue;
+
     const handleInputChange = useCallback(
         (_: SyntheticEvent, value: string, reason: AutocompleteInputChangeReason) => {
             if (reason === "clear") {
@@ -115,12 +144,12 @@ function DamagedGoodsProductSearchFieldInner({
                 return;
             }
             setInputValue(value);
-            if (committedSelection != null && value !== committedSelection.shortName) {
+            if (selection != null && value !== selection.shortName) {
                 setCommittedSelection(null);
                 field.handleChange(0);
             }
         },
-        [committedSelection, field],
+        [selection, field],
     );
 
     const errors = field.state.meta.errors;
@@ -147,8 +176,8 @@ function DamagedGoodsProductSearchFieldInner({
             filterOptions={(list) => list}
             getOptionLabel={(option) => option.shortName}
             isOptionEqualToValue={(a, b) => a.id === b.id}
-            value={committedSelection}
-            inputValue={inputValue}
+            value={selection}
+            inputValue={shownInput}
             onInputChange={handleInputChange}
             onChange={(_, newValue) => {
                 if (newValue == null) {

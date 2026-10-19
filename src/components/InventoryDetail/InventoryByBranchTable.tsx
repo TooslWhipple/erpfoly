@@ -35,7 +35,7 @@ export function InventoryByBranchTable({
         },
         {
             id: "pendingDelivery",
-            label: "Pendiente de Entrega",
+            label: "Por entregar",
             type: "number",
             size: "lg",
             align: "center",

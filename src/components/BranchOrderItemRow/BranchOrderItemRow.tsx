@@ -60,6 +60,8 @@ export function BranchOrderItemRow({
                 />
             </Stack>
             <Typography variant="subtitle1" flex="2 0 96px" align="center">{item.quantity}</Typography>
+            <Typography variant="subtitle1" flex="2 0 96px" align="center">{item.shippedQuantity ?? "-"}</Typography>
+            <Typography variant="subtitle1" flex="2 0 96px" align="center">{item.deliveredQuantity}</Typography>
         </Card>
     );
 }

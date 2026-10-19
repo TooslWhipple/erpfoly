@@ -1,32 +1,34 @@
 import { useCallback, useEffect, useState } from "react";
 import dayjs from "@/lib/dayjs";
+import NextLink from "next/link";
 import { useRouter } from "next/router";
 import {
   Button,
   CircularProgress,
   Divider,
+  Link,
   Stack,
   Typography,
 } from "@mui/material";
 import { Breadcrumbs, BranchOrderItemRow, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { TransferActions, TransferDialogs, type TransferDialog } from "@/components/TransferActions";
+import { TransferIncidentsPanel, TransferTimeline } from "@/components/TransferDetail";
 import type {
-  BranchRequestFullDetail,
   BranchOrderDetail,
   BranchOrderLineItem,
   ScheduleBranchRequestPayload,
 } from "@/types/solicitudes.types";
-import {
-  getBranchRequestFull,
-  updateBranchRequest,
-  scheduleBranchRequest,
-} from "@/services/requests.service";
+import type { TransferDetail } from "@/types/transfers.types";
+import { getTransfer, scheduleTransfer } from "@/services/transfers.service";
 import {
   mapBranchOrderStatus,
   getBranchOrderStatusLabel,
   getBranchOrderStatusVariant,
-  isBranchOrderEditable,
 } from "@/utils/branchRequest";
+import { getTransferButtons } from "@/utils/transfers";
+import { usePermissions } from "@/hooks/usePermissions";
+import { DAMAGED_INVENTORY_CREATE, TRASPASOS_UPDATE } from "@/lib/permissions";
 import {
   PageContainer,
   OriginDestinationCard,
@@ -48,7 +50,7 @@ function getMinDeliveryDate(): string {
   return dayjs.utc().add(1, "day").format("YYYY-MM-DD");
 }
 function mapBackendToBranchOrderDetail(
-  detail: BranchRequestFullDetail,
+  detail: TransferDetail,
 ): BranchOrderDetail {
   const items: BranchOrderLineItem[] = detail.order_items.map((item) => ({
     articleId: String(item.id),
@@ -62,6 +64,7 @@ function mapBackendToBranchOrderDetail(
     productId: item.product?.id ?? 0,
     requestedQuantity: item.requested_quantity,
     deliveredQuantity: item.delivered_quantity,
+    shippedQuantity: item.shipped_quantity,
   }));
   return {
     id: detail.id,
@@ -75,17 +78,6 @@ function mapBackendToBranchOrderDetail(
     items,
   };
 }
-async function getBranchOrderDetail(
-  orderId: string,
-): Promise<BranchOrderDetail | null> {
-  const id = parseInt(orderId, 10);
-  if (Number.isNaN(id) || id < 1) return null;
-  const result = await getBranchRequestFull(id);
-  if (result.data) {
-    return mapBackendToBranchOrderDetail(result.data);
-  }
-  return null;
-}
 function formatCreatedDate(isoDate: string): string {
   return formatDate(isoDate, "dateLong");
 }
@@ -94,6 +86,13 @@ export default function TraspasoDetallePage() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : null;
   const { showSuccess, showError } = useSnackbarStore();
+  const { hasPermission } = usePermissions();
+  const viewer = {
+    canUpdate: hasPermission(TRASPASOS_UPDATE),
+    canRegisterDamage: hasPermission(DAMAGED_INVENTORY_CREATE),
+  };
+  const [dialog, setDialog] = useState<TransferDialog | null>(null);
+  const [detail, setDetail] = useState<TransferDetail | null>(null);
   const [status, setStatus] = useState<PageStatus>("loading");
   const [order, setOrder] = useState<BranchOrderDetail | null>(null);
   const [originalOrder, setOriginalOrder] = useState<BranchOrderDetail | null>(
@@ -106,13 +105,20 @@ export default function TraspasoDetallePage() {
     if (!id) return;
     setStatus("loading");
     try {
-      const data = await getBranchOrderDetail(id);
-      if (data) {
+      const transferId = parseInt(id, 10);
+      const result =
+        Number.isNaN(transferId) || transferId < 1
+          ? null
+          : await getTransfer(transferId);
+      if (result?.data) {
+        const data = mapBackendToBranchOrderDetail(result.data);
+        setDetail(result.data);
         setOrder(data);
         setOriginalOrder(JSON.parse(JSON.stringify(data)));
         setDeliveryDateErrors({});
         setStatus("success");
       } else {
+        setDetail(null);
         setOrder(null);
         setOriginalOrder(null);
         setStatus("empty");
@@ -161,7 +167,7 @@ export default function TraspasoDetallePage() {
             scheduled_delivery_date: item.deliveryDate,
           })),
         };
-        await scheduleBranchRequest(parseInt(id, 10), payload);
+        await scheduleTransfer(parseInt(id, 10), payload);
       }
       await fetchOrder();
       showSuccess("Traspaso actualizado correctamente.");
@@ -250,10 +256,9 @@ export default function TraspasoDetallePage() {
       </Stack>
     );
   }
-  if (!order) return null;
-  const isEditable = isBranchOrderEditable(order.status);
+  if (!order || !detail) return null;
+  const isEditable = getTransferButtons(detail, viewer).schedule;
   const isSubmitting = status === "submitting";
-  const showActionButtons = isEditable;
   const minDeliveryDate = getMinDeliveryDate();
   return (
     <>
@@ -266,19 +271,26 @@ export default function TraspasoDetallePage() {
         justifyContent="space-between"
       >
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
-        {showActionButtons && (
-          <Button
-            variant="contained"
-            onClick={handleUpdate}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Actualizar pedido"
-            )}
-          </Button>
-        )}
+        <Stack direction="row" spacing={1} alignItems="flex-start">
+          {isEditable && (
+            <Button
+              variant="contained"
+              onClick={handleUpdate}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Actualizar pedido"
+              )}
+            </Button>
+          )}
+          <TransferActions
+            detail={detail}
+            viewer={viewer}
+            onOpenDialog={setDialog}
+          />
+        </Stack>
       </Stack>
 
       <PageContainer>
@@ -300,6 +312,14 @@ export default function TraspasoDetallePage() {
               variant={getBranchOrderStatusVariant(order.status)}
             />
           </Stack>
+          {detail.sale && (
+            <Typography variant="body2" color="text.secondary">
+              Venta:{" "}
+              <Link component={NextLink} href={`/ventas/${detail.sale.id}`}>
+                {detail.sale.folio}
+              </Link>
+            </Typography>
+          )}
         </Stack>
 
         <Divider />
@@ -350,6 +370,22 @@ export default function TraspasoDetallePage() {
             >
               Pedido
             </Typography>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              flex="2 0 96px"
+              align="center"
+            >
+              Enviado
+            </Typography>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              flex="2 0 96px"
+              align="center"
+            >
+              Recibido
+            </Typography>
           </ProductHeaderSection>
           <Stack>
             {order.items.map((item, index) => (
@@ -364,7 +400,28 @@ export default function TraspasoDetallePage() {
             ))}
           </Stack>
         </ProductsSection>
+
+        <TransferIncidentsPanel
+          detail={detail}
+          viewer={viewer}
+          onOpenDialog={setDialog}
+          onRegisterDamage={(incident, line) =>
+            router.push({
+              pathname: "/inventario/mercancia-danada",
+              query: { branch_id: incident.order.branch_id, product_id: line.product.id },
+            })
+          }
+        />
+
+        <TransferTimeline entries={detail.timeline} />
       </PageContainer>
+
+      <TransferDialogs
+        detail={detail}
+        active={dialog}
+        onClose={() => setDialog(null)}
+        onChanged={fetchOrder}
+      />
     </>
   );
 }

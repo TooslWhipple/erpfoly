@@ -43,6 +43,8 @@ import {
   getSuggestions,
 } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
+import { getTransfer, updateTransfer } from "@/services/transfers.service";
+import type { UpdateTransferPayload } from "@/types/transfers.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   StockCell,
@@ -215,7 +217,10 @@ export default function OrderForm({
   const loadOrder = async (id: number) => {
     setOrderLoading(true);
     try {
-      const result = await getOrderFull(id);
+      const result =
+        effectiveOrderType === "internal"
+          ? await getTransfer(id)
+          : await getOrderFull(id);
       const orderData = result.data;
       if (orderData) {
         setOriginalOrder(orderData);
@@ -500,8 +505,18 @@ export default function OrderForm({
           exchange_rate: item.exchangeRate,
         })),
       };
+      const transferPayload: UpdateTransferPayload = {
+        items: selectedItems.map((item) => ({
+          product_id: item.productId,
+          requested_quantity: item.quantity,
+          unit_price: item.unitPrice,
+        })),
+      };
       try {
-        const result = await updateOrderWithItems(orderId, payload);
+        const result =
+          effectiveOrderType === "internal"
+            ? await updateTransfer(orderId, transferPayload)
+            : await updateOrderWithItems(orderId, payload);
         if (result.data) {
           const returnUrl =
             originalOrder?.order_type === "internal"

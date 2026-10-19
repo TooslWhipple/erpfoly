@@ -4,15 +4,25 @@ import { Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-mater
 import { Title, TabFilters, TableCrud, StatusChip, BranchSelectionModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
 import type { TabOption } from "@/components/TabFilters";
-import type { BranchOrderStatus, BranchRequestListItem } from "@/types/solicitudes.types";
-import { getBranchRequests } from "@/services/requests.service";
+import type { BranchOrderStatus } from "@/types/solicitudes.types";
+import type { TransferListItem, TransferStats } from "@/types/transfers.types";
+import { getTransfers, getTransferStats } from "@/services/transfers.service";
 import {
     mapBranchOrderStatus,
     getBranchOrderStatusLabel,
     getBranchOrderStatusVariant,
+    getTransferTabFilters,
+    isBranchOrderEditable,
+    TRANSFER_TAB_ALL,
+    TRANSFER_TAB_CANCELLED,
+    TRANSFER_TAB_DELIVERED,
+    TRANSFER_TAB_INCIDENT,
+    TRANSFER_TAB_IN_COURSE,
+    TRANSFER_TAB_TO_RECEIVE,
+    TRANSFER_TAB_TO_SHIP,
 } from "@/utils/branchRequest";
 import { Stack } from "@mui/material";
-import { TRASPASOS_CREATE, TRASPASOS_READ, TRASPASOS_UPDATE } from "@/lib/permissions";
+import { TRASPASOS_CREATE, TRASPASOS_EDIT, TRASPASOS_READ } from "@/lib/permissions";
 import dayjs from "@/lib/dayjs";
 import { formatDate, formatDateOnly } from "@/utils/date";
 
@@ -25,6 +35,7 @@ interface BranchOrder {
     requestedBy: string;
     requestedItems: number;
     deliveredItems: number | null;
+    saleFolio: string | null;
     status: BranchOrderStatus;
 }
 
@@ -32,7 +43,7 @@ interface GetBranchOrdersParams {
     page: number;
     limit: number;
     search?: string;
-    status?: "all" | BranchOrderStatus;
+    tab: string;
 }
 
 interface GetBranchOrdersResponse {
@@ -42,13 +53,7 @@ interface GetBranchOrdersResponse {
     limit: number;
 }
 
-const ALL_TAB = "all";
-const PENDING_TAB = "pending";
-const SCHEDULED_TAB = "scheduled";
-const IN_PROGRESS_TAB = "partially_delivered";
-const DELIVERED_TAB = "delivered";
-
-function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder {
+function mapBackendOrderToBranchOrder(order: TransferListItem): BranchOrder {
     const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
     const totalDelivered = order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
 
@@ -63,6 +68,7 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
             : "—",
         requestedItems: totalRequested,
         deliveredItems: totalDelivered > 0 ? totalDelivered : null,
+        saleFolio: order.sale_folio,
         status: mapBranchOrderStatus(order.status),
     };
 }
@@ -70,15 +76,11 @@ function mapBackendOrderToBranchOrder(order: BranchRequestListItem): BranchOrder
 async function getBranchOrders(
     params: GetBranchOrdersParams
 ): Promise<GetBranchOrdersResponse> {
-    const statusFilter = params.status && params.status !== "all"
-        ? params.status
-        : undefined;
-
-    const result = await getBranchRequests({
+    const result = await getTransfers({
         page: params.page + 1,
         limit: params.limit,
         search: params.search,
-        status: statusFilter,
+        ...getTransferTabFilters(params.tab),
     });
 
     if (result.data) {
@@ -99,26 +101,22 @@ export default function TraspasosPage() {
     const [orders, setOrders] = useState<BranchOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchValue, setSearchValue] = useState("");
-    const [activeTab, setActiveTab] = useState(ALL_TAB);
+    const [activeTab, setActiveTab] = useState(TRANSFER_TAB_ALL);
+    const [stats, setStats] = useState<TransferStats | null>(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalRows, setTotalRows] = useState(0);
     const [branchModalOpen, setBranchModalOpen] = useState(false);
 
     const tabs: TabOption[] = [
-        { label: "Todos", value: ALL_TAB },
-        { label: "Solicitados", value: PENDING_TAB },
-        { label: "Agendados", value: SCHEDULED_TAB },
-        { label: "En curso", value: IN_PROGRESS_TAB },
-        { label: "Entregados", value: DELIVERED_TAB },
-    ].map((t) => ({
-        ...t,
-        count: t.value === activeTab ? totalRows : undefined,
-    }));
-
-    const getStatusFilter = useCallback((): "all" | BranchOrderStatus => {
-        return activeTab as "all" | BranchOrderStatus;
-    }, [activeTab]);
+        { label: "Todos", value: TRANSFER_TAB_ALL, count: stats?.total },
+        { label: "Por enviar", value: TRANSFER_TAB_TO_SHIP, count: stats?.toShip },
+        { label: "Por recibir", value: TRANSFER_TAB_TO_RECEIVE, count: stats?.toReceive },
+        { label: "En curso", value: TRANSFER_TAB_IN_COURSE, count: stats?.shipped },
+        { label: "Entregados", value: TRANSFER_TAB_DELIVERED, count: stats?.delivered },
+        { label: "Con incidencia", value: TRANSFER_TAB_INCIDENT, count: stats?.openIncidents },
+        { label: "Canceladas", value: TRANSFER_TAB_CANCELLED, count: stats?.cancelled },
+    ];
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -127,7 +125,7 @@ export default function TraspasosPage() {
                 page,
                 limit: rowsPerPage,
                 search: searchValue,
-                status: getStatusFilter(),
+                tab: activeTab,
             });
             setOrders(response.data);
             setTotalRows(response.total);
@@ -136,11 +134,15 @@ export default function TraspasosPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, searchValue, getStatusFilter]);
+    }, [page, rowsPerPage, searchValue, activeTab]);
 
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
+
+    useEffect(() => {
+        getTransferStats().then((result) => setStats(result.data));
+    }, []);
 
     useEffect(() => {
         setPage(0);
@@ -237,6 +239,12 @@ export default function TraspasosPage() {
             format: (value) => (value === null ? "-" : String(value)),
         },
         {
+            id: "saleFolio",
+            label: "Venta",
+            size: "md",
+            format: (value) => (value ? String(value) : "-"),
+        },
+        {
             id: "status",
             label: "Estatus",
             size: "md",
@@ -266,8 +274,8 @@ export default function TraspasosPage() {
             label: "Editar",
             icon: <EditIcon fontSize="small" />,
             onClick: handleEditOrder,
-            permission: TRASPASOS_UPDATE,
-            hidden: (row) => row.status !== "pending",
+            permission: TRASPASOS_EDIT,
+            hidden: (row) => !isBranchOrderEditable(row.status, row.saleFolio !== null),
         },
     ];
 

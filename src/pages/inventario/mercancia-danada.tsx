@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import {
   TrendingUp as TrendingUpIcon,
   Edit as EditIcon,
@@ -15,6 +16,7 @@ import {
   MarkDamagedGoodsDiscountedModal,
 } from "@/components";
 import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
+import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
 import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
   Column,
@@ -25,6 +27,7 @@ import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   getDamagedProducts,
   getDamagedProductStats,
@@ -40,6 +43,19 @@ import {
   DAMAGED_INVENTORY_UPDATE,
 } from "@/lib/permissions";
 const SEARCH_DEBOUNCE_MS = 300;
+/** Query params that open the create modal with a branch and product already chosen. */
+const PREFILL_BRANCH_PARAM = "branch_id";
+const PREFILL_PRODUCT_PARAM = "product_id";
+
+function parsePrefill(
+  query: Record<string, string | string[] | undefined>,
+): AddDamagedGoodsPrefill | undefined {
+  const branchId = Number(query[PREFILL_BRANCH_PARAM]);
+  const productId = Number(query[PREFILL_PRODUCT_PARAM]);
+  return Number.isInteger(branchId) && branchId > 0 && Number.isInteger(productId) && productId > 0
+    ? { branchId, productId }
+    : undefined;
+}
 /** Only supplier returns are closed from this screen: the folio ends when the supplier collects. */
 const RETURN_TO_SUPPLIER_CODE = "RETURN_TO_SUPPLIER";
 const DAMAGE_STATUS_CHIP_LABELS: Record<string, string> = {
@@ -72,12 +88,19 @@ function isFolioCompleted(row: DamagedProductListItem): boolean {
   return row.status.toLowerCase() === "completed";
 }
 export default function MercanciaDanada() {
+  const router = useRouter();
+  const { hasPermission } = usePermissions();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
   const [stats, setStats] = useState<DamagedProductStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const canCreate = hasPermission(DAMAGED_INVENTORY_CREATE);
+  const prefill = useMemo(
+    () => (canCreate ? parsePrefill(router.query) : undefined),
+    [canCreate, router.query],
+  );
   const [confirmState, setConfirmState] = useState<
     | { open: false }
     | {
@@ -121,6 +144,7 @@ export default function MercanciaDanada() {
   useEffect(() => {
     setPage(0);
   }, [activeTab, setPage]);
+
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
     SEARCH_DEBOUNCE_MS,
@@ -463,13 +487,17 @@ export default function MercanciaDanada() {
       />
 
       <AddDamagedGoodsModal
-        open={addModalOpen}
+        open={addModalOpen || prefill != null}
         onClose={() => {
           setAddModalOpen(false);
           setEditingId(null);
+          if (prefill != null) {
+            void router.replace(router.pathname, undefined, { shallow: true });
+          }
         }}
         onSuccess={handleAddSuccess}
         damagedProductId={editingId}
+        prefill={prefill}
       />
 
       <ConfirmModal

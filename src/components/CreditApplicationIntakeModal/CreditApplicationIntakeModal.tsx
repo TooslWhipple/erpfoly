@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button, CircularProgress, Typography } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { PenSquare } from "lucide-react";
 import { CameraDeviceSelect, CameraSwitchControl } from "@/components/CameraDeviceSelect";
 import {
@@ -23,12 +22,8 @@ import {
   formatFaceMatchScoreHint,
 } from "@/utils/creditApplicationFaceMatch";
 import type { CreditApplicationBiometricsData } from "@/types/credit-application-form.types";
-import {
-  SignatureCanvas,
-  SignatureCanvasWrapper,
-  SignatureLegalText,
-  SignatureSection,
-} from "./styles";
+import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
+import { SignatureLegalText, SignatureSection } from "./styles";
 
 interface CreditApplicationIntakeModalProps {
   open: boolean;
@@ -73,7 +68,6 @@ export function CreditApplicationIntakeModal({
   clientDisplayName,
   onFinalize,
 }: CreditApplicationIntakeModalProps) {
-  const theme = useTheme();
   const [activeStep, setActiveStep] = useState<IntakeStepId>("ine-capture");
   const [ineExecutionId, setIneExecutionId] = useState<string | null>(null);
   const [ineFrontImage, setIneFrontImage] = useState<string | null>(null);
@@ -91,14 +85,10 @@ export function CreditApplicationIntakeModal({
   const [faceMatchScoreHint, setFaceMatchScoreHint] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
-  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawingRef = useRef(false);
+  const signaturePadRef = useRef<SignaturePadHandle | null>(null);
 
   const clearSignatureCanvas = () => {
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    signaturePadRef.current?.clear();
     setSignatureDrawn(false);
   };
 
@@ -268,7 +258,7 @@ export function CreditApplicationIntakeModal({
           selfieImage,
           ineExecutionId,
           livenessExecutionId,
-          signatureDataUrl: signatureCanvasRef.current?.toDataURL("image/png") ?? null,
+          signatureDataUrl: signaturePadRef.current?.toDataUrl() ?? null,
           completedAt: new Date().toISOString(),
         });
         resetModalState();
@@ -287,56 +277,6 @@ export function CreditApplicationIntakeModal({
 
     const nextStep = STEP_ORDER[currentStepIndex + 1];
     setActiveStep(nextStep);
-  };
-
-  const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    const canvas = signatureCanvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
-    };
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (saving) return;
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    event.preventDefault();
-    canvas.setPointerCapture(event.pointerId);
-    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
-    context.beginPath();
-    context.moveTo(x, y);
-    isDrawingRef.current = true;
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current || saving) return;
-    const canvas = signatureCanvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    event.preventDefault();
-    const { x, y } = getCanvasCoordinates(event.clientX, event.clientY);
-    context.lineTo(x, y);
-    context.strokeStyle = theme.palette.text.primary;
-    context.lineWidth = 2;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.stroke();
-    setSignatureDrawn(true);
-  };
-
-  const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (signatureCanvasRef.current?.hasPointerCapture(event.pointerId)) {
-      signatureCanvasRef.current.releasePointerCapture(event.pointerId);
-    }
-    isDrawingRef.current = false;
   };
 
   const renderSdkBootstrapState = () => (
@@ -541,18 +481,11 @@ export function CreditApplicationIntakeModal({
               Solicita la autorización del cliente para revisar su historial crediticio
               a través del Buró de Crédito.
             </Typography>
-            <SignatureCanvasWrapper>
-              <SignatureCanvas
-                ref={signatureCanvasRef}
-                width={900}
-                height={480}
-                disabled={saving}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-              />
-            </SignatureCanvasWrapper>
+            <SignaturePad
+              ref={signaturePadRef}
+              disabled={saving}
+              onDrawnChange={setSignatureDrawn}
+            />
             <SignatureLegalText variant="body2">
               Autorizo la revisión y consulta de mi historial crediticio a Foly Muebles
               S.A. de C.V.

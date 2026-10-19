@@ -57,6 +57,10 @@ export interface ConfirmModalProps {
   icon?: ReactNode;
   /** Hide the leading icon badge. */
   hideIcon?: boolean;
+  /** Contenido extra (p. ej. campos de formulario) entre la descripción y los botones. */
+  children?: ReactNode;
+  /** Deshabilita el botón de confirmar (p. ej. mientras el formulario es inválido). */
+  confirmDisabled?: boolean;
 }
 
 function resolveType(
@@ -105,6 +109,8 @@ export function ConfirmModal({
   type,
   icon,
   hideIcon = false,
+  children,
+  confirmDisabled = false,
 }: ConfirmModalProps) {
   const [contentSnapshot, setContentSnapshot] = useState<ConfirmModalContentSnapshot | null>(
     null,
@@ -222,6 +228,8 @@ export function ConfirmModal({
           </CloseButton>
         </ModalHeader>
 
+        {children}
+
         <FormActions>
           <Button
             type="button"
@@ -238,7 +246,7 @@ export function ConfirmModal({
             variant="contained"
             color={resolvedConfirmColor}
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
           >
             {loading ? <CircularProgress size={20} color="inherit" /> : content.confirmLabel}
           </ConfirmButton>

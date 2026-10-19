@@ -230,6 +230,8 @@ export interface ApiError {
 	validationMessages?: string[];
 	errorCode?: string;
 	blocks?: ApiErrorBlock[];
+	/** Extras del error del backend (p. ej. `attemptsLeft`, `cooldownUntil`, `maxDate`). */
+	data?: Record<string, unknown>;
 }
 
 export interface ApiSuccessPayload {
@@ -373,6 +375,12 @@ function apiErrorFromAxios(error: AxiosError): ApiError {
 			const code = (data as { errorCode?: unknown }).errorCode;
 			if (typeof code === "string" && code.trim()) {
 				apiError.errorCode = code;
+			}
+		}
+		if (data && typeof data === "object" && "data" in data) {
+			const extra = (data as { data?: unknown }).data;
+			if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+				apiError.data = extra as Record<string, unknown>;
 			}
 		}
 		const blocks = extractBlocksFromPayload(data);

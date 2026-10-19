@@ -10,12 +10,15 @@ import {
   HeartHandshake,
   ShoppingCart,
 } from "@/components/Icons";
-import { BanknoteArrowDown, Calculator, LifeBuoy, Receipt } from "lucide-react";
+import { BanknoteArrowDown, Calculator, LifeBuoy, PackageCheck, Receipt } from "lucide-react";
 import {
   QUOTATIONS_READ,
   SALES_READ,
   TRASPASOS_READ,
+  TRASPASOS_INCIDENTS_READ,
   CASH_REGISTERS_READ,
+  DELIVERY_HANDOVER_READ,
+  DELIVERY_HOLD_READ,
   CATALOG_BRANCHES_READ,
   CATALOG_CASH_REGISTERS_READ,
   CATALOG_DEPARTMENTS_READ,
@@ -102,6 +105,16 @@ export const NAV_ITEMS: NavItem[] = [
     icon: <ClipboardList size={ICON_SIZE} />,
     requirement: { permission: QUOTATIONS_READ },
   },
+  {
+    label: "Entregas",
+    path: "/entregas",
+    icon: <PackageCheck size={ICON_SIZE} />,
+    requirement: { anyPermissions: [DELIVERY_HANDOVER_READ, DELIVERY_HOLD_READ] },
+    subItems: [
+      { label: "Entregas", path: "/entregas", requirement: { permission: DELIVERY_HANDOVER_READ } },
+      { label: "Resguardos", path: "/entregas/resguardos", requirement: { permission: DELIVERY_HOLD_READ } },
+    ],
+  },
   { label: "Cajas", path: "/cajas", icon: <Monitor size={ICON_SIZE} />, requirement: { permission: CASH_REGISTERS_READ } },
   {
     label: "Clientes",
@@ -132,7 +145,15 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Traspasos",
     path: "/traspasos",
     icon: <ClipboardList size={ICON_SIZE} />,
-    requirement: { permission: TRASPASOS_READ },
+    requirement: { anyPermissions: [TRASPASOS_READ, TRASPASOS_INCIDENTS_READ] },
+    subItems: [
+      { label: "Traspasos", path: "/traspasos", requirement: { permission: TRASPASOS_READ } },
+      {
+        label: "Incidencias",
+        path: "/traspasos/incidencias",
+        requirement: { permission: TRASPASOS_INCIDENTS_READ },
+      },
+    ],
   },
   {
     label: "Solicitudes de descuento",

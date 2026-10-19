@@ -3,6 +3,7 @@ import {
   api,
   get,
   post,
+  put,
   patch,
   del,
   getApiErrorMessage,
@@ -15,6 +16,10 @@ import type {
 } from "@/lib/axios";
 import { throwIfEconomicRevisionRequired } from "@/utils/economicRevision";
 import type { EconomicRevisionPreview } from "@/utils/economicRevision";
+import type {
+  PickupReceiver,
+  PickupReceiverPayload,
+} from "@/types/saleHandover.types";
 import { buildListUrl } from "@/lib/apiHelpers";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
@@ -492,6 +497,16 @@ export async function getSaleDetail(
   saleId: number,
 ): Promise<ApiResult<SaleDetail>> {
   return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+}
+
+/** Guarda quién recoge la venta (titular o tercero). No cambia economic_revision. */
+export async function updatePickupReceiver(
+  saleId: number,
+  payload: PickupReceiverPayload,
+): Promise<PickupReceiver> {
+  return unwrapOrThrow(
+    await put<PickupReceiver>(`${BASE}/sales/${saleId}/pickup-receiver`, payload),
+  );
 }
 
 /** Persist catalog/promo prices onto the ticket without charging. */

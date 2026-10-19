@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Alert,
@@ -61,6 +61,8 @@ import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
+import { SaleHandoverPanel } from "@/components/SaleHandoverPanel";
+import { printSaleTicket } from "@/services/sale-handover.service";
 import { formatCreditInstallmentPlan } from "@/utils/creditInstallmentPlan";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -165,16 +167,39 @@ export default function VentaDetalle() {
 
   const [autoPrinted, setAutoPrinted] = useState(false);
 
+  const showWarning = snackbar.showWarning;
+  const printTicketOrWarn = useCallback(
+    async (targetSaleId: number) => {
+      try {
+        await printSaleTicket(targetSaleId);
+      } catch (err) {
+        console.warn("No se pudo imprimir el ticket de la venta:", err);
+        showWarning(
+          "No se pudo imprimir el ticket de la venta. Usa «Reimprimir ticket» en el detalle.",
+        );
+      }
+    },
+    [showWarning],
+  );
+
   useEffect(() => {
     if (isNew && saleId && sale && !autoPrinted) {
       setAutoPrinted(true);
-      if (isFacturacionConfirmacionEncendida) {
-        printSaleInvoicePdfOnly(saleId).catch((err) => {
-          console.warn("No se pudo desplegar la impresión de la factura en automático:", err);
-        });
-      }
+      void (async () => {
+        if (isFacturacionConfirmacionEncendida) {
+          try {
+            await printSaleInvoicePdfOnly(saleId);
+          } catch (err) {
+            console.warn("No se pudo desplegar la impresión de la factura en automático:", err);
+          }
+        }
+        // Ticket con QR para recoger en sucursal; en orden con la factura.
+        if (sale.status !== "DRAFT" && sale.status !== "CANCELLED") {
+          await printTicketOrWarn(saleId);
+        }
+      })();
     }
-  }, [isNew, saleId, sale, autoPrinted, isFacturacionConfirmacionEncendida]);
+  }, [isNew, saleId, sale, autoPrinted, isFacturacionConfirmacionEncendida, printTicketOrWarn]);
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {
@@ -324,6 +349,7 @@ export default function VentaDetalle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
       snackbar.showSuccess("Apartado completado");
+      if (saleId) void printTicketOrWarn(saleId);
     },
     onError: (err: Error) => snackbar.showError(err.message),
   });
@@ -618,6 +644,18 @@ export default function VentaDetalle() {
                     )}
                   </Box>
                 </Stack>
+              )}
+
+              {sale.deliveryType === "BRANCH" && !isDraftSale && (
+                <SaleHandoverPanel
+                  saleId={sale.id}
+                  handoverStatus={sale.handoverStatus ?? "PENDING"}
+                  pickupReceiver={sale.pickupReceiver}
+                  isCancelled={isSaleCancelled}
+                  onReceiverSaved={() =>
+                    queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] })
+                  }
+                />
               )}
 
               <Stack spacing={1.5}>

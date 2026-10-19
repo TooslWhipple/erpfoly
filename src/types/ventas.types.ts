@@ -1,11 +1,14 @@
+import type {
+  HandoverProgress,
+  PickupReceiver,
+} from "@/types/saleHandover.types";
+
 export type SaleStatus =
   | "DRAFT"
   | "PENDING_DISCOUNT"
   | "PENDING_CASHIER"
   | "PENDING_PAYMENT"
   | "PAID"
-  | "PARTIALLY_DELIVERED"
-  | "DELIVERED"
   | "CANCELLED";
 
 export type SalePaymentType = "CREDIT" | "CASH" | "LAYAWAY";
@@ -27,6 +30,10 @@ export interface SaleListItem {
   id: number;
   folio: string;
   status: SaleStatus;
+  /** Progreso de entrega en sucursal; solo es significativo en ventas de recolección. */
+  handoverStatus?: HandoverProgress;
+  /** Tipo de entrega de la venta; null si no tiene. El chip de entrega solo aplica a BRANCH. */
+  deliveryType?: "ADDRESS" | "BRANCH" | null;
   paymentType: SalePaymentType;
   clientName: string | null;
   sellerName?: string | null;
@@ -248,6 +255,9 @@ export interface SaleDetail {
   estimatedDeliveryDate?: string | null;
   deliveryStatus?: string | null;
   deliveryType?: string | null;
+  handoverStatus?: HandoverProgress;
+  /** null si la venta no es de recolección en sucursal. */
+  pickupReceiver?: PickupReceiver | null;
   deliveryBranchId?: number | null;
   deliveryBranchName?: string | null;
   deliveryAddressId?: number | null;

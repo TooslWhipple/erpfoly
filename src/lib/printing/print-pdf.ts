@@ -14,6 +14,33 @@ function attachHiddenIframe(): HTMLIFrameElement {
   return iframe;
 }
 
+const EXTERNAL_VIEWER_REVOKE_MS = 10 * 60_000;
+
+/**
+ * Navegadores sin visor de PDF integrado (p. ej. Chrome en Android) no pueden
+ * imprimir un PDF dentro de un iframe: se abre el blob en una pestaña nueva
+ * para que el sistema lo muestre e imprima.
+ */
+function canPrintPdfInIframe(): boolean {
+  return navigator.pdfViewerEnabled !== false;
+}
+
+function openPdfBlobInNewTab(blob: Blob): PrintJobResult {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const opened = window.open(blobUrl, "_blank");
+  if (!opened) {
+    window.URL.revokeObjectURL(blobUrl);
+    throw new Error(
+      "No se pudo abrir el PDF. Permite las ventanas emergentes e intenta de nuevo.",
+    );
+  }
+  window.setTimeout(
+    () => window.URL.revokeObjectURL(blobUrl),
+    EXTERNAL_VIEWER_REVOKE_MS,
+  );
+  return { success: true, printed: false };
+}
+
 /**
  * Opens the browser print dialog for a PDF blob via a hidden iframe.
  * Resolves as soon as `print()` is called. The iframe stays until
@@ -24,6 +51,14 @@ export function printPdfBlob(
   blob: Blob,
   options: PrintJobOptions = {},
 ): Promise<PrintJobResult> {
+  if (!canPrintPdfInIframe()) {
+    try {
+      return Promise.resolve(openPdfBlobInNewTab(blob));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
   const blobUrl = window.URL.createObjectURL(blob);
   const iframe = attachHiddenIframe();
 

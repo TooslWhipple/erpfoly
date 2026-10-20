@@ -29,6 +29,16 @@ export const EMPTY_PRODUCT_SELECTION: PromotionProductSelectionState = {
   includedIds: [],
 };
 
+export interface PromotionSupplierSelectionState {
+  selectAll: boolean;
+  excludedIds: number[];
+}
+
+export const EMPTY_SUPPLIER_SELECTION: PromotionSupplierSelectionState = {
+  selectAll: false,
+  excludedIds: [],
+};
+
 export interface PromotionFormState {
   name: string;
   percentage: string;
@@ -49,6 +59,7 @@ export interface PromotionFormState {
   productSelection: PromotionProductSelectionState;
   selectedBranchIds: number[];
   suppliers: PromotionSupplier[];
+  supplierSelection: PromotionSupplierSelectionState;
 }
 
 export interface FormErrors {

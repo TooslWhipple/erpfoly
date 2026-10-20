@@ -10,6 +10,7 @@ import {
     Button,
     CircularProgress,
     Box,
+    Stack,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
@@ -31,6 +32,8 @@ interface AddSupplierModalProps {
     open: boolean;
     onClose: () => void;
     onAddSupplier: (supplierId: number) => Promise<void>;
+    onAddAll?: () => void;
+    description?: string;
     onNewSupplier?: () => void;
     loading?: boolean;
     /** True while the supplier catalog is still loading (distinct from add-in-progress). */
@@ -43,6 +46,8 @@ export function AddSupplierModal({
     open,
     onClose,
     onAddSupplier,
+    onAddAll,
+    description = "Selecciona un proveedor para agregar a este artículo",
     onNewSupplier,
     loading = false,
     catalogLoading = false,
@@ -75,6 +80,12 @@ export function AddSupplierModal({
         await onAddSupplier(supplierId);
     };
 
+    const allSuppliersAdded =
+        availableSuppliers.length > 0 &&
+        availableSuppliers.every((supplier) =>
+            existingSupplierIds.includes(supplier.id),
+        );
+
     return (
         <SideModal
             open={open}
@@ -82,15 +93,31 @@ export function AddSupplierModal({
             maxWidth="lg"
             disableClose={loading}
             title="Agregar proveedor"
-            description="Selecciona un proveedor para agregar a este artículo"
+            description={description}
             headerActions={
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={onNewSupplier}
-                    disabled={loading}>
-                    Nuevo
-                </Button>
+                <Stack direction="row" spacing={1}>
+                    {onAddAll ? (
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={onAddAll}
+                            disabled={
+                                loading ||
+                                catalogLoading ||
+                                availableSuppliers.length === 0 ||
+                                allSuppliersAdded
+                            }>
+                            Agregar todos
+                        </Button>
+                    ) : null}
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={onNewSupplier}
+                        disabled={loading}>
+                        Nuevo
+                    </Button>
+                </Stack>
             }
             contentSx={{
                 flex: 1,

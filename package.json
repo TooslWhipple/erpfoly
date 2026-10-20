@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ../api/node_modules/ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/components/HandoverCounter/handover.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts",
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ../api/node_modules/ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/lib/promotionDownPayment.test.ts src/components/HandoverCounter/handover.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts",
     "prepare": "husky"
   },
   "dependencies": {

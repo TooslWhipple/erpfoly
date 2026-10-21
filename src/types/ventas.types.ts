@@ -239,6 +239,11 @@ export interface SaleDetail {
   totalAmount: number;
   economicRevision?: number;
   creditDownPaymentAmount?: number | null;
+  /** Live credit terms for the saved lines. Null when the sale is not credit. */
+  creditOffer?: {
+    termMonths: number[];
+    minimumDownPaymentRate: number;
+  } | null;
   dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   loyaltyPointsEarned?: number;

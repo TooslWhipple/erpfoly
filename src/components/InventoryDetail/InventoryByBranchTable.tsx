@@ -19,8 +19,15 @@ export function InventoryByBranchTable({
             align: "left"
         },
         {
-            id: "physicalTotal",
-            label: "Físico Total",
+            id: "damaged",
+            label: "Dañado",
+            type: "number",
+            size: "md",
+            align: "center",
+        },
+        {
+            id: "inTransit",
+            label: "En Tránsito",
             type: "number",
             size: "md",
             align: "center",
@@ -35,40 +42,19 @@ export function InventoryByBranchTable({
         },
         {
             id: "pendingDelivery",
-            label: "Pendiente de Entrega",
-            type: "number",
-            size: "lg",
-            align: "center",
-            headerWrap: true,
-        },
-        {
-            id: "inTransit",
-            label: "En Tránsito",
+            label: "Por entregar",
             type: "number",
             size: "md",
             align: "center",
             headerWrap: true,
         },
         {
-            id: "damaged",
-            label: "Dañado",
+            id: "physicalTotal",
+            label: "Físico Total",
             type: "number",
             size: "md",
             align: "center",
-        },
-        {
-            id: "creditPrice",
-            label: "Precio crédito",
-            type: "currency",
-            size: "md",
-            align: "center",
-        },
-        {
-            id: "price",
-            label: "Precio contado",
-            type: "currency",
-            size: "md",
-            align: "center",
+            headerWrap: true,
         },
     ];
 

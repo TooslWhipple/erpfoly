@@ -17,7 +17,6 @@ export interface TransferItemInput {
 export interface CreateTransferPayload {
   branch_id: number;
   origin_branch_id: number;
-  folio: string;
   order_date: string;
   notes?: string;
   items: TransferItemInput[];
@@ -27,7 +26,6 @@ export interface CreateTransferPayload {
 export interface UpdateTransferPayload {
   branch_id?: number;
   origin_branch_id?: number;
-  folio?: string;
   order_date?: string;
   notes?: string;
   items: Array<TransferItemInput & { id?: number }>;

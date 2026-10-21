@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Skeleton, Typography, Button, Stack, Divider, Avatar, Box } from "@mui/material";
 import numeral from "numeral";
-import { Fingerprint, Plus } from "lucide-react";
+import { FileText, Fingerprint, Plus } from "lucide-react";
 import { Breadcrumbs, CreditLimitBar, StatusChip, TabFilters } from "@/components";
 import type { StatusChipVariant } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   ActivityTab,
+  AccountStatementModal,
   ClientDetailActions,
   DeactivateClientModal,
   MovementsTab,
@@ -172,6 +173,7 @@ export default function ClientDetailPage() {
   const [activeTab, setActiveTab] = useState("actividad");
   const [validatingPayment, setValidatingPayment] = useState(false);
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
+  const [statementModalOpen, setStatementModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const numericClientId =
     typeof id === "string" && Number.isFinite(Number(id)) ? Number(id) : null;
@@ -508,6 +510,7 @@ export default function ClientDetailPage() {
               showDeactivateAction={canDeactivateClient}
               deactivateDisabled={!isClientActive}
               onDeactivateClick={() => setDeactivateModalOpen(true)}
+              onGenerateStatement={() => setStatementModalOpen(true)}
             />
           </Stack>
         </Stack>
@@ -561,6 +564,11 @@ export default function ClientDetailPage() {
           ]);
         }}
       />
+      <AccountStatementModal
+        open={statementModalOpen}
+        clientId={header.id}
+        onClose={() => setStatementModalOpen(false)}
+      />
       <ClientBiometricEnrollModal
         open={enrollModalOpen}
         clientId={header.id}
@@ -587,22 +595,44 @@ export default function ClientDetailPage() {
           onTabChange={(value: string) => setActiveTab(value)}
         />
 
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={validatingPayment || !isClientActive}
-          sx={{
-            minWidth: {
-              xs: "100%",
-              sm: "144px",
-            },
-          }}
-          onClick={() => {
-            void handleAddPaymentClick();
-          }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
         >
-          Agregar abono
-        </Button>
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<FileText size={16} />}
+            disabled={!isClientActive}
+            sx={{
+              minWidth: {
+                xs: "100%",
+                sm: "auto",
+              },
+              textTransform: "none",
+            }}
+            onClick={() => setStatementModalOpen(true)}
+          >
+            Estado de cuenta
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={validatingPayment || !isClientActive}
+            sx={{
+              minWidth: {
+                xs: "100%",
+                sm: "144px",
+              },
+            }}
+            onClick={() => {
+              void handleAddPaymentClick();
+            }}
+          >
+            Agregar abono
+          </Button>
+        </Stack>
       </Stack>
 
       {renderTabContent()}

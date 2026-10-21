@@ -87,6 +87,10 @@ export interface PromotionDetail {
 	}>;
 	branch_ids: number[];
 	supplier_ids: number[];
+	supplier_selection?: {
+		select_all: boolean;
+		excluded_supplier_ids: number[];
+	};
 }
 
 /** Frontend form / nested product promotions (camelCase). */
@@ -114,6 +118,10 @@ export interface SavePromotionPayload {
 	};
 	branchIds?: number[];
 	supplierIds?: number[];
+	supplierSelection?: {
+		selectAll: boolean;
+		excludedSupplierIds?: number[];
+	};
 }
 
 /** POST/PATCH /promotions body (snake_case). */
@@ -139,6 +147,10 @@ export interface CreatePromotionApiPayload {
 	};
 	branch_ids?: number[];
 	supplier_ids?: number[];
+	supplier_selection?: {
+		select_all: boolean;
+		excluded_supplier_ids?: number[];
+	};
 }
 
 /** Normalizes calendar dates to `YYYY-MM-DD` for form inputs and API payloads. */
@@ -187,6 +199,13 @@ function mapSavePromotionPayloadToApi(
 			: undefined,
 		branch_ids: normalized.branchIds ?? [],
 		supplier_ids: normalized.supplierIds ?? [],
+		supplier_selection: normalized.supplierSelection
+			? {
+					select_all: normalized.supplierSelection.selectAll,
+					excluded_supplier_ids:
+						normalized.supplierSelection.excludedSupplierIds ?? [],
+				}
+			: undefined,
 	};
 }
 

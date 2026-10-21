@@ -3,6 +3,7 @@ import {
   api,
   get,
   post,
+  put,
   patch,
   del,
   getApiErrorMessage,
@@ -15,6 +16,10 @@ import type {
 } from "@/lib/axios";
 import { throwIfEconomicRevisionRequired } from "@/utils/economicRevision";
 import type { EconomicRevisionPreview } from "@/utils/economicRevision";
+import type {
+  PickupReceiver,
+  PickupReceiverPayload,
+} from "@/types/saleHandover.types";
 import { buildListUrl } from "@/lib/apiHelpers";
 import { dataUrlToFile } from "@/utils/creditApplicationIntake";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
@@ -494,6 +499,16 @@ export async function getSaleDetail(
   return get<SaleDetail>(`${BASE}/sales/${saleId}`);
 }
 
+/** Guarda quién recoge la venta (titular o tercero). No cambia economic_revision. */
+export async function updatePickupReceiver(
+  saleId: number,
+  payload: PickupReceiverPayload,
+): Promise<PickupReceiver> {
+  return unwrapOrThrow(
+    await put<PickupReceiver>(`${BASE}/sales/${saleId}/pickup-receiver`, payload),
+  );
+}
+
 /** Persist catalog/promo prices onto the ticket without charging. */
 export async function acceptSaleEconomicRevision(
   saleId: number,
@@ -575,13 +590,19 @@ export type PricePreviewLine = {
   totalAmount: number;
 };
 
+export type PricePreview = {
+  lines: PricePreviewLine[];
+  termMonths: number[];
+  minimumDownPaymentRate: number;
+};
+
 export async function previewCartPrices(payload: {
   branch_id: number;
   purchase_type_id: number;
   items: Array<{ product_id: number; quantity: number }>;
-}): Promise<PricePreviewLine[]> {
+}): Promise<PricePreview> {
   return unwrapOrThrow(
-    await post<PricePreviewLine[]>(`${BASE}/price-preview`, payload),
+    await post<PricePreview>(`${BASE}/price-preview`, payload),
   );
 }
 

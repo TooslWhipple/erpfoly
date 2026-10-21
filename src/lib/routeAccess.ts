@@ -4,6 +4,8 @@ import { clearExplicitLogoutFlag } from "@/lib/authSession";
 import { ROLE_CODES } from "@/constants/role-codes";
 import {
   CASH_REGISTERS_READ,
+  DELIVERY_HANDOVER_READ,
+  DELIVERY_HOLD_READ,
   CATALOG_BRANCHES_CREATE,
   CATALOG_BRANCHES_READ,
   CATALOG_CASH_REGISTERS_READ,
@@ -70,8 +72,9 @@ import {
   ORDERS_CREATE,
   ORDERS_READ,
   TRASPASOS_CREATE,
+  TRASPASOS_EDIT,
+  TRASPASOS_INCIDENTS_READ,
   TRASPASOS_READ,
-  TRASPASOS_UPDATE,
   ROUTES_READ,
   SALES_READ,
   SALES_CREATE,
@@ -121,15 +124,19 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/cajas(\/.*)?$/, permission: CASH_REGISTERS_READ },
 
+  { pattern: /^\/entregas\/resguardos(\/.*)?$/, permission: DELIVERY_HOLD_READ },
+  { pattern: /^\/entregas(\/.*)?$/, permission: DELIVERY_HANDOVER_READ },
+
   { pattern: /^\/clientes\/cobranza(\/.*)?$/, permission: CUSTOMER_COLLECTION_READ },
   { pattern: /^\/clientes\/morosidad(\/.*)?$/, permission: CUSTOMER_DELINQUENCY_READ },
   { pattern: /^\/clientes\/nuevo$/, permission: CUSTOMERS_CREATE },
   { pattern: /^\/clientes\/[^/]+\/editar$/, permission: CUSTOMERS_UPDATE },
   { pattern: /^\/clientes(\/.*)?$/, permission: CUSTOMERS_READ },
 
-  { pattern: /^\/traspasos\/nuevo\/confirmar$/, permission: TRASPASOS_UPDATE },
+  { pattern: /^\/traspasos\/incidencias$/, permission: TRASPASOS_INCIDENTS_READ },
+  { pattern: /^\/traspasos\/nuevo\/confirmar$/, permission: TRASPASOS_CREATE },
   { pattern: /^\/traspasos\/nuevo$/, permission: TRASPASOS_CREATE },
-  { pattern: /^\/traspasos\/[^/]+\/editar$/, permission: TRASPASOS_UPDATE },
+  { pattern: /^\/traspasos\/[^/]+\/editar$/, permission: TRASPASOS_EDIT },
   { pattern: /^\/traspasos(\/.*)?$/, permission: TRASPASOS_READ },
   { pattern: /^\/pedidos\/nuevo$/, anyPermissions: [ORDERS_CREATE, NEW_ORDER_READ] },
   { pattern: /^\/pedidos(\/.*)?$/, permission: ORDERS_READ },
@@ -233,6 +240,9 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   },
   { path: "/atencion-cliente", requirement: { permission: CUSTOMER_SUPPORT_READ } },
   { path: "/rutas", requirement: { permission: ROUTES_READ } },
+  { path: "/entregas", requirement: { permission: DELIVERY_HANDOVER_READ } },
+  { path: "/entregas/resguardos", requirement: { permission: DELIVERY_HOLD_READ } },
+  { path: "/traspasos/incidencias", requirement: { permission: TRASPASOS_INCIDENTS_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
   { path: "/catalogos/roles", requirement: { permission: CATALOG_ROLES_READ } },
 ];

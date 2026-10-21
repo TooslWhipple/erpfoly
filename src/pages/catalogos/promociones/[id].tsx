@@ -5,7 +5,7 @@ import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 import { Breadcrumbs, Title, TabFilters } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
-import { EMPTY_PRODUCT_SELECTION } from "@/types/promociones.types";
+import { EMPTY_PRODUCT_SELECTION, EMPTY_SUPPLIER_SELECTION } from "@/types/promociones.types";
 import {
   getPromotionFormConfiguration,
   getPromotionById,
@@ -27,6 +27,10 @@ import {
   validatePromotionAdvancePercentage,
   resolvePromotionAdvanceRate,
 } from "@/lib/promotionFormValidation";
+import {
+  promotionPercentageError,
+  withSingleDownPayment,
+} from "@/lib/promotionDownPayment";
 import {
   CATALOG_PROMOTIONS_CREATE,
   CATALOG_PROMOTIONS_UPDATE,
@@ -51,6 +55,7 @@ function emptyForm(): PromotionFormState {
     productSelection: EMPTY_PRODUCT_SELECTION,
     selectedBranchIds: [],
     suppliers: [],
+    supplierSelection: EMPTY_SUPPLIER_SELECTION,
   };
 }
 function mergeCustomerLevels(
@@ -106,11 +111,17 @@ function mapDetailToForm(
         : [...(selection?.included_product_ids ?? detail.product_ids)],
     },
     selectedBranchIds: [...detail.branch_ids],
-    suppliers: detail.supplier_ids.map((sid, i) => ({
-      id: i + 1,
-      supplierId: sid,
-      supplierName: `Proveedor ${sid}`,
-    })),
+    supplierSelection: {
+      selectAll: Boolean(detail.supplier_selection?.select_all),
+      excludedIds: [...(detail.supplier_selection?.excluded_supplier_ids ?? [])],
+    },
+    suppliers: detail.supplier_selection?.select_all
+      ? []
+      : detail.supplier_ids.map((sid, i) => ({
+          id: i + 1,
+          supplierId: sid,
+          supplierName: `Proveedor ${sid}`,
+        })),
   };
 }
 export default function PromotionFormPage() {
@@ -217,8 +228,9 @@ export default function PromotionFormPage() {
     if (!formState.name.trim()) {
       newErrors.name = "El nombre es requerido";
     }
-    if (!formState.percentage || Number(formState.percentage) <= 0) {
-      newErrors.percentage = "El porcentaje debe ser mayor a 0";
+    const percentageError = promotionPercentageError(formState.percentage);
+    if (percentageError) {
+      newErrors.percentage = percentageError;
     }
     const advancePercentageError = validatePromotionAdvancePercentage(
       purchaseTypeMeta?.code,
@@ -265,7 +277,9 @@ export default function PromotionFormPage() {
       formState.productSelection.selectAll ||
       formState.productSelection.includedIds.length > 0;
     const hasBranches = formState.selectedBranchIds.length > 0;
-    const hasSuppliers = (formState.suppliers?.length ?? 0) > 0;
+    const hasSuppliers =
+      formState.supplierSelection.selectAll ||
+      (formState.suppliers?.length ?? 0) > 0;
     if (!hasProducts && !hasBranches && !hasSuppliers) {
       newErrors.scopeSelection =
         "Debes elegir al menos una opción: productos (tab Departamentos), sucursales o proveedores.";
@@ -296,10 +310,12 @@ export default function PromotionFormPage() {
       layawayTermIds: code === "APARTADO" ? formState.layawayTermIds : [],
       customerLevelDownPayments:
         code === "CREDITO" || code === "APARTADO"
-          ? formState.customerLevelDownPayments.map((r) => ({
-              customerLevelId: r.customer_level_id,
-              percentage: r.percentage,
-            }))
+          ? withSingleDownPayment(formState.customerLevelDownPayments).map(
+              (r) => ({
+                customerLevelId: r.customer_level_id,
+                percentage: r.percentage,
+              }),
+            )
           : [],
       productSelection:
         formState.selectedLineIds.length > 0 &&
@@ -316,7 +332,15 @@ export default function PromotionFormPage() {
         ? []
         : formState.productSelection.includedIds,
       branchIds: formState.selectedBranchIds,
-      supplierIds: formState.suppliers.map((s) => s.supplierId),
+      supplierIds: formState.supplierSelection.selectAll
+        ? []
+        : formState.suppliers.map((s) => s.supplierId),
+      supplierSelection: formState.supplierSelection.selectAll
+        ? {
+            selectAll: true,
+            excludedSupplierIds: formState.supplierSelection.excludedIds,
+          }
+        : undefined,
     };
   };
   const handleSave = async () => {
@@ -379,7 +403,8 @@ export default function PromotionFormPage() {
       if (
         field === "productSelection" ||
         field === "selectedBranchIds" ||
-        field === "suppliers"
+        field === "suppliers" ||
+        field === "supplierSelection"
       ) {
         setErrors((prev) => {
           if (!prev.scopeSelection) return prev;

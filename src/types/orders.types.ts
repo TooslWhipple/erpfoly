@@ -54,7 +54,6 @@ export interface CreateOrderPayload {
   order_type: "external" | "internal";
   branch_id: number;
   origin_branch_id?: number;
-  folio: string;
   order_date: string;
   notes?: string;
   client_id?: number;
@@ -66,7 +65,6 @@ export interface CreateOrderPayload {
 export interface UpdateOrderPayload {
   order_type?: "external" | "internal";
   branch_id?: number;
-  folio?: string;
   order_date?: string;
   notes?: string;
   client_id?: number;

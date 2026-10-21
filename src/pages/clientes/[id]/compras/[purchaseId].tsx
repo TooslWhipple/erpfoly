@@ -10,6 +10,9 @@ import {
   PurchaseDetailActions,
   PurchaseDetailSummary,
 } from "../../compras/components";
+import { PurchaseHandoversTab } from "../../compras/components/PurchaseHandoversTab";
+import { usePermissions } from "@/hooks/usePermissions";
+import { SALES_READ } from "@/lib/permissions";
 import { ErrorState } from "@/styles/clientes/detalle.styles";
 const PURCHASE_TABS = [
   {
@@ -24,6 +27,17 @@ const PURCHASE_TABS = [
 export default function ClientPurchaseDetailPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("payment-history");
+  const { hasPermission } = usePermissions();
+  const tabs = useMemo(
+    () =>
+      hasPermission(SALES_READ)
+        ? [
+            ...PURCHASE_TABS,
+            { value: "handovers", label: "Comprobantes de entrega" },
+          ]
+        : PURCHASE_TABS,
+    [hasPermission],
+  );
   const { routerReady, clientId, purchase, loading, error, refetch } =
     useClientPurchaseDetail();
   const breadcrumbs: BreadcrumbItem[] = useMemo(
@@ -128,7 +142,7 @@ export default function ClientPurchaseDetailPage() {
 
       <Divider />
       <TabFilters
-        tabs={PURCHASE_TABS}
+        tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
@@ -139,6 +153,10 @@ export default function ClientPurchaseDetailPage() {
 
       {activeTab === "purchase-data" && (
         <PurchaseDataTab purchaseInfo={purchase.purchaseInfo} />
+      )}
+
+      {activeTab === "handovers" && (
+        <PurchaseHandoversTab saleId={Number(purchase.id)} />
       )}
     </Stack>
   );

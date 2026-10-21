@@ -14,6 +14,7 @@ import type { DateRangeSelectOption } from "@/components/DateRangePopover";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { getSales, cancelSale } from "@/services/ventas.service";
+import type { HandoverProgress } from "@/types/saleHandover.types";
 import type {
   SaleListItem,
   SalePaymentType,
@@ -24,6 +25,8 @@ import { SALES_CREATE } from "@/lib/permissions";
 import {
   SALE_STATUS_CHIP_LABELS,
   SALE_STATUS_CHIP_VARIANTS,
+  HANDOVER_STATUS_LABELS,
+  HANDOVER_STATUS_VARIANTS,
 } from "@/utils/saleStatus";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
@@ -152,6 +155,25 @@ export default function Ventas() {
       type: "chip",
       chipLabelMap: SALE_STATUS_CHIP_LABELS,
       chipVariantMap: SALE_STATUS_CHIP_VARIANTS,
+    },
+    {
+      // El progreso solo es significativo en ventas de recolección en sucursal.
+      id: "handoverStatus",
+      label: "Entrega",
+      size: "md",
+      format: (value, row) => {
+        const status = value as HandoverProgress | undefined;
+        if (!status || row.deliveryType !== "BRANCH" || row.status === "CANCELLED") {
+          return "—";
+        }
+        return (
+          <StatusChip
+            label={HANDOVER_STATUS_LABELS[status]}
+            size="small"
+            variant={HANDOVER_STATUS_VARIANTS[status]}
+          />
+        );
+      },
     },
     {
       id: "clientName",

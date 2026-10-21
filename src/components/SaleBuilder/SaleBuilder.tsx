@@ -42,6 +42,15 @@ import NumberSpinner from "@/components/NumberSpinner";
 import { useTheme } from "@mui/material/styles";
 import { InlineMobileMenuButton } from "@/components/Layout";
 import { SaleBuilderHeader } from "./SaleBuilderHeader";
+import {
+  HOLDER_RECEIVER_DRAFT,
+  PickupReceiverFields,
+  draftFromPickupReceiver,
+  getPickupReceiverError,
+  pickupReceiverKey,
+  toPickupReceiverPayload,
+} from "./PickupReceiverFields";
+import type { PickupReceiverDraft } from "./PickupReceiverFields";
 import { SaleCartItemRow, BackorderChip, PendingSupplyAlert } from "./SaleCartItem";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
@@ -96,6 +105,7 @@ import {
   previewShippingQuote,
   previewCartPrices,
   getSaleDetail,
+  updatePickupReceiver,
   invalidateSaleDiscount,
   getClientLoyalty,
 } from "@/services/ventas.service";
@@ -358,6 +368,13 @@ function DeliveryMapPreview({
   );
 }
 
+function formatDownPaymentPercent(rate: number): string {
+  const percent = rate * 100;
+  return Number.isInteger(percent)
+    ? String(percent)
+    : percent.toFixed(2).replace(/\.?0+$/, "");
+}
+
 function SaleBuilderResumeSkeleton({ onExit }: { onExit: () => void }) {
   return (
     <PageShell aria-busy="true" aria-label="Cargando cotización">
@@ -485,6 +502,15 @@ export function SaleBuilder({
   >(null);
   const [lastSyncedDelivery, setLastSyncedDelivery] =
     useState<SyncedDeliverySnapshot | null>(null);
+  const [pickupReceiverErrorsVisible, setPickupReceiverErrorsVisible] =
+    useState(false);
+  const [pickupReceiver, setPickupReceiver] = useState<PickupReceiverDraft>(
+    HOLDER_RECEIVER_DRAFT,
+  );
+  // Último receptor confirmado en el back. El default de la venta es HOLDER.
+  const [lastSyncedReceiverKey, setLastSyncedReceiverKey] = useState(
+    pickupReceiverKey(HOLDER_RECEIVER_DRAFT),
+  );
   const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
     useState(false);
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
@@ -521,9 +547,17 @@ export function SaleBuilder({
     useState(false);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
-  const [selectedTermMonths, setSelectedTermMonths] = useState<12 | 18 | 24>(
-    12,
-  );
+  const [allowedTermMonths, setAllowedTermMonths] = useState<number[]>([
+    12, 18, 24,
+  ]);
+  const [downPaymentRate, setDownPaymentRate] = useState(0.1);
+  const [selectedTermMonths, setSelectedTermMonths] = useState(12);
+  useEffect(() => {
+    if (allowedTermMonths.length === 0) return;
+    if (!allowedTermMonths.includes(selectedTermMonths)) {
+      setSelectedTermMonths(allowedTermMonths[0]);
+    }
+  }, [allowedTermMonths, selectedTermMonths]);
   const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState(0);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingConfirmed, setBillingConfirmed] = useState(false);
@@ -853,6 +887,11 @@ export function SaleBuilder({
       setDeliveryType("pickup");
       setCustomDeliveryAddress(null);
       setUseCustomDeliveryAddress(false);
+      const savedReceiver = draftFromPickupReceiver(
+        resumeSaleData.pickupReceiver,
+      );
+      setPickupReceiver(savedReceiver);
+      setLastSyncedReceiverKey(pickupReceiverKey(savedReceiver));
       if (resumeSaleData.deliveryBranchId != null) {
         setDeliveryBranch({
           id: resumeSaleData.deliveryBranchId,
@@ -955,6 +994,22 @@ export function SaleBuilder({
     setView("form");
   }
 
+  // Guarda quién recoge (endpoint 15) solo si cambió. Debe correr después de
+  // setDeliveryDate (la venta ya es BRANCH) y antes de getSaleDetail.
+  // `force` reenvía un tercero cuando la entrega se reescribió en el back.
+  const syncPickupReceiver = async (saleId: number, force: boolean) => {
+    const key = pickupReceiverKey(pickupReceiver);
+    const changed = key !== lastSyncedReceiverKey;
+    if (!changed && !(force && pickupReceiver.type === "THIRD_PARTY")) return;
+    const validationError = getPickupReceiverError(pickupReceiver);
+    if (validationError) {
+      setPickupReceiverErrorsVisible(true);
+      throw new Error(validationError);
+    }
+    await updatePickupReceiver(saleId, toPickupReceiverPayload(pickupReceiver));
+    setLastSyncedReceiverKey(key);
+  };
+
   const syncDeliverySelection = async (saleId: number) => {
     const deliveryDate =
       deliveryType === "pickup"
@@ -1017,13 +1072,15 @@ export function SaleBuilder({
       );
       const dateUnchanged =
         lastSyncedDelivery?.deliveryDate === deliveryDateKey;
-      if (!placeUnchanged || !dateUnchanged) {
+      const deliveryRewritten = !placeUnchanged || !dateUnchanged;
+      if (deliveryRewritten) {
         await setDeliveryDate(saleId, {
           delivery_type: "BRANCH",
           branch_id: effectiveDeliveryBranch.id,
           ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
         });
       }
+      await syncPickupReceiver(saleId, deliveryRewritten);
       setShippingQuote(null);
       setLastSyncedDelivery(snapshot);
     }
@@ -1032,6 +1089,9 @@ export function SaleBuilder({
   const applyQuotedPrices = (result: UpdateSalePurchaseTypeResult) => {
     setSaleEconomicRevision(result.economicRevision);
     setCheckoutRule(result.checkout);
+    if (result.checkout.type === "CREDIT") {
+      setAllowedTermMonths(result.checkout.allowedTermMonths);
+    }
     setCart((prev) =>
       patchCartLinePrices(
         prev,
@@ -1365,7 +1425,8 @@ export function SaleBuilder({
           );
           const dateUnchanged =
             lastSyncedDelivery?.deliveryDate === snapshot.deliveryDate;
-          if (!placeUnchanged || !dateUnchanged) {
+          const deliveryRewritten = !placeUnchanged || !dateUnchanged;
+          if (deliveryRewritten) {
             await setDeliveryDate(saleId, {
               delivery_type: "BRANCH",
               branch_id: effectiveDeliveryBranch.id,
@@ -1373,6 +1434,9 @@ export function SaleBuilder({
             });
             setLastSyncedDelivery(snapshot);
           }
+          await syncPickupReceiver(saleId, deliveryRewritten);
+        } else {
+          await syncPickupReceiver(saleId, false);
         }
       }
 
@@ -2276,7 +2340,7 @@ export function SaleBuilder({
       }
 
       try {
-        const lines = await previewCartPrices({
+        const preview = await previewCartPrices({
           branch_id: coverageBranchId,
           purchase_type_id: purchaseTypeId,
           items: cart.map((item) => ({
@@ -2285,7 +2349,9 @@ export function SaleBuilder({
           })),
         });
         if (isCancelled()) return;
-        setCart((prev) => patchCartLinePrices(prev, lines));
+        setCart((prev) => patchCartLinePrices(prev, preview.lines));
+        setAllowedTermMonths(preview.termMonths);
+        setDownPaymentRate(preview.minimumDownPaymentRate);
       } catch (error) {
         if (!isCancelled()) {
           snackbar.showError(
@@ -2387,7 +2453,7 @@ export function SaleBuilder({
   const exceedsCashLimit =
     paymentType === "CASH" && cashAmtNum >= MAX_CASH_SALE_PAYMENT;
   const totalPaid = roundToCents(cashAmtNum + cardAmtNum + extraCardAmtNum);
-  const minimumEnganche = creditMinimumDownPayment(totalFinal);
+  const minimumEnganche = creditMinimumDownPayment(totalFinal, downPaymentRate);
   const typedEnganche =
     creditDownPaymentText == null
       ? null
@@ -2405,7 +2471,7 @@ export function SaleBuilder({
         : minimumEnganche
       : checkoutRule?.type === "CREDIT"
         ? checkoutRule.minimumDownPayment
-        : creditMinimumDownPayment(totalFinal);
+        : creditMinimumDownPayment(totalFinal, downPaymentRate);
   const montoAFinanciar = roundToCents(totalFinal - enganche);
   const earnAmountToSpend = resumeSaleData?.loyaltyEarnAmountToSpend ?? null;
   const earnPointsAwarded = resumeSaleData?.loyaltyEarnPointsAwarded ?? 1;
@@ -3190,7 +3256,7 @@ export function SaleBuilder({
       creditDownPaymentInvalid
       ? typedEnganche != null && typedEnganche > totalFinal + 0.001
         ? "El enganche no puede ser mayor al total de la venta"
-        : `El enganche no puede ser menor al 10% (${formatCurrency(minimumEnganche)})`
+        : `El enganche no puede ser menor al ${formatDownPaymentPercent(downPaymentRate)}% (${formatCurrency(minimumEnganche)})`
       : null;
   const creditDownPaymentShown =
     creditDownPaymentText ?? minimumEnganche.toFixed(2);
@@ -3832,13 +3898,15 @@ export function SaleBuilder({
                         size="small"
                         value={selectedTermMonths}
                         onChange={(e) =>
-                          setSelectedTermMonths(e.target.value as 12 | 18 | 24)
+                          setSelectedTermMonths(Number(e.target.value))
                         }
                         sx={{ minWidth: 110, ...saleInputSx }}
                       >
-                        <MenuItem value={12}>12 meses</MenuItem>
-                        <MenuItem value={18}>18 meses</MenuItem>
-                        <MenuItem value={24}>24 meses</MenuItem>
+                        {allowedTermMonths.map((months) => (
+                          <MenuItem key={months} value={months}>
+                            {months} meses
+                          </MenuItem>
+                        ))}
                       </Select>
                       <Typography variant="body2" fontWeight={600}>
                         {formatCurrency(
@@ -4071,6 +4139,20 @@ export function SaleBuilder({
             : "Proceder al cobro"
         }
         onProceedToCheckout={() => {
+          // Mismo criterio que syncPickupReceiver: solo se valida lo que
+          // cambió, para no exigir el celular enmascarado de un tercero ya guardado.
+          if (
+            isCajeroMode &&
+            deliveryType === "pickup" &&
+            pickupReceiverKey(pickupReceiver) !== lastSyncedReceiverKey
+          ) {
+            const receiverError = getPickupReceiverError(pickupReceiver);
+            if (receiverError) {
+              setPickupReceiverErrorsVisible(true);
+              snackbar.showWarning(receiverError);
+              return;
+            }
+          }
           if (paymentType === "CREDIT" && !identityOk) {
             if (selectedClient?.biometricsPending) {
               setMissingBiometricsAuthOpen(true);
@@ -4602,6 +4684,14 @@ export function SaleBuilder({
                       }
                     />
                   )}
+                  {deliveryType === "pickup" && (
+                    <PickupReceiverFields
+                      value={pickupReceiver}
+                      onChange={setPickupReceiver}
+                      savedPhoneMasked={resumeSaleData?.pickupReceiver?.thirdPartyPhoneMasked}
+                      showErrors={pickupReceiverErrorsVisible}
+                    />
+                  )}
                 </>
               ) : (
                 <>
@@ -4791,6 +4881,13 @@ export function SaleBuilder({
                           Entrega hoy mismo en tienda.
                         </Alert>
                       )}
+
+                      <PickupReceiverFields
+                        value={pickupReceiver}
+                        onChange={setPickupReceiver}
+                        savedPhoneMasked={resumeSaleData?.pickupReceiver?.thirdPartyPhoneMasked}
+                        showErrors={pickupReceiverErrorsVisible}
+                      />
                     </>
                   )}
                 </>

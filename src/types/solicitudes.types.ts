@@ -1,11 +1,12 @@
-import type { OrderListItem, OrderFullDetail, QueryOrdersParams, UpdateOrderPayload } from "@/types/orders.types";
-
 export type BranchOrderStatus =
     | "pending"
     | "scheduled"
+    | "shipped"
     | "partially_delivered"
+    | "in_progress"
     | "delivered"
-    | "cancelled";
+    | "cancelled"
+    | "unknown";
 
 export interface BranchOrderLineItem {
     articleId: string;
@@ -17,6 +18,7 @@ export interface BranchOrderLineItem {
     productId: number;
     requestedQuantity: number;
     deliveredQuantity: number;
+    shippedQuantity: number | null;
 }
 
 export interface BranchOrderDetail {
@@ -35,12 +37,6 @@ export interface BranchOrderDetailParams {
     id: string;
 }
 
-export interface QueryBranchRequestsParams extends QueryOrdersParams {}
-
-export interface BranchRequestListItem extends OrderListItem {}
-
-export interface BranchRequestFullDetail extends OrderFullDetail {}
-
 export interface ScheduleBranchRequestPayload {
     items: Array<{
         order_item_id: number;
@@ -49,4 +45,3 @@ export interface ScheduleBranchRequestPayload {
     notes?: string;
 }
 
-export interface UpdateBranchRequestPayload extends UpdateOrderPayload {}

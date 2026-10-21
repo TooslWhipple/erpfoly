@@ -21,6 +21,8 @@ export type PermissionModule =
   | "pedidos"
   | "pedidos.nuevo"
   | "traspasos"
+  | "traspasos.editar"
+  | "traspasos.incidencias"
   | "solicitudes_descuento"
   | "inventario"
   | "inventario.mercancia_danada"
@@ -59,6 +61,8 @@ export type PermissionModule =
   | "catalogos.tipos-transaccion"
   | "catalogos.polizas-sistema"
   | "catalogos.polizas"
+  | "entregas"
+  | "entregas.resguardos"
   | "ventas"
   | "cotizaciones"
   | "reportes";
@@ -133,6 +137,15 @@ export const TRASPASOS_CREATE = TRASPASOS_PERMISSIONS.create;
 export const TRASPASOS_READ = TRASPASOS_PERMISSIONS.read;
 export const TRASPASOS_UPDATE = TRASPASOS_PERMISSIONS.update;
 export const TRASPASOS_DELETE = TRASPASOS_PERMISSIONS.delete;
+
+// Edición de un traspaso (`traspasos-editar`, T5)
+export const TRASPASOS_EDIT_PERMISSIONS = createCrudPermissions("traspasos.editar");
+export const TRASPASOS_EDIT = TRASPASOS_EDIT_PERMISSIONS.update;
+
+// Incidencias de traspaso (`traspasos-incidencias`, bandeja del Auditor)
+export const TRASPASOS_INCIDENTS_PERMISSIONS = createCrudPermissions("traspasos.incidencias");
+export const TRASPASOS_INCIDENTS_READ = TRASPASOS_INCIDENTS_PERMISSIONS.read;
+export const TRASPASOS_INCIDENTS_UPDATE = TRASPASOS_INCIDENTS_PERMISSIONS.update;
 
 export const DISCOUNT_REQUESTS_PERMISSIONS = createCrudPermissions("solicitudes_descuento");
 export const DISCOUNT_REQUESTS_CREATE = DISCOUNT_REQUESTS_PERMISSIONS.create;
@@ -408,6 +421,15 @@ export const CATALOG_GENERATED_POLICIES_READ = CATALOG_GENERATED_POLICIES_PERMIS
 export const CATALOG_GENERATED_POLICIES_UPDATE = CATALOG_GENERATED_POLICIES_PERMISSIONS.update;
 export const CATALOG_GENERATED_POLICIES_DELETE = CATALOG_GENERATED_POLICIES_PERMISSIONS.delete;
 
+// Deliveries (Entregas): queue/handover and pickup holds (resguardos)
+export const DELIVERY_HANDOVER_PERMISSIONS = createCrudPermissions("entregas");
+export const DELIVERY_HANDOVER_READ = DELIVERY_HANDOVER_PERMISSIONS.read;
+export const DELIVERY_HANDOVER_UPDATE = DELIVERY_HANDOVER_PERMISSIONS.update;
+
+export const DELIVERY_HOLD_PERMISSIONS = createCrudPermissions("entregas.resguardos");
+export const DELIVERY_HOLD_READ = DELIVERY_HOLD_PERMISSIONS.read;
+export const DELIVERY_HOLD_UPDATE = DELIVERY_HOLD_PERMISSIONS.update;
+
 // Sales (Ventas)
 export const SALES_PERMISSIONS = createCrudPermissions("ventas");
 export const SALES_CREATE = SALES_PERMISSIONS.create;
@@ -441,6 +463,8 @@ export const PERMISSIONS_BY_MODULE = {
     orders: Object.values(ORDERS_PERMISSIONS),
     newOrder: Object.values(NEW_ORDER_PERMISSIONS),
     traspasos: Object.values(TRASPASOS_PERMISSIONS),
+    transferEdit: Object.values(TRASPASOS_EDIT_PERMISSIONS),
+    transferIncidents: Object.values(TRASPASOS_INCIDENTS_PERMISSIONS),
     discountRequests: Object.values(DISCOUNT_REQUESTS_PERMISSIONS),
   },
   inventory: {
@@ -484,6 +508,10 @@ export const PERMISSIONS_BY_MODULE = {
     goals: Object.values(CATALOG_GOALS_PERMISSIONS),
     shippingCosts: Object.values(CATALOG_SHIPPING_COSTS_PERMISSIONS),
     points: Object.values(CATALOG_POINTS_PERMISSIONS),
+  },
+  deliveries: {
+    handover: Object.values(DELIVERY_HANDOVER_PERMISSIONS),
+    holds: Object.values(DELIVERY_HOLD_PERMISSIONS),
   },
   sales: Object.values(SALES_PERMISSIONS),
   quotations: Object.values(QUOTATIONS_PERMISSIONS),

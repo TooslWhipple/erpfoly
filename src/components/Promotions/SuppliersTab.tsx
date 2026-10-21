@@ -7,6 +7,7 @@ import {
   Table,
   TableBody,
   TableHead,
+  TablePagination,
   TableRow,
   Typography,
   CircularProgress,
@@ -24,8 +25,11 @@ import {
   SupplierRemoveIconButton,
 } from "@/styles/catalogos/productos.styles";
 import type { PromotionFormState, PromotionSupplier } from "@/types/promociones.types";
+import { EMPTY_SUPPLIER_SELECTION } from "@/types/promociones.types";
 import type { SupplierCatalogItem } from "@/services/suppliers.service";
 import { Minus, PlusIcon, Search } from "lucide-react";
+
+const SUPPLIERS_PAGE_SIZE = 50;
 
 function supplierDisplayName(
   row: PromotionSupplier,
@@ -58,6 +62,7 @@ export function SuppliersTab({
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(0);
 
   const suppliersCatalogQuery = usePromotionSuppliersCatalog(isActive);
   const catalog = suppliersCatalogQuery.data ?? [];
@@ -75,18 +80,43 @@ export function SuppliersTab({
     void suppliersCatalogQuery.refetch();
   }, [modalOpen, suppliersCatalogQuery.refetch]);
 
+  const selection = formState.supplierSelection ?? EMPTY_SUPPLIER_SELECTION;
+
+  const selectedSuppliers = useMemo(() => {
+    if (selection.selectAll) {
+      const excluded = new Set(selection.excludedIds);
+      return catalog
+        .filter((supplier) => !excluded.has(supplier.id))
+        .map((supplier) => ({
+          id: supplier.id,
+          supplierId: supplier.id,
+          supplierName: supplier.businessName?.trim() || supplier.name,
+        }));
+    }
+    return formState.suppliers || [];
+  }, [catalog, formState.suppliers, selection.excludedIds, selection.selectAll]);
+
   const filteredSuppliers = useMemo(() => {
-    const suppliers = formState.suppliers || [];
-    if (!searchTerm.trim()) return suppliers;
+    if (!searchTerm.trim()) return selectedSuppliers;
     const term = searchTerm.toLowerCase().trim();
-    return suppliers.filter((s) => {
+    return selectedSuppliers.filter((s) => {
       const displayName = supplierDisplayName(s, catalog);
       return (
         String(s.supplierId).toLowerCase().includes(term) ||
         displayName.toLowerCase().includes(term)
       );
     });
-  }, [formState.suppliers, searchTerm, catalog]);
+  }, [selectedSuppliers, searchTerm, catalog]);
+
+  const pagedSuppliers = useMemo(() => {
+    if (filteredSuppliers.length <= SUPPLIERS_PAGE_SIZE) return filteredSuppliers;
+    const start = page * SUPPLIERS_PAGE_SIZE;
+    return filteredSuppliers.slice(start, start + SUPPLIERS_PAGE_SIZE);
+  }, [filteredSuppliers, page]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, selection.selectAll, selection.excludedIds, formState.suppliers]);
 
   const handleOpenModal = () => {
     setModalOpen(true);
@@ -96,7 +126,25 @@ export function SuppliersTab({
     setModalOpen(false);
   };
 
+  const handleAddAll = () => {
+    onFieldChange("supplierSelection", {
+      selectAll: true,
+      excludedIds: [],
+    });
+    onFieldChange("suppliers", []);
+    setModalOpen(false);
+  };
+
   const handleAddSupplier = async (supplierId: number) => {
+    if (selection.selectAll) {
+      onFieldChange("supplierSelection", {
+        selectAll: true,
+        excludedIds: selection.excludedIds.filter((id) => id !== supplierId),
+      });
+      setModalOpen(false);
+      return;
+    }
+
     setSaving(true);
     try {
       const row = catalog.find((s) => s.id === supplierId);
@@ -115,11 +163,19 @@ export function SuppliersTab({
     }
   };
 
-  const handleRemoveSupplier = (rowId: number) => {
+  const handleRemoveSupplier = (supplier: PromotionSupplier) => {
+    if (selection.selectAll) {
+      if (selection.excludedIds.includes(supplier.supplierId)) return;
+      onFieldChange("supplierSelection", {
+        selectAll: true,
+        excludedIds: [...selection.excludedIds, supplier.supplierId],
+      });
+      return;
+    }
     const current = formState.suppliers || [];
     onFieldChange(
       "suppliers",
-      current.filter((s) => s.id !== rowId)
+      current.filter((s) => s.id !== supplier.id)
     );
   };
 
@@ -127,7 +183,7 @@ export function SuppliersTab({
     window.location.href = "/catalogos/proveedores/nuevo";
   };
 
-  const existingSupplierIds = (formState.suppliers || []).map((s) => s.supplierId);
+  const existingSupplierIds = selectedSuppliers.map((s) => s.supplierId);
 
   return (
     <>
@@ -175,11 +231,11 @@ export function SuppliersTab({
           >
             <CircularProgress size={28} />
           </div>
-        ) : formState.suppliers && formState.suppliers.length > 0 ? (
+        ) : selectedSuppliers.length > 0 ? (
           <>
             <Typography variant="body2" color="text.secondary">
-              {formState.suppliers.length}
-              {formState.suppliers.length > 1
+              {selectedSuppliers.length}
+              {selectedSuppliers.length > 1
                 ? " proveedores agregados"
                 : " proveedor agregado"}
             </Typography>
@@ -204,7 +260,7 @@ export function SuppliersTab({
                       </SupplierTableCell>
                     </TableRow>
                   ) : (
-                    filteredSuppliers.map((supplier) => (
+                    pagedSuppliers.map((supplier) => (
                       <SupplierTableRow key={supplier.id}>
                         <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
                         <SupplierTableCell>
@@ -214,7 +270,7 @@ export function SuppliersTab({
                           <SupplierRemoveIconButton
                             size="small"
                             aria-label="Quitar proveedor"
-                            onClick={() => handleRemoveSupplier(supplier.id)}
+                            onClick={() => handleRemoveSupplier(supplier)}
                           >
                             <Minus size={16} strokeWidth={2} />
                           </SupplierRemoveIconButton>
@@ -225,6 +281,25 @@ export function SuppliersTab({
                 </TableBody>
               </Table>
             </SupplierTableContainer>
+            {filteredSuppliers.length > SUPPLIERS_PAGE_SIZE ? (
+              <TablePagination
+                component="div"
+                count={filteredSuppliers.length}
+                page={page}
+                onPageChange={(_event, nextPage) => setPage(nextPage)}
+                rowsPerPage={SUPPLIERS_PAGE_SIZE}
+                rowsPerPageOptions={[SUPPLIERS_PAGE_SIZE]}
+                labelRowsPerPage=""
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}–${to} de ${count}`
+                }
+                sx={{
+                  ".MuiTablePagination-selectLabel, .MuiTablePagination-input": {
+                    display: "none",
+                  },
+                }}
+              />
+            ) : null}
           </>
         ) : (
           <Typography variant="body2" color="text.secondary">
@@ -237,6 +312,8 @@ export function SuppliersTab({
         open={modalOpen}
         onClose={handleCloseModal}
         onAddSupplier={handleAddSupplier}
+        onAddAll={handleAddAll}
+        description="Selecciona un proveedor para agregar a esta promoción"
         onNewSupplier={handleNewSupplier}
         loading={saving}
         catalogLoading={suppliersCatalogLoading}

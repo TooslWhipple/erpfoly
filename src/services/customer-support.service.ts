@@ -54,7 +54,7 @@ function saleStatusLabel(status: string): string {
 
 function mapSaleStatus(status: string): InvoiceStatus {
   if (status === "CANCELLED") return "cancelado";
-  if (status === "PAID" || status === "DELIVERED") return "pagado";
+  if (status === "PAID") return "pagado";
   return "activo";
 }
 
@@ -71,8 +71,8 @@ function mapPaymentType(code: string | null): InvoicePaymentType {
 
 function mapArticleStatus(args: {
   cancelledAt?: string | null;
-  saleStatus: string;
   deliveryStatus?: string | null;
+  handoverStatus?: string | null;
   serviceOrderId?: string;
   recoverySheetId?: string;
   recoverySheetStatus?: string | null;
@@ -81,7 +81,11 @@ function mapArticleStatus(args: {
   if (args.recoverySheetStatus === "recuperada") return "recuperado";
   if (args.recoverySheetId) return "esperando_recuperacion";
   if (args.serviceOrderId) return "reparacion";
-  if (args.deliveryStatus === "DELIVERED" || args.saleStatus === "DELIVERED") {
+  if (
+    args.deliveryStatus === "DELIVERED" ||
+    args.handoverStatus === "DELIVERED" ||
+    args.handoverStatus === "CLOSED"
+  ) {
     return "entregado";
   }
   return "pendiente";
@@ -283,7 +287,9 @@ export async function mapSaleToInvoice(
   } else {
     totalPayments = sale.payments.reduce((sum, row) => sum + row.amount, 0);
     remaining = Math.max(0, sale.totalAmount - totalPayments);
-    canCancel = sale.status !== "CANCELLED" && sale.status !== "DELIVERED";
+    canCancel =
+      sale.status !== "CANCELLED" &&
+      (sale.handoverStatus ?? "PENDING") === "PENDING";
   }
 
   const articles: InvoiceArticle[] = sale.items.map((item) => {
@@ -293,8 +299,8 @@ export async function mapSaleToInvoice(
       code: item.product.code,
       status: mapArticleStatus({
         cancelledAt: item.cancelledAt,
-        saleStatus: sale.status,
         deliveryStatus: sale.deliveryStatus,
+        handoverStatus: sale.handoverStatus,
         serviceOrderId: order?.id,
         recoverySheetId: order?.recoverySheetId ?? undefined,
         recoverySheetStatus: order?.recoverySheetStatus,

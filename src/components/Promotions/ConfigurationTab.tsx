@@ -12,6 +12,7 @@ import { FormCard } from "@/styles/catalogos/productos.styles";
 import { SwitchContainer } from "@/styles/catalogos/promociones.styles";
 import type { PromotionFormState, FormErrors } from "@/types/promociones.types";
 import type { PromotionFormConfiguration } from "@/services/promociones.service";
+import { USE_SINGLE_DOWN_PAYMENT } from "@/lib/promotionDownPayment";
 
 interface ConfigurationTabProps {
   isModal?: boolean;
@@ -65,6 +66,17 @@ export function ConfigurationTab({
       ...rest,
       { customer_level_id: customerLevelId, percentage },
     ]);
+  };
+
+  const setSingleDownPayment = (percentage: number) => {
+    const levels = configuration?.customerLevels ?? [];
+    onFieldChange(
+      "customerLevelDownPayments",
+      levels.map((level) => ({
+        customer_level_id: level.id,
+        percentage,
+      })),
+    );
   };
 
   const pctForLevel = (customerLevelId: number) =>
@@ -236,22 +248,24 @@ export function ConfigurationTab({
 
       {(purchaseType?.code === "CREDITO" || purchaseType?.code === "APARTADO") && configuration?.customerLevels?.length &&
         <FormCard>
-          <Stack spacing={0.5}>
-            <Typography variant="h6">Enganche por nivel de cliente</Typography>
-            <Typography variant="body2" color="text.secondary">Configure el porcentaje de anticipo que se aplicará a cada nivel de cliente.</Typography>
-          </Stack>
-          <Grid container spacing={2} width="100%">
-            {
-              configuration.customerLevels.map((item) => (
-                <Grid size={{ xs: 'auto' }} key={item.id}>
+          {USE_SINGLE_DOWN_PAYMENT ? (
+            <>
+              <Stack spacing={0.5}>
+                <Typography variant="h6">Enganche</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Porcentaje mínimo de anticipo para esta promoción.
+                </Typography>
+              </Stack>
+              <Grid container spacing={2} width="100%">
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <FormTextField
-                    label={item.label}
-                    value={String(pctForLevel(item.id))}
+                    label="Enganche"
+                    value={String(pctForLevel(configuration.customerLevels[0].id))}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         const n = value === "" ? 0 : Number(value);
-                        setCustomerLevelPct(item.id, Number.isFinite(n) ? n : 0);
+                        setSingleDownPayment(Number.isFinite(n) ? n : 0);
                         if (errors.customerLevelDownPayments) {
                           onErrorClear("customerLevelDownPayments");
                         }
@@ -263,9 +277,42 @@ export function ConfigurationTab({
                     }}
                   />
                 </Grid>
-              ))
-            }
-          </Grid>
+              </Grid>
+            </>
+          ) : (
+            <>
+              <Stack spacing={0.5}>
+                <Typography variant="h6">Enganche por nivel de cliente</Typography>
+                <Typography variant="body2" color="text.secondary">Configure el porcentaje de anticipo que se aplicará a cada nivel de cliente.</Typography>
+              </Stack>
+              <Grid container spacing={2} width="100%">
+                {
+                  configuration.customerLevels.map((item) => (
+                    <Grid size={{ xs: 'auto' }} key={item.id}>
+                      <FormTextField
+                        label={item.label}
+                        value={String(pctForLevel(item.id))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                            const n = value === "" ? 0 : Number(value);
+                            setCustomerLevelPct(item.id, Number.isFinite(n) ? n : 0);
+                            if (errors.customerLevelDownPayments) {
+                              onErrorClear("customerLevelDownPayments");
+                            }
+                          }
+                        }}
+                        placeholder="0"
+                        InputProps={{
+                          endAdornment: <Box component="span" sx={{ color: "text.secondary" }}>%</Box>,
+                        }}
+                      />
+                    </Grid>
+                  ))
+                }
+              </Grid>
+            </>
+          )}
         </FormCard>
       }
 

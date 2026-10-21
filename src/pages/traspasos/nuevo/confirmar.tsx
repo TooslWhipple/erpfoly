@@ -17,7 +17,8 @@ import {
   ProductImage,
   ImagePlaceholder,
 } from "@/styles/traspasos/confirmar.styles";
-import { createOrderWithItems } from "@/services/orders.service";
+import { createTransfer } from "@/services/transfers.service";
+import type { CreateTransferPayload } from "@/types/transfers.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import dayjs from "@/lib/dayjs";
 
@@ -116,11 +117,9 @@ export default function ConfirmarTraspasoPage() {
         return;
       }
 
-      const payload = {
-        order_type: "internal" as const,
+      const payload: CreateTransferPayload = {
         branch_id: Number(traspasoData.branchId),
         origin_branch_id: Number(traspasoData.originBranchId),
-        folio: `PED-${Date.now()}`,
         order_date: dayjs().format("YYYY-MM-DD"),
         items: items.map((item) => ({
           product_id: item.productId,
@@ -129,7 +128,7 @@ export default function ConfirmarTraspasoPage() {
         })),
       };
 
-      const result = await createOrderWithItems(payload);
+      const result = await createTransfer(payload);
       if (result.error || !result.data) {
         const msg =
           result.error?.message ||

@@ -10,7 +10,6 @@ import {
     Button,
     CircularProgress,
     Box,
-    Stack,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { FormTextField } from "@/components";
@@ -85,6 +84,7 @@ export function AddSupplierModal({
         availableSuppliers.every((supplier) =>
             existingSupplierIds.includes(supplier.id),
         );
+    const showAddAll = Boolean(onAddAll) && availableSuppliers.length > 0 && !allSuppliersAdded;
 
     return (
         <SideModal
@@ -95,29 +95,13 @@ export function AddSupplierModal({
             title="Agregar proveedor"
             description={description}
             headerActions={
-                <Stack direction="row" spacing={1}>
-                    {onAddAll ? (
-                        <Button
-                            variant="outlined"
-                            color="primary"
-                            onClick={onAddAll}
-                            disabled={
-                                loading ||
-                                catalogLoading ||
-                                availableSuppliers.length === 0 ||
-                                allSuppliersAdded
-                            }>
-                            Agregar todos
-                        </Button>
-                    ) : null}
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={onNewSupplier}
-                        disabled={loading}>
-                        Nuevo
-                    </Button>
-                </Stack>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={onNewSupplier}
+                    disabled={loading}>
+                    Nuevo
+                </Button>
             }
             contentSx={{
                 flex: 1,
@@ -137,13 +121,51 @@ export function AddSupplierModal({
                 }}
             />
 
-            <SupplierTableContainer sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            <SupplierTableContainer
+                sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: "auto",
+                    ...(showAddAll
+                        ? { "& .MuiTable-root": { minWidth: 0, tableLayout: "fixed" } }
+                        : null),
+                }}
+            >
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <SupplierTableHeader>ID</SupplierTableHeader>
+                            <SupplierTableHeader
+                                sx={showAddAll ? { width: { xs: 52, sm: 72 }, whiteSpace: "nowrap" } : undefined}
+                            >
+                                ID
+                            </SupplierTableHeader>
                             <SupplierTableHeader>Proveedor</SupplierTableHeader>
-                            <SupplierTableHeader align="right"></SupplierTableHeader>
+                            <SupplierTableHeader
+                                align="right"
+                                sx={
+                                    showAddAll
+                                        ? {
+                                            width: { xs: 148, sm: 168 },
+                                            whiteSpace: "nowrap",
+                                            py: 0.5,
+                                            px: 1,
+                                        }
+                                        : undefined
+                                }
+                            >
+                                {showAddAll ? (
+                                    <Button
+                                        variant="text"
+                                        size="small"
+                                        color="primary"
+                                        onClick={onAddAll}
+                                        disabled={loading || catalogLoading}
+                                        sx={{ px: { xs: 0.5, sm: 1 }, whiteSpace: "nowrap" }}
+                                    >
+                                        Agregar todos
+                                    </Button>
+                                ) : null}
+                            </SupplierTableHeader>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -169,18 +191,28 @@ export function AddSupplierModal({
                             <TableRow>
                                 <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">
-                                        {
-                                            (searchTerm) ? "No se encontraron proveedores" : "No hay proveedores disponibles"
-                                        }
+                                        {allSuppliersAdded
+                                            ? "Todos los proveedores ya están agregados"
+                                            : searchTerm
+                                                ? "No se encontraron proveedores"
+                                                : "No hay proveedores disponibles"}
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredSuppliers.map((supplier) => (
                                 <SupplierTableRow key={supplier.id}>
-                                    <SupplierTableCell>{supplier.id}</SupplierTableCell>
-                                    <SupplierTableCell>{supplierDisplayName(supplier)}</SupplierTableCell>
-                                    <SupplierTableCell align="right">
+                                    <SupplierTableCell sx={{ whiteSpace: "nowrap" }}>{supplier.id}</SupplierTableCell>
+                                    <SupplierTableCell>
+                                        {showAddAll ? (
+                                            <Typography noWrap variant="body2" title={supplierDisplayName(supplier)}>
+                                                {supplierDisplayName(supplier)}
+                                            </Typography>
+                                        ) : (
+                                            supplierDisplayName(supplier)
+                                        )}
+                                    </SupplierTableCell>
+                                    <SupplierTableCell align="right" sx={showAddAll ? { px: 1 } : undefined}>
                                         <Button
                                             variant="text"
                                             onClick={() => handleAddSupplier(supplier.id)}

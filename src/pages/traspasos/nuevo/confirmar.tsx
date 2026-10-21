@@ -120,7 +120,6 @@ export default function ConfirmarTraspasoPage() {
       const payload: CreateTransferPayload = {
         branch_id: Number(traspasoData.branchId),
         origin_branch_id: Number(traspasoData.originBranchId),
-        folio: `PED-${Date.now()}`,
         order_date: dayjs().format("YYYY-MM-DD"),
         items: items.map((item) => ({
           product_id: item.productId,

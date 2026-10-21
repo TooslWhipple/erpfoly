@@ -132,7 +132,6 @@ export default function ConfirmarPedidoPage() {
       const payload = {
         order_type: "external" as const,
         branch_id: mainWarehouse.id,
-        folio: `PED-${Date.now()}`,
         order_date: dayjs().format("YYYY-MM-DD"),
         supplier_id: orderData.supplierId
           ? Number(orderData.supplierId)

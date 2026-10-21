@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import type { CashRegisterState } from "@/components/CashRegister";
+import { toAmount } from "@/utils/cashCut";
 
 interface UseCashRegisterSessionOptions {
   loadMovementsOnOpen?: boolean;
@@ -26,9 +27,9 @@ function mapSummaryToState(summary: CashRegisterSummary): CashRegisterState {
     id: String(summary.cash_register_id),
     name: summary.cash_register_name,
     status: isOpen ? "open" : "closed",
-    initialFund: summary.opening_balance ?? 0,
+    initialFund: toAmount(summary.opening_balance),
     exchangeRate: summary.exchange_rate ?? 17.6,
-    currentCash: isOpen ? (summary.current_cash ?? 0) : 0,
+    currentCash: isOpen ? toAmount(summary.current_cash) : 0,
     limit: summary.limit ?? 20000,
     branchId: summary.branch_id,
   };

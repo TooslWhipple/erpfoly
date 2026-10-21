@@ -13,6 +13,7 @@ import {
     WithdrawalTotalCard,
 } from "@/styles/cajas.styles";
 import { StatusChip } from "../StatusChip";
+import { formatCashAmount } from "@/utils/cashCut";
 
 export type CutType = "partial" | "final";
 
@@ -151,7 +152,7 @@ export function CutModal({
                         cutType === "final" &&
                         <CurrentCashCard>
                             <Typography variant="body1">Corte final</Typography>
-                            <Typography variant="subtitle1">{numeral(totalIncome).format("$0,0.00")}</Typography>
+                            <Typography variant="subtitle1">{formatCashAmount(totalIncome)}</Typography>
                         </CurrentCashCard>
 
                     }
@@ -220,23 +221,23 @@ export function CutModal({
                                 <Stack>
                                     <BreakdownItem>
                                         <Typography variant="body1">Fondo inicial</Typography>
-                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(initialFund).format("$0,0.00")}</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{formatCashAmount(initialFund)}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <Typography variant="body1">Efectivo</Typography>
-                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(cash).format("$0,0.00")}</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{formatCashAmount(cash)}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <Typography variant="body1">Tarjeta de crédito</Typography>
-                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(creditCard).format("$0,0.00")}</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{formatCashAmount(creditCard)}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem>
                                         <Typography variant="body1">Depósitos en efectivo</Typography>
-                                        <Typography variant="subtitle1" fontWeight={600}>{numeral(cashDeposits).format("$0,0.00")}</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>{formatCashAmount(cashDeposits)}</Typography>
                                     </BreakdownItem>
                                     <BreakdownItem sx={{ borderBottom: 'none' }}>
                                         <Typography variant="body1">Retiros de caja ({withdrawals})</Typography>
-                                        <Typography variant="subtitle1" fontWeight={600}>-{numeral(withdrawalAmount).format("$0,0.00")}</Typography>
+                                        <Typography variant="subtitle1" fontWeight={600}>-{formatCashAmount(withdrawalAmount)}</Typography>
                                     </BreakdownItem>
                                 </Stack>
                             </Stack>
@@ -252,7 +253,7 @@ export function CutModal({
                     cutType === "final" &&
                     <ShortageCard>
                         <Typography variant="body2" color="text.secondary">Faltante</Typography>
-                        <Typography variant="subtitle1" fontWeight={600}>{numeral(shortage).format("$0,0.00")}</Typography>
+                        <Typography variant="subtitle1" fontWeight={600}>{formatCashAmount(shortage)}</Typography>
                     </ShortageCard>
                 }
 

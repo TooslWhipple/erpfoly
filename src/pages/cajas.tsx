@@ -15,10 +15,7 @@ import {
   CASH_REGISTER_HISTORY_PATH,
   CASH_REGISTER_CLOSINGS_PATH,
 } from "@/lib/cashRegisterRoutes";
-import {
-  CashMovementType,
-  CashMovementPaymentForm,
-} from "@/lib/cashMovement.constants";
+import { buildCashCutSummary } from "@/utils/cashCut";
 import {
   OpenCashRegisterForm,
   CashRegisterDashboard,
@@ -120,55 +117,15 @@ export default function Cajas() {
     };
   }, [router.events, loadAssignedCashRegister]);
 
-  const cutModalData = useMemo(() => {
-    const withdrawals = movements.filter(
-      (m) => m.movement_type === CashMovementType.WITHDRAWAL,
-    );
-    const payments = movements.filter(
-      (m) =>
-        m.movement_type === CashMovementType.PAYMENT ||
-        m.movement_type === CashMovementType.SALE,
-    );
-    const partialCuts = movements.filter(
-      (m) => m.movement_type === CashMovementType.PARTIAL_CUT,
-    );
-    const sumByPaymentForm = (form: string) =>
-      payments
-        .filter((m) => (m.payment_form ?? CashMovementPaymentForm.CASH) === form)
-        .reduce((sum, m) => sum + Number(m.amount), 0);
-
-    const cashSales = sumByPaymentForm(CashMovementPaymentForm.CASH);
-    const creditCard = sumByPaymentForm(CashMovementPaymentForm.CREDIT_CARD);
-    const cashDeposits = sumByPaymentForm(CashMovementPaymentForm.CASH_DEPOSIT);
-    const withdrawalCount = withdrawals.length;
-    const withdrawalTotal = withdrawals.reduce(
-      (sum, m) => sum + Number(m.amount),
-      0,
-    );
-    const partialCutTotal = partialCuts.reduce(
-      (sum, m) => sum + Number(m.amount),
-      0,
-    );
-    const totalWithdrawals = withdrawalTotal + partialCutTotal;
-    const totalIncome = cashSales + creditCard + cashDeposits;
-    // Efectivo esperado en caja: fondo + ventas efectivo + depósitos - retiros
-    const expectedCash =
-      (cashRegister?.initialFund ?? 0) +
-      cashSales +
-      cashDeposits -
-      totalWithdrawals;
-    const actualCash = cashRegister?.currentCash ?? 0;
-    const shortage = expectedCash - actualCash;
-    return {
-      cash: cashSales,
-      creditCard,
-      cashDeposits,
-      withdrawals: withdrawalCount,
-      withdrawalAmount: totalWithdrawals,
-      totalIncome,
-      shortage,
-    };
-  }, [movements, cashRegister]);
+  const cutModalData = useMemo(
+    () =>
+      buildCashCutSummary({
+        movements,
+        initialFund: cashRegister?.initialFund,
+        currentCash: cashRegister?.currentCash,
+      }),
+    [movements, cashRegister],
+  );
   const handleOpenCashRegister = async () => {
     if (!cashRegister) return;
     try {

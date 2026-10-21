@@ -91,12 +91,16 @@ function mapArticleStatus(args: {
   return "pendiente";
 }
 
+function isHandedOver(
+  handoverStatus: SaleListItem["handoverStatus"],
+): boolean {
+  return (
+    handoverStatus === "PARTIALLY_DELIVERED" || handoverStatus === "DELIVERED"
+  );
+}
+
 function isCashierValidatedSale(sale: SaleListItem): boolean {
-  if (
-    sale.status === "PAID" ||
-    sale.status === "PARTIALLY_DELIVERED" ||
-    sale.status === "DELIVERED"
-  ) {
+  if (sale.status === "PAID" || isHandedOver(sale.handoverStatus)) {
     return true;
   }
   return (
@@ -121,11 +125,7 @@ function isSaleDetailEligible(sale: SaleDetail): boolean {
   ) {
     return false;
   }
-  if (
-    sale.status === "PAID" ||
-    sale.status === "PARTIALLY_DELIVERED" ||
-    sale.status === "DELIVERED"
-  ) {
+  if (sale.status === "PAID" || isHandedOver(sale.handoverStatus)) {
     return true;
   }
   if (sale.status !== "PENDING_PAYMENT") return false;

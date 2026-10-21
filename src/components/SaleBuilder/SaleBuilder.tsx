@@ -852,6 +852,10 @@ export function SaleBuilder({
         resumeSaleData.creditDownPaymentAmount.toFixed(2),
       );
     }
+    if (resumeSaleData.creditOffer) {
+      setAllowedTermMonths(resumeSaleData.creditOffer.termMonths);
+      setDownPaymentRate(resumeSaleData.creditOffer.minimumDownPaymentRate);
+    }
 
     if (resumeSaleData.deliveryType === "ADDRESS") {
       setDeliveryType("delivery");
@@ -957,6 +961,10 @@ export function SaleBuilder({
   ) {
     setLastSeenGetRevision(resumeSaleData.economicRevision ?? null);
     setSaleEconomicRevision(resumeSaleData.economicRevision ?? null);
+    if (resumeSaleData.creditOffer) {
+      setAllowedTermMonths(resumeSaleData.creditOffer.termMonths);
+      setDownPaymentRate(resumeSaleData.creditOffer.minimumDownPaymentRate);
+    }
     setCart((prev) =>
       patchCartLinePrices(
         prev,

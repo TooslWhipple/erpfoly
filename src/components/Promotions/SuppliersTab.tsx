@@ -135,6 +135,11 @@ export function SuppliersTab({
     setModalOpen(false);
   };
 
+  const handleRemoveAll = () => {
+    onFieldChange("supplierSelection", { ...EMPTY_SUPPLIER_SELECTION });
+    onFieldChange("suppliers", []);
+  };
+
   const handleAddSupplier = async (supplierId: number) => {
     if (selection.selectAll) {
       onFieldChange("supplierSelection", {
@@ -188,19 +193,31 @@ export function SuppliersTab({
   return (
     <>
       <FormCard>
-        <Stack width="100%" direction="row" justifyContent="space-between" alignItems="center">
+        <Stack
+          width="100%"
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "stretch", md: "center" }}
+          spacing={2}
+        >
           <Stack spacing={0.5}>
             <Typography variant="h6">Proveedores</Typography>
             <Typography variant="body2" color="text.secondary">
               Configura los proveedores que aplicará con este Promoción.
             </Typography>
           </Stack>
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={2}
+            sx={{ width: { xs: "100%", md: "auto" }, flexWrap: "wrap" }}
+          >
             <FormTextField
               placeholder="Buscar proveedores"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
+              sx={{ flex: "1 1 180px", minWidth: 0 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -213,7 +230,7 @@ export function SuppliersTab({
               variant="outlined"
               color="primary"
               startIcon={<PlusIcon size={12} />}
-              sx={{ minWidth: 128 }}
+              sx={{ minWidth: 128, flexShrink: 0 }}
               onClick={handleOpenModal}
             >
               Agregar
@@ -239,13 +256,48 @@ export function SuppliersTab({
                 ? " proveedores agregados"
                 : " proveedor agregado"}
             </Typography>
-            <SupplierTableContainer>
+            <SupplierTableContainer
+              sx={{ "& .MuiTable-root": { minWidth: 0, tableLayout: "fixed" } }}
+            >
               <Table>
                 <TableHead>
                   <TableRow>
-                    <SupplierTableHeader>ID</SupplierTableHeader>
-                    <SupplierTableHeader>Proveedor</SupplierTableHeader>
-                    <SupplierTableHeader align="right"></SupplierTableHeader>
+                    <SupplierTableHeader
+                      sx={{
+                        width: { xs: 52, sm: 72 },
+                        whiteSpace: "nowrap",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1,
+                      }}
+                    >
+                      ID
+                    </SupplierTableHeader>
+                    <SupplierTableHeader sx={{ position: "sticky", top: 0, zIndex: 1 }}>
+                      Proveedor
+                    </SupplierTableHeader>
+                    <SupplierTableHeader
+                      align="right"
+                      sx={{
+                        width: { xs: 148, sm: 168 },
+                        whiteSpace: "nowrap",
+                        py: 0.5,
+                        px: 1,
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1,
+                      }}
+                    >
+                      <Button
+                        variant="text"
+                        size="small"
+                        color="error"
+                        onClick={handleRemoveAll}
+                        sx={{ px: { xs: 0.5, sm: 1 }, whiteSpace: "nowrap" }}
+                      >
+                        Quitar todos
+                      </Button>
+                    </SupplierTableHeader>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -262,11 +314,19 @@ export function SuppliersTab({
                   ) : (
                     pagedSuppliers.map((supplier) => (
                       <SupplierTableRow key={supplier.id}>
-                        <SupplierTableCell>{supplier.supplierId}</SupplierTableCell>
-                        <SupplierTableCell>
-                          {supplierDisplayName(supplier, catalog)}
+                        <SupplierTableCell sx={{ whiteSpace: "nowrap" }}>
+                          {supplier.supplierId}
                         </SupplierTableCell>
-                        <SupplierTableCell align="right">
+                        <SupplierTableCell>
+                          <Typography
+                            noWrap
+                            variant="body2"
+                            title={supplierDisplayName(supplier, catalog)}
+                          >
+                            {supplierDisplayName(supplier, catalog)}
+                          </Typography>
+                        </SupplierTableCell>
+                        <SupplierTableCell align="right" sx={{ px: 1 }}>
                           <SupplierRemoveIconButton
                             size="small"
                             aria-label="Quitar proveedor"

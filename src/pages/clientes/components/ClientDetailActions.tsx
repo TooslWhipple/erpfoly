@@ -6,16 +6,19 @@ export interface ClientDetailActionsProps {
   showDeactivateAction: boolean;
   deactivateDisabled: boolean;
   onDeactivateClick: () => void;
+  onGenerateStatement?: () => void;
 }
 
 export function ClientDetailActions({
   showDeactivateAction,
   deactivateDisabled,
   onDeactivateClick,
+  onGenerateStatement,
 }: ClientDetailActionsProps) {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
 
-  if (!showDeactivateAction) {
+  const hasAnyAction = showDeactivateAction || Boolean(onGenerateStatement);
+  if (!hasAnyAction) {
     return null;
   }
 
@@ -30,6 +33,11 @@ export function ClientDetailActions({
   const handleDeactivateClick = () => {
     handleCloseMenu();
     onDeactivateClick();
+  };
+
+  const handleGenerateStatement = () => {
+    handleCloseMenu();
+    onGenerateStatement?.();
   };
 
   return (
@@ -48,13 +56,20 @@ export function ClientDetailActions({
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem
-          disabled={deactivateDisabled}
-          onClick={handleDeactivateClick}
-          sx={{ color: deactivateDisabled ? undefined : "error.main" }}
-        >
-          Dar de baja
-        </MenuItem>
+        {onGenerateStatement ? (
+          <MenuItem onClick={handleGenerateStatement}>
+            Generar Estado de Cuenta
+          </MenuItem>
+        ) : null}
+        {showDeactivateAction ? (
+          <MenuItem
+            disabled={deactivateDisabled}
+            onClick={handleDeactivateClick}
+            sx={{ color: deactivateDisabled ? undefined : "error.main" }}
+          >
+            Dar de baja
+          </MenuItem>
+        ) : null}
       </Menu>
     </>
   );

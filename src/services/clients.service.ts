@@ -1,5 +1,11 @@
-import { get, patch, post } from "@/lib/axios";
-import type { ApiResult, ApiSuccessPayload, PaginatedRowsResponse } from "@/lib/axios";
+import axios from "axios";
+import { api, get, patch, post } from "@/lib/axios";
+import type {
+  ApiResult,
+  ApiSuccessPayload,
+  AxiosConfigWithSkipToast,
+  PaginatedRowsResponse,
+} from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   ClientCollectionActivity,
@@ -446,5 +452,74 @@ export async function cancelClientPurchase(
   return post<ApiSuccessPayload>(
     `${BASE}/${clientId}/purchases/${saleId}/cancel`,
     payload
+  );
+}
+
+export interface SendClientAccountStatementWhatsappResult {
+  sentTo: string;
+}
+
+async function blobFromPdfResponse(
+  data: unknown,
+  fallbackMessage: string,
+): Promise<Blob> {
+  if (data instanceof Blob) {
+    const looksJson =
+      data.type.includes("application/json") || data.type.includes("text/plain");
+    if (looksJson) {
+      const text = await data.text();
+      try {
+        const json = JSON.parse(text) as {
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(json.error?.message ?? json.message ?? fallbackMessage);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new Error(fallbackMessage);
+        }
+        throw error;
+      }
+    }
+    return data.type.includes("pdf")
+      ? data
+      : new Blob([data], { type: "application/pdf" });
+  }
+
+  return new Blob([data as BlobPart], { type: "application/pdf" });
+}
+
+export async function getClientAccountStatementPdf(
+  clientId: number,
+): Promise<Blob> {
+  try {
+    const response = await api.get(`${BASE}/${clientId}/account-statement/pdf`, {
+      responseType: "blob",
+      skipGlobalErrorToast: true,
+    } as AxiosConfigWithSkipToast);
+    return blobFromPdfResponse(
+      response.data,
+      "No se pudo generar el estado de cuenta",
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      return blobFromPdfResponse(
+        error.response.data,
+        "No se pudo generar el estado de cuenta",
+      );
+    }
+    throw error instanceof Error
+      ? error
+      : new Error("No se pudo generar el estado de cuenta");
+  }
+}
+
+export async function sendClientAccountStatementWhatsapp(
+  clientId: number,
+): Promise<ApiResult<SendClientAccountStatementWhatsappResult>> {
+  return post<SendClientAccountStatementWhatsappResult>(
+    `${BASE}/${clientId}/account-statement/whatsapp`,
+    undefined,
+    { skipGlobalErrorToast: true },
   );
 }

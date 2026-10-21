@@ -91,6 +91,57 @@ function mapArticleStatus(args: {
   return "pendiente";
 }
 
+function isHandedOver(
+  handoverStatus: SaleListItem["handoverStatus"],
+): boolean {
+  return (
+    handoverStatus === "PARTIALLY_DELIVERED" || handoverStatus === "DELIVERED"
+  );
+}
+
+function isCashierValidatedSale(sale: SaleListItem): boolean {
+  if (sale.status === "PAID" || isHandedOver(sale.handoverStatus)) {
+    return true;
+  }
+  return (
+    sale.status === "PENDING_PAYMENT" &&
+    (sale.paymentType === "CREDIT" || sale.paymentType === "LAYAWAY")
+  );
+}
+
+function isSaleDetailEligible(sale: SaleDetail): boolean {
+  if (
+    sale.status === "CANCELLED" ||
+    sale.status === "PENDING_CASHIER" ||
+    sale.status === "DRAFT" ||
+    sale.status === "PENDING_DISCOUNT"
+  ) {
+    return false;
+  }
+  if (
+    sale.layaway?.status === "EXPIRED" ||
+    sale.layaway?.status === "CANCELLED" ||
+    sale.credit?.status === "CANCELLED"
+  ) {
+    return false;
+  }
+  if (sale.status === "PAID" || isHandedOver(sale.handoverStatus)) {
+    return true;
+  }
+  if (sale.status !== "PENDING_PAYMENT") return false;
+  const creditStatus = sale.credit?.status;
+  if (
+    creditStatus === "ACTIVE" ||
+    creditStatus === "DEFAULTED" ||
+    creditStatus === "PAID"
+  ) {
+    return true;
+  }
+  return (
+    sale.layaway?.status === "ACTIVE" || sale.layaway?.status === "COMPLETED"
+  );
+}
+
 function saleToSearchResult(sale: SaleListItem): CustomerSupportSearchResult {
   const dateLabel = formatDateOnly(sale.createdAt, "dateLong");
   return {
@@ -138,18 +189,28 @@ export async function searchCustomerSupport(
   }
 
   const sales = await unwrapOrThrow(
-    await getSales({ page: 1, limit: 20, search: trimmed }),
+    await getSales({
+      page: 1,
+      limit: 20,
+      search: trimmed,
+      customerSupport: true,
+    }),
   );
-  return sales.rows.map(saleToSearchResult);
+  return sales.rows.filter(isCashierValidatedSale).map(saleToSearchResult);
 }
 
 export async function searchSalesForClient(
   clientId: number,
 ): Promise<CustomerSupportSearchResult[]> {
   const sales = await unwrapOrThrow(
-    await getSales({ page: 1, limit: 50, client_id: clientId }),
+    await getSales({
+      page: 1,
+      limit: 50,
+      client_id: clientId,
+      customerSupport: true,
+    }),
   );
-  return sales.rows.map(saleToSearchResult);
+  return sales.rows.filter(isCashierValidatedSale).map(saleToSearchResult);
 }
 
 type ServiceOrderListItem = {
@@ -181,6 +242,9 @@ export async function getInvoiceDetail(
     throw new Error("Factura no encontrada");
   }
   const sale = await unwrapOrThrow(await getSaleDetail(saleId));
+  if (!isSaleDetailEligible(sale)) {
+    throw new Error("Factura no encontrada");
+  }
   return mapSaleToInvoice(sale);
 }
 

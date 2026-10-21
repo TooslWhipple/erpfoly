@@ -49,6 +49,7 @@ export interface GetSalesParams {
   created_by?: number;
   branch_id?: number;
   amount?: number;
+  customerSupport?: boolean;
 }
 
 export interface ProductSearchResult {

@@ -308,20 +308,29 @@ export default function OrderForm({
     };
     fetchSuggestions();
   }, [sourceEntityId, effectiveOrderType]);
+  const destinationBranchId = Number(branch?.id);
   const { data: productRows, isFetching: articlesFetching } = useQuery({
     queryKey: [
       effectiveOrderType === "external"
         ? "products-by-supplier"
         : "products-by-branch",
       sourceEntityId,
+      effectiveOrderType === "internal" ? destinationBranchId : null,
     ],
     queryFn: async () => {
       if (effectiveOrderType === "external") {
         return unwrapOrThrow(await getProductsBySupplier(sourceEntityId));
       }
-      return unwrapOrThrow(await getProductsByBranch(sourceEntityId));
+      return unwrapOrThrow(
+        await getProductsByBranch(
+          sourceEntityId,
+          Number.isFinite(destinationBranchId) ? destinationBranchId : undefined,
+        ),
+      );
     },
-    enabled: sourceEntityId > 0,
+    enabled:
+      sourceEntityId > 0 &&
+      (effectiveOrderType !== "internal" || destinationBranchId > 0),
     staleTime: 30_000,
   });
   const articles = useMemo<ArticleRow[]>(

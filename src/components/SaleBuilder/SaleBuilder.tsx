@@ -84,6 +84,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getProductDetail,
+  lookupPosProductByCode,
   searchProducts,
   getPurchaseTypes,
   getLayawayTerms,
@@ -619,28 +620,6 @@ export function SaleBuilder({
   const [quantityMap, setQuantityMap] = useState<Record<string, number>>({});
   const [showOtherBranches, setShowOtherBranches] = useState(false);
 
-  const { data: productSearchData, isLoading: searchLoading } = useQuery({
-    queryKey: [
-      "product-search",
-      debouncedProductSearch,
-      effectiveProductPage,
-      productLimit,
-    ],
-    enabled: view === "search",
-    queryFn: async () => {
-      const result = await searchProducts({
-        search:
-          debouncedProductSearch.trim().length > 1
-            ? debouncedProductSearch
-            : undefined,
-        page: effectiveProductPage + 1,
-        limit: productLimit,
-      });
-      if (result.error) throw new Error(result.error.message);
-      return result.data ?? { rows: [], total: 0, page: 1, limit: 10 };
-    },
-  });
-
   const principalBranchId =
     useAuthStore((s) => s.user?.principalBranchId) ?? null;
   const activeSessionQuery = useQuery({
@@ -658,6 +637,33 @@ export function SaleBuilder({
   const workingBranchId =
     activeSessionQuery.data?.branch_id ?? principalBranchId ?? null;
 
+  const { data: productSearchData, isLoading: searchLoading } = useQuery({
+    queryKey: [
+      "product-search",
+      debouncedProductSearch,
+      effectiveProductPage,
+      productLimit,
+      workingBranchId,
+    ],
+    enabled: view === "search" && workingBranchId != null,
+    queryFn: async () => {
+      if (workingBranchId == null) {
+        return { rows: [], total: 0, page: 1, limit: productLimit };
+      }
+      const result = await searchProducts({
+        search:
+          debouncedProductSearch.trim().length > 1
+            ? debouncedProductSearch
+            : undefined,
+        page: effectiveProductPage + 1,
+        limit: productLimit,
+        branch_id: workingBranchId,
+      });
+      if (result.error) throw new Error(result.error.message);
+      return result.data ?? { rows: [], total: 0, page: 1, limit: 10 };
+    },
+  });
+
   const { data: purchaseTypesRes } = useQuery({
     queryKey: ["purchase-types"],
     queryFn: async () => {
@@ -670,7 +676,11 @@ export function SaleBuilder({
   const purchaseTypes = purchaseTypesRes ?? [];
   const purchaseTypeId = resolvePurchaseTypeId(paymentType, purchaseTypes);
 
-  const { data: productDetail, isLoading: detailLoading } = useQuery({
+  const {
+    data: productDetail,
+    isLoading: detailLoading,
+    error: productDetailError,
+  } = useQuery({
     queryKey: [
       "product-detail",
       selectedProductId,
@@ -693,6 +703,13 @@ export function SaleBuilder({
       if (result.error) throw new Error(result.error.message);
       return result.data ?? null;
     },
+    retry: (failureCount, error) => {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("no está habilitado para su venta/exhibición")) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -710,6 +727,19 @@ export function SaleBuilder({
   );
   const snackbar = useSnackbarStore();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
+
+  useEffect(() => {
+    if (!(productDetailError instanceof Error)) return;
+    if (
+      !productDetailError.message.includes(
+        "no está habilitado para su venta/exhibición",
+      )
+    ) {
+      return;
+    }
+    setSelectedProductId(null);
+    setView("search");
+  }, [productDetailError]);
 
   const handleCreditIntakeFinalize = async (
     payload: CreditApplicationBiometricsData,
@@ -2016,11 +2046,22 @@ export function SaleBuilder({
     setView("product-detail");
   };
 
-  const handleProductCodeScanned = (code: string) => {
+  const handleProductCodeScanned = async (code: string) => {
     setProductScannerOpen(false);
-    setProductSearch(code);
-    setProductPage(0);
-    setView("search");
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    if (workingBranchId == null) {
+      snackbar.showError(
+        "No hay sucursal de trabajo para validar el artículo.",
+      );
+      return;
+    }
+    const result = await lookupPosProductByCode(trimmed, workingBranchId);
+    if (result.error || !result.data) return;
+    setSelectedProductId(result.data.id);
+    setQuantityMap({});
+    setShowOtherBranches(false);
+    setView("product-detail");
   };
 
   const canAddToCart = (): boolean => {

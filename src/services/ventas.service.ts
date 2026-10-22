@@ -75,6 +75,13 @@ export interface SearchProductsParams {
   search?: string;
   page?: number;
   limit?: number;
+  branch_id?: number;
+}
+
+export interface PosProductByCode {
+  id: number;
+  code: string;
+  name: string;
 }
 
 export type SearchProductsResponse = PaginatedRowsResponse<ProductSearchResult>;
@@ -84,6 +91,15 @@ export async function searchProducts(
 ): Promise<ApiResult<SearchProductsResponse>> {
   return get<SearchProductsResponse>(
     buildListUrl(`${BASE}/products/search`, params),
+  );
+}
+
+export async function lookupPosProductByCode(
+  code: string,
+  branchId: number,
+): Promise<ApiResult<PosProductByCode>> {
+  return get<PosProductByCode>(
+    buildListUrl(`${BASE}/products/by-code`, { code, branch_id: branchId }),
   );
 }
 

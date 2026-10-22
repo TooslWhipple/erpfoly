@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useMutation, type QueryClient } from "@tanstack/react-query";
 
 import type { NewRouteFormValues } from "@/components";
+import dayjs from "@/lib/dayjs";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import {
   addAssistantToRoute,
@@ -27,7 +28,7 @@ interface UseRouteMutationsParams {
   routeDateStr: string;
   showSuccess: (message: string) => void;
   showError: (message: string) => void;
-  setSelectedRouteId: (id: number) => void;
+  onRouteCreated: (route: RouteDetailApi) => void;
   setActiveTab: (tab: string) => void;
   setNewRouteModalOpen: (open: boolean) => void;
   setPendingCartaLocalFile: (file: File | undefined) => void;
@@ -39,7 +40,7 @@ export function useRouteMutations({
   routeDateStr,
   showSuccess,
   showError,
-  setSelectedRouteId,
+  onRouteCreated,
   setActiveTab,
   setNewRouteModalOpen,
   setPendingCartaLocalFile,
@@ -51,9 +52,15 @@ export function useRouteMutations({
       return unwrapOrThrow(res);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      const createdDateStr = data.scheduled_date
+        ? dayjs(data.scheduled_date).format("YYYY-MM-DD")
+        : routeDateStr;
+      queryClient.invalidateQueries({ queryKey: ["routes", createdDateStr] });
+      if (createdDateStr !== routeDateStr) {
+        queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      }
       queryClient.setQueryData<RouteDetailApi>(["route-detail", data.id], data);
-      setSelectedRouteId(data.id);
+      onRouteCreated(data);
       setActiveTab(getDefaultTabForRouteType(data.route_type));
       showSuccess("Ruta creada correctamente.");
       setNewRouteModalOpen(false);

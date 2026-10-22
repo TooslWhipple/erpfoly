@@ -739,14 +739,20 @@ export async function getProductsBySupplier(
 }
 
 export async function getProductsByBranch(
-    branchId: number
+    branchId: number,
+    destinationBranchId?: number,
 ): Promise<ApiResult<ProductBySupplierItem[]>> {
     if (!Number.isFinite(branchId) || branchId <= 0) {
         return { data: [], error: null };
     }
 
     const result = await get<unknown>(`${PRODUCTS_BASE}/search-by-branch`, {
-        params: { branchId },
+        params: {
+            branchId,
+            ...(destinationBranchId != null && destinationBranchId > 0
+                ? { destinationBranchId }
+                : {}),
+        },
     });
 
     if (result.error != null) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Typography,
@@ -9,11 +9,9 @@ import {
   Grid,
   Box,
 } from "@mui/material";
-import {
-  Breadcrumbs,
-  StatusChipVariant,
-  StatusChip,
-} from "@/components";
+import { Breadcrumbs, StatusChip } from "@/components";
+import { OrderAdjustmentActions } from "@/components/OrderAdjustment";
+import { getOrderStatusLabel, getOrderStatusVariant } from "@/utils/orderStatus";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { ConfirmOrderItemCard } from "@/components/ConfirmOrderItemCard";
 import type { ConfirmOrderItem } from "@/components/ConfirmOrderItemCard";
@@ -23,49 +21,6 @@ import { SummaryCard } from "@/styles/pedidos/confirmar.styles";
 // import { buildPlaceholderOnlinePrices } from "@/lib/onlinePrices";
 import { formatDateOnly } from "@/utils/date";
 const IVA_RATE = 0.16;
-type DisplayStatus =
-  | "pending"
-  | "scheduled"
-  | "in_progress"
-  | "received"
-  | "cancelled";
-function mapBackendStatus(status: string): DisplayStatus {
-  switch (status) {
-    case "pending":
-      return "pending";
-    case "scheduled":
-    case "shipped":
-      return "scheduled";
-    case "partially_delivered":
-      return "in_progress";
-    case "delivered":
-      return "received";
-    case "cancelled":
-      return "cancelled";
-    default:
-      return "pending";
-  }
-}
-function getStatusLabel(status: DisplayStatus): string {
-  const labels: Record<DisplayStatus, string> = {
-    pending: "Solicitado",
-    scheduled: "Programado",
-    in_progress: "En curso",
-    received: "Recibido",
-    cancelled: "Cancelado",
-  };
-  return labels[status];
-}
-function getStatusVariant(status: DisplayStatus): StatusChipVariant {
-  const variants: Record<DisplayStatus, string> = {
-    pending: "pending",
-    scheduled: "infoAlt",
-    in_progress: "info",
-    received: "success",
-    cancelled: "error",
-  };
-  return variants[status] as StatusChipVariant;
-}
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -94,13 +49,8 @@ export default function PedidoDetalle() {
   const { id } = router.query;
   const [order, setOrder] = useState<OrderFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (id && typeof id === "string") {
-      loadOrder(id);
-    }
-  }, [id]);
-  const loadOrder = async (orderId: string) => {
-    setLoading(true);
+  const loadOrder = useCallback(async (orderId: string, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const result = await getOrderFull(Number(orderId));
       if (result.data) {
@@ -111,8 +61,15 @@ export default function PedidoDetalle() {
     } finally {
       setLoading(false);
     }
-  };
-  const displayStatus = order ? mapBackendStatus(order.status) : "pending";
+  }, []);
+  const reloadOrder = useCallback(() => {
+    if (id && typeof id === "string") void loadOrder(id, true);
+  }, [id, loadOrder]);
+  useEffect(() => {
+    if (id && typeof id === "string") {
+      void loadOrder(id);
+    }
+  }, [id, loadOrder]);
   const subtotal = order
     ? order.order_items.reduce(
         (sum, item) =>
@@ -244,10 +201,15 @@ export default function PedidoDetalle() {
               sm: "center",
             }}
           >
+            <OrderAdjustmentActions
+              orderId={order.id}
+              status={order.status}
+              onChanged={reloadOrder}
+            />
             <StatusChip
               size="small"
-              label={getStatusLabel(displayStatus)}
-              variant={getStatusVariant(displayStatus)}
+              label={getOrderStatusLabel(order.status)}
+              variant={getOrderStatusVariant(order.status)}
             />
           </Stack>
         </Stack>
@@ -282,34 +244,39 @@ export default function PedidoDetalle() {
           >
             <SummaryCard>
               <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between">
+                <Stack spacing={1}>
                   <Typography variant="body2" color="text.secondary">
-                    Entrega
+                    Entrega prometida
                   </Typography>
-                  <Typography variant="body1" textAlign="right">
-                    {order.order_deliveries[0] ? (
-                      <>
-                        {formatDateOnly(
-                          order.order_deliveries[0].delivery_date,
-                          "dateLong",
-                        )}
-                        {order.order_deliveries[0].delivery_method && (
+                  {order.order_items.map((item) => (
+                    <Stack
+                      key={item.id}
+                      direction="row"
+                      justifyContent="space-between"
+                      spacing={2}
+                    >
+                      <Typography variant="body2" noWrap>
+                        {item.product?.short_name ?? "Producto sin nombre"}
+                      </Typography>
+                      <Typography variant="body2" textAlign="right">
+                        {item.scheduled_delivery_date
+                          ? formatDateOnly(item.scheduled_delivery_date, "dateLong")
+                          : "Pendiente de confirmar"}
+                        {item.delivery_method && (
                           <>
                             <br />
                             <Typography
                               component="span"
-                              variant="body2"
+                              variant="caption"
                               color="text.secondary"
                             >
-                              {order.order_deliveries[0].delivery_method.name}
+                              {item.delivery_method.name}
                             </Typography>
                           </>
                         )}
-                      </>
-                    ) : (
-                      "Pendiente de confirmar"
-                    )}
-                  </Typography>
+                      </Typography>
+                    </Stack>
+                  ))}
                 </Stack>
                 <Divider />
                 <Stack direction="row" justifyContent="space-between">

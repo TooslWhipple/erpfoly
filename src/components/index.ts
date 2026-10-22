@@ -104,7 +104,7 @@ export type { MultiSelectAutocompleteProps, SelectableItem as SelectableItemAuto
 export { Tabs } from "./Tabs";
 export type { TabItem, TabsProps } from "./Tabs";
 export { OrderCard, OrderList } from "./OrderCard";
-export type { OrderCardData, OrderStatus as OrderCardStatus } from "./OrderCard";
+export type { OrderCardData } from "./OrderCard";
 export { CosteoCard, CosteoList } from "./CosteoCard";
 export type { CosteoCardData } from "./CosteoCard";
 export { CardListPagination } from "./CardListPagination";

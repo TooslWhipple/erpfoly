@@ -144,7 +144,6 @@ export interface OrderListItem {
     scheduled_delivery_date: string | null;
     product: { id: number; code: string; short_name: string } | null;
   }>;
-  order_deliveries: Array<{ delivery_date: string }>;
 }
 
 export interface OrderFullDetail {
@@ -166,6 +165,7 @@ export interface OrderFullDetail {
     unit_price: number;
     delivered_quantity: number;
     scheduled_delivery_date: string | null;
+    delivery_method: { id: number; name: string } | null;
     notes: string | null;
     product: {
       id: number;
@@ -248,4 +248,43 @@ export interface CreateDeliveryWithItemsResponse {
     order_item_id: number;
     quantity: number;
   }>;
+}
+
+/** Contexto de `GET /orders/:id/adjustment-context`. */
+export interface OrderAdjustmentContext {
+  orderId: number;
+  folio: string;
+  status: string;
+  allowed_actions: { adjust: boolean; closeRemainder: boolean };
+  openReceptions: Array<{ id: number; folio: string; status: string }>;
+  lines: OrderAdjustmentLine[];
+}
+
+export interface OrderAdjustmentLine {
+  orderItemId: number;
+  productId: number;
+  productName: string;
+  originalRequestedQuantity: number;
+  requestedQuantity: number;
+  deliveredQuantity: number;
+  openReceptionQuantity: number;
+  minAllowedQuantity: number;
+  pendingQuantity: number;
+  committedOrdered: number;
+  otherIncoming: number;
+}
+
+export interface AdjustOrderPayload {
+  reason: string;
+  items: Array<{ orderItemId: number; requestedQuantity: number }>;
+}
+
+export interface CloseOrderPayload {
+  reason: string;
+}
+
+export interface OrderActionResponse {
+  id: number;
+  status: string;
+  message: string;
 }

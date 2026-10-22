@@ -24,28 +24,20 @@ import dayjs from "@/lib/dayjs";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-type OrderStatus = "pending" | "scheduled" | "in_progress" | "received";
-
 function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
     const totalRequested = order.order_items.reduce((sum, item) => sum + item.requested_quantity, 0);
     const totalDelivered = order.order_items.reduce((sum, item) => sum + item.delivered_quantity, 0);
     const progress = totalRequested > 0 ? Math.round((totalDelivered / totalRequested) * 100) : 0;
 
-    let status: OrderStatus = "pending";
-    if (order.status === "delivered") {
-        status = "received";
-    } else if (order.status === "partially_delivered") {
-        status = "in_progress";
-    } else if (order.status === "scheduled" || order.status === "shipped") {
-        status = "scheduled";
-    } else if (order.status === "cancelled") {
-        status = "pending";
-    }
-
     const orderDate = dayjs.utc(order.order_date);
-    // La fecha de entrega la confirma el proveedor desde el portal
-    // (order_deliveries) — no se muestra hasta que exista.
-    const confirmedDelivery = order.order_deliveries[0]?.delivery_date;
+    // La promesa la fija el proveedor por línea: se muestra la más próxima
+    // de las líneas que aún tienen pendiente.
+    const promisedDates = order.order_items
+        .filter((item) => item.requested_quantity > item.delivered_quantity)
+        .map((item) => item.scheduled_delivery_date)
+        .filter((date): date is string => Boolean(date))
+        .sort();
+    const confirmedDelivery = promisedDates[0];
 
     return {
         id: order.id,
@@ -54,7 +46,7 @@ function mapBackendOrderToCardData(order: OrderListItem): OrderCardData {
         destination: order.branch?.name ?? "Bodega",
         deliveryDate: confirmedDelivery ? dayjs.utc(confirmedDelivery).toDate() : null,
         itemCount: order.order_items.length,
-        status,
+        status: order.status,
         progress,
     };
 }
@@ -72,15 +64,19 @@ export default function Pedidos() {
     const tabs: TabItem[] = [
         { value: "all", label: "Todos" },
         { value: "pending", label: "Solicitado" },
-        { value: "in_progress", label: "En curso" },
+        { value: "scheduled", label: "Programados" },
+        { value: "in_progress", label: "Parcialmente entregados" },
         { value: "received", label: "Recibidos" },
+        { value: "closed", label: "Cerrados" },
     ];
 
     const statusFilter = useMemo(() => {
         if (activeTab === "all") return undefined;
         if (activeTab === "pending") return "pending";
+        if (activeTab === "scheduled") return "scheduled";
         if (activeTab === "in_progress") return "partially_delivered";
         if (activeTab === "received") return "delivered";
+        if (activeTab === "closed") return "closed";
         return undefined;
     }, [activeTab]);
 

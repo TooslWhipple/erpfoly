@@ -16,6 +16,10 @@ import type {
   QueryOrderItemsParams,
   QueryOrderDeliveriesParams,
   UpdateOrderPayload,
+  OrderAdjustmentContext,
+  AdjustOrderPayload,
+  CloseOrderPayload,
+  OrderActionResponse,
 } from "@/types/orders.types";
 
 const ORDERS_BASE = "/orders";
@@ -110,4 +114,27 @@ export async function getOrderItems(
   params: QueryOrderItemsParams
 ): Promise<ApiResult<{ rows: OrderItemByOrder[]; total: number; page: number; limit: number; totalPages: number }>> {
   return get(buildListUrl(ORDER_ITEMS_BASE, params));
+}
+
+/** Los errores de las acciones se muestran en el propio diálogo, no como toast global. */
+const ACTION_CONFIG = { skipGlobalErrorToast: true } as const;
+
+export async function getOrderAdjustmentContext(
+  id: number
+): Promise<ApiResult<OrderAdjustmentContext>> {
+  return get<OrderAdjustmentContext>(`${ORDERS_BASE}/${id}/adjustment-context`);
+}
+
+export async function adjustOrder(
+  id: number,
+  payload: AdjustOrderPayload
+): Promise<ApiResult<OrderActionResponse>> {
+  return patch<OrderActionResponse>(`${ORDERS_BASE}/${id}/adjust`, payload, ACTION_CONFIG);
+}
+
+export async function closeOrderRemainder(
+  id: number,
+  payload: CloseOrderPayload
+): Promise<ApiResult<OrderActionResponse>> {
+  return patch<OrderActionResponse>(`${ORDERS_BASE}/${id}/close`, payload, ACTION_CONFIG);
 }

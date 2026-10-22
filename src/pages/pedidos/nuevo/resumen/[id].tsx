@@ -11,7 +11,7 @@ import {
   Box,
 } from "@mui/material";
 import { Breadcrumbs, Pencil, StatusChip } from "@/components";
-import type { StatusChipVariant } from "@/components";
+import { getOrderStatusLabel, getOrderStatusVariant } from "@/utils/orderStatus";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 // import { OnlinePriceBar } from "@/components/ConfirmOrderItemCard";
 import { getOrderFull } from "@/services/orders.service";
@@ -27,26 +27,6 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 const IVA_RATE = 0.16;
-type DisplayStatus =
-  "pending" | "partially_delivered" | "delivered" | "cancelled";
-function getStatusLabel(status: string): string {
-  const labels: Record<DisplayStatus, string> = {
-    pending: "Solicitado",
-    partially_delivered: "En curso",
-    delivered: "Recibido",
-    cancelled: "Cancelado",
-  };
-  return labels[status as DisplayStatus] ?? labels.pending;
-}
-function getStatusVariant(status: string): StatusChipVariant {
-  const variants: Record<DisplayStatus, StatusChipVariant> = {
-    pending: "pending",
-    partially_delivered: "info",
-    delivered: "success",
-    cancelled: "error",
-  };
-  return variants[status as DisplayStatus] ?? "pending";
-}
 export default function ResumenPedido() {
   const router = useRouter();
   const { id } = router.query;
@@ -315,9 +295,9 @@ export default function ResumenPedido() {
             Editar
           </Button>
           <StatusChip
-            label={getStatusLabel(order.status)}
+            label={getOrderStatusLabel(order.status)}
             size="small"
-            variant={getStatusVariant(order.status)}
+            variant={getOrderStatusVariant(order.status)}
           />
         </Stack>
       </Stack>

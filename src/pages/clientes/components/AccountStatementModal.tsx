@@ -4,7 +4,6 @@ import {
   CircularProgress,
   Dialog,
   Stack,
-  Typography,
 } from "@mui/material";
 import {
   Download,
@@ -63,7 +62,7 @@ export function AccountStatementModal({
     onError: (error) => {
       showError(
         getApiErrorMessage(error) ||
-          "No se pudo enviar por WhatsApp. Usa la impresión o descarga manual.",
+        "No se pudo enviar por WhatsApp. Usa la impresión o descarga manual.",
       );
     },
   });
@@ -76,7 +75,7 @@ export function AccountStatementModal({
     try {
       const blob = await getClientAccountStatementPdf(clientId);
       if (action === "print") {
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, { jobName: buildFilename(clientId) });
       } else {
         downloadBlob(blob, buildFilename(clientId));
         showSuccess("Estado de cuenta descargado.");
@@ -85,7 +84,7 @@ export function AccountStatementModal({
     } catch (error) {
       showError(
         getApiErrorMessage(error) ||
-          "No se pudo generar el estado de cuenta. Intenta de nuevo.",
+        "No se pudo generar el estado de cuenta. Intenta de nuevo.",
       );
     } finally {
       setPdfAction(null);
@@ -97,19 +96,11 @@ export function AccountStatementModal({
     onClose();
   };
 
-  const loadingLabel = whatsappMutation.isPending
-    ? "Enviando documento..."
-    : pdfAction === "print"
-      ? "Preparando impresión..."
-      : pdfAction === "download"
-        ? "Generando PDF..."
-        : null;
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <DialogContent>
         <ModalHeader>
-          <Stack direction="row" spacing={1.5} alignItems="flex-start" flex={1}>
+          <Stack direction="row" spacing={1} alignItems="flex-start" flex={1}>
             <Stack
               alignItems="center"
               justifyContent="center"
@@ -119,86 +110,58 @@ export function AccountStatementModal({
                 borderRadius: 2,
                 bgcolor: "grey.100",
                 flexShrink: 0,
-              }}
-            >
+              }}>
               <FileText size={20} />
             </Stack>
-            <Stack spacing={0.5} flex={1}>
+            <Stack flex={1}>
               <ModalTitle>Estado de cuenta</ModalTitle>
-              <ModalDescription>
-                ¿Qué deseas hacer con el estado de cuenta?
-              </ModalDescription>
+              <ModalDescription>¿Qué deseas hacer con el estado de cuenta?</ModalDescription>
             </Stack>
           </Stack>
           <CloseButton
-            aria-label="Cerrar"
             onClick={handleClose}
-            disabled={busy}
-          >
+            disabled={busy}>
             <CloseIcon size={18} />
           </CloseButton>
         </ModalHeader>
 
-        <Stack spacing={1.5} sx={{ mt: 1 }}>
+        <Stack spacing={2} sx={{ mt: 2 }}>
           <Button
-            variant="outlined"
+            variant="option"
             color="inherit"
             startIcon={
-              pdfAction === "print" ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <Printer size={18} />
-              )
+              (pdfAction === "print") ? <CircularProgress size={16} color="inherit" /> : <Printer size={18} />
             }
             disabled={busy}
             onClick={() => {
               void handlePdfAction("print");
-            }}
-            sx={{ justifyContent: "flex-start", textTransform: "none", py: 1.25 }}
-          >
+            }}>
             Imprimir
           </Button>
           <Button
-            variant="outlined"
+            variant="option"
             color="inherit"
             startIcon={
-              pdfAction === "download" ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <Download size={18} />
-              )
+              (pdfAction === "download") ? <CircularProgress size={16} color="inherit" /> : <Download size={18} />
             }
             disabled={busy}
             onClick={() => {
               void handlePdfAction("download");
-            }}
-            sx={{ justifyContent: "flex-start", textTransform: "none", py: 1.25 }}
-          >
+            }}>
             Descargar PDF
           </Button>
           <Button
             variant="contained"
             color="primary"
             startIcon={
-              whatsappMutation.isPending ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <MessageCircle size={18} />
-              )
+              (whatsappMutation.isPending) ? <CircularProgress size={16} color="inherit" /> : <MessageCircle size={18} />
             }
             disabled={busy}
             onClick={() => {
               whatsappMutation.mutate();
-            }}
-            sx={{ justifyContent: "flex-start", textTransform: "none", py: 1.25 }}
-          >
+            }}>
             Enviar por WhatsApp
           </Button>
-          {loadingLabel ? (
-            <Typography variant="caption" color="text.secondary" textAlign="center">
-              {loadingLabel}
-            </Typography>
-          ) : null}
         </Stack>
       </DialogContent>
     </Dialog>

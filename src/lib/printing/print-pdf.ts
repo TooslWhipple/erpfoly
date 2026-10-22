@@ -25,8 +25,14 @@ function canPrintPdfInIframe(): boolean {
   return navigator.pdfViewerEnabled !== false;
 }
 
-function openPdfBlobInNewTab(blob: Blob): PrintJobResult {
-  const blobUrl = window.URL.createObjectURL(blob);
+function pdfSource(blob: Blob, jobName?: string): Blob | File {
+  const name = jobName?.trim();
+  if (!name) return blob;
+  return new File([blob], name, { type: blob.type || "application/pdf" });
+}
+
+function openPdfBlobInNewTab(blob: Blob, jobName?: string): PrintJobResult {
+  const blobUrl = window.URL.createObjectURL(pdfSource(blob, jobName));
   const opened = window.open(blobUrl, "_blank");
   if (!opened) {
     window.URL.revokeObjectURL(blobUrl);
@@ -53,13 +59,13 @@ export function printPdfBlob(
 ): Promise<PrintJobResult> {
   if (!canPrintPdfInIframe()) {
     try {
-      return Promise.resolve(openPdfBlobInNewTab(blob));
+      return Promise.resolve(openPdfBlobInNewTab(blob, options.jobName));
     } catch (error) {
       return Promise.reject(error);
     }
   }
 
-  const blobUrl = window.URL.createObjectURL(blob);
+  const blobUrl = window.URL.createObjectURL(pdfSource(blob, options.jobName));
   const iframe = attachHiddenIframe();
 
   return new Promise<PrintJobResult>((resolve, reject) => {

@@ -597,23 +597,21 @@ export default function ClientDetailPage() {
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
+          spacing={1}
+          sx={{ width: { xs: "100%", sm: "auto" } }}>
           <Button
-            variant="outlined"
+            variant="option"
             color="inherit"
             startIcon={<FileText size={16} />}
             disabled={!isClientActive}
             sx={{
               minWidth: {
                 xs: "100%",
-                sm: "auto",
+                sm: "176px",
               },
               textTransform: "none",
             }}
-            onClick={() => setStatementModalOpen(true)}
-          >
+            onClick={() => setStatementModalOpen(true)}>
             Estado de cuenta
           </Button>
           <Button
@@ -628,8 +626,7 @@ export default function ClientDetailPage() {
             }}
             onClick={() => {
               void handleAddPaymentClick();
-            }}
-          >
+            }}>
             Agregar abono
           </Button>
         </Stack>

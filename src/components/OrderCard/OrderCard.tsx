@@ -7,10 +7,8 @@ import {
     ProgressBarFill,
     EmptyContainer,
 } from "./styles";
-import type { OrderStatus } from "./styles";
-import { StatusChip, StatusChipVariant } from "../StatusChip";
-
-export type { OrderStatus } from "./styles";
+import { StatusChip } from "../StatusChip";
+import { getOrderStatusLabel, getOrderStatusVariant } from "@/utils/orderStatus";
 
 export interface OrderCardData {
     id: number;
@@ -19,7 +17,8 @@ export interface OrderCardData {
     destination: string;
     deliveryDate: string | Date | null;
     itemCount: number;
-    status: OrderStatus;
+    /** Estatus del back (`order.status`). */
+    status: string;
     progress: number;
 }
 
@@ -28,34 +27,14 @@ interface OrderCardProps {
     onClick?: (order: OrderCardData) => void;
 }
 
-function getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-        pending: "Solicitado",
-        scheduled: "Programado",
-        in_progress: "En curso",
-        received: "Recibido",
-    };
-    return labels[status];
-}
-
-function getStatusVariant(status: OrderStatus): StatusChipVariant {
-    const variants: Record<OrderStatus, string> = {
-        pending: "pending",
-        scheduled: "infoAlt",
-        in_progress: "info",
-        received: "success",
-    };
-
-    return variants[status] as StatusChipVariant;
-}
-
-function getProgressColor(status: OrderStatus): string {
+function getProgressColor(status: string): string {
     switch (status) {
-        case "received":
-            return "#16a34a";
-        case "in_progress":
+        case "delivered":
+        case "partially_delivered":
             return "#16a34a";
         case "scheduled":
+        case "shipped":
+        case "in_progress":
             return "#7c3aed";
         case "pending":
             return "#ea580c";
@@ -65,7 +44,7 @@ function getProgressColor(status: OrderStatus): string {
 }
 
 export function OrderCard({ order, onClick }: OrderCardProps) {
-    const statusVariant: StatusChipVariant = getStatusVariant(order.status);
+    const statusVariant = getOrderStatusVariant(order.status);
     const progressColor = getProgressColor(order.status);
 
     const handleClick = () => {
@@ -100,7 +79,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
                         <Stack direction="row" alignItems="center" justifyContent={{ xs: "flex-start", md: "flex-end" }} spacing={2} flex={2}>
                             <Typography variant="body2">{order.itemCount} artículos</Typography>
                             <StatusChip
-                                label={getStatusLabel(order.status)}
+                                label={getOrderStatusLabel(order.status)}
                                 size="small"
                                 variant={statusVariant}
                             />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   CircularProgress,
@@ -18,14 +18,14 @@ import {
   FormTextField,
   type SelectOption,
 } from "@/components/Form";
+import { useSuppliersSelect } from "@/hooks/suppliers/useSuppliersSelect";
 import { formatDate } from "@/utils/date";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   createInvoiceRequest,
   parseInvoiceFile,
 } from "@/services/invoice-requests.service";
-import { searchSuppliers } from "@/services/suppliers.service";
-import type { SupplierSearchItem } from "@/services/suppliers.service";
+import type { SupplierCatalogItem } from "@/services/suppliers.service";
 import type {
   CreateInvoiceRequestPayload,
   InvoicePaymentType,
@@ -89,7 +89,7 @@ const EMPTY_FORM: FormValues = {
 
 function mapParsedToForm(
   parsed: ParsedInvoiceFileData,
-  suppliers: SupplierSearchItem[],
+  suppliers: SupplierCatalogItem[],
 ): FormValues {
   const matchedSupplier = suppliers.find((supplier) => {
     const candidate = (supplier.businessName ?? supplier.name).toLowerCase();
@@ -137,17 +137,14 @@ export function CreateInvoiceRequestModal({
   >({});
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
-  const [suppliers, setSuppliers] = useState<SupplierSearchItem[]>([]);
 
-  const supplierOptions: SelectOption[] = useMemo(
-    () =>
-      suppliers.map((supplier) => ({
-        value: String(supplier.id),
-        label: supplier.businessName?.trim() || supplier.name,
-      })),
-    [suppliers],
-  );
+  const {
+    selectOptions: supplierOptions,
+    data: suppliers = [],
+    isPending: loadingSuppliers,
+    isError: suppliersError,
+    error: suppliersQueryError,
+  } = useSuppliersSelect({ enabled: open });
 
   const xmlFile = xmlFiles[0]?.file ?? null;
   const pdfFile = pdfFiles[0]?.file ?? null;
@@ -161,28 +158,17 @@ export function CreateInvoiceRequestModal({
       setFormErrors({});
       setParsing(false);
       setSaving(false);
-      return;
     }
+  }, [open]);
 
-    let cancelled = false;
-    setLoadingSuppliers(true);
-    void searchSuppliers({ q: "", limit: 100 }).then((result) => {
-      if (cancelled) return;
-      setLoadingSuppliers(false);
-      if (result.error || !result.data) {
-        showError(
-          result.error?.message ?? "No se pudieron cargar los proveedores",
-        );
-        setSuppliers([]);
-        return;
-      }
-      setSuppliers(result.data.rows);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, showError]);
+  useEffect(() => {
+    if (!suppliersError) return;
+    showError(
+      suppliersQueryError instanceof Error
+        ? suppliersQueryError.message
+        : "No se pudieron cargar los proveedores",
+    );
+  }, [showError, suppliersError, suppliersQueryError]);
 
   const handleClose = () => {
     if (parsing || saving) return;
@@ -445,6 +431,7 @@ export function CreateInvoiceRequestModal({
               <FormAutocomplete
                 label="Proveedor"
                 required
+                virtualized
                 options={supplierOptions}
                 value={formValues.supplierId}
                 onChange={(value) =>

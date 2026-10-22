@@ -1,30 +1,24 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback } from "react";
 import { Button, Typography } from "@mui/material";
 import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
-import { CaptureErrorState, CaptureHost, CaptureStepRoot, CaptureViewport } from "@/components/NubariumCapturePreview/styles";
+import {
+  CaptureErrorState,
+  CaptureHost,
+  CaptureStepRoot,
+  CaptureViewport,
+} from "@/components/NubariumCapturePreview/styles";
+import { useNubariumCapture } from "@/hooks/useNubariumCapture";
 import {
   extractFaceCaptureImage,
-  getCameraAccessErrorMessage,
-  getNubariumCameraOptions,
-  installNubariumFaceCaptureSnapshotPatch,
+  extractNubariumExecutionId,
   NUBARIUM_FACE_CAPTURE_CONFIG,
-  patchNubariumFaceCaptureErrors,
-  patchNubariumLandscapeCapture,
-  releaseNubariumLandscapeCapture,
-  safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
-} from "@/utils/nubariumSdk";
-import {
-  facingHintToNubarium,
-  installCameraDeviceConstraintInterceptor,
-  releaseCameraHardware,
-  setPreferredCameraDeviceId,
-  type CameraFacingHint,
-} from "@/utils/cameraDevices";
+} from "@/utils/nubarium";
+import type { CameraFacingHint } from "@/utils/cameraDevices";
 
 export interface NubariumFaceCaptureResult {
   executionId: string;
@@ -52,6 +46,17 @@ interface NubariumFaceCaptureProps {
   onReset?: () => void;
 }
 
+function tryFinishFaceCapture(payload: unknown): NubariumFaceCaptureResult | null {
+  const faceDataUrl = extractFaceCaptureImage(
+    payload && typeof payload === "object"
+      ? payload as Parameters<typeof extractFaceCaptureImage>[0]
+      : {},
+  );
+  const executionId = extractNubariumExecutionId(payload);
+  if (!faceDataUrl || !executionId) return null;
+  return { executionId, faceDataUrl };
+}
+
 export function NubariumFaceCapture({
   token,
   active,
@@ -66,138 +71,41 @@ export function NubariumFaceCapture({
   onSuccess,
   onReset,
 }: NubariumFaceCaptureProps) {
-  const reactId = useId().replace(/:/g, "");
-  const rootElementId = `nubarium-face-capture-${reactId}`;
-  const captureRef = useRef<FaceCapture | null>(null);
-  const onSuccessRef = useRef(onSuccess);
-  onSuccessRef.current = onSuccess;
-  const onInitializedRef = useRef(onInitialized);
-  onInitializedRef.current = onInitialized;
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const handleSdkSuccess = useCallback((data: unknown) => {
+    const result = tryFinishFaceCapture(data);
+    if (!result) return "La prueba de vida no devolvió una imagen válida.";
+    onSuccess(result);
+    return true;
+  }, [onSuccess]);
 
-  useEffect(() => {
-    installCameraDeviceConstraintInterceptor();
-    setPreferredCameraDeviceId(videoDeviceId ?? null);
-    return () => {
-      setPreferredCameraDeviceId(null);
-    };
-  }, [videoDeviceId]);
+  const handleSdkFail = useCallback((fail: unknown) => {
+    if (!acceptFailedLiveness) return false;
+    const result = tryFinishFaceCapture(fail);
+    if (!result) return false;
+    onSuccess(result);
+    return true;
+  }, [acceptFailedLiveness, onSuccess]);
 
-  useEffect(() => {
-    if (!active || completed || !tokenRef.current.trim()) return;
-
-    let cancelled = false;
-    setErrorMessage(null);
-
-    const mountCapture = () => {
-      if (cancelled || captureRef.current) return;
-
-      const cameraAccessError = getCameraAccessErrorMessage();
-      if (cameraAccessError) {
-        setErrorMessage(cameraAccessError);
-        return;
-      }
-
-      try {
-        const capture = new FaceCapture();
-        captureRef.current = capture;
-        const sessionToken = tokenRef.current;
-
-        capture.init({
-          ...NUBARIUM_FACE_CAPTURE_CONFIG,
-          cameras: cameraFacing
-            ? facingHintToNubarium(cameraFacing)
-            : getNubariumCameraOptions(),
-          rootElement: rootElementId,
-        });
-        installNubariumFaceCaptureSnapshotPatch();
-        patchNubariumLandscapeCapture(capture);
-        patchNubariumFaceCaptureErrors(capture);
-
-        capture.setToken(sessionToken);
-
-        capture
-          .onSuccess((data) => {
-            if (cancelled) return;
-            const faceDataUrl = extractFaceCaptureImage(data);
-            const executionId = data.id?.trim();
-
-            if (!faceDataUrl || !executionId) {
-              safeClearNubariumCapture(capture, rootElementId);
-              captureRef.current = null;
-              releaseCameraHardware();
-              setErrorMessage("La prueba de vida no devolvió una imagen válida.");
-              return;
-            }
-
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            onSuccessRef.current({ executionId, faceDataUrl });
-          })
-          .onFail((fail) => {
-            if (cancelled) return;
-            const faceDataUrl = extractFaceCaptureImage(fail);
-            const executionId = fail.id?.trim();
-            if (acceptFailedLiveness && faceDataUrl && executionId) {
-              safeClearNubariumCapture(capture, rootElementId);
-              captureRef.current = null;
-              releaseCameraHardware();
-              onSuccessRef.current({ executionId, faceDataUrl });
-              return;
-            }
-
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            setErrorMessage(translateNubariumFailReason(fail.reason));
-          })
-          .onError((sdkError) => {
-            if (cancelled) return;
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            setErrorMessage(translateNubariumError(sdkError));
-            onInitializedRef.current?.();
-          });
-
-        capture.load(() => {
-          if (cancelled || captureRef.current !== capture) return;
-          capture.start();
-          onInitializedRef.current?.();
-        });
-      } catch (mountError) {
-        const rawMessage = mountError instanceof Error ? mountError.message : "";
-        setErrorMessage(
-          rawMessage.toLowerCase().includes("getusermedia")
-            ? (getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.")
-            : (rawMessage || "No fue posible iniciar la prueba de vida."),
-        );
-        onInitializedRef.current?.();
-      }
-    };
-
-    // Defer past React Strict Mode's discarded first effect so FaceCapture is
-    // not started, torn down, and started again (looks like the camera opened twice).
-    const startTimer = window.setTimeout(mountCapture, 0);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(startTimer);
-      releaseNubariumLandscapeCapture(captureRef.current);
-      safeClearNubariumCapture(captureRef.current, rootElementId);
-      captureRef.current = null;
-      releaseCameraHardware();
-    };
-  }, [acceptFailedLiveness, active, cameraFacing, completed, rootElementId, videoDeviceId]);
+  const { rootElementId, viewportRef, errorMessage, retry } = useNubariumCapture({
+    kind: "face",
+    token,
+    active,
+    completed,
+    videoDeviceId,
+    cameraFacing,
+    initConfig: { ...NUBARIUM_FACE_CAPTURE_CONFIG },
+    createCapture: () => new FaceCapture() as never,
+    onSdkSuccess: handleSdkSuccess,
+    onSdkFail: handleSdkFail,
+    translateError: translateNubariumError,
+    translateFail: translateNubariumFailReason,
+    deferMount: true,
+    onInitialized,
+    fallbackMountError: "No fue posible iniciar la prueba de vida.",
+  });
 
   const handleRetry = () => {
-    safeClearNubariumCapture(captureRef.current, rootElementId);
-    captureRef.current = null;
-    releaseCameraHardware();
-    setErrorMessage(null);
+    retry();
     onReset?.();
   };
 
@@ -231,12 +139,16 @@ export function NubariumFaceCapture({
   }
 
   if (fillParent) {
-    return host;
+    return (
+      <div ref={viewportRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+        {host}
+      </div>
+    );
   }
 
   return (
     <CaptureStepRoot>
-      <CaptureViewport>
+      <CaptureViewport ref={viewportRef}>
         {host}
       </CaptureViewport>
 

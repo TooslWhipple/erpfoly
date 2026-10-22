@@ -20,52 +20,16 @@ export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
   },
 }));
 
+/**
+ * Unified 4:3 capture viewport for IdCapture and FaceCapture.
+ * Sized via container queries against CaptureStepRoot so portrait and
+ * landscape tablets fill the available area without black bands.
+ */
 export const CaptureViewport = styled("div")({
   boxSizing: "border-box",
   position: "relative",
-  width: "min(100%, calc(min(68dvh, 560px) * 4 / 3))",
-  maxWidth: "100%",
-  aspectRatio: "4 / 3",
-  height: "auto",
-  flex: "0 0 auto",
-  minWidth: 0,
-  marginInline: "auto",
-  borderRadius: 16,
-  overflow: "hidden",
-  backgroundColor: "#000",
-  border: "none",
-  "@media (orientation: landscape)": {
-    width: "min(100%, calc(min(72dvh, 480px) * 4 / 3))",
-  },
-  "@media (orientation: landscape) and (max-height: 500px)": {
-    width: "min(100%, calc(min(78dvh, 360px) * 4 / 3))",
-    borderRadius: 12,
-  },
-  maxHeight: "min(68dvh, 560px)",
-  "@container (min-height: 1px)": {
-    [touchLandscape]: {
-      // Height-driven (Safari-safe) but use the full step area; cap by width×3/4.
-      width: "auto",
-      height: "min(100cqb - 36px, 100cqi * 3 / 4)",
-      maxWidth: "min(100cqi, 100%)",
-      maxHeight: "none",
-      aspectRatio: "4 / 3",
-    },
-  },
-});
-
-/**
- * IdCapture viewport must stay 4:3 — that is the surface Nubarium actually
- * paints (e.g. canvas3 at 420×315). Rotation is handled in JS, not by the box.
- *
- * Fullscreen + iPad landscape: Safari keeps `width` when `max-height` clamps
- * `aspect-ratio`, so a width-driven box becomes wider than the canvas and shows
- * black bands. Drive that case by height and let width follow 4:3.
- */
-export const IdCaptureViewport = styled("div")({
-  boxSizing: "border-box",
-  position: "relative",
-  width: "min(100%, 560px)",
+  // Fallback before container queries.
+  width: "min(100%, 720px)",
   maxWidth: "100%",
   aspectRatio: "4 / 3",
   height: "auto",
@@ -78,35 +42,16 @@ export const IdCaptureViewport = styled("div")({
   overflow: "hidden",
   backgroundColor: "#000",
   border: "none",
-  maxHeight: "min(52dvh, 420px)",
-  "@media (orientation: landscape) and (pointer: fine)": {
-    width: "min(100%, calc(min(64dvh, 320px) * 4 / 3))",
-    maxHeight: "min(64dvh, 320px)",
-  },
-  // Fallback before container queries; kept modest so it cannot overflow the modal.
-  [touchLandscape]: {
-    width: "auto",
-    height: "min(55dvh, calc((100vw - 48px) * 3 / 4))",
-    maxWidth: "min(100%, calc(100vw - 48px))",
-    maxHeight: "none",
-    aspectRatio: "4 / 3",
-    borderRadius: 12,
-  },
+  maxHeight: "min(68dvh, 540px)",
   "@container (min-height: 1px)": {
-    // Portrait / desktop: width-driven, locked to remaining step area.
-    width: "min(100cqi, calc((100cqb - 48px) * 4 / 3), 560px)",
-    maxHeight: "min(calc(100cqb - 48px), 420px)",
+    width: "min(100cqi, calc((100cqb - 48px) * 4 / 3), 720px)",
+    maxHeight: "min(calc(100cqb - 48px), 540px)",
     aspectRatio: "4 / 3",
-    [touchLandscape]: {
-      width: "auto",
-      // Fill the step area (leave room for the hint row); cap so width stays ≤ 100cqi.
-      height: "min(100cqb - 48px, 100cqi * 3 / 4)",
-      maxWidth: "min(100cqi, 100%)",
-      maxHeight: "none",
-      aspectRatio: "4 / 3",
-    },
   },
 });
+
+/** @deprecated Use CaptureViewport — kept as alias for existing imports. */
+export const IdCaptureViewport = CaptureViewport;
 
 export const CaptureHost = styled("div")({
   position: "absolute",

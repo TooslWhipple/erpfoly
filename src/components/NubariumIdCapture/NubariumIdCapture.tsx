@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback } from "react";
 import { Button, Typography } from "@mui/material";
 import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
@@ -8,28 +8,17 @@ import {
   CaptureErrorState,
   CaptureHost,
   CaptureStepRoot,
-  IdCaptureViewport,
+  CaptureViewport,
 } from "@/components/NubariumCapturePreview/styles";
+import { useNubariumCapture } from "@/hooks/useNubariumCapture";
 import {
   extractIdCaptureImages,
   extractNubariumExecutionId,
-  getCameraAccessErrorMessage,
-  getNubariumCameraOptions,
   NUBARIUM_ID_CAPTURE_CONFIG,
-  patchNubariumIdCaptureAutorotate,
-  patchNubariumLandscapeCapture,
-  releaseNubariumLandscapeCapture,
-  safeClearNubariumCapture,
   translateNubariumError,
   translateNubariumFailReason,
-} from "@/utils/nubariumSdk";
-import {
-  facingHintToNubarium,
-  installCameraDeviceConstraintInterceptor,
-  releaseCameraHardware,
-  setPreferredCameraDeviceId,
-  type CameraFacingHint,
-} from "@/utils/cameraDevices";
+} from "@/utils/nubarium";
+import type { CameraFacingHint } from "@/utils/cameraDevices";
 
 export interface NubariumIdCaptureResult {
   executionId: string;
@@ -48,6 +37,17 @@ interface NubariumIdCaptureProps {
   onReset?: () => void;
 }
 
+function tryFinishIdCapture(payload: unknown): NubariumIdCaptureResult | null {
+  const { frontDataUrl, backDataUrl } = extractIdCaptureImages(
+    payload && typeof payload === "object"
+      ? payload as Parameters<typeof extractIdCaptureImages>[0]
+      : {},
+  );
+  const executionId = extractNubariumExecutionId(payload);
+  if (!frontDataUrl || !backDataUrl || !executionId) return null;
+  return { executionId, frontDataUrl, backDataUrl };
+}
+
 export function NubariumIdCapture({
   token,
   active,
@@ -58,123 +58,40 @@ export function NubariumIdCapture({
   onSuccess,
   onReset,
 }: NubariumIdCaptureProps) {
-  const reactId = useId().replace(/:/g, "");
-  const rootElementId = `nubarium-id-capture-${reactId}`;
-  const captureRef = useRef<IdCapture | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const handleSdkSuccess = useCallback((data: unknown) => {
+    const result = tryFinishIdCapture(data);
+    if (!result) return "La captura de la INE no devolvió imágenes válidas.";
+    onSuccess(result);
+    return true;
+  }, [onSuccess]);
 
-  useEffect(() => {
-    installCameraDeviceConstraintInterceptor();
-    setPreferredCameraDeviceId(videoDeviceId ?? null);
-    return () => {
-      setPreferredCameraDeviceId(null);
-    };
-  }, [videoDeviceId]);
+  const handleSdkFail = useCallback((fail: unknown) => {
+    const result = tryFinishIdCapture(fail);
+    if (result) {
+      onSuccess(result);
+      return true;
+    }
+    return false;
+  }, [onSuccess]);
 
-  useEffect(() => {
-    if (!active || completed || !token.trim()) return;
-
-    let cancelled = false;
-    setErrorMessage(null);
-
-    const mountCapture = () => {
-      if (cancelled) return;
-
-      const cameraAccessError = getCameraAccessErrorMessage();
-      if (cameraAccessError) {
-        setErrorMessage(cameraAccessError);
-        return;
-      }
-
-      try {
-        const capture = new IdCapture();
-        captureRef.current = capture;
-
-        const finishIdCapture = (instance: IdCapture, payload: unknown): boolean => {
-          const { frontDataUrl, backDataUrl } = extractIdCaptureImages(
-            payload && typeof payload === "object"
-              ? payload as Parameters<typeof extractIdCaptureImages>[0]
-              : {},
-          );
-          const executionId = extractNubariumExecutionId(payload);
-          if (!frontDataUrl || !backDataUrl || !executionId) return false;
-
-          safeClearNubariumCapture(instance, rootElementId);
-          captureRef.current = null;
-          releaseCameraHardware();
-          onSuccess({ executionId, frontDataUrl, backDataUrl });
-          return true;
-        };
-
-        capture.init({
-          ...NUBARIUM_ID_CAPTURE_CONFIG,
-          cameras: cameraFacing
-            ? facingHintToNubarium(cameraFacing)
-            : getNubariumCameraOptions(),
-          rootElement: rootElementId,
-        });
-        patchNubariumLandscapeCapture(capture);
-        patchNubariumIdCaptureAutorotate(capture);
-
-        capture.setToken(token);
-
-        capture
-          .onSuccess((data) => {
-            if (cancelled) return;
-            if (finishIdCapture(capture, data)) return;
-
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            setErrorMessage("La captura de la INE no devolvió imágenes válidas.");
-          })
-          .onFail((fail) => {
-            if (cancelled) return;
-            if (finishIdCapture(capture, fail)) return;
-
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            setErrorMessage(translateNubariumFailReason(fail.reason));
-          })
-          .onError((sdkError) => {
-            if (cancelled) return;
-            safeClearNubariumCapture(capture, rootElementId);
-            captureRef.current = null;
-            releaseCameraHardware();
-            setErrorMessage(translateNubariumError(sdkError));
-          });
-
-        capture.load(() => {
-          if (cancelled) return;
-          capture.start();
-        });
-      } catch (mountError) {
-        const rawMessage = mountError instanceof Error ? mountError.message : "";
-        setErrorMessage(
-          rawMessage.toLowerCase().includes("getusermedia")
-            ? (getCameraAccessErrorMessage() ?? "No fue posible acceder a la cámara del dispositivo.")
-            : (rawMessage || "No fue posible iniciar la captura de la INE."),
-        );
-      }
-    };
-
-    mountCapture();
-
-    return () => {
-      cancelled = true;
-      releaseNubariumLandscapeCapture(captureRef.current);
-      safeClearNubariumCapture(captureRef.current, rootElementId);
-      captureRef.current = null;
-      releaseCameraHardware();
-    };
-  }, [active, cameraFacing, completed, onSuccess, rootElementId, token, videoDeviceId]);
+  const { rootElementId, viewportRef, errorMessage, retry } = useNubariumCapture({
+    kind: "id",
+    token,
+    active,
+    completed,
+    videoDeviceId,
+    cameraFacing,
+    initConfig: { ...NUBARIUM_ID_CAPTURE_CONFIG },
+    createCapture: () => new IdCapture() as never,
+    onSdkSuccess: handleSdkSuccess,
+    onSdkFail: handleSdkFail,
+    translateError: translateNubariumError,
+    translateFail: translateNubariumFailReason,
+    fallbackMountError: "No fue posible iniciar la captura de la INE.",
+  });
 
   const handleRetry = () => {
-    safeClearNubariumCapture(captureRef.current, rootElementId);
-    captureRef.current = null;
-    releaseCameraHardware();
-    setErrorMessage(null);
+    retry();
     onReset?.();
   };
 
@@ -196,9 +113,9 @@ export function NubariumIdCapture({
 
   return (
     <CaptureStepRoot>
-      <IdCaptureViewport>
+      <CaptureViewport ref={viewportRef}>
         <CaptureHost id={rootElementId} />
-      </IdCaptureViewport>
+      </CaptureViewport>
 
       {!errorMessage ? (
         <BiometricCaptureHint>

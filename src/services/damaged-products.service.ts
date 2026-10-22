@@ -51,6 +51,8 @@ export interface DamagedProductListApiRow {
     dispositionCode: string;
     /** Human-readable elapsed time in Spanish (e.g. "menos de un minuto", "2 días"). */
     elapsedSinceRegistration: string;
+    /** Folio de la orden de servicio ligada, o el de la factura si no hay orden. */
+    sourceReference: string | null;
     /**
      * Derivado: "collected" si el folio ya está `completed`; si no,
      * "discounted_pending_pickup" si existe un `SupplierDamagedGoods` en

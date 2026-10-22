@@ -330,6 +330,13 @@ export default function MercanciaDanada() {
         size: "sm",
       },
       {
+        id: "sourceReference",
+        label: "Referencia",
+        type: "text",
+        size: "md",
+        format: (value) => (value ? String(value) : "—"),
+      },
+      {
         id: "branch",
         label: "Sucursal",
         size: "xl",

@@ -15,13 +15,16 @@ import {
   fetchRoutesForDate,
 } from "@/services/rutas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import type { AvailableOrdersApi } from "@/types/rutas-api.types";
+import type {
+  AvailableOrdersApi,
+  RouteDetailApi,
+} from "@/types/rutas-api.types";
 import type {
   AddRoutePointPayload,
   AvailableOrdersResponse,
   RouteSummary,
 } from "@/types/rutas.types";
-import { parseDateParam } from "@/utils/query";
+import { parseDateParam, parsePositiveIntParam } from "@/utils/query";
 import {
   mapRouteDetailApiToView,
   mapRouteListRowToSummary,
@@ -52,10 +55,11 @@ export function useRutasPage() {
     (date: Date) => {
       setSelectedDate(date);
       const dateStr = dayjs(date).format("YYYY-MM-DD");
+      const { ruta: _removed, ...restQuery } = router.query;
       router.replace(
         {
           pathname: "/rutas",
-          query: { ...router.query, fecha: dateStr },
+          query: { ...restQuery, fecha: dateStr },
         },
         undefined,
         { shallow: true },
@@ -87,12 +91,21 @@ export function useRutasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.fecha]);
 
+  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const fromUrl = parsePositiveIntParam(router.query.ruta);
+    if (fromUrl != null && fromUrl !== selectedRouteId) {
+      setSelectedRouteId(fromUrl);
+    }
+  }, [router.isReady, router.query.ruta, selectedRouteId]);
+
   const routeDateStr = useMemo(
     () => dayjs(selectedDate).format("YYYY-MM-DD"),
     [selectedDate],
   );
 
-  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(TAB_ARTICLES);
   const [addOrdersModalOpen, setAddOrdersModalOpen] = useState(false);
   const [addOrdersBranchId, setAddOrdersBranchId] = useState<number | null>(
@@ -154,12 +167,45 @@ export function useRutasPage() {
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
 
+  const selectRouteInUrl = useCallback(
+    (routeId: number, fecha?: string) => {
+      setSelectedRouteId(routeId);
+      const fechaStr =
+        fecha ?? dayjs(selectedDate).format("YYYY-MM-DD");
+      if (fecha) {
+        const parsed = dayjs(fecha, "YYYY-MM-DD", true);
+        if (parsed.isValid()) {
+          setSelectedDate(parsed.startOf("day").toDate());
+        }
+      }
+      void router.replace(
+        {
+          pathname: "/rutas",
+          query: { ...router.query, fecha: fechaStr, ruta: String(routeId) },
+        },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router, selectedDate],
+  );
+
+  const onRouteCreated = useCallback(
+    (route: RouteDetailApi) => {
+      const fechaStr = route.scheduled_date
+        ? dayjs(route.scheduled_date).format("YYYY-MM-DD")
+        : routeDateStr;
+      selectRouteInUrl(route.id, fechaStr);
+    },
+    [routeDateStr, selectRouteInUrl],
+  );
+
   const mutations = useRouteMutations({
     queryClient,
     routeDateStr,
     showSuccess,
     showError,
-    setSelectedRouteId,
+    onRouteCreated,
     setActiveTab,
     setNewRouteModalOpen,
     setPendingCartaLocalFile,
@@ -270,9 +316,9 @@ export function useRutasPage() {
   };
 
   const handleSelectRoute = (routeId: number) => {
-    setSelectedRouteId(routeId);
     const summary = routes.find((r) => r.id === routeId);
     setActiveTab(getDefaultTabForRouteType(summary?.routeType));
+    selectRouteInUrl(routeId);
   };
 
   const handleOpenAddOrders = () => {

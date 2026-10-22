@@ -241,8 +241,8 @@ export function AddOrdersToRouteModal({
   const selectionCount = isScheduled
     ? selectedScheduledIds.size
     : selectedSuggestedIds.size +
-      selectedOrderIds.size +
-      selectedRecoveryIds.size;
+    selectedOrderIds.size +
+    selectedRecoveryIds.size;
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
@@ -416,8 +416,8 @@ export function AddOrdersToRouteModal({
           <TableHead>
             <TableRow>
               <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>Pedido</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: "160px" }}>SKU</StyledTableCell>
               <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
               <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
               <StyledTableCell sx={{ minWidth: "160px" }}>Fecha de entrega</StyledTableCell>
@@ -618,7 +618,7 @@ export function AddOrdersToRouteModal({
           ? "Selecciona los pedidos que deseas agregar a esta ruta"
           : "Selecciona los artículos que deseas agregar a esta ruta"
       }
-      maxWidth="md"
+      maxWidth="xl"
       headerActions={
         <Button
           variant="contained"
@@ -660,35 +660,36 @@ export function AddOrdersToRouteModal({
               <TabButton
                 type="button"
                 active={activeTab === "orders"}
-                onClick={() => setActiveTab("orders")}
-              >
+                onClick={() => setActiveTab("orders")}>
                 {`Artículos [${data.ordersCount + data.suggestedCount}]`}
               </TabButton>
               <TabButton
                 type="button"
                 active={activeTab === "recoveries"}
-                onClick={() => setActiveTab("recoveries")}
-              >
+                onClick={() => setActiveTab("recoveries")}>
                 {`Recuperaciones [${data.recoveriesCount}]`}
               </TabButton>
             </TabsRow>
 
-            {activeTab === "orders" ? (
-              <Stack spacing={0} flex={1} minHeight={0}>
-                <SuggestedCard variant="outlined">
-                  <SuggestedHeader>
-                    <RobotIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
-                    <Typography variant="subtitle2" color="primary.main" fontWeight={600}>
-                      Pedidos sugeridos
-                    </Typography>
-                  </SuggestedHeader>
-                  {renderSuggestedTable()}
-                </SuggestedCard>
-                {renderGeneralTable()}
-              </Stack>
-            ) : (
-              renderRecoveriesTable()
-            )}
+            {
+              (activeTab === "orders") ?
+                <Stack spacing={0} flex={1} minHeight={0}>
+                  <SuggestedCard variant="outlined">
+                    <SuggestedHeader>
+                      <RobotIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
+                      <Typography variant="subtitle2" color="primary.main" fontWeight={600}>Pedidos sugeridos</Typography>
+                    </SuggestedHeader>
+                    {
+                      renderSuggestedTable()
+                    }
+                  </SuggestedCard>
+                  {
+                    renderGeneralTable()
+                  }
+                </Stack>
+                :
+                renderRecoveriesTable()
+            }
           </>
         )}
       </ModalContent>

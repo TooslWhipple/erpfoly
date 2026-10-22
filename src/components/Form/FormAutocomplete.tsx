@@ -13,8 +13,11 @@ import {
   type UIEvent,
 } from "react";
 import {
+  alpha,
   Autocomplete,
+  autocompleteClasses,
   type AutocompleteRenderInputParams,
+  styled,
   Typography,
 } from "@mui/material";
 import {
@@ -49,6 +52,34 @@ type ListboxOptionElement = ReactElement<HTMLAttributes<HTMLLIElement>>;
 function getOptionClassName(element: ListboxOptionElement): string {
   return String(element.props.className ?? "");
 }
+
+const OPTION_INSET_X = 8;
+
+const VirtualizedListboxRoot = styled("ul")(({ theme }) => ({
+  listStyle: "none",
+  [`& .${autocompleteClasses.option}`]: {
+    cursor: "pointer",
+    borderRadius: 6,
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    [`&.${autocompleteClasses.focused}`]: {
+      backgroundColor: theme.palette.action.hover,
+    },
+    '&[aria-selected="true"]': {
+      backgroundColor: alpha(
+        theme.palette.primary.main,
+        theme.palette.action.selectedOpacity,
+      ),
+      [`&.${autocompleteClasses.focused}, &:hover`]: {
+        backgroundColor: alpha(
+          theme.palette.primary.main,
+          theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity,
+        ),
+      },
+    },
+  },
+}));
 
 const VirtualizedListbox = forwardRef<
   HTMLUListElement,
@@ -125,7 +156,7 @@ const VirtualizedListbox = forwardRef<
   );
 
   return (
-    <ul
+    <VirtualizedListboxRoot
       {...other}
       ref={setRefs}
       onScroll={handleScroll}
@@ -160,11 +191,14 @@ const VirtualizedListbox = forwardRef<
             ...itemStyle,
             position: "absolute",
             top: index * VIRTUAL_ITEM_HEIGHT,
-            left: 0,
-            width: "100%",
+            left: OPTION_INSET_X,
+            width: `calc(100% - ${OPTION_INSET_X * 2}px)`,
             height: VIRTUAL_ITEM_HEIGHT,
             boxSizing: "border-box",
             margin: 0,
+            padding: "0 12px",
+            cursor: "pointer",
+            zIndex: 1,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -173,7 +207,7 @@ const VirtualizedListbox = forwardRef<
           },
         });
       })}
-    </ul>
+    </VirtualizedListboxRoot>
   );
 });
 

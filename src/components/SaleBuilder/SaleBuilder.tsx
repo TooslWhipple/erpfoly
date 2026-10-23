@@ -1687,11 +1687,6 @@ export function SaleBuilder({
     setPaymentType(nextPaymentType);
     lastPatchedPurchaseTypeRef.current = result.purchaseType.id;
     applyQuotedPrices(result);
-    if (result.discountInvalidated) {
-      void queryClient.invalidateQueries({
-        queryKey: ["resume-sale-draft", resumeSaleId],
-      });
-    }
     if (nextPaymentType !== "CREDIT") {
       setIdentityOk(false);
       setIdentityVerificationModalOpen(false);
@@ -1731,8 +1726,13 @@ export function SaleBuilder({
       }
       return { value, result: res.data };
     },
-    onSuccess: ({ value, result }) => {
+    onSuccess: async ({ value, result }) => {
       applyPurchaseTypeSnapshot(result, value);
+      // Cashier totals come from the sale query; keep the mutation pending
+      // until it refetches so checkout never uses the previous type's total.
+      await queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", resumeSaleId],
+      });
     },
     onError: (err: Error) => {
       snackbar.showError(err.message);

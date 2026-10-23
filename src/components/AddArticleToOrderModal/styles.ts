@@ -37,27 +37,32 @@ export const ImagePlaceholder = styled('div')({
     flexShrink: 0,
 });
 
+export const AgreementSection = styled("div")({
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px"
+});
+
 export const HistorySection = styled('div')({
     position: "relative",
     display: "flex",
     flexDirection: "column",
-    gap: "24px",
-    paddingLeft: "8px"
+    gap: "24px"
 });
 
-export const UnitPriceSection = styled('div')({
+export const UnitPriceSection = styled('div', { shouldForwardProp: (prop) => prop !== 'hasHistory' })<{ hasHistory: boolean }>(({ hasHistory }) => ({
     position: "relative",
     display: "flex",
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: "8px",
-    paddingLeft: "18px"
-});
+    paddingLeft: (hasHistory) ? "18px" : "0px",
+}));
 
 export const TimelineLine = styled('div')({
     position: "absolute",
-    left: "13px",
+    left: "5px",
     top: "42px",
     bottom: "34px",
     width: "1px",

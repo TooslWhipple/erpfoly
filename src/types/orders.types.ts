@@ -29,6 +29,29 @@ export interface CostHistoryEntry {
   branchName?: string;
 }
 
+export interface PurchaseHistoryEntry {
+  id: string;
+  date: string;
+  price: number;
+  changePercentage: number;
+  changeType: "increase" | "decrease";
+  orderId: number;
+  orderFolio: string;
+}
+
+export interface ProductSupplierPurchaseContext {
+  agreedUnitPrice: number | null;
+  agreedPriceValidUntil: string | null;
+  isAgreedPriceValid: boolean;
+  suggestedUnitPrice: number | null;
+  purchaseHistory: PurchaseHistoryEntry[];
+}
+
+export interface UpdateAgreedPricePayload {
+  agreedUnitPrice: number;
+  agreedPriceValidUntil: string;
+}
+
 export interface OrderItemInput {
   product_id: number;
   requested_quantity: number;

@@ -3,6 +3,9 @@ import { buildListUrl } from "@/lib/apiHelpers";
 import type {
   ProductSuggestion,
   CostHistoryEntry,
+  ProductSupplierPurchaseContext,
+  PurchaseHistoryEntry,
+  UpdateAgreedPricePayload,
   CreateOrderPayload,
   CreateOrderResponse,
   OrderListItem,
@@ -40,6 +43,87 @@ export async function getProductCostHistory(
   productId: number
 ): Promise<ApiResult<CostHistoryEntry[]>> {
   return get<CostHistoryEntry[]>(`${PRODUCTS_BASE}/${productId}/cost-history`);
+}
+
+interface PurchaseHistoryApiEntry {
+  id: string;
+  date: string;
+  price: number;
+  changePercentage: number;
+  orderId: number;
+  orderFolio: string;
+}
+
+interface ProductSupplierPurchaseContextApi {
+  agreedUnitPrice: number | null;
+  agreedPriceValidUntil: string | null;
+  isAgreedPriceValid: boolean;
+  suggestedUnitPrice: number | null;
+  purchaseHistory: PurchaseHistoryApiEntry[];
+}
+
+function mapPurchaseHistoryEntry(row: PurchaseHistoryApiEntry): PurchaseHistoryEntry {
+  const changePercentage = Number(row.changePercentage) || 0;
+  return {
+    id: String(row.id),
+    date: row.date,
+    price: Number(row.price) || 0,
+    changePercentage,
+    changeType: changePercentage < 0 ? "decrease" : "increase",
+    orderId: Number(row.orderId),
+    orderFolio: row.orderFolio,
+  };
+}
+
+function mapPurchaseContext(
+  row: ProductSupplierPurchaseContextApi,
+): ProductSupplierPurchaseContext {
+  return {
+    agreedUnitPrice:
+      row.agreedUnitPrice == null ? null : Number(row.agreedUnitPrice),
+    agreedPriceValidUntil: row.agreedPriceValidUntil,
+    isAgreedPriceValid: Boolean(row.isAgreedPriceValid),
+    suggestedUnitPrice:
+      row.suggestedUnitPrice == null ? null : Number(row.suggestedUnitPrice),
+    purchaseHistory: (row.purchaseHistory ?? []).map(mapPurchaseHistoryEntry),
+  };
+}
+
+export async function getProductSupplierPurchaseContext(
+  productId: number,
+  supplierId: number,
+  options?: { excludeOrderId?: number },
+): Promise<ApiResult<ProductSupplierPurchaseContext>> {
+  const result = await get<ProductSupplierPurchaseContextApi>(
+    `${PRODUCTS_BASE}/${productId}/suppliers/${supplierId}/purchase-context`,
+    {
+      params: {
+        ...(options?.excludeOrderId
+          ? { excludeOrderId: options.excludeOrderId }
+          : {}),
+      },
+    },
+  );
+  if (result.error || !result.data) {
+    return { data: null, error: result.error };
+  }
+  return { data: mapPurchaseContext(result.data), error: null };
+}
+
+export async function updateProductSupplierAgreedPrice(
+  productId: number,
+  supplierId: number,
+  payload: UpdateAgreedPricePayload,
+): Promise<ApiResult<ProductSupplierPurchaseContext>> {
+  const result = await patch<ProductSupplierPurchaseContextApi>(
+    `${PRODUCTS_BASE}/${productId}/suppliers/${supplierId}/agreed-price`,
+    payload,
+    { skipGlobalErrorToast: true },
+  );
+  if (result.error || !result.data) {
+    return { data: null, error: result.error };
+  }
+  return { data: mapPurchaseContext(result.data), error: null };
 }
 
 export async function createOrder(

@@ -26,8 +26,9 @@ import type {
   ProductSuggestion,
   SelectedOrderItem,
   OrderFullDetail,
+  ProductSupplierPurchaseContext,
+  UpdateAgreedPricePayload,
 } from "@/types/orders.types";
-import type { CostHistoryEntry } from "@/components";
 import type { BranchCatalogItem } from "@/services/branches.service";
 import { unwrapOrThrow } from "@/lib/axios";
 import {
@@ -37,7 +38,8 @@ import {
 } from "@/services/productos.service";
 import {
   getSuggestionsBySupplier,
-  getProductCostHistory,
+  getProductSupplierPurchaseContext,
+  updateProductSupplierAgreedPrice,
   getOrderFull,
   updateOrderWithItems,
   getSuggestions,
@@ -107,7 +109,7 @@ export default function OrderForm({
 }: OrderFormProps) {
   const router = useRouter();
   const theme = useTheme();
-  const { showError } = useSnackbarStore();
+  const { showError, showSuccess } = useSnackbarStore();
   const { hasPermission } = usePermissions();
   const orderType =
     propOrderType ??
@@ -131,8 +133,9 @@ export default function OrderForm({
   const [selectedArticle, setSelectedArticle] = useState<ArticleRow | null>(
     null,
   );
-  const [costHistory, setCostHistory] = useState<CostHistoryEntry[]>([]);
-  const [costHistoryLoading, setCostHistoryLoading] = useState(false);
+  const [purchaseContext, setPurchaseContext] =
+    useState<ProductSupplierPurchaseContext | null>(null);
+  const [purchaseContextLoading, setPurchaseContextLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState<SelectedOrderItem[]>([]);
   const [orderLoading, setOrderLoading] = useState(mode === "edit");
   const [originalOrder, setOriginalOrder] = useState<OrderFullDetail | null>(
@@ -367,26 +370,54 @@ export default function OrderForm({
       return;
     }
     setSelectedArticle(article);
+    setPurchaseContext(null);
     setAddArticleModalOpen(true);
-    setCostHistoryLoading(true);
+    setPurchaseContextLoading(true);
     try {
       const productId = Number(article.id);
-      if (Number.isFinite(productId) && productId > 0) {
-        const result = await getProductCostHistory(productId);
+      if (
+        Number.isFinite(productId) &&
+        productId > 0 &&
+        sourceEntityId > 0
+      ) {
+        const result = await getProductSupplierPurchaseContext(
+          productId,
+          sourceEntityId,
+          mode === "edit" && orderId && orderId > 0
+            ? { excludeOrderId: orderId }
+            : undefined,
+        );
         if (result.data) {
-          setCostHistory(result.data);
+          setPurchaseContext(result.data);
         } else {
-          setCostHistory([]);
+          setPurchaseContext(null);
         }
       } else {
-        setCostHistory([]);
+        setPurchaseContext(null);
       }
     } catch (error) {
-      console.error("[OrderForm] Error fetching cost history:", error);
-      setCostHistory([]);
+      console.error("[OrderForm] Error fetching purchase context:", error);
+      setPurchaseContext(null);
     } finally {
-      setCostHistoryLoading(false);
+      setPurchaseContextLoading(false);
     }
+  };
+  const handleSaveAgreedPrice = async (payload: UpdateAgreedPricePayload) => {
+    if (!selectedArticle || sourceEntityId <= 0) return false;
+    const productId = Number(selectedArticle.id);
+    if (!Number.isFinite(productId) || productId <= 0) return false;
+    const result = await updateProductSupplierAgreedPrice(
+      productId,
+      sourceEntityId,
+      payload,
+    );
+    if (result.error || !result.data) {
+      showError(result.error?.message ?? "No se pudo guardar el precio vigente.");
+      return false;
+    }
+    setPurchaseContext(result.data);
+    showSuccess("Precio vigente actualizado.");
+    return true;
   };
   const handleAddToOrder = (item: OrderItem) => {
     const productId = Number(item.articleId);
@@ -446,7 +477,7 @@ export default function OrderForm({
   const handleCloseAddArticleModal = () => {
     setAddArticleModalOpen(false);
     setSelectedArticle(null);
-    setCostHistory([]);
+    setPurchaseContext(null);
   };
   const handleAddFromSuggestion = (suggestion: ProductSuggestion) => {
     const article = articles.find((a) => a.folio === suggestion.sku);
@@ -885,7 +916,9 @@ export default function OrderForm({
           onClose={handleCloseAddArticleModal}
           article={selectedArticle}
           onAddToOrder={handleAddToOrder}
-          costHistory={costHistory}
+          purchaseContext={purchaseContext}
+          loading={purchaseContextLoading}
+          onSaveAgreedPrice={handleSaveAgreedPrice}
         />
       )}
     </>

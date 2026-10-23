@@ -14,3 +14,4 @@ export { FormAutocomplete } from "./FormAutocomplete";
 export type { FormAutocompleteProps } from "./FormAutocomplete";
 export { FormDatePicker } from "./FormDatePicker";
 export type { FormDatePickerProps } from "./FormDatePicker";
+export { MoneyInput } from "./MoneyInput";

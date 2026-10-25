@@ -287,9 +287,11 @@ export async function mapSaleToInvoice(
   } else {
     totalPayments = sale.payments.reduce((sum, row) => sum + row.amount, 0);
     remaining = Math.max(0, sale.totalAmount - totalPayments);
+    const handover = sale.handoverStatus ?? "PENDING";
     canCancel =
       sale.status !== "CANCELLED" &&
-      (sale.handoverStatus ?? "PENDING") === "PENDING";
+      handover !== "DELIVERED" &&
+      handover !== "CLOSED";
   }
 
   const articles: InvoiceArticle[] = sale.items.map((item) => {

@@ -245,6 +245,9 @@ export function useRutasPage() {
         orderNumber: row.order_number,
         articleName: row.article_name,
         zone: row.zone,
+        zoneId: row.zone_id ?? null,
+        zoneColor: row.zone_color ?? null,
+        zoneCoverage: row.zone_coverage ?? "UNCONFIGURED",
         scheduledDate: row.scheduled_date,
         destinationBranch: row.destination_branch,
       });

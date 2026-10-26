@@ -60,6 +60,9 @@ export interface SuggestedItemToAddApi {
   order_number: string;
   article_name: string;
   zone: string;
+  zone_id?: number | null;
+  zone_color?: string | null;
+  zone_coverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
   scheduled_date: string;
   destination_branch: string | null;
 }
@@ -73,6 +76,9 @@ export interface OrderToAddApi {
   order_number: string;
   article_name: string;
   zone: string;
+  zone_id?: number | null;
+  zone_color?: string | null;
+  zone_coverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
   scheduled_date: string;
   destination_branch: string | null;
 }

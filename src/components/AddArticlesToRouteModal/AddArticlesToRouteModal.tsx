@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useMemo, type ChangeEvent } from "react";
 import {
   Stack,
   Button,
@@ -12,9 +12,15 @@ import {
   TableRow,
   Typography,
   InputAdornment,
+  AccordionDetails,
 } from "@mui/material";
-import { Search as SearchIcon, SmartToy as RobotIcon } from "@mui/icons-material";
+import {
+  Search as SearchIcon,
+  SmartToy as RobotIcon,
+  ExpandMore as ExpandMoreIcon,
+} from "@mui/icons-material";
 import { SideModal } from "@/components";
+import { LogisticZoneBadge } from "@/components/LogisticZoneBadge";
 import { formatDateOnly } from "@/utils/date";
 import { theme } from "@/styles/theme";
 import type {
@@ -27,7 +33,6 @@ import type {
 import {
   SearchInput,
   TableContainer,
-  GeneralTableContainer,
   StyledTableRow,
   StyledTableCell,
   EmptyStateContainer,
@@ -36,7 +41,11 @@ import {
   SuggestedCard,
   SuggestedHeader,
   ModalContent,
+  ZoneGroupsContainer,
+  ZoneAccordion,
+  ZoneAccordionSummary,
 } from "./styles";
+import { groupItemsByZone, matchesOrderSearch, zoneGroupKey } from "./zone-groups";
 
 type ModalTab = "orders" | "recoveries";
 type SelectableItem = SuggestedItemToAdd | OrderToAdd;
@@ -121,6 +130,22 @@ function buildPointsFromSelected(
   return Array.from(pointsMap.values());
 }
 
+function toggleId(current: Set<string>, id: string): Set<string> {
+  const next = new Set(current);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
+
+function toggleIds(current: Set<string>, ids: string[], selected: boolean): Set<string> {
+  const next = new Set(current);
+  for (const id of ids) {
+    if (selected) next.add(id);
+    else next.delete(id);
+  }
+  return next;
+}
+
 export function AddOrdersToRouteModal({
   open,
   onClose,
@@ -141,147 +166,126 @@ export function AddOrdersToRouteModal({
   });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>("orders");
-  const [selectedSuggestedIds, setSelectedSuggestedIds] = useState<Set<string>>(new Set());
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [selectedArticleIds, setSelectedArticleIds] = useState<Set<string>>(new Set());
   const [selectedRecoveryIds, setSelectedRecoveryIds] = useState<Set<string>>(new Set());
   const [selectedScheduledIds, setSelectedScheduledIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const openSessionKey = open ? `${routeId}:${branchId ?? ""}` : null;
+  const [resetKey, setResetKey] = useState<string | null>(null);
 
-  const loadOrders = useCallback(async (search?: string) => {
-    setLoading(true);
-
-    try {
-      const result = await fetchAvailableOrders(
-        routeId,
-        search,
-        branchId ?? undefined,
-      );
-      setData(result);
-    } catch {
-      setData({
-        suggested: [],
-        orders: [],
-        recoveries: [],
-        suggestedCount: 0,
-        ordersCount: 0,
-        recoveriesCount: 0,
-      });
-    } finally {
-      setLoading(false);
+  if (openSessionKey !== resetKey) {
+    setResetKey(openSessionKey);
+    if (openSessionKey) {
+      setActiveTab("orders");
+      setSelectedArticleIds(new Set());
+      setSelectedRecoveryIds(new Set());
+      setSelectedScheduledIds(new Set());
+      setSearchQuery("");
+      setLoading(true);
     }
-  }, [fetchAvailableOrders, routeId, branchId]);
+  }
 
   useEffect(() => {
     if (!open) return;
-    setActiveTab("orders");
-    setSelectedSuggestedIds(new Set());
-    setSelectedOrderIds(new Set());
-    setSelectedRecoveryIds(new Set());
-    setSelectedScheduledIds(new Set());
-    setSearchQuery("");
-    void loadOrders();
-  }, [open, routeId, branchId, loadOrders]);
+    let cancelled = false;
 
-  useEffect(() => {
-    if (!open) return;
+    fetchAvailableOrders(routeId, undefined, branchId ?? undefined)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setData({
+          suggested: [],
+          orders: [],
+          recoveries: [],
+          suggestedCount: 0,
+          ordersCount: 0,
+          recoveriesCount: 0,
+        });
+        setLoading(false);
+      });
 
-    const timeout = setTimeout(() => {
-      void loadOrders(searchQuery.trim() || undefined);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [searchQuery, open, loadOrders]);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, routeId, branchId, fetchAvailableOrders]);
 
-  const allScheduledItems = useMemo(
+  const articleItems = useMemo(
     () => [...data.suggested, ...data.orders],
     [data.suggested, data.orders],
   );
 
-  const filteredSuggested = useMemo(() => {
-    if (!searchQuery.trim()) return data.suggested;
-    const query = searchQuery.toLowerCase();
-    return data.suggested.filter(
-      (item) =>
-        item.orderNumber.toLowerCase().includes(query) ||
-        item.sku.toLowerCase().includes(query) ||
-        item.articleName.toLowerCase().includes(query),
-    );
-  }, [data.suggested, searchQuery]);
+  const filteredArticles = useMemo(
+    () => articleItems.filter((item) => matchesOrderSearch(item, searchQuery)),
+    [articleItems, searchQuery],
+  );
 
-  const filteredOrders = useMemo(() => {
-    if (!searchQuery.trim()) return data.orders;
-    const query = searchQuery.toLowerCase();
-    return data.orders.filter(
-      (item) =>
-        item.orderNumber.toLowerCase().includes(query) ||
-        item.sku.toLowerCase().includes(query) ||
-        item.articleName.toLowerCase().includes(query),
-    );
-  }, [data.orders, searchQuery]);
+  const filteredScheduledItems = useMemo(
+    () => articleItems.filter((item) => matchesOrderSearch(item, searchQuery)),
+    [articleItems, searchQuery],
+  );
 
-  const filteredScheduledItems = useMemo(() => {
-    if (!searchQuery.trim()) return allScheduledItems;
-    const query = searchQuery.toLowerCase();
-    return allScheduledItems.filter((item) =>
-      item.orderNumber.toLowerCase().includes(query),
-    );
-  }, [allScheduledItems, searchQuery]);
+  const filteredRecoveries = useMemo(
+    () => data.recoveries.filter((item) => matchesOrderSearch(item, searchQuery)),
+    [data.recoveries, searchQuery],
+  );
 
-  const filteredRecoveries = useMemo(() => {
-    if (!searchQuery.trim()) return data.recoveries;
-    const query = searchQuery.toLowerCase();
-    return data.recoveries.filter(
+  const anchorItem = useMemo(() => {
+    for (const id of selectedArticleIds) {
+      const item = articleItems.find((candidate) => candidate.id === id);
+      if (item) return item;
+    }
+    return null;
+  }, [selectedArticleIds, articleItems]);
+
+  const zoneSuggestions = useMemo(() => {
+    if (!anchorItem) return [];
+    const anchorKey = zoneGroupKey(anchorItem);
+    return articleItems.filter(
       (item) =>
-        item.orderNumber.toLowerCase().includes(query) ||
-        item.sku.toLowerCase().includes(query) ||
-        item.articleName.toLowerCase().includes(query),
+        zoneGroupKey(item) === anchorKey && !selectedArticleIds.has(item.id),
     );
-  }, [data.recoveries, searchQuery]);
+  }, [anchorItem, articleItems, selectedArticleIds]);
+
+  const filteredZoneSuggestions = useMemo(
+    () => zoneSuggestions.filter((item) => matchesOrderSearch(item, searchQuery)),
+    [zoneSuggestions, searchQuery],
+  );
 
   const selectionCount = isScheduled
     ? selectedScheduledIds.size
-    : selectedSuggestedIds.size +
-    selectedOrderIds.size +
-    selectedRecoveryIds.size;
+    : selectedArticleIds.size + selectedRecoveryIds.size;
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
 
-  const handleToggleSuggested = (id: string) => {
-    setSelectedSuggestedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleToggleArticle = (id: string) => {
+    setSelectedArticleIds((prev) => toggleId(prev, id));
   };
 
-  const handleToggleOrder = (id: string) => {
-    setSelectedOrderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleToggleArticleGroup = (ids: string[], selected: boolean) => {
+    setSelectedArticleIds((prev) => toggleIds(prev, ids, selected));
   };
 
   const handleToggleScheduled = (id: string) => {
-    setSelectedScheduledIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedScheduledIds((prev) => toggleId(prev, id));
+  };
+
+  const handleToggleScheduledGroup = (ids: string[], selected: boolean) => {
+    setSelectedScheduledIds((prev) => toggleIds(prev, ids, selected));
   };
 
   const handleToggleRecovery = (id: string) => {
-    setSelectedRecoveryIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedRecoveryIds((prev) => toggleId(prev, id));
+  };
+
+  const handleToggleRecoveryGroup = (ids: string[], selected: boolean) => {
+    setSelectedRecoveryIds((prev) => toggleIds(prev, ids, selected));
   };
 
   const handleConfirm = async () => {
@@ -290,15 +294,15 @@ export function AddOrdersToRouteModal({
     try {
       let points: AddRoutePointPayload[];
       if (isScheduled) {
-        points = buildPointsFromSelected(allScheduledItems, selectedScheduledIds);
+        points = buildPointsFromSelected(articleItems, selectedScheduledIds);
       } else {
         const pointsMap = new Map<string, AddRoutePointPayload>();
         for (const point of [
           ...buildPointsPayload(
             data.suggested,
             data.orders,
-            selectedSuggestedIds,
-            selectedOrderIds,
+            selectedArticleIds,
+            selectedArticleIds,
           ),
           ...buildPointsFromSelected(data.recoveries, selectedRecoveryIds),
         ]) {
@@ -327,8 +331,127 @@ export function AddOrdersToRouteModal({
   const addButtonLabel =
     selectionCount > 0 ? `Agregar [${selectionCount}]` : "Agregar";
 
-  const renderSuggestedTable = () => {
+  const renderItemRows = (
+    rows: SelectableItem[],
+    selectedIds: Set<string>,
+    onToggle: (id: string) => void,
+    dateHeader: string,
+  ) => (
+    <TableContainer>
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
+            <StyledTableCell padding="checkbox" sx={{ minWidth: "48px" }} />
+            <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
+            <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
+            <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
+            <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
+            <StyledTableCell sx={{ minWidth: "160px" }}>{dateHeader}</StyledTableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.map((row) => {
+            const isSelected = selectedIds.has(row.id);
+            return (
+              <StyledTableRow key={row.id} selected={isSelected} hover>
+                <StyledTableCell padding="checkbox">
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={() => onToggle(row.id)}
+                    disabled={submitting}
+                  />
+                </StyledTableCell>
+                <StyledTableCell>{row.orderNumber}</StyledTableCell>
+                <StyledTableCell>{row.sku}</StyledTableCell>
+                <StyledTableCell
+                  sx={{
+                    maxWidth: 280,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {row.articleName}
+                </StyledTableCell>
+                <StyledTableCell>
+                  <LogisticZoneBadge label={row.zone} color={row.zoneColor} />
+                </StyledTableCell>
+                <StyledTableCell>
+                  {row.scheduledDate
+                    ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
+                    : "-"}
+                </StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  const renderZoneGroups = (
+    items: SelectableItem[],
+    selectedIds: Set<string>,
+    onToggle: (id: string) => void,
+    onToggleGroup: (ids: string[], selected: boolean) => void,
+    dateHeader: string,
+    emptyMessage: string,
+  ) => {
     if (loading) {
+      return (
+        <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
+          <CircularProgress size={32} />
+        </Stack>
+      );
+    }
+
+    if (items.length === 0) {
+      return (
+        <EmptyStateContainer>
+          <Typography variant="body2" color="text.secondary">
+            {emptyMessage}
+          </Typography>
+        </EmptyStateContainer>
+      );
+    }
+
+    const groups = groupItemsByZone(items);
+
+    return (
+      <ZoneGroupsContainer>
+        {groups.map((group) => {
+          const groupIds = group.items.map((item) => item.id);
+          const selectedInGroup = groupIds.filter((id) => selectedIds.has(id)).length;
+          const allSelected = selectedInGroup === groupIds.length;
+          const someSelected = selectedInGroup > 0 && !allSelected;
+
+          return (
+            <ZoneAccordion key={group.key} defaultExpanded disableGutters>
+              <ZoneAccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={someSelected}
+                  disabled={submitting}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={() => onToggleGroup(groupIds, !allSelected)}
+                />
+                <LogisticZoneBadge label={group.label} color={group.color} />
+                <Typography variant="body2" color="text.secondary">
+                  {group.items.length}
+                </Typography>
+              </ZoneAccordionSummary>
+              <AccordionDetails sx={{ p: 0 }}>
+                {renderItemRows(group.items, selectedIds, onToggle, dateHeader)}
+              </AccordionDetails>
+            </ZoneAccordion>
+          );
+        })}
+      </ZoneGroupsContainer>
+    );
+  };
+
+  const renderSuggestedTable = () => {
+    if (loading && articleItems.length === 0) {
       return (
         <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
           <CircularProgress size={28} />
@@ -336,275 +459,27 @@ export function AddOrdersToRouteModal({
       );
     }
 
-    if (filteredSuggested.length === 0) {
+    if (!anchorItem) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-          No hay pedidos sugeridos
+          Selecciona un artículo para ver más pedidos de la misma zona
         </Typography>
       );
     }
 
-    return (
-      <TableContainer>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell padding="checkbox" sx={{ minWidth: "48px" }} />
-              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Fecha de entrega</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredSuggested.map((row) => {
-              const isSelected = selectedSuggestedIds.has(row.id);
-              return (
-                <StyledTableRow key={row.id} selected={isSelected} hover>
-                  <StyledTableCell padding="checkbox">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleToggleSuggested(row.id)}
-                      disabled={submitting}
-                    />
-                  </StyledTableCell>
-                  <StyledTableCell>{row.orderNumber}</StyledTableCell>
-                  <StyledTableCell>{row.sku}</StyledTableCell>
-                  <StyledTableCell>{row.articleName}</StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
-                  <StyledTableCell>
-                    {row.scheduledDate
-                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
-                      : "-"}
-                  </StyledTableCell>
-                </StyledTableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
-  };
-
-  const renderGeneralTable = () => {
-    if (loading) {
+    if (filteredZoneSuggestions.length === 0) {
       return (
-        <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
-          <CircularProgress size={32} />
-        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+          No hay más pedidos pendientes en esta zona
+        </Typography>
       );
     }
 
-    if (filteredOrders.length === 0) {
-      return (
-        <EmptyStateContainer>
-          <Typography variant="body2" color="text.secondary">
-            {
-              (searchQuery)
-                ? "No se encontraron pedidos"
-                : "No hay ventas disponibles para agregar"
-            }
-          </Typography>
-        </EmptyStateContainer>
-      );
-    }
-
-    return (
-      <GeneralTableContainer>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell sx={{ minWidth: "160px" }}>Pedido</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>SKU</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Fecha de entrega</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredOrders.map((row) => {
-              const isSelected = selectedOrderIds.has(row.id);
-              return (
-                <StyledTableRow key={row.id} selected={isSelected} hover>
-                  <StyledTableCell padding="checkbox">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleToggleOrder(row.id)}
-                      disabled={submitting}
-                    />
-                  </StyledTableCell>
-                  <StyledTableCell>{row.orderNumber}</StyledTableCell>
-                  <StyledTableCell>{row.sku}</StyledTableCell>
-                  <StyledTableCell
-                    sx={{
-                      maxWidth: 280,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {row.articleName}
-                  </StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
-                  <StyledTableCell>
-                    {row.scheduledDate
-                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
-                      : "-"}
-                  </StyledTableCell>
-                </StyledTableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </GeneralTableContainer>
-    );
-  };
-
-  const renderRecoveriesTable = () => {
-    if (loading) {
-      return (
-        <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
-          <CircularProgress size={32} />
-        </Stack>
-      );
-    }
-
-    if (filteredRecoveries.length === 0) {
-      return (
-        <EmptyStateContainer>
-          <Typography variant="body2" color="text.secondary">
-            {searchQuery
-              ? "No se encontraron recuperaciones"
-              : "No hay artículos pendientes de reasignación"}
-          </Typography>
-        </EmptyStateContainer>
-      );
-    }
-
-    return (
-      <GeneralTableContainer>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Intento fallido</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredRecoveries.map((row) => {
-              const isSelected = selectedRecoveryIds.has(row.id);
-              return (
-                <StyledTableRow key={row.id} selected={isSelected} hover>
-                  <StyledTableCell padding="checkbox">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleToggleRecovery(row.id)}
-                      disabled={submitting}
-                    />
-                  </StyledTableCell>
-                  <StyledTableCell>{row.orderNumber}</StyledTableCell>
-                  <StyledTableCell>{row.sku}</StyledTableCell>
-                  <StyledTableCell
-                    sx={{
-                      maxWidth: 280,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {row.articleName}
-                  </StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
-                  <StyledTableCell>
-                    {row.scheduledDate
-                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
-                      : "-"}
-                  </StyledTableCell>
-                </StyledTableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </GeneralTableContainer>
-    );
-  };
-
-  const renderScheduledTable = () => {
-    if (loading) {
-      return (
-        <Stack direction="row" justifyContent="center" sx={{ p: 2 }}>
-          <CircularProgress size={32} />
-        </Stack>
-      );
-    }
-
-    if (filteredScheduledItems.length === 0) {
-      return (
-        <EmptyStateContainer>
-          <Typography variant="body2" color="text.secondary">
-            {searchQuery
-              ? "No se encontraron pedidos"
-              : "No hay pedidos internos disponibles para agregar"}
-          </Typography>
-        </EmptyStateContainer>
-      );
-    }
-
-    return (
-      <GeneralTableContainer>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell padding="checkbox" sx={{ width: 48 }} />
-              <StyledTableCell sx={{ minWidth: "112px" }}>Pedido</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "140px" }}>SKU</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "240px" }}>Artículo</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Zona</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: "160px" }}>Fecha programada</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredScheduledItems.map((row) => {
-              const isSelected = selectedScheduledIds.has(row.id);
-              return (
-                <StyledTableRow key={row.id} selected={isSelected} hover>
-                  <StyledTableCell padding="checkbox">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleToggleScheduled(row.id)}
-                      disabled={submitting}
-                    />
-                  </StyledTableCell>
-                  <StyledTableCell>{row.orderNumber}</StyledTableCell>
-                  <StyledTableCell>{row.sku}</StyledTableCell>
-                  <StyledTableCell
-                    sx={{
-                      maxWidth: 280,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {row.articleName}
-                  </StyledTableCell>
-                  <StyledTableCell>{row.zone}</StyledTableCell>
-                  <StyledTableCell>
-                    {row.scheduledDate
-                      ? formatDateOnly(row.scheduledDate, "D [de] MMM YYYY")
-                      : "-"}
-                  </StyledTableCell>
-                </StyledTableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </GeneralTableContainer>
+    return renderItemRows(
+      filteredZoneSuggestions,
+      selectedArticleIds,
+      handleToggleArticle,
+      "Fecha de entrega",
     );
   };
 
@@ -635,8 +510,8 @@ export function AddOrdersToRouteModal({
         <SearchInput
           placeholder={
             isScheduled
-              ? "Buscar por número de pedido"
-              : "Buscar por pedido, SKU o artículo"
+              ? "Buscar por número de pedido o zona"
+              : "Buscar por pedido, SKU, artículo o zona"
           }
           value={searchQuery}
           onChange={handleSearchChange}
@@ -653,7 +528,16 @@ export function AddOrdersToRouteModal({
         />
 
         {isScheduled ? (
-          renderScheduledTable()
+          renderZoneGroups(
+            filteredScheduledItems,
+            selectedScheduledIds,
+            handleToggleScheduled,
+            handleToggleScheduledGroup,
+            "Fecha programada",
+            searchQuery
+              ? "No se encontraron pedidos"
+              : "No hay pedidos internos disponibles para agregar",
+          )
         ) : (
           <>
             <TabsRow>
@@ -684,11 +568,29 @@ export function AddOrdersToRouteModal({
                     }
                   </SuggestedCard>
                   {
-                    renderGeneralTable()
+                    renderZoneGroups(
+                      filteredArticles,
+                      selectedArticleIds,
+                      handleToggleArticle,
+                      handleToggleArticleGroup,
+                      "Fecha de entrega",
+                      searchQuery
+                        ? "No se encontraron pedidos"
+                        : "No hay ventas disponibles para agregar",
+                    )
                   }
                 </Stack>
                 :
-                renderRecoveriesTable()
+                renderZoneGroups(
+                  filteredRecoveries,
+                  selectedRecoveryIds,
+                  handleToggleRecovery,
+                  handleToggleRecoveryGroup,
+                  "Intento fallido",
+                  searchQuery
+                    ? "No se encontraron recuperaciones"
+                    : "No hay artículos pendientes de reasignación",
+                )
             }
           </>
         )}

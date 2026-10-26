@@ -1,0 +1,1 @@
+export { LogisticZoneBadge } from "./LogisticZoneBadge";

@@ -1,4 +1,4 @@
-import { Checkbox, Stack, Switch, Typography, useMediaQuery } from "@mui/material";
+import { Stack, Switch, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { ExternalLink } from "lucide-react";
 import { useMemo } from "react";
@@ -7,7 +7,6 @@ import {
   FormAutocomplete,
   FormDatePicker,
   FormSelect,
-  FormTextField,
   RadioButton,
 } from "@/components";
 import { FileUpload } from "@/components/FileUpload";
@@ -27,7 +26,6 @@ import { hasOtherUncancelledArticles } from "@/types/atencion-cliente.types";
 import {
   AlertBox,
   AlertLinkButton,
-  DamagedGoodsCard,
   RadioGroupResponsive,
   SectionLabel,
   SwitchRow,
@@ -80,15 +78,6 @@ export function ServiceOrderSolucionTab({
     excludeRoleCodes: DRIVER_ROLE_CODES_EXCLUDED,
   });
 
-  const damageTypeOptions: SelectOption[] = useMemo(
-    () =>
-      (catalogQuery.data?.damageTypes ?? []).map((item) => ({
-        value: catalogItemIdString(item),
-        label: item.label,
-      })),
-    [catalogQuery.data?.damageTypes],
-  );
-
   const solutionOptions: SelectOption[] = useMemo(
     () =>
       (catalogQuery.data?.solutions ?? []).map((item) => ({
@@ -119,9 +108,14 @@ export function ServiceOrderSolucionTab({
       ]
     : [];
 
+  const linkedDamagedGoods = solucion.registerAsDamagedGoods ? (
+    <AlertBox tone="info">Vinculado a mercancía dañada.</AlertBox>
+  ) : null;
+
   if (isCancelSale) {
     return (
       <Stack spacing={2.5}>
+        {linkedDamagedGoods}
         {needsOtherArticlesCancelled && (
           <AlertBox tone="warning">
             Deberás cancelar los demás artículos de la factura para proceder con
@@ -266,53 +260,7 @@ export function ServiceOrderSolucionTab({
         </>
       )}
 
-      <DamagedGoodsCard
-        onClick={() => {
-          if (disabled) return;
-          onChange({
-            registerAsDamagedGoods: !solucion.registerAsDamagedGoods,
-          });
-        }}
-        role="checkbox"
-        aria-checked={solucion.registerAsDamagedGoods}
-      >
-        <Checkbox
-          checked={solucion.registerAsDamagedGoods}
-          disabled={disabled}
-          onChange={(_, checked) =>
-            onChange({ registerAsDamagedGoods: checked })
-          }
-          onClick={(event) => event.stopPropagation()}
-          color="primary"
-        />
-        <Typography variant="body2" fontWeight={500} sx={{ pt: 1.25 }}>
-          Registrar como mercancía dañada
-        </Typography>
-      </DamagedGoodsCard>
-
-      {solucion.registerAsDamagedGoods && (
-        <>
-          <FormSelect
-            label="Tipo de daño"
-            options={damageTypeOptions}
-            value={solucion.damageTypeId}
-            onChange={(event) =>
-              onChange({ damageTypeId: String(event.target.value) })
-            }
-            disabled={disabled || catalogQuery.isPending}
-            placeholder="Selecciona"
-          />
-          <FormTextField
-            label="Observaciones"
-            value={solucion.observations}
-            onChange={(event) => onChange({ observations: event.target.value })}
-            disabled={disabled}
-            multiline
-            minRows={3}
-            placeholder="Ingrese"
-          />
-        </>
-      )}
+      {linkedDamagedGoods}
     </Stack>
   );
 }

@@ -60,7 +60,6 @@ function flattenUpdate(payload: UpdateServiceOrderPayload) {
     isSolved: payload.solucion?.isSolved,
     solvedDate: payload.solucion?.solvedDate,
     approvalMethod: payload.solucion?.approvalMethod,
-    registerAsDamagedGoods: payload.solucion?.registerAsDamagedGoods,
     deliveredSolutionId: payload.solucion?.deliveredSolutionId,
     solutionObservations: payload.solucion?.observations,
     solutionAuthorizedById: payload.solucion?.authorizedById,
@@ -129,12 +128,6 @@ export async function updateServiceOrder(
   if (payload.indicaciones?.action === "cancelar_venta" || payload.indicaciones?.action === "reemplazar") {
     unwrapOrThrow(
       await post<ServiceOrder>(`${BASE}/${serviceOrderId}/apply-instructions`),
-    );
-  }
-
-  if (payload.solucion?.registerAsDamagedGoods) {
-    unwrapOrThrow(
-      await post<ServiceOrder>(`${BASE}/${serviceOrderId}/register-damaged`),
     );
   }
 

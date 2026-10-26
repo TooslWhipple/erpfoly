@@ -57,6 +57,10 @@ export interface DamagedProductListApiRow {
      * `scheduled` para el folio; si no, "not_discounted".
      */
     discountStatus: DamagedProductDiscountStatus;
+    invoiceNumber: string | null;
+    serviceOrderFolio: string | null;
+    /** Folio de la orden de servicio y factura de origen, cuando existen. */
+    referenceLabel: string;
 }
 
 /** Ver `discountStatus` en `DamagedProductListApiRow`. */

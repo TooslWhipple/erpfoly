@@ -41,11 +41,14 @@ export interface InventoryListApiRow {
 
 export type InventoryListItem = InventoryListApiRow;
 
+export type InventoryQuantityFilter = "inStock" | "inTransit" | "damaged";
+
 export interface GetInventoryListParams {
   page: number;
   limit: number;
   search?: string;
   status?: string;
+  quantityFilter?: InventoryQuantityFilter;
   [key: string]: unknown;
 }
 

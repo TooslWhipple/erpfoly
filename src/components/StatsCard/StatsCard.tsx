@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { CalendarToday as CalendarIcon } from "@mui/icons-material";
 import numeral from "numeral";
 import {
@@ -18,6 +19,8 @@ export interface StatsCardData {
   icon?: React.ReactNode;
   valueColor?: string;
   isCurrency?: boolean;
+  /** When true and the group receives onCardClick, the card filters on click. */
+  clickable?: boolean;
 }
 
 interface StatsCardProps {
@@ -30,6 +33,9 @@ interface StatsCardProps {
   };
   icon?: React.ReactNode;
   isCurrency?: boolean;
+  clickable?: boolean;
+  active?: boolean;
+  onClick?: () => void;
 }
 
 export function StatsCard({
@@ -38,6 +44,9 @@ export function StatsCard({
   comparison,
   icon = <CalendarIcon />,
   isCurrency = false,
+  clickable = false,
+  active = false,
+  onClick,
 }: StatsCardProps) {
   const formatValue = (val: number): string => {
     if (isCurrency) {
@@ -59,8 +68,24 @@ export function StatsCard({
     return `${formatComparisonValue(comparison.value)} ${prefix} que ${comparison.period}`;
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!clickable || !onClick) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <CardContainer>
+    <CardContainer
+      $clickable={clickable}
+      $active={active}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-pressed={clickable ? active : undefined}
+      onClick={clickable ? onClick : undefined}
+      onKeyDown={handleKeyDown}
+    >
       <Typography variant="subtitle1">{label}</Typography>
       <Stack direction="row" spacing={0.5} alignItems="center">
         <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>
@@ -81,9 +106,17 @@ interface StatsCardGroupProps {
   cards: StatsCardData[];
   columns?: number;
   loading?: boolean;
+  activeCardId?: string | null;
+  onCardClick?: (id: string) => void;
 }
 
-export function StatsCardGroup({ cards, columns = 3, loading = false }: StatsCardGroupProps) {
+export function StatsCardGroup({
+  cards,
+  columns = 3,
+  loading = false,
+  activeCardId = null,
+  onCardClick,
+}: StatsCardGroupProps) {
   const size = 12 / columns;
 
   if (loading) {
@@ -103,17 +136,23 @@ export function StatsCardGroup({ cards, columns = 3, loading = false }: StatsCar
   return (
     <Grid container spacing={2} alignItems="stretch">
       {
-        cards.map((card) => (
-          <Grid key={card.id} size={{ xs: 12, sm: 6, md: size }}>
-            <StatsCard
-              label={card.label}
-              value={card.value}
-              comparison={card.comparison}
-              icon={card.icon}
-              isCurrency={card.isCurrency}
-            />
-          </Grid>
-        ))
+        cards.map((card) => {
+          const clickable = Boolean(card.clickable && onCardClick);
+          return (
+            <Grid key={card.id} size={{ xs: 12, sm: 6, md: size }}>
+              <StatsCard
+                label={card.label}
+                value={card.value}
+                comparison={card.comparison}
+                icon={card.icon}
+                isCurrency={card.isCurrency}
+                clickable={clickable}
+                active={clickable && activeCardId === card.id}
+                onClick={clickable ? () => onCardClick?.(card.id) : undefined}
+              />
+            </Grid>
+          );
+        })
       }
     </Grid>
   );

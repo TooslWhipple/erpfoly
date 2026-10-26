@@ -234,6 +234,7 @@ export {
   GuarantorTab,
 } from "./CreditApplicationForm";
 export * from "./Icons";
+export { LogisticZoneBadge } from "./LogisticZoneBadge";
 export { RouteCircuitMap } from "./RouteCircuitMap";
 export type { RouteCircuitMapProps } from "./RouteCircuitMap";
 export {

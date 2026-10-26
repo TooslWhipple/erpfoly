@@ -1,5 +1,7 @@
 import { styled } from "@mui/material/styles";
 import {
+  Accordion,
+  AccordionSummary,
   Box,
   TableCell,
   TableContainer as MuiTableContainer,
@@ -113,3 +115,33 @@ export const ModalContent = styled(Box)({
   flex: 1,
   minHeight: 0,
 });
+
+export const ZoneGroupsContainer = styled(Box)({
+  flex: 1,
+  minHeight: 200,
+  maxHeight: "40vh",
+  overflow: "auto",
+});
+
+export const ZoneAccordion = styled(Accordion)(({ theme }) => ({
+  border: `1px solid ${theme.palette.app.border}`,
+  borderRadius: 8,
+  marginBottom: theme.spacing(1),
+  boxShadow: "none",
+  "&:before": { display: "none" },
+  "&.Mui-expanded": {
+    margin: 0,
+    marginBottom: theme.spacing(1),
+  },
+}));
+
+export const ZoneAccordionSummary = styled(AccordionSummary)(({ theme }) => ({
+  minHeight: 48,
+  paddingLeft: theme.spacing(1),
+  paddingRight: theme.spacing(2),
+  "& .MuiAccordionSummary-content": {
+    alignItems: "center",
+    gap: theme.spacing(1),
+    margin: theme.spacing(1, 0),
+  },
+}));

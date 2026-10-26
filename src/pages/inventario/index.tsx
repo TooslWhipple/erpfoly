@@ -24,22 +24,39 @@ import {
   getInventoryList,
   getInventoryStats,
   type InventoryListItem,
+  type InventoryQuantityFilter,
   type InventoryStats,
 } from "@/services/inventory.service";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
+const QUANTITY_FILTER_OPTIONS = [
+  { label: "Todas", value: "all" },
+  { label: "En existencia > 0", value: "inStock" },
+  { label: "En tránsito > 0", value: "inTransit" },
+  { label: "Dañada > 0", value: "damaged" },
+];
+
 export default function Inventario() {
   const router = useRouter();
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [quantityFilter, setQuantityFilter] =
+    useState<InventoryQuantityFilter | null>(null);
 
   const listExtraParams = useMemo(() => {
-    if (activeTab === "all") {
-      return {};
+    const params: {
+      status?: string;
+      quantityFilter?: InventoryQuantityFilter;
+    } = {};
+    if (activeTab !== "all") {
+      params.status = activeTab;
     }
-    return { status: activeTab };
-  }, [activeTab]);
+    if (quantityFilter) {
+      params.quantityFilter = quantityFilter;
+    }
+    return params;
+  }, [activeTab, quantityFilter]);
 
   const {
     data: items,
@@ -62,7 +79,7 @@ export default function Inventario() {
 
   useEffect(() => {
     setPage(0);
-  }, [activeTab, setPage]);
+  }, [activeTab, quantityFilter, setPage]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -100,6 +117,22 @@ export default function Inventario() {
     setActiveTab(value);
   }, []);
 
+  const handleQuantityCardClick = useCallback((id: string) => {
+    if (id === "total") {
+      setQuantityFilter(null);
+      return;
+    }
+    setQuantityFilter((current) =>
+      current === id ? null : (id as InventoryQuantityFilter),
+    );
+  }, []);
+
+  const handleQuantityFilterChange = useCallback((value: string) => {
+    setQuantityFilter(
+      value === "all" ? null : (value as InventoryQuantityFilter),
+    );
+  }, []);
+
   const handleViewDetail = useCallback(
     (item: InventoryListItem) => {
       const sku = item.code.replace(/\s+/g, "");
@@ -122,24 +155,28 @@ export default function Inventario() {
           label: "Total artículos",
           value: stats.totalItems,
           icon: <GridViewIcon />,
+          clickable: true,
         },
         {
           id: "inStock",
           label: "En existencia",
           value: stats.inStock,
           icon: <SyncIcon />,
+          clickable: true,
         },
         {
           id: "inTransit",
           label: "En tránsito",
           value: stats.inTransit,
           icon: <ShippingIcon />,
+          clickable: true,
         },
         {
           id: "damaged",
           label: "Mercancía dañada",
           value: stats.damaged,
           icon: <BuildIcon />,
+          clickable: true,
         },
       ]
     : [];
@@ -249,7 +286,12 @@ export default function Inventario() {
       <Title title="Inventario" />
 
       {stats ? (
-        <StatsCardGroup cards={statsCards} columns={4} />
+        <StatsCardGroup
+          cards={statsCards}
+          columns={4}
+          activeCardId={quantityFilter ?? "total"}
+          onCardClick={handleQuantityCardClick}
+        />
       ) : (
         <Grid container spacing={2}>
           {[1, 2, 3, 4].map((i) => (
@@ -282,6 +324,14 @@ export default function Inventario() {
         showSearch
         searchValue={searchInput}
         onSearchChange={setSearchInput}
+        selectFilters={[
+          {
+            label: "Cantidad",
+            value: quantityFilter ?? "all",
+            options: QUANTITY_FILTER_OPTIONS,
+            onChange: handleQuantityFilterChange,
+          },
+        ]}
       />
 
       <TableCrud
@@ -296,7 +346,11 @@ export default function Inventario() {
         onRowsPerPageChange={handleRowsPerPageChange}
         onRowClick={handleRowClick}
         actions={rowActions}
-        emptyMessage="No hay artículos en inventario"
+        emptyMessage={
+          quantityFilter
+            ? "No hay artículos con cantidad mayor a 0 en esa columna"
+            : "No hay artículos en inventario"
+        }
       />
     </Stack>
   );

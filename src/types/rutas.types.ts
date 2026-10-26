@@ -60,6 +60,8 @@ export interface RouteScheduledStop {
   sequence: number;
 }
 
+export type LogisticZoneCoverage = "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
+
 export interface SuggestedItemToAdd {
   id: string;
   sourceType: "sale" | "order";
@@ -69,6 +71,9 @@ export interface SuggestedItemToAdd {
   orderNumber: string;
   articleName: string;
   zone: string;
+  zoneId?: number | null;
+  zoneColor?: string | null;
+  zoneCoverage?: LogisticZoneCoverage;
   scheduledDate: string;
   destinationBranch: string | null;
 }
@@ -83,6 +88,9 @@ export interface OrderToAdd {
   orderNumber: string;
   articleName: string;
   zone: string;
+  zoneId?: number | null;
+  zoneColor?: string | null;
+  zoneCoverage?: LogisticZoneCoverage;
   scheduledDate: string;
   destinationBranch: string | null;
 }

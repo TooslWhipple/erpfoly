@@ -23,10 +23,9 @@ import {
   type InvoiceStatus,
 } from "@/types/atencion-cliente.types";
 import { getInvoiceDetail } from "@/services/customer-support.service";
-import { CancelPurchaseModal } from "@/pages/clientes/compras/components";
+import { SaleCancellationModal } from "@/components/SaleCancellationModal";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMER_SUPPORT_INVOICES_DELETE } from "@/lib/permissions";
-import type { SaleCancelBlockReason } from "@/types/cancelPurchase.types";
 import { InvoiceActivityTab, InvoiceArticlesTab } from "./components";
 import {
   MenuIconButton,
@@ -308,20 +307,12 @@ export default function InvoiceDetailPage() {
         </SummaryPanel>
       </ContentLayout>
 
-      {invoice.customerId ? (
-        <CancelPurchaseModal
-          open={cancelInvoiceOpen}
-          clientId={Number(invoice.customerId)}
+      {cancelInvoiceOpen ? (
+        <SaleCancellationModal
+          open
           saleId={Number(invoice.id)}
-          totalPaid={invoice.totalPayments}
-          blockReason={
-            (invoice.cancelBlockReason as SaleCancelBlockReason | null) ?? null
-          }
           onClose={() => setCancelInvoiceOpen(false)}
-          onSuccess={() => {
-            setCancelInvoiceOpen(false);
-            void loadInvoice(invoice.id);
-          }}
+          onSuccess={() => void loadInvoice(invoice.id)}
         />
       ) : null}
     </Stack>

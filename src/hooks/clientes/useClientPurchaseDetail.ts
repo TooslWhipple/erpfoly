@@ -51,6 +51,8 @@ function mapPurchaseDetail(data: ClientPurchaseDetailApi): ClientPurchaseDetail 
     totalInstallments: data.totalInstallments,
     canCancel: data.canCancel,
     cancelBlockReason: data.cancelBlockReason,
+    cancellationState: data.cancellationState,
+    cancelledAmount: data.cancelledAmount,
     payments: data.payments.map((payment) => ({
       id: String(payment.id),
       status: payment.status,

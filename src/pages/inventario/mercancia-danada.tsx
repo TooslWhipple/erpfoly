@@ -356,6 +356,16 @@ export default function MercanciaDanada() {
         truncate: true,
       },
       {
+        id: "referenceLabel",
+        label: "Referencia",
+        size: "lg",
+        truncate: true,
+        format: (value) => {
+          const text = typeof value === "string" ? value.trim() : "";
+          return text || "—";
+        },
+      },
+      {
         id: "registeredByUser",
         label: "Registrado por",
         size: "lg",

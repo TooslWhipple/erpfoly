@@ -153,6 +153,7 @@ export interface ServiceOrderSolucion {
   isSolved: boolean;
   solvedDate: string;
   approvalMethod: ServiceOrderApprovalMethod;
+  /** Lectura: true cuando la orden ya tiene un folio de mercancía dañada. */
   registerAsDamagedGoods: boolean;
   damageTypeId: string;
   observations: string;

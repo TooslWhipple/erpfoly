@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { ChevronDown, CircleDotDashed } from "lucide-react";
 import { SideModal, TabFilters } from "@/components";
+import { getApiErrorMessage } from "@/lib/axios";
 import {
   getServiceOrderById,
   updateServiceOrder,
@@ -187,7 +188,10 @@ export function ServiceOrderDetailModal({
       onSuccess?.();
     } catch (error) {
       console.error("[ServiceOrderDetailModal] Error saving order:", error);
-      showError("No se pudieron guardar los cambios. Intenta de nuevo.");
+      showError(
+        getApiErrorMessage(error) ||
+          "No se pudieron guardar los cambios. Intenta de nuevo.",
+      );
     } finally {
       setSaving(false);
     }

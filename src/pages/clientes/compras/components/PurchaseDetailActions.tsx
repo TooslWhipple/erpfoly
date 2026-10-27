@@ -3,11 +3,13 @@ import { Button, IconButton, Menu, MenuItem, Stack } from "@mui/material";
 import { MoreVertical } from "lucide-react";
 import { StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
-import type { SaleCancelBlockReason } from "@/types/cancelPurchase.types";
-import type { ClientPurchaseStatus } from "@/types/clientPurchase.types";
+import type {
+  ClientPurchaseCancellationState,
+  ClientPurchaseStatus,
+} from "@/types/clientPurchase.types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMERS_UPDATE } from "@/lib/permissions";
-import { CancelPurchaseModal } from "./CancelPurchaseModal";
+import { SaleCancellationModal } from "@/components/SaleCancellationModal";
 import { DeliverPurchaseModal } from "./DeliverPurchaseModal";
 
 const STATUS_LABELS: Record<ClientPurchaseStatus, string> = {
@@ -26,11 +28,8 @@ const STATUS_VARIANTS: Record<ClientPurchaseStatus, StatusChipVariant> = {
 
 export interface PurchaseDetailActionsProps {
   status: ClientPurchaseStatus;
-  clientId: number;
   saleId: number;
-  canCancel: boolean;
-  cancelBlockReason: SaleCancelBlockReason | null;
-  totalPaid: number;
+  cancellationState: ClientPurchaseCancellationState;
   productName: string;
   productSku: string;
   productImageUrl?: string | null;
@@ -39,11 +38,8 @@ export interface PurchaseDetailActionsProps {
 
 export function PurchaseDetailActions({
   status,
-  clientId,
   saleId,
-  canCancel,
-  cancelBlockReason,
-  totalPaid,
+  cancellationState,
   productName,
   productSku,
   productImageUrl,
@@ -89,6 +85,9 @@ export function PurchaseDetailActions({
         variant={STATUS_VARIANTS[status]}
         size="small"
       />
+      {cancellationState === "PARTIAL" ? (
+        <StatusChip label="Cancelación parcial" variant="warning" size="small" />
+      ) : null}
 
       {isDeliveryPending && false ? (
         <>
@@ -126,19 +125,18 @@ export function PurchaseDetailActions({
                 onClick={handleOpenCancelModal}
                 sx={{ color: alreadyCancelled ? undefined : "error.main" }}
               >
-                Cancelar cuenta
+                Cancelar artículos
               </MenuItem>
             </Menu>
 
-            <CancelPurchaseModal
-              open={cancelModalOpen}
-              clientId={clientId}
-              saleId={saleId}
-              totalPaid={totalPaid}
-              blockReason={canCancel ? null : cancelBlockReason}
-              onClose={handleCloseCancelModal}
-              onSuccess={onSuccess}
-            />
+            {cancelModalOpen ? (
+              <SaleCancellationModal
+                open
+                saleId={saleId}
+                onClose={handleCloseCancelModal}
+                onSuccess={() => onSuccess?.()}
+              />
+            ) : null}
           </>
         )
       )}

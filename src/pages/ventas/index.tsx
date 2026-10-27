@@ -13,7 +13,8 @@ import {
 import type { DateRangeSelectOption } from "@/components/DateRangePopover";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
-import { getSales, cancelSale } from "@/services/ventas.service";
+import { getSales } from "@/services/ventas.service";
+import { SaleCancellationModal } from "@/components/SaleCancellationModal";
 import type { HandoverProgress } from "@/types/saleHandover.types";
 import type {
   SaleListItem,
@@ -28,9 +29,9 @@ import {
   HANDOVER_STATUS_LABELS,
   HANDOVER_STATUS_VARIANTS,
 } from "@/utils/saleStatus";
-import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const CANCELLABLE_STATUSES = new Set(["PENDING_CASHIER", "PENDING_PAYMENT", "PAID"]);
 const MEXICO_CITY_TZ = "America/Mexico_City";
 const STATUS_TABS: TabOption[] = [
   { label: "Todas", value: "all" },
@@ -76,8 +77,7 @@ function formatItemCount(count: number): string {
 
 export default function Ventas() {
   const router = useRouter();
-  const showSuccess = useSnackbarStore((s) => s.showSuccess);
-  const showError = useSnackbarStore((s) => s.showError);
+  const [cancelSaleId, setCancelSaleId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [dateFrom, setDateFrom] = useState(todayInMexicoCity);
   const [dateTo, setDateTo] = useState(todayInMexicoCity);
@@ -124,15 +124,6 @@ export default function Ventas() {
     setDateFrom(range.startDate || today);
     setDateTo(range.endDate || range.startDate || today);
     setPage(0);
-  };
-  const handleCancelSale = async (row: SaleListItem) => {
-    const res = await cancelSale(row.id);
-    if (res.error) {
-      showError(res.error.message);
-      return;
-    }
-    showSuccess(`Venta ${row.folio} cancelada. Inventario liberado.`);
-    void refetch();
   };
   const tabs = STATUS_TABS.map((t) => ({
     ...t,
@@ -222,8 +213,8 @@ export default function Ventas() {
       id: "cancelar",
       label: "Cancelar venta",
       color: "error",
-      hidden: (row) => row.status !== "PENDING_CASHIER",
-      onClick: (row) => void handleCancelSale(row),
+      hidden: (row) => !CANCELLABLE_STATUSES.has(row.status),
+      onClick: (row) => setCancelSaleId(row.id),
     },
   ];
   return (
@@ -281,6 +272,15 @@ export default function Ventas() {
         onRowClick={handleRowClick}
         emptyMessage="No hay órdenes registradas"
       />
+
+      {cancelSaleId !== null ? (
+        <SaleCancellationModal
+          open
+          saleId={cancelSaleId}
+          onClose={() => setCancelSaleId(null)}
+          onSuccess={() => void refetch()}
+        />
+      ) : null}
     </Stack>
   );
 }

@@ -8,6 +8,8 @@ export type ClientPurchaseStatus =
 
 export type ClientPurchasePaymentStatus = "PAID" | "PENDING" | "CANCELLED";
 
+export type ClientPurchaseCancellationState = "NONE" | "PARTIAL" | "TOTAL";
+
 export interface ClientPurchasePayment {
   id: string;
   status: ClientPurchasePaymentStatus;
@@ -42,6 +44,8 @@ export interface ClientPurchaseDetailApi {
   totalInstallments: number;
   canCancel: boolean;
   cancelBlockReason: SaleCancelBlockReason | null;
+  cancellationState: ClientPurchaseCancellationState;
+  cancelledAmount: number;
   payments: Array<{
     id: number;
     status: ClientPurchasePaymentStatus;
@@ -77,6 +81,8 @@ export interface ClientPurchaseDetail {
   totalInstallments: number;
   canCancel: boolean;
   cancelBlockReason: SaleCancelBlockReason | null;
+  cancellationState: ClientPurchaseCancellationState;
+  cancelledAmount: number;
   payments: ClientPurchasePayment[];
   purchaseInfo: ClientPurchaseInfo;
 }

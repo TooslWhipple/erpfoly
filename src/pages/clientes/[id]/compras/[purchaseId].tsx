@@ -126,11 +126,8 @@ export default function ClientPurchaseDetailPage() {
         <Breadcrumbs items={breadcrumbs} showBackButton onBack={handleBack} />
         <PurchaseDetailActions
           status={purchase.status}
-          clientId={Number(purchase.clientId)}
           saleId={Number(purchase.id)}
-          canCancel={purchase.canCancel}
-          cancelBlockReason={purchase.cancelBlockReason}
-          totalPaid={purchase.totalPaid}
+          cancellationState={purchase.cancellationState}
           productName={purchase.productName}
           productSku={purchase.productSku}
           productImageUrl={purchase.productImageUrl}

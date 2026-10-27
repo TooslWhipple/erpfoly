@@ -12,6 +12,8 @@ import {
   assignVehicleToRoute,
   createRoute,
   deleteCartaPorteDocument,
+  fetchRouteDetail,
+  publishRoute,
   removeAssistantFromRoute,
   removeDriverFromRoute,
   removeRoutePoint,
@@ -503,6 +505,31 @@ export function useRouteMutations({
     },
   });
 
+  const publishRouteMutation = useMutation({
+    mutationFn: async ({ routeId }: { routeId: number }) => {
+      const published = await publishRoute(routeId);
+      unwrapOrThrow(published);
+      const detail = await fetchRouteDetail(routeId);
+      return unwrapOrThrow(detail);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Ruta publicada correctamente.");
+    },
+    onError: (err) => {
+      const detail = getApiErrorMessage(err);
+      showError(
+        detail
+          ? `No se pudo publicar la ruta: ${detail}`
+          : "No se pudo publicar la ruta.",
+      );
+    },
+  });
+
   const removeRoutePointItemMutation = useMutation({
     mutationFn: async ({
       routeId,
@@ -583,5 +610,6 @@ export function useRouteMutations({
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
+    publishRouteMutation,
   };
 }

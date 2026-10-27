@@ -226,6 +226,7 @@ export function useRutasPage() {
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
+    publishRouteMutation,
   } = mutations;
 
   const fetchOrdersForModal = useCallback(
@@ -502,6 +503,22 @@ export function useRutasPage() {
   const canEditArticles =
     canUpdateRoute && routeDetail?.status === "scheduled";
 
+  const canPublishRoute = canEditArticles;
+
+  const canModifyRoute =
+    canUpdateRoute &&
+    routeDetail?.status !== "cancelled" &&
+    routeDetail?.status !== "completed";
+
+  const handlePublishRoute = useCallback(async () => {
+    if (resolvedRouteId == null) return;
+    try {
+      await publishRouteMutation.mutateAsync({ routeId: resolvedRouteId });
+    } catch {
+      // Error already shown by the mutation snackbar
+    }
+  }, [resolvedRouteId, publishRouteMutation]);
+
   return {
     selectedDate,
     routes,
@@ -514,6 +531,9 @@ export function useRutasPage() {
     setActiveTab,
     canUpdateRoute,
     canEditArticles,
+    canPublishRoute,
+    canModifyRoute,
+    handlePublishRoute,
     cartaPanelKey,
     pendingCartaLocalFile,
     setPendingCartaLocalFile,
@@ -562,5 +582,6 @@ export function useRutasPage() {
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
+    publishRouteMutation,
   };
 }

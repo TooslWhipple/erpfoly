@@ -3,6 +3,7 @@ import type { BranchOrderStatus } from "@/types/solicitudes.types";
 import type { QueryTransfersParams } from "@/types/transfers.types";
 
 const BRANCH_ORDER_STATUSES: BranchOrderStatus[] = [
+    "draft",
     "pending",
     "scheduled",
     "shipped",
@@ -27,6 +28,7 @@ export function isLegacyBranchOrderStatus(status: BranchOrderStatus): boolean {
 
 export function getBranchOrderStatusLabel(status: BranchOrderStatus): string {
     const labels: Record<BranchOrderStatus, string> = {
+        draft: "Propuesta",
         pending: "Solicitado",
         scheduled: "Agendado",
         shipped: "En curso",
@@ -43,6 +45,7 @@ export function getBranchOrderStatusVariant(
     status: BranchOrderStatus
 ): StatusChipVariant {
     const variants: Record<BranchOrderStatus, StatusChipVariant> = {
+        draft: "default",
         pending: "pending",
         scheduled: "warning",
         shipped: "info",
@@ -55,15 +58,17 @@ export function getBranchOrderStatusVariant(
     return variants[status];
 }
 
-/** Solo se edita lo pendiente y que no esté ligado a una venta. */
+/** Se edita una propuesta o un solicitado que no esté ligado a una venta. */
 export function isBranchOrderEditable(
     status: BranchOrderStatus,
     linkedToSale: boolean
 ): boolean {
-    return status === "pending" && !linkedToSale;
+    return (status === "pending" || status === "draft") && !linkedToSale;
 }
 
 export const TRANSFER_TAB_ALL = "all";
+export const TRANSFER_FILTER_DRAFT = "draft";
+export const TRANSFER_FILTER_PENDING = "pending";
 export const TRANSFER_TAB_TO_SHIP = "to_ship";
 export const TRANSFER_TAB_TO_RECEIVE = "to_receive";
 export const TRANSFER_TAB_IN_COURSE = "in_course";
@@ -76,9 +81,13 @@ type TransferTabFilters = Pick<
     "status" | "pending_action" | "has_open_incident"
 >;
 
-/** Filtros de `GET /transfers` que corresponden a cada pestaña del listado. */
-export function getTransferTabFilters(tab: string): TransferTabFilters {
-    switch (tab) {
+/** Filtros de `GET /transfers` que corresponden a cada valor del select de estatus. */
+export function getTransferListFilters(statusFilter: string): TransferTabFilters {
+    switch (statusFilter) {
+        case TRANSFER_FILTER_DRAFT:
+            return { status: "draft" };
+        case TRANSFER_FILTER_PENDING:
+            return { status: "pending" };
         case TRANSFER_TAB_TO_SHIP:
             return { pending_action: "ship" };
         case TRANSFER_TAB_TO_RECEIVE:
@@ -95,3 +104,6 @@ export function getTransferTabFilters(tab: string): TransferTabFilters {
             return {};
     }
 }
+
+/** @deprecated Usar `getTransferListFilters`. */
+export const getTransferTabFilters = getTransferListFilters;

@@ -114,7 +114,7 @@ export function NubariumIdCapture({
   return (
     <CaptureStepRoot>
       <CaptureViewport ref={viewportRef}>
-        <CaptureHost id={rootElementId} />
+        <CaptureHost id={rootElementId} data-nubarium-host="" />
       </CaptureViewport>
 
       {!errorMessage ? (

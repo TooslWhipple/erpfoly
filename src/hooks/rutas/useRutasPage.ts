@@ -167,6 +167,12 @@ export function useRutasPage() {
     return mapRouteDetailApiToView(raw);
   }, [detailQuery.data]);
 
+  const canEditDraftRoute =
+    canUpdateRoute && routeDetail?.status === "scheduled";
+  const canEditArticles = canEditDraftRoute;
+  const canPublishRoute = canEditDraftRoute;
+  const canModifyRoute = canEditDraftRoute;
+
   const selectRouteInUrl = useCallback(
     (routeId: number, fecha?: string) => {
       setSelectedRouteId(routeId);
@@ -326,11 +332,13 @@ export function useRutasPage() {
   };
 
   const handleOpenAddOrders = () => {
+    if (!canEditDraftRoute) return;
     setAddOrdersBranchId(null);
     setAddOrdersModalOpen(true);
   };
 
   const handleOpenAddOrdersForBranch = (branchId: number) => {
+    if (!canEditDraftRoute) return;
     setAddOrdersBranchId(branchId);
     setAddOrdersModalOpen(true);
   };
@@ -343,7 +351,7 @@ export function useRutasPage() {
   const handleConfirmAddOrders = async (payload: {
     points: AddRoutePointPayload[];
   }) => {
-    if (!resolvedRouteId || payload.points.length === 0) return;
+    if (!resolvedRouteId || payload.points.length === 0 || !canEditDraftRoute) return;
     await addOrdersMutation.mutateAsync({
       routeId: resolvedRouteId,
       points: payload.points,
@@ -351,7 +359,7 @@ export function useRutasPage() {
   };
 
   const handleConfirmAssignDriver = async (userId: number) => {
-    if (!resolvedRouteId) return;
+    if (!resolvedRouteId || !canEditDraftRoute) return;
     await assignDriverMutation.mutateAsync({
       routeId: resolvedRouteId,
       userId,
@@ -359,7 +367,7 @@ export function useRutasPage() {
   };
 
   const handleConfirmAddAssistant = async (userId: number) => {
-    if (!resolvedRouteId) return;
+    if (!resolvedRouteId || !canEditDraftRoute) return;
     await addAssistantMutation.mutateAsync({
       routeId: resolvedRouteId,
       userId,
@@ -367,7 +375,7 @@ export function useRutasPage() {
   };
 
   const handleAssignVehicle = async (vehicleId: number | null) => {
-    if (!resolvedRouteId) return;
+    if (!resolvedRouteId || !canEditDraftRoute) return;
     await assignVehicleMutation.mutateAsync({
       routeId: resolvedRouteId,
       vehicleId,
@@ -375,7 +383,7 @@ export function useRutasPage() {
   };
 
   const handleSaveCartaPorte = async () => {
-    if (!resolvedRouteId || !pendingCartaLocalFile) return;
+    if (!resolvedRouteId || !pendingCartaLocalFile || !canEditDraftRoute) return;
     await uploadCartaMutation.mutateAsync({
       routeId: resolvedRouteId,
       file: pendingCartaLocalFile,
@@ -384,16 +392,17 @@ export function useRutasPage() {
 
   const handleRemoveCartaServerDocument = useCallback(
     (documentId: number) => {
-      if (resolvedRouteId == null) return;
+      if (resolvedRouteId == null || !canEditDraftRoute) return;
       deleteCartaMutation.mutate({
         routeId: resolvedRouteId,
         documentId,
       });
     },
-    [resolvedRouteId, deleteCartaMutation],
+    [resolvedRouteId, deleteCartaMutation, canEditDraftRoute],
   );
 
   const handleRequestRemoveAssistant = (assistantId: string) => {
+    if (!canEditDraftRoute) return;
     const assistant = routeDetail?.assistants.find((a) => a.id === assistantId);
     setPendingRemoval({
       kind: "assistant",
@@ -403,6 +412,7 @@ export function useRutasPage() {
   };
 
   const handleRequestRemoveDriver = () => {
+    if (!canEditDraftRoute) return;
     setPendingRemoval({
       kind: "driver",
       name: routeDetail?.driver?.name ?? "",
@@ -410,7 +420,7 @@ export function useRutasPage() {
   };
 
   const handleConfirmRemove = async () => {
-    if (!pendingRemoval || !resolvedRouteId) return;
+    if (!pendingRemoval || !resolvedRouteId || !canEditDraftRoute) return;
     try {
       if (pendingRemoval.kind === "assistant") {
         await removeAssistantMutation.mutateAsync({
@@ -486,7 +496,7 @@ export function useRutasPage() {
 
   const handleAddScheduledStop = useCallback(
     async (branchId: number, branchName: string) => {
-      if (resolvedRouteId == null) return;
+      if (resolvedRouteId == null || !canEditDraftRoute) return;
       try {
         await addScheduledStopMutation.mutateAsync({
           routeId: resolvedRouteId,
@@ -497,18 +507,8 @@ export function useRutasPage() {
         // Error already shown by the mutation snackbar
       }
     },
-    [resolvedRouteId, addScheduledStopMutation],
+    [resolvedRouteId, addScheduledStopMutation, canEditDraftRoute],
   );
-
-  const canEditArticles =
-    canUpdateRoute && routeDetail?.status === "scheduled";
-
-  const canPublishRoute = canEditArticles;
-
-  const canModifyRoute =
-    canUpdateRoute &&
-    routeDetail?.status !== "cancelled" &&
-    routeDetail?.status !== "completed";
 
   const handlePublishRoute = useCallback(async () => {
     if (resolvedRouteId == null) return;

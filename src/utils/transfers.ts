@@ -39,6 +39,7 @@ export interface TransferButtons {
   cancel: boolean;
   returnToOrigin: boolean;
   schedule: boolean;
+  authorize: boolean;
   /** Ligado en pending/scheduled: no se cancela aquí, solo la venta. */
   linkedCancelNote: boolean;
   /** La hoja de salida y de entrada existen desde que el traspaso salió. */
@@ -60,6 +61,7 @@ export function getTransferButtons(
     cancel: allowed("cancel"),
     returnToOrigin: allowed("return_to_origin"),
     schedule: allowed("schedule"),
+    authorize: allowed("authorize"),
     linkedCancelNote: detail.sale !== null && beforeShipping,
     print: detail.status === "shipped" || detail.status === "delivered",
   };
@@ -114,6 +116,8 @@ export const INCIDENT_RESOLUTION_LABELS: Record<TransferIncidentResolution, stri
 
 const TIMELINE_LABELS: Record<string, string> = {
   scheduled: "Agendado",
+  authorized: "Autorizado",
+  replenishment_generated: "Propuesta generada",
   shipped: "Enviado",
   received: "Recibido",
   cancelled: "Cancelado",

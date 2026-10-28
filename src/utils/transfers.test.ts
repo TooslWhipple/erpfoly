@@ -45,6 +45,12 @@ describe("getTransferButtons", () => {
   it("un normal en pending no lleva la nota", () => {
     assert.equal(getTransferButtons(detail("pending", ["cancel"]), manager).linkedCancelNote, false);
   });
+  it("una propuesta muestra autorizar cuando el backend lo permite", () => {
+    const buttons = getTransferButtons(detail("draft", ["authorize", "cancel"]), manager);
+    assert.equal(buttons.authorize, true);
+    assert.equal(buttons.schedule, false);
+    assert.equal(buttons.cancel, true);
+  });
 });
 
 describe("getIncidentButtons", () => {

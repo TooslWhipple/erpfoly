@@ -12,7 +12,12 @@ import {
 } from "@mui/material";
 import { Breadcrumbs, BranchOrderItemRow, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
-import { TransferActions, TransferDialogs, type TransferDialog } from "@/components/TransferActions";
+import {
+  TransferActions,
+  TransferDialogs,
+  useTransferActionRunner,
+  type TransferDialog,
+} from "@/components/TransferActions";
 import { TransferIncidentsPanel, TransferTimeline } from "@/components/TransferDetail";
 import type {
   BranchOrderDetail,
@@ -20,7 +25,7 @@ import type {
   ScheduleBranchRequestPayload,
 } from "@/types/solicitudes.types";
 import type { TransferDetail } from "@/types/transfers.types";
-import { getTransfer, scheduleTransfer } from "@/services/transfers.service";
+import { authorizeTransfer, getTransfer, scheduleTransfer } from "@/services/transfers.service";
 import {
   mapBranchOrderStatus,
   getBranchOrderStatusLabel,
@@ -127,6 +132,18 @@ export default function TraspasoDetallePage() {
       setStatus("error");
     }
   }, [id]);
+  const { run: runTransferAction, busy: authorizing } = useTransferActionRunner(() => {
+    void fetchOrder();
+  });
+  const handleAuthorize = () => {
+    if (!id) return;
+    const transferId = parseInt(id, 10);
+    if (Number.isNaN(transferId) || transferId < 1) return;
+    void runTransferAction(
+      () => authorizeTransfer(transferId),
+      "El traspaso quedó solicitado.",
+    );
+  };
   useEffect(() => {
     if (id) fetchOrder();
   }, [id, fetchOrder]);
@@ -289,6 +306,8 @@ export default function TraspasoDetallePage() {
             detail={detail}
             viewer={viewer}
             onOpenDialog={setDialog}
+            onAuthorize={handleAuthorize}
+            authorizing={authorizing}
           />
         </Stack>
       </Stack>

@@ -34,6 +34,7 @@ export interface UpdateTransferPayload {
 /** Acciones que el backend calcula por traspaso y usuario (`allowed_actions`). */
 export type TransferAction =
   | "schedule"
+  | "authorize"
   | "ship"
   | "receive"
   | "cancel"
@@ -65,6 +66,7 @@ export type AuditorIncidentResolution = Exclude<
 
 export interface TransferStats {
   total: number;
+  draft: number;
   pending: number;
   scheduled: number;
   shipped: number;

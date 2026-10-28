@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { Title, TabFilters, TableCrud, StatusChip, BranchSelectionModal } from "@/components";
 import type { Column, RowAction } from "@/components/TableCrud";
-import type { TabOption } from "@/components/TabFilters";
 import type { BranchOrderStatus } from "@/types/solicitudes.types";
 import type { TransferListItem, TransferStats } from "@/types/transfers.types";
 import { getTransfers, getTransferStats } from "@/services/transfers.service";
@@ -11,8 +10,10 @@ import {
     mapBranchOrderStatus,
     getBranchOrderStatusLabel,
     getBranchOrderStatusVariant,
-    getTransferTabFilters,
+    getTransferListFilters,
     isBranchOrderEditable,
+    TRANSFER_FILTER_DRAFT,
+    TRANSFER_FILTER_PENDING,
     TRANSFER_TAB_ALL,
     TRANSFER_TAB_CANCELLED,
     TRANSFER_TAB_DELIVERED,
@@ -80,7 +81,7 @@ async function getBranchOrders(
         page: params.page + 1,
         limit: params.limit,
         search: params.search,
-        ...getTransferTabFilters(params.tab),
+        ...getTransferListFilters(params.tab),
     });
 
     if (result.data) {
@@ -108,15 +109,21 @@ export default function TraspasosPage() {
     const [totalRows, setTotalRows] = useState(0);
     const [branchModalOpen, setBranchModalOpen] = useState(false);
 
-    const tabs: TabOption[] = [
-        { label: "Todos", value: TRANSFER_TAB_ALL, count: stats?.total },
-        { label: "Por enviar", value: TRANSFER_TAB_TO_SHIP, count: stats?.toShip },
-        { label: "Por recibir", value: TRANSFER_TAB_TO_RECEIVE, count: stats?.toReceive },
-        { label: "En curso", value: TRANSFER_TAB_IN_COURSE, count: stats?.shipped },
-        { label: "Entregados", value: TRANSFER_TAB_DELIVERED, count: stats?.delivered },
-        { label: "Con incidencia", value: TRANSFER_TAB_INCIDENT, count: stats?.openIncidents },
-        { label: "Canceladas", value: TRANSFER_TAB_CANCELLED, count: stats?.cancelled },
-    ];
+    const statusOptions = useMemo(() => {
+        const withCount = (label: string, count: number | undefined) =>
+            count === undefined ? label : `${label} (${count})`;
+        return [
+            { label: withCount("Todos", stats?.total), value: TRANSFER_TAB_ALL },
+            { label: withCount("Propuestas semanales", stats?.draft), value: TRANSFER_FILTER_DRAFT },
+            { label: withCount("Solicitado", stats?.pending), value: TRANSFER_FILTER_PENDING },
+            { label: withCount("Por enviar", stats?.toShip), value: TRANSFER_TAB_TO_SHIP },
+            { label: withCount("Por recibir", stats?.toReceive), value: TRANSFER_TAB_TO_RECEIVE },
+            { label: withCount("En curso", stats?.shipped), value: TRANSFER_TAB_IN_COURSE },
+            { label: withCount("Entregados", stats?.delivered), value: TRANSFER_TAB_DELIVERED },
+            { label: withCount("Con incidencia", stats?.openIncidents), value: TRANSFER_TAB_INCIDENT },
+            { label: withCount("Canceladas", stats?.cancelled), value: TRANSFER_TAB_CANCELLED },
+        ];
+    }, [stats]);
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -285,12 +292,21 @@ export default function TraspasosPage() {
                 <Title title="Traspasos" />
 
                 <TabFilters
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onTabChange={handleTabChange}
+                    tabs={[]}
+                    activeTab=""
+                    onTabChange={() => {}}
                     showSearch
                     searchValue={searchValue}
                     onSearchChange={handleSearchChange}
+                    selectFilters={[
+                        {
+                            label: "Estatus",
+                            value: activeTab,
+                            onChange: handleTabChange,
+                            options: statusOptions,
+                            minWidth: 280,
+                        },
+                    ]}
                     actions={[
                         {
                             label: "Nuevo",

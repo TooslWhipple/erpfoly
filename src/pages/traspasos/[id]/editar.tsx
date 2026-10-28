@@ -64,7 +64,7 @@ export default function EditarTraspaso() {
                 if (!isBranchOrderEditable(status, false)) {
                     setResolution({
                         kind: "invalid",
-                        reason: "Este traspaso no puede editarse porque su estatus no es pendiente.",
+                        reason: "Este traspaso no puede editarse en su estatus actual.",
                     });
                     return;
                 }

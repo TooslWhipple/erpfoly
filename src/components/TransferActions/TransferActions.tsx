@@ -11,6 +11,8 @@ export interface TransferActionsProps {
   detail: TransferDetail;
   viewer: TransferViewer;
   onOpenDialog: (dialog: TransferDialog) => void;
+  onAuthorize?: () => void;
+  authorizing?: boolean;
 }
 
 const DOCUMENT_BUTTONS: Array<{ kind: TransferDocumentKind; label: string }> = [
@@ -19,7 +21,13 @@ const DOCUMENT_BUTTONS: Array<{ kind: TransferDocumentKind; label: string }> = [
 ];
 
 /** Botones de acción del traspaso: salen de `allowed_actions` y del permiso del usuario. */
-export function TransferActions({ detail, viewer, onOpenDialog }: TransferActionsProps) {
+export function TransferActions({
+  detail,
+  viewer,
+  onOpenDialog,
+  onAuthorize,
+  authorizing = false,
+}: TransferActionsProps) {
   const { showError } = useSnackbarStore();
   const [printing, setPrinting] = useState<TransferDocumentKind | null>(null);
   const buttons = getTransferButtons(detail, viewer);
@@ -38,6 +46,11 @@ export function TransferActions({ detail, viewer, onOpenDialog }: TransferAction
   return (
     <Stack spacing={1} alignItems={{ xs: "stretch", sm: "flex-end" }}>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        {buttons.authorize && (
+          <Button variant="contained" onClick={onAuthorize} disabled={authorizing || !onAuthorize}>
+            {authorizing ? <CircularProgress size={20} color="inherit" /> : "Autorizar"}
+          </Button>
+        )}
         {buttons.ship && (
           <Button variant="contained" onClick={() => onOpenDialog({ kind: "ship" })}>
             Enviar

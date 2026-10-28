@@ -1,4 +1,5 @@
 export type BranchOrderStatus =
+    | "draft"
     | "pending"
     | "scheduled"
     | "shipped"

@@ -54,6 +54,7 @@ export interface SelectFilterConfig {
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  minWidth?: number;
 }
 
 interface TabFiltersProps {
@@ -317,7 +318,7 @@ export function TabFilters({
           <Grid
             key={`${filter.label ?? "filter"}-${index}`}
             size={{ xs: 12, sm: "auto" }}
-            sx={{ flexShrink: 0, minWidth: { sm: 160 } }}
+            sx={{ flexShrink: 0, minWidth: { sm: filter.minWidth ?? 160 } }}
           >
             <FormSelect
               label={filter.label}

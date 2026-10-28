@@ -109,7 +109,7 @@ export function NubariumFaceCapture({
     onReset?.();
   };
 
-  const host = <CaptureHost id={rootElementId} />;
+  const host = <CaptureHost id={rootElementId} data-nubarium-host="" />;
   const showPreview = Boolean(completed && completedResult?.faceDataUrl);
 
   if (showPreview && completedResult) {

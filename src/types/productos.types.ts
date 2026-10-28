@@ -68,6 +68,8 @@ export type CreateProductRequest = {
     currency?: string;
     exchangeRate?: number;
     iva?: number;
+    /** Enciende fin de ciclo: descontinuado y etiqueta roja. */
+    isDiscontinued?: boolean;
     isLiquidation?: boolean;
     costBasisForCalculation?: CostBasisForCalculation;
     /** Solo aplica en edición: si true, usa el exchangeRate del payload en vez de conservar el guardado. */
@@ -123,6 +125,7 @@ export interface ProductPrice {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
+    discontinued: boolean;
     costBasisForCalculation?: CostBasisForCalculation;
     basePrices?: ProductBasePrice[];
 }
@@ -193,6 +196,7 @@ export interface PriceFormState {
     exchangeRate: string;
     iva: string;
     liquidation: boolean;
+    discontinued: boolean;
     costBasisForCalculation: CostBasisForCalculation;
     lastCost: string;
     averageCost: string;

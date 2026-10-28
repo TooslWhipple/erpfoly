@@ -66,6 +66,7 @@ export interface ProductSearchResult {
   imageUrl: string | null;
   finalPrice: number;
   isLiquidation?: boolean;
+  isDiscontinued?: boolean;
 }
 
 export interface InventorySource {
@@ -93,6 +94,7 @@ export interface ProductDetail {
   inventorySources: InventorySource[];
   hasOtherBranches?: boolean;
   isLiquidation?: boolean;
+  isDiscontinued?: boolean;
 }
 
 export interface CartItem {
@@ -114,6 +116,7 @@ export interface CartItem {
    */
   backorderedQuantity: number;
   isLiquidation?: boolean;
+  isDiscontinued?: boolean;
 }
 
 export type NewSaleView = "form" | "search" | "product-detail" | "checkout";
@@ -134,6 +137,7 @@ export interface SaleDetailItem {
     name: string;
     imageUrl: string | null;
     isLiquidation?: boolean;
+    isDiscontinued?: boolean;
   };
 }
 

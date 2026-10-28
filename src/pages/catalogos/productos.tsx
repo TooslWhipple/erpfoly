@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Alert, Stack } from "@mui/material";
+import { Alert, Chip, Stack } from "@mui/material";
 import {
+  Block as BlockIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
   Restore as RestoreIcon,
@@ -19,9 +20,11 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   deleteProduct,
   restoreProduct,
+  setProductEndOfLife,
   getProducts,
   type ProductListItem,
 } from "@/services/productos.service";
+import { DISCONTINUED_CHIP_LABEL } from "@/lib/product-end-of-life";
 import {
   CATALOG_PRODUCTS_CREATE,
   CATALOG_PRODUCTS_DELETE,
@@ -41,13 +44,62 @@ const PRODUCT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   INACTIVE: "error",
 };
 
-type ProductStatusTab = "all" | "active" | "inactive";
+type ProductStatusTab = "all" | "active" | "inactive" | "discontinued";
+type ProductConfirmAction =
+  | "delete"
+  | "restore"
+  | "discontinue"
+  | "clearDiscontinued";
 
 const STATUS_TABS: { value: ProductStatusTab; label: string }[] = [
   { value: "all", label: "Todos" },
   { value: "active", label: "Activos" },
   { value: "inactive", label: "Inactivos" },
+  { value: "discontinued", label: "Descontinuados" },
 ];
+
+const CONFIRM_COPY: Record<
+  ProductConfirmAction,
+  {
+    title: string;
+    confirmLabel: string;
+    type: "primary" | "error";
+    success: string;
+    description: (name: string) => string;
+  }
+> = {
+  delete: {
+    title: "Desactivar artículo",
+    confirmLabel: "Desactivar",
+    type: "error",
+    success: "Artículo desactivado correctamente.",
+    description: (name) =>
+      `¿Deseas desactivar el artículo "${name}"? Dejará de aparecer en el catálogo activo.`,
+  },
+  restore: {
+    title: "Reactivar artículo",
+    confirmLabel: "Reactivar",
+    type: "primary",
+    success: "Artículo reactivado correctamente.",
+    description: (name) => `¿Deseas reactivar el artículo "${name}"?`,
+  },
+  discontinue: {
+    title: "Descontinuar artículo",
+    confirmLabel: "Descontinuar",
+    type: "error",
+    success: "Artículo descontinuado. Ya no se pedirá al proveedor.",
+    description: (name) =>
+      `¿Deseas descontinuar "${name}"? Se imprime con etiqueta roja, en caja se avisa que no volverá a recibirse y no se podrá pedir al proveedor. Se sigue vendiendo.`,
+  },
+  clearDiscontinued: {
+    title: "Quitar descontinuación",
+    confirmLabel: "Quitar",
+    type: "primary",
+    success: "El artículo ya no está descontinuado.",
+    description: (name) =>
+      `¿Deseas quitar la descontinuación de "${name}"? Volverá a poder pedirse al proveedor. La etiqueta roja de liquidación, si la tiene, se queda.`,
+  },
+};
 
 export default function Productos() {
   const router = useRouter();
@@ -60,6 +112,9 @@ export default function Productos() {
     }
     if (activeTab === "inactive") {
       return { status: "INACTIVE" as const };
+    }
+    if (activeTab === "discontinued") {
+      return { status: "DISCONTINUED" as const };
     }
     return { includeInactive: true };
   }, [activeTab]);
@@ -96,7 +151,11 @@ export default function Productos() {
   }, [debouncedSearch, setSearch]);
   const [confirmState, setConfirmState] = useState<
     | { open: false }
-    | { open: true; product: ProductListItem; action: "delete" | "restore" }
+    | {
+        open: true;
+        product: ProductListItem;
+        action: ProductConfirmAction;
+      }
   >({ open: false });
   const [confirmLoading, setConfirmLoading] = useState(false);
   const handleSearchChange = useCallback(
@@ -124,7 +183,7 @@ export default function Productos() {
     [setPage],
   );
   const openConfirm = useCallback(
-    (product: ProductListItem, action: "delete" | "restore") => {
+    (product: ProductListItem, action: ProductConfirmAction) => {
       setConfirmState({ open: true, product, action });
     },
     [],
@@ -140,18 +199,19 @@ export default function Productos() {
     const result =
       action === "delete"
         ? await deleteProduct(product.id)
-        : await restoreProduct(product.id);
+        : action === "restore"
+          ? await restoreProduct(product.id)
+          : await setProductEndOfLife(
+              product.id,
+              action === "discontinue",
+            );
     setConfirmLoading(false);
     if (result.error) {
       showError(result.error.message);
       return;
     }
     setConfirmState({ open: false });
-    showSuccess(
-      action === "delete"
-        ? "Artículo desactivado correctamente."
-        : "Artículo reactivado correctamente.",
-    );
+    showSuccess(CONFIRM_COPY[action].success);
     refetch();
   }, [confirmState, refetch, showError, showSuccess]);
   const columns = useMemo<Column<ProductListItem>[]>(
@@ -192,6 +252,15 @@ export default function Productos() {
         label: "Proveedor",
         size: "xl"
       },
+      {
+        id: "isDiscontinued",
+        label: "Etiqueta",
+        size: "lg",
+        format: (_value, row) =>
+          row.isDiscontinued ? (
+            <Chip size="small" color="error" label={DISCONTINUED_CHIP_LABEL} />
+          ) : null,
+      },
     ],
     [],
   );
@@ -212,6 +281,23 @@ export default function Productos() {
         onClick: handleOpenProduct,
         permission: CATALOG_PRODUCTS_UPDATE,
         hidden: (row) => row.status === "INACTIVE",
+      },
+      {
+        id: "discontinue",
+        label: "Descontinuar",
+        icon: <BlockIcon fontSize="small" />,
+        onClick: (row) => openConfirm(row, "discontinue"),
+        color: "error",
+        permission: CATALOG_PRODUCTS_UPDATE,
+        hidden: (row) => row.status === "INACTIVE" || Boolean(row.isDiscontinued),
+      },
+      {
+        id: "clear-discontinued",
+        label: "Quitar descontinuación",
+        icon: <RestoreIcon fontSize="small" />,
+        onClick: (row) => openConfirm(row, "clearDiscontinued"),
+        permission: CATALOG_PRODUCTS_UPDATE,
+        hidden: (row) => row.status === "INACTIVE" || !row.isDiscontinued,
       },
       {
         id: "delete",
@@ -281,7 +367,9 @@ export default function Productos() {
             ? "No hay artículos inactivos"
             : activeTab === "active"
               ? "No hay artículos activos"
-              : "No hay artículos registrados"
+              : activeTab === "discontinued"
+                ? "No hay artículos descontinuados"
+                : "No hay artículos registrados"
         }
       />
 
@@ -291,26 +379,26 @@ export default function Productos() {
         onConfirm={handleConfirmAction}
         loading={confirmLoading}
         title={
-          confirmState.open && confirmState.action === "restore"
-            ? "Reactivar artículo"
+          confirmState.open
+            ? CONFIRM_COPY[confirmState.action].title
             : "Desactivar artículo"
         }
         description={
           confirmState.open
-            ? confirmState.action === "restore"
-              ? `¿Deseas reactivar el artículo "${confirmState.product.name}"?`
-              : `¿Deseas desactivar el artículo "${confirmState.product.name}"? Dejará de aparecer en el catálogo activo.`
+            ? CONFIRM_COPY[confirmState.action].description(
+                confirmState.product.name,
+              )
             : ""
         }
         confirmLabel={
-          confirmState.open && confirmState.action === "restore"
-            ? "Reactivar"
+          confirmState.open
+            ? CONFIRM_COPY[confirmState.action].confirmLabel
             : "Desactivar"
         }
         cancelLabel="Cancelar"
         type={
-          confirmState.open && confirmState.action === "restore"
-            ? "primary"
+          confirmState.open
+            ? CONFIRM_COPY[confirmState.action].type
             : "error"
         }
       />

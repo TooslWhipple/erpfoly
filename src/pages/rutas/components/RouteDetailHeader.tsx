@@ -1,5 +1,5 @@
-import { Stack, Typography } from "@mui/material";
-import { Box, Repeat2, Route, Truck } from "lucide-react";
+import { Button, Stack, Typography } from "@mui/material";
+import { Box, Repeat2, Route, Send, Truck } from "lucide-react";
 
 import { StatusChip } from "@/components";
 import { DetailHeader } from "@/styles/rutas.styles";
@@ -14,9 +14,17 @@ import {
 
 interface RouteDetailHeaderProps {
   routeDetail: RouteDetailView;
+  canPublish: boolean;
+  onPublish: () => void;
+  isPublishing: boolean;
 }
 
-export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
+export function RouteDetailHeader({
+  routeDetail,
+  canPublish,
+  onPublish,
+  isPublishing,
+}: RouteDetailHeaderProps) {
   const statusConfig = getRouteStatusChipConfig(routeDetail.status);
   const StatusIcon = statusConfig.Icon;
 
@@ -75,6 +83,18 @@ export function RouteDetailHeader({ routeDetail }: RouteDetailHeaderProps) {
             </Typography>
           </Stack>
         </Stack>
+        {canPublish ? (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Send size={16} />}
+            onClick={onPublish}
+            disabled={isPublishing}
+            sx={{ flexShrink: 0 }}
+          >
+            Publicar ruta
+          </Button>
+        ) : null}
       </Stack>
     </DetailHeader>
   );

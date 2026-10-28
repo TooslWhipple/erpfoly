@@ -13,6 +13,7 @@ export interface SupplierListItem {
   email: string | null;
   type: SupplierTypeApi | null;
   paymentTerm: number | null;
+  returnDamageGraceDays: number | null;
   freight: FreightTypeApi | null;
   accountingAccount?: string | null;
   accountingAccountName?: string | null;
@@ -86,6 +87,7 @@ export interface CreateSupplierPayload {
   email?: string;
   type: SupplierTypeApi;
   paymentTerm: number;
+  returnDamageGraceDays: number;
   freight: FreightTypeApi;
   observations?: string;
   accountingAccount?: string;

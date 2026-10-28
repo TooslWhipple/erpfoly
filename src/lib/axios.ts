@@ -229,6 +229,7 @@ export interface ApiError {
 	errors?: Record<string, string[]>;
 	validationMessages?: string[];
 	errorCode?: string;
+	requirementErrors?: { code: string; message: string }[];
 	blocks?: ApiErrorBlock[];
 	/** Extras del error del backend (p. ej. `attemptsLeft`, `cooldownUntil`, `maxDate`). */
 	data?: Record<string, unknown>;
@@ -290,6 +291,31 @@ function messageFromPayload(data: unknown): string | null {
 		if (Array.isArray(msg)) return msg.map(String).join(". ") || null;
 	}
 	return null;
+}
+
+function extractRequirementErrors(
+	data: unknown,
+): { code: string; message: string }[] | undefined {
+	if (data == null || typeof data !== "object" || !("errors" in data)) {
+		return undefined;
+	}
+	const raw = (data as { errors?: unknown }).errors;
+	if (!Array.isArray(raw)) return undefined;
+	const parsed = raw.flatMap((item) => {
+		if (item == null || typeof item !== "object" || !("message" in item)) {
+			return [];
+		}
+		const message = (item as { message?: unknown }).message;
+		if (typeof message !== "string" || !message.trim()) return [];
+		const code = (item as { code?: unknown }).code;
+		return [
+			{
+				code: typeof code === "string" ? code : "",
+				message,
+			},
+		];
+	});
+	return parsed.length > 0 ? parsed : undefined;
 }
 
 function extractBlocksFromPayload(data: unknown): ApiErrorBlock[] | undefined {
@@ -376,6 +402,10 @@ function apiErrorFromAxios(error: AxiosError): ApiError {
 			if (typeof code === "string" && code.trim()) {
 				apiError.errorCode = code;
 			}
+		}
+		const requirementErrors = extractRequirementErrors(data);
+		if (requirementErrors?.length) {
+			apiError.requirementErrors = requirementErrors;
 		}
 		if (data && typeof data === "object" && "data" in data) {
 			const extra = (data as { data?: unknown }).data;

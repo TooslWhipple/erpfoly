@@ -131,6 +131,7 @@ export function useSupplierForm() {
             website: formState.website.trim() || undefined,
             email: formState.email.trim(),
             paymentTerm: formState.paymentTerm,
+            returnDamageGraceDays: formState.returnDamageGraceDays,
         });
         const contacts = validateContactsForm(
             formState.contacts.map((c) => ({
@@ -170,6 +171,7 @@ export function useSupplierForm() {
         formState.website,
         formState.email,
         formState.paymentTerm,
+        formState.returnDamageGraceDays,
         formState.contacts,
         formState.creditAttention,
         formState.creditJobTitleId,
@@ -294,6 +296,7 @@ export function useSupplierForm() {
         email: formState.email,
         type: formState.type,
         paymentTerm: formState.paymentTerm,
+        returnDamageGraceDays: formState.returnDamageGraceDays,
         freight: formState.freight,
         observations: formState.observations,
         accountingAccount: formState.accountingAccount,

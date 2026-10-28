@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Pause, Truck, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, Check, Pause, Send, Truck, X, type LucideIcon } from "lucide-react";
 
 import type { StatusChipVariant } from "@/components/StatusChip";
 import type { TabItem } from "@/components/Tabs";
@@ -39,6 +39,7 @@ export function getDefaultTabForRouteType(routeType?: RouteType): string {
 
 export const STATUS_LABEL: Record<RouteStatus, string> = {
   scheduled: "Agendada",
+  published: "Publicada",
   in_progress: "En curso",
   paused: "Pausada",
   completed: "Completada",
@@ -51,6 +52,7 @@ export const STATUS_CHIP_CONFIG: Record<
   { variant: StatusChipVariant; Icon: LucideIcon }
 > = {
   scheduled: { variant: "pending", Icon: Truck },
+  published: { variant: "success", Icon: Send },
   in_progress: { variant: "info", Icon: Truck },
   paused: { variant: "warning", Icon: Pause },
   completed: { variant: "success", Icon: Check },

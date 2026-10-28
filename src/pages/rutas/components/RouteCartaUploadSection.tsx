@@ -5,12 +5,14 @@ import { CartaPorteTab } from "@/components/RouteTabs";
 
 interface RouteCartaUploadSectionProps {
   serverFiles: UploadedFileItem[];
+  readOnly?: boolean;
   onPendingLocalFile: (file: File | undefined) => void;
   onRemoveServerDocument: (documentId: number) => void;
 }
 
 export function RouteCartaUploadSection({
   serverFiles,
+  readOnly = false,
   onPendingLocalFile,
   onRemoveServerDocument,
 }: RouteCartaUploadSectionProps) {
@@ -26,6 +28,7 @@ export function RouteCartaUploadSection({
 
   const handleChange = useCallback(
     (files: UploadedFileItem[]) => {
+      if (readOnly) return;
       for (const sf of serverFiles) {
         const stillPresent = files.some(
           (f) => String(f.id) === String(sf.id),
@@ -42,10 +45,12 @@ export function RouteCartaUploadSection({
       setAddon(locals);
       onPendingLocalFile(locals[0]?.file);
     },
-    [serverFiles, onPendingLocalFile, onRemoveServerDocument],
+    [readOnly, serverFiles, onPendingLocalFile, onRemoveServerDocument],
   );
 
-  return <CartaPorteTab value={merged} onChange={handleChange} />;
+  return (
+    <CartaPorteTab value={merged} onChange={handleChange} disabled={readOnly} />
+  );
 }
 
 const RouteCartaUploadSectionPage = () => null;

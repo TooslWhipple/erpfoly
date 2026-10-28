@@ -13,6 +13,7 @@ export type SupplierFormState = Pick<
     email: string;
     type: Supplier["type"];
     paymentTerm: string;
+    returnDamageGraceDays: string;
     freight: Supplier["freight"];
     observations: string;
     accountingAccount: string;
@@ -63,6 +64,7 @@ export function getDefaultFormState(): SupplierFormState {
         email: "",
         type: "nacional",
         paymentTerm: "60",
+        returnDamageGraceDays: "",
         freight: "pagado",
         observations: "",
         accountingAccount: "",
@@ -84,6 +86,8 @@ export function supplierDetailToFormState(d: SupplierDetail): SupplierFormState 
         email: d.email ?? "",
         type: apiTypeToForm(d.type),
         paymentTerm: String(d.paymentTerm ?? 60),
+        returnDamageGraceDays:
+            d.returnDamageGraceDays == null ? "" : String(d.returnDamageGraceDays),
         freight: apiFreightToForm(d.freight),
         observations: d.observations ?? "",
         accountingAccount: d.accountingAccount ?? "",
@@ -276,6 +280,7 @@ export function formStateToPayload(
         email: state.email.trim() || undefined,
         type: formTypeToApi(state.type),
         paymentTerm: Number(state.paymentTerm),
+        returnDamageGraceDays: Number(state.returnDamageGraceDays),
         freight: formFreightToApi(state.freight),
         observations: state.observations.trim() || undefined,
         accountingAccount: state.accountingAccount.trim() || undefined,

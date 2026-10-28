@@ -36,6 +36,7 @@ export interface Supplier {
     email: string;
     type: "nacional" | "extranjera";
     paymentTerm: number;
+    returnDamageGraceDays: number | null;
     freight: "pagado" | "cobrar";
     observations?: string;
     accountingAccount?: string | null;
@@ -55,6 +56,7 @@ export interface GeneralFormValues {
     email: string;
     type: "nacional" | "extranjera";
     paymentTerm: string;
+    returnDamageGraceDays: string;
     freight: "pagado" | "cobrar";
     observations: string;
     accountingAccount: string;

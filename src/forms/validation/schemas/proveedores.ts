@@ -51,6 +51,13 @@ export const generalSchema = z.object({
         .string()
         .min(1, "El plazo de pagos es requerido")
         .refine((v) => Number(v) > 0, "El plazo de pagos debe ser mayor a 0"),
+    returnDamageGraceDays: z
+        .string()
+        .min(1, "El plazo de devolución/daños es requerido")
+        .refine(
+            (v) => /^\d+$/.test(v) && Number(v) > 0 && Number(v) <= 365,
+            "El plazo de devolución/daños debe ser un entero entre 1 y 365",
+        ),
 });
 
 export const contactsSchema = z

@@ -3,7 +3,8 @@ import { useMutation, type QueryClient } from "@tanstack/react-query";
 
 import type { NewRouteFormValues } from "@/components";
 import dayjs from "@/lib/dayjs";
-import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { getApiErrorMessage, unwrapOrThrow, type ApiError } from "@/lib/axios";
+import { formatPublishRouteFailure } from "@/utils/route-publish-readiness";
 import {
   addAssistantToRoute,
   addOrdersToRoute,
@@ -12,6 +13,8 @@ import {
   assignVehicleToRoute,
   createRoute,
   deleteCartaPorteDocument,
+  fetchRouteDetail,
+  publishRoute,
   removeAssistantFromRoute,
   removeDriverFromRoute,
   removeRoutePoint,
@@ -503,6 +506,34 @@ export function useRouteMutations({
     },
   });
 
+  const publishRouteMutation = useMutation({
+    mutationFn: async ({ routeId }: { routeId: number }) => {
+      const published = await publishRoute(routeId);
+      unwrapOrThrow(published);
+      const detail = await fetchRouteDetail(routeId);
+      return unwrapOrThrow(detail);
+    },
+    onSuccess: (data, vars) => {
+      queryClient.setQueryData<RouteDetailApi>(
+        ["route-detail", vars.routeId],
+        data,
+      );
+      queryClient.invalidateQueries({ queryKey: ["routes", routeDateStr] });
+      showSuccess("Ruta publicada correctamente.");
+    },
+    onError: (err) => {
+      const api =
+        err instanceof Error
+          ? (err as Error & { apiError?: ApiError }).apiError
+          : undefined;
+      const detail = getApiErrorMessage(err);
+      const fallback = detail
+        ? `No se pudo publicar la ruta: ${detail}`
+        : "No se pudo publicar la ruta.";
+      showError(formatPublishRouteFailure(api, fallback));
+    },
+  });
+
   const removeRoutePointItemMutation = useMutation({
     mutationFn: async ({
       routeId,
@@ -583,5 +614,6 @@ export function useRouteMutations({
     removeScheduledStopMutation,
     removeRoutePointMutation,
     removeRoutePointItemMutation,
+    publishRouteMutation,
   };
 }

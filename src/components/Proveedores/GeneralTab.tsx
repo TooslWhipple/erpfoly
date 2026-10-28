@@ -127,7 +127,7 @@ export function GeneralTab({
                         </StyledRadioGroup>
                     </RadioGroupContainer>
                 </Grid>
-                <Grid size={{ xs: 12 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <FormTextField
                         label="Plazo de pagos (días)"
                         placeholder="Ingresa..."
@@ -137,6 +137,19 @@ export function GeneralTab({
                         error={Boolean(errors.paymentTerm)}
                         helperText={errors.paymentTerm}
                         required
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <FormTextField
+                        label="Plazo de devolución/daños (días)"
+                        placeholder="Ingresa..."
+                        type="number"
+                        value={values.returnDamageGraceDays}
+                        onChange={(e) => handleChange("returnDamageGraceDays")(e.target.value)}
+                        error={Boolean(errors.returnDamageGraceDays)}
+                        helperText={errors.returnDamageGraceDays}
+                        required
+                        inputProps={{ step: 1, min: 1 }}
                     />
                 </Grid>
                 <Grid size={{ xs: 12 }}>

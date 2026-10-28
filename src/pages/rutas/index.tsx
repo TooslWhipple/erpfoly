@@ -75,14 +75,19 @@ export default function RutaPage() {
             </Typography>
           ) : r.routeDetail ? (
             <Stack spacing={2}>
-              <RouteDetailHeader routeDetail={r.routeDetail} />
+              <RouteDetailHeader
+                routeDetail={r.routeDetail}
+                canPublish={r.canPublishRoute}
+                onPublish={() => void r.handlePublishRoute()}
+                isPublishing={r.publishRouteMutation.isPending}
+              />
               <RouteDetailBody
                 routeDetail={r.routeDetail}
                 resolvedRouteId={r.resolvedRouteId}
                 activeTab={r.activeTab}
                 onTabChange={r.setActiveTab}
                 canEditArticles={r.canEditArticles}
-                canUpdateRoute={r.canUpdateRoute}
+                canModifyRoute={r.canModifyRoute}
                 cartaPanelKey={r.cartaPanelKey}
                 pendingCartaLocalFile={r.pendingCartaLocalFile}
                 savingCarta={r.uploadCartaMutation.isPending}

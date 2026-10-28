@@ -12,7 +12,15 @@ export function isSupplierFormTab(value: string): value is SupplierFormTab {
     return SUPPLIER_FORM_TABS.some((tab) => tab.value === value);
 }
 
-const GENERAL_ERROR_FIELDS = ["name", "businessName", "rfc", "website", "email", "paymentTerm"] as const;
+const GENERAL_ERROR_FIELDS = [
+    "name",
+    "businessName",
+    "rfc",
+    "website",
+    "email",
+    "paymentTerm",
+    "returnDamageGraceDays",
+] as const;
 
 export function hasSupplierTabErrors(
     tab: SupplierFormTab,

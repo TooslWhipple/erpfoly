@@ -27,7 +27,7 @@ interface RouteDetailBodyProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   canEditArticles: boolean;
-  canUpdateRoute: boolean;
+  canModifyRoute: boolean;
   cartaPanelKey: number;
   pendingCartaLocalFile: File | undefined;
   savingCarta: boolean;
@@ -70,7 +70,7 @@ export function RouteDetailBody({
   activeTab,
   onTabChange,
   canEditArticles,
-  canUpdateRoute,
+  canModifyRoute,
   cartaPanelKey,
   pendingCartaLocalFile,
   savingCarta,
@@ -108,6 +108,7 @@ export function RouteDetailBody({
       return null;
     }
     if (activeTab === TAB_CARTA_PORTE) {
+      if (!canModifyRoute) return null;
       return (
         <Button
           variant="outlined"
@@ -185,6 +186,7 @@ export function RouteDetailBody({
         <RouteCartaUploadSection
           key={`${resolvedRouteId}-${cartaPanelKey}`}
           serverFiles={routeDetail.cartaPorteRemoteFiles}
+          readOnly={!canModifyRoute}
           onPendingLocalFile={onPendingLocalFile}
           onRemoveServerDocument={onRemoveServerDocument}
         />
@@ -193,7 +195,7 @@ export function RouteDetailBody({
       {activeTab === TAB_DRIVER && (
         <DriverTab
           routeDetail={routeDetail}
-          canManage={canUpdateRoute}
+          canManage={canModifyRoute}
           loadingDriver={loadingDriver}
           loadingAssistant={loadingAssistant}
           loadingVehicle={loadingVehicle}

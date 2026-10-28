@@ -57,6 +57,11 @@ export async function fetchRouteDetail(routeId: number) {
   return get<RouteDetailApi>(`/routes/${routeId}`);
 }
 
+/** POST /routes/:id/publish — DRAFT → PENDING. The axios interceptor unwraps `{ success, data }`. */
+export async function publishRoute(routeId: number) {
+  return post<{ id: number; status: string }>(`/routes/${routeId}/publish`, {});
+}
+
 export async function fetchAvailableOrders(
   routeId: number,
   search?: string,

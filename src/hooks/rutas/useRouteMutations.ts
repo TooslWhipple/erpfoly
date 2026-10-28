@@ -3,7 +3,8 @@ import { useMutation, type QueryClient } from "@tanstack/react-query";
 
 import type { NewRouteFormValues } from "@/components";
 import dayjs from "@/lib/dayjs";
-import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { getApiErrorMessage, unwrapOrThrow, type ApiError } from "@/lib/axios";
+import { formatPublishRouteFailure } from "@/utils/route-publish-readiness";
 import {
   addAssistantToRoute,
   addOrdersToRoute,
@@ -521,12 +522,15 @@ export function useRouteMutations({
       showSuccess("Ruta publicada correctamente.");
     },
     onError: (err) => {
+      const api =
+        err instanceof Error
+          ? (err as Error & { apiError?: ApiError }).apiError
+          : undefined;
       const detail = getApiErrorMessage(err);
-      showError(
-        detail
-          ? `No se pudo publicar la ruta: ${detail}`
-          : "No se pudo publicar la ruta.",
-      );
+      const fallback = detail
+        ? `No se pudo publicar la ruta: ${detail}`
+        : "No se pudo publicar la ruta.";
+      showError(formatPublishRouteFailure(api, fallback));
     },
   });
 

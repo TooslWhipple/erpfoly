@@ -136,6 +136,7 @@ function serializeProductFormDirtyState(input: {
     payload,
     priceFields: {
       liquidation: input.priceData.liquidation,
+      discontinued: input.priceData.discontinued,
       costBasisForCalculation: input.priceData.costBasisForCalculation,
       lastCost: input.priceData.lastCost,
       averageCost: input.priceData.averageCost,
@@ -356,6 +357,7 @@ export default function ProductFormPage() {
     exchangeRate: "1.00",
     iva: "16.00",
     liquidation: false,
+    discontinued: false,
     costBasisForCalculation: "last_cost",
     lastCost: "0.00",
     averageCost: "0.00",

@@ -52,6 +52,10 @@ import {
 } from "./PickupReceiverFields";
 import type { PickupReceiverDraft } from "./PickupReceiverFields";
 import { SaleCartItemRow, BackorderChip, PendingSupplyAlert } from "./SaleCartItem";
+import {
+  DISCONTINUED_SALE_WARNING,
+  saleLifecycleChipLabel,
+} from "@/lib/product-end-of-life";
 import { SaleCheckoutPaymentPanel } from "./SaleCheckoutPaymentPanel";
 import {
   Card,
@@ -469,6 +473,7 @@ export function SaleBuilder({
   >(null);
 
   const [view, setView] = useState<NewSaleView>("form");
+  const [discontinuedNotice, setDiscontinuedNotice] = useState(false);
   const [paymentType, setPaymentType] = useState<"CREDIT" | "CASH" | "LAYAWAY">(
     "CREDIT",
   );
@@ -859,6 +864,7 @@ export function SaleBuilder({
         saleItemId: item.id,
         backorderedQuantity: item.backorderedQuantity,
         isLiquidation: item.product.isLiquidation,
+        isDiscontinued: item.product.isDiscontinued,
       })),
     );
 
@@ -2122,6 +2128,7 @@ export function SaleBuilder({
         sources: productSources,
         backorderedQuantity,
         isLiquidation: productDetail.isLiquidation,
+        isDiscontinued: productDetail.isDiscontinued,
       };
       if (existing >= 0) {
         const updated = [...prev];
@@ -2130,11 +2137,16 @@ export function SaleBuilder({
           quantity: totalQty,
           sources: productSources,
           backorderedQuantity,
+          isLiquidation: productDetail.isLiquidation,
+          isDiscontinued: productDetail.isDiscontinued,
         };
         return updated;
       }
       return [...prev, newItem];
     });
+    if (productDetail.isDiscontinued) {
+      setDiscontinuedNotice(true);
+    }
     setView("form");
     setSelectedProductId(null);
     setShowOtherBranches(false);
@@ -2795,11 +2807,15 @@ export function SaleBuilder({
                         component="span"
                         variant="body2"
                         fontWeight={700}
-                        color={row.isLiquidation ? "error.main" : "text.primary"}
+                        color={
+                          row.isDiscontinued || row.isLiquidation
+                            ? "error.main"
+                            : "text.primary"
+                        }
                       >
                         {formatCurrency(Number(value))}
                       </Typography>
-                      {row.isLiquidation && (
+                      {saleLifecycleChipLabel(row) && (
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Box
                             component="span"
@@ -2817,7 +2833,7 @@ export function SaleBuilder({
                             color="error.main"
                             lineHeight={1.2}
                           >
-                            Liquidación
+                            {saleLifecycleChipLabel(row)}
                           </Typography>
                         </Stack>
                       )}
@@ -2978,13 +2994,18 @@ export function SaleBuilder({
                   <Typography variant="h5" fontWeight={700} mt={0.5} mb={0.25}>
                     {productDetail.name}
                   </Typography>
-                  {productDetail.isLiquidation && (
+                  {saleLifecycleChipLabel(productDetail) && (
                     <Chip
                       size="small"
                       color="error"
-                      label="Liquidación"
+                      label={saleLifecycleChipLabel(productDetail)}
                       sx={{ mt: 0.5, mb: 1 }}
                     />
+                  )}
+                  {productDetail.isDiscontinued && (
+                    <Alert severity="warning" sx={{ mt: 1, mb: 1 }}>
+                      {DISCONTINUED_SALE_WARNING}
+                    </Alert>
                   )}
                   {productDetail.brandName && (
                     <Typography variant="body2" color="text.secondary" mb={2}>
@@ -3507,11 +3528,11 @@ export function SaleBuilder({
                             {item.brandName}
                           </Typography>
                         )}
-                        {item.isLiquidation && (
+                        {saleLifecycleChipLabel(item) && (
                           <Chip
                             size="small"
                             color="error"
-                            label="Liquidación"
+                            label={saleLifecycleChipLabel(item)}
                             sx={{ mt: 0.5, height: 20 }}
                           />
                         )}
@@ -4289,6 +4310,16 @@ export function SaleBuilder({
                 </Stack>
               )}
             </Stack>
+
+            {discontinuedNotice && (
+              <Alert
+                severity="warning"
+                sx={{ mt: 2 }}
+                onClose={() => setDiscontinuedNotice(false)}
+              >
+                {DISCONTINUED_SALE_WARNING}
+              </Alert>
+            )}
 
             {cart.length === 0 ? (
               <EmptyCartBox>

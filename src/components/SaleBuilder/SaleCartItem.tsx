@@ -14,6 +14,7 @@ import {
   formatPendingSupplyLabel,
   pendingSupplyBreakdown,
 } from "@/utils/saleCartCoverage";
+import { saleLifecycleChipLabel } from "@/lib/product-end-of-life";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -132,11 +133,11 @@ export function SaleCartItemRow({
               {item.brandName}
             </Typography>
           )}
-          {item.isLiquidation && (
+          {saleLifecycleChipLabel(item) && (
             <Chip
               size="small"
               color="error"
-              label="Liquidación"
+              label={saleLifecycleChipLabel(item)}
               sx={{ mt: 0.5, height: 20, fontSize: "0.6875rem" }}
             />
           )}

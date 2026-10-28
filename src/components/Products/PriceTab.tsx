@@ -386,17 +386,19 @@ export function PriceTab({
                                     </Stack>
                                 </Stack>
                             </LastCostCard>
-                            <LuquidationCard checked={formState.liquidation}>
+                            <LuquidationCard checked={formState.discontinued || formState.liquidation}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
                                     <LiquidationSwitch
-                                        checked={formState.liquidation}
-                                        onChange={(e) => onFieldChange("liquidation", e.target.checked)}
+                                        checked={formState.discontinued}
+                                        onChange={(e) => onFieldChange("discontinued", e.target.checked)}
                                         color="primary"
                                         disabled={readOnly}
                                     />
-                                    <Typography variant="body1">Liquidación</Typography>
+                                    <Typography variant="body1">Descontinuar</Typography>
                                 </Stack>
-                                <Typography variant="body2">Se imprimirá con etiqueta roja.</Typography>
+                                <Typography variant="body2">
+                                    No se pide al proveedor. Sale la etiqueta roja y en caja se avisa que no volverá a recibirse.
+                                </Typography>
                             </LuquidationCard>
                         </FormCard>
                         <FormCard>
@@ -564,7 +566,7 @@ export function PriceTab({
                 onClose={handleClosePromotionModal}
                 productId={productNumericId}
                 editingDraft={editingPromotionDraft}
-                isLiquidation={formState.liquidation}
+                isLiquidation={formState.discontinued || formState.liquidation}
                 onSave={handleSavePromotionDraft}
             />
         </>

@@ -152,7 +152,7 @@ export function buildCreateProductRequest(
         currency: priceData.currency,
         exchangeRate: Number(priceData.exchangeRate),
         iva: Number(priceData.iva),
-        isLiquidation: priceData.liquidation,
+        isDiscontinued: priceData.discontinued,
         costBasisForCalculation: priceData.costBasisForCalculation,
         suppliers: suppliers.map((s) => ({
             supplierId: s.supplierId,
@@ -263,6 +263,15 @@ export async function restoreProduct(id: number): Promise<ApiResult<{ message: s
     return patch<{ message: string }>(`${PRODUCTS_BASE}/${id}/restore`);
 }
 
+export async function setProductEndOfLife(
+    id: number,
+    discontinued: boolean,
+): Promise<ApiResult<{ message: string }>> {
+    return patch<{ message: string }>(`${PRODUCTS_BASE}/${id}/end-of-life`, {
+        discontinued,
+    });
+}
+
 export async function getCurrentExchangeRate(): Promise<ApiResult<ExchangeRateResponse>> {
     return get<ExchangeRateResponse>(`${PRODUCTS_BASE}/exchange-rate`);
 }
@@ -290,6 +299,7 @@ export interface ProductDetailPriceDto {
     averageCost: number;
     lastCost: number;
     liquidation: boolean;
+    discontinued?: boolean;
     costBasisForCalculation?: CostBasisForCalculation | null;
     lastEditedBy?: string | null;
     lastEditedDate?: string | null;
@@ -487,6 +497,7 @@ export function productDetailDtoToFormSnapshot(detail: ProductDetailDto): Loaded
         exchangeRate: (price?.exchangeRate ?? 1).toFixed(2),
         iva: String(price?.iva ?? 16),
         liquidation: Boolean(price?.liquidation),
+        discontinued: Boolean(price?.discontinued),
         costBasisForCalculation: normalizeCostBasis(price?.costBasisForCalculation ?? undefined),
         lastCost: (price?.lastCost ?? 0).toFixed(2),
         averageCost: (price?.averageCost ?? 0).toFixed(2),
@@ -616,6 +627,7 @@ export interface ProductListItem {
     department: string;
     line: string;
     supplier: string | null;
+    isDiscontinued?: boolean;
 }
 export interface GetProductsQueryParams {
     page: number;

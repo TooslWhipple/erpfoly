@@ -59,6 +59,12 @@ export async function updateTransfer(
   return patch<CreateOrderResponse>(`${TRANSFERS_BASE}/${id}`, payload);
 }
 
+export async function authorizeTransfer(
+  id: number,
+): Promise<ApiResult<TransferDetail>> {
+  return post<TransferDetail>(`${TRANSFERS_BASE}/${id}/authorize`, {}, ACTION_CONFIG);
+}
+
 export async function scheduleTransfer(
   id: number,
   payload: ScheduleBranchRequestPayload,

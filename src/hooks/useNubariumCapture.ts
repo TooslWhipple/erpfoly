@@ -6,6 +6,7 @@ import {
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   safeClearNubariumCapture,
+  scheduleNubariumCaptureRedraw,
   type NubariumCaptureKind,
 } from "@/utils/nubarium";
 import {
@@ -88,6 +89,7 @@ export function useNubariumCapture(
   const rootElementId = `nubarium-${kind}-capture-${reactId}`;
   const captureRef = useRef<NubariumCaptureInstance | null>(null);
   const restorePatchesRef = useRef<(() => void) | null>(null);
+  const stopRedrawRef = useRef<(() => void) | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -110,6 +112,8 @@ export function useNubariumCapture(
   tokenRef.current = token;
 
   const teardown = useCallback(() => {
+    stopRedrawRef.current?.();
+    stopRedrawRef.current = null;
     restorePatchesRef.current?.();
     restorePatchesRef.current = null;
     safeClearNubariumCapture(captureRef.current, rootElementId);
@@ -197,6 +201,8 @@ export function useNubariumCapture(
           capture.start();
           // SDK loading() assigns window.onresize to force portrait — clear it again.
           window.onresize = null;
+          stopRedrawRef.current?.();
+          stopRedrawRef.current = scheduleNubariumCaptureRedraw(capture, viewportRef.current);
           onInitializedRef.current?.();
         });
       } catch (mountError) {

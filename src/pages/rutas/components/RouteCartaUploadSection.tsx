@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Stack, Typography } from "@mui/material";
 
 import type { UploadedFileItem } from "@/components/FileUpload";
 import { CartaPorteTab } from "@/components/RouteTabs";
@@ -47,6 +48,15 @@ export function RouteCartaUploadSection({
     },
     [readOnly, serverFiles, onPendingLocalFile, onRemoveServerDocument],
   );
+
+  if (readOnly && serverFiles.length === 0) {
+    return (
+      <Stack spacing={1}>
+        <Typography variant="subtitle2">Carta porte</Typography>
+        <Typography variant="body2" color="text.secondary">No se subió carta porte.</Typography>
+      </Stack>
+    );
+  }
 
   return (
     <CartaPorteTab value={merged} onChange={handleChange} disabled={readOnly} />

@@ -28,11 +28,13 @@ export const CaptureStepRoot = styled(Stack)(({ theme }) => ({
 export const CaptureViewport = styled("div")({
   boxSizing: "border-box",
   position: "relative",
-  // Fallback before container queries.
-  width: "min(100%, 720px)",
+  // Fallback before container queries. Width is derived from the same
+  // max-height cap so the visor stays 4:3 when the tablet modal is short.
+  width: "min(100%, 720px, calc(min(68dvh, 540px) * 4 / 3))",
   maxWidth: "100%",
-  aspectRatio: "4 / 3",
   height: "auto",
+  maxHeight: "min(68dvh, 540px)",
+  aspectRatio: "4 / 3",
   flex: "0 1 auto",
   alignSelf: "center",
   minWidth: 0,
@@ -42,11 +44,34 @@ export const CaptureViewport = styled("div")({
   overflow: "hidden",
   backgroundColor: "#000",
   border: "none",
-  maxHeight: "min(68dvh, 540px)",
   "@container (min-height: 1px)": {
-    width: "min(100cqi, calc((100cqb - 48px) * 4 / 3), 720px)",
+    height: "auto",
+    width: "min(100cqi, 720px, calc(min(calc(100cqb - 48px), 540px) * 4 / 3))",
     maxHeight: "min(calc(100cqb - 48px), 540px)",
     aspectRatio: "4 / 3",
+  },
+  // The SDK replaces the host className, so these rules stay on the viewport.
+  "& .NUBSDK_container, & [id$='-body'], & [id$='-media'], & .NUBSDK_FC_MEDIA_CONTAINER, & .NUBSDK_FC_SLIDES": {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    maxWidth: "100%",
+    maxHeight: "100%",
+    margin: 0,
+    overflow: "hidden",
+    boxSizing: "border-box",
+  },
+  "& video": {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    maxWidth: "100%",
+    maxHeight: "100%",
+    objectFit: "cover",
+    margin: 0,
+    padding: 0,
   },
 });
 
@@ -59,28 +84,34 @@ export const CaptureHost = styled("div")({
   width: "100%",
   height: "100%",
   overflow: "hidden",
-  // Absolute fill so the SDK tree cannot leave a taller empty black band.
-  "& [id$='-body'], & [id$='-media'], & .NUBSDK_FC_MEDIA_CONTAINER, & .NUBSDK_FC_SLIDES": {
+  // Keep the SDK tree inside the 4:3 visor. `max-height: 100vh` from the SDK
+  // stylesheet otherwise sizes the video (and the yellow guide) to the tablet screen.
+  "& .NUBSDK_container, & [id$='-body'], & [id$='-media'], & .NUBSDK_FC_MEDIA_CONTAINER, & .NUBSDK_FC_SLIDES": {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
+    maxWidth: "100%",
+    maxHeight: "100%",
     margin: 0,
-    maxHeight: "none",
+    overflow: "hidden",
+    boxSizing: "border-box",
   },
   "& video, & .NUBSDK_FC_MEDIA_VIDEO": {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
-    maxWidth: "none",
-    maxHeight: "none",
+    maxWidth: "100%",
+    maxHeight: "100%",
     objectFit: "cover",
     padding: 0,
     margin: 0,
+    boxSizing: "border-box",
   },
-  // Full-frame SDK overlays track the video box; the yellow guide keeps attribute size.
-  "& canvas.NUBSDK_FC_CANVAS": {
+  "& canvas.NUBSDK_FC_CANVAS, & img.NUBSDK_FC_CANVAS_IMAGE": {
+    position: "absolute",
+    boxSizing: "border-box",
     maxWidth: "none",
     maxHeight: "none",
   },

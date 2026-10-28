@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import {
   getBranchOrderStatusLabel,
   getBranchOrderStatusVariant,
-  getTransferTabFilters,
+  getTransferListFilters,
   isBranchOrderEditable,
   isLegacyBranchOrderStatus,
   mapBranchOrderStatus,
@@ -35,27 +35,35 @@ describe("getBranchOrderStatusLabel", () => {
     assert.equal(getBranchOrderStatusLabel("unknown"), "Desconocido");
     assert.equal(getBranchOrderStatusVariant("unknown"), "default");
   });
+  it("draft se muestra como Propuesta", () => {
+    assert.equal(mapBranchOrderStatus("draft"), "draft");
+    assert.equal(getBranchOrderStatusLabel("draft"), "Propuesta");
+  });
 });
 
 describe("isBranchOrderEditable", () => {
-  it("solo lo pendiente y no ligado a una venta", () => {
+  it("propuesta y solicitado se editan si no están ligados a una venta", () => {
     assert.equal(isBranchOrderEditable("pending", false), true);
+    assert.equal(isBranchOrderEditable("draft", false), true);
     assert.equal(isBranchOrderEditable("pending", true), false);
+    assert.equal(isBranchOrderEditable("draft", true), false);
     assert.equal(isBranchOrderEditable("scheduled", false), false);
     assert.equal(isBranchOrderEditable("unknown", false), false);
   });
 });
 
-describe("getTransferTabFilters", () => {
-  it("traduce cada pestaña a los filtros de GET /transfers", () => {
-    assert.deepEqual(getTransferTabFilters("to_ship"), { pending_action: "ship" });
-    assert.deepEqual(getTransferTabFilters("to_receive"), { pending_action: "receive" });
-    assert.deepEqual(getTransferTabFilters("in_course"), { status: "shipped" });
-    assert.deepEqual(getTransferTabFilters("delivered"), { status: "delivered" });
-    assert.deepEqual(getTransferTabFilters("incident"), { has_open_incident: true });
-    assert.deepEqual(getTransferTabFilters("cancelled"), { status: "cancelled" });
+describe("getTransferListFilters", () => {
+  it("traduce cada opción del select a los filtros de GET /transfers", () => {
+    assert.deepEqual(getTransferListFilters("draft"), { status: "draft" });
+    assert.deepEqual(getTransferListFilters("pending"), { status: "pending" });
+    assert.deepEqual(getTransferListFilters("to_ship"), { pending_action: "ship" });
+    assert.deepEqual(getTransferListFilters("to_receive"), { pending_action: "receive" });
+    assert.deepEqual(getTransferListFilters("in_course"), { status: "shipped" });
+    assert.deepEqual(getTransferListFilters("delivered"), { status: "delivered" });
+    assert.deepEqual(getTransferListFilters("incident"), { has_open_incident: true });
+    assert.deepEqual(getTransferListFilters("cancelled"), { status: "cancelled" });
   });
   it("Todos no filtra", () => {
-    assert.deepEqual(getTransferTabFilters("all"), {});
+    assert.deepEqual(getTransferListFilters("all"), {});
   });
 });

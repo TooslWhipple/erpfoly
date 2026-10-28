@@ -15,6 +15,7 @@ import type {
   PaginatedRowsResponse,
 } from "@/lib/axios";
 import { throwIfEconomicRevisionRequired } from "@/utils/economicRevision";
+import { throwIfSaleStockChanged } from "@/utils/saleStockChanged";
 import type { EconomicRevisionPreview } from "@/utils/economicRevision";
 import type {
   PickupReceiver,
@@ -53,6 +54,7 @@ async function postPosSaleAction<T>(
   } catch (err) {
     if (axios.isAxiosError(err)) {
       throwIfEconomicRevisionRequired(err.response?.data);
+      throwIfSaleStockChanged(err.response?.data);
     }
     return {
       data: null,
@@ -313,6 +315,8 @@ export async function addSaleItem(
 export interface UpdateSaleItemPayload {
   quantity?: number;
   inventory_sources?: Array<{ branch_id: number; quantity: number }>;
+  /** Re-resuelve la cobertura viva y deja el faltante como por surtir. */
+  accept_shortfall?: boolean;
 }
 
 export async function updateSaleItem(

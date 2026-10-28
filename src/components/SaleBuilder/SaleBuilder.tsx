@@ -189,6 +189,7 @@ import {
   throwIfSaleError,
   type EconomicRevisionPreview,
 } from "@/utils/economicRevision";
+import { SaleStockChangedError } from "@/utils/saleStockChanged";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
 import { SALES_POS_BREAKPOINT } from "@/lib/layoutBreakpoints";
@@ -259,6 +260,19 @@ function qtyMaxForCartItem(
     );
   }
   return item.quantity;
+}
+
+async function fetchLiveCartSources(
+  productIds: number[],
+  branchId: number,
+): Promise<Record<number, InventorySource[]>> {
+  const pairs = await Promise.all(
+    productIds.map(async (id) => {
+      const res = await getProductDetail(id, branchId, true);
+      return [id, res.data?.inventorySources ?? []] as const;
+    }),
+  );
+  return Object.fromEntries(pairs) as Record<number, InventorySource[]>;
 }
 
 function formatCurrency(value: number) {
@@ -1149,6 +1163,8 @@ export function SaleBuilder({
     );
   };
 
+  const shortfallItemIdsRef = useRef<Set<number>>(new Set());
+
   const ensureSaleSynced = async (): Promise<{
     id: number;
     folio: string;
@@ -1276,7 +1292,11 @@ export function SaleBuilder({
           const inventorySources = toInventorySourcesPayload(item.sources);
           if (item.saleItemId) {
             const hydrated = hydratedById.get(item.saleItemId);
+            const shortfallAccepted = shortfallItemIdsRef.current.has(
+              item.saleItemId,
+            );
             const unchanged =
+              !shortfallAccepted &&
               hydrated != null &&
               item.quantity === hydrated.quantity &&
               inventorySourcesMatch(
@@ -1289,8 +1309,10 @@ export function SaleBuilder({
               ...(inventorySources.length > 0
                 ? { inventory_sources: inventorySources }
                 : {}),
+              ...(shortfallAccepted ? { accept_shortfall: true } : {}),
             });
             if (updateRes.error) throw new Error(updateRes.error.message);
+            shortfallItemIdsRef.current.delete(item.saleItemId);
             cartWrote = true;
           } else {
             const itemRes = await addSaleItem(saleId, {
@@ -1633,9 +1655,61 @@ export function SaleBuilder({
         setRevisionPreview(err.preview);
         return;
       }
+      if (handleSaleStockChanged(err)) return;
       snackbar.showError(err.message);
     },
   });
+
+  /**
+   * 409 SALE_STOCK_CHANGED: la existencia se movió entre armar y registrar.
+   * Avisa con el snackbar del builder y recalcula la cobertura del carrito
+   * (misma lectura que `hydrated-cart-coverage`) para que el vendedor vea el
+   * Chip "por surtir" antes de reintentar. En caja la venta ya está guardada:
+   * solo se refresca el borrador.
+   */
+  const handleSaleStockChanged = (err: Error): boolean => {
+    if (!(err instanceof SaleStockChangedError)) return false;
+    snackbar.showError(err.message);
+    // La venta DRAFT sigue con la fuente `existence` que ya no alcanza: el
+    // reintento debe re-resolver esos renglones (mismo PATCH de siempre) para
+    // que el faltante quede persistido como por surtir.
+    for (const line of err.lines) {
+      shortfallItemIdsRef.current.add(line.saleItemId);
+    }
+    const saleId = activeSaleId ?? resumeSaleId;
+    if (saleId != null) {
+      void queryClient.invalidateQueries({
+        queryKey: ["resume-sale-draft", saleId],
+      });
+    }
+    void queryClient.invalidateQueries({
+      queryKey: ["hydrated-cart-coverage"],
+    });
+    if (!isCajeroMode && coverageBranchId != null) {
+      const productIds = [...new Set(cart.map((item) => item.productId))];
+      void fetchLiveCartSources(productIds, coverageBranchId).then(
+        (live) =>
+          setCart((prev) =>
+            prev.map((item) => {
+              const sources = overlayLiveInventoryOnSources(
+                item.sources,
+                live[item.productId],
+              );
+              if (sources === item.sources) return item;
+              return {
+                ...item,
+                sources,
+                backorderedQuantity: backorderedFromSources(
+                  sources,
+                  item.quantity,
+                ),
+              };
+            }),
+          ),
+      );
+    }
+    return true;
+  };
 
   const registerSaleMutation = useMutation({
     mutationFn: async () => {
@@ -1670,6 +1744,7 @@ export function SaleBuilder({
         setRevisionPreview(err.preview);
         return;
       }
+      if (handleSaleStockChanged(err)) return;
       snackbar.showError(err.message);
     },
   });
@@ -1929,16 +2004,8 @@ export function SaleBuilder({
       hydratedSaleId != null &&
       cartCoverageProductIds.length > 0 &&
       coverageBranchId != null,
-    queryFn: async () => {
-      const branchId = coverageBranchId!;
-      const pairs = await Promise.all(
-        cartCoverageProductIds.map(async (id) => {
-          const res = await getProductDetail(id, branchId, true);
-          return [id, res.data?.inventorySources ?? []] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<number, InventorySource[]>;
-    },
+    queryFn: () =>
+      fetchLiveCartSources(cartCoverageProductIds, coverageBranchId!),
     staleTime: 30_000,
   });
 

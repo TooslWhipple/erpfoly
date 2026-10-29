@@ -20,6 +20,8 @@ export {
   StyledTableRow,
   StyledTableCell,
   ArticleNameCell,
+  SkuCell,
+  NumericCell,
   AddInvoiceButton,
   InvoiceCard,
   InvoiceCardInfo,

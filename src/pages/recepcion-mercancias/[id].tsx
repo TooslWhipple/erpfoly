@@ -11,7 +11,6 @@ import {
 } from "@mui/material";
 import numeral from "numeral";
 import { Breadcrumbs } from "@/components";
-import type { StatusChipVariant } from "@/components/StatusChip";
 import { StatusChip } from "@/components/StatusChip";
 import { SendToCostingModal } from "@/components/ReceptionOrdersModal/SendToCostingModal";
 import { PrinterSetupDialog } from "@/components/printing";
@@ -27,6 +26,10 @@ import {
 } from "@/services/recepcion-mercancias.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { formatDate } from "@/utils/date";
+import {
+  canEditMerchandiseReception,
+  getMerchandiseReceptionStatusPresentation,
+} from "@/utils/merchandise-reception";
 import {
   PageContainer,
   PageHeader,
@@ -55,32 +58,10 @@ import {
   InvoiceCardDate,
   InvoiceCardAmount,
   InvoiceTotalCard,
+  InvoiceGuideLine,
+  InvoiceGuidePanel,
   Table,
 } from "@/styles/recepcion-mercancias/index.styles";
-
-function getStatusChip(status: string): {
-  label: string;
-  variant: StatusChipVariant;
-} | null {
-  switch (status) {
-    case "draft":
-      return { label: "Borrador", variant: "default" };
-    case "pre_captured":
-      return { label: "Precapturado", variant: "success" };
-    case "in_costing":
-      return { label: "En costeo", variant: "info" };
-    case "costed":
-      return { label: "Costeado", variant: "success" };
-    case "cancelled":
-      return { label: "Cancelado", variant: "warning" };
-    default:
-      return null;
-  }
-}
-
-function isEditable(status: string): boolean {
-  return status === "draft" || status === "pre_captured";
-}
 
 function calculateProgress(received: number, ordered: number): number {
   if (ordered === 0) return 0;
@@ -242,16 +223,20 @@ export default function RecepcionDetalle() {
   ).variant;
   const canPrintLabels =
     reception.status === "pre_captured" && totalReceived > 0;
+  const awaitingCapture =
+    reception.status === "pre_authorized" && reception.items.length === 0;
   const progress = calculateProgress(totalReceived, totalOrdered);
   const invoicesTotal = reception.invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const statusChip = getStatusChip(reception.status);
+  const statusChip = getMerchandiseReceptionStatusPresentation(reception.status);
   const deliveryDate =
     reception.items
       .map((i) => i.scheduledDeliveryDate)
       .filter((d): d is string => Boolean(d))
       .sort()[0] ?? null;
-  const canEdit = isEditable(reception.status);
+  const canEdit = canEditMerchandiseReception(reception.status);
   const orderDate = formatDate(reception.createdAt, "dateLong");
+  const goToCapture = () =>
+    router.push(`/recepcion-mercancias/${reception.id}/editar`);
 
   return (
     <PageContainer>
@@ -274,11 +259,18 @@ export default function RecepcionDetalle() {
             <ActionButton
               variant="outlined"
               color="inherit"
-              onClick={() =>
-                router.push(`/recepcion-mercancias/${reception.id}/editar`)
-              }
+              onClick={goToCapture}
             >
               Editar
+            </ActionButton>
+          )}
+          {awaitingCapture && (
+            <ActionButton
+              variant="contained"
+              color="primary"
+              onClick={goToCapture}
+            >
+              Continuar captura
             </ActionButton>
           )}
           {canPrintLabels && (
@@ -347,11 +339,17 @@ export default function RecepcionDetalle() {
         )}
       </Stack>
 
-      <ProgressSection>
-        <ProgressBarContainer>
-          <StyledProgressBar variant="determinate" value={progress} />
-        </ProgressBarContainer>
-      </ProgressSection>
+      {awaitingCapture ? (
+        <Typography variant="body2" color="text.secondary">
+          Sin captura
+        </Typography>
+      ) : (
+        <ProgressSection>
+          <ProgressBarContainer>
+            <StyledProgressBar variant="determinate" value={progress} />
+          </ProgressBarContainer>
+        </ProgressSection>
+      )}
 
       <ContentLayout>
         <Stack spacing={2} flex="1 1 0">
@@ -377,7 +375,9 @@ export default function RecepcionDetalle() {
                   <StyledTableRow>
                     <StyledTableCell colSpan={5} align="center">
                       <Typography variant="body2" color="text.secondary">
-                        Esta recepción no tiene artículos
+                        {reception.status === "pre_authorized"
+                          ? "Aún no capturas cantidades. Usa Continuar captura para registrar lo recibido."
+                          : "Esta recepción no tiene artículos"}
                       </Typography>
                     </StyledTableCell>
                   </StyledTableRow>
@@ -411,8 +411,9 @@ export default function RecepcionDetalle() {
 
           {reception.invoices.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              Esta recepción aún no tiene facturas vinculadas. Se vincularán al
-              enviar a costeo.
+              {reception.status === "pre_authorized"
+                ? "Este folio se abrió sin facturas vinculadas. Vuelve a abrir la recepción con las facturas del proveedor."
+                : "Esta recepción no tiene facturas vinculadas."}
             </Typography>
           ) : (
             <Stack spacing={1}>
@@ -436,6 +437,33 @@ export default function RecepcionDetalle() {
                   {numeral(invoicesTotal).format("$0,0.00")}
                 </Typography>
               </InvoiceTotalCard>
+
+              {reception.invoices.some((invoice) => (invoice.lines ?? []).length > 0) ? (
+                <InvoiceGuidePanel>
+                  {reception.invoices.flatMap((invoice) =>
+                    (invoice.lines ?? []).map((line, index) => (
+                      <InvoiceGuideLine
+                        key={`${invoice.id}-${index}-${line.issuerSku ?? line.description}`}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {invoice.externalId}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {line.description}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {line.issuerSku
+                            ? `SKU proveedor: ${line.issuerSku}`
+                            : "Sin SKU de proveedor"}
+                          {" · "}
+                          {line.quantity} ×{" "}
+                          {numeral(line.unitPrice).format("$0,0.00")}
+                        </Typography>
+                      </InvoiceGuideLine>
+                    )),
+                  )}
+                </InvoiceGuidePanel>
+              ) : null}
             </Stack>
           )}
         </Stack>

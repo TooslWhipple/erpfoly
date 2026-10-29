@@ -61,12 +61,17 @@ export interface ReceptionArticle {
     orderedQuantity: number;
     /** Tope máximo capturable en esta recepción. */
     pendingQuantity: number;
-    /** Tope autorizado por factura (folios preautorizados). */
-    authorizedQuantity?: number;
     received: number;
     branchName?: string;
     branchId?: number;
     scheduledDeliveryDate?: string | null;
+}
+
+export interface ReceptionInvoiceLine {
+    description: string;
+    issuerSku: string | null;
+    quantity: number;
+    unitPrice: number;
 }
 
 export interface ReceptionDetailInvoice {
@@ -76,6 +81,7 @@ export interface ReceptionDetailInvoice {
     paymentType: "PUE" | "PPD";
     origin: "providers" | "administration";
     amount: number;
+    lines?: ReceptionInvoiceLine[];
 }
 
 export interface ReceptionInvoice {
@@ -85,6 +91,7 @@ export interface ReceptionInvoice {
     amount: number;
     origin?: string;
     paymentType?: string;
+    lines?: ReceptionInvoiceLine[];
 }
 
 export interface NewReceptionData {

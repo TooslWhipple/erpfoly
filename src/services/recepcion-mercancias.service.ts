@@ -47,6 +47,13 @@ export interface ReceptionDetailItem {
   scheduledDeliveryDate: string | null;
 }
 
+export interface ReceptionDetailInvoiceLine {
+  description: string;
+  issuerSku: string | null;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface ReceptionDetailInvoice {
   id: number;
   externalId: string;
@@ -54,6 +61,7 @@ export interface ReceptionDetailInvoice {
   paymentType: string;
   origin: string;
   amount: number;
+  lines?: ReceptionDetailInvoiceLine[];
 }
 
 export interface ReceptionDetail extends ReceptionListItem {
@@ -111,6 +119,14 @@ export interface CreateReceptionItemPayload {
   received?: number;
 }
 
+export interface UpdateReceptionItemPayload {
+  order_id?: number;
+  order_item_id?: number;
+  product_id: number;
+  quantity?: number;
+  received?: number;
+}
+
 export interface CreateReceptionPayload {
   supplier_id: number;
   branch_id: number;
@@ -127,7 +143,7 @@ export interface UpdateReceptionPayload {
   order_date?: string;
   printed_labels_count?: number;
   notes?: string;
-  items?: CreateReceptionItemPayload[];
+  items?: UpdateReceptionItemPayload[];
   payable_invoice_ids?: number[];
 }
 
@@ -243,9 +259,18 @@ export async function getSuppliersWithPendingOrders(): Promise<
 
 export async function getPendingArticlesBySupplier(
   supplierId: number,
+  options?: { groupBy?: "product"; excludeReceptionId?: number },
 ): Promise<ApiResult<PendingArticleApi[]>> {
   return get<PendingArticleApi[]>(
     `${BASE}/pending-articles-by-supplier/${supplierId}`,
+    {
+      params: {
+        ...(options?.groupBy ? { groupBy: options.groupBy } : {}),
+        ...(options?.excludeReceptionId != null
+          ? { excludeReceptionId: options.excludeReceptionId }
+          : {}),
+      },
+    },
   );
 }
 

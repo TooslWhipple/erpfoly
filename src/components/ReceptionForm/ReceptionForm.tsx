@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
   IconButton,
+  InputAdornment,
   Stack,
   TableBody,
   TableRow,
+  TextField,
   Typography,
 } from "@mui/material";
-import { CircleMinus, Plus } from "lucide-react";
+import { CircleMinus, Plus, Search } from "lucide-react";
 import numeral from "numeral";
 import { Breadcrumbs, InvoiceSelectorModal, StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
@@ -65,6 +67,8 @@ import {
   InvoiceCardAmount,
   InvoiceTotalCard,
   InvoiceAmountAlert,
+  InvoiceGuideLine,
+  InvoiceGuidePanel,
   Table,
 } from "@/styles/recepcion-mercancias/index.styles";
 
@@ -115,8 +119,7 @@ function detailItemToReceptionArticle(
   item: ReceptionDetailItem,
 ): ReceptionArticle {
   const orderedQuantity = item.orderedQuantity ?? item.quantity;
-  const authorizedQuantity = item.authorizedQuantity ?? item.pendingQuantity;
-  const pendingQuantity = item.pendingQuantity ?? authorizedQuantity ?? orderedQuantity;
+  const pendingQuantity = item.pendingQuantity ?? orderedQuantity;
   return {
     id: `reception-item-${item.id}`,
     productId: item.productId,
@@ -128,7 +131,6 @@ function detailItemToReceptionArticle(
     quantity: orderedQuantity,
     orderedQuantity,
     pendingQuantity,
-    authorizedQuantity,
     received: item.received,
     branchName: item.branchName ?? undefined,
     branchId: undefined,
@@ -136,35 +138,37 @@ function detailItemToReceptionArticle(
   };
 }
 
-/** Agrupa partidas del mismo SKU para captura en rampa (tope = suma autorizada). */
-function groupArticlesBySku(articles: ReceptionArticle[]): ReceptionArticle[] {
-  const groups = new Map<number, ReceptionArticle>();
-  for (const article of articles) {
-    const productId = article.productId ?? 0;
-    const existing = groups.get(productId);
-    if (!existing) {
-      groups.set(productId, {
-        ...article,
-        id: `sku-${productId}`,
-        pendingQuantity: article.authorizedQuantity ?? article.pendingQuantity,
-        authorizedQuantity: article.authorizedQuantity ?? article.pendingQuantity,
-        orderedQuantity: article.orderedQuantity,
-        quantity: article.orderedQuantity,
-        received: article.received,
-      });
-      continue;
-    }
-    existing.pendingQuantity +=
-      article.authorizedQuantity ?? article.pendingQuantity;
-    existing.authorizedQuantity =
-      (existing.authorizedQuantity ?? 0) +
-      (article.authorizedQuantity ?? article.pendingQuantity);
-    existing.orderedQuantity += article.orderedQuantity;
-    existing.quantity += article.orderedQuantity;
-    existing.received += article.received;
-    existing.orderNumber = `${existing.orderNumber}, ${article.orderNumber}`;
+async function loadCaptureArticles(
+  detail: ReceptionDetail,
+): Promise<ReceptionArticle[]> {
+  const captured = detail.items.map(detailItemToReceptionArticle);
+  if (detail.status !== "pre_authorized") return captured;
+
+  const pendingResult = await getPendingArticlesBySupplier(detail.supplierId, {
+    groupBy: "product",
+    excludeReceptionId: detail.id,
+  });
+  if (pendingResult.error) {
+    throw new Error(pendingResult.error.message);
   }
-  return [...groups.values()];
+
+  const receivedByProduct = new Map<number, number>();
+  for (const item of captured) {
+    const productId = item.productId ?? 0;
+    receivedByProduct.set(
+      productId,
+      (receivedByProduct.get(productId) ?? 0) + item.received,
+    );
+  }
+
+  return (pendingResult.data ?? []).map((item) => {
+    const article = pendingArticleToReceptionArticle(item);
+    const productId = article.productId ?? 0;
+    return {
+      ...article,
+      received: receivedByProduct.get(productId) ?? 0,
+    };
+  });
 }
 
 function detailInvoiceToReceptionInvoice(
@@ -177,6 +181,12 @@ function detailInvoiceToReceptionInvoice(
     amount: inv.amount,
     paymentType: inv.paymentType,
     origin: inv.origin,
+    lines: (inv.lines ?? []).map((line) => ({
+      description: line.description,
+      issuerSku: line.issuerSku,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+    })),
   };
 }
 
@@ -190,14 +200,6 @@ function getTotalLabels(articles: ReceptionArticle[]): number {
 
 function getInvoicesTotal(invoices: ReceptionInvoice[]): number {
   return invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-}
-
-function hasQuantityMismatch(articles: ReceptionArticle[]): boolean {
-  return articles.some(
-    (article) =>
-      article.received !==
-      (article.authorizedQuantity ?? article.pendingQuantity),
-  );
 }
 
 function getStatusChip(status: ReceptionDetailStatus): {
@@ -316,7 +318,7 @@ export function ReceptionForm({
     receptionId ?? null,
   );
   const [supplierNameFromReception, setSupplierNameFromReception] = useState("");
-  const [lineItems, setLineItems] = useState<ReceptionArticle[]>([]);
+  const [articleSearch, setArticleSearch] = useState("");
   const [originalLabelsIssued, setOriginalLabelsIssued] = useState(false);
   const [reprintAuthOpen, setReprintAuthOpen] = useState(false);
   const [reprintAuthLoading, setReprintAuthLoading] = useState(false);
@@ -327,13 +329,23 @@ export function ReceptionForm({
   const extraLabels = Math.max(0, totalLabels - baselineLabels);
   const invoicesTotal = getInvoicesTotal(invoices);
   const invoicesExceedCost = invoices.length > 0 && invoicesTotal > totalLabels;
-  const quantityMismatch = hasQuantityMismatch(articles);
   const statusChip = getStatusChip(status);
   const canEditQuantities =
     status === "draft" ||
     status === "pre_captured" ||
     status === "pre_authorized";
   const canManageInvoices = status === "draft" || status === "pre_captured";
+  const isAggregatedCapture = status === "pre_authorized";
+  const columnCount = isAggregatedCapture ? 5 : 6;
+  const visibleArticles = useMemo(() => {
+    const query = articleSearch.trim().toLowerCase();
+    if (!query) return articles;
+    return articles.filter(
+      (article) =>
+        article.name.toLowerCase().includes(query) ||
+        article.sku.toLowerCase().includes(query),
+    );
+  }, [articles, articleSearch]);
   const confirmVariant = resolveConfirmVariant(status, extraLabels);
   const primaryDisabled =
     (status === "draft" && totalArticles === 0) ||
@@ -376,7 +388,7 @@ export function ReceptionForm({
 
     if (currentReceptionId != null) {
       getReceptionById(currentReceptionId)
-        .then((result) => {
+        .then(async (result) => {
           if (cancelled) return;
           if (result.error || !result.data) {
             setArticlesError(
@@ -386,13 +398,19 @@ export function ReceptionForm({
             return;
           }
           const detail = result.data;
-          const mapped = detail.items.map(detailItemToReceptionArticle);
-          setLineItems(mapped);
-          setArticles(
-            detail.status === "pre_authorized"
-              ? groupArticlesBySku(mapped)
-              : mapped,
-          );
+          try {
+            const captureArticles = await loadCaptureArticles(detail);
+            if (cancelled) return;
+            setArticles(captureArticles);
+          } catch (loadErr) {
+            if (cancelled) return;
+            setArticlesError(
+              loadErr instanceof Error
+                ? loadErr.message
+                : "No se pudo cargar el listado pendiente",
+            );
+            setArticles([]);
+          }
           const loadedInvoices = detail.invoices.map(detailInvoiceToReceptionInvoice);
           setInvoices(loadedInvoices);
           setOriginalPayableIds(
@@ -490,50 +508,34 @@ export function ReceptionForm({
     setActivePanel("confirm");
   };
 
-  const buildSavePayload = () => {
-    if (status === "pre_authorized" && lineItems.length > 0) {
-      const receivedByProduct = new Map(
-        articles.map((article) => [article.productId ?? 0, article.received]),
-      );
-      const usedProducts = new Set<number>();
-      const items = lineItems.map((line) => {
-        const productId = line.productId ?? 0;
-        let received = 0;
-        if (!usedProducts.has(productId)) {
-          received = receivedByProduct.get(productId) ?? 0;
-          usedProducts.add(productId);
-        }
-        return {
-          order_id: line.orderId ?? 0,
-          order_item_id: line.orderItemId ?? 0,
-          product_id: productId,
-          quantity: line.orderedQuantity ?? line.quantity,
-          received,
-        };
-      });
-      return {
-        printed_labels_count: totalLabels,
-        items,
-        payable_invoice_ids: extractPayableIds(invoices),
-      };
-    }
+  const buildLegacySavePayload = () => ({
+    printed_labels_count: totalLabels,
+    items: articles.map((article) => ({
+      order_id: article.orderId ?? 0,
+      order_item_id:
+        article.orderItemId ??
+        (article.id.startsWith("order-item-")
+          ? Number(article.id.replace("order-item-", ""))
+          : 0),
+      product_id: article.productId ?? 0,
+      quantity: article.orderedQuantity ?? article.quantity,
+      received: article.received,
+    })),
+    payable_invoice_ids: extractPayableIds(invoices),
+  });
 
-    return {
-      printed_labels_count: totalLabels,
-      items: articles.map((article) => ({
-        order_id: article.orderId ?? 0,
-        order_item_id:
-          article.orderItemId ??
-          (article.id.startsWith("order-item-")
-            ? Number(article.id.replace("order-item-", ""))
-            : 0),
+  const buildPreAuthorizedPayload = () => ({
+    printed_labels_count: totalLabels,
+    items: articles
+      .filter(
+        (article) => article.received > 0 && (article.productId ?? 0) > 0,
+      )
+      .map((article) => ({
         product_id: article.productId ?? 0,
-        quantity: article.orderedQuantity ?? article.quantity,
         received: article.received,
       })),
-      payable_invoice_ids: extractPayableIds(invoices),
-    };
-  };
+    payable_invoice_ids: extractPayableIds(invoices),
+  });
 
   const handleConfirmAction = async (_reason?: string) => {
     if (articles.length === 0) {
@@ -548,7 +550,7 @@ export function ReceptionForm({
         const printMode =
           status === "pre_captured" && extraLabels > 0 ? "extra" : "all";
         const skip = printMode === "extra" ? baselineLabels : 0;
-        const payload = buildSavePayload();
+        const payload = buildLegacySavePayload();
         const result =
           currentReceptionId != null
             ? await updateReception(currentReceptionId, payload)
@@ -593,7 +595,9 @@ export function ReceptionForm({
         if (status === "pre_authorized" || isInvoiceListDirty()) {
           const updateResult = await updateReception(
             currentReceptionId,
-            buildSavePayload(),
+            status === "pre_authorized"
+              ? buildPreAuthorizedPayload()
+              : buildLegacySavePayload(),
           );
           if (updateResult.error || !updateResult.data) {
             setSubmitError(
@@ -602,11 +606,16 @@ export function ReceptionForm({
             return;
           }
           syncServerInvoiceState(updateResult.data.invoices);
-          const mapped = updateResult.data.items.map(detailItemToReceptionArticle);
-          setLineItems(mapped);
-          setArticles(
-            status === "pre_authorized" ? groupArticlesBySku(mapped) : mapped,
-          );
+          try {
+            setArticles(await loadCaptureArticles(updateResult.data));
+          } catch (loadErr) {
+            setSubmitError(
+              loadErr instanceof Error
+                ? loadErr.message
+                : "No se pudo recargar el listado pendiente",
+            );
+            return;
+          }
         }
 
         const payload = {
@@ -780,20 +789,40 @@ export function ReceptionForm({
           <Stack>
             <Typography variant="h6">Artículos recibidos</Typography>
             <Typography variant="body2" color="text.secondary">
-              Confirma la cantidad de artículos recibidos.
+              {isAggregatedCapture
+                ? "Busca el artículo interno y captura la cantidad física. La factura es solo una guía."
+                : "Confirma la cantidad de artículos recibidos."}
             </Typography>
           </Stack>
+          {isAggregatedCapture ? (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Buscar por nombre o SKU"
+              value={articleSearch}
+              onChange={(event) => setArticleSearch(event.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          ) : null}
           <TableContainer>
             <Table>
               <StyledTableHead>
                 <TableRow>
                   <StyledTableCell>Nombre</StyledTableCell>
                   <StyledTableCell>SKU</StyledTableCell>
-                  <StyledTableCell>Pedido</StyledTableCell>
+                  {isAggregatedCapture ? null : (
+                    <StyledTableCell>Pedido</StyledTableCell>
+                  )}
                   <StyledTableCell>Total Pedido</StyledTableCell>
                   <StyledTableCell>
-                    {status === "pre_authorized"
-                      ? "Autorizado (factura)"
+                    {isAggregatedCapture
+                      ? "Pendiente total"
                       : "Pendiente por Recibir"}
                   </StyledTableCell>
                   <StyledTableCell>Recibidos</StyledTableCell>
@@ -802,7 +831,7 @@ export function ReceptionForm({
               <TableBody>
                 {loadingArticles ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={6} align="center">
+                    <StyledTableCell colSpan={columnCount} align="center">
                       <Typography variant="body2" color="text.secondary">
                         Cargando artículos...
                       </Typography>
@@ -810,26 +839,30 @@ export function ReceptionForm({
                   </StyledTableRow>
                 ) : articlesError ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={6} align="center">
+                    <StyledTableCell colSpan={columnCount} align="center">
                       <Typography variant="body2" color="error">
                         {articlesError}
                       </Typography>
                     </StyledTableCell>
                   </StyledTableRow>
-                ) : articles.length === 0 ? (
+                ) : visibleArticles.length === 0 ? (
                   <StyledTableRow>
-                    <StyledTableCell colSpan={6} align="center">
+                    <StyledTableCell colSpan={columnCount} align="center">
                       <Typography variant="body2" color="text.secondary">
-                        Este proveedor no tiene artículos pendientes por recibir
+                        {articles.length === 0
+                          ? "Este proveedor no tiene artículos pendientes por recibir"
+                          : "Ningún artículo coincide con la búsqueda"}
                       </Typography>
                     </StyledTableCell>
                   </StyledTableRow>
                 ) : (
-                  articles.map((article) => (
+                  visibleArticles.map((article) => (
                     <StyledTableRow key={article.id}>
                       <ArticleNameCell>{article.name}</ArticleNameCell>
                       <StyledTableCell>{article.sku}</StyledTableCell>
-                      <StyledTableCell>{article.orderNumber}</StyledTableCell>
+                      {isAggregatedCapture ? null : (
+                        <StyledTableCell>{article.orderNumber}</StyledTableCell>
+                      )}
                       <StyledTableCell>
                         {article.orderedQuantity}
                       </StyledTableCell>
@@ -863,7 +896,7 @@ export function ReceptionForm({
             <Stack>
               <Typography variant="h6">Facturas</Typography>
               <Typography variant="body2" color="text.secondary">
-                Facturas pertenecientes a esta mercancía.
+                Guía visual de la factura. No se cruza con los artículos internos.
               </Typography>
             </Stack>
             {canManageInvoices && (
@@ -907,6 +940,33 @@ export function ReceptionForm({
                 </Typography>
               </InvoiceTotalCard>
 
+              {invoices.some((invoice) => (invoice.lines ?? []).length > 0) ? (
+                <InvoiceGuidePanel>
+                  {invoices.flatMap((invoice) =>
+                    (invoice.lines ?? []).map((line, index) => (
+                      <InvoiceGuideLine
+                        key={`${invoice.id}-${index}-${line.issuerSku ?? line.description}`}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {invoice.fiscalFolio}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {line.description}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {line.issuerSku
+                            ? `SKU proveedor: ${line.issuerSku}`
+                            : "Sin SKU de proveedor"}
+                          {" · "}
+                          {line.quantity} ×{" "}
+                          {numeral(line.unitPrice).format("$0,0.00")}
+                        </Typography>
+                      </InvoiceGuideLine>
+                    )),
+                  )}
+                </InvoiceGuidePanel>
+              ) : null}
+
               {invoicesExceedCost && (
                 <InvoiceAmountAlert severity="warning" icon={false}>
                   <Typography variant="body2">
@@ -941,7 +1001,7 @@ export function ReceptionForm({
         totalArticles={totalArticles}
         totalLabels={totalLabels}
         extraLabels={extraLabels}
-        hasQuantityMismatch={quantityMismatch}
+        hasQuantityMismatch={false}
         loading={confirmLoading && printProgress == null}
         printProgress={printProgress}
         printerName={printerProfile.displayName}

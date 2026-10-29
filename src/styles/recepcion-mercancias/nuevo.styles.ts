@@ -218,6 +218,24 @@ export const InvoiceAmountAlert = styled(Alert)(({ theme }) => ({
   backgroundColor: "#FFEDD5"
 }));
 
+export const InvoiceGuidePanel = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing(1),
+  maxHeight: 360,
+  overflowY: "auto",
+}));
+
+export const InvoiceGuideLine = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  padding: theme.spacing(1),
+  borderRadius: 8,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.app.border}`,
+}));
+
 export const Table = styled(MuiTable)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
 }));

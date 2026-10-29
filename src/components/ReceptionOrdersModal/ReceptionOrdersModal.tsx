@@ -93,7 +93,6 @@ export function ReceptionOrdersModal({
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [errorBlocks, setErrorBlocks] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -104,7 +103,6 @@ export function ReceptionOrdersModal({
       setSelectedInvoiceIds(new Set());
       setBranchId(null);
       setError(null);
-      setErrorBlocks([]);
       setSearchQuery("");
       setLoadingSuppliers(true);
       getSuppliersWithPendingOrders()
@@ -135,7 +133,6 @@ export function ReceptionOrdersModal({
     setStep("invoices");
     setLoadingInvoices(true);
     setError(null);
-    setErrorBlocks([]);
     setSelectedInvoiceIds(new Set());
     try {
       const [invoicesResult, articlesResult] = await Promise.all([
@@ -181,7 +178,6 @@ export function ReceptionOrdersModal({
 
     setSubmitting(true);
     setError(null);
-    setErrorBlocks([]);
     try {
       const result = await preAuthorizeReception({
         supplier_id: selectedSupplier.id,
@@ -190,21 +186,16 @@ export function ReceptionOrdersModal({
         payable_invoice_ids: [...selectedInvoiceIds],
       });
       if (result.error || !result.data) {
-        const blockMessages =
-          result.error?.blocks?.map((block) => block.message).filter(Boolean) ??
-          [];
         setError(
-          result.error?.message ?? "No se pudo preautorizar la recepción",
+          result.error?.message ?? "No se pudo abrir la recepción",
         );
-        setErrorBlocks(blockMessages);
         return;
       }
       await onConfirm(result.data.id);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error al preautorizar la recepción",
+        err instanceof Error ? err.message : "Error al abrir la recepción",
       );
-      setErrorBlocks([]);
     } finally {
       setSubmitting(false);
     }
@@ -227,7 +218,7 @@ export function ReceptionOrdersModal({
       description={
         step === "suppliers"
           ? "Selecciona el proveedor con mercancía en tránsito"
-          : "Selecciona las facturas a preautorizar"
+          : "Selecciona las facturas de la mercancía que vas a recibir"
       }
       maxWidth="md"
       disableClose={isBusy}
@@ -238,22 +229,6 @@ export function ReceptionOrdersModal({
           <Typography variant="body2" fontWeight={600}>
             {error}
           </Typography>
-          {errorBlocks.length > 0 ? (
-            <Box
-              component="ul"
-              sx={{ m: 0, mt: 1, pl: 2.5, display: "flex", flexDirection: "column", gap: 0.5 }}
-            >
-              {errorBlocks.map((blockMessage, index) => (
-                <Typography
-                  key={`${index}-${blockMessage.slice(0, 24)}`}
-                  component="li"
-                  variant="body2"
-                >
-                  {blockMessage}
-                </Typography>
-              ))}
-            </Box>
-          ) : null}
         </Alert>
       ) : null}
 
@@ -326,7 +301,7 @@ export function ReceptionOrdersModal({
           ) : invoices.length === 0 ? (
             <EmptyStateContainer>
               <Typography variant="body2" color="text.secondary">
-                No hay facturas disponibles para preautorizar. Aprueba primero
+                No hay facturas disponibles para esta recepción. Aprueba primero
                 la solicitud de factura con sus conceptos CFDI.
               </Typography>
             </EmptyStateContainer>
@@ -448,7 +423,6 @@ export function ReceptionOrdersModal({
               onClick={() => {
                 setStep("suppliers");
                 setError(null);
-                setErrorBlocks([]);
               }}
             >
               Atrás
@@ -462,7 +436,7 @@ export function ReceptionOrdersModal({
               {submitting ? (
                 <CircularProgress size={18} color="inherit" />
               ) : (
-                "Preautorizar recepción"
+                "Abrir recepción"
               )}
             </CreateButton>
           </Box>

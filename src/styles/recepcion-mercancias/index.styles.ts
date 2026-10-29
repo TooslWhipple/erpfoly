@@ -28,5 +28,7 @@ export {
   InvoiceCardAmount,
   InvoiceTotalCard,
   InvoiceAmountAlert,
+  InvoiceGuidePanel,
+  InvoiceGuideLine,
   Table,
 } from "./nuevo.styles";

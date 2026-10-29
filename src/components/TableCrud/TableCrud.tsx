@@ -16,6 +16,7 @@ import {
   ActionsHeaderCell,
   ActionsCell,
   ActionsButton,
+  SortableHeaderLabel,
   StyledMenu,
   StyledMenuItem,
   StyledTablePagination,
@@ -81,6 +82,8 @@ export interface Column<T> {
   truncate?: boolean;
   /** Allow header label to wrap onto multiple lines. */
   headerWrap?: boolean;
+  /** Header click sorts this column when the table receives onSortChange. */
+  sortable?: boolean;
   format?: (value: T[keyof T], row: T) => React.ReactNode;
   sticky?: boolean;
   stickyPosition?: "left" | "right";
@@ -150,6 +153,10 @@ interface TableCrudProps<T> {
   fillHeight?: boolean;
   /** Enable drag-to-resize on column headers (opt-in). */
   resizable?: boolean;
+  /** Active sort column id. */
+  sortField?: string;
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (field: string, order: "asc" | "desc") => void;
 }
 
 function buildInitialColumnWidths<T>(columns: Column<T>[]): Record<string, number> {
@@ -185,6 +192,9 @@ export function TableCrud<T>({
   minTableWidth = 650,
   fillHeight = false,
   resizable = false,
+  sortField,
+  sortOrder,
+  onSortChange,
 }: TableCrudProps<T>) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
@@ -574,6 +584,13 @@ export function TableCrud<T>({
     ));
   };
 
+  const handleColumnSort = (columnId: string) => {
+    if (!onSortChange) return;
+    const nextOrder: "asc" | "desc" =
+      sortField === columnId && sortOrder === "desc" ? "asc" : "desc";
+    onSortChange(columnId, nextOrder);
+  };
+
   const renderTableHeader = () => (
     <StyledTableHead>
       <StyledTableRow>
@@ -595,6 +612,8 @@ export function TableCrud<T>({
           const canResize = isColumnResizable(column);
           const allowWrap = Boolean(column.headerWrap) || (resizable && column.type === "number");
           const HeaderCellComponent = column.sticky ? StickyHeaderCell : StyledHeaderCell;
+          const isSortable = Boolean(column.sortable && onSortChange);
+          const isActiveSort = sortField === columnId;
 
           return (
             <HeaderCellComponent
@@ -605,7 +624,18 @@ export function TableCrud<T>({
               allowWrap={allowWrap}
               resizable={canResize}
             >
-              {column.label}
+              {isSortable ? (
+                <SortableHeaderLabel
+                  active={isActiveSort}
+                  direction={isActiveSort && sortOrder === "asc" ? "asc" : "desc"}
+                  hideSortIcon={false}
+                  onClick={() => handleColumnSort(columnId)}
+                >
+                  {column.label}
+                </SortableHeaderLabel>
+              ) : (
+                column.label
+              )}
               {canResize && (
                 <ColumnResizeHandle
                   role="separator"

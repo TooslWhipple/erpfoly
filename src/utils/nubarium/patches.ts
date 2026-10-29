@@ -105,10 +105,37 @@ export function videoBoxNeedsSync(
   );
 }
 
+export interface SnapshotCanvasSize {
+  width: number;
+  height: number;
+}
+
 /**
- * `setDrawFrame` places the yellow guide from the frame rect.
- * `NubSdkCanvasHelper.draw` then halves `top` and swaps in INE 54:86 mask math,
- * which blows the face oval out of the tablet visor.
+ * Prefer the visor box for the snapshot buffer. The SDK otherwise pins
+ * `canvas-ssh` to 1024×768 or 768×1024, which stretches the INE JPEG
+ * away from the 4:3 frame the user aligned.
+ */
+export function resolveSnapshotCanvasSize(
+  box: NubariumVideoBox,
+  canvasWidth: number,
+  canvasHeight: number,
+): SnapshotCanvasSize {
+  const width = Math.round(box.width);
+  const height = Math.round(box.height);
+  if (width > 0 && height > 0) {
+    return { width, height };
+  }
+  return {
+    width: Math.max(0, Math.round(canvasWidth)),
+    height: Math.max(0, Math.round(canvasHeight)),
+  };
+}
+
+/**
+ * INE (`rectangle`) must go through `draw()` so the detection mask and
+ * `canvas-ssh` stay in sync with the yellow stroke.
+ * Face (`oval`) stays on `setDrawFrame`: `draw()` paints an INE 54:86 hole
+ * and halves `top`, which blows the oval out of the tablet visor.
  */
 export function selectGuideRedrawMode(input: {
   hasFrame: boolean;
@@ -117,6 +144,19 @@ export function selectGuideRedrawMode(input: {
   hasDraw: boolean;
 }): GuideRedrawMode {
   if (!input.hasFrame || input.areaType == null) return "skip";
+
+  if (input.areaType === "rectangle") {
+    if (input.hasDraw) return "draw";
+    if (input.hasSetDrawFrame) return "setDrawFrame";
+    return "skip";
+  }
+
+  if (input.areaType === "oval") {
+    if (input.hasSetDrawFrame) return "setDrawFrame";
+    if (input.hasDraw) return "draw";
+    return "skip";
+  }
+
   if (input.hasSetDrawFrame) return "setDrawFrame";
   if (input.hasDraw) return "draw";
   return "skip";
@@ -383,6 +423,17 @@ function drawVideoCoverOntoCanvas(
   );
 }
 
+function applySnapshotCanvasSize(rootId: string, canvas: HTMLCanvasElement): SnapshotCanvasSize {
+  syncNubariumVideoLayout(rootId, viewportByRootId.get(rootId) ?? null);
+  const box = measureNubariumVideoBox(rootId, viewportByRootId.get(rootId) ?? null);
+  const size = resolveSnapshotCanvasSize(box, canvas.width, canvas.height);
+  if (size.width > 0 && size.height > 0 && (canvas.width !== size.width || canvas.height !== size.height)) {
+    canvas.width = size.width;
+    canvas.height = size.height;
+  }
+  return size;
+}
+
 function captureSnapshotCover(
   rootElementId: string,
   compression = 1.0,
@@ -395,8 +446,9 @@ function captureSnapshotCover(
     return original?.(rootElementId, undefined, undefined, compression, preview) ?? "";
   }
 
-  const width = canvas.width;
-  const height = canvas.height;
+  const size = applySnapshotCanvasSize(rootElementId, canvas);
+  const width = size.width;
+  const height = size.height;
   const ctx = canvas.getContext("2d");
   if (!ctx || width <= 0 || height <= 0) {
     return original?.(rootElementId, width, height, compression, preview) ?? "";
@@ -480,7 +532,9 @@ function patchFixedLandscapeOrientation(
   }
 
   const originalGetOrientation = capture.getOrientation.bind(capture);
-  // Visor Foly is always 4:3 landscape — ignore screen.width quirks on iPad/Android.
+  // Foly visor is 4:3 with width > height (CaptureViewport). prepareGuide()
+  // uses this to pick ine-*-landscape.png. The SDK's mobileOrientations
+  // ['portrait'] only changes internal copy, not the OCR endpoint.
   capture.getOrientation = () => "LANDSCAPE";
 
   return () => {
@@ -595,18 +649,17 @@ function redrawCaptureFrame(
         hasDraw: typeof helper?.draw === "function",
       });
 
-      if (mode === "setDrawFrame") {
-        capture.nubSdkCanvasHelper?.setDrawFrame?.(frame, areaType);
-      } else if (mode === "draw") {
+      if (mode === "draw") {
         helper?.draw?.(rootId, frame, areaType);
+        // draw() resets canvas-ssh to 1024×768 / 768×1024. Put it back on the visor
+        // so the next snapshot matches the 4:3 frame the user aligned.
+        const snapshot = document.getElementById(`${rootId}-canvas-ssh`) as HTMLCanvasElement | null;
+        if (snapshot) applySnapshotCanvasSize(rootId, snapshot);
+      } else if (mode === "setDrawFrame") {
+        capture.nubSdkCanvasHelper?.setDrawFrame?.(frame, areaType);
+        if (isFrameRect(frame)) restoreGuideBox(rootId, frame);
       }
-
-      // setDrawFrame wins over draw()'s y/2 shift. Re-apply after updateFrameUi
-      // so the guide image stays on the same rect as the yellow stroke.
-      capture.updateFrameUi?.();
-      if (mode === "setDrawFrame" && isFrameRect(frame)) {
-        restoreGuideBox(rootId, frame);
-      }
+      // updateFrameUi() only calls setDrawFrame and would drop the INE detection mask.
     }
 
     if (!taskType) {
@@ -640,11 +693,10 @@ function tryInstallCanvasDrawPatch(): boolean {
 
   originalDraw = helper.draw.bind(helper);
   helper.draw = (rootElementId, rectangle, type) => {
-    // Face oval: draw() rewrites top to y/2 and paints an INE 54:86 hole.
-    // Keep the SDK stroke, then put the guide back on the frame rect.
+    // draw() halves `top` for the INE rectangle and the face oval.
     syncNubariumVideoLayout(rootElementId, viewportByRootId.get(rootElementId) ?? null);
     originalDraw?.(rootElementId, rectangle, type);
-    if (type === "oval" && isFrameRect(rectangle)) {
+    if ((type === "rectangle" || type === "oval") && isFrameRect(rectangle)) {
       restoreGuideBox(rootElementId, rectangle);
     }
   };

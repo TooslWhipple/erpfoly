@@ -26,12 +26,19 @@ export {
   inferImageMimeType,
 } from "./results";
 
-export type { CoverCropRect, GuideRedrawMode, NubariumCaptureKind, NubariumVideoBox } from "./patches";
+export type {
+  CoverCropRect,
+  GuideRedrawMode,
+  NubariumCaptureKind,
+  NubariumVideoBox,
+  SnapshotCanvasSize,
+} from "./patches";
 export {
   applyNubariumCapturePatches,
   computeObjectFitCoverCrop,
   measureNubariumVideoBox,
   resolveCaptureBox,
+  resolveSnapshotCanvasSize,
   scheduleNubariumCaptureRedraw,
   selectGuideRedrawMode,
   syncNubariumVideoLayout,

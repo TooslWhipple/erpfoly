@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import {
   resolveCaptureBox,
+  resolveSnapshotCanvasSize,
   selectGuideRedrawMode,
   videoBoxNeedsSync,
 } from "./patches";
@@ -60,11 +61,37 @@ assert.equal(
   selectGuideRedrawMode({
     hasFrame: true,
     areaType: "rectangle",
+    hasSetDrawFrame: true,
+    hasDraw: true,
+  }),
+  "draw",
+);
+assert.equal(
+  selectGuideRedrawMode({
+    hasFrame: true,
+    areaType: "rectangle",
     hasSetDrawFrame: false,
     hasDraw: true,
   }),
   "draw",
 );
+assert.equal(
+  selectGuideRedrawMode({
+    hasFrame: true,
+    areaType: "rectangle",
+    hasSetDrawFrame: true,
+    hasDraw: false,
+  }),
+  "setDrawFrame",
+);
+
+const visorSnapshot = resolveSnapshotCanvasSize({ width: 640.4, height: 480.2 }, 1024, 768);
+assert.equal(visorSnapshot.width, 640);
+assert.equal(visorSnapshot.height, 480);
+
+const fallbackSnapshot = resolveSnapshotCanvasSize({ width: 0, height: 0 }, 1024, 768);
+assert.equal(fallbackSnapshot.width, 1024);
+assert.equal(fallbackSnapshot.height, 768);
 assert.equal(
   selectGuideRedrawMode({
     hasFrame: false,

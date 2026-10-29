@@ -25,6 +25,7 @@ import {
   getInventoryStats,
   type InventoryListItem,
   type InventoryQuantityFilter,
+  type InventorySortOrder,
   type InventoryStats,
 } from "@/services/inventory.service";
 
@@ -43,11 +44,17 @@ export default function Inventario() {
   const [activeTab, setActiveTab] = useState("all");
   const [quantityFilter, setQuantityFilter] =
     useState<InventoryQuantityFilter | null>(null);
+  const [sortField, setSortField] = useState<InventoryQuantityFilter | null>(
+    null,
+  );
+  const [sortOrder, setSortOrder] = useState<InventorySortOrder>("desc");
 
   const listExtraParams = useMemo(() => {
     const params: {
       status?: string;
       quantityFilter?: InventoryQuantityFilter;
+      sortField?: InventoryQuantityFilter;
+      sortOrder?: InventorySortOrder;
     } = {};
     if (activeTab !== "all") {
       params.status = activeTab;
@@ -55,8 +62,12 @@ export default function Inventario() {
     if (quantityFilter) {
       params.quantityFilter = quantityFilter;
     }
+    if (sortField) {
+      params.sortField = sortField;
+      params.sortOrder = sortOrder;
+    }
     return params;
-  }, [activeTab, quantityFilter]);
+  }, [activeTab, quantityFilter, sortField, sortOrder]);
 
   const {
     data: items,
@@ -79,7 +90,7 @@ export default function Inventario() {
 
   useEffect(() => {
     setPage(0);
-  }, [activeTab, quantityFilter, setPage]);
+  }, [activeTab, quantityFilter, sortField, sortOrder, setPage]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -133,6 +144,14 @@ export default function Inventario() {
     );
   }, []);
 
+  const handleSortChange = useCallback(
+    (field: string, order: InventorySortOrder) => {
+      setSortField(field as InventoryQuantityFilter);
+      setSortOrder(order);
+    },
+    [],
+  );
+
   const handleViewDetail = useCallback(
     (item: InventoryListItem) => {
       const sku = item.code.replace(/\s+/g, "");
@@ -150,35 +169,35 @@ export default function Inventario() {
 
   const statsCards: StatsCardData[] = stats
     ? [
-        {
-          id: "total",
-          label: "Total artículos",
-          value: stats.totalItems,
-          icon: <GridViewIcon />,
-          clickable: true,
-        },
-        {
-          id: "inStock",
-          label: "En existencia",
-          value: stats.inStock,
-          icon: <SyncIcon />,
-          clickable: true,
-        },
-        {
-          id: "inTransit",
-          label: "En tránsito",
-          value: stats.inTransit,
-          icon: <ShippingIcon />,
-          clickable: true,
-        },
-        {
-          id: "damaged",
-          label: "Mercancía dañada",
-          value: stats.damaged,
-          icon: <BuildIcon />,
-          clickable: true,
-        },
-      ]
+      {
+        id: "total",
+        label: "Total artículos",
+        value: stats.totalItems,
+        icon: <GridViewIcon />,
+        clickable: true,
+      },
+      {
+        id: "inStock",
+        label: "En existencia",
+        value: stats.inStock,
+        icon: <SyncIcon />,
+        clickable: true,
+      },
+      {
+        id: "inTransit",
+        label: "En tránsito",
+        value: stats.inTransit,
+        icon: <ShippingIcon />,
+        clickable: true,
+      },
+      {
+        id: "damaged",
+        label: "Mercancía dañada",
+        value: stats.damaged,
+        icon: <BuildIcon />,
+        clickable: true,
+      },
+    ]
     : [];
 
   const columns: Column<InventoryListItem>[] = [
@@ -216,21 +235,21 @@ export default function Inventario() {
     {
       id: "line",
       label: "Línea",
-      size: "md",
+      size: "xl",
+      truncate: true,
     },
     {
       id: "inStock",
       label: "En existencia",
       type: "number",
       size: "sm",
-      align: "left",
+      sortable: true,
       format: (value) => (
         <span
           style={{
             color: INVENTORY_COLORS.green,
             fontWeight: 500,
-          }}
-        >
+          }}>
           {String(value)}
         </span>
       ),
@@ -240,14 +259,13 @@ export default function Inventario() {
       label: "En tránsito",
       type: "number",
       size: "sm",
-      align: "left",
+      sortable: true,
       format: (value) => (
         <span
           style={{
             color: INVENTORY_COLORS.yellow,
             fontWeight: 500,
-          }}
-        >
+          }}>
           {String(value)}
         </span>
       ),
@@ -257,14 +275,13 @@ export default function Inventario() {
       label: "Dañada",
       type: "number",
       size: "sm",
-      align: "left",
+      sortable: true,
       format: (value) => (
         <span
           style={{
             color: INVENTORY_COLORS.red,
             fontWeight: 500,
-          }}
-        >
+          }}>
           {String(value)}
         </span>
       ),
@@ -346,6 +363,9 @@ export default function Inventario() {
         onRowsPerPageChange={handleRowsPerPageChange}
         onRowClick={handleRowClick}
         actions={rowActions}
+        sortField={sortField ?? undefined}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
         emptyMessage={
           quantityFilter
             ? "No hay artículos con cantidad mayor a 0 en esa columna"

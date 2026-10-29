@@ -43,12 +43,18 @@ export type InventoryListItem = InventoryListApiRow;
 
 export type InventoryQuantityFilter = "inStock" | "inTransit" | "damaged";
 
+export type InventorySortField = InventoryQuantityFilter;
+
+export type InventorySortOrder = "asc" | "desc";
+
 export interface GetInventoryListParams {
   page: number;
   limit: number;
   search?: string;
   status?: string;
   quantityFilter?: InventoryQuantityFilter;
+  sortField?: InventorySortField;
+  sortOrder?: InventorySortOrder;
   [key: string]: unknown;
 }
 

@@ -9,6 +9,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
 } from "@mui/material";
 
 export const TableWrapper = styled("div", {
@@ -74,6 +75,24 @@ export const StyledHeaderCell = styled(TableCell, {
   [theme.breakpoints.down("sm")]: {
     padding: "10px 12px",
     fontSize: 13,
+  },
+}));
+
+export const SortableHeaderLabel = styled(TableSortLabel)(({ theme }) => ({
+  color: "inherit",
+  "&:hover": {
+    color: "inherit",
+  },
+  "&.Mui-active": {
+    color: theme.palette.text.primary,
+  },
+  "& .MuiTableSortLabel-icon": {
+    opacity: 0.35,
+    color: `${theme.palette.text.secondary} !important`,
+  },
+  "&.Mui-active .MuiTableSortLabel-icon": {
+    opacity: 1,
+    color: `${theme.palette.text.primary} !important`,
   },
 }));
 

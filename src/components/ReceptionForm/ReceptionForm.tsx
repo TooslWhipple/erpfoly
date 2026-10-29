@@ -59,6 +59,8 @@ import {
   StyledTableRow,
   StyledTableCell,
   ArticleNameCell,
+  SkuCell,
+  NumericCell,
   AddInvoiceButton,
   InvoiceCard,
   InvoiceCardInfo,
@@ -466,12 +468,12 @@ export function ReceptionForm({
       prev.map((article) =>
         article.id === articleId
           ? {
-              ...article,
-              received: Math.min(
-                article.pendingQuantity,
-                Math.max(0, newQuantity),
-              ),
-            }
+            ...article,
+            received: Math.min(
+              article.pendingQuantity,
+              Math.max(0, newQuantity),
+            ),
+          }
           : article,
       ),
     );
@@ -555,11 +557,11 @@ export function ReceptionForm({
           currentReceptionId != null
             ? await updateReception(currentReceptionId, payload)
             : await createReception({
-                ...payload,
-                supplier_id: supplierId ?? 0,
-                branch_id: articles[0]?.branchId ?? 0,
-                order_date: orderDate,
-              });
+              ...payload,
+              supplier_id: supplierId ?? 0,
+              branch_id: articles[0]?.branchId ?? 0,
+              order_date: orderDate,
+            });
         if (result.error || !result.data) {
           setSubmitError(result.error?.message ?? "Error al guardar");
           return;
@@ -785,7 +787,7 @@ export function ReceptionForm({
       )}
 
       <ContentLayout>
-        <Stack spacing={2} flex="1 1 0">
+        <Stack spacing={2} flex="1 1 0" minWidth={0}>
           <Stack>
             <Typography variant="h6">Artículos recibidos</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -794,7 +796,8 @@ export function ReceptionForm({
                 : "Confirma la cantidad de artículos recibidos."}
             </Typography>
           </Stack>
-          {isAggregatedCapture ? (
+          {
+            isAggregatedCapture &&
             <TextField
               size="small"
               fullWidth
@@ -809,23 +812,23 @@ export function ReceptionForm({
                 ),
               }}
             />
-          ) : null}
+          }
           <TableContainer>
             <Table>
               <StyledTableHead>
                 <TableRow>
-                  <StyledTableCell>Nombre</StyledTableCell>
-                  <StyledTableCell>SKU</StyledTableCell>
-                  {isAggregatedCapture ? null : (
-                    <StyledTableCell>Pedido</StyledTableCell>
+                  <ArticleNameCell>Nombre</ArticleNameCell>
+                  <SkuCell>SKU</SkuCell>
+                  {!isAggregatedCapture && (
+                    <SkuCell>Pedido</SkuCell>
                   )}
-                  <StyledTableCell>Total Pedido</StyledTableCell>
-                  <StyledTableCell>
+                  <NumericCell>Total pedido</NumericCell>
+                  <NumericCell>
                     {isAggregatedCapture
                       ? "Pendiente total"
-                      : "Pendiente por Recibir"}
-                  </StyledTableCell>
-                  <StyledTableCell>Recibidos</StyledTableCell>
+                      : "Pendiente por recibir"}
+                  </NumericCell>
+                  <NumericCell>Recibidos</NumericCell>
                 </TableRow>
               </StyledTableHead>
               <TableBody>
@@ -859,17 +862,13 @@ export function ReceptionForm({
                   visibleArticles.map((article) => (
                     <StyledTableRow key={article.id}>
                       <ArticleNameCell>{article.name}</ArticleNameCell>
-                      <StyledTableCell>{article.sku}</StyledTableCell>
+                      <SkuCell>{article.sku}</SkuCell>
                       {isAggregatedCapture ? null : (
-                        <StyledTableCell>{article.orderNumber}</StyledTableCell>
+                        <SkuCell>{article.orderNumber}</SkuCell>
                       )}
-                      <StyledTableCell>
-                        {article.orderedQuantity}
-                      </StyledTableCell>
-                      <StyledTableCell>
-                        {article.pendingQuantity}
-                      </StyledTableCell>
-                      <StyledTableCell>
+                      <NumericCell>{article.orderedQuantity}</NumericCell>
+                      <NumericCell>{article.pendingQuantity}</NumericCell>
+                      <NumericCell align="right">
                         <NumberInput
                           value={article.received}
                           onChange={(value) =>
@@ -882,7 +881,7 @@ export function ReceptionForm({
                           size="small"
                           disabled={!canEditQuantities}
                         />
-                      </StyledTableCell>
+                      </NumericCell>
                     </StyledTableRow>
                   ))
                 )}

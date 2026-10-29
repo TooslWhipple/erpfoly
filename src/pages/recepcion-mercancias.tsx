@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Edit as EditIcon } from "@mui/icons-material";
+import {
+  Edit as EditIcon,
+  Visibility as VisibilityIcon,
+} from "@mui/icons-material";
 import {
   Title,
   TabFilters,
@@ -17,7 +20,12 @@ import type {
 import {
   MERCHANDISE_RECEPTION_CREATE,
   MERCHANDISE_RECEPTION_READ,
+  MERCHANDISE_RECEPTION_UPDATE,
 } from "@/lib/permissions";
+import {
+  canEditMerchandiseReception,
+  getMerchandiseReceptionStatusPresentation,
+} from "@/utils/merchandise-reception";
 import { Stack } from "@mui/material";
 import {
   getReceptions as fetchReceptions,
@@ -80,13 +88,7 @@ function toApiStatusFilter(
 // ============================================================================
 
 function getStatusLabel(status: ReceptionStatus): string {
-  const labels: Record<ReceptionStatus, string> = {
-    pre_authorized: "Preautorizado",
-    pre_captured: "Precapturado",
-    captured: "Capturado",
-    costed: "Costeado",
-  };
-  return labels[status];
+  return getMerchandiseReceptionStatusPresentation(status)?.label ?? status;
 }
 
 // ============================================================================
@@ -200,6 +202,16 @@ export default function RecepcionMercancias() {
   const handleViewReception = (reception: MerchandiseReception) => {
     router.push(`/recepcion-mercancias/${reception.id}`);
   };
+  const handleEditReception = (reception: MerchandiseReception) => {
+    router.push(`/recepcion-mercancias/${reception.id}/editar`);
+  };
+  const handleRowClick = (reception: MerchandiseReception) => {
+    if (reception.status === "pre_authorized") {
+      handleEditReception(reception);
+      return;
+    }
+    handleViewReception(reception);
+  };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
@@ -250,9 +262,18 @@ export default function RecepcionMercancias() {
     {
       id: "view",
       label: "Ver detalle",
-      icon: <EditIcon fontSize="small" />,
+      icon: <VisibilityIcon fontSize="small" />,
       onClick: handleViewReception,
       permission: MERCHANDISE_RECEPTION_READ,
+    },
+    {
+      id: "edit",
+      label: (row) =>
+        row.status === "pre_authorized" ? "Capturar" : "Editar",
+      icon: <EditIcon fontSize="small" />,
+      onClick: handleEditReception,
+      permission: MERCHANDISE_RECEPTION_UPDATE,
+      hidden: (row) => !canEditMerchandiseReception(row.status),
     },
   ];
   return (
@@ -288,7 +309,7 @@ export default function RecepcionMercancias() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
-        onRowClick={handleViewReception}
+        onRowClick={handleRowClick}
         emptyMessage="No hay recepciones de mercancía"
       />
 

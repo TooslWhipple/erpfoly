@@ -149,14 +149,30 @@ export const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-export const StyledTableCell = styled(TableCell)(({ theme }) => ({
+export const StyledTableCell = styled(TableCell)(({ theme, style }) => ({
   borderBottom: `1px solid ${theme.palette.app.border}`,
   fontSize: "0.875rem",
   color: theme.palette.text.primary,
+  ...style,
 }));
 
 export const ArticleNameCell = styled(StyledTableCell)({
   fontWeight: 400,
+  width: "40%",
+  minWidth: 200,
+});
+
+export const SkuCell = styled(StyledTableCell)({
+  width: "22%",
+  minWidth: 148,
+  whiteSpace: "nowrap",
+});
+
+export const NumericCell = styled(StyledTableCell)({
+  width: 128,
+  minWidth: 112,
+  whiteSpace: "nowrap",
+  textAlign: "right",
 });
 
 export const AddInvoiceButton = styled(IconButton)(({ theme }) => ({
@@ -238,4 +254,5 @@ export const InvoiceGuideLine = styled("div")(({ theme }) => ({
 
 export const Table = styled(MuiTable)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
+  minWidth: 760,
 }));

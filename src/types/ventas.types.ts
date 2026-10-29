@@ -151,6 +151,11 @@ export interface SaleDetailClient {
     formatted: string;
     latitude: string | null;
     longitude: string | null;
+    street: string;
+    externalNumber: string | null;
+    internalNumber: string | null;
+    postalCode: string | null;
+    neighborhoodFullCode: string;
   } | null;
 }
 

@@ -1,22 +1,44 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, Grid, Stack, Typography, Button, Box } from "@mui/material";
+import {
+  Dialog,
+  DialogContent,
+  Grid,
+  Stack,
+  Typography,
+  Button,
+  Box,
+  CircularProgress,
+} from "@mui/material";
 import { FormTextField } from "@/components/Form";
 import { PostalCodeSettlementFields } from "@/components/CreditApplicationForm/PostalCodeSettlementFields";
 import { StreetAddressFields } from "@/components/CreditApplicationForm/StreetAddressFields";
 import { useNeighborhoodsByPostalCode } from "@/hooks/credit-applications/useNeighborhoodsByPostalCode";
-import {
-  createAddress,
-  previewAddressGeocode,
-} from "@/services/address.service";
-import { formatStreetAddressLine } from "@/utils/address";
+import { previewAddressGeocode } from "@/services/address.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { StaticLocationMap } from "@/components/StaticLocationMap/StaticLocationMap";
 import { googleMapsBrowserApiKey } from "@/config/maps";
 
+export interface DeliveryAddressDraft {
+  neighborhoodFullCode: string;
+  street: string;
+  externalNumber: string;
+  internalNumber?: string;
+  postalCode: string;
+}
+
+export interface DeliveryAddressInitial {
+  street?: string | null;
+  externalNumber?: string | null;
+  internalNumber?: string | null;
+  postalCode?: string | null;
+  neighborhoodFullCode?: string | null;
+}
+
 interface DeliveryAddressModalProps {
   open: boolean;
   onClose: () => void;
-  onSaved: (address: DeliveryAddressSelection) => void | Promise<void>;
+  initial?: DeliveryAddressInitial | null;
+  onSubmit: (draft: DeliveryAddressDraft) => Promise<void>;
 }
 
 export interface DeliveryAddressSelection {
@@ -46,11 +68,37 @@ const EMPTY_FORM: DeliveryAddressFormState = {
   internalNumber: "",
 };
 
-export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddressModalProps) {
+export function DeliveryAddressModal({
+  open,
+  onClose,
+  initial,
+  onSubmit,
+}: DeliveryAddressModalProps) {
   const [form, setForm] = useState<DeliveryAddressFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<{ lat: number; lng: number } | null>(null);
+  const [pin, setPin] = useState<{
+    key: string;
+    coords: { lat: number; lng: number } | null;
+  } | null>(null);
+  const [wasOpen, setWasOpen] = useState(false);
   const snackbar = useSnackbarStore();
+
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setForm({
+        postalCode: initial?.postalCode?.trim() ?? "",
+        neighborhoodFullCode: initial?.neighborhoodFullCode?.trim() || "-1",
+        state: "",
+        city: "",
+        street: initial?.street?.trim() ?? "",
+        externalNumber: initial?.externalNumber?.trim() ?? "",
+        internalNumber: initial?.internalNumber?.trim() ?? "",
+      });
+      setPin(null);
+      setSaving(false);
+    }
+  }
 
   const { data: neighborhoods = [], isLoading: neighborhoodsLoading } =
     useNeighborhoodsByPostalCode(form.postalCode);
@@ -65,37 +113,51 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
     form.neighborhoodFullCode !== "-1" &&
     form.postalCode.trim().length === 5;
 
+  const previewRequest =
+    open && canSave
+      ? {
+          neighborhoodFullCode: form.neighborhoodFullCode,
+          street: form.street.trim(),
+          externalNumber: form.externalNumber.trim(),
+          internalNumber: form.internalNumber.trim(),
+          postalCode: form.postalCode,
+        }
+      : null;
+  const previewKey = previewRequest ? JSON.stringify(previewRequest) : "";
+  const locating = previewKey !== "" && pin?.key !== previewKey;
+  const preview = pin?.key === previewKey ? pin.coords : null;
+  const fieldsLocked = saving;
+
   useEffect(() => {
-    if (!open || !canSave) {
-      setPreview(null);
-      return;
-    }
+    if (!previewKey) return;
+    const key = previewKey;
+    const payload = JSON.parse(key) as {
+      neighborhoodFullCode: string;
+      street: string;
+      externalNumber: string;
+      internalNumber: string;
+      postalCode: string;
+    };
     const handle = window.setTimeout(() => {
       void previewAddressGeocode({
-        neighborhoodFullCode: form.neighborhoodFullCode,
-        street: form.street.trim(),
-        externalNumber: form.externalNumber.trim(),
-        internalNumber: form.internalNumber.trim() || undefined,
-        postalCode: form.postalCode,
+        neighborhoodFullCode: payload.neighborhoodFullCode,
+        street: payload.street,
+        externalNumber: payload.externalNumber,
+        internalNumber: payload.internalNumber || undefined,
+        postalCode: payload.postalCode,
       })
-        .then((coords) => setPreview({ lat: coords.latitude, lng: coords.longitude }))
-        .catch(() => setPreview(null));
+        .then((coords) =>
+          setPin({ key, coords: { lat: coords.latitude, lng: coords.longitude } }),
+        )
+        .catch(() => setPin({ key, coords: null }));
     }, 400);
     return () => window.clearTimeout(handle);
-  }, [
-    open,
-    canSave,
-    form.neighborhoodFullCode,
-    form.street,
-    form.externalNumber,
-    form.internalNumber,
-    form.postalCode,
-  ]);
+  }, [previewKey]);
 
   const handleClose = () => {
     if (saving) return;
     setForm(EMPTY_FORM);
-    setPreview(null);
+    setPin(null);
     onClose();
   };
 
@@ -103,59 +165,61 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
     if (!canSave || saving) return;
     setSaving(true);
     try {
-      const created = await createAddress({
+      await onSubmit({
         neighborhoodFullCode: form.neighborhoodFullCode,
         street: form.street.trim(),
         externalNumber: form.externalNumber.trim(),
         internalNumber: form.internalNumber.trim() || undefined,
         postalCode: form.postalCode,
-        latitude: preview?.lat,
-        longitude: preview?.lng,
-      });
-      const neighborhoodName =
-        neighborhoods.find((n) => n.full_code === form.neighborhoodFullCode)?.name ?? "";
-      const formatted = [
-        formatStreetAddressLine({
-          street: form.street,
-          externalNumber: form.externalNumber,
-          internalNumber: form.internalNumber,
-        }),
-        neighborhoodName,
-        form.city,
-        form.state,
-      ]
-        .filter((part) => part && part.trim().length > 0)
-        .join(", ");
-
-      await onSaved({
-        id: created.id,
-        formatted,
-        latitude: created.latitude,
-        longitude: created.longitude,
       });
       setForm(EMPTY_FORM);
-      setPreview(null);
-    } catch {
-      snackbar.showError("No se pudo guardar la dirección, intenta nuevamente.");
+      setPin(null);
+    } catch (error) {
+      const toasted =
+        error instanceof Error &&
+        "apiError" in error &&
+        Boolean((error as { apiError?: { message?: string } }).apiError?.message);
+      if (!toasted) {
+        snackbar.showError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo guardar la dirección, intenta nuevamente.",
+        );
+      }
     } finally {
       setSaving(false);
     }
   };
 
+  const mapPlaceholder = locating
+    ? "Ubicando dirección…"
+    : previewKey && pin?.coords == null && pin?.key === previewKey
+      ? "No se pudo ubicar la dirección. Revisa calle y número."
+      : "Completa calle, número y CP para ver el pin";
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogContent sx={{ p: 3 }}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      disableEscapeKeyDown={saving}
+    >
+      <DialogContent sx={{ p: 3 }} aria-busy={saving}>
         <Stack spacing={2}>
           <Typography variant="h6" fontWeight={700}>
-            Nueva dirección de entrega
+            Dirección del cliente
           </Typography>
 
           <Grid container spacing={2}>
             <PostalCodeSettlementFields
               postalCode={form.postalCode}
               neighborhoodFullCode={form.neighborhoodFullCode}
+              state={form.state}
+              city={form.city}
               neighborhoods={neighborhoods}
               neighborhoodsLoading={neighborhoodsLoading}
+              disabled={fieldsLocked}
               fieldKeys={{
                 postalCode: "postalCode",
                 neighborhoodFullCode: "neighborhoodFullCode",
@@ -168,6 +232,7 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
               street={form.street}
               externalNumber={form.externalNumber}
               internalNumber={form.internalNumber}
+              disabled={fieldsLocked}
               fieldKeys={{
                 street: "street",
                 externalNumber: "externalNumber",
@@ -187,7 +252,7 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
             )}
           </Grid>
 
-          {preview && googleMapsBrowserApiKey ? (
+          {preview && googleMapsBrowserApiKey && !locating ? (
             <StaticLocationMap coords={preview} apiKey={googleMapsBrowserApiKey} height={160} />
           ) : (
             <Box
@@ -198,10 +263,12 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 1,
               }}
             >
+              {locating ? <CircularProgress size={18} /> : null}
               <Typography variant="caption" color="text.secondary">
-                Completa calle, número y CP para ver el pin
+                {mapPlaceholder}
               </Typography>
             </Box>
           )}
@@ -217,11 +284,14 @@ export function DeliveryAddressModal({ open, onClose, onSaved }: DeliveryAddress
             </Button>
             <Button
               variant="contained"
-              disabled={!canSave || saving}
+              disabled={!canSave || saving || neighborhoodsLoading}
               onClick={handleSave}
               sx={{ textTransform: "none" }}
+              startIcon={
+                saving ? <CircularProgress size={16} color="inherit" /> : undefined
+              }
             >
-              {saving ? "Guardando..." : "Guardar dirección"}
+              {saving ? "Guardando…" : "Guardar dirección"}
             </Button>
           </Stack>
         </Stack>

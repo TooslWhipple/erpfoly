@@ -573,6 +573,55 @@ export async function getDeliveryAvailability(
   );
 }
 
+export type ClientDeliveryAddress = {
+  addressId: number;
+  formatted: string;
+  latitude: number;
+  longitude: number;
+  street: string;
+  externalNumber: string;
+  internalNumber: string | null;
+  postalCode: string;
+  neighborhoodFullCode: string;
+  neighborhoodName: string;
+};
+
+export async function updateClientPrimaryAddress(
+  clientId: number,
+  payload: {
+    neighborhoodFullCode: string;
+    street: string;
+    externalNumber: string;
+    internalNumber?: string;
+    postalCode: string;
+  },
+): Promise<ClientDeliveryAddress> {
+  return unwrapOrThrow(
+    await patch<ClientDeliveryAddress>(
+      `${BASE}/clients/${clientId}/delivery-address`,
+      payload,
+    ),
+  );
+}
+
+export async function updateClientDeliveryAddress(
+  saleId: number,
+  payload: {
+    neighborhoodFullCode: string;
+    street: string;
+    externalNumber: string;
+    internalNumber?: string;
+    postalCode: string;
+  },
+): Promise<ClientDeliveryAddress & { deliveryDate: string | null }> {
+  return unwrapOrThrow(
+    await patch<ClientDeliveryAddress & { deliveryDate: string | null }>(
+      `${BASE}/sales/${saleId}/client-address`,
+      payload,
+    ),
+  );
+}
+
 export async function setDeliveryDate(
   saleId: number,
   payload: SetDeliveryDatePayload,

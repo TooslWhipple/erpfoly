@@ -53,6 +53,7 @@ export interface ClientAddressItem {
   externalNumber: string | null;
   internalNumber: string | null;
   postalCode: string | null;
+  neighborhoodFullCode: string;
   neighborhoodName: string;
   latitude?: string | null;
   longitude?: string | null;

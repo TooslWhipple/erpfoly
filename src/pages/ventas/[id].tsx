@@ -43,6 +43,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSaleDetail,
   setDeliveryDate,
+  updateClientDeliveryAddress,
   removeDeliveryDate,
   registerLayawayPayment,
   completeLayaway,
@@ -58,6 +59,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useInvoicingConfigStore } from "@/store/useInvoicingConfigStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
+import type { DeliveryAddressDraft } from "@/components/DeliveryAddressModal";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
@@ -273,17 +275,11 @@ export default function VentaDetalle() {
   });
 
   const updateAddressMutation = useMutation({
-    mutationFn: (address: { id: number }) =>
-      setDeliveryDate(saleId!, {
-        delivery_type: "ADDRESS",
-        address_id: address.id,
-        // Solo se está cambiando la dirección; se conserva la fecha ya
-        // comprometida, o se propone mañana si aún no había ninguna.
-        delivery_date: sale?.deliveryDate ?? dayjs().add(1, "day").format("YYYY-MM-DD"),
-      }),
+    mutationFn: (draft: DeliveryAddressDraft) =>
+      updateClientDeliveryAddress(saleId!, draft),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
-      snackbar.showSuccess("Dirección de entrega actualizada");
+      snackbar.showSuccess("Domicilio del cliente actualizado");
       setAddressModalOpen(false);
     },
     onError: () => {
@@ -1343,7 +1339,10 @@ export default function VentaDetalle() {
       <DeliveryAddressModal
         open={addressModalOpen}
         onClose={() => setAddressModalOpen(false)}
-        onSaved={(address) => updateAddressMutation.mutate(address)}
+        initial={sale?.client?.primaryAddress}
+        onSubmit={async (draft) => {
+          await updateAddressMutation.mutateAsync(draft);
+        }}
       />
 
       <ConfirmModal

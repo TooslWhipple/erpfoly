@@ -106,6 +106,8 @@ import {
   registerSale,
   acceptSaleEconomicRevision,
   setDeliveryDate,
+  updateClientDeliveryAddress,
+  updateClientPrimaryAddress,
   quoteShipping,
   previewShippingQuote,
   previewCartPrices,
@@ -116,6 +118,7 @@ import {
 } from "@/services/ventas.service";
 import type { SaleInvoiceBillingPayload } from "@/services/ventas.service";
 import type { ShippingQuote } from "@/services/ventas.service";
+import type { ClientDeliveryAddress } from "@/services/ventas.service";
 import type { UpdateSalePurchaseTypeResult } from "@/services/ventas.service";
 import { IdentityVerificationDialog } from "./IdentityVerificationDialog";
 import { BiometricCreditRequiredDialog } from "./BiometricCreditRequiredDialog";
@@ -306,6 +309,40 @@ function sameDeliveryPlace(
     prev.pickupBranchId === next.pickupBranchId &&
     prev.dispatchBranchId === next.dispatchBranchId
   );
+}
+
+function patchClientPrimaryAddress(
+  client: Client,
+  saved: ClientDeliveryAddress,
+): Client {
+  const primaryIndex = client.addresses.findIndex((address) => address.isPrimary);
+  const index = primaryIndex >= 0 ? primaryIndex : 0;
+  const current = client.addresses[index];
+  const next = {
+    id: current?.id ?? saved.addressId,
+    addressId: saved.addressId,
+    addressType: current?.addressType ?? "home",
+    isPrimary: true,
+    street: saved.street,
+    externalNumber: saved.externalNumber,
+    internalNumber: saved.internalNumber,
+    postalCode: saved.postalCode,
+    neighborhoodFullCode: saved.neighborhoodFullCode,
+    neighborhoodName: saved.neighborhoodName,
+    latitude: String(saved.latitude),
+    longitude: String(saved.longitude),
+  };
+  const addresses =
+    client.addresses.length === 0
+      ? [next]
+      : client.addresses.map((address, i) =>
+          i === index ? { ...address, ...next, id: address.id } : address,
+        );
+  return {
+    ...client,
+    addresses,
+    primaryAddressFormatted: saved.formatted,
+  };
 }
 
 const CHANGE_LINK_SX = {
@@ -1104,15 +1141,15 @@ export function SaleBuilder({
             ...(deliveryDate ? { delivery_date: deliveryDate } : {}),
           });
         }
-        if (!placeUnchanged) {
-          const quote = await quoteShipping(saleId, {
-            address_id: addressId,
-            dispatch_branch_id: coverageBranchId ?? undefined,
-          });
-          setShippingQuote(quote);
-          if (quote.economicRevision != null) {
-            setSaleEconomicRevision(quote.economicRevision);
-          }
+        // Always re-quote: zone tariffs can change while the address stays put.
+        // quoteAndPersistShipping no-ops when amount, zone, coverage and branch match.
+        const quote = await quoteShipping(saleId, {
+          address_id: addressId,
+          dispatch_branch_id: coverageBranchId ?? undefined,
+        });
+        setShippingQuote(quote);
+        if (quote.economicRevision != null) {
+          setSaleEconomicRevision(quote.economicRevision);
         }
         setLastSyncedDelivery(snapshot);
       }
@@ -5093,19 +5130,76 @@ export function SaleBuilder({
           <DeliveryAddressModal
             open={deliveryAddressModalOpen}
             onClose={() => setDeliveryAddressModalOpen(false)}
-            onSaved={async (address) => {
-              if (activeSaleId) {
-                await setDeliveryDate(activeSaleId, {
-                  delivery_type: "ADDRESS",
-                  address_id: address.id,
-                  ...(checkoutDeliveryDate
-                    ? { delivery_date: checkoutDeliveryDate }
-                    : {}),
-                });
+            initial={
+              selectedClient?.addresses.find((address) => address.isPrimary) ??
+              selectedClient?.addresses[0]
+            }
+            onSubmit={async (draft) => {
+              if (!selectedClient) {
+                throw new Error(
+                  "Selecciona un cliente antes de guardar el domicilio",
+                );
               }
-              setCustomDeliveryAddress(address);
-              setUseCustomDeliveryAddress(true);
+              // Cotización guardada y venta en curso son el mismo borrador.
+              const persistedSaleId =
+                activeSaleId ?? (resumeIdReady ? resumeSaleId : null);
+              const saleSaved =
+                persistedSaleId == null
+                  ? null
+                  : await updateClientDeliveryAddress(persistedSaleId, draft);
+              const saved =
+                saleSaved ??
+                (await updateClientPrimaryAddress(selectedClient.id, draft));
+              setSelectedClient((prev) =>
+                prev ? patchClientPrimaryAddress(prev, saved) : prev,
+              );
+              setUseCustomDeliveryAddress(false);
+              setCustomDeliveryAddress(null);
               setDeliveryAddressModalOpen(false);
+              showSuccess("Domicilio del cliente actualizado.");
+              try {
+                if (saleSaved == null || persistedSaleId == null) {
+                  if (coverageBranchId == null) return;
+                  const quote = await previewShippingQuote({
+                    address_id: saved.addressId,
+                    dispatch_branch_id: coverageBranchId,
+                  });
+                  setShippingQuote(quote);
+                  return;
+                }
+                const quote = await quoteShipping(persistedSaleId, {
+                  address_id: saved.addressId,
+                  dispatch_branch_id: coverageBranchId ?? undefined,
+                });
+                setShippingQuote(quote);
+                if (quote.economicRevision != null) {
+                  setSaleEconomicRevision(quote.economicRevision);
+                }
+                setLastSyncedDelivery({
+                  fulfillment: "delivery",
+                  addressId: saved.addressId,
+                  pickupBranchId: null,
+                  dispatchBranchId: coverageBranchId ?? null,
+                  // La fecha de pantalla se graba al cotizar o cobrar.
+                  deliveryDate: saleSaved.deliveryDate,
+                });
+              } catch (error) {
+                if (saleSaved != null) setLastSyncedDelivery(null);
+                const toasted =
+                  error instanceof Error &&
+                  "apiError" in error &&
+                  Boolean(
+                    (error as { apiError?: { message?: string } }).apiError
+                      ?.message,
+                  );
+                if (!toasted) {
+                  snackbar.showError(
+                    error instanceof Error
+                      ? error.message
+                      : "No se pudo cotizar el envío",
+                  );
+                }
+              }
             }}
           />
 

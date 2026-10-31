@@ -106,7 +106,7 @@ import {
   registerSale,
   acceptSaleEconomicRevision,
   setDeliveryDate,
-  updateClientDeliveryAddress,
+  saveOrderDeliveryAddress,
   updateClientPrimaryAddress,
   quoteShipping,
   previewShippingQuote,
@@ -358,6 +358,9 @@ const DELIVERY_TYPE_LABELS: Record<"delivery" | "pickup", string> = {
   pickup: "En tienda o bodega",
 };
 
+const ORIGIN_COORDINATES_ALERT =
+  "Faltan coordenadas en el domicilio origen. Por favor, actualiza los datos del cliente.";
+
 function formatCheckoutDeliveryDate(date: string | null): string {
   if (!date) return "Sin fecha";
   return dayjs(date)
@@ -568,8 +571,9 @@ export function SaleBuilder({
   const [lastSyncedReceiverKey, setLastSyncedReceiverKey] = useState(
     pickupReceiverKey(HOLDER_RECEIVER_DRAFT),
   );
-  const [deliveryAddressModalOpen, setDeliveryAddressModalOpen] =
-    useState(false);
+  const [addressModal, setAddressModal] = useState<null | "origin" | "order">(
+    null,
+  );
   const [checkoutDeliveryDate, setCheckoutDeliveryDate] = useState<
     string | null
   >(null);
@@ -2416,8 +2420,9 @@ export function SaleBuilder({
   const isDeliveryAddressReady =
     deliveryType === "delivery" &&
     (useCustomDeliveryAddress
-      ? !!customDeliveryAddress
-      : !!selectedClient?.primaryAddressFormatted);
+      ? customDeliveryAddress?.latitude != null &&
+        customDeliveryAddress.longitude != null
+      : primaryCoords != null);
 
   const deliveryAddressId =
     deliveryType !== "delivery"
@@ -2428,6 +2433,12 @@ export function SaleBuilder({
           selectedClient?.addresses?.[0]?.addressId ??
           null);
   const debouncedDeliveryAddressId = useDebouncedValue(deliveryAddressId, 200);
+  // quoteAddress reads the row by id. The coord key reruns the quote when an
+  // in-place origin update keeps that same id.
+  const deliveryCoordKey = deliveryCoords
+    ? `${deliveryCoords.lat}:${deliveryCoords.lng}`
+    : "";
+  const debouncedDeliveryCoordKey = useDebouncedValue(deliveryCoordKey, 200);
 
   useAsyncEffect(
     async (isCancelled) => {
@@ -2461,7 +2472,12 @@ export function SaleBuilder({
         if (!isCancelled()) setShippingQuoteLoading(false);
       }
     },
-    [deliveryType, debouncedDeliveryAddressId, coverageBranchId],
+    [
+      deliveryType,
+      debouncedDeliveryAddressId,
+      debouncedDeliveryCoordKey,
+      coverageBranchId,
+    ],
   );
 
   const cartPriceKey = cart
@@ -4837,6 +4853,11 @@ export function SaleBuilder({
                         coords={deliveryCoords}
                         apiKey={GOOGLE_MAPS_API_KEY}
                       />
+                      {primaryCoords == null && (
+                        <Alert severity="warning" sx={{ mb: 1.5 }}>
+                          {ORIGIN_COORDINATES_ALERT}
+                        </Alert>
+                      )}
                       <ReadOnlyField
                         label="Dirección de entrega"
                         value={
@@ -4944,6 +4965,15 @@ export function SaleBuilder({
                         coords={deliveryCoords}
                         apiKey={GOOGLE_MAPS_API_KEY}
                       />
+                      {primaryCoords == null && (
+                        <Alert
+                          severity="warning"
+                          onClick={() => setAddressModal("origin")}
+                          sx={{ mb: 1.5, cursor: "pointer" }}
+                        >
+                          {ORIGIN_COORDINATES_ALERT}
+                        </Alert>
+                      )}
                       {shippingQuote && shippingQuote.coverage !== "IN_ZONE" ? (
                         <Alert severity="error" sx={{ mb: 1.5 }}>
                           No hay cobertura de envío para esta dirección. Cambia a
@@ -4968,7 +4998,7 @@ export function SaleBuilder({
                             ...CHANGE_LINK_SX,
                             fontSize: "0.75rem",
                           }}
-                          onClick={() => setDeliveryAddressModalOpen(true)}
+                          onClick={() => setAddressModal("order")}
                         >
                           Cambiar
                         </Button>
@@ -5128,11 +5158,18 @@ export function SaleBuilder({
           </Dialog>
 
           <DeliveryAddressModal
-            open={deliveryAddressModalOpen}
-            onClose={() => setDeliveryAddressModalOpen(false)}
+            open={addressModal != null}
+            title={
+              addressModal === "origin"
+                ? "Domicilio del cliente"
+                : "Nueva dirección de entrega"
+            }
+            onClose={() => setAddressModal(null)}
             initial={
-              selectedClient?.addresses.find((address) => address.isPrimary) ??
-              selectedClient?.addresses[0]
+              addressModal === "origin"
+                ? (selectedClient?.addresses.find((address) => address.isPrimary) ??
+                  selectedClient?.addresses[0])
+                : null
             }
             onSubmit={async (draft) => {
               if (!selectedClient) {
@@ -5140,66 +5177,63 @@ export function SaleBuilder({
                   "Selecciona un cliente antes de guardar el domicilio",
                 );
               }
-              // Cotización guardada y venta en curso son el mismo borrador.
               const persistedSaleId =
                 activeSaleId ?? (resumeIdReady ? resumeSaleId : null);
-              const saleSaved =
-                persistedSaleId == null
-                  ? null
-                  : await updateClientDeliveryAddress(persistedSaleId, draft);
-              const saved =
-                saleSaved ??
-                (await updateClientPrimaryAddress(selectedClient.id, draft));
-              setSelectedClient((prev) =>
-                prev ? patchClientPrimaryAddress(prev, saved) : prev,
-              );
-              setUseCustomDeliveryAddress(false);
-              setCustomDeliveryAddress(null);
-              setDeliveryAddressModalOpen(false);
-              showSuccess("Domicilio del cliente actualizado.");
-              try {
-                if (saleSaved == null || persistedSaleId == null) {
-                  if (coverageBranchId == null) return;
-                  const quote = await previewShippingQuote({
+              if (addressModal === "origin") {
+                const saved = await updateClientPrimaryAddress(
+                  selectedClient.id,
+                  draft,
+                );
+                setSelectedClient((prev) =>
+                  prev ? patchClientPrimaryAddress(prev, saved) : prev,
+                );
+                if (persistedSaleId != null && !useCustomDeliveryAddress) {
+                  await setDeliveryDate(persistedSaleId, {
+                    delivery_type: "ADDRESS",
                     address_id: saved.addressId,
-                    dispatch_branch_id: coverageBranchId,
+                    ...(checkoutDeliveryDate
+                      ? { delivery_date: checkoutDeliveryDate }
+                      : {}),
                   });
-                  setShippingQuote(quote);
-                  return;
+                  setLastSyncedDelivery({
+                    fulfillment: "delivery",
+                    addressId: saved.addressId,
+                    pickupBranchId: null,
+                    dispatchBranchId: coverageBranchId ?? null,
+                    deliveryDate: checkoutDeliveryDate,
+                  });
                 }
-                const quote = await quoteShipping(persistedSaleId, {
-                  address_id: saved.addressId,
-                  dispatch_branch_id: coverageBranchId ?? undefined,
-                });
-                setShippingQuote(quote);
-                if (quote.economicRevision != null) {
-                  setSaleEconomicRevision(quote.economicRevision);
-                }
+                setAddressModal(null);
+                showSuccess("Domicilio del cliente actualizado.");
+                return;
+              }
+              const saved = await saveOrderDeliveryAddress(
+                {
+                  ...draft,
+                  ...(useCustomDeliveryAddress && customDeliveryAddress
+                    ? { addressId: customDeliveryAddress.id }
+                    : {}),
+                },
+                persistedSaleId ?? undefined,
+              );
+              setCustomDeliveryAddress({
+                id: saved.addressId,
+                formatted: saved.formatted,
+                latitude: saved.latitude,
+                longitude: saved.longitude,
+              });
+              setUseCustomDeliveryAddress(true);
+              if (persistedSaleId != null) {
                 setLastSyncedDelivery({
                   fulfillment: "delivery",
                   addressId: saved.addressId,
                   pickupBranchId: null,
                   dispatchBranchId: coverageBranchId ?? null,
-                  // La fecha de pantalla se graba al cotizar o cobrar.
-                  deliveryDate: saleSaved.deliveryDate,
+                  deliveryDate: saved.deliveryDate,
                 });
-              } catch (error) {
-                if (saleSaved != null) setLastSyncedDelivery(null);
-                const toasted =
-                  error instanceof Error &&
-                  "apiError" in error &&
-                  Boolean(
-                    (error as { apiError?: { message?: string } }).apiError
-                      ?.message,
-                  );
-                if (!toasted) {
-                  snackbar.showError(
-                    error instanceof Error
-                      ? error.message
-                      : "No se pudo cotizar el envío",
-                  );
-                }
               }
+              setAddressModal(null);
+              showSuccess("Dirección de entrega actualizada.");
             }}
           />
 

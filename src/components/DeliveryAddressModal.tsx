@@ -36,6 +36,7 @@ export interface DeliveryAddressInitial {
 
 interface DeliveryAddressModalProps {
   open: boolean;
+  title: string;
   onClose: () => void;
   initial?: DeliveryAddressInitial | null;
   onSubmit: (draft: DeliveryAddressDraft) => Promise<void>;
@@ -70,6 +71,7 @@ const EMPTY_FORM: DeliveryAddressFormState = {
 
 export function DeliveryAddressModal({
   open,
+  title,
   onClose,
   initial,
   onSubmit,
@@ -208,7 +210,7 @@ export function DeliveryAddressModal({
       <DialogContent sx={{ p: 3 }} aria-busy={saving}>
         <Stack spacing={2}>
           <Typography variant="h6" fontWeight={700}>
-            Dirección del cliente
+            {title}
           </Typography>
 
           <Grid container spacing={2}>

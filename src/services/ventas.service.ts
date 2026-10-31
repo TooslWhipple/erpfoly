@@ -604,19 +604,24 @@ export async function updateClientPrimaryAddress(
   );
 }
 
-export async function updateClientDeliveryAddress(
-  saleId: number,
+export async function saveOrderDeliveryAddress(
   payload: {
     neighborhoodFullCode: string;
     street: string;
     externalNumber: string;
     internalNumber?: string;
     postalCode: string;
+    addressId?: number;
   },
+  saleId?: number,
 ): Promise<ClientDeliveryAddress & { deliveryDate: string | null }> {
+  const path =
+    saleId == null
+      ? `${BASE}/delivery-addresses`
+      : `${BASE}/sales/${saleId}/delivery-address`;
   return unwrapOrThrow(
-    await patch<ClientDeliveryAddress & { deliveryDate: string | null }>(
-      `${BASE}/sales/${saleId}/client-address`,
+    await post<ClientDeliveryAddress & { deliveryDate: string | null }>(
+      path,
       payload,
     ),
   );

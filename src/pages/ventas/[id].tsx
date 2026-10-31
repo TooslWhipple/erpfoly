@@ -43,7 +43,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSaleDetail,
   setDeliveryDate,
-  updateClientDeliveryAddress,
+  saveOrderDeliveryAddress,
+  updateClientPrimaryAddress,
   removeDeliveryDate,
   registerLayawayPayment,
   completeLayaway,
@@ -124,7 +125,9 @@ export default function VentaDetalle() {
   const isNew = nuevo === "1";
 
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
-  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [addressModal, setAddressModal] = useState<null | "origin" | "order">(
+    null,
+  );
   const [downloadingType, setDownloadingType] = useState<"xml" | "pdf" | "zip" | null>(null);
 
   const queryClient = useQueryClient();
@@ -274,13 +277,52 @@ export default function VentaDetalle() {
     },
   });
 
-  const updateAddressMutation = useMutation({
-    mutationFn: (draft: DeliveryAddressDraft) =>
-      updateClientDeliveryAddress(saleId!, draft),
+  const updateOriginMutation = useMutation({
+    mutationFn: async (draft: DeliveryAddressDraft) => {
+      if (!sale?.client) {
+        throw new Error("La venta no tiene un cliente para actualizar el domicilio");
+      }
+      const saved = await updateClientPrimaryAddress(sale.client.id, draft);
+      const usesOrigin =
+        sale.deliveryAddressId == null ||
+        sale.deliveryAddressId === sale.client.primaryAddress?.id;
+      if (usesOrigin && saleId != null) {
+        await setDeliveryDate(saleId, {
+          delivery_type: "ADDRESS",
+          address_id: saved.addressId,
+          ...(sale.deliveryDate ? { delivery_date: sale.deliveryDate } : {}),
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
       snackbar.showSuccess("Domicilio del cliente actualizado");
-      setAddressModalOpen(false);
+      setAddressModal(null);
+    },
+    onError: () => {
+      // Interceptor in lib/axios already showed the error snackbar.
+    },
+  });
+
+  const updateOrderAddressMutation = useMutation({
+    mutationFn: (draft: DeliveryAddressDraft) => {
+      const orderAddressId =
+        sale?.deliveryAddressId != null &&
+        sale.deliveryAddressId !== sale?.client?.primaryAddress?.id
+          ? sale.deliveryAddressId
+          : undefined;
+      return saveOrderDeliveryAddress(
+        {
+          ...draft,
+          ...(orderAddressId != null ? { addressId: orderAddressId } : {}),
+        },
+        saleId!,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      snackbar.showSuccess("Dirección de entrega actualizada");
+      setAddressModal(null);
     },
     onError: () => {
       // Interceptor in lib/axios already showed the error snackbar.
@@ -1267,6 +1309,23 @@ export default function VentaDetalle() {
                           </Typography>
                         </Box>
                       )}
+                      {(sale.client.primaryAddress?.latitude == null ||
+                        sale.client.primaryAddress?.longitude == null ||
+                        !Number.isFinite(
+                          Number(sale.client.primaryAddress.latitude),
+                        ) ||
+                        !Number.isFinite(
+                          Number(sale.client.primaryAddress.longitude),
+                        )) && (
+                        <Alert
+                          severity="warning"
+                          onClick={() => setAddressModal("origin")}
+                          sx={{ mb: 1.5, cursor: "pointer" }}
+                        >
+                          Faltan coordenadas en el domicilio origen. Por favor,
+                          actualiza los datos del cliente.
+                        </Alert>
+                      )}
                       <Stack
                         direction="row"
                         justifyContent="space-between"
@@ -1287,7 +1346,7 @@ export default function VentaDetalle() {
                             py: 0.25,
                             fontWeight: 500,
                           }}
-                          onClick={() => setAddressModalOpen(true)}
+                          onClick={() => setAddressModal("order")}
                         >
                           Cambiar
                         </Button>
@@ -1337,11 +1396,22 @@ export default function VentaDetalle() {
       />
 
       <DeliveryAddressModal
-        open={addressModalOpen}
-        onClose={() => setAddressModalOpen(false)}
-        initial={sale?.client?.primaryAddress}
+        open={addressModal != null}
+        title={
+          addressModal === "origin"
+            ? "Domicilio del cliente"
+            : "Nueva dirección de entrega"
+        }
+        onClose={() => setAddressModal(null)}
+        initial={
+          addressModal === "origin" ? sale?.client?.primaryAddress : null
+        }
         onSubmit={async (draft) => {
-          await updateAddressMutation.mutateAsync(draft);
+          if (addressModal === "origin") {
+            await updateOriginMutation.mutateAsync(draft);
+            return;
+          }
+          await updateOrderAddressMutation.mutateAsync(draft);
         }}
       />
 

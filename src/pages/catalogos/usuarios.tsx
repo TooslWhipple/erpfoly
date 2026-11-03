@@ -22,6 +22,8 @@ import {
 } from "@/forms";
 import {
     getUsers as getUsersApi,
+    getUser as getUserApi,
+    getBranches,
     resetUserAccess,
     updateUserStatus,
     type UserListItem,
@@ -31,9 +33,14 @@ import {
     getCashRegistersCatalog,
 } from "@/services/cash-registers-catalog.service";
 import { formatListDateTime } from "@/utils/date";
-import { CATALOG_USERS_CREATE, CATALOG_USERS_UPDATE } from "@/lib/permissions";
+import {
+    CATALOG_USERS_CREATE,
+    CATALOG_USERS_UPDATE,
+    CASH_REGISTERS_UPDATE,
+} from "@/lib/permissions";
 import { ROLE_CODES } from "@/constants/role-codes";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useConfirmationModal } from "@/hooks/useConfirmationModal";
 
@@ -74,8 +81,11 @@ const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
 export default function Usuarios() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { hasPermission } = usePermissions();
     const { showSuccess, showError } = useSnackbarStore();
     const { requestConfirmation, confirmationModal } = useConfirmationModal();
+    const canAssignCashRegister =
+        hasPermission(CATALOG_USERS_UPDATE) && hasPermission(CASH_REGISTERS_UPDATE);
 
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -93,6 +103,8 @@ export default function Usuarios() {
         { open: false } | { open: true; user: User }
     >({ open: false });
     const [assignSaving, setAssignSaving] = useState(false);
+    const [assignRefreshing, setAssignRefreshing] = useState(false);
+    const [assignFormCashRegisterId, setAssignFormCashRegisterId] = useState(NONE_VALUE);
 
     useEffect(() => {
         setSearchValue(debouncedSearch);
@@ -125,6 +137,19 @@ export default function Usuarios() {
         setPage(0);
     }, [searchValue]);
 
+    // Refetch when returning from user edit so branchIds/caja stay current.
+    useEffect(() => {
+        const onRouteComplete = (url: string) => {
+            if (url === "/catalogos/usuarios" || url.startsWith("/catalogos/usuarios?")) {
+                void fetchUsers();
+            }
+        };
+        router.events.on("routeChangeComplete", onRouteComplete);
+        return () => {
+            router.events.off("routeChangeComplete", onRouteComplete);
+        };
+    }, [router.events, fetchUsers]);
+
     const invalidateCashRegisterCaches = useCallback(async () => {
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: CASH_REGISTERS_CATALOG_QUERY_KEY }),
@@ -142,6 +167,47 @@ export default function Usuarios() {
     const assignUser = assignState.open ? assignState.user : null;
     const userBranchIds = assignUser?.branchIds ?? [];
     const userBranchNames = assignUser?.branches ?? [];
+
+    const assignUserId = assignState.open ? assignState.user.id : null;
+    const assignUserCashRegisterId = assignState.open
+        ? assignState.user.cashRegisterId
+        : null;
+    const assignUserCashRegisterName = assignState.open
+        ? assignState.user.cashRegisterName
+        : null;
+
+    // Prefer live catalog assignment over the (possibly stale) list row.
+    useEffect(() => {
+        if (assignUserId == null || !cashRegistersQuery.data) return;
+        const assigned = cashRegistersQuery.data.find(
+            (item) => item.userId === assignUserId,
+        );
+        const nextId = assigned?.id ?? null;
+        const nextName = assigned?.name ?? null;
+        if (
+            nextId === assignUserCashRegisterId &&
+            nextName === assignUserCashRegisterName
+        ) {
+            return;
+        }
+        setAssignState((prev) => {
+            if (!prev.open || prev.user.id !== assignUserId) return prev;
+            return {
+                open: true,
+                user: {
+                    ...prev.user,
+                    cashRegisterId: nextId,
+                    cashRegisterName: nextName,
+                },
+            };
+        });
+        setAssignFormCashRegisterId(nextId != null ? String(nextId) : NONE_VALUE);
+    }, [
+        assignUserId,
+        assignUserCashRegisterId,
+        assignUserCashRegisterName,
+        cashRegistersQuery.data,
+    ]);
 
     const cashRegisterOptions = useMemo(() => {
         const catalog = cashRegistersQuery.data ?? [];
@@ -174,6 +240,9 @@ export default function Usuarios() {
         [assignUser?.cashRegisterId],
     );
 
+    const assignConfirmDisabled =
+        assignUser?.cashRegisterId == null && assignFormCashRegisterId === NONE_VALUE;
+
     const handleSearchChange = (value: string) => {
         setSearchInput(value);
     };
@@ -186,13 +255,69 @@ export default function Usuarios() {
         router.push(`/catalogos/usuarios/${user.id}`);
     };
 
-    const handleOpenAssign = (user: User) => {
+    const handleOpenAssign = async (user: User) => {
         void queryClient.invalidateQueries({ queryKey: CASH_REGISTERS_CATALOG_QUERY_KEY });
+        setAssignFormCashRegisterId(
+            user.cashRegisterId != null ? String(user.cashRegisterId) : NONE_VALUE,
+        );
         setAssignState({ open: true, user });
+        setAssignRefreshing(true);
+
+        try {
+            const [detailResult, branchesResult, listResult] = await Promise.all([
+                getUserApi(user.id),
+                getBranches(),
+                getUsersApi({
+                    page: page + 1,
+                    limit: rowsPerPage,
+                    search: searchValue || undefined,
+                }),
+            ]);
+
+            if (!listResult.error && listResult.data) {
+                setUsers(listResult.data.rows);
+                setTotalRows(listResult.data.total);
+            }
+
+            const fromList = listResult.data?.rows.find((row) => row.id === user.id);
+            const detail = detailResult.error ? null : detailResult.data;
+            if (!detail && !fromList) return;
+
+            const branchIds = detail?.branchIds ?? fromList?.branchIds ?? user.branchIds;
+            const branchNameById = new Map(
+                (branchesResult.data ?? []).map((branch) => [branch.id, branch.name]),
+            );
+            const branches =
+                detail != null
+                    ? branchIds
+                          .map((id) => branchNameById.get(id))
+                          .filter((name): name is string => Boolean(name))
+                    : (fromList?.branches ?? user.branches);
+
+            const freshUser: User = {
+                ...(fromList ?? user),
+                branchIds,
+                branches,
+                cashRegisterId: fromList?.cashRegisterId ?? user.cashRegisterId,
+                cashRegisterName: fromList?.cashRegisterName ?? user.cashRegisterName,
+            };
+
+            setAssignFormCashRegisterId(
+                freshUser.cashRegisterId != null
+                    ? String(freshUser.cashRegisterId)
+                    : NONE_VALUE,
+            );
+            setAssignState((prev) => {
+                if (!prev.open || prev.user.id !== user.id) return prev;
+                return { open: true, user: freshUser };
+            });
+        } finally {
+            setAssignRefreshing(false);
+        }
     };
 
     const handleCloseAssign = () => {
-        if (assignSaving) return;
+        if (assignSaving || assignRefreshing) return;
         setAssignState({ open: false });
     };
 
@@ -202,6 +327,11 @@ export default function Usuarios() {
         const selectedId =
             value.cashRegisterId === NONE_VALUE ? null : Number(value.cashRegisterId);
         const currentId = assignUser.cashRegisterId;
+
+        if (selectedId == null && currentId == null) {
+            showError("Selecciona una caja para asignar");
+            return;
+        }
 
         if (selectedId === currentId) {
             setAssignState({ open: false });
@@ -255,7 +385,7 @@ export default function Usuarios() {
         }
 
         setAssignSaving(false);
-        setAssignState({ open: false });
+        showError("Selecciona una caja para asignar");
     };
 
     const handleResetAccess = (user: User) => {
@@ -338,7 +468,9 @@ export default function Usuarios() {
             ? "El cajero no tiene sucursal; no hay cajas disponibles para asignar."
             : cashRegisterOptions.length <= 1
               ? "No hay cajas libres en las sucursales del cajero."
-              : undefined;
+              : assignConfirmDisabled
+                ? "Debes elegir una caja; un cajero solo puede tener una."
+                : "Un cajero solo puede tener una caja asignada.";
 
     const columns: Column<User>[] = [
         {
@@ -417,8 +549,9 @@ export default function Usuarios() {
             label: "Asignar caja",
             icon: <Monitor size={16} />,
             onClick: handleOpenAssign,
-            permission: CATALOG_USERS_UPDATE,
-            hidden: (row) => row.roleCode !== ROLE_CODES.CAJERO,
+            permission: CASH_REGISTERS_UPDATE,
+            hidden: (row) =>
+                row.roleCode !== ROLE_CODES.CAJERO || !canAssignCashRegister,
         },
         {
             id: "reset-access",
@@ -492,10 +625,25 @@ export default function Usuarios() {
                 open={assignState.open}
                 onClose={handleCloseAssign}
                 title={assignUser ? `Asignar caja — ${assignUser.fullName}` : "Asignar caja"}
+                description="Un cajero solo puede tener una caja asignada, aunque tenga varias sucursales."
                 fields={assignCashRegisterFormFields}
                 defaultValues={assignDefaultValues}
+                defaultValuesKey={
+                    assignState.open
+                        ? `${assignState.user.id}-${assignState.user.cashRegisterId ?? "none"}-${assignState.user.branchIds.join(",")}`
+                        : "closed"
+                }
                 onSubmit={handleAssignSubmit}
-                loading={assignSaving || cashRegistersQuery.isPending}
+                onValuesChange={(values) => {
+                    const next = values.cashRegisterId;
+                    setAssignFormCashRegisterId(
+                        typeof next === "string" || typeof next === "number"
+                            ? String(next)
+                            : NONE_VALUE,
+                    );
+                }}
+                loading={assignSaving || assignRefreshing || cashRegistersQuery.isPending}
+                confirmDisabled={assignConfirmDisabled}
                 confirmLabel="Guardar"
                 maxWidth="sm"
                 fullWidth
@@ -536,7 +684,11 @@ export default function Usuarios() {
                                         onBlur={field.handleBlur}
                                         error={hasError}
                                         helperText={hasError ? errorMessage : noBranchHelper}
-                                        disabled={assignSaving || cashRegistersQuery.isPending}
+                                        disabled={
+                                            assignSaving ||
+                                            assignRefreshing ||
+                                            cashRegistersQuery.isPending
+                                        }
                                         noOptionsText="Sin cajas en las sucursales del cajero"
                                     />
                                 );

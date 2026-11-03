@@ -580,57 +580,58 @@ export default function OrderForm({
       : originBranch && branch
         ? `${originBranch.name} → ${branch.name}`
         : branch?.name;
+  const isInternal =
+    mode === "create"
+      ? effectiveOrderType === "internal"
+      : originalOrder?.order_type === "internal";
+  const listLabel = isInternal ? "Traspasos" : "Pedidos";
+  const listHref = isInternal ? "/traspasos" : "/pedidos";
   const breadcrumbs: BreadcrumbItem[] =
     mode === "create"
       ? [
           {
-            label: "Traspasos",
-            href: effectiveOrderType === "internal" ? "/traspasos" : "/pedidos",
+            label: listLabel,
+            href: listHref,
           },
           {
             label: truncatedName(displayName),
             href:
-              displayName && branch
-                ? effectiveOrderType === "internal"
+              displayName &&
+              (isInternal ? branch : supplier)
+                ? isInternal
                   ? `/traspasos?branch=${branch?.id}`
                   : `/pedidos?supplier=${supplier?.id}`
                 : undefined,
           },
           {
-            label:
-              effectiveOrderType === "internal"
-                ? "Nuevo traspaso"
-                : "Nuevo pedido",
+            label: isInternal ? "Nuevo traspaso" : "Nuevo pedido",
           },
         ]
       : [
           {
-            label: "Traspasos",
-            href:
-              originalOrder?.order_type === "internal"
-                ? "/traspasos"
-                : "/pedidos",
+            label: listLabel,
+            href: listHref,
           },
           {
             label: originalOrder?.folio
-              ? `Pedido ${originalOrder.folio}`
+              ? `${isInternal ? "Traspaso" : "Pedido"} ${originalOrder.folio}`
               : "...",
             href: originalOrder
-              ? originalOrder.order_type === "internal"
+              ? isInternal
                 ? `/traspasos/${originalOrder.id}`
                 : `/pedidos/${originalOrder.id}`
               : undefined,
           },
           {
-            label: "Editar pedido",
+            label: isInternal ? "Editar traspaso" : "Editar pedido",
           },
         ];
   const pageTitle =
     mode === "create"
-      ? effectiveOrderType === "internal"
+      ? isInternal
         ? "Nuevo traspaso"
         : "Nuevo pedido"
-      : `Editar pedido ${originalOrder?.folio ?? ""}`;
+      : `${isInternal ? "Editar traspaso" : "Editar pedido"} ${originalOrder?.folio ?? ""}`;
   const columns: Column<ArticleRow>[] = [
     {
       id: "name",

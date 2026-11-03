@@ -29,6 +29,8 @@ export interface ModalFormZodProps<T extends readonly FieldDef[]> {
   onSubmit: (value: SchemaOutputFromFields<T>) => void | Promise<void>;
   confirmLabel?: string;
   loading?: boolean;
+  /** Extra guard beyond form validity (e.g. require a real selection before first assign). */
+  confirmDisabled?: boolean;
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   fullWidth?: boolean;
   validateOn?: "change" | "blur" | "submit";
@@ -60,6 +62,7 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
   onSubmit,
   confirmLabel = "Guardar",
   loading = false,
+  confirmDisabled = false,
   maxWidth = "md",
   fullWidth = true,
   validateOn = "blur",
@@ -125,7 +128,12 @@ export function ModalFormZod<T extends readonly FieldDef[]>({
                 type="button"
                 variant="contained"
                 color="primary"
-                disabled={loading || (!allowInvalidSubmit && !canSubmit) || isSubmitting}
+                disabled={
+                  loading ||
+                  confirmDisabled ||
+                  (!allowInvalidSubmit && !canSubmit) ||
+                  isSubmitting
+                }
                 onClick={() => form.handleSubmit()}>
                 {
                   loading || isSubmitting ?

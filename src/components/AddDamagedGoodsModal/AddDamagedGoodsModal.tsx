@@ -70,7 +70,7 @@ interface AddDamagedGoodsFormShape extends Record<string, unknown> {
     damagedProductDisposition: string;
     assignedToId: string;
     responsibleId: string;
-    solutionId: string;
+    solutionText: string;
     endDate: string;
     includeCost: boolean;
     repairCost: string;
@@ -140,6 +140,8 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
         label: "Trabajo asignado a",
         type: "select",
         placeholder: "Seleccione",
+        // Placeholder/options se eligen en el JSX según disposición
+        // (técnicos internos vs talleres externos).
     },
     {
         name: "responsibleId",
@@ -149,11 +151,11 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
         placeholder: "Seleccione",
     },
     {
-        name: "solutionId",
-        schema: z.string(),
+        name: "solutionText",
+        schema: z.string().max(1024, { message: "Máximo 1024 caracteres" }),
         label: "Solución",
-        type: "select",
-        placeholder: "Seleccione",
+        type: "textarea",
+        placeholder: "Describe el trabajo o reporte técnico del proveedor",
     },
     {
         name: "endDate",
@@ -216,7 +218,7 @@ const EMPTY_DEFAULTS: AddDamagedGoodsFormShape = {
     damagedProductDisposition: "",
     assignedToId: "",
     responsibleId: "",
-    solutionId: "",
+    solutionText: "",
     endDate: "",
     includeCost: false,
     repairCost: "",
@@ -250,7 +252,7 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
                 : "",
         assignedToId: "",
         responsibleId: "",
-        solutionId: "",
+        solutionText: "",
         endDate: "",
         includeCost: false,
         repairCost: "",
@@ -262,15 +264,28 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
     };
 }
 
+/** Date inputs need `YYYY-MM-DD`; API may return a full ISO timestamp. */
+function toDateInputValue(isoOrDate: string | null | undefined): string {
+    if (!isoOrDate) return "";
+    return isoOrDate.slice(0, 10);
+}
+
 /**
  * Builds the form's default values from an existing folio (edit mode).
  *
- * `assignedToId` is only recovered from `repairSupplierId` (the only DB-backed
- * counterpart it has); `responsibleId`, `solutionId`, `endDate` and
- * `chargedSupplierId` have no column at all (`chargedSupplierId` is create-only),
- * so they always start empty in edit mode too.
+ * `assignedToId` comes from the detail payload (technician for internal,
+ * workshop for supplier repair). `responsibleId` and `chargedSupplierId`
+ * still have no editable column (`chargedSupplierId` is create-only).
+ * `solutionText` and `endDate` hydrate from the folio when present.
  */
 function buildDefaultValuesFromFolio(folio: DamagedProductDetail): AddDamagedGoodsFormShape {
+    const assignedToId =
+        folio.assignedToId != null
+            ? String(folio.assignedToId)
+            : folio.dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR &&
+                folio.repairSupplierId != null
+              ? String(folio.repairSupplierId)
+              : "";
     return {
         productId: folio.productId,
         branchId: String(folio.branchId),
@@ -280,10 +295,10 @@ function buildDefaultValuesFromFolio(folio: DamagedProductDetail): AddDamagedGoo
         damageDetected: folio.damageDescription ?? "",
         observations: folio.observations ?? "",
         damagedProductDisposition: folio.dispositionCode,
-        assignedToId: folio.repairSupplierId != null ? String(folio.repairSupplierId) : "",
+        assignedToId,
         responsibleId: "",
-        solutionId: "",
-        endDate: "",
+        solutionText: folio.solutionText ?? "",
+        endDate: toDateInputValue(folio.endDate),
         includeCost: folio.repairCost != null,
         repairCost: folio.repairCost != null ? String(folio.repairCost) : "",
         repairCostAssignedTo: folio.repairCostAssignedTo ?? "",
@@ -810,9 +825,9 @@ export function AddDamagedGoodsModal({
 
         if (data.damagedProductDisposition === DISPOSITION_CODES.INTERNAL_REPAIR ||
             data.damagedProductDisposition === DISPOSITION_CODES.SUPPLIER_REPAIR) {
-            // `assignedToId` (cuando la disposición es interna), `responsibleId`, `solutionId`
-            // y `endDate` no tienen columna en la base de datos: exigirlos en edición
-            // bloquearía folios legítimos por un dato que nunca se puede persistir.
+            // `responsibleId` aún no tiene columna: se exige solo al crear (UX).
+            // `solutionText` y `endDate` son opcionales al alta; en edición, si hay
+            // fecha de cierre debe documentarse también la solución.
             if (!isEditMode) {
                 if (!data.assignedToId) {
                     ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["assignedToId"] });
@@ -820,9 +835,9 @@ export function AddDamagedGoodsModal({
                 if (!data.responsibleId) {
                     ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["responsibleId"] });
                 }
-                if (!data.solutionId) {
-                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["solutionId"] });
-                }
+            }
+            if (data.endDate && !data.solutionText?.trim()) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["solutionText"] });
             }
             if (data.includeCost && !data.repairCost) {
                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["repairCost"] });
@@ -904,14 +919,6 @@ export function AddDamagedGoodsModal({
         }));
     }, [catalog]);
 
-    const solutionOptions: SelectOption[] = useMemo(() => {
-        if (catalog == null) return [];
-        return (catalog.solutions ?? []).map((item) => ({
-            value: String(item.id),
-            label: item.label,
-        }));
-    }, [catalog]);
-
     useEffect(() => {
         if (open) {
             setActiveTab("report");
@@ -934,10 +941,9 @@ export function AddDamagedGoodsModal({
                     );
                     const dispositionCode = dispositionItem?.code ?? values.damagedProductDisposition;
 
-                    // Payload filtrado estrictamente a la lista blanca del PATCH: productId,
-                    // branchId, quantity y status no son editables, y assignedToId /
-                    // responsibleId / solutionId / endDate no tienen columna y el backend
-                    // los rechaza (400 forbidNonWhitelisted).
+                    // Payload filtrado a la lista blanca del PATCH: productId, branchId,
+                    // quantity y status no son editables aquí; assignedToId/responsibleId
+                    // siguen sin columna (salvo repairSupplierId vía assignedToId).
                     const updatePayload: UpdateDamagedProductPayload = {
                         dispositionCode,
                         damageOriginId: parseInt(values.damageOrigin, 10),
@@ -950,12 +956,23 @@ export function AddDamagedGoodsModal({
                     if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR && values.assignedToId) {
                         updatePayload.repairSupplierId = parseInt(values.assignedToId, 10);
                     }
+                    if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR && values.assignedToId) {
+                        updatePayload.assignedToId = parseInt(values.assignedToId, 10);
+                    }
                     const editedReturnSupplierId = returnSupplierIdForDisposition(
                         dispositionCode,
                         values.returnSupplierId,
                     );
                     if (editedReturnSupplierId != null) {
                         updatePayload.returnSupplierId = editedReturnSupplierId;
+                    }
+
+                    if (
+                        dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR ||
+                        dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR
+                    ) {
+                        updatePayload.solutionText = values.solutionText?.trim() || "";
+                        updatePayload.endDate = values.endDate || "";
                     }
 
                     if (values.includeCost && values.repairCost) {
@@ -1035,17 +1052,22 @@ export function AddDamagedGoodsModal({
 
                         if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR ||
                             dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
-                            payload.assignedToId = values.assignedToId ? parseInt(values.assignedToId, 10) : undefined;
-                            // «Trabajo asignado a» se llena con el catálogo de contratistas
-                            // (repairSuppliers), que es justo lo que el backend exige como
-                            // repairSupplierId con esta disposición —y prohíbe con la interna.
+                            // Interna: técnico Foly (assignedToId → repair_assigned_user_id).
+                            // Externa: taller (repairSupplierId); no enviar assignedToId.
+                            if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR) {
+                                payload.assignedToId = values.assignedToId
+                                    ? parseInt(values.assignedToId, 10)
+                                    : undefined;
+                            }
                             if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
                                 payload.repairSupplierId = values.assignedToId
                                     ? parseInt(values.assignedToId, 10)
                                     : undefined;
                             }
                             payload.responsibleId = values.responsibleId ? parseInt(values.responsibleId, 10) : undefined;
-                            payload.solutionId = values.solutionId ? parseInt(values.solutionId, 10) : undefined;
+                            if (values.solutionText?.trim()) {
+                                payload.solutionText = values.solutionText.trim();
+                            }
                             payload.endDate = values.endDate || undefined;
                             if (values.includeCost && values.repairCost) {
                                 payload.repairCost = parseFloat(values.repairCost);
@@ -1404,11 +1426,10 @@ export function AddDamagedGoodsModal({
                                                                         ) {
                                                                             form.setFieldValue("returnSupplierId", "");
                                                                         }
+                                                                        // Cambiar entre interna ↔ externa (o salir de
+                                                                        // reparación) invalida el catálogo del select.
                                                                         if (
-                                                                            nextCode !==
-                                                                                DISPOSITION_CODES.INTERNAL_REPAIR &&
-                                                                            nextCode !==
-                                                                                DISPOSITION_CODES.SUPPLIER_REPAIR
+                                                                            nextCode !== dispositionValue
                                                                         ) {
                                                                             form.setFieldValue("assignedToId", "");
                                                                         }
@@ -1428,9 +1449,17 @@ export function AddDamagedGoodsModal({
                                                             form={form}
                                                             name="assignedToId"
                                                             label="Trabajo asignado a"
-                                                            placeholder="Seleccione proveedor"
+                                                            placeholder={
+                                                                dispositionValue === DISPOSITION_CODES.INTERNAL_REPAIR
+                                                                    ? "Seleccione técnico"
+                                                                    : "Seleccione proveedor"
+                                                            }
                                                             type="select"
-                                                            options={repairSupplierOptions}
+                                                            options={
+                                                                dispositionValue === DISPOSITION_CODES.INTERNAL_REPAIR
+                                                                    ? repairResponsibleOptions
+                                                                    : repairSupplierOptions
+                                                            }
                                                         />
 
                                                         <FormField
@@ -1444,11 +1473,10 @@ export function AddDamagedGoodsModal({
 
                                                         <FormField
                                                             form={form}
-                                                            name="solutionId"
+                                                            name="solutionText"
                                                             label="Solución"
-                                                            placeholder="Seleccione solución"
-                                                            type="select"
-                                                            options={solutionOptions}
+                                                            placeholder="Describe el trabajo o reporte técnico del proveedor"
+                                                            type="textarea"
                                                         />
 
                                                         <FormField

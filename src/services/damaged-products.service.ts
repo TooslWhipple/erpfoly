@@ -61,6 +61,8 @@ export interface DamagedProductListApiRow {
     serviceOrderFolio: string | null;
     /** Folio de la orden de servicio y factura de origen, cuando existen. */
     referenceLabel: string;
+    /** ISO 8601 when the repair cycle was closed with an end date; otherwise null. */
+    repairEndDate: string | null;
 }
 
 /** Ver `discountStatus` en `DamagedProductListApiRow`. */
@@ -72,6 +74,11 @@ export type DamagedProductDiscountStatus =
 export type DamagedProductListItem = DamagedProductListApiRow & {
     /** Stable key for TableCrud when `id` is not provided by the API. */
     rowKey: string;
+    /**
+     * Chip key for the status column: open repairs without end date show
+     * `external_repair` / `internal_repair` instead of raw `pending`.
+     */
+    statusDisplay: string;
 };
 
 export interface GetDamagedProductsQueryParams {
@@ -89,12 +96,33 @@ function buildDamagedProductRowKey(row: DamagedProductListApiRow): string {
     return `${row.branch.id}-${row.registrationDate}-${row.productCode}`;
 }
 
+/** Chip key for open repairs still without a completion date. */
+export function resolveDamagedProductStatusDisplay(
+    row: Pick<DamagedProductListApiRow, "status" | "dispositionCode" | "repairEndDate">,
+): string {
+    const status = row.status.toLowerCase();
+    if (status === "pending" && !row.repairEndDate) {
+        if (row.dispositionCode === "REPAIR_WITH_SUPPLIER") {
+            return "external_repair";
+        }
+        if (row.dispositionCode === "INTERNAL_MAINTENANCE") {
+            return "internal_repair";
+        }
+    }
+    return status;
+}
+
 function normalizeDamagedProductRows(
     rows: DamagedProductListApiRow[]
 ): DamagedProductListItem[] {
     return rows.map((row) => ({
         ...row,
+        repairEndDate: row.repairEndDate ?? null,
         rowKey: buildDamagedProductRowKey(row),
+        statusDisplay: resolveDamagedProductStatusDisplay({
+            ...row,
+            repairEndDate: row.repairEndDate ?? null,
+        }),
     }));
 }
 
@@ -246,7 +274,8 @@ export interface CreateDamagedProductPayload {
     chargedSupplierId?: number;
     assignedToId?: number;
     responsibleId?: number;
-    solutionId?: number;
+    /** Free-text technical report / solution for repair dispositions. */
+    solutionText?: string;
     endDate?: string;
     acceptanceLetterUrl?: string;
     auctionPrice?: number;
@@ -275,9 +304,10 @@ export interface DamagedProductProductDto {
  * Full folio detail returned by GET /damaged-products/:id and
  * PATCH /damaged-products/:id.
  *
- * `assignedToId`, `responsibleId`, `solutionId`, `endDate`, `listCost` and
- * `lastCost` have no backing column in the database: the backend always
- * answers `null` for them.
+ * `assignedToId` is the technician (internal) or workshop (supplier repair)
+ * shown in «Trabajo asignado a». `responsibleId`, `solutionId`, `listCost`
+ * and `lastCost` still have no usable column (`null`).
+ * `solutionText` and `endDate` are persisted for repair dispositions.
  */
 export interface DamagedProductDetail {
     id: number;
@@ -321,10 +351,15 @@ export interface DamagedProductDetail {
      */
     acceptanceLetterPreviewUrl: string | null;
     auctionPrice: number | null;
-    endDate: null;
-    assignedToId: null;
+    endDate: string | null;
+    /**
+     * Internal technician user id or external repair-supplier id, matching
+     * the disposition — same control as the create form's «Trabajo asignado a».
+     */
+    assignedToId: number | null;
     responsibleId: null;
     solutionId: null;
+    solutionText: string | null;
     listCost: null;
     lastCost: null;
 }
@@ -360,9 +395,14 @@ export interface UpdateDamagedProductPayload {
     repairCost?: number;
     repairCostAssignedTo?: RepairCostAssignee;
     repairSupplierId?: number;
+    /** Internal technician; only for INTERNAL_MAINTENANCE. */
+    assignedToId?: number;
     /** Commercial supplier that receives a RETURN_TO_SUPPLIER folio. */
     returnSupplierId?: number;
     auctionPrice?: number;
+    /** Free-text technical report; together with endDate closes the repair. */
+    solutionText?: string;
+    endDate?: string;
 }
 
 /**

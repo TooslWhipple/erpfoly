@@ -43,6 +43,7 @@ export interface ProductSupplierPurchaseContext {
   agreedUnitPrice: number | null;
   agreedPriceValidUntil: string | null;
   isAgreedPriceValid: boolean;
+  /** Costo de lista del catálogo (MXN) para precargar el precio del pedido. */
   suggestedUnitPrice: number | null;
   purchaseHistory: PurchaseHistoryEntry[];
 }

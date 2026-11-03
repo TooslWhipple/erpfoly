@@ -65,6 +65,8 @@ const DAMAGE_STATUS_CHIP_LABELS: Record<string, string> = {
   PENDING: "Por realizar",
   COMPLETED: "Finalizada",
   CANCELLED: "Cancelada",
+  external_repair: "En reparación externa",
+  internal_repair: "En reparación",
 };
 const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   pending: "pending",
@@ -73,6 +75,8 @@ const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   PENDING: "pending",
   COMPLETED: "success",
   CANCELLED: "error",
+  external_repair: "info",
+  internal_repair: "info",
 };
 const DISCOUNT_STATUS_CHIP_LABELS: Record<string, string> = {
   not_discounted: "Pendiente",
@@ -377,7 +381,7 @@ export default function MercanciaDanada() {
         size: "lg",
       },
       {
-        id: "status",
+        id: "statusDisplay",
         label: "Estatus",
         size: "md",
         type: "chip",

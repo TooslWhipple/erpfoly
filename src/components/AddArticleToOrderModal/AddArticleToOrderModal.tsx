@@ -86,6 +86,7 @@ export function AddArticleToOrderModal({
     if (hydratedArticleId.current === article.id) return;
     hydratedArticleId.current = article.id;
 
+    // suggestedUnitPrice = costo de lista del catálogo (MXN).
     const suggested = purchaseContext?.suggestedUnitPrice;
     setUnitPrice(suggested != null && suggested > 0 ? suggested : null);
     setAgreedPrice(
@@ -121,8 +122,19 @@ export function AddArticleToOrderModal({
   const isExchangeRateValid =
     !requiresExchangeRate || (typeof exchangeRate === "number" && exchangeRate > 0);
   const canAdd = unitPrice != null && unitPrice > 0 && isExchangeRateValid;
+  const initialAgreedPrice =
+    purchaseContext?.agreedUnitPrice != null &&
+    purchaseContext.agreedUnitPrice > 0
+      ? purchaseContext.agreedUnitPrice
+      : null;
+  const initialValidUntil = purchaseContext?.agreedPriceValidUntil ?? "";
+  const agreedPriceChanged =
+    agreedPrice !== initialAgreedPrice || validUntil !== initialValidUntil;
   const canSaveAgreedPrice =
-    agreedPrice != null && agreedPrice > 0 && validUntil.trim().length > 0;
+    agreedPriceChanged &&
+    agreedPrice != null &&
+    agreedPrice > 0 &&
+    validUntil.trim().length > 0;
 
   const handleAddToOrder = async () => {
     if (!article || !canAdd || unitPrice == null || savingAgreedPrice) {

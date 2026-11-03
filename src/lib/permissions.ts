@@ -61,6 +61,7 @@ export type PermissionModule =
   | "catalogos.tipos-transaccion"
   | "catalogos.polizas-sistema"
   | "catalogos.polizas"
+  | "catalogos.agrupamientos-sucursales"
   | "entregas"
   | "entregas.resguardos"
   | "ventas"
@@ -316,6 +317,12 @@ export const CATALOG_PROMOTIONS_READ = CATALOG_PROMOTIONS_PERMISSIONS.read;
 export const CATALOG_PROMOTIONS_UPDATE = CATALOG_PROMOTIONS_PERMISSIONS.update;
 export const CATALOG_PROMOTIONS_DELETE = CATALOG_PROMOTIONS_PERMISSIONS.delete;
 
+export const CATALOG_BRANCH_GROUPINGS_PERMISSIONS = createCrudPermissions("catalogos.agrupamientos-sucursales");
+export const CATALOG_BRANCH_GROUPINGS_CREATE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.create;
+export const CATALOG_BRANCH_GROUPINGS_READ = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.read;
+export const CATALOG_BRANCH_GROUPINGS_UPDATE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.update;
+export const CATALOG_BRANCH_GROUPINGS_DELETE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.delete;
+
 export const CATALOG_ZONES_PERMISSIONS = createCrudPermissions("catalogos.zonas");
 export const CATALOG_ZONES_CREATE = CATALOG_ZONES_PERMISSIONS.create;
 export const CATALOG_ZONES_READ = CATALOG_ZONES_PERMISSIONS.read;
@@ -495,6 +502,7 @@ export const PERMISSIONS_BY_MODULE = {
     products: Object.values(CATALOG_PRODUCTS_PERMISSIONS),
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),
     promotions: Object.values(CATALOG_PROMOTIONS_PERMISSIONS),
+    branchGroupings: Object.values(CATALOG_BRANCH_GROUPINGS_PERMISSIONS),
     zones: Object.values(CATALOG_ZONES_PERMISSIONS),
     branches: Object.values(CATALOG_BRANCHES_PERMISSIONS),
     cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),

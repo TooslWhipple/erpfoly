@@ -61,6 +61,7 @@ import {
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
+  CATALOG_BRANCH_GROUPINGS_READ,
   CATALOG_APPORTIONMENTS_READ,
 } from "@/lib/permissions";
 import type { AccessRequirement } from "@/lib/routeAccess";
@@ -229,6 +230,7 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/catalogos/opciones-contables",
     icon: <Calculator size={ICON_SIZE} />,
     subItems: [
+      { label: "Agrupamiento de sucursales", path: "/catalogos/agrupamientos-sucursales", requirement: { permission: CATALOG_BRANCH_GROUPINGS_READ } },
       { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
       { label: "Tipos de Transacción", path: "/catalogos/tipos-transaccion", requirement: { permission: CATALOG_TRANSACTION_TYPES_READ } },
       { label: "Pólizas Sistema", path: "/catalogos/polizas-sistema", requirement: { permission: CATALOG_SYSTEM_POLICIES_READ } },

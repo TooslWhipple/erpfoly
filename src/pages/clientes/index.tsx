@@ -1,32 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import {
-  Add as AddIcon,
-  FileDownload as ExportIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-} from "@mui/icons-material";
+import { Visibility as ViewIcon } from "@mui/icons-material";
 import { Title, TabFilters, TableCrud } from "@/components";
-import type { Column, RowAction, TitleAction } from "@/components";
+import type { Column, RowAction } from "@/components";
 import type { StatusChipVariant } from "@/components/TableCrud";
-import {
-  CUSTOMERS_CREATE,
-  CUSTOMERS_DELETE,
-  CUSTOMERS_READ,
-  CUSTOMERS_UPDATE,
-  REPORTS_READ,
-} from "@/lib/permissions";
+import { CUSTOMERS_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
   getClients,
   type Client,
+  type ClientSortField,
+  type ClientSortOrder,
   type ClientStatus,
   type ClientType,
 } from "@/services/clients.service";
 import { Stack } from "@mui/material";
+
 const SEARCH_DEBOUNCE_MS = 300;
+
 const STATUS_TABS: {
   label: string;
   value: string;
@@ -48,36 +40,43 @@ const STATUS_TABS: {
     value: "blocked",
   },
 ];
+
 const STATUS_CHIP_LABELS: Record<string, string> = {
   active: "Activo",
   inactive: "Inactivo",
   blocked: "Bloqueado",
 };
+
 const STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   active: "success",
   inactive: "default",
   blocked: "error",
 };
+
 const CLIENT_TYPE_CHIP_LABELS: Record<ClientType, string> = {
   CASH: "Contado",
   CREDIT: "Crédito",
 };
+
 const CLIENT_TYPE_CHIP_VARIANTS: Record<ClientType, StatusChipVariant> = {
   CASH: "info",
   CREDIT: "warning",
 };
+
 const columns: Column<Client>[] = [
   {
     id: "id",
     label: "ID",
     type: "number",
     size: "xs",
+    sortable: true,
   },
   {
     id: "fullName",
     label: "Nombre",
     type: "text",
     size: "xl",
+    sortable: true,
   },
   {
     id: "phoneNumber",
@@ -114,19 +113,28 @@ const columns: Column<Client>[] = [
     truncate: true,
   },
 ];
+
 export default function Clientes() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
-  const statusParam:
-    | {
-        status?: ClientStatus;
-      }
-    | undefined =
-    activeTab === "all"
-      ? undefined
-      : {
-          status: activeTab as ClientStatus,
-        };
+  const [sortField, setSortField] = useState<ClientSortField>("fullName");
+  const [sortOrder, setSortOrder] = useState<ClientSortOrder>("asc");
+
+  const listExtraParams = useMemo(() => {
+    const params: {
+      status?: ClientStatus;
+      sortField: ClientSortField;
+      sortOrder: ClientSortOrder;
+    } = {
+      sortField,
+      sortOrder,
+    };
+    if (activeTab !== "all") {
+      params.status = activeTab as ClientStatus;
+    }
+    return params;
+  }, [activeTab, sortField, sortOrder]);
+
   const {
     data: clients,
     total: totalRows,
@@ -138,28 +146,44 @@ export default function Clientes() {
     setSearch,
     isLoading: loading,
   } = usePaginatedList<Client>({
-    queryKey: ["clients", activeTab],
+    queryKey: ["clients"],
     queryFn: getClients,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    extraParams: statusParam,
+    extraParams: listExtraParams,
   });
+
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, sortField, sortOrder, setPage]);
+
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
     SEARCH_DEBOUNCE_MS,
   );
+
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    setPage(0);
   };
+
+  const handleSortChange = useCallback(
+    (field: string, order: ClientSortOrder) => {
+      setSortField(field as ClientSortField);
+      setSortOrder(order);
+    },
+    [],
+  );
+
   const tabs = STATUS_TABS.map((t) => ({
     ...t,
     count: t.value === activeTab ? totalRows : undefined,
   }));
+
   const rowActions: RowAction<Client>[] = [
     {
       id: "view",
@@ -169,6 +193,7 @@ export default function Clientes() {
       permission: CUSTOMERS_READ,
     },
   ];
+
   return (
     <Stack direction="column" spacing={3}>
       <Title title="Clientes" />
@@ -192,6 +217,9 @@ export default function Clientes() {
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
         onRowClick={(row) => router.push(`/clientes/${row.id}`)}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
         emptyMessage="No hay clientes registrados"
       />
     </Stack>

@@ -16,12 +16,14 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
+  AlertCircle,
   Archive,
   Calendar,
   CheckCircle,
   Clock,
   FileCode,
   FileText,
+  RefreshCw,
   Store,
   Truck,
   X,
@@ -49,7 +51,8 @@ import {
   registerLayawayPayment,
   completeLayaway,
   cancelLayaway,
-  downloadSaleInvoiceFile,
+  downloadSpecificInvoiceFile,
+  retryInvoiceBilling,
   printSaleInvoicePdfOnly,
   getInvoicingConfig,
 } from "@/services/ventas.service";
@@ -117,6 +120,37 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function invoiceTypeLabel(type: string) {
+  switch (type) {
+    case "VENTA":
+      return "Factura de Ingreso (Venta)";
+    case "ABONO":
+      return "Complemento de Pago";
+    case "DESCUENTO":
+      return "Nota de Crédito";
+    default:
+      return type;
+  }
+}
+
+function invoiceStatusMeta(status: string): {
+  label: string;
+  variant: StatusChipVariant;
+} {
+  switch (status) {
+    case "GENERATED":
+      return { label: "Timbrada", variant: "success" };
+    case "PENDING":
+      return { label: "Pendiente de timbrar", variant: "warning" };
+    case "FAILED":
+      return { label: "Error al timbrar", variant: "error" };
+    case "CANCELLED":
+      return { label: "Cancelada", variant: "disabled" };
+    default:
+      return { label: status, variant: "default" };
+  }
+}
+
 export default function VentaDetalle() {
   const theme = useTheme();
   const router = useRouter();
@@ -128,7 +162,8 @@ export default function VentaDetalle() {
   const [addressModal, setAddressModal] = useState<null | "origin" | "order">(
     null,
   );
-  const [downloadingType, setDownloadingType] = useState<"xml" | "pdf" | "zip" | null>(null);
+  const [downloadingType, setDownloadingType] = useState<string | null>(null);
+  const [retryingInvoiceId, setRetryingInvoiceId] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
   const snackbar = useSnackbarStore();
@@ -142,11 +177,15 @@ export default function VentaDetalle() {
 
   const isFacturacionConfirmacionEncendida = invoicingConfig?.facturacionConfirmacionVentaEnabled ?? true;
 
-  const handleDownloadInvoice = async (type: "xml" | "pdf" | "zip") => {
-    if (!saleId) return;
-    setDownloadingType(type);
+  const handleDownloadSpecificInvoice = async (
+    invoiceId: number,
+    type: "xml" | "pdf" | "zip",
+    filenameFallback?: string,
+  ) => {
+    const key = `${invoiceId}-${type}`;
+    setDownloadingType(key);
     try {
-      await downloadSaleInvoiceFile(saleId, type);
+      await downloadSpecificInvoiceFile(invoiceId, type, filenameFallback);
       snackbar.showSuccess(`Archivo ${type.toUpperCase()} descargado con éxito`);
     } catch (err: any) {
       const msg =
@@ -155,6 +194,21 @@ export default function VentaDetalle() {
       snackbar.showError(msg);
     } finally {
       setDownloadingType(null);
+    }
+  };
+
+  const handleRetryInvoice = async (invoiceId: number) => {
+    setRetryingInvoiceId(invoiceId);
+    try {
+      const res = await retryInvoiceBilling(invoiceId);
+      if (res.error) throw new Error(res.error.message);
+      snackbar.showSuccess("Factura timbrada con éxito");
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+    } catch (err: any) {
+      snackbar.showError(err?.message || "Error al reintentar el timbrado");
+      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+    } finally {
+      setRetryingInvoiceId(null);
     }
   };
 
@@ -167,6 +221,13 @@ export default function VentaDetalle() {
       const res = await getSaleDetail(saleId!);
       if (res.error) throw new Error(res.error.message);
       return res.data!;
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const hasPendingInvoice = data?.invoices?.some(
+        (inv) => inv.status === "PENDING",
+      );
+      return hasPendingInvoice ? 4000 : false;
     },
   });
 
@@ -191,7 +252,10 @@ export default function VentaDetalle() {
     if (isNew && saleId && sale && !autoPrinted) {
       setAutoPrinted(true);
       void (async () => {
-        if (isFacturacionConfirmacionEncendida) {
+        const hasGeneratedVentaInvoice = sale.invoices?.some(
+          (inv) => inv.invoiceType === "VENTA" && inv.status === "GENERATED",
+        );
+        if (isFacturacionConfirmacionEncendida && hasGeneratedVentaInvoice) {
           try {
             await printSaleInvoicePdfOnly(saleId);
           } catch (err) {
@@ -811,56 +875,220 @@ export default function VentaDetalle() {
               sx={{
                 borderRadius: 2,
                 bgcolor: "background.paper",
-                border: "1px solid", borderColor: "divider",
+                border: "1px solid",
+                borderColor: "divider",
                 mb: 2,
               }}
             >
               <CardContent sx={{ p: 2 }}>
-                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
                   Facturación (CFDI)
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                  mb={2}
+                >
                   Descarga de archivos fiscales almacenados en el sistema
                 </Typography>
 
-                <InvoiceActionsGrid>
-                  <Button
-                    fullWidth
-                    variant="option"
-                    color="inherit"
-                    size="small"
-                    startIcon={<FileCode size={15} />}
-                    disabled={downloadingType === "xml"}
-                    onClick={() => handleDownloadInvoice("xml")}
-                    sx={invoiceDownloadButtonSx}
-                  >
-                    XML
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<FileText size={15} />}
-                    disabled={downloadingType === "pdf"}
-                    onClick={() => handleDownloadInvoice("pdf")}
-                    sx={invoiceDownloadButtonSx}
-                  >
-                    PDF
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    startIcon={<Archive size={15} />}
-                    disabled={downloadingType === "zip"}
-                    onClick={() => handleDownloadInvoice("zip")}
-                    sx={invoiceDownloadButtonSx}
-                  >
-                    ZIP
-                  </Button>
-                </InvoiceActionsGrid>
+                {!sale.invoices || sale.invoices.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No hay facturas generadas para esta venta.
+                  </Typography>
+                ) : (
+                  <Stack spacing={2} divider={<Divider />}>
+                    {sale.invoices.map((invoice) => {
+                      const statusMeta = invoiceStatusMeta(invoice.status);
+                      const typeText = invoiceTypeLabel(invoice.invoiceType);
+                      const folioDisplay =
+                        invoice.serie || invoice.documento
+                          ? `${invoice.serie ?? ""}${invoice.serie && invoice.documento ? "-" : ""}${invoice.documento ?? ""}`
+                          : `#${invoice.id}`;
+                      const fallbackFilename =
+                        invoice.uuid || String(invoice.id);
+
+                      return (
+                        <Box key={invoice.id}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="flex-start"
+                            spacing={1}
+                            mb={1}
+                          >
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600}>
+                                {typeText} ({folioDisplay})
+                              </Typography>
+                              {invoice.amount != null && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  display="block"
+                                >
+                                  Monto: {formatCurrency(invoice.amount)}
+                                </Typography>
+                              )}
+                              {invoice.uuid && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  display="block"
+                                  sx={{ wordBreak: "break-all" }}
+                                >
+                                  UUID: {invoice.uuid}
+                                </Typography>
+                              )}
+                            </Box>
+                            <StatusChip
+                              label={statusMeta.label}
+                              size="small"
+                              variant={statusMeta.variant}
+                            />
+                          </Stack>
+
+                          {invoice.status === "GENERATED" ? (
+                            <InvoiceActionsGrid>
+                              <Button
+                                fullWidth
+                                variant="option"
+                                color="inherit"
+                                size="small"
+                                startIcon={<FileCode size={15} />}
+                                disabled={
+                                  downloadingType === `${invoice.id}-xml`
+                                }
+                                onClick={() =>
+                                  handleDownloadSpecificInvoice(
+                                    invoice.id,
+                                    "xml",
+                                    fallbackFilename,
+                                  )
+                                }
+                                sx={invoiceDownloadButtonSx}
+                              >
+                                XML
+                              </Button>
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<FileText size={15} />}
+                                disabled={
+                                  downloadingType === `${invoice.id}-pdf`
+                                }
+                                onClick={() =>
+                                  handleDownloadSpecificInvoice(
+                                    invoice.id,
+                                    "pdf",
+                                    fallbackFilename,
+                                  )
+                                }
+                                sx={invoiceDownloadButtonSx}
+                              >
+                                PDF
+                              </Button>
+                              <Button
+                                fullWidth
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                startIcon={<Archive size={15} />}
+                                disabled={
+                                  downloadingType === `${invoice.id}-zip`
+                                }
+                                onClick={() =>
+                                  handleDownloadSpecificInvoice(
+                                    invoice.id,
+                                    "zip",
+                                    fallbackFilename,
+                                  )
+                                }
+                                sx={invoiceDownloadButtonSx}
+                              >
+                                ZIP
+                              </Button>
+                            </InvoiceActionsGrid>
+                          ) : (
+                            <Stack spacing={1.25} mt={1}>
+                              {(invoice.status === "FAILED" ||
+                                Boolean(invoice.errorMessage)) && (
+                                <Alert
+                                  severity="error"
+                                  icon={<AlertCircle size={18} />}
+                                  sx={{
+                                    py: 0.75,
+                                    px: 1.5,
+                                    borderRadius: 1.5,
+                                    "& .MuiAlert-message": {
+                                      fontSize: "0.8rem",
+                                      wordBreak: "break-word",
+                                    },
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight={700}
+                                    display="block"
+                                  >
+                                    Motivo por el que no se timbró:
+                                  </Typography>
+                                  {invoice.errorMessage ||
+                                    "Error desconocido al timbrar el comprobante."}
+                                </Alert>
+                              )}
+
+                              {invoice.status === "PENDING" && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.75,
+                                  }}
+                                >
+                                  <Clock size={14} />
+                                  El comprobante se encuentra en proceso de
+                                  timbrado asíncrono. Las descargas se
+                                  habilitarán al completarse.
+                                </Typography>
+                              )}
+
+                              {invoice.status === "CANCELLED" && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Este comprobante fiscal fue cancelado.
+                                </Typography>
+                              )}
+
+                              {invoice.status === "FAILED" && (
+                                <Button
+                                  fullWidth
+                                  variant="contained"
+                                  color="warning"
+                                  size="small"
+                                  startIcon={<RefreshCw size={15} />}
+                                  disabled={retryingInvoiceId === invoice.id}
+                                  onClick={() => handleRetryInvoice(invoice.id)}
+                                >
+                                  {retryingInvoiceId === invoice.id
+                                    ? "Reintentando timbrado..."
+                                    : "Reintentar timbrado"}
+                                </Button>
+                              )}
+                            </Stack>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
               </CardContent>
             </Card>
           )}

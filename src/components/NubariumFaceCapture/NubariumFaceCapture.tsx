@@ -6,7 +6,6 @@ import { BiometricCaptureHint } from "@/components/BiometricCaptureModal";
 import { NubariumCapturePreview } from "@/components/NubariumCapturePreview";
 import {
   CaptureErrorState,
-  CaptureHost,
   CaptureStepRoot,
   CaptureViewport,
 } from "@/components/NubariumCapturePreview/styles";
@@ -86,7 +85,7 @@ export function NubariumFaceCapture({
     return true;
   }, [acceptFailedLiveness, onSuccess]);
 
-  const { rootElementId, viewportRef, errorMessage, retry } = useNubariumCapture({
+  const { rootElementId, errorMessage, retry } = useNubariumCapture({
     kind: "face",
     token,
     active,
@@ -109,7 +108,6 @@ export function NubariumFaceCapture({
     onReset?.();
   };
 
-  const host = <CaptureHost id={rootElementId} data-nubarium-host="" />;
   const showPreview = Boolean(completed && completedResult?.faceDataUrl);
 
   if (showPreview && completedResult) {
@@ -140,17 +138,15 @@ export function NubariumFaceCapture({
 
   if (fillParent) {
     return (
-      <div ref={viewportRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-        {host}
+      <div style={{ width: "100%", height: "100%", minHeight: 240 }}>
+        <div id={rootElementId} style={{ width: "100%", height: "100%", minHeight: 240 }} />
       </div>
     );
   }
 
   return (
     <CaptureStepRoot>
-      <CaptureViewport ref={viewportRef}>
-        {host}
-      </CaptureViewport>
+      <CaptureViewport id={rootElementId} />
 
       {!errorMessage ? (
         <BiometricCaptureHint>

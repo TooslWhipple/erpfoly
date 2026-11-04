@@ -3,7 +3,6 @@ export {
   ensureNavigatorMediaDevices,
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
-  isTouchCaptureDevice,
 } from "./media";
 
 export {
@@ -12,7 +11,6 @@ export {
 } from "./config";
 
 export {
-  mapFramingFailMessageKey,
   translateNubariumError,
   translateNubariumFailReason,
 } from "./messages";
@@ -26,22 +24,6 @@ export {
   inferImageMimeType,
 } from "./results";
 
-export type {
-  CoverCropRect,
-  GuideRedrawMode,
-  NubariumCaptureKind,
-  NubariumVideoBox,
-  SnapshotCanvasSize,
-} from "./patches";
-export {
-  applyNubariumCapturePatches,
-  computeObjectFitCoverCrop,
-  measureNubariumVideoBox,
-  resolveCaptureBox,
-  resolveSnapshotCanvasSize,
-  scheduleNubariumCaptureRedraw,
-  selectGuideRedrawMode,
-  syncNubariumVideoLayout,
-  videoBoxNeedsSync,
-  safeClearNubariumCapture,
-} from "./patches";
+export { safeClearNubariumCapture } from "./cleanup";
+
+export type NubariumCaptureKind = "id" | "face";

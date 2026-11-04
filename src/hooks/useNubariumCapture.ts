@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
-  applyNubariumCapturePatches,
   getCameraAccessErrorMessage,
   getNubariumCameraOptions,
   safeClearNubariumCapture,
-  scheduleNubariumCaptureRedraw,
   type NubariumCaptureKind,
 } from "@/utils/nubarium";
+import { syncIdCaptureOrientationToHost } from "@/utils/nubarium/orientation";
 import {
   facingHintToNubarium,
   installCameraDeviceConstraintInterceptor,
@@ -59,7 +58,6 @@ export interface UseNubariumCaptureOptions {
 
 export interface UseNubariumCaptureResult {
   rootElementId: string;
-  viewportRef: React.RefObject<HTMLDivElement | null>;
   errorMessage: string | null;
   retry: () => void;
 }
@@ -88,9 +86,7 @@ export function useNubariumCapture(
   const reactId = useId().replace(/:/g, "");
   const rootElementId = `nubarium-${kind}-capture-${reactId}`;
   const captureRef = useRef<NubariumCaptureInstance | null>(null);
-  const restorePatchesRef = useRef<(() => void) | null>(null);
-  const stopRedrawRef = useRef<(() => void) | null>(null);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const restoreOrientationRef = useRef<(() => void) | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -112,10 +108,8 @@ export function useNubariumCapture(
   tokenRef.current = token;
 
   const teardown = useCallback(() => {
-    stopRedrawRef.current?.();
-    stopRedrawRef.current = null;
-    restorePatchesRef.current?.();
-    restorePatchesRef.current = null;
+    restoreOrientationRef.current?.();
+    restoreOrientationRef.current = null;
     safeClearNubariumCapture(captureRef.current, rootElementId);
     captureRef.current = null;
     releaseCameraHardware();
@@ -158,9 +152,13 @@ export function useNubariumCapture(
           rootElement: rootElementId,
         });
 
-        restorePatchesRef.current = applyNubariumCapturePatches(capture, kind, {
-          viewportEl: viewportRef.current,
-        });
+        // IdCapture only: guide assets follow host box, not window orientation.
+        if (kind === "id") {
+          restoreOrientationRef.current = syncIdCaptureOrientationToHost(
+            capture,
+            rootElementId,
+          );
+        }
 
         capture.setToken(sessionToken);
 
@@ -199,10 +197,6 @@ export function useNubariumCapture(
         capture.load(() => {
           if (cancelled || captureRef.current !== capture) return;
           capture.start();
-          // SDK loading() assigns window.onresize to force portrait — clear it again.
-          window.onresize = null;
-          stopRedrawRef.current?.();
-          stopRedrawRef.current = scheduleNubariumCaptureRedraw(capture, viewportRef.current);
           onInitializedRef.current?.();
         });
       } catch (mountError) {
@@ -246,7 +240,6 @@ export function useNubariumCapture(
 
   return {
     rootElementId,
-    viewportRef,
     errorMessage,
     retry,
   };

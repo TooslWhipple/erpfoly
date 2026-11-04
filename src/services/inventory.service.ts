@@ -43,6 +43,21 @@ export type InventoryListItem = InventoryListApiRow;
 
 export type InventoryQuantityFilter = "inStock" | "inTransit" | "damaged";
 
+const INVENTORY_QUANTITY_FILTERS: readonly InventoryQuantityFilter[] = [
+  "inStock",
+  "inTransit",
+  "damaged",
+];
+
+function isInventoryQuantityFilter(
+  value: unknown,
+): value is InventoryQuantityFilter {
+  return (
+    typeof value === "string" &&
+    (INVENTORY_QUANTITY_FILTERS as readonly string[]).includes(value)
+  );
+}
+
 export type InventorySortField = InventoryQuantityFilter;
 
 export type InventorySortOrder = "asc" | "desc";
@@ -282,6 +297,9 @@ export async function getInventoryList(
   const query: GetInventoryListParams = { ...params };
   if (query.status === "all") {
     delete query.status;
+  }
+  if (!isInventoryQuantityFilter(query.quantityFilter)) {
+    delete query.quantityFilter;
   }
   return get<PaginatedRowsResponse<InventoryListItem>>(
     buildListUrl(INVENTORY_BASE, query),

@@ -59,28 +59,6 @@ export function getCameraAccessErrorMessage(): string | null {
 }
 
 /**
- * Teléfono o tablet. El SDK legacy trata ambos como "phablet" y bloquea landscape.
- * `(pointer: coarse)` cubre iPad aunque el user agent diga desktop.
- */
-export function isTouchCaptureDevice(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-
-  const coarsePointer =
-    typeof window.matchMedia === "function"
-    && window.matchMedia("(pointer: coarse)").matches;
-  if (coarsePointer) return true;
-
-  const ua = navigator.userAgent;
-  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
-
-  return (
-    navigator.maxTouchPoints > 1
-    && typeof window.matchMedia === "function"
-    && window.matchMedia("(max-width: 1366px)").matches
-  );
-}
-
-/**
  * Preferencia de cámara según el dispositivo.
  * En móvil: trasera primero. En desktop: `default` primero.
  */

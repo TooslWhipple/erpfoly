@@ -32,7 +32,7 @@ export type ReceptionConfirmVariant =
 
 export interface SendToCostingModalProps {
   open: boolean;
-  onClose: () => void;
+  onClose: () => void | Promise<void>;
   onConfirm: (reason?: string) => void | Promise<void>;
   variant?: ReceptionConfirmVariant;
   totalArticles?: number;
@@ -96,16 +96,16 @@ export function SendToCostingModal({
     }
   }, [open]);
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (!disableClose) {
-      onClose();
+      await onClose();
     }
   };
 
-  const handleDialogClose = (_event: object, reason: string) => {
+  const handleDialogClose = async (_event: object, reason: string) => {
     if (disableClose) return;
     if (reason === "backdropClick") return;
-    onClose();
+    await onClose();
   };
 
   const handleConfirm = async () => {

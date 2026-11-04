@@ -140,11 +140,24 @@ function detailItemToReceptionArticle(
   };
 }
 
+/** Captura en rampa: preautorizado o precapturado sin inventario posteado. */
+function isRampCaptureReception(
+  status: ReceptionDetailStatus | ReceptionDetail["status"],
+  inventoryPostedAt: string | null | undefined,
+): boolean {
+  return (
+    status === "pre_authorized" ||
+    (status === "pre_captured" && inventoryPostedAt == null)
+  );
+}
+
 async function loadCaptureArticles(
   detail: ReceptionDetail,
 ): Promise<ReceptionArticle[]> {
   const captured = detail.items.map(detailItemToReceptionArticle);
-  if (detail.status !== "pre_authorized") return captured;
+  if (!isRampCaptureReception(detail.status, detail.inventoryPostedAt)) {
+    return captured;
+  }
 
   const pendingResult = await getPendingArticlesBySupplier(detail.supplierId, {
     groupBy: "product",
@@ -322,6 +335,9 @@ export function ReceptionForm({
   const [supplierNameFromReception, setSupplierNameFromReception] = useState("");
   const [articleSearch, setArticleSearch] = useState("");
   const [originalLabelsIssued, setOriginalLabelsIssued] = useState(false);
+  const [inventoryPostedAt, setInventoryPostedAt] = useState<string | null>(
+    null,
+  );
   const [reprintAuthOpen, setReprintAuthOpen] = useState(false);
   const [reprintAuthLoading, setReprintAuthLoading] = useState(false);
   const [reprintAuthError, setReprintAuthError] = useState<string | null>(null);
@@ -337,7 +353,10 @@ export function ReceptionForm({
     status === "pre_captured" ||
     status === "pre_authorized";
   const canManageInvoices = status === "draft" || status === "pre_captured";
-  const isAggregatedCapture = status === "pre_authorized";
+  const isAggregatedCapture = isRampCaptureReception(
+    status,
+    inventoryPostedAt,
+  );
   const columnCount = isAggregatedCapture ? 5 : 6;
   const visibleArticles = useMemo(() => {
     const query = articleSearch.trim().toLowerCase();
@@ -421,6 +440,7 @@ export function ReceptionForm({
           setStatus(mapReceptionDetailStatus(detail.status));
           setBaselineLabels(getBaselineLabelsFromDetail(detail));
           setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
+          setInventoryPostedAt(detail.inventoryPostedAt ?? null);
           setSupplierNameFromReception(detail.supplier);
         })
         .catch((err) => {
@@ -545,6 +565,7 @@ export function ReceptionForm({
     setBaselineLabels(getBaselineLabelsFromDetail(detail));
     syncServerInvoiceState(detail.invoices);
     setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
+    setInventoryPostedAt(detail.inventoryPostedAt ?? null);
     setArticles(await loadCaptureArticles(detail));
   };
 
@@ -566,10 +587,13 @@ export function ReceptionForm({
     setConfirmLoading(true);
     setSubmitError(null);
     try {
-      const payload =
-        status === "pre_authorized"
-          ? buildPreAuthorizedPayload()
-          : buildLegacySavePayload();
+      const usesRampPayload = isRampCaptureReception(
+        status,
+        inventoryPostedAt,
+      );
+      const payload = usesRampPayload
+        ? buildPreAuthorizedPayload()
+        : buildLegacySavePayload();
       const result = await updateReception(currentReceptionId, payload);
       if (result.error || !result.data) {
         const message =
@@ -661,9 +685,13 @@ export function ReceptionForm({
           status === "pre_captured" ||
           isInvoiceListDirty();
         if (shouldPersistCapture) {
+          const usesRampPayload = isRampCaptureReception(
+            status,
+            inventoryPostedAt,
+          );
           const updateResult = await updateReception(
             currentReceptionId,
-            status === "pre_authorized"
+            usesRampPayload
               ? buildPreAuthorizedPayload()
               : buildLegacySavePayload(),
           );
@@ -673,6 +701,8 @@ export function ReceptionForm({
             );
             return;
           }
+          setStatus(mapReceptionDetailStatus(updateResult.data.status));
+          setInventoryPostedAt(updateResult.data.inventoryPostedAt ?? null);
           syncServerInvoiceState(updateResult.data.invoices);
           try {
             setArticles(await loadCaptureArticles(updateResult.data));

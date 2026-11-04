@@ -85,12 +85,17 @@ export interface Client {
   invoiceWhatsappNumber?: string | null;
 }
 
+export type ClientSortField = "fullName" | "id";
+export type ClientSortOrder = "asc" | "desc";
+
 export interface GetClientsParams {
   page: number;
   limit: number;
   search?: string;
   status?: ClientStatus;
   client_id?: number;
+  sortField?: ClientSortField;
+  sortOrder?: ClientSortOrder;
 }
 
 export type GetClientsResponse = PaginatedRowsResponse<Client>;

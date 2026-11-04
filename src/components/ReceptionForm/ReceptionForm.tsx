@@ -235,7 +235,7 @@ function getPrimaryActionLabel(
     case "pre_captured":
       return extraLabels > 0 || originalLabelsIssued
         ? "Reimprimir etiquetas"
-        : "Enviar a costeo";
+        : "Finalizar recepción / Enviar a costeo";
     case "in_costing":
     case "costed":
       return originalLabelsIssued ? "Reimprimir etiquetas" : "Guardar cambios";
@@ -539,6 +539,68 @@ export function ReceptionForm({
     payable_invoice_ids: extractPayableIds(invoices),
   });
 
+  const applySavedReceptionDetail = async (detail: ReceptionDetail) => {
+    setCurrentReceptionId(detail.id);
+    setStatus(mapReceptionDetailStatus(detail.status));
+    setBaselineLabels(getBaselineLabelsFromDetail(detail));
+    syncServerInvoiceState(detail.invoices);
+    setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
+    setArticles(await loadCaptureArticles(detail));
+  };
+
+  /** Cancelar el modal de costeo = guardado parcial (borrador Precapturado). */
+  const handleDismissConfirmModal = async () => {
+    if (printProgress != null) return;
+
+    const shouldDraftSave =
+      confirmVariant === "send_to_costing" &&
+      totalArticles > 0 &&
+      currentReceptionId != null &&
+      (status === "pre_authorized" || status === "pre_captured");
+
+    if (!shouldDraftSave) {
+      setActivePanel(null);
+      return;
+    }
+
+    setConfirmLoading(true);
+    setSubmitError(null);
+    try {
+      const payload =
+        status === "pre_authorized"
+          ? buildPreAuthorizedPayload()
+          : buildLegacySavePayload();
+      const result = await updateReception(currentReceptionId, payload);
+      if (result.error || !result.data) {
+        const message =
+          result.error?.message ?? "Error al guardar captura";
+        setSubmitError(message);
+        showError(message);
+        return;
+      }
+      try {
+        await applySavedReceptionDetail(result.data);
+      } catch (loadErr) {
+        const message =
+          loadErr instanceof Error
+            ? loadErr.message
+            : "No se pudo recargar el listado pendiente";
+        setSubmitError(message);
+        showError(message);
+        return;
+      }
+      setActivePanel(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Error al guardar captura";
+      console.error("[ReceptionForm] Error saving draft on cancel:", err);
+      setSubmitError(message);
+      showError(message);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
   const handleConfirmAction = async (_reason?: string) => {
     if (articles.length === 0) {
       setSubmitError("No hay artículos para guardar");
@@ -594,7 +656,11 @@ export function ReceptionForm({
           return;
         }
 
-        if (status === "pre_authorized" || isInvoiceListDirty()) {
+        const shouldPersistCapture =
+          status === "pre_authorized" ||
+          status === "pre_captured" ||
+          isInvoiceListDirty();
+        if (shouldPersistCapture) {
           const updateResult = await updateReception(
             currentReceptionId,
             status === "pre_authorized"
@@ -633,7 +699,7 @@ export function ReceptionForm({
           return;
         }
 
-        if (status === "pre_authorized") {
+        if (status === "pre_authorized" || !originalLabelsIssued) {
           try {
             await printReceptionLabels(currentReceptionId, { mode: "all" });
             setOriginalLabelsIssued(true);
@@ -990,11 +1056,7 @@ export function ReceptionForm({
 
       <SendToCostingModal
         open={activePanel === "confirm"}
-        onClose={() => {
-          if (printProgress == null) {
-            setActivePanel(null);
-          }
-        }}
+        onClose={handleDismissConfirmModal}
         onConfirm={handleConfirmAction}
         variant={confirmVariant}
         totalArticles={totalArticles}

@@ -8,9 +8,10 @@ import {
   type NubariumCaptureKind,
 } from "@/utils/nubarium";
 import { syncIdCaptureOrientationToHost } from "@/utils/nubarium/orientation";
+import { syncNubariumPreviewMirror } from "@/utils/nubarium/previewMirror";
 import {
-  facingHintToNubarium,
   installCameraDeviceConstraintInterceptor,
+  nubariumCamerasForFacing,
   releaseCameraHardware,
   setPreferredCameraDeviceId,
   type CameraFacingHint,
@@ -87,6 +88,7 @@ export function useNubariumCapture(
   const rootElementId = `nubarium-${kind}-capture-${reactId}`;
   const captureRef = useRef<NubariumCaptureInstance | null>(null);
   const restoreOrientationRef = useRef<(() => void) | null>(null);
+  const restoreMirrorRef = useRef<(() => void) | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -108,6 +110,8 @@ export function useNubariumCapture(
   tokenRef.current = token;
 
   const teardown = useCallback(() => {
+    restoreMirrorRef.current?.();
+    restoreMirrorRef.current = null;
     restoreOrientationRef.current?.();
     restoreOrientationRef.current = null;
     safeClearNubariumCapture(captureRef.current, rootElementId);
@@ -146,9 +150,7 @@ export function useNubariumCapture(
 
         capture.init({
           ...initConfigRef.current,
-          cameras: cameraFacing
-            ? facingHintToNubarium(cameraFacing)
-            : getNubariumCameraOptions(),
+          cameras: nubariumCamerasForFacing(cameraFacing, getNubariumCameraOptions),
           rootElement: rootElementId,
         });
 
@@ -197,6 +199,11 @@ export function useNubariumCapture(
         capture.load(() => {
           if (cancelled || captureRef.current !== capture) return;
           capture.start();
+          restoreMirrorRef.current?.();
+          restoreMirrorRef.current = syncNubariumPreviewMirror(
+            rootElementId,
+            cameraFacing,
+          );
           onInitializedRef.current?.();
         });
       } catch (mountError) {

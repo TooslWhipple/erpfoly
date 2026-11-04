@@ -99,6 +99,19 @@ export function facingHintToNubarium(facing: CameraFacingHint): NubariumCameraOp
   return "default";
 }
 
+/**
+ * Prefer a single-facing list so the SDK does not keep front/selfie mirror
+ * when Foly has pinned a rear deviceId.
+ */
+export function nubariumCamerasForFacing(
+  facing: CameraFacingHint | undefined,
+  fallback: () => NubariumCameraOption[],
+): NubariumCameraOption[] {
+  if (facing === "environment") return ["back"];
+  if (facing === "user") return ["front"];
+  return fallback();
+}
+
 export function applyPreferredCameraConstraint(
   constraints: MediaStreamConstraints | undefined,
   deviceId: string | null,

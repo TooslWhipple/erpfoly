@@ -9,6 +9,7 @@ import {
   formatCameraLabel,
   inferCameraFacing,
   findStoredCamera,
+  nubariumCamerasForFacing,
   pickPreferredCamera,
   resolvePreferredCamera,
   type CameraDeviceOption,
@@ -79,6 +80,13 @@ assert.equal(
 assert.equal(facingHintToNubarium("environment"), "back");
 assert.equal(facingHintToNubarium("user"), "front");
 assert.equal(facingHintToNubarium("unknown"), "default");
+
+assert.deepEqual(nubariumCamerasForFacing("environment", () => ["default"]), ["back"]);
+assert.deepEqual(nubariumCamerasForFacing("user", () => ["default"]), ["front"]);
+assert.deepEqual(
+  nubariumCamerasForFacing("unknown", () => ["default", "front", "back"]),
+  ["default", "front", "back"],
+);
 
 assert.equal(formatCameraLabel({ label: "USB Camera", facing: "environment" }, 0), "USB Camera (trasera)");
 assert.equal(formatCameraLabel({ label: "", facing: "user" }, 1), "Cámara 2 (frontal)");

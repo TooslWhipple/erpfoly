@@ -192,6 +192,11 @@ import {
   throwIfSaleError,
   type EconomicRevisionPreview,
 } from "@/utils/economicRevision";
+import {
+  LAYAWAY_MIN_DEPOSIT_PERCENT,
+  layawayBalance,
+  layawayMinimumDeposit,
+} from "@/utils/layaway";
 import { SaleStockChangedError } from "@/utils/saleStockChanged";
 import { StaticLocationMap } from "@/components/StaticLocationMap";
 import dayjs from "@/lib/dayjs";
@@ -1813,6 +1818,15 @@ export function SaleBuilder({
       if (paymentType === "CREDIT" || paymentType === "CASH") {
         setCashAmount(charge.tenderDue.toFixed(2));
       }
+      if (paymentType === "LAYAWAY") {
+        const newMinimum = layawayMinimumDeposit(charge.total);
+        const otherTenders = roundToCents(cardAmtNum + extraCardAmtNum);
+        if (roundToCents(cashAmtNum + otherTenders) < newMinimum) {
+          setCashAmount(
+            Math.max(0, roundToCents(newMinimum - otherTenders)).toFixed(2),
+          );
+        }
+      }
       void queryClient.invalidateQueries({
         queryKey: ["resume-sale-draft", saleId],
       });
@@ -2614,6 +2628,8 @@ export function SaleBuilder({
       ? Math.max(0, quotedServerTotal - loyaltyPointsUsed)
       : payableMerchandise + shippingAmount,
   );
+  const layawayMinimum = layawayMinimumDeposit(totalFinal);
+  const layawayRemaining = layawayBalance(totalFinal);
   const totalPending = cartPendingSupplyTotal(coverageCart);
   const showPendingSupplyAlert = totalPending > 0;
   const showShippingInSummary =
@@ -3563,7 +3579,8 @@ export function SaleBuilder({
       (paymentType !== "CREDIT" ||
         (identityOk && !creditDownPaymentInvalid && !creditLineExceeded)) &&
       (paymentType !== "LAYAWAY" ||
-        (totalPaid > 0 && totalPaid <= roundToCents(totalFinal))) &&
+        (totalPaid >= layawayMinimum &&
+          totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
@@ -4130,6 +4147,22 @@ export function SaleBuilder({
                           .format("D [de] MMMM")}
                       </Typography>
                     </Stack>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Enganche mínimo (
+                        {formatDownPaymentPercent(
+                          LAYAWAY_MIN_DEPOSIT_PERCENT / 100,
+                        )}
+                        %)
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {formatCurrency(layawayMinimum)}
+                      </Typography>
+                    </Stack>
                     <Select
                       size="small"
                       value={activeLayawayTerm.id}
@@ -4354,6 +4387,9 @@ export function SaleBuilder({
               setIdentityVerificationModalOpen(true);
             }
           } else {
+            if (paymentType === "LAYAWAY" && cashAmount.trim() === "") {
+              setCashAmount(layawayMinimum.toFixed(2));
+            }
             setView("checkout");
           }
         }}
@@ -4576,6 +4612,23 @@ export function SaleBuilder({
 
                   {paymentType === "LAYAWAY" && (
                     <>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        py={1.25}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Enganche mínimo solicitado (
+                          {formatDownPaymentPercent(
+                            LAYAWAY_MIN_DEPOSIT_PERCENT / 100,
+                          )}
+                          %)
+                        </Typography>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatCurrency(layawayMinimum)}
+                        </Typography>
+                      </Stack>
                       <Box
                         sx={{
                           bgcolor: "grey.100",
@@ -4595,7 +4648,7 @@ export function SaleBuilder({
                             Total a liquidar
                           </Typography>
                           <Typography variant="h6" fontWeight={700}>
-                            {formatCurrency(totalFinal)}
+                            {formatCurrency(layawayRemaining)}
                           </Typography>
                         </Stack>
 

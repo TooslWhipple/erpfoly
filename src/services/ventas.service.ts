@@ -769,6 +769,11 @@ export async function printAndDownloadSaleInvoicePdf(
 export async function printSaleInvoicePdfOnly(
   saleId: number,
 ): Promise<void> {
+  // Sin factura (p. ej. apartado recién cobrado) no hay PDF que pedir: el
+  // endpoint respondería 404 y el interceptor mostraría un toast de error.
+  const statusInfo = await getSaleInvoiceStatus(saleId);
+  if (!statusInfo.hasInvoice || !statusInfo.hasPdf) return;
+
   const response = await api.get(`${BASE}/sales/${saleId}/invoice/pdf`, {
     responseType: "blob",
   });

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ../api/node_modules/ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/lib/promotionDownPayment.test.ts src/components/HandoverCounter/handover.test.ts src/components/HandoverCounter/handoverErrors.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts src/utils/route-publish-readiness.test.ts",
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/lib/promotionDownPayment.test.ts src/components/HandoverCounter/handover.test.ts src/components/HandoverCounter/handoverErrors.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts src/utils/route-publish-readiness.test.ts src/utils/layaway.test.ts src/utils/number.test.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -47,6 +47,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "16.1.1",
     "husky": "^9.1.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
 }

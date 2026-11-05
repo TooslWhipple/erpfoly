@@ -4,3 +4,5 @@ export { HandoverSaleView } from "./HandoverSaleView";
 export { IdentityStep } from "./IdentityStep";
 export { EvidenceStep } from "./EvidenceStep";
 export { HandoverResult } from "./HandoverResult";
+export { ReceiverSection } from "./ReceiverSection";
+export { ChangeDeliveryBranchDialog } from "./ChangeDeliveryBranchDialog";

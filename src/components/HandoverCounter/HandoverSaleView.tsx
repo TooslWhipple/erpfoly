@@ -41,6 +41,8 @@ export interface HandoverSaleViewProps {
   captured: CapturedLines;
   onCapturedChange: (next: CapturedLines) => void;
   disabled?: boolean;
+  /** Solo lectura: sin escaneo ni captura de cantidades. */
+  readOnly?: boolean;
 }
 
 function lineBreakdown(line: HandoverLine): string[] {
@@ -56,6 +58,7 @@ export function HandoverSaleView({
   captured,
   onCapturedChange,
   disabled = false,
+  readOnly = false,
 }: HandoverSaleViewProps) {
   const [manualCode, setManualCode] = useState("");
   const [feedback, setFeedback] = useState<ScanFeedback>(null);
@@ -122,6 +125,7 @@ export function HandoverSaleView({
         <FeedbackBanner role="alert">{feedback.message}</FeedbackBanner>
       ) : null}
 
+      {readOnly ? null : (
       <SectionCard>
         <Stack spacing={1.5}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -178,6 +182,7 @@ export function HandoverSaleView({
           />
         </Stack>
       </SectionCard>
+      )}
 
       <Stack spacing={1.25}>
         {detail.lines.map((line) => {
@@ -212,7 +217,7 @@ export function HandoverSaleView({
                     ) : null}
                   </Stack>
                 </Box>
-                {line.ready > 0 ? (
+                {line.ready > 0 && !readOnly ? (
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <NumberSpinner
                       value={quantity}

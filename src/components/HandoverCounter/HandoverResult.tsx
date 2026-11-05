@@ -12,6 +12,7 @@ import type {
   HandoverResult as HandoverResultData,
 } from "@/types/saleHandover.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { formatDeliveredAt } from "./handover";
 import { SectionCard } from "./styles";
 
 const STATUS_LABEL: Record<HandoverNotificationStatus, string> = {
@@ -87,6 +88,8 @@ export function HandoverResult({
       >
         Entrega registrada · {result.folio}
         {hasPending ? " (parcial)" : ""}
+        <br />
+        Entregada el {formatDeliveredAt(result.deliveredAt)} (hora de Ciudad de México)
       </Alert>
 
       <SectionCard>

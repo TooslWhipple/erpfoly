@@ -1,15 +1,12 @@
 import { useRef, useState } from "react";
-import { Alert, Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Button, Chip, Stack, Typography } from "@mui/material";
 import { SignaturePad } from "@/components/SignaturePad";
 import type { SignaturePadHandle } from "@/components/SignaturePad";
 import { uploadHandoverFile } from "@/services/sale-handover.service";
 import { IdPhotoSlot } from "./IdPhotoSlot";
-import { RECEIVER_NAME_MAX_LENGTH, isReceiverNameValid } from "./handover";
 import { SectionCard } from "./styles";
 
 export interface EvidenceStepProps {
-  receiverName: string;
-  onReceiverNameChange: (name: string) => void;
   signatureFileId: number | null;
   onSignatureFileIdChange: (fileId: number | null) => void;
   ineFrontFileId: number | null;
@@ -20,8 +17,6 @@ export interface EvidenceStepProps {
 }
 
 export function EvidenceStep({
-  receiverName,
-  onReceiverNameChange,
   signatureFileId,
   onSignatureFileIdChange,
   ineFrontFileId,
@@ -34,8 +29,6 @@ export function EvidenceStep({
   const [drawn, setDrawn] = useState(false);
   const [savingSignature, setSavingSignature] = useState(false);
   const [signatureError, setSignatureError] = useState<string | null>(null);
-
-  const nameInvalid = receiverName.length > 0 && !isReceiverNameValid(receiverName);
 
   const handleDrawnChange = (isDrawn: boolean) => {
     setDrawn(isDrawn);
@@ -63,25 +56,6 @@ export function EvidenceStep({
 
   return (
     <Stack spacing={2}>
-      <SectionCard>
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Quien recibe
-          </Typography>
-          <TextField
-            label="Nombre completo de quien recibe"
-            value={receiverName}
-            disabled={disabled}
-            onChange={(event) => onReceiverNameChange(event.target.value)}
-            error={nameInvalid}
-            helperText={nameInvalid ? "Mínimo 2 caracteres." : undefined}
-            inputProps={{ maxLength: RECEIVER_NAME_MAX_LENGTH }}
-            required
-            fullWidth
-          />
-        </Stack>
-      </SectionCard>
-
       <SectionCard>
         <Stack spacing={1.5}>
           <Typography variant="subtitle1" fontWeight={700}>

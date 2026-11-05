@@ -13,7 +13,7 @@ import type {
   HandoverAuthorizationPurpose,
   HandoverSaleDetail,
 } from "@/types/saleHandover.types";
-import { activeAuthorizationFor } from "./handover";
+import { activeAuthorizationFor, identityOtpTimerId } from "./handover";
 import { handoverErrorMessage } from "./handoverErrors";
 import { SectionCard } from "./styles";
 
@@ -51,7 +51,7 @@ export function IdentityStep({
     () => activeAuthorizationFor(detail, "IDENTITY")?.supervisor?.name ?? null,
   );
 
-  const otpCooldown = useOtpCooldown(`sale-handover:identity-otp:${detail.saleId}`);
+  const otpCooldown = useOtpCooldown(identityOtpTimerId(detail.saleId));
   const cooldownSeconds = otpCooldown.remainingSeconds;
 
   const handleSend = async () => {

@@ -1474,6 +1474,8 @@ export function SaleBuilder({
           }
           : undefined;
 
+      const isLayawayCheckout = paymentType === "LAYAWAY";
+
       if (deliveryType === "delivery") {
         const clientPrimaryAddress =
           selectedClient?.addresses?.find((a) => a.isPrimary) ??
@@ -1487,8 +1489,9 @@ export function SaleBuilder({
         // Vendedor ya persistió en ensureSaleSynced. Cajero: fecha al cobrar,
         // sin recotizar envío. No reescribir si el snapshot no cambió — en
         // pickup cada setDeliveryDate subía economic_revision y el cobro
-        // mandaba la revisión anterior.
-        if (isCajeroMode && checkoutDeliveryDate) {
+        // mandaba la revisión anterior. Un apartado no programa entrega aquí:
+        // el servidor (409) la difiere hasta que quede liquidado.
+        if (isCajeroMode && checkoutDeliveryDate && !isLayawayCheckout) {
           const snapshot: SyncedDeliverySnapshot = {
             fulfillment: "delivery",
             addressId,
@@ -1516,8 +1519,9 @@ export function SaleBuilder({
         deliveryType === "pickup" &&
         effectiveDeliveryBranch
       ) {
-        const pickupDate =
-          effectivePickupDate || checkoutDeliveryDate || undefined;
+        const pickupDate = isLayawayCheckout
+          ? undefined
+          : effectivePickupDate || checkoutDeliveryDate || undefined;
         if (pickupDate) {
           const snapshot: SyncedDeliverySnapshot = {
             fulfillment: "pickup",

@@ -47,16 +47,16 @@ import {
   updateClientPrimaryAddress,
   removeDeliveryDate,
   registerLayawayPayment,
-  completeLayaway,
-  cancelLayaway,
+  getLayawayBalance,
   downloadSaleInvoiceFile,
   printSaleInvoicePdfOnly,
   getInvoicingConfig,
 } from "@/services/ventas.service";
 import { getPaymentTerminalsCatalog } from "@/services/payment-terminals.service";
 import { getSessionSummary } from "@/services/cash-register.service";
+import { unwrapOrThrow } from "@/lib/axios";
 import { googleMapsBrowserApiKey } from "@/config/maps";
-import { ConfirmModal } from "@/components/ConfirmModal";
+import { SaleCancellationModal } from "@/components/SaleCancellationModal";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useInvoicingConfigStore } from "@/store/useInvoicingConfigStore";
 import { DeliveryAddressModal } from "@/components/DeliveryAddressModal";
@@ -74,6 +74,11 @@ import {
   CASH_REGISTER_SESSION_SUMMARY_KEY,
   invalidateCashRegisterQueries,
 } from "@/lib/cashRegisterQueries";
+
+/** Un apartado abierto (activo o vencido sin liquidar) sigue recibiendo abonos. */
+function isOpenLayawayStatus(status: string): boolean {
+  return status === "ACTIVE" || status === "EXPIRED";
+}
 
 function layawayStatusMeta(status: string): {
   label: string;
@@ -336,7 +341,7 @@ export default function VentaDetalle() {
 
   const isLayawayCardPayment = layawayMethod === "CARD";
   const needsCashierSession =
-    fromCajas || Boolean(sale?.layaway && sale.layaway.status === "ACTIVE");
+    fromCajas || Boolean(sale?.layaway && isOpenLayawayStatus(sale.layaway.status));
 
   const activeSessionQuery = useQuery({
     queryKey: CASH_REGISTER_SESSION_SUMMARY_KEY,
@@ -355,6 +360,14 @@ export default function VentaDetalle() {
     staleTime: 60_000,
   });
 
+  const layawayBalanceQuery = useQuery({
+    queryKey: ["layaway-balance", sale?.layaway?.id],
+    queryFn: async () => unwrapOrThrow(await getLayawayBalance(sale!.layaway!.id)),
+    enabled: sale?.layaway != null,
+    staleTime: 0,
+  });
+  const layawayBalance = layawayBalanceQuery.data;
+
   const registerLayawayPaymentMutation = useMutation({
     mutationFn: async (payload: {
       amount: number;
@@ -366,43 +379,20 @@ export default function VentaDetalle() {
       if (res.error) throw new Error(res.error.message);
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+      queryClient.invalidateQueries({ queryKey: ["layaway-balance"] });
       if (isCashRegisterReturnQuery(router.query)) {
         invalidateCashRegisterQueries(queryClient);
       }
-      snackbar.showSuccess("Abono registrado");
+      const completed =
+        (data as { layaway_status?: string } | undefined)?.layaway_status ===
+        "COMPLETED";
+      snackbar.showSuccess(
+        completed ? "Abono registrado. Apartado liquidado" : "Abono registrado",
+      );
       setLayawayAmount("");
-    },
-    onError: (err: Error) => snackbar.showError(err.message),
-  });
-
-  const completeLayawayMutation = useMutation({
-    mutationFn: async () => {
-      if (!sale?.layaway) throw new Error("Este apartado no existe");
-      const res = await completeLayaway(sale.layaway.id);
-      if (res.error) throw new Error(res.error.message);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
-      snackbar.showSuccess("Apartado completado");
-      if (saleId) void printTicketOrWarn(saleId);
-    },
-    onError: (err: Error) => snackbar.showError(err.message),
-  });
-
-  const cancelLayawayMutation = useMutation({
-    mutationFn: async () => {
-      if (!sale?.layaway) throw new Error("Este apartado no existe");
-      const res = await cancelLayaway(sale.layaway.id);
-      if (res.error) throw new Error(res.error.message);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
-      snackbar.showSuccess("Apartado cancelado");
-      setCancelLayawayModalOpen(false);
+      if (completed && saleId) void printTicketOrWarn(saleId);
     },
     onError: (err: Error) => snackbar.showError(err.message),
   });
@@ -484,8 +474,10 @@ export default function VentaDetalle() {
     );
   }
 
+  // Adeudo (capital + mora) del endpoint /balance; sin él, solo el capital.
   const layawayRemaining = sale.layaway
-    ? Math.max(0, sale.layaway.totalAmount - sale.layaway.paidAmount)
+    ? (layawayBalance?.totalDue ??
+      Math.max(0, sale.layaway.totalAmount - sale.layaway.paidAmount))
     : 0;
   const layawayAmountNum =
     parseFloat(layawayAmount.replace(/[^0-9.]/g, "")) || 0;
@@ -493,7 +485,10 @@ export default function VentaDetalle() {
     layawayMethod === "CASH"
       ? Math.max(0, layawayAmountNum - layawayRemaining)
       : 0;
-  const isPendingLayaway = sale.layaway?.status === "ACTIVE";
+  const isPendingLayaway =
+    sale.layaway != null && isOpenLayawayStatus(sale.layaway.status);
+  // Programar entrega solo con el apartado liquidado (lo valida también el servidor).
+  const layawaySettled = layawayBalance?.isSettled ?? sale.layaway?.status === "COMPLETED";
   const isSaleCancelled = sale.status === "CANCELLED";
   const isDraftSale = sale.status === "DRAFT";
   const creditInstallmentPlan = sale.credit
@@ -764,7 +759,7 @@ export default function VentaDetalle() {
                           />
                         )}
                       </Box>
-                      {!isPendingLayaway && !isSaleCancelled && (
+                      {(!sale.layaway || layawaySettled) && !isSaleCancelled && (
                         <Box
                           sx={{ flexShrink: 0 }}
                           onClick={() => setDeliveryModalOpen(true)}
@@ -1102,8 +1097,30 @@ export default function VentaDetalle() {
                       </Typography>
                     </Stack>
                     <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">
+                        Capital pendiente
+                      </Typography>
+                      <Typography variant="body2">
+                        {formatCurrency(
+                          layawayBalance?.principalOutstanding ??
+                            Math.max(0, sale.layaway.totalAmount - sale.layaway.paidAmount),
+                        )}
+                      </Typography>
+                    </Stack>
+                    {layawayBalance && layawayBalance.lateFee.outstanding > 0 && (
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography variant="body2" color="error.main">
+                          Mora ({layawayBalance.lateFee.daysAccrued} días,{" "}
+                          {layawayBalance.lateFee.annualRatePercent}% anual)
+                        </Typography>
+                        <Typography variant="body2" color="error.main">
+                          {formatCurrency(layawayBalance.lateFee.outstanding)}
+                        </Typography>
+                      </Stack>
+                    )}
+                    <Stack direction="row" justifyContent="space-between">
                       <Typography variant="h6" fontWeight={700}>
-                        Restante
+                        Adeudo total
                       </Typography>
                       <Typography variant="h6" fontWeight={700}>
                         {formatCurrency(layawayRemaining)}
@@ -1131,7 +1148,7 @@ export default function VentaDetalle() {
                     </Box>
                   )}
 
-                  {sale.layaway.status === "ACTIVE" && hasOpenCashierSession && (
+                  {isOpenLayawayStatus(sale.layaway.status) && hasOpenCashierSession && (
                     <>
                       <Divider sx={{ mb: 2 }} />
                       <Typography variant="caption" color="text.secondary" display="block" mb={1}>
@@ -1227,15 +1244,6 @@ export default function VentaDetalle() {
                         sx={{ textTransform: "none", mb: 1 }}
                       >
                         {registerLayawayPaymentMutation.isPending ? "Registrando..." : "Registrar abono"}
-                      </Button>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        disabled={layawayRemaining > 0 || completeLayawayMutation.isPending}
-                        onClick={() => completeLayawayMutation.mutate()}
-                        sx={{ textTransform: "none", mb: 1 }}
-                      >
-                        {completeLayawayMutation.isPending ? "Completando..." : "Completar apartado"}
                       </Button>
                       <Button
                         fullWidth
@@ -1415,19 +1423,19 @@ export default function VentaDetalle() {
         }}
       />
 
-      <ConfirmModal
-        open={cancelLayawayModalOpen}
-        onClose={() => setCancelLayawayModalOpen(false)}
-        onConfirm={async () => {
-          await cancelLayawayMutation.mutateAsync();
-        }}
-        loading={cancelLayawayMutation.isPending}
-        title="Cancelar apartado"
-        description="Esta acción cancelará el apartado y liberará el inventario reservado. ¿Deseas continuar?"
-        confirmLabel="Cancelar apartado"
-        cancelLabel="Volver"
-        confirmColor="error"
-      />
+      {cancelLayawayModalOpen && sale.layaway ? (
+        <SaleCancellationModal
+          open
+          saleId={sale.id}
+          preselectAll
+          onClose={() => setCancelLayawayModalOpen(false)}
+          onSuccess={() => {
+            setCancelLayawayModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["venta-detail", saleId] });
+            queryClient.invalidateQueries({ queryKey: ["layaway-balance"] });
+          }}
+        />
+      ) : null}
     </DetailPageShell>
   );
 }

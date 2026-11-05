@@ -10,6 +10,7 @@ import type {
   HandoverInputMethod,
   HandoverLine,
   HandoverSaleDetail,
+  PickupReceiver,
 } from "@/types/saleHandover.types";
 
 /** Cantidad capturada por renglón (`saleItemId`). Solo guarda cantidades > 0. */
@@ -26,9 +27,6 @@ export type ApplyCodeResult =
       saleItemId: number;
       ready: number;
     };
-
-export const RECEIVER_NAME_MIN_LENGTH = 2;
-export const RECEIVER_NAME_MAX_LENGTH = 128;
 
 const SALE_QR_PREFIX = "foly:sale:";
 
@@ -88,7 +86,8 @@ export function activeAuthorizationFor(
 export type ConfirmInput = {
   detail: HandoverSaleDetail;
   captured: CapturedLines;
-  receiverName: string;
+  /** `true` si el receptor se editó y aún no se guardó con `PUT …/receiver`. */
+  receiverDirty: boolean;
   signatureFileId: number | null;
   identityAuthorizationId: string | null;
   expiredHoldAuthorizationId: string | null;
@@ -117,9 +116,65 @@ function hasValidQuantities(
   });
 }
 
-export function isReceiverNameValid(name: string): boolean {
-  const length = name.trim().length;
-  return length >= RECEIVER_NAME_MIN_LENGTH && length <= RECEIVER_NAME_MAX_LENGTH;
+/** Clave del receptor guardado: cambia al cambiar de titular a tercero o de tercero. */
+export function receiverStepKey(receiver: PickupReceiver): string {
+  return `${receiver.type}|${receiver.thirdPartyName ?? ""}|${receiver.thirdPartyPhoneMasked ?? ""}`;
+}
+
+/** Id del enfriamiento del reenvío de OTP de identidad de una venta. */
+export function identityOtpTimerId(saleId: number): string {
+  return `sale-handover:identity-otp:${saleId}`;
+}
+
+const DELIVERED_AT_FORMAT = new Intl.DateTimeFormat("es-MX", {
+  timeZone: "America/Mexico_City",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** Fecha y hora de la entrega (instante UTC) en la zona de Ciudad de México. */
+export function formatDeliveredAt(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return DELIVERED_AT_FORMAT.format(date);
+}
+
+/**
+ * La orden se procesa solo si el alcance de escritura cubre la sucursal de
+ * entrega (`canEdit`, del back) y el usuario tiene el permiso de actualizar.
+ * El front no recalcula roles.
+ */
+export function canProcess(
+  scope: { canEdit: boolean },
+  hasUpdatePermission: boolean,
+): boolean {
+  return scope.canEdit && hasUpdatePermission;
+}
+
+/** Piezas vendidas aún sin entregar ni regularizar. */
+export function pendingUnits(detail: Pick<HandoverSaleDetail, "lines">): number {
+  return detail.lines.reduce(
+    (total, line) => total + Math.max(0, line.quantity - line.delivered - line.released),
+    0,
+  );
+}
+
+/**
+ * Cambiar la ubicación de entrega no depende de `canEdit`: lo inicia cualquiera
+ * con `entregas.update` que lea la venta, y autoriza un gerente de la sucursal
+ * que vendió. Basta con que haya piezas pendientes; el back valida el resto
+ * (`HANDOVER_BLOCKED` con su motivo).
+ */
+export function canChangeDeliveryBranch(
+  detail: Pick<HandoverSaleDetail, "lines">,
+  hasUpdatePermission: boolean,
+): boolean {
+  return hasUpdatePermission && pendingUnits(detail) > 0;
 }
 
 /** `true` solo si la entrega puede enviarse al backend. */
@@ -128,7 +183,7 @@ export function canConfirm(input: ConfirmInput): boolean {
   if (detail.blockReason !== null) return false;
   if (!hasValidQuantities(detail, input.captured)) return false;
   if (capturedUnits(detail, input.captured) < 1) return false;
-  if (!isReceiverNameValid(input.receiverName)) return false;
+  if (input.receiverDirty) return false;
   if (input.signatureFileId === null) return false;
   if (detail.requiresIdentityAuthorization && !input.identityAuthorizationId) {
     return false;
@@ -167,7 +222,6 @@ export function buildConfirmRequest(
     saleId: detail.saleId,
     branchId: input.branchId,
     idempotencyKey: input.idempotencyKey,
-    receiverName: input.receiverName.trim(),
     ...(detail.requiresIdentityAuthorization && input.identityAuthorizationId
       ? { identityAuthorizationId: input.identityAuthorizationId }
       : {}),

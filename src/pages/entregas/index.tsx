@@ -1,15 +1,21 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
-import { Alert, Button, CircularProgress, Stack } from "@mui/material";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  FormControlLabel,
+  MenuItem,
+  Stack,
+  Switch,
+  TextField,
+} from "@mui/material";
 import { Title } from "@/components";
 import { HandoverQueue } from "@/components/HandoverCounter";
-import { InlineBranchSelect } from "@/components/InlineBranchSelect";
 import { useHandoverBranches } from "@/hooks/sale-handover/useHandoverBranches";
-import { useAuthStore } from "@/store/useAuthStore";
 
 export default function EntregasPage() {
   const router = useRouter();
-  const principalBranchId = useAuthStore((state) => state.user?.principalBranchId);
   const {
     data: branches = [],
     isLoading,
@@ -17,25 +23,20 @@ export default function EntregasPage() {
     error,
     refetch,
   } = useHandoverBranches();
+  // `null` = «Todas las sucursales» (se omite `branchId` en la cola).
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
-
-  const defaultBranchId = useMemo(() => {
-    if (branches.length === 0) return null;
-    const principal = branches.find((branch) => branch.id === principalBranchId);
-    return (principal ?? branches[0]).id;
-  }, [branches, principalBranchId]);
+  const [includeUpcoming, setIncludeUpcoming] = useState(false);
 
   const branchId =
     selectedBranchId !== null &&
     branches.some((branch) => branch.id === selectedBranchId)
       ? selectedBranchId
-      : defaultBranchId;
+      : null;
 
   const handleOpenSale = (saleId: number) => {
-    if (branchId === null) return;
     void router.push({
       pathname: "/entregas/[saleId]",
-      query: { saleId: String(saleId), branchId: String(branchId) },
+      query: { saleId: String(saleId) },
     });
   };
 
@@ -70,15 +71,43 @@ export default function EntregasPage() {
         </Alert>
       ) : null}
 
-      {branchId !== null ? (
+      {branches.length > 0 ? (
         <>
-          <InlineBranchSelect
-            label="Sucursal de entrega"
-            value={branchId}
-            options={branches}
-            onChange={setSelectedBranchId}
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+            <TextField
+              select
+              size="small"
+              label="Sucursal de entrega"
+              value={branchId === null ? "all" : String(branchId)}
+              onChange={(event) =>
+                setSelectedBranchId(
+                  event.target.value === "all" ? null : Number(event.target.value),
+                )
+              }
+              sx={{ minWidth: 240 }}
+            >
+              <MenuItem value="all">Todas las sucursales</MenuItem>
+              {branches.map((branch) => (
+                <MenuItem key={branch.id} value={String(branch.id)}>
+                  {branch.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={includeUpcoming}
+                  onChange={(event) => setIncludeUpcoming(event.target.checked)}
+                />
+              }
+              label="Incluir por surtir / en camino"
+            />
+          </Stack>
+          <HandoverQueue
+            branchId={branchId}
+            readiness={includeUpcoming ? "ANY" : "READY"}
+            onOpenSale={handleOpenSale}
           />
-          <HandoverQueue branchId={branchId} onOpenSale={handleOpenSale} />
         </>
       ) : null}
     </Stack>

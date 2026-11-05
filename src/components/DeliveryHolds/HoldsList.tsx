@@ -47,12 +47,15 @@ export function HoldsList({ branches, onOpenHold }: HoldsListProps) {
 
   const [activeTab, setActiveTab] = useState<HoldTab>("EXPIRED");
   const [branchFilter, setBranchFilter] = useState(ALL_BRANCHES);
+  const [responsibleFilter, setResponsibleFilter] = useState(ALL_BRANCHES);
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     "",
     SEARCH_DEBOUNCE_MS,
   );
 
   const branchId = branchFilter === ALL_BRANCHES ? undefined : Number(branchFilter);
+  const responsibleBranchId =
+    responsibleFilter === ALL_BRANCHES ? undefined : Number(responsibleFilter);
 
   const {
     data: rows,
@@ -72,12 +75,13 @@ export function HoldsList({ branches, onOpenHold }: HoldsListProps) {
       getHolds({
         status: activeTab,
         branchId,
+        responsibleBranchId,
         search: params.search,
         page: params.page,
         limit: params.limit,
       }),
     initialRowsPerPage: PAGE_SIZE,
-    extraParams: { status: activeTab, branchId },
+    extraParams: { status: activeTab, branchId, responsibleBranchId },
   });
 
   useEffect(() => {
@@ -91,6 +95,11 @@ export function HoldsList({ branches, onOpenHold }: HoldsListProps) {
 
   const handleBranchChange = (value: string) => {
     setBranchFilter(value);
+    setPage(0);
+  };
+
+  const handleResponsibleChange = (value: string) => {
+    setResponsibleFilter(value);
     setPage(0);
   };
 
@@ -108,11 +117,23 @@ export function HoldsList({ branches, onOpenHold }: HoldsListProps) {
         searchPlaceholder="Buscar por folio o cliente"
         selectFilters={[
           {
-            label: "Sucursal",
+            label: "Entrega en",
             value: branchFilter,
             onChange: handleBranchChange,
             options: [
               { label: "Todas las sucursales", value: ALL_BRANCHES },
+              ...branches.map((branch) => ({
+                label: branch.name,
+                value: String(branch.id),
+              })),
+            ],
+          },
+          {
+            label: "Responsable",
+            value: responsibleFilter,
+            onChange: handleResponsibleChange,
+            options: [
+              { label: "Todos los responsables", value: ALL_BRANCHES },
               ...branches.map((branch) => ({
                 label: branch.name,
                 value: String(branch.id),
@@ -208,7 +229,7 @@ function HoldCard({ row, onOpen }: { row: HoldRow; onOpen: () => void }) {
             {row.clientName}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {row.branch.name} · vence {formatHoldDate(row.expiresAt)}
+            Responsable: {row.responsibleBranch.name} · entrega en {row.branch.name} · vence {formatHoldDate(row.expiresAt)}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">

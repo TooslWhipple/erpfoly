@@ -22,22 +22,31 @@ import { TabFilters } from "@/components/TabFilters/TabFilters";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { getHandoverQueue } from "@/services/sale-handover.service";
-import type { QueueRow } from "@/types/saleHandover.types";
+import type { QueueReadiness, QueueRow } from "@/types/saleHandover.types";
 import {
   HANDOVER_STATUS_LABELS,
   HANDOVER_STATUS_VARIANTS,
 } from "@/utils/saleStatus";
-import { blockReasonLabel, parseSaleQr } from "./handover";
+import { usePermissions } from "@/hooks/usePermissions";
+import { DELIVERY_HANDOVER_UPDATE } from "@/lib/permissions";
+import { blockReasonLabel, canProcess, parseSaleQr } from "./handover";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const QUEUE_PAGE_SIZE = 10;
 
 export interface HandoverQueueProps {
-  branchId: number;
+  /** `null` = todas las sucursales del alcance de lectura. */
+  branchId: number | null;
+  /** `ANY` incluye órdenes por surtir o en camino. */
+  readiness: QueueReadiness;
   onOpenSale: (saleId: number) => void;
 }
 
-export function HandoverQueue({ branchId, onOpenSale }: HandoverQueueProps) {
+export function HandoverQueue({
+  branchId,
+  readiness,
+  onOpenSale,
+}: HandoverQueueProps) {
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     "",
     SEARCH_DEBOUNCE_MS,
@@ -60,13 +69,14 @@ export function HandoverQueue({ branchId, onOpenSale }: HandoverQueueProps) {
     queryKey: ["sale-handover", "queue"],
     queryFn: (params) =>
       getHandoverQueue({
-        branchId,
+        ...(branchId !== null ? { branchId } : {}),
+        readiness,
         search: params.search,
         page: params.page,
         limit: params.limit,
       }),
     initialRowsPerPage: QUEUE_PAGE_SIZE,
-    extraParams: { branchId },
+    extraParams: { branchId: branchId ?? "all", readiness },
   });
 
   useEffect(() => {
@@ -135,7 +145,7 @@ export function HandoverQueue({ branchId, onOpenSale }: HandoverQueueProps) {
           <Typography variant="subtitle1" fontWeight={600}>
             {isSearching
               ? "No hay ventas que coincidan con la búsqueda"
-              : "No hay entregas pendientes en esta sucursal"}
+              : "No hay entregas pendientes"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {isSearching
@@ -182,6 +192,8 @@ function HandoverQueueCard({
   row: QueueRow;
   onOpen: () => void;
 }) {
+  const { hasPermission } = usePermissions();
+  const processable = canProcess(row, hasPermission(DELIVERY_HANDOVER_UPDATE));
   return (
     <Box
       component="button"
@@ -215,7 +227,7 @@ function HandoverQueueCard({
             {row.clientName}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Venta en {row.saleBranchName}
+            Entrega en {row.deliveryBranch.name} · Responsable: {row.saleBranchName}
           </Typography>
         </Stack>
         <Stack
@@ -242,6 +254,9 @@ function HandoverQueueCard({
               variant="outlined"
               label={`Pendientes: ${formatUnits(row.pendingUnits)}`}
             />
+          ) : null}
+          {!processable ? (
+            <Chip size="small" variant="outlined" label="Solo lectura" />
           ) : null}
           {row.hold ? (
             <StatusChip

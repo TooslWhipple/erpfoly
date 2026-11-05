@@ -53,6 +53,11 @@ export type HandoverValidationMethod =
   | "THIRD_PARTY_OTP"
   | "SUPERVISOR";
 
+/** Cuerpo de `PUT /sale-handovers/sales/:saleId/receiver` (C3). */
+export type UpdateHandoverReceiverRequest = PickupReceiverPayload & {
+  branchId: number;
+};
+
 export type HandoverNotificationStatus = "SENT" | "FAILED" | "SKIPPED";
 
 export type HandoverBranch = {
@@ -61,10 +66,19 @@ export type HandoverBranch = {
   isMainWarehouse: boolean;
 };
 
+/** Sucursal que entrega físicamente la orden (donde está el inventario). */
+export type DeliveryBranch = { id: number; name: string };
+
+export type QueueReadiness = "READY" | "ANY";
+
 export type QueueRow = {
   saleId: number;
   folio: string;
+  /** Sucursal responsable (la que vendió). */
   saleBranchName: string;
+  deliveryBranch: DeliveryBranch;
+  /** Solo alcance de escritura; el permiso lo combina `canProcess`. */
+  canEdit: boolean;
   clientName: string;
   handoverStatus: HandoverProgress;
   readyUnits: number;
@@ -97,7 +111,11 @@ export type ActiveHandoverAuthorization = {
 export type HandoverSaleDetail = {
   saleId: number;
   folio: string;
+  /** Sucursal **responsable** (la que vendió), no la que entrega. */
   branch: { id: number; name: string };
+  deliveryBranch: DeliveryBranch;
+  /** Solo alcance de escritura; el permiso lo combina `canProcess`. */
+  canEdit: boolean;
   client: { id: number; name: string; phoneMasked: string | null };
   receiver: PickupReceiver;
   handoverStatus: HandoverProgress;
@@ -110,7 +128,10 @@ export type HandoverSaleDetail = {
 };
 
 export type GetHandoverQueueParams = {
-  branchId: number;
+  /** Omitido = todas las sucursales del alcance de lectura. */
+  branchId?: number;
+  /** Por defecto `READY`; `ANY` incluye órdenes por surtir o en camino. */
+  readiness?: QueueReadiness;
   search?: string;
   page: number;
   limit: number;
@@ -167,7 +188,6 @@ export type ConfirmHandoverRequest = {
   branchId: number;
   /** uuid v4: se crea en el primer intento y se renueva tras cada éxito. */
   idempotencyKey: string;
-  receiverName: string;
   identityAuthorizationId?: string;
   expiredHoldAuthorizationId?: string;
   signatureFileId: number;
@@ -184,6 +204,8 @@ export type HandoverResultItem = {
 
 export type HandoverResult = {
   id: number;
+  /** Instante de la entrega (ISO 8601 UTC, igual a `created_at`). */
+  deliveredAt: string;
   saleId: number;
   folio: string;
   handoverStatus: HandoverProgress;
@@ -221,6 +243,9 @@ export type HandoverErrorCode =
   | "SALE_NOT_FOUND"
   | "INVALID_FILE"
   | "RECEIVER_NOT_THIRD_PARTY"
+  | "INVALID_PHONE"
+  | "NOT_BRANCH_PICKUP"
+  | "NOTHING_PENDING"
   | "OTP_COOLDOWN"
   | "OTP_LOCKED"
   | "OTP_SEND_FAILED"
@@ -241,7 +266,10 @@ export type HandoverErrorCode =
   | "HOLD_SCOPE_FORBIDDEN"
   | "HOLD_NOT_EXTENDABLE"
   | "HOLD_NOT_RELEASABLE"
-  | "EXTENSION_OUT_OF_RANGE";
+  | "EXTENSION_OUT_OF_RANGE"
+  | "HOLD_NOT_RESPONSIBLE"
+  | "SAME_BRANCH"
+  | "INVALID_BRANCH";
 
 /** Resguardos (C4 #16-#19). */
 export type HoldRow = {
@@ -249,7 +277,12 @@ export type HoldRow = {
   folio: string;
   clientName: string;
   clientPhoneMasked: string | null;
+  /** Sucursal **de entrega** (donde está el inventario), no la responsable. */
   branch: { id: number; name: string };
+  /** Sucursal que vendió: la que gestiona (prorroga) el resguardo. */
+  responsibleBranch: { id: number; name: string };
+  /** Calculado por el back: el usuario puede prorrogar este resguardo. */
+  canManage: boolean;
   status: HoldStatus;
   readyAt: string;
   expiresAt: string;
@@ -276,7 +309,10 @@ export type HoldDetail = HoldRow & {
 };
 
 export type GetHoldsParams = {
+  /** Sucursal de entrega. */
   branchId?: number;
+  /** Sucursal responsable (la que vendió). */
+  responsibleBranchId?: number;
   status: HoldStatus;
   search?: string;
   page: number;
@@ -311,3 +347,27 @@ export type DeliveryConfig = {
 };
 
 export type UpdateDeliveryConfigRequest = Partial<DeliveryConfig>;
+
+/** Cambio de ubicación de entrega (C4). */
+export type ChangeDeliveryBranchRequest = {
+  branchId: number;
+  username: string;
+  password: string;
+  /** 5 a 512 caracteres. */
+  reason: string;
+};
+
+export type ChangeDeliveryBranchResponse = {
+  saleId: number;
+  previousBranch: DeliveryBranch;
+  deliveryBranch: DeliveryBranch;
+  authorizedBy: { id: number; name: string };
+  transfersCancelled: number;
+  openTransfers: number;
+  /** `null` si la sucursal nueva aún no tiene piezas listas. */
+  hold: {
+    status: HoldStatus;
+    readyAt: string | null;
+    expiresAt: string | null;
+  } | null;
+};

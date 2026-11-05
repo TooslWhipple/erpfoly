@@ -5,7 +5,13 @@ import {
   applyCode,
   blockReasonLabel,
   buildConfirmRequest,
+  canChangeDeliveryBranch,
   canConfirm,
+  canProcess,
+  pendingUnits,
+  formatDeliveredAt,
+  identityOtpTimerId,
+  receiverStepKey,
   parseSaleQr,
   type ConfirmInput,
 } from "./handover";
@@ -25,6 +31,8 @@ function detail(overrides: Partial<HandoverSaleDetail> = {}): HandoverSaleDetail
     saleId: 7,
     folio: "A-7",
     branch: { id: 3, name: "Centro" },
+    deliveryBranch: { id: 3, name: "Centro" },
+    canEdit: true,
     client: { id: 1, name: "Ana", phoneMasked: "******1234" },
     receiver: { type: "HOLDER", thirdPartyName: null, thirdPartyPhoneMasked: null },
     handoverStatus: "PENDING",
@@ -42,7 +50,7 @@ function input(overrides: Partial<ConfirmInput> = {}): ConfirmInput {
   return {
     detail: detail(),
     captured: { 1: { quantity: 1, inputMethod: "QR" } },
-    receiverName: "Ana Pérez",
+    receiverDirty: false,
     signatureFileId: 55,
     identityAuthorizationId: null,
     expiredHoldAuthorizationId: null,
@@ -93,9 +101,8 @@ describe("canConfirm", () => {
     assert.equal(canConfirm(input({ captured: { 1: { quantity: 3, inputMethod: "MANUAL" } } })), false);
   });
 
-  it("exige nombre de 2 a 128 caracteres y firma", () => {
-    assert.equal(canConfirm(input({ receiverName: " A " })), false);
-    assert.equal(canConfirm(input({ receiverName: "A".repeat(129) })), false);
+  it("exige receptor guardado y firma", () => {
+    assert.equal(canConfirm(input({ receiverDirty: true })), false);
     assert.equal(canConfirm(input({ signatureFileId: null })), false);
   });
 
@@ -130,7 +137,6 @@ describe("buildConfirmRequest", () => {
       saleId: 7,
       branchId: 3,
       idempotencyKey: "k-1",
-      receiverName: "Ana Pérez",
       signatureFileId: 55,
       lines: [{ saleItemId: 1, quantity: 1, inputMethod: "QR" }],
     });
@@ -156,7 +162,6 @@ describe("buildConfirmRequest", () => {
       saleId: 7,
       branchId: 3,
       idempotencyKey: "k-2",
-      receiverName: "Ana Pérez",
       identityAuthorizationId: "auth-1",
       signatureFileId: 55,
       ineFrontFileId: 8,
@@ -211,5 +216,63 @@ describe("activeAuthorizationFor", () => {
     assert.equal(activeAuthorizationFor(detail(), "IDENTITY"), null);
     const d = detail({ activeAuthorizations: [supervisorAuth] });
     assert.equal(activeAuthorizationFor(d, "EXPIRED_HOLD"), null);
+  });
+});
+
+describe("receiverStepKey", () => {
+  it("distingue titular, tercero y cambio de tercero", () => {
+    const holder = receiverStepKey({ type: "HOLDER", thirdPartyName: null, thirdPartyPhoneMasked: null });
+    const a = receiverStepKey({ type: "THIRD_PARTY", thirdPartyName: "María", thirdPartyPhoneMasked: "******5678" });
+    const b = receiverStepKey({ type: "THIRD_PARTY", thirdPartyName: "María", thirdPartyPhoneMasked: "******9999" });
+    assert.notEqual(holder, a);
+    assert.notEqual(a, b);
+  });
+});
+
+describe("identityOtpTimerId", () => {
+  it("es estable por venta", () => {
+    assert.equal(identityOtpTimerId(7), "sale-handover:identity-otp:7");
+  });
+});
+
+describe("formatDeliveredAt", () => {
+  it("muestra el instante UTC en hora de Ciudad de México", () => {
+    // 03:30 UTC del 5 de noviembre = 21:30 del 4 de noviembre en México.
+    const text = formatDeliveredAt("2026-11-05T03:30:00.000Z");
+    assert.match(text, /4/);
+    assert.match(text, /9:30/);
+  });
+
+  it("devuelve guion si no hay fecha válida", () => {
+    assert.equal(formatDeliveredAt(null), "—");
+    assert.equal(formatDeliveredAt("no-es-fecha"), "—");
+  });
+});
+
+describe("canProcess", () => {
+  it("exige alcance de escritura y permiso", () => {
+    assert.equal(canProcess({ canEdit: true }, true), true);
+    assert.equal(canProcess({ canEdit: true }, false), false);
+    assert.equal(canProcess({ canEdit: false }, true), false);
+    assert.equal(canProcess({ canEdit: false }, false), false);
+  });
+});
+
+describe("cambio de ubicación de entrega", () => {
+  const base = { lines };
+  it("pendingUnits resta entregadas y regularizadas", () => {
+    assert.equal(pendingUnits(base), 4);
+    assert.equal(
+      pendingUnits({ lines: [{ ...lines[0], delivered: 2, released: 1 }, { ...lines[1], delivered: 1 }] }),
+      0,
+    );
+  });
+  it("exige permiso y piezas pendientes, no canEdit", () => {
+    assert.equal(canChangeDeliveryBranch(base, true), true);
+    assert.equal(canChangeDeliveryBranch(base, false), false);
+    assert.equal(
+      canChangeDeliveryBranch({ lines: [{ ...lines[1], delivered: 1 }] }, true),
+      false,
+    );
   });
 });

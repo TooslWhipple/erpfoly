@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
@@ -43,6 +43,10 @@ export interface SupervisorCredentialsDialogProps {
   reasonLabel?: string;
   /** Con `reasonLabel`, exige entre 5 y 512 caracteres para habilitar el botón. */
   reasonRequired?: boolean;
+  /** Campos extra del llamador, entre el mensaje de error y las credenciales. */
+  children?: ReactNode;
+  /** Bloquea el botón de confirmar (p. ej. falta un campo de `children`). */
+  confirmDisabled?: boolean;
   onClose: () => void;
   onConfirm: (credentials: SupervisorCredentials) => void;
 }
@@ -56,6 +60,8 @@ export function SupervisorCredentialsDialog({
   confirmLabel = "Autorizar",
   reasonLabel,
   reasonRequired = false,
+  children,
+  confirmDisabled = false,
   onClose,
   onConfirm,
 }: SupervisorCredentialsDialogProps) {
@@ -74,7 +80,7 @@ export function SupervisorCredentialsDialog({
     (trimmedReason.length === 0 && !reasonRequired) ||
     (trimmedReason.length >= SUPERVISOR_REASON_MIN_LENGTH &&
       trimmedReason.length <= SUPERVISOR_REASON_MAX_LENGTH);
-  const canSubmit = !loading && Boolean(username.trim()) && Boolean(password) && reasonValid;
+  const canSubmit = !loading && !confirmDisabled && Boolean(username.trim()) && Boolean(password) && reasonValid;
 
   const handleClose = () => {
     if (loading) return;
@@ -120,6 +126,7 @@ export function SupervisorCredentialsDialog({
 
         <Stack spacing={2} sx={{ mt: 2 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
+          {children}
           <TextField
             label="Usuario"
             value={username}

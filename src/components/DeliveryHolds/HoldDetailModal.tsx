@@ -91,7 +91,7 @@ export function HoldDetailModal({
       {data ? (
         <HoldDetailBody
           detail={data}
-          canExtend={canExtendHold(data.status, role, canUpdate)}
+          canExtend={canExtendHold(data.status, role, canUpdate, data.canManage)}
           canRelease={canReleaseHold(data.status, role, canUpdate)}
           onExtend={() => onExtend(data)}
           onRelease={() => onRelease(data)}
@@ -155,7 +155,8 @@ function HoldDetailBody({
           gap: 2,
         }}
       >
-        <Field label="Sucursal" value={detail.branch.name} />
+        <Field label="Responsable" value={detail.responsibleBranch.name} />
+        <Field label="Entrega en" value={detail.branch.name} />
         <Field label="Teléfono" value={detail.clientPhoneMasked ?? "—"} />
         <Field label="Pendiente" value={formatUnits(detail.pendingUnits)} />
         <Field label="Importe pendiente" value={formatHoldAmount(detail.pendingAmount)} />

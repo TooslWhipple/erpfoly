@@ -1,10 +1,28 @@
+import type { ReactNode } from "react";
 import { TableCrud } from "@/components/TableCrud";
 import type { Column } from "@/components/TableCrud";
 import type { BranchInventory } from "@/types/inventario.types";
+import {
+    INVENTORY_COLORS,
+    inventoryQuantityColor,
+} from "@/styles/inventario/styles";
 
 export interface InventoryByBranchTableProps {
     data: BranchInventory[];
     loading?: boolean;
+}
+
+function formatQuantity(value: unknown, positiveColor: string): ReactNode {
+    const n = Number(value);
+    return (
+        <span
+            style={{
+                color: inventoryQuantityColor(n, positiveColor),
+                fontWeight: 500,
+            }}>
+            {String(value)}
+        </span>
+    );
 }
 
 export function InventoryByBranchTable({
@@ -24,6 +42,7 @@ export function InventoryByBranchTable({
             type: "number",
             size: "md",
             align: "center",
+            format: (value) => formatQuantity(value, INVENTORY_COLORS.red),
         },
         {
             id: "inTransit",
@@ -32,6 +51,7 @@ export function InventoryByBranchTable({
             size: "md",
             align: "center",
             headerWrap: true,
+            format: (value) => formatQuantity(value, INVENTORY_COLORS.yellow),
         },
         {
             id: "available",
@@ -39,6 +59,7 @@ export function InventoryByBranchTable({
             type: "number",
             size: "md",
             align: "center",
+            format: (value) => formatQuantity(value, INVENTORY_COLORS.green),
         },
         {
             id: "pendingDelivery",
@@ -55,6 +76,7 @@ export function InventoryByBranchTable({
             size: "md",
             align: "center",
             headerWrap: true,
+            format: (value) => formatQuantity(value, INVENTORY_COLORS.green),
         },
     ];
 

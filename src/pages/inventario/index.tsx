@@ -16,7 +16,10 @@ import type {
 } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import { INVENTORY_COLORS } from "@/styles/inventario/styles";
+import {
+  INVENTORY_COLORS,
+  inventoryQuantityColor,
+} from "@/styles/inventario/styles";
 import { INVENTORY_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -231,15 +234,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.green,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.green),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
     {
       id: "inTransit",
@@ -247,15 +253,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.yellow,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.yellow),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
     {
       id: "damaged",
@@ -263,15 +272,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.red,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.red),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
   ];
 

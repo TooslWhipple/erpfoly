@@ -19,14 +19,27 @@ import {
   getDelinquentCustomers,
 } from "@/services/delinquency.service";
 import { getDelinquencySharedLists } from "@/services/delinquency-shared-list.service";
-import type { DelinquencySharedListSummary } from "@/types/delinquency-shared-list.types";
+import type {
+  DelinquencySharedListSortField,
+  DelinquencySharedListSortOrder,
+  DelinquencySharedListSummary,
+} from "@/types/delinquency-shared-list.types";
 import type {
   DelinquencyPeriod,
   DelinquencySummary,
   DelinquentCustomer,
+  GetDelinquentCustomersParams,
 } from "@/types/delinquency.types";
 import { formatDate, formatDateOnly } from "@/utils/date";
+import { toTitleCase } from "@/utils/strings";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+
+type DelinquentCustomerSortField = NonNullable<
+  GetDelinquentCustomersParams["sortField"]
+>;
+type DelinquentCustomerSortOrder = NonNullable<
+  GetDelinquentCustomersParams["sortOrder"]
+>;
 
 const SEARCH_DEBOUNCE_MS = 300;
 const CUSTOMER_ROWS_PER_PAGE = 50;
@@ -80,15 +93,48 @@ export default function ClientesMorosidad() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [existingListForModal, setExistingListForModal] =
     useState<DelinquencySharedListSummary | null>(null);
+  const [sortField, setSortField] =
+    useState<DelinquentCustomerSortField>("dueDate");
+  const [sortOrder, setSortOrder] =
+    useState<DelinquentCustomerSortOrder>("asc");
+  const [sharedSortField, setSharedSortField] = useState<
+    DelinquencySharedListSortField | undefined
+  >(undefined);
+  const [sharedSortOrder, setSharedSortOrder] =
+    useState<DelinquencySharedListSortOrder>("asc");
 
   const isSharedLists = activeTab === SHARED_LISTS_TAB;
 
-  const listExtraParams = useMemo((): { period?: DelinquencyPeriod } => {
-    if (activeTab === "all" || isSharedLists) {
-      return {};
+  const listExtraParams = useMemo((): {
+    period?: DelinquencyPeriod;
+    sortField: DelinquentCustomerSortField;
+    sortOrder: DelinquentCustomerSortOrder;
+  } => {
+    const params: {
+      period?: DelinquencyPeriod;
+      sortField: DelinquentCustomerSortField;
+      sortOrder: DelinquentCustomerSortOrder;
+    } = {
+      sortField,
+      sortOrder,
+    };
+    if (activeTab !== "all" && !isSharedLists) {
+      params.period = activeTab as DelinquencyPeriod;
     }
-    return { period: activeTab as DelinquencyPeriod };
-  }, [activeTab, isSharedLists]);
+    return params;
+  }, [activeTab, isSharedLists, sortField, sortOrder]);
+
+  const sharedListExtraParams = useMemo(() => {
+    const params: {
+      sortField?: DelinquencySharedListSortField;
+      sortOrder?: DelinquencySharedListSortOrder;
+    } = {};
+    if (sharedSortField) {
+      params.sortField = sharedSortField;
+      params.sortOrder = sharedSortOrder;
+    }
+    return params;
+  }, [sharedSortField, sharedSortOrder]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     "",
@@ -129,8 +175,23 @@ export default function ClientesMorosidad() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
+    extraParams: sharedListExtraParams,
     enabled: isSharedLists,
   });
+
+  useEffect(() => {
+    if (isSharedLists) {
+      return;
+    }
+    setCustomersPage(0);
+  }, [sortField, sortOrder, setCustomersPage, isSharedLists]);
+
+  useEffect(() => {
+    if (!isSharedLists) {
+      return;
+    }
+    setSharedListsPage(0);
+  }, [sharedSortField, sharedSortOrder, setSharedListsPage, isSharedLists]);
 
   useEffect(() => {
     if (isSharedLists) {
@@ -243,6 +304,22 @@ export default function ClientesMorosidad() {
     void queryClient.invalidateQueries({ queryKey: ["clients", "delinquency", "shared-lists"] });
   }, [queryClient]);
 
+  const handleCustomerSortChange = useCallback(
+    (field: string, order: DelinquentCustomerSortOrder) => {
+      setSortField(field as DelinquentCustomerSortField);
+      setSortOrder(order);
+    },
+    [],
+  );
+
+  const handleSharedListSortChange = useCallback(
+    (field: string, order: DelinquencySharedListSortOrder) => {
+      setSharedSortField(field as DelinquencySharedListSortField);
+      setSharedSortOrder(order);
+    },
+    [],
+  );
+
   const statsCards: StatsCardData[] = summary
     ? [
       {
@@ -276,39 +353,43 @@ export default function ClientesMorosidad() {
     () => [
       {
         id: "fullName",
-        label: "CLIENTE",
+        label: "Cliente",
         size: "xl",
         truncate: true,
-        format: (value, row) => (
-          <Link
-            component="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              handleViewCustomer(row);
-            }}
-            sx={{
-              color: "text.primary",
-              textDecoration: "underline",
-              textDecorationColor: "text.secondary",
-              fontWeight: 400,
-              cursor: "pointer",
-              "&:hover": {
-                color: "primary.main",
-              },
-            }}>
-            {String(value)}
-          </Link>
-        ),
+        sortable: true,
+        format: (value, row) => {
+          const displayName = toTitleCase(String(value));
+          return (
+            <Link
+              component="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleViewCustomer(row);
+              }}
+              sx={{
+                color: "text.primary",
+                textDecoration: "underline",
+                textDecorationColor: "text.secondary",
+                fontWeight: 400,
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+              }}>
+              {displayName}
+            </Link>
+          );
+        },
       },
       {
         id: "phone",
-        label: "TELÉFONO",
+        label: "Teléfono",
         size: "md",
         format: (value) => (value ? String(value) : "—"),
       },
       {
         id: "lastPaymentDate",
-        label: "ÚLTIMO PAGO",
+        label: "Último pago",
         size: "lg",
         format: (value) =>
           value ? formatDate(value, DATE_FORMAT) : "—",
@@ -321,7 +402,7 @@ export default function ClientesMorosidad() {
       },
       {
         id: "delinquencyPeriod",
-        label: "MOROSIDAD",
+        label: "Morosidad",
         size: "sm",
         type: "chip",
         align: "center",
@@ -330,10 +411,11 @@ export default function ClientesMorosidad() {
       },
       {
         id: "debtAmount",
-        label: "DEUDA",
+        label: "Deuda",
         type: "currency",
         size: "md",
         align: "right",
+        sortable: true,
       },
     ],
     [handleViewCustomer],
@@ -343,46 +425,52 @@ export default function ClientesMorosidad() {
     () => [
       {
         id: "name",
-        label: "CLIENTE",
+        label: "Responsable / Gestor",
         size: "xl",
         truncate: true,
-        format: (value) => (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ width: 32, height: 32, fontSize: 12, bgcolor: "primary.main" }}>
-              {String(value).slice(0, 2).toUpperCase()}
-            </Avatar>
-            <Typography variant="body2" noWrap title={String(value)}>
-              {String(value)}
-            </Typography>
-          </Stack>
-        ),
+        sortable: true,
+        format: (value) => {
+          const displayName = toTitleCase(String(value));
+          return (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Avatar sx={{ width: 32, height: 32, fontSize: 12, bgcolor: "primary.main" }}>
+                {displayName.slice(0, 2).toUpperCase()}
+              </Avatar>
+              <Typography variant="body2" noWrap title={displayName}>
+                {displayName}
+              </Typography>
+            </Stack>
+          );
+        },
       },
       {
         id: "contactEmail",
-        label: "EMAIL",
+        label: "Email",
         size: "lg",
         truncate: true,
         format: (value) => (typeof value === "string" && value ? value : "—"),
       },
       {
         id: "clientCount",
-        label: "CLIENTES COMPARTIDOS",
+        label: "Clientes compartidos",
         type: "number",
         size: "md",
         align: "right",
+        sortable: true,
       },
       {
         id: "shareToken",
-        label: "ACCESO",
+        label: "Accesos",
         size: "sm",
         format: (_value, row) => <AccessAvatars emails={row.accessEmails} />,
       },
       {
         id: "totalDebtAmount",
-        label: "VALOR DE DEUDA",
+        label: "Valor de deuda",
         type: "currency",
         size: "md",
         align: "right",
+        sortable: true,
       },
     ],
     [],
@@ -455,6 +543,9 @@ export default function ClientesMorosidad() {
             onRowsPerPageChange={setSharedListsRowsPerPage}
             actions={sharedListActions}
             onRowClick={handleViewSharedListDetail}
+            sortField={sharedSortField}
+            sortOrder={sharedSortOrder}
+            onSortChange={handleSharedListSortChange}
             emptyMessage="No hay listas compartidas"
           />
           :
@@ -480,6 +571,9 @@ export default function ClientesMorosidad() {
             onRowClick={(row) => {
               void router.push(`/clientes/${row.id}`);
             }}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortChange={handleCustomerSortChange}
             emptyMessage="No hay clientes con morosidad"
           />
       }

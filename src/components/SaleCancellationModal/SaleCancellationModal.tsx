@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -6,6 +6,7 @@ import {
   Chip,
   CircularProgress,
   Dialog,
+  FormControlLabel,
   Skeleton,
   Stack,
   Typography,
@@ -82,6 +83,10 @@ function formatCurrency(value: number): string {
   return numeral(value).format("$0,0.00");
 }
 
+function formatPercent(value: number): string {
+  return `${numeral(value).format("0.[##]")}%`;
+}
+
 function formatUnits(count: number): string {
   return count === 1 ? "1 pieza" : `${count} piezas`;
 }
@@ -104,6 +109,8 @@ export interface SaleCancellationModalProps {
   saleId: number;
   onClose: () => void;
   onSuccess?: (result: SaleCancellationResult) => void;
+  /** Abre con todas las partidas cancelables seleccionadas (p. ej. "Cancelar apartado"). */
+  preselectAll?: boolean;
 }
 
 /**
@@ -116,6 +123,7 @@ export function SaleCancellationModal({
   saleId,
   onClose,
   onSuccess,
+  preselectAll = false,
 }: SaleCancellationModalProps) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
@@ -127,6 +135,7 @@ export function SaleCancellationModal({
   const [selection, setSelection] = useState<Record<number, number>>({});
   const [reasonId, setReasonId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [waivePenalty, setWaivePenalty] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
@@ -187,6 +196,30 @@ export function SaleCancellationModal({
       (line) => selection[line.saleItemId] === line.availableQuantity,
     );
 
+  const preselectedRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      preselectedRef.current = false;
+      return;
+    }
+    if (
+      !preselectAll ||
+      preselectedRef.current ||
+      cancellableLines.length === 0
+    ) {
+      return;
+    }
+    preselectedRef.current = true;
+    setSelection(
+      Object.fromEntries(
+        cancellableLines.map((line) => [
+          line.saleItemId,
+          line.availableQuantity,
+        ]),
+      ),
+    );
+  }, [open, preselectAll, cancellableLines]);
+
   const reasonOptions = useMemo(
     () =>
       (preview?.reasons ?? []).map((reason) => ({
@@ -200,8 +233,15 @@ export function SaleCancellationModal({
   );
   const trimmedNotes = notes.trim();
   const notesRequired = selectedReason?.allowsCustomText ?? false;
+  const penalty = simulation?.penalty ?? null;
+  const penaltyWaived = penalty !== null && waivePenalty;
+  const netCredited = simulation
+    ? penaltyWaived
+      ? simulation.grossCreditedAmount
+      : simulation.creditedAmount
+    : 0;
   const missingClient =
-    Boolean(simulation && simulation.creditedAmount > 0) &&
+    Boolean(simulation && simulation.grossCreditedAmount > 0) &&
     preview?.hasClient === false;
   const isVoid = preview?.type === "VOID";
   const reasonDone =
@@ -231,6 +271,7 @@ export function SaleCancellationModal({
     setSelection({});
     setReasonId(null);
     setNotes("");
+    setWaivePenalty(false);
     setAuthOpen(false);
     setAuthError(null);
     resetKey();
@@ -247,6 +288,7 @@ export function SaleCancellationModal({
           reasonId,
           notes: trimmedNotes || undefined,
           lines: selectedLines,
+          waivePenalty: penaltyWaived ? true : undefined,
           authorization: credentials
             ? { username: credentials.username, password: credentials.password }
             : undefined,
@@ -499,7 +541,53 @@ export function SaleCancellationModal({
                 {formatCurrency(simulation.totalAmount)}
               </Typography>
             </SummaryRow>
-            {simulation.creditedAmount > 0 ? (
+            {penalty ? (
+              <>
+                <SummaryRow>
+                  <Typography variant="body2" color="text.secondary">
+                    Abonado a devolver
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatCurrency(simulation.grossCreditedAmount)}
+                  </Typography>
+                </SummaryRow>
+                <SummaryRow>
+                  <Typography variant="body2" color="error.main">
+                    Cargo por cancelación ({formatPercent(penalty.ratePercent)})
+                    {penaltyWaived ? " · condonado" : ""}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="error.main"
+                    sx={
+                      penaltyWaived
+                        ? { textDecoration: "line-through" }
+                        : undefined
+                    }
+                  >
+                    {penaltyWaived ? "" : "-"}
+                    {formatCurrency(penalty.amount)}
+                  </Typography>
+                </SummaryRow>
+                {penalty.waivable ? (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={waivePenalty}
+                        disabled={busy}
+                        onChange={(event) => {
+                          resetKey();
+                          setWaivePenalty(event.target.checked);
+                        }}
+                      />
+                    }
+                    label={`Condonar cargo del ${formatPercent(penalty.ratePercent)} (Excepción gerencial)`}
+                  />
+                ) : null}
+              </>
+            ) : null}
+            {netCredited > 0 ? (
               <SummaryRow>
                 <Typography variant="body2" color="success.main">
                   Saldo a favor del cliente
@@ -509,7 +597,7 @@ export function SaleCancellationModal({
                   color="success.main"
                   fontWeight={600}
                 >
-                  {formatCurrency(simulation.creditedAmount)}
+                  {formatCurrency(netCredited)}
                 </Typography>
               </SummaryRow>
             ) : null}
@@ -534,6 +622,35 @@ export function SaleCancellationModal({
           </>
         )}
       </SummaryCard>
+    );
+  };
+
+  const renderHistory = () => {
+    const entries = (preview?.history ?? []).filter(
+      (entry) => entry.penaltyAmount > 0 || entry.penaltyWaived,
+    );
+    if (entries.length === 0) return null;
+    return (
+      <Section aria-label="Historial de cancelaciones">
+        <SectionHeader>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Cancelaciones anteriores
+          </Typography>
+        </SectionHeader>
+        {entries.map((entry) => (
+          <SummaryRow key={entry.id}>
+            <Typography variant="body2" color="text.secondary">
+              {new Date(entry.createdAt).toLocaleDateString("es-MX")} · Saldo a
+              favor {formatCurrency(entry.creditedAmount)}
+            </Typography>
+            <Typography variant="body2">
+              {entry.penaltyWaived
+                ? "Cargo condonado"
+                : `Cargo ${formatCurrency(entry.penaltyAmount)}`}
+            </Typography>
+          </SummaryRow>
+        ))}
+      </Section>
     );
   };
 
@@ -642,6 +759,7 @@ export function SaleCancellationModal({
                 inputProps={{ maxLength: NOTES_MAX_LENGTH }}
               />
             </Section>
+            {renderHistory()}
           </MainColumn>
 
           <SideColumn>

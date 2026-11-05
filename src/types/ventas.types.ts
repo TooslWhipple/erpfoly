@@ -206,6 +206,26 @@ export interface SaleDetailLayaway {
   payments: SaleDetailLayawayPayment[];
 }
 
+/** GET /pos/layaways/:id/balance — adeudo con mora (motor de Crédito). */
+export interface LayawayBalance {
+  layawayId: number;
+  status: SaleDetailLayaway["status"];
+  expiresAt: string;
+  totalAmount: number;
+  principalPaid: number;
+  principalOutstanding: number;
+  lateFee: {
+    annualRatePercent: number;
+    graceDays: number;
+    daysAccrued: number;
+    accrued: number;
+    paid: number;
+    outstanding: number;
+  };
+  totalDue: number;
+  isSettled: boolean;
+}
+
 export type DiscountRequestReason =
   "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
 

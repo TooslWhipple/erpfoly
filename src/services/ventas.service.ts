@@ -37,6 +37,7 @@ import type {
   RedDeliveryListItem,
   GetRedDeliveriesParams,
   CancelRedDeliveryPayload,
+  LayawayBalance,
 } from "@/types/ventas.types";
 
 export type { SaleListItem, GetSalesParams };
@@ -190,20 +191,10 @@ export async function registerLayawayPayment(
   return post<unknown>(`${BASE}/layaways/${layawayId}/payments`, payload);
 }
 
-export async function completeLayaway(
+export async function getLayawayBalance(
   layawayId: number,
-): Promise<ApiResult<{ success: boolean; message: string }>> {
-  return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/complete`,
-  );
-}
-
-export async function cancelLayaway(
-  layawayId: number,
-): Promise<ApiResult<{ success: boolean; message: string }>> {
-  return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/cancel`,
-  );
+): Promise<ApiResult<LayawayBalance>> {
+  return get<LayawayBalance>(`${BASE}/layaways/${layawayId}/balance`);
 }
 
 export interface CreateSaleDraftPayload {

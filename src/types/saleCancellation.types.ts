@@ -20,12 +20,20 @@ export interface SaleCancellationLineSelection {
   quantity: number;
 }
 
+export interface SaleCancellationPenalty {
+  ratePercent: number;
+  amount: number;
+  waivable: boolean;
+}
+
 export interface SaleCancellationSummary {
   scope: SaleCancellationScope;
   units: number;
   merchandiseAmount: number;
   shippingAmount: number;
   totalAmount: number;
+  grossCreditedAmount: number;
+  penalty: SaleCancellationPenalty | null;
   creditedAmount: number;
   outstandingReduction: number;
   newTotal: number;
@@ -58,6 +66,8 @@ export interface SaleCancellationHistoryEntry {
   createdAt: string;
   totalAmount: number;
   creditedAmount: number;
+  penaltyAmount: number;
+  penaltyWaived: boolean;
   units: number;
   reason: string | null;
 }
@@ -88,6 +98,7 @@ export interface CreateSaleCancellationPayload {
   reasonId: number;
   notes?: string;
   lines: SaleCancellationLineSelection[];
+  waivePenalty?: boolean;
   authorization?: { username: string; password: string };
 }
 

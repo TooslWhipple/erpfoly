@@ -121,10 +121,19 @@ export interface CreateDelinquencySharedListPayload {
   selection?: DelinquencyClientSelectionPayload;
 }
 
+export type DelinquencySharedListSortField =
+  | "name"
+  | "clientCount"
+  | "totalDebtAmount";
+
+export type DelinquencySharedListSortOrder = "asc" | "desc";
+
 export interface GetDelinquencySharedListsParams {
   page: number;
   limit: number;
   search?: string;
+  sortField?: DelinquencySharedListSortField;
+  sortOrder?: DelinquencySharedListSortOrder;
   [key: string]: unknown;
 }
 

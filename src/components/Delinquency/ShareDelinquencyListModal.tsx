@@ -106,8 +106,8 @@ export function ShareDelinquencyListModal({
   const canShare = isExisting
     ? pendingEmails.length > 0
     : selectedClientCount > 0 &&
-      clientName.trim().length > 0 &&
-      isValidEmail(contactEmail);
+    clientName.trim().length > 0 &&
+    isValidEmail(contactEmail);
 
   const handleAddEmailField = useCallback(() => {
     setEmailFields((prev) => [...prev, createEmptyEmailField()]);
@@ -247,34 +247,32 @@ export function ShareDelinquencyListModal({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
-    >
+      PaperProps={{ sx: { borderRadius: 2 } }}>
       <Stack spacing={3} sx={{ p: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <IconButton onClick={onClose} size="small" sx={{ mt: -0.5, ml: -0.5 }}>
+        <Stack direction="column" alignItems="flex-start">
+          <IconButton onClick={onClose} size="small">
             <CloseIcon size={18} />
           </IconButton>
-          <Stack alignItems="flex-end" spacing={0.25}>
-            <Typography variant="h6" fontWeight={700}>
-              ${numeral(totalDebt).format("0,0.00")}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Valor de deuda
-            </Typography>
+
+          <Stack width="100%" direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Stack>
+              <Typography variant="h6" fontWeight={600}>Base de clientes compartida</Typography>
+              <Typography variant="body2" color="text.secondary">{numeral(clientCount).format("0,0")} clientes compartidos</Typography>
+            </Stack>
+            <Stack alignItems="flex-end" spacing={0.25}>
+              <Typography variant="h6" fontWeight={700}>${numeral(totalDebt).format("0,0.00")}</Typography>
+              <Typography variant="caption" color="text.secondary">Valor de deuda</Typography>
+            </Stack>
           </Stack>
         </Stack>
 
-        <Box>
-          <Typography variant="h6" fontWeight={600}>Base de clientes compartida</Typography>
-          <Typography variant="body2" color="text.secondary">{numeral(clientCount).format("0,0")} clientes compartidos</Typography>
-        </Box>
 
-        <Stack spacing={1.5}>
+        <Stack spacing={1}>
           <FormTextField
-            label="Cliente"
+            label="Responsable / Gestor"
             value={clientName}
             onChange={(event) => setClientName(event.target.value)}
-            placeholder="Nombre del cliente"
+            placeholder="Nombre del responsable"
             fullWidth
             size="small"
             disabled={isExisting || loading}
@@ -296,65 +294,67 @@ export function ShareDelinquencyListModal({
               ),
             }}
           />
+
+          <Stack spacing={1}>
+            <Typography variant="subtitle2" fontWeight={600}>Acceso</Typography>
+
+            {
+              savedEmails.map((email) => (
+                <Stack key={email} direction="row" spacing={1} alignItems="center">
+                  <FormTextField
+                    value={email}
+                    fullWidth
+                    size="small"
+                    disabled
+                    InputProps={{
+                      startAdornment: (
+                        <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
+                      ),
+                    }}
+                  />
+                  <Button
+                    variant="text"
+                    color="error"
+                    onClick={() => void handleRemoveSavedEmail(email)}
+                    disabled={loading}
+                    sx={{ whiteSpace: "nowrap" }}>
+                    Remover
+                  </Button>
+                </Stack>
+              ))
+            }
+
+            {
+              emailFields.map((email, index) => (
+                <FormTextField
+                  key={`email-field-${index}`}
+                  value={email}
+                  onChange={(event) => handleEmailChange(index, event.target.value)}
+                  placeholder="Email"
+                  fullWidth
+                  size="small"
+                  type="email"
+                  inputProps={{ maxLength: MAX_FIELD_LENGTH }}
+                  InputProps={{
+                    startAdornment: (
+                      <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
+                    ),
+                  }}
+                />
+              ))
+            }
+
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={handleAddEmailField}
+              sx={{ alignSelf: "flex-start", bgcolor: "grey.100", borderColor: "grey.300" }}>
+              Agregar otro
+            </Button>
+          </Stack>
         </Stack>
 
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle2" fontWeight={600}>
-            Acceso
-          </Typography>
 
-          {savedEmails.map((email) => (
-            <Stack key={email} direction="row" spacing={1} alignItems="center">
-              <FormTextField
-                value={email}
-                fullWidth
-                size="small"
-                disabled
-                InputProps={{
-                  startAdornment: (
-                    <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
-                  ),
-                }}
-              />
-              <Button
-                variant="text"
-                color="error"
-                onClick={() => void handleRemoveSavedEmail(email)}
-                disabled={loading}
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                Remover
-              </Button>
-            </Stack>
-          ))}
-
-          {emailFields.map((email, index) => (
-            <FormTextField
-              key={`email-field-${index}`}
-              value={email}
-              onChange={(event) => handleEmailChange(index, event.target.value)}
-              placeholder="Email"
-              fullWidth
-              size="small"
-              type="email"
-              inputProps={{ maxLength: MAX_FIELD_LENGTH }}
-              InputProps={{
-                startAdornment: (
-                  <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
-                ),
-              }}
-            />
-          ))}
-
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={handleAddEmailField}
-            sx={{ alignSelf: "flex-start", bgcolor: "grey.100", borderColor: "grey.300" }}
-          >
-            Agregar otro
-          </Button>
-        </Stack>
 
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Button

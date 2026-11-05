@@ -66,31 +66,31 @@ export default function DelinquencySharedListDetailPage() {
     () => [
       {
         id: "fullName",
-        label: "CLIENTE",
+        label: "Cliente",
         size: "xl",
         truncate: true,
       },
       {
         id: "phone",
-        label: "TELÉFONO",
+        label: "Teléfono",
         size: "md",
         format: (value) => (value ? String(value) : "—"),
       },
       {
         id: "email",
-        label: "EMAIL",
+        label: "Email",
         size: "lg",
         format: (value) => (value ? String(value) : "—"),
       },
       {
         id: "lastPaymentDate",
-        label: "ÚLTIMO PAGO",
+        label: "Último pago",
         size: "lg",
         format: (value) => (value ? formatDate(value, DATE_FORMAT) : "—"),
       },
       {
         id: "delinquencyPeriod",
-        label: "MOROSIDAD",
+        label: "Morosidad",
         size: "sm",
         type: "chip",
         align: "center",
@@ -99,14 +99,14 @@ export default function DelinquencySharedListDetailPage() {
       },
       {
         id: "totalDebtAmount",
-        label: "DEUDA ACTUAL",
+        label: "Deuda actual",
         type: "currency",
         size: "md",
         align: "right",
       },
       {
         id: "negotiatedDebtAmount",
-        label: "NEGOCIACIÓN",
+        label: "Negociación",
         size: "md",
         align: "right",
         format: (value) =>

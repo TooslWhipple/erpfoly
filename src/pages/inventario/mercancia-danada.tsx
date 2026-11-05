@@ -17,7 +17,7 @@ import {
 } from "@/components";
 import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
 import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
-import { Grid, Skeleton, Stack } from "@mui/material";
+import { Grid, Skeleton, Stack, Typography } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -42,6 +42,10 @@ import {
   DAMAGED_INVENTORY_CREATE,
   DAMAGED_INVENTORY_UPDATE,
 } from "@/lib/permissions";
+import {
+  formatElapsedCompact,
+  formatElapsedDetailEs,
+} from "@/utils/damagedGoodsElapsed";
 const SEARCH_DEBOUNCE_MS = 300;
 /** Query params that open the create modal with a branch and product already chosen. */
 const PREFILL_BRANCH_PARAM = "branch_id";
@@ -286,6 +290,19 @@ export default function MercanciaDanada() {
     },
     [discountItem, showError, showSuccess, refetch],
   );
+  const toComparison = (
+    change: number,
+  ): StatsCardData["comparison"] | undefined => {
+    if (change === 0) {
+      return undefined;
+    }
+    return {
+      value: Math.abs(change),
+      type: change > 0 ? "increase" : "decrease",
+      period: "el mes anterior",
+    };
+  };
+
   const statsCards: StatsCardData[] = stats
     ? [
         {
@@ -293,11 +310,7 @@ export default function MercanciaDanada() {
           label: "Artículos dañados",
           value: stats.totalItems,
           icon: <TrendingUpIcon />,
-          comparison: {
-            value: stats.itemsChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.itemsChange),
         },
         {
           id: "itemsCost",
@@ -305,11 +318,7 @@ export default function MercanciaDanada() {
           value: stats.itemsCost,
           icon: <TrendingUpIcon />,
           isCurrency: true,
-          comparison: {
-            value: stats.costChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.costChange),
         },
         {
           id: "itemsValue",
@@ -317,11 +326,7 @@ export default function MercanciaDanada() {
           value: stats.itemsValue,
           icon: <TrendingUpIcon />,
           isCurrency: true,
-          comparison: {
-            value: stats.valueChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.valueChange),
         },
       ]
     : [];
@@ -331,7 +336,12 @@ export default function MercanciaDanada() {
         id: "productCode",
         label: "Código",
         type: "text",
-        size: "sm",
+        size: "md",
+        format: (value) => (
+          <Typography variant="body2" component="span" noWrap>
+            {String(value ?? "")}
+          </Typography>
+        ),
       },
       {
         id: "branch",
@@ -383,7 +393,7 @@ export default function MercanciaDanada() {
       {
         id: "statusDisplay",
         label: "Estatus",
-        size: "md",
+        size: "lg",
         type: "chip",
         chipLabelMap: DAMAGE_STATUS_CHIP_LABELS,
         chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
@@ -391,7 +401,7 @@ export default function MercanciaDanada() {
       {
         id: "discountStatus",
         label: "Descuento a proveedor",
-        size: "md",
+        size: "lg",
         type: "chip",
         chipLabelMap: DISCOUNT_STATUS_CHIP_LABELS,
         chipVariantMap: DISCOUNT_STATUS_CHIP_VARIANTS,
@@ -400,7 +410,15 @@ export default function MercanciaDanada() {
         id: "elapsedSinceRegistration",
         label: "Tiempo transcurrido",
         size: "md",
-        type: "text",
+        format: (_value, row) => {
+          const compact = formatElapsedCompact(row.registrationDate);
+          const detail = formatElapsedDetailEs(row.registrationDate);
+          return (
+            <Typography variant="body2" component="span" noWrap title={detail}>
+              {compact}
+            </Typography>
+          );
+        },
       },
     ],
     [],
@@ -450,7 +468,7 @@ export default function MercanciaDanada() {
         onSearchChange={handleSearchChange}
         actions={[
           {
-            label: "Ingresar",
+            label: "Registrar daño",
             onClick: handleCreate,
             variant: "contained",
             color: "primary",

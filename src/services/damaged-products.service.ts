@@ -49,7 +49,10 @@ export interface DamagedProductListApiRow {
     status: string;
     /** Disposition code of the folio (e.g. "RETURN_TO_SUPPLIER"). */
     dispositionCode: string;
-    /** Human-readable elapsed time in Spanish (e.g. "menos de un minuto", "2 días"). */
+    /**
+     * Human-readable elapsed time in Spanish from the API (e.g. "menos de un minuto", "2 días").
+     * The list UI formats from `registrationDate` instead (compact cell + detail tooltip).
+     */
     elapsedSinceRegistration: string;
     /**
      * Derivado: "collected" si el folio ya está `completed`; si no,

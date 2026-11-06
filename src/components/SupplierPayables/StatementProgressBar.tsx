@@ -5,6 +5,8 @@ import numeral from "numeral";
 export interface StatementProgressBarProps {
   paidAmount: number;
   totalAmount: number;
+  /** Si se indica, la barra y la etiqueta muestran este porcentaje ("N% pagado"). */
+  paidPercent?: number;
 }
 
 function clampPercent(value: number, total: number): number {
@@ -15,8 +17,10 @@ function clampPercent(value: number, total: number): number {
 export function StatementProgressBar({
   paidAmount,
   totalAmount,
+  paidPercent,
 }: StatementProgressBarProps) {
-  const percent = clampPercent(paidAmount, totalAmount);
+  const percent =
+    paidPercent ?? clampPercent(paidAmount, totalAmount);
   const complete = totalAmount > 0 && paidAmount >= totalAmount;
 
   return (
@@ -28,7 +32,9 @@ export function StatementProgressBar({
       />
       <Stack direction="row" justifyContent="space-between" spacing={2}>
         <Typography variant="body2" fontWeight={600}>
-          Pagado: {numeral(paidAmount).format("$0,0.00")}
+          {paidPercent === undefined
+            ? `Pagado: ${numeral(paidAmount).format("$0,0.00")}`
+            : `${paidPercent}% pagado`}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Total {numeral(totalAmount).format("$0,0.00")}

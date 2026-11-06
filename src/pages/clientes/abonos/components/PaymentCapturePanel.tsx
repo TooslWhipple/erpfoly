@@ -40,6 +40,8 @@ export interface PaymentCapturePanelProps {
   paymentTerminals: PaymentTerminalCatalogItem[];
   paymentTerminalsLoading: boolean;
   totalPendingInstallmentsCount: number;
+  /** Sin créditos (solo apartados) no aplica la cascada: se ocultan parcialidades, monto y depósito. */
+  showCreditControls?: boolean;
   onPaymentAmountChange: (value: number) => void;
   onPaymentMethodChange: (method: ClientPaymentMethod) => void;
   onCashDepositChange: (value: boolean) => void;
@@ -87,6 +89,7 @@ export function PaymentCapturePanel({
   paymentTerminals,
   paymentTerminalsLoading,
   totalPendingInstallmentsCount,
+  showCreditControls = true,
   onPaymentAmountChange,
   onPaymentMethodChange,
   onCashDepositChange,
@@ -184,6 +187,8 @@ export function PaymentCapturePanel({
         Ingresa el cobro realizado al cliente:
       </Typography>
 
+      {showCreditControls && (
+      <>
       <InstallmentsControl>
         <Typography variant="body2" textAlign="center">
           Parcialidades a cubrir
@@ -242,6 +247,8 @@ export function PaymentCapturePanel({
         }
         onChange={(event) => handleInputChange(event.target.value)}
       />
+      </>
+      )}
 
       <Stack direction="row" spacing={1}>
         <RadioButton
@@ -290,6 +297,7 @@ export function PaymentCapturePanel({
         </Select>
       )}
 
+      {showCreditControls && (
       <FormControlLabel
         control={
           <Checkbox
@@ -303,6 +311,7 @@ export function PaymentCapturePanel({
           </Typography>
         }
       />
+      )}
 
       {hasPartialInstallmentRemainder && (
         <Stack spacing={0.5}>
@@ -330,7 +339,7 @@ export function PaymentCapturePanel({
 
       <CaptureCardActions>
         {
-          paymentMethod === "cash" && !isCashDeposit && (
+          showCreditControls && paymentMethod === "cash" && !isCashDeposit && (
             <CaptureCardChangeRow>
               <Typography variant="body2" color="text.secondary">Cambio</Typography>
               <Typography variant="subtitle1">{formatCurrency(change)}</Typography>

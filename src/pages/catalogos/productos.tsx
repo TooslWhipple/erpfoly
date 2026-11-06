@@ -34,14 +34,17 @@ import {
 
 const SEARCH_DEBOUNCE_MS = 300;
 
+// DISCONTINUED = end of life but kept (not deleted); row actions still key off INACTIVE.
 const PRODUCT_STATUS_CHIP_LABELS: Record<string, string> = {
   ACTIVE: "Activo",
   INACTIVE: "Inactivo",
+  DISCONTINUED: "Inactivo",
 };
 
 const PRODUCT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   ACTIVE: "success",
   INACTIVE: "error",
+  DISCONTINUED: "default",
 };
 
 type ProductStatusTab = "all" | "active" | "inactive" | "discontinued";

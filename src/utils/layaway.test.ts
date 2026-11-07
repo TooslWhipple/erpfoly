@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   LAYAWAY_MIN_DEPOSIT_PERCENT,
   layawayBalance,
+  layawayDownPaymentError,
   layawayMinimumDeposit,
 } from "./layaway";
 
@@ -27,3 +28,28 @@ for (const [total, deposit, balance] of cases) {
     assert.equal(layawayBalance(total), balance);
   });
 }
+
+test("enganche inválido: menor al mínimo o no numérico", () => {
+  assert.equal(
+    layawayDownPaymentError(7200, 719.99),
+    "El enganche no puede ser menor al 10% ($720.00)",
+  );
+  assert.equal(
+    layawayDownPaymentError(14999, 500),
+    "El enganche no puede ser menor al 10% ($1,499.90)",
+  );
+  assert.notEqual(layawayDownPaymentError(7200, Number.NaN), null);
+  assert.notEqual(layawayDownPaymentError(7200, null), null);
+});
+
+test("enganche válido: del mínimo al total", () => {
+  assert.equal(layawayDownPaymentError(7200, 720.0), null);
+  assert.equal(layawayDownPaymentError(7200, 7200.0), null);
+});
+
+test("enganche inválido: mayor al total", () => {
+  assert.equal(
+    layawayDownPaymentError(7200, 7200.01),
+    "El enganche no puede ser mayor al total de la venta",
+  );
+});

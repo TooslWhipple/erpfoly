@@ -71,6 +71,22 @@ export type DeliveryBranch = { id: number; name: string };
 
 export type QueueReadiness = "READY" | "ANY";
 
+/** Estatus de traspaso activo que expone el back (subconjunto de `OrderStatus`). */
+export type IncomingTransferStatus =
+  | "pending"
+  | "scheduled"
+  | "in_progress"
+  | "shipped"
+  | "partially_delivered";
+
+/** Traspaso interno activo hacia la sucursal de entrega de la venta. */
+export type IncomingTransfer = {
+  orderId: number;
+  folio: string;
+  originBranch: { id: number; name: string };
+  status: IncomingTransferStatus;
+};
+
 export type QueueRow = {
   saleId: number;
   folio: string;
@@ -85,6 +101,7 @@ export type QueueRow = {
   pendingUnits: number;
   hold: HoldSummary;
   blockReason: BlockReason | null;
+  incomingTransfers: IncomingTransfer[];
 };
 
 export type HandoverLine = {
@@ -121,6 +138,7 @@ export type HandoverSaleDetail = {
   handoverStatus: HandoverProgress;
   hold: HoldSummary;
   blockReason: BlockReason | null;
+  incomingTransfers: IncomingTransfer[];
   requiresIdentityAuthorization: boolean;
   requiresExpiredHoldAuthorization: boolean;
   activeAuthorizations: ActiveHandoverAuthorization[];

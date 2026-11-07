@@ -4,6 +4,8 @@ import {
   activeAuthorizationFor,
   applyCode,
   blockReasonLabel,
+  handoverNotice,
+  incomingTransferLine,
   buildConfirmRequest,
   canChangeDeliveryBranch,
   canConfirm,
@@ -19,6 +21,7 @@ import type {
   BlockReason,
   HandoverLine,
   HandoverSaleDetail,
+  IncomingTransfer,
 } from "../../types/saleHandover.types";
 
 const lines: HandoverLine[] = [
@@ -38,6 +41,7 @@ function detail(overrides: Partial<HandoverSaleDetail> = {}): HandoverSaleDetail
     handoverStatus: "PENDING",
     hold: null,
     blockReason: null,
+    incomingTransfers: [],
     requiresIdentityAuthorization: false,
     requiresExpiredHoldAuthorization: false,
     activeAuthorizations: [],
@@ -274,5 +278,53 @@ describe("cambio de ubicación de entrega", () => {
       canChangeDeliveryBranch({ lines: [{ ...lines[1], delivered: 1 }] }, true),
       false,
     );
+  });
+});
+
+describe("handoverNotice / incomingTransferLine", () => {
+  const label = (s: string) => (s === "pending" ? "Solicitado" : s);
+  const transfer: IncomingTransfer = {
+    orderId: 59,
+    folio: "TV-V520261101-2673-3",
+    originBranch: { id: 3, name: "FOLY AV. MONTERREY" },
+    status: "pending",
+  };
+
+  it("pinta origen, folio y estado", () => {
+    assert.equal(
+      incomingTransferLine(transfer, label),
+      "En traspaso desde FOLY AV. MONTERREY · TV-V520261101-2673-3 · Solicitado",
+    );
+  });
+
+  it("NOTHING_READY con traspasos sustituye el aviso", () => {
+    const n = handoverNotice("NOTHING_READY", [transfer], label);
+    assert.equal(n.warning, null);
+    assert.equal(n.transferLines.length, 1);
+  });
+
+  it("NOTHING_READY sin traspasos conserva el aviso", () => {
+    const n = handoverNotice("NOTHING_READY", [], label);
+    assert.equal(n.warning, blockReasonLabel("NOTHING_READY"));
+    assert.deepEqual(n.transferLines, []);
+  });
+
+  it("entrega parcial (sin bloqueo) muestra el traspaso como información", () => {
+    const n = handoverNotice(null, [transfer, { ...transfer, orderId: 60 }], label);
+    assert.equal(n.warning, null);
+    assert.equal(n.transferLines.length, 2);
+  });
+
+  it("otro bloqueo conserva su aviso y no muestra traspasos", () => {
+    const n = handoverNotice("NOT_PAID", [transfer], label);
+    assert.equal(n.warning, blockReasonLabel("NOT_PAID"));
+    assert.deepEqual(n.transferLines, []);
+  });
+
+  it("sin bloqueo ni traspasos no hay nada que mostrar", () => {
+    assert.deepEqual(handoverNotice(null, [], label), {
+      warning: null,
+      transferLines: [],
+    });
   });
 });

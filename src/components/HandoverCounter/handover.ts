@@ -10,6 +10,7 @@ import type {
   HandoverInputMethod,
   HandoverLine,
   HandoverSaleDetail,
+  IncomingTransfer,
   PickupReceiver,
 } from "@/types/saleHandover.types";
 
@@ -248,6 +249,43 @@ const BLOCK_REASON_LABELS: Record<BlockReason, string> = {
 
 export function blockReasonLabel(reason: BlockReason): string {
   return BLOCK_REASON_LABELS[reason];
+}
+
+/** Línea informativa de un traspaso entrante. `statusLabel` traduce el estado. */
+export function incomingTransferLine(
+  transfer: IncomingTransfer,
+  statusLabel: (status: string) => string,
+): string {
+  return `En traspaso desde ${transfer.originBranch.name} · ${transfer.folio} · ${statusLabel(transfer.status)}`;
+}
+
+export type HandoverNotice = {
+  /** Texto del aviso de bloqueo; `null` si no aplica o lo sustituyen los traspasos. */
+  warning: string | null;
+  /** Líneas informativas de traspaso (vacío si no hay). */
+  transferLines: string[];
+};
+
+/**
+ * Qué avisar en tarjeta y detalle. Con `NOTHING_READY` y traspasos activos las
+ * líneas del traspaso sustituyen el aviso; en entrega parcial (sin bloqueo) se
+ * muestran como información; cualquier otro bloqueo conserva su texto.
+ */
+export function handoverNotice(
+  blockReason: BlockReason | null,
+  incomingTransfers: readonly IncomingTransfer[],
+  statusLabel: (status: string) => string,
+): HandoverNotice {
+  const transferLines = incomingTransfers.map((t) =>
+    incomingTransferLine(t, statusLabel),
+  );
+  const replacesWarning =
+    blockReason === "NOTHING_READY" && transferLines.length > 0;
+  return {
+    warning: blockReason && !replacesWarning ? blockReasonLabel(blockReason) : null,
+    transferLines:
+      blockReason === null || replacesWarning ? transferLines : [],
+  };
 }
 
 /** Extrae el `saleId` de un QR de ticket de venta (`foly:sale:<id>`), o `null`. */

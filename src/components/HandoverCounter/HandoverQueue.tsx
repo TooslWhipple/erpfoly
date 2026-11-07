@@ -29,7 +29,8 @@ import {
 } from "@/utils/saleStatus";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DELIVERY_HANDOVER_UPDATE } from "@/lib/permissions";
-import { blockReasonLabel, canProcess, parseSaleQr } from "./handover";
+import { HandoverNotice } from "./HandoverNotice";
+import { canProcess, parseSaleQr } from "./handover";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const QUEUE_PAGE_SIZE = 10;
@@ -267,11 +268,11 @@ function HandoverQueueCard({
           ) : null}
         </Stack>
       </Stack>
-      {row.blockReason ? (
-        <Alert severity="warning" sx={{ mt: 1.5 }}>
-          {blockReasonLabel(row.blockReason)}
-        </Alert>
-      ) : null}
+      <HandoverNotice
+        blockReason={row.blockReason}
+        incomingTransfers={row.incomingTransfers}
+        sx={{ mt: 1.5 }}
+      />
     </Box>
   );
 }

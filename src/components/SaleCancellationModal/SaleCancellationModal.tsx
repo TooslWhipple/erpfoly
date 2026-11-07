@@ -569,22 +569,6 @@ export function SaleCancellationModal({
                     {formatCurrency(penalty.amount)}
                   </Typography>
                 </SummaryRow>
-                {penalty.waivable ? (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={waivePenalty}
-                        disabled={busy}
-                        onChange={(event) => {
-                          resetKey();
-                          setWaivePenalty(event.target.checked);
-                        }}
-                      />
-                    }
-                    label={`Condonar cargo del ${formatPercent(penalty.ratePercent)} (Excepción gerencial)`}
-                  />
-                ) : null}
               </>
             ) : null}
             {netCredited > 0 ? (
@@ -758,6 +742,22 @@ export function SaleCancellationModal({
                 size="small"
                 inputProps={{ maxLength: NOTES_MAX_LENGTH }}
               />
+              {penalty?.waivable ? (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={waivePenalty}
+                      disabled={busy}
+                      onChange={(event) => {
+                        resetKey();
+                        setWaivePenalty(event.target.checked);
+                      }}
+                    />
+                  }
+                  label={`Condonar cargo del ${formatPercent(penalty.ratePercent)} (Excepción gerencial)`}
+                />
+              ) : null}
             </Section>
             {renderHistory()}
           </MainColumn>
@@ -888,7 +888,7 @@ export function SaleCancellationModal({
           title="Autorización de gerente"
           description={
             simulation
-              ? `Autoriza la cancelación de ${formatUnits(simulation.units)} por ${formatCurrency(simulation.totalAmount)}.`
+              ? `Autoriza la cancelación de ${formatUnits(simulation.units)} por ${formatCurrency(simulation.totalAmount)}${penaltyWaived ? " y la condonación del cargo" : ""}.`
               : "Autoriza la cancelación."
           }
           confirmLabel="Autorizar cancelación"

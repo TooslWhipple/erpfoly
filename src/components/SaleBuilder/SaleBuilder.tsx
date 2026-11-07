@@ -85,6 +85,7 @@ import {
   saleFieldTriggerSx,
   saleInputSx,
 } from "./styles";
+import { DownPaymentField } from "./DownPaymentField";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getProductDetail,
@@ -97,6 +98,7 @@ import {
   updateSalePurchaseType,
   updateSaleLayawayTerm,
   updateSaleCreditDownPayment,
+  updateSaleLayawayDownPayment,
   addSaleItem,
   updateSaleItem,
   removeSaleItem,
@@ -194,7 +196,7 @@ import {
 } from "@/utils/economicRevision";
 import {
   LAYAWAY_MIN_DEPOSIT_PERCENT,
-  layawayBalance,
+  layawayDownPaymentError,
   layawayMinimumDeposit,
 } from "@/utils/layaway";
 import { SaleStockChangedError } from "@/utils/saleStockChanged";
@@ -609,8 +611,9 @@ export function SaleBuilder({
   const [creditDownPaymentText, setCreditDownPaymentText] = useState<
     string | null
   >(null);
-  const [creditDownPaymentFocused, setCreditDownPaymentFocused] =
-    useState(false);
+  const [layawayDownPaymentText, setLayawayDownPaymentText] = useState<
+    string | null
+  >(null);
   const [createClientModalOpen, setCreateClientModalOpen] = useState(false);
   const [creditIntakeModalOpen, setCreditIntakeModalOpen] = useState(false);
   const [allowedTermMonths, setAllowedTermMonths] = useState<number[]>([
@@ -946,6 +949,11 @@ export function SaleBuilder({
     if (resumeSaleData.creditDownPaymentAmount != null) {
       setCreditDownPaymentText(
         resumeSaleData.creditDownPaymentAmount.toFixed(2),
+      );
+    }
+    if (resumeSaleData.layawayDownPaymentAmount != null) {
+      setLayawayDownPaymentText(
+        resumeSaleData.layawayDownPaymentAmount.toFixed(2),
       );
     }
     if (resumeSaleData.creditOffer) {
@@ -1417,6 +1425,12 @@ export function SaleBuilder({
         paymentType === "CREDIT" ? Number(enganche.toFixed(2)) : null,
       );
       if (downPaymentRes.error) throw new Error(downPaymentRes.error.message);
+      const layawayDownPaymentRes = await updateSaleLayawayDownPayment(
+        saleId,
+        paymentType === "LAYAWAY" ? Number(layawayEnganche.toFixed(2)) : null,
+      );
+      if (layawayDownPaymentRes.error)
+        throw new Error(layawayDownPaymentRes.error.message);
     }
     return { id: saleId, folio };
   };
@@ -1575,7 +1589,7 @@ export function SaleBuilder({
         paymentType === "CREDIT"
           ? enganche
           : paymentType === "LAYAWAY"
-            ? cashAmtNum + cardAmtNum + extraCardAmtNum
+            ? layawayEnganche
             : totalFinal;
       const allocatedTenders = allocateCheckoutTenders({
         due: tenderDue,
@@ -1643,21 +1657,19 @@ export function SaleBuilder({
       if (paymentType === "LAYAWAY") {
         if (!activeLayawayTerm)
           throw new Error("Selecciona un plazo de apartado");
-        const depositAmount = cashAmtNum + cardAmtNum + extraCardAmtNum;
+        const depositAmount = layawayEnganche;
         const layawayTenders =
           tenders.length > 0
             ? tenders
-            : depositAmount > 0
-              ? [
-                {
-                  payment_method: (isCardPayment ? "CARD" : "CASH") as
-                    | "CASH"
-                    | "CARD",
-                  amount: depositAmount,
-                  payment_terminal_id: selectedTerminal ?? undefined,
-                },
-              ]
-              : [];
+            : [
+              {
+                payment_method: (isCardPayment ? "CARD" : "CASH") as
+                  | "CASH"
+                  | "CARD",
+                amount: depositAmount,
+                payment_terminal_id: selectedTerminal ?? undefined,
+              },
+            ];
         const layawayRes = await createLayaway(saleId, {
           layaway_term_id: activeLayawayTerm.id,
           deposit_amount: depositAmount,
@@ -1778,6 +1790,9 @@ export function SaleBuilder({
         ...(paymentType === "CREDIT"
           ? { credit_down_payment_amount: enganche }
           : {}),
+        ...(paymentType === "LAYAWAY"
+          ? { layaway_down_payment_amount: layawayEnganche }
+          : {}),
       });
       throwIfSaleError(registerRes.error);
       return saleId;
@@ -1820,10 +1835,14 @@ export function SaleBuilder({
       }
       if (paymentType === "LAYAWAY") {
         const newMinimum = layawayMinimumDeposit(charge.total);
+        const newEnganche = Math.max(layawayEnganche, newMinimum);
+        if (newEnganche > layawayEnganche) {
+          setLayawayDownPaymentText(newEnganche.toFixed(2));
+        }
         const otherTenders = roundToCents(cardAmtNum + extraCardAmtNum);
-        if (roundToCents(cashAmtNum + otherTenders) < newMinimum) {
+        if (roundToCents(cashAmtNum + otherTenders) !== newEnganche) {
           setCashAmount(
-            Math.max(0, roundToCents(newMinimum - otherTenders)).toFixed(2),
+            Math.max(0, roundToCents(newEnganche - otherTenders)).toFixed(2),
           );
         }
       }
@@ -2629,7 +2648,19 @@ export function SaleBuilder({
       : payableMerchandise + shippingAmount,
   );
   const layawayMinimum = layawayMinimumDeposit(totalFinal);
-  const layawayRemaining = layawayBalance(totalFinal);
+  const typedLayawayEnganche =
+    layawayDownPaymentText == null
+      ? null
+      : parseCreditDownPayment(layawayDownPaymentText);
+  const layawayDownPaymentInvalid =
+    paymentType === "LAYAWAY" &&
+    layawayDownPaymentText != null &&
+    layawayDownPaymentError(totalFinal, typedLayawayEnganche) != null;
+  const layawayEnganche =
+    typedLayawayEnganche != null && !layawayDownPaymentInvalid
+      ? typedLayawayEnganche
+      : layawayMinimum;
+  const layawayRemaining = roundToCents(totalFinal - layawayEnganche);
   const totalPending = cartPendingSupplyTotal(coverageCart);
   const showPendingSupplyAlert = totalPending > 0;
   const showShippingInSummary =
@@ -2704,6 +2735,24 @@ export function SaleBuilder({
     }
   }, [paymentType, creditDownPaymentText, minimumEnganche]);
 
+  // Ajuste durante el render (patrón de React): si el mínimo sube por encima
+  // del enganche tecleado, este sube al nuevo mínimo.
+  const [previousLayawayMinimum, setPreviousLayawayMinimum] =
+    useState(layawayMinimum);
+  if (previousLayawayMinimum !== layawayMinimum) {
+    setPreviousLayawayMinimum(layawayMinimum);
+    if (
+      paymentType === "LAYAWAY" &&
+      layawayDownPaymentText != null &&
+      layawayMinimum > previousLayawayMinimum
+    ) {
+      const parsed = parseCreditDownPayment(layawayDownPaymentText);
+      if (parsed != null && parsed < layawayMinimum) {
+        setLayawayDownPaymentText(layawayMinimum.toFixed(2));
+      }
+    }
+  }
+
   const handleIdentityVerified = () => {
     setIdentityOk(true);
     setIdentityVerificationModalOpen(false);
@@ -2726,7 +2775,7 @@ export function SaleBuilder({
     paymentType === "CREDIT"
       ? enganche
       : paymentType === "LAYAWAY"
-        ? totalPaid
+        ? layawayEnganche
         : roundToCents(totalFinal);
   const change = cashChangeDue(
     amountToPay,
@@ -3482,11 +3531,6 @@ export function SaleBuilder({
       !creditDownPaymentAtMinimum
       ? `${Math.round((creditDownPaymentParsed / totalFinal) * 100)}%`
       : null;
-  const creditDownPaymentDisplay = (() => {
-    const [whole, fraction] = creditDownPaymentShown.split(".");
-    const grouped = Number(whole || "0").toLocaleString("es-MX");
-    return fraction != null ? `${grouped}.${fraction}` : grouped;
-  })();
   const creditLineShortageAlert = () =>
     creditLineExceeded && creditAvailable != null ? (
       <Alert severity="error">
@@ -3498,76 +3542,78 @@ export function SaleBuilder({
   const creditDownPaymentField =
     paymentType === "CREDIT" ? (
       <Stack spacing={0.5} py={1.25}>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          gap={2}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Enganche
-          </Typography>
-          <OutlinedInput
-            size="small"
-            value={
-              creditDownPaymentFocused
-                ? creditDownPaymentShown
-                : creditDownPaymentDisplay
-            }
-            onFocus={() => setCreditDownPaymentFocused(true)}
-            onChange={(event) =>
-              setCreditDownPaymentText(
-                sanitizeCreditDownPaymentInput(event.target.value),
-              )
-            }
-            onBlur={() => {
-              setCreditDownPaymentFocused(false);
-              if (creditDownPaymentText == null) return;
-              const parsed = parseCreditDownPayment(creditDownPaymentText);
-              if (parsed == null) return;
-              setCreditDownPaymentText(parsed.toFixed(2));
-            }}
-            error={creditDownPaymentErrorText != null}
-            inputProps={{
-              inputMode: "decimal",
-              autoComplete: "off",
-              "aria-label": "Enganche solicitado",
-              style: { textAlign: "right" },
-            }}
-            startAdornment={
-              <InputAdornment position="start">$</InputAdornment>
-            }
-            sx={{ width: 168, flexShrink: 0, ...saleInputSx }}
-          />
-        </Stack>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          gap={1}
-        >
-          <Typography
-            variant="caption"
-            color={creditDownPaymentErrorText ? "error" : "text.secondary"}
-          >
-            {creditDownPaymentErrorText ??
-              `Mínimo ${formatCurrency(minimumEnganche)} (10%)${creditDownPaymentShare ? ` · ${creditDownPaymentShare}` : ""
-              }`}
-          </Typography>
-          {!creditDownPaymentAtMinimum && (
-            <Button
-              size="small"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() =>
-                setCreditDownPaymentText(minimumEnganche.toFixed(2))
-              }
-              sx={{ minWidth: 0, px: 0.5, py: 0, textTransform: "none" }}
-            >
-              Usar mínimo
-            </Button>
-          )}
-        </Stack>
+        <DownPaymentField
+          valueText={creditDownPaymentShown}
+          onChange={(text) =>
+            setCreditDownPaymentText(sanitizeCreditDownPaymentInput(text))
+          }
+          onCommit={() => {
+            if (creditDownPaymentText == null) return;
+            const parsed = parseCreditDownPayment(creditDownPaymentText);
+            if (parsed == null) return;
+            setCreditDownPaymentText(parsed.toFixed(2));
+          }}
+          onUseMinimum={() =>
+            setCreditDownPaymentText(minimumEnganche.toFixed(2))
+          }
+          minimum={minimumEnganche}
+          minimumPercentLabel="10%"
+          sharePercentLabel={creditDownPaymentShare}
+          errorText={creditDownPaymentErrorText}
+          atMinimum={creditDownPaymentAtMinimum}
+          ariaLabel="Enganche solicitado"
+        />
         {creditLineShortageAlert()}
+      </Stack>
+    ) : null;
+
+  // El cajero no edita el enganche: ve el efectivo (el tecleado válido o el
+  // mínimo vigente), nunca un texto rehidratado que quedó obsoleto tras una
+  // revisión económica y taparía el apoyo "Mínimo" con un error.
+  const layawayDownPaymentShown = isCajeroMode
+    ? layawayEnganche.toFixed(2)
+    : (layawayDownPaymentText ?? layawayMinimum.toFixed(2));
+  const layawayDownPaymentParsed = parseCreditDownPayment(
+    layawayDownPaymentShown,
+  );
+  const layawayDownPaymentAtMinimum =
+    layawayDownPaymentParsed != null &&
+    Math.abs(layawayDownPaymentParsed - layawayMinimum) < 0.001;
+  const layawayDownPaymentShare =
+    layawayDownPaymentParsed != null &&
+    totalFinal > 0 &&
+    !layawayDownPaymentAtMinimum
+      ? `${Math.round((layawayDownPaymentParsed / totalFinal) * 100)}%`
+      : null;
+  const layawayDownPaymentField =
+    paymentType === "LAYAWAY" ? (
+      <Stack spacing={0.5} py={1.25}>
+        <DownPaymentField
+          valueText={layawayDownPaymentShown}
+          onChange={(text) =>
+            setLayawayDownPaymentText(sanitizeCreditDownPaymentInput(text))
+          }
+          onCommit={() => {
+            if (layawayDownPaymentText == null) return;
+            const parsed = parseCreditDownPayment(layawayDownPaymentText);
+            if (parsed == null) return;
+            setLayawayDownPaymentText(parsed.toFixed(2));
+          }}
+          onUseMinimum={() =>
+            setLayawayDownPaymentText(layawayMinimum.toFixed(2))
+          }
+          minimum={layawayMinimum}
+          minimumPercentLabel={`${formatDownPaymentPercent(LAYAWAY_MIN_DEPOSIT_PERCENT / 100)}%`}
+          sharePercentLabel={layawayDownPaymentShare}
+          errorText={
+            layawayDownPaymentInvalid && !isCajeroMode
+              ? layawayDownPaymentError(totalFinal, typedLayawayEnganche)
+              : null
+          }
+          atMinimum={layawayDownPaymentAtMinimum}
+          ariaLabel="Enganche del apartado"
+          readOnly={isCajeroMode}
+        />
       </Stack>
     ) : null;
 
@@ -3579,7 +3625,7 @@ export function SaleBuilder({
       (paymentType !== "CREDIT" ||
         (identityOk && !creditDownPaymentInvalid && !creditLineExceeded)) &&
       (paymentType !== "LAYAWAY" ||
-        (totalPaid >= layawayMinimum &&
+        (totalPaid >= layawayEnganche &&
           totalPaid <= roundToCents(totalFinal))) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
@@ -4153,14 +4199,10 @@ export function SaleBuilder({
                       alignItems="center"
                     >
                       <Typography variant="body2" color="text.secondary">
-                        Enganche mínimo (
-                        {formatDownPaymentPercent(
-                          LAYAWAY_MIN_DEPOSIT_PERCENT / 100,
-                        )}
-                        %)
+                        Enganche
                       </Typography>
                       <Typography variant="body2" fontWeight={600}>
-                        {formatCurrency(layawayMinimum)}
+                        {formatCurrency(layawayEnganche)}
                       </Typography>
                     </Stack>
                     <Select
@@ -4359,7 +4401,11 @@ export function SaleBuilder({
         onRegisterSale={() =>
           void executeSaleOperation(() => registerSaleMutation.mutateAsync())
         }
-        creditLineExceeded={creditLineExceeded || creditDownPaymentInvalid}
+        creditLineExceeded={
+          creditLineExceeded ||
+          creditDownPaymentInvalid ||
+          layawayDownPaymentInvalid
+        }
         proceedLabel={
           paymentType === "CREDIT" && !identityOk
             ? "Validar identidad"
@@ -4388,7 +4434,7 @@ export function SaleBuilder({
             }
           } else {
             if (paymentType === "LAYAWAY" && cashAmount.trim() === "") {
-              setCashAmount(layawayMinimum.toFixed(2));
+              setCashAmount(layawayEnganche.toFixed(2));
             }
             setView("checkout");
           }
@@ -4612,23 +4658,7 @@ export function SaleBuilder({
 
                   {paymentType === "LAYAWAY" && (
                     <>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        py={1.25}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          Enganche mínimo solicitado (
-                          {formatDownPaymentPercent(
-                            LAYAWAY_MIN_DEPOSIT_PERCENT / 100,
-                          )}
-                          %)
-                        </Typography>
-                        <Typography variant="body2" fontWeight={500}>
-                          {formatCurrency(layawayMinimum)}
-                        </Typography>
-                      </Stack>
+                      {layawayDownPaymentField}
                       <Box
                         sx={{
                           bgcolor: "grey.100",

@@ -1,6 +1,7 @@
 import type { ClientStatus } from "@/types/clientes.types";
 import type { BackendSaleCreditActiveItem } from "@/types/clientPayment.types";
-import { isCreditClient } from "@/utils/client";
+import type { OpenClientLayaway } from "@/services/ventas.service";
+import { isCreditClient } from "./client";
 
 export type ClientPaymentAccessDenialReason =
   | "inactive"
@@ -11,10 +12,19 @@ export function getClientPaymentAccessDenial(input: {
   creditApplicationId: number | null | undefined;
   status: ClientStatus | null | undefined;
   activeCredits: Pick<BackendSaleCreditActiveItem, "outstanding_balance">[];
+  /** Apartados abiertos del cliente en la sucursal activa (cobrables aunque sea de contado). */
+  openLayaways?: Pick<OpenClientLayaway, "totalDue">[];
 }): ClientPaymentAccessDenialReason | null {
   const status = input.status ?? "active";
   if (status !== "active") {
     return "inactive";
+  }
+
+  const hasPayableLayaway = (input.openLayaways ?? []).some(
+    (layaway) => layaway.totalDue > 0,
+  );
+  if (hasPayableLayaway) {
+    return null;
   }
 
   if (!isCreditClient({ creditApplicationId: input.creditApplicationId })) {
@@ -36,9 +46,9 @@ export function getClientPaymentAccessDenialMessage(
 ): string | null {
   switch (reason) {
     case "cash-client":
-      return "Este cliente es de contado y no puede registrar abonos.";
+      return "Este cliente es de contado y no tiene apartados con saldo pendiente.";
     case "no-payable-credit":
-      return "El cliente no tiene compras a crédito vigentes con parcialidades pendientes.";
+      return "El cliente no tiene compras a crédito con parcialidades pendientes ni apartados con saldo.";
     case "inactive":
       return null;
   }

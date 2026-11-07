@@ -1,5 +1,6 @@
 import { Stack, Typography } from "@mui/material";
 import numeral from "numeral";
+import { StatementProgressBar } from "@/components";
 import type { ClientPurchaseDetail } from "@/types/clientPurchase.types";
 import {
   FinancialMetric,
@@ -36,18 +37,28 @@ export function PurchaseDetailSummary({ purchase }: PurchaseDetailSummaryProps) 
           </Typography>
         </Stack>
 
-        <Stack spacing={0.5}>
-          <Typography variant="body2" color="text.secondary" align="right">
-            {purchase.paidInstallments} de {purchase.totalInstallments} pagos
-          </Typography>
-          <Stack direction="row" spacing={0.25}>
-            {
-              Array.from({ length: purchase.totalInstallments }).map((_, index) => (
-                <PaymentDot key={index} active={index < purchase.paidInstallments} />
-              ))
-            }
+        {purchase.isLayaway ? (
+          <Stack spacing={0.5} minWidth={{ md: 280 }}>
+            <StatementProgressBar
+              paidAmount={purchase.totalPaid}
+              totalAmount={purchase.initialCost}
+              paidPercent={purchase.paidPercent}
+            />
           </Stack>
-        </Stack>
+        ) : (
+          <Stack spacing={0.5}>
+            <Typography variant="body2" color="text.secondary" align="right">
+              {purchase.paidInstallments} de {purchase.totalInstallments} pagos
+            </Typography>
+            <Stack direction="row" spacing={0.25}>
+              {
+                Array.from({ length: purchase.totalInstallments }).map((_, index) => (
+                  <PaymentDot key={index} active={index < purchase.paidInstallments} />
+                ))
+              }
+            </Stack>
+          </Stack>
+        )}
       </Stack>
 
       <FinancialSummaryRow>

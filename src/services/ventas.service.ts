@@ -184,11 +184,47 @@ export interface RegisterLayawayPaymentPayload {
   payment_terminal_id?: number;
 }
 
+export interface RegisterLayawayPaymentResult {
+  id: number;
+  amount: number;
+  layaway_status: "ACTIVE" | "EXPIRED" | "COMPLETED";
+  branch_id: number;
+}
+
 export async function registerLayawayPayment(
   layawayId: number,
   payload: RegisterLayawayPaymentPayload,
-): Promise<ApiResult<unknown>> {
-  return post<unknown>(`${BASE}/layaways/${layawayId}/payments`, payload);
+): Promise<ApiResult<RegisterLayawayPaymentResult>> {
+  return post<RegisterLayawayPaymentResult>(
+    `${BASE}/layaways/${layawayId}/payments`,
+    payload,
+  );
+}
+
+/** Apartado ACTIVE/EXPIRED de un cliente en la sucursal activa de la caja (C2). */
+export interface OpenClientLayaway {
+  layawayId: number;
+  saleId: number;
+  folio: string;
+  productName: string | null;
+  productSku: string | null;
+  purchaseDate: string;
+  status: "ACTIVE" | "EXPIRED";
+  totalAmount: number;
+  principalPaid: number;
+  principalOutstanding: number;
+  lateFeeOutstanding: number;
+  totalDue: number;
+  expiresAt: string;
+  paidPercent: number;
+}
+
+export async function getOpenClientLayaways(
+  clientId: number,
+): Promise<ApiResult<{ rows: OpenClientLayaway[] }>> {
+  return get<{ rows: OpenClientLayaway[] }>(
+    `${BASE}/clients/${clientId}/layaways/open`,
+  );
 }
 
 export async function getLayawayBalance(

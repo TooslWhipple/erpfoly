@@ -25,7 +25,7 @@ export default function EntregasPage() {
   } = useHandoverBranches();
   // `null` = «Todas las sucursales» (se omite `branchId` en la cola).
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
-  const [includeUpcoming, setIncludeUpcoming] = useState(false);
+  const [includeUpcoming, setIncludeUpcoming] = useState(true);
 
   const branchId =
     selectedBranchId !== null &&

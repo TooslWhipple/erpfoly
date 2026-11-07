@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -18,11 +17,8 @@ import type {
   HandoverSaleDetail,
 } from "@/types/saleHandover.types";
 import { playScanTone } from "@/utils/playScanTone";
-import {
-  applyCode,
-  blockReasonLabel,
-  type CapturedLines,
-} from "./handover";
+import { HandoverNotice } from "./HandoverNotice";
+import { applyCode, type CapturedLines } from "./handover";
 import {
   FeedbackBanner,
   LineCard,
@@ -115,12 +111,19 @@ export function HandoverSaleView({
 
   if (detail.blockReason) {
     return (
-      <Alert severity="warning">{blockReasonLabel(detail.blockReason)}</Alert>
+      <HandoverNotice
+        blockReason={detail.blockReason}
+        incomingTransfers={detail.incomingTransfers}
+      />
     );
   }
 
   return (
     <Stack spacing={2}>
+      <HandoverNotice
+        blockReason={null}
+        incomingTransfers={detail.incomingTransfers}
+      />
       {feedback?.kind === "error" ? (
         <FeedbackBanner role="alert">{feedback.message}</FeedbackBanner>
       ) : null}

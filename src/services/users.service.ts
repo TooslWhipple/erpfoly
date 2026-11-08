@@ -21,6 +21,12 @@ export interface UserListItem {
     branches: string[];
     cashRegisterId: number | null;
     cashRegisterName: string | null;
+    diverseDebtorId?: number | null;
+    diverseDebtor?: {
+        id: number;
+        employeeNumber: string;
+        fullName: string;
+    } | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -37,6 +43,12 @@ export interface UserDetail {
     branches?: BranchItem[];
     branchIds: number[];
     requiresOtp: boolean;
+    diverseDebtorId?: number | null;
+    diverseDebtor?: {
+        id: number;
+        employeeNumber: string;
+        fullName: string;
+    } | null;
     driverDetails?: UserDriverDetails;
 }
 
@@ -103,6 +115,7 @@ export interface CreateUserPayload {
     roleId: number;
     branchIds: number[];
     requiresOtp?: boolean;
+    diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
 }
 
@@ -116,6 +129,7 @@ export interface UpdateUserPayload {
     lastName?: string;
     username?: string;
     branchIds?: number[];
+    diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
 }
 

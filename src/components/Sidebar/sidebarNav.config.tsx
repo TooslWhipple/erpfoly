@@ -54,6 +54,9 @@ import {
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
+  INTERNAL_PAYABLE_CATEGORIES_READ,
+  DIVERSE_DEBTORS_READ,
+  EXPENSE_REQUESTS_READ,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   NEW_ORDER_READ,
@@ -192,6 +195,9 @@ export const NAV_ITEMS: NavItem[] = [
         PAYABLE_INVOICES_READ,
         INVOICE_REQUESTS_READ,
         GENERAL_EXPENSES_READ,
+        INTERNAL_PAYABLE_CATEGORIES_READ,
+        DIVERSE_DEBTORS_READ,
+        EXPENSE_REQUESTS_READ,
         SUPPLIER_PAYABLES_READ,
         MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
       ],
@@ -210,6 +216,26 @@ export const NAV_ITEMS: NavItem[] = [
       {
         label: "Interno",
         path: "/facturas/gastos-generales",
+        requirement: { permission: GENERAL_EXPENSES_READ },
+      },
+      {
+        label: "Categorías de gastos",
+        path: "/facturas/categorias-gastos",
+        requirement: { permission: INTERNAL_PAYABLE_CATEGORIES_READ },
+      },
+      {
+        label: "Deudores diversos",
+        path: "/facturas/deudores-diversos",
+        requirement: { permission: DIVERSE_DEBTORS_READ },
+      },
+      {
+        label: "Solicitud de gastos",
+        path: "/facturas/solicitudes-gastos",
+        requirement: { permission: EXPENSE_REQUESTS_READ },
+      },
+      {
+        label: "Programación de pagos",
+        path: "/facturas/programacion-pagos",
         requirement: { permission: GENERAL_EXPENSES_READ },
       },
       {

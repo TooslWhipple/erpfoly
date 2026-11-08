@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { CalendarDays } from "lucide-react";
 import { Grid, Stack, Typography } from "@mui/material";
@@ -73,12 +73,15 @@ export default function GeneralExpensesPage() {
     string | null
   >(null);
 
-  const statusTabExtra:
-    | { statusTab?: GeneralExpenseStatusTab }
-    | undefined =
-    activeTab === "all"
-      ? undefined
-      : { statusTab: activeTab as GeneralExpenseStatusTab };
+  const listExtraParams = useMemo(
+    () => ({
+      ...(activeTab === "all"
+        ? {}
+        : { statusTab: activeTab as GeneralExpenseStatusTab }),
+      configuration: "PROVEEDORES",
+    }),
+    [activeTab],
+  );
 
   const {
     data: expenses,
@@ -99,7 +102,7 @@ export default function GeneralExpensesPage() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    extraParams: statusTabExtra,
+    extraParams: listExtraParams,
   });
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
@@ -114,7 +117,9 @@ export default function GeneralExpensesPage() {
   } = useQuery({
     queryKey: ["general-expenses-summary"],
     queryFn: async () => {
-      const result = await getGeneralExpensesSummary();
+      const result = await getGeneralExpensesSummary({
+        configuration: "PROVEEDORES",
+      });
       if (result.error) throw new Error(result.error.message);
       return (
         result.data ?? {

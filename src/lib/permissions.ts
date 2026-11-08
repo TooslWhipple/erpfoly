@@ -34,6 +34,9 @@ export type PermissionModule =
   | "facturas"
   | "facturas.solicitudes"
   | "facturas.gastos_generales"
+  | "facturas.categorias_gastos"
+  | "facturas.deudores_diversos"
+  | "facturas.solicitudes_gastos"
   | "facturas.proveedores"
   | "facturas.discrepancias"
   | "atencion_cliente"
@@ -219,6 +222,27 @@ export const GENERAL_EXPENSES_CREATE = GENERAL_EXPENSES_PERMISSIONS.create;
 export const GENERAL_EXPENSES_READ = GENERAL_EXPENSES_PERMISSIONS.read;
 export const GENERAL_EXPENSES_UPDATE = GENERAL_EXPENSES_PERMISSIONS.update;
 export const GENERAL_EXPENSES_DELETE = GENERAL_EXPENSES_PERMISSIONS.delete;
+
+// Categorías de gastos (Cuentas por pagar internas)
+export const INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS = createCrudPermissions("facturas.categorias_gastos");
+export const INTERNAL_PAYABLE_CATEGORIES_CREATE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.create;
+export const INTERNAL_PAYABLE_CATEGORIES_READ = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.read;
+export const INTERNAL_PAYABLE_CATEGORIES_UPDATE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.update;
+export const INTERNAL_PAYABLE_CATEGORIES_DELETE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.delete;
+
+// Deudores diversos (Empleados)
+export const DIVERSE_DEBTORS_PERMISSIONS = createCrudPermissions("facturas.deudores_diversos");
+export const DIVERSE_DEBTORS_CREATE = DIVERSE_DEBTORS_PERMISSIONS.create;
+export const DIVERSE_DEBTORS_READ = DIVERSE_DEBTORS_PERMISSIONS.read;
+export const DIVERSE_DEBTORS_UPDATE = DIVERSE_DEBTORS_PERMISSIONS.update;
+export const DIVERSE_DEBTORS_DELETE = DIVERSE_DEBTORS_PERMISSIONS.delete;
+
+// Solicitudes de gastos (Viáticos, Solicitud de gastos, Caja chica)
+export const EXPENSE_REQUESTS_PERMISSIONS = createCrudPermissions("facturas.solicitudes_gastos");
+export const EXPENSE_REQUESTS_CREATE = EXPENSE_REQUESTS_PERMISSIONS.create;
+export const EXPENSE_REQUESTS_READ = EXPENSE_REQUESTS_PERMISSIONS.read;
+export const EXPENSE_REQUESTS_UPDATE = EXPENSE_REQUESTS_PERMISSIONS.update;
+export const EXPENSE_REQUESTS_DELETE = EXPENSE_REQUESTS_PERMISSIONS.delete;
 
 // Supplier payables (Proveedores - Cuentas por pagar)
 export const SUPPLIER_PAYABLES_PERMISSIONS = createCrudPermissions("facturas.proveedores");

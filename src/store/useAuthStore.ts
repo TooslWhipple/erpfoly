@@ -10,6 +10,7 @@ export interface User {
 	roleId?: number;
 	roleName?: string;
 	principalBranchId?: number | null;
+	diverseDebtorId?: number | null;
 	permissions: string[];
 	temporaryPassword?: boolean;
 }

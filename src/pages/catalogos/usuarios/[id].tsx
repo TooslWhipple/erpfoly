@@ -48,6 +48,10 @@ import {
   type BranchItem,
   type UserDetail,
 } from "@/services/users.service";
+import {
+  getDiverseDebtorsCatalog,
+  type DiverseDebtorListItem,
+} from "@/services/diverse-debtors.service";
 import type { ApiResult, ApiSuccessPayload } from "@/lib/axios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -65,13 +69,15 @@ import {
 import { useUsernameAvailability } from "@/hooks/users/useUsernameAvailability";
 const personNameFilter = filters.personName();
 async function loadCatalogs() {
-  const [rolesResult, branchesResult] = await Promise.all([
+  const [rolesResult, branchesResult, debtors] = await Promise.all([
     getRoles(),
     getBranches(),
+    getDiverseDebtorsCatalog(),
   ]);
   return {
     rolesResult,
     branchesResult,
+    debtors,
   };
 }
 async function loadUser(id: number) {
@@ -85,6 +91,7 @@ type UserFormState = {
   roleId: number | "";
   branchIds: number[];
   requiresOtp: boolean;
+  diverseDebtorId?: number | null;
 };
 type UserFormErrors = Partial<Record<keyof UserFormState, string>>;
 const initialUser: UserFormState = {
@@ -95,6 +102,7 @@ const initialUser: UserFormState = {
   roleId: "",
   branchIds: [],
   requiresOtp: true,
+  diverseDebtorId: null,
 };
 /**
  * One request of the edit save. Role, cellphone and OTP requirement have their
@@ -128,6 +136,7 @@ export default function UserFormPage() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [branches, setBranches] = useState<BranchItem[]>([]);
+  const [debtors, setDebtors] = useState<DiverseDebtorListItem[]>([]);
   const [user, setUser] = useState<UserFormState>(initialUser);
   const [errors, setErrors] = useState<UserFormErrors>({});
   const [driverForm, setDriverForm] =
@@ -151,11 +160,13 @@ export default function UserFormPage() {
     });
   useAsyncEffect(
     async (isCancelled) => {
-      const { rolesResult, branchesResult } = await loadCatalogs();
+      const { rolesResult, branchesResult, debtors: loadedDebtors } =
+        await loadCatalogs();
       if (isCancelled()) return;
       if (!rolesResult.error && rolesResult.data) setRoles(rolesResult.data);
       if (!branchesResult.error && branchesResult.data)
         setBranches(branchesResult.data);
+      if (loadedDebtors) setDebtors(loadedDebtors);
       if (isNew) setLoading(false);
     },
     [isNew],
@@ -169,6 +180,7 @@ export default function UserFormPage() {
       roleId: data.roleId,
       branchIds: data.branchIds,
       requiresOtp: data.requiresOtp,
+      diverseDebtorId: data.diverseDebtorId ?? null,
     };
     setSavedUser(loaded);
     setUser(loaded);
@@ -352,6 +364,7 @@ export default function UserFormPage() {
       roleId: user.roleId as number,
       branchIds: user.branchIds,
       requiresOtp: user.requiresOtp,
+      diverseDebtorId: user.diverseDebtorId || undefined,
       driverDetails,
     });
     if (result.error) {
@@ -386,6 +399,7 @@ export default function UserFormPage() {
             lastName: user.lastName.trim(),
             username: user.username.trim().slice(0, USERNAME_MAX_LENGTH),
             branchIds: user.branchIds,
+            diverseDebtorId: user.diverseDebtorId ?? null,
             // Driver details belong to the role they are sent with.
             ...(roleChanged ? {} : { driverDetails }),
           }),
@@ -624,6 +638,34 @@ export default function UserFormPage() {
                 maxLength: USERNAME_MAX_LENGTH,
                 inputMode: "numeric",
               }}
+            />
+          </Grid>
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <FormSelect
+              label="Deudor diverso (Empleado)"
+              placeholder="Selecciona colaborador"
+              value={
+                user.diverseDebtorId != null ? String(user.diverseDebtorId) : ""
+              }
+              onChange={(e) =>
+                setUserField(
+                  "diverseDebtorId",
+                  e.target.value === "" ? null : Number(e.target.value),
+                )
+              }
+              options={[
+                { value: "", label: "Ninguno / Sin deudor diverso" },
+                ...debtors.map((d) => ({
+                  value: String(d.id),
+                  label: `${d.employeeNumber} - ${d.fullName}`,
+                })),
+              ]}
+              disabled={sendingInvite}
             />
           </Grid>
         </Grid>

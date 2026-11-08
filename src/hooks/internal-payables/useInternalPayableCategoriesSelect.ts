@@ -10,14 +10,16 @@ export const INTERNAL_PAYABLE_CATEGORIES_QUERY_KEY = [
 ] as const;
 
 export function useInternalPayableCategoriesSelect(
-  options: { enabled?: boolean } = {},
+  options: { enabled?: boolean; configuration?: string } = {},
 ) {
-  const { enabled = true } = options;
+  const { enabled = true, configuration = "PROVEEDORES" } = options;
 
   const query = useQuery({
-    queryKey: INTERNAL_PAYABLE_CATEGORIES_QUERY_KEY,
+    queryKey: [...INTERNAL_PAYABLE_CATEGORIES_QUERY_KEY, configuration],
     queryFn: async () => {
-      const result = await getExpenseCategories();
+      const result = await getExpenseCategories(
+        configuration ? { configuration } : undefined,
+      );
       if (result.error) throw new Error(result.error.message);
       return result.data ?? [];
     },

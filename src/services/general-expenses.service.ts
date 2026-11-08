@@ -73,10 +73,11 @@ export async function getGeneralExpenses(
   return get<GetGeneralExpensesResponse>(buildListUrl(BASE, params));
 }
 
-export async function getGeneralExpensesSummary(): Promise<
-  ApiResult<GeneralExpenseSummary>
-> {
-  return get<GeneralExpenseSummary>(`${BASE}/summary`);
+export async function getGeneralExpensesSummary(params?: {
+  configuration?: string;
+}): Promise<ApiResult<GeneralExpenseSummary>> {
+  const url = params ? buildListUrl(`${BASE}/summary`, params) : `${BASE}/summary`;
+  return get<GeneralExpenseSummary>(url);
 }
 
 export async function getGeneralExpenseById(
@@ -94,10 +95,20 @@ export async function getUnassignedInvoices(
   return get<UnassignedInvoice[]>(url);
 }
 
-export async function getExpenseCategories(): Promise<
-  ApiResult<GeneralExpenseCatalogOption[]>
-> {
-  return get<GeneralExpenseCatalogOption[]>("/internal-payable-categories");
+export async function getExpenseCategories(params?: {
+  configuration?: string;
+}): Promise<ApiResult<GeneralExpenseCatalogOption[]>> {
+  const url = params
+    ? buildListUrl("/internal-payable-categories", params)
+    : "/internal-payable-categories";
+  const result = await get<any>(url);
+  if (result.data) {
+    const list = Array.isArray(result.data)
+      ? result.data
+      : (result.data.rows ?? result.data.data ?? []);
+    return { ...result, data: list };
+  }
+  return result;
 }
 
 export async function getApportionmentPreview(

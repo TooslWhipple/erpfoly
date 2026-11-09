@@ -179,6 +179,7 @@ import {
   approvedSpecialDiscount,
   cartLineDiscounts,
   cartListSubtotal,
+  extendUnitQuote,
   lineTotal,
   merchandiseTotal,
   patchCartLinePrices,
@@ -3054,6 +3055,14 @@ export function SaleBuilder({
 
   if (view === "product-detail") {
     const totalQty = productSources.reduce((s, src) => s + src.quantity, 0);
+    const lineQuote = extendUnitQuote(
+      {
+        originalPrice: productDetail?.originalPrice ?? 0,
+        discountAmount: productDetail?.discountAmount ?? 0,
+        finalPrice: productDetail?.finalPrice ?? 0,
+      },
+      totalQty,
+    );
 
     return (
       <>
@@ -3215,7 +3224,7 @@ export function SaleBuilder({
                         Precio original
                       </Typography>
                       <Typography variant="h6" fontWeight={700}>
-                        {formatCurrency(productDetail.originalPrice)}
+                        {formatCurrency(lineQuote.originalPrice)}
                       </Typography>
                     </Box>
                     <Box minWidth={100}>
@@ -3223,7 +3232,7 @@ export function SaleBuilder({
                         Descuento
                       </Typography>
                       <Typography variant="h6" fontWeight={700} color="error.main">
-                        -{formatCurrency(productDetail.discountAmount)}
+                        -{formatCurrency(lineQuote.discountAmount)}
                       </Typography>
                     </Box>
                     <Box minWidth={100}>
@@ -3231,7 +3240,7 @@ export function SaleBuilder({
                         Total
                       </Typography>
                       <Typography variant="h6" fontWeight={700}>
-                        {formatCurrency(productDetail.finalPrice)}
+                        {formatCurrency(lineQuote.total)}
                       </Typography>
                     </Box>
                   </Stack>

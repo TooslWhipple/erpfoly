@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import {
+  Alert,
   Button,
   CircularProgress,
   Dialog,
@@ -21,7 +22,6 @@ import { Breadcrumbs, TabFilters } from "@/components";
 import type { SelectOption } from "@/components/Form";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useUsersSelect, userSelectLabel } from "@/hooks/users/useUsersSelect";
 import { getBranches, type BranchItem } from "@/services/users.service";
 import {
   getDiverseDebtorsCatalog,
@@ -39,12 +39,14 @@ import {
   concludeExpenseRequest,
   createExpenseRequest,
   deleteExpenseVoucher,
+  getMyExpenseRequestContext,
   rejectExpenseRequest,
   reviewExpenseVoucher,
   sendToAuthorizeExpenseRequest,
   updateExpenseRequest,
 } from "@/services/expense-requests.service";
 import type {
+  CompleteExpenseVerificationPayload,
   CreateExpenseRequestPayload,
   CreateExpenseVoucherPayload,
   ExpenseRequestClassification,
@@ -85,7 +87,6 @@ export function ExpenseRequestForm({
   const currentUser = useAuthStore((s) => s.user);
 
   const isEdit = Boolean(request);
-  const isDraft = !request || request.status === "DRAFT";
   const [activeTab, setActiveTab] = useState<ExpenseFormTab>("details");
   const [submitting, setSubmitting] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<ExpenseRequestDetail | null>(
@@ -99,15 +100,22 @@ export function ExpenseRequestForm({
   // Catalogs
   const [branches, setBranches] = useState<BranchItem[]>([]);
   const [debtors, setDebtors] = useState<DiverseDebtorListItem[]>([]);
+  const [debtorsLoaded, setDebtorsLoaded] = useState(false);
   const [categories, setCategories] = useState<InternalPayableCategoryListItem[]>([]);
-  const { data: users = [] } = useUsersSelect();
+  const [userDiverseDebtorId, setUserDiverseDebtorId] = useState<number | null | undefined>(
+    currentUser?.diverseDebtorId,
+  );
+  const [userDetailLoaded, setUserDetailLoaded] = useState(false);
 
   // Form details state
   const [formState, setFormState] = useState<ExpenseRequestDetailsFormState>({
     classification: request?.classification ?? initialClassification,
     internalPayableCategoryId: request?.category?.id ? String(request.category.id) : "",
-    diverseDebtorId: request?.debtor?.id ? String(request.debtor.id) : "",
-    responsibleUserId: request?.responsible?.id ? String(request.responsible.id) : "",
+    diverseDebtorId: request?.debtor?.id
+      ? String(request.debtor.id)
+      : currentUser?.diverseDebtorId
+        ? String(currentUser.diverseDebtorId)
+        : "",
     branchId: request?.branch?.id ? String(request.branch.id) : "",
     startDate: request?.startDate ?? new Date().toISOString().split("T")[0],
     endDate: request?.endDate ?? new Date().toISOString().split("T")[0],
@@ -128,7 +136,6 @@ export function ExpenseRequestForm({
         classification: request.classification,
         internalPayableCategoryId: request.category?.id ? String(request.category.id) : "",
         diverseDebtorId: request.debtor?.id ? String(request.debtor.id) : "",
-        responsibleUserId: request.responsible?.id ? String(request.responsible.id) : "",
         branchId: request.branch?.id ? String(request.branch.id) : "",
         startDate: request.startDate,
         endDate: request.endDate,
@@ -151,7 +158,8 @@ export function ExpenseRequestForm({
       .then((items) => {
         if (Array.isArray(items)) setDebtors(items);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setDebtorsLoaded(true));
 
     getInternalPayableCategories({ limit: 100 })
       .then((res) => {
@@ -160,15 +168,55 @@ export function ExpenseRequestForm({
       .catch(() => {});
   }, []);
 
+  // Load logged-in user's diverseDebtorId from expense-requests/my-context
+  useEffect(() => {
+    getMyExpenseRequestContext()
+      .then((res) => {
+        if (res.data) {
+          setUserDiverseDebtorId(res.data.diverseDebtorId ?? null);
+          if (res.data.debtor) {
+            const myDebtor = res.data.debtor;
+            setDebtors((prev) =>
+              prev.some((d) => d.id === myDebtor.id)
+                ? prev
+                : [...prev, myDebtor],
+            );
+          }
+          if (res.data.branches && res.data.branches.length > 0) {
+            setBranches((prev) => (prev.length > 0 ? prev : res.data!.branches!));
+          }
+          if (res.data.categories && res.data.categories.length > 0) {
+            setCategories((prev) =>
+              prev.length > 0 ? prev : res.data!.categories!,
+            );
+          }
+          if (!isEdit && res.data.diverseDebtorId) {
+            setFormState((prev) => ({
+              ...prev,
+              diverseDebtorId: String(res.data!.diverseDebtorId),
+              branchId:
+                prev.branchId ||
+                (res.data?.debtor?.branchId
+                  ? String(res.data.debtor.branchId)
+                  : prev.branchId),
+            }));
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setUserDetailLoaded(true));
+  }, [isEdit]);
+
   // Pre-fill debtor if user is linked to debtor
   useEffect(() => {
-    if (!isEdit && !formState.diverseDebtorId && currentUser?.diverseDebtorId) {
+    const resolvedDebtorId = userDiverseDebtorId ?? currentUser?.diverseDebtorId;
+    if (!isEdit && resolvedDebtorId) {
       setFormState((prev) => ({
         ...prev,
-        diverseDebtorId: String(currentUser.diverseDebtorId),
+        diverseDebtorId: String(resolvedDebtorId),
       }));
     }
-  }, [currentUser, isEdit, formState.diverseDebtorId]);
+  }, [userDiverseDebtorId, currentUser?.diverseDebtorId, isEdit]);
 
   // Options
   const branchOptions: SelectOption[] = useMemo(
@@ -180,43 +228,62 @@ export function ExpenseRequestForm({
     [branches],
   );
 
-  const debtorOptions: SelectOption[] = useMemo(
-    () =>
-      debtors.map((d) => {
-        const full = `${d.firstName} ${d.paternalSurname}${
-          d.maternalSurname ? " " + d.maternalSurname : ""
-        }`.trim();
-        return {
-          value: String(d.id),
-          label: `${d.employeeNumber} - ${full}`,
-        };
-      }),
-    [debtors],
-  );
-
-  // When debtor selected, get potential responsibles
-  const selectedDebtor = useMemo(
-    () => debtors.find((d) => String(d.id) === formState.diverseDebtorId),
-    [debtors, formState.diverseDebtorId],
-  );
-
-  const responsibleOptions: SelectOption[] = useMemo(() => {
-    if (selectedDebtor?.responsibles && selectedDebtor.responsibles.length > 0) {
-      return selectedDebtor.responsibles.map((r) => ({
-        value: String(r.userId),
-        label: `${r.fullName || r.username} (Responsable Asignado)`,
-      }));
+  const debtorOptions: SelectOption[] = useMemo(() => {
+    const opts = debtors.map((d) => {
+      const full = `${d.firstName} ${d.paternalSurname}${
+        d.maternalSurname ? " " + d.maternalSurname : ""
+      }`.trim();
+      return {
+        value: String(d.id),
+        label: `${d.employeeNumber} - ${full}`,
+      };
+    });
+    if (
+      currentRequest?.debtor &&
+      !opts.some((o) => o.value === String(currentRequest.debtor!.id))
+    ) {
+      opts.push({
+        value: String(currentRequest.debtor.id),
+        label: `${currentRequest.debtor.employeeNumber} - ${currentRequest.debtor.fullName}`,
+      });
     }
-    return users.map((u) => ({
-      value: String(u.id),
-      label: userSelectLabel(u),
-    }));
-  }, [selectedDebtor, users]);
+    return opts;
+  }, [debtors, currentRequest?.debtor]);
 
-  // Categories filtered by classification configuration
+  const resolvedUserDebtorId =
+    userDiverseDebtorId ?? currentUser?.diverseDebtorId ?? null;
+
+  const isSameDebtorAsUser = Boolean(
+    currentRequest &&
+      ((resolvedUserDebtorId != null &&
+        currentRequest.debtor?.id != null &&
+        Number(currentRequest.debtor.id) === Number(resolvedUserDebtorId)) ||
+        (currentUser?.id != null &&
+          currentRequest.applicant?.id != null &&
+          Number(currentRequest.applicant.id) === Number(currentUser.id))),
+  );
+
+  const isEditable =
+    !currentRequest ||
+    (isSameDebtorAsUser &&
+      (currentRequest.status === "DRAFT" ||
+        currentRequest.status === "PENDING_APPROVAL"));
+
+  const canAuthorizeOrReject = Boolean(
+    isEdit &&
+      currentRequest?.status === "PENDING_APPROVAL" &&
+      userDetailLoaded &&
+      !isSameDebtorAsUser,
+  );
+
+  const hasAssignedDebtor = Boolean(formState.diverseDebtorId);
+  const canCreateRequest = isEdit || hasAssignedDebtor;
+
+  // Categories filtered by classification configuration (only VIATICOS and SOLICITUD_GASTOS)
   const categoryOptions: SelectOption[] = useMemo(() => {
     return categories
       .filter((c) => {
+        if (c.configuration === "CAJA_CHICA_REVOLVENTE") return false;
         if (!c.configuration) return true;
         return c.configuration === formState.classification;
       })
@@ -230,7 +297,22 @@ export function ExpenseRequestForm({
     field: K,
     value: ExpenseRequestDetailsFormState[K],
   ) => {
-    setFormState((prev) => ({ ...prev, [field]: value }));
+    setFormState((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "classification") {
+        const selectedCat = categories.find(
+          (c) => String(c.id) === prev.internalPayableCategoryId,
+        );
+        if (
+          selectedCat &&
+          selectedCat.configuration &&
+          selectedCat.configuration !== value
+        ) {
+          next.internalPayableCategoryId = "";
+        }
+      }
+      return next;
+    });
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
@@ -240,13 +322,11 @@ export function ExpenseRequestForm({
       errs.internalPayableCategoryId = "La categoría es obligatoria";
     }
     if (!formState.diverseDebtorId) {
-      errs.diverseDebtorId = "El empleado / deudor es obligatorio";
+      errs.diverseDebtorId =
+        "Tu usuario debe tener un Deudor Diverso asignado en Usuarios para solicitar";
     }
     if (!formState.branchId) {
       errs.branchId = "La sucursal es obligatoria";
-    }
-    if (!formState.responsibleUserId) {
-      errs.responsibleUserId = "El responsable de autorización es obligatorio";
     }
     if (!formState.startDate) {
       errs.startDate = "La fecha de inicio es obligatoria";
@@ -279,7 +359,6 @@ export function ExpenseRequestForm({
           internalPayableCategoryId: Number(formState.internalPayableCategoryId),
           diverseDebtorId: Number(formState.diverseDebtorId),
           branchId: Number(formState.branchId),
-          responsibleUserId: Number(formState.responsibleUserId),
           startDate: formState.startDate,
           endDate: formState.endDate,
           destination: formState.destination.trim() || undefined,
@@ -300,7 +379,6 @@ export function ExpenseRequestForm({
           internalPayableCategoryId: Number(formState.internalPayableCategoryId),
           diverseDebtorId: Number(formState.diverseDebtorId),
           branchId: Number(formState.branchId),
-          responsibleUserId: Number(formState.responsibleUserId),
           startDate: formState.startDate,
           endDate: formState.endDate,
           destination: formState.destination.trim() || undefined,
@@ -423,14 +501,28 @@ export function ExpenseRequestForm({
     onSuccess?.(res.data);
   };
 
-  const handleConclude = async () => {
+  const handleConclude = async (payload?: CompleteExpenseVerificationPayload) => {
     if (!currentRequest) return;
-    const res = await concludeExpenseRequest(currentRequest.id);
+    const prevStatus = currentRequest.status;
+    const res = await concludeExpenseRequest(currentRequest.id, payload);
     if (res.error || !res.data) {
-      showError(res.error?.message ?? "Error al concluir comprobación");
+      showError(res.error?.message ?? "Error al procesar la comprobación");
       return;
     }
-    showSuccess("Comprobación concluida satisfactoriamente");
+    if (
+      (prevStatus === "IN_COMPROBATION" || prevStatus === "APPROVED") &&
+      res.data.status === "IN_VERIFICATION"
+    ) {
+      showSuccess(
+        "Comprobación concluida y enviada a En verificación para revisión del responsable",
+      );
+    } else if (res.data.reimbursementSchedule) {
+      showSuccess(
+        "Revisión completada y reembolso de viáticos programado para devolución",
+      );
+    } else {
+      showSuccess("Comprobación verificada y concluida satisfactoriamente");
+    }
     setCurrentRequest(res.data);
     onSuccess?.(res.data);
   };
@@ -482,19 +574,19 @@ export function ExpenseRequestForm({
         </Stack>
 
         <HeaderActions>
-          {isDraft && (
+          {isEditable && (
             <SaveButton
               variant="contained"
               startIcon={<Save size={16} />}
               onClick={handleSave}
-              disabled={submitting}
+              disabled={submitting || (!isEdit && userDetailLoaded && debtorsLoaded && !canCreateRequest)}
             >
               {submitting ? (
                 <CircularProgress size={20} />
               ) : isEdit ? (
                 "Guardar cambios"
               ) : (
-                "Guardar borrador"
+                "Registrar solicitud"
               )}
             </SaveButton>
           )}
@@ -511,7 +603,7 @@ export function ExpenseRequestForm({
             </Button>
           )}
 
-          {isEdit && currentRequest?.status === "PENDING_APPROVAL" && (
+          {canAuthorizeOrReject && (
             <>
               <Button
                 variant="contained"
@@ -544,6 +636,13 @@ export function ExpenseRequestForm({
         />
       </TabsSection>
 
+      {!isEdit && userDetailLoaded && debtorsLoaded && !hasAssignedDebtor && (
+        <Alert severity="warning">
+          Tu usuario no tiene un <strong>Deudor Diverso</strong> asignado en el catálogo de{" "}
+          <strong>Usuarios</strong>. Para poder solicitar viáticos o gastos, primero se debe vincular un Deudor Diverso a tu usuario.
+        </Alert>
+      )}
+
       <ContentLayout>
         <MainPanel>
           <FormCard>
@@ -552,11 +651,10 @@ export function ExpenseRequestForm({
                 values={formState}
                 categoryOptions={categoryOptions}
                 debtorOptions={debtorOptions}
-                responsibleOptions={responsibleOptions}
                 branchOptions={branchOptions}
                 errors={formErrors}
                 onChange={handleFieldChange}
-                disabled={!isDraft}
+                disabled={!isEditable}
               />
             )}
 
@@ -573,8 +671,10 @@ export function ExpenseRequestForm({
                   currentRequest.status !== "REJECTED"
                 }
                 canReviewVouchers={
-                  currentRequest.status === "APPROVED" ||
-                  currentRequest.status === "IN_VERIFICATION"
+                  !isSameDebtorAsUser &&
+                  (currentRequest.status === "IN_VERIFICATION" ||
+                    currentRequest.status === "IN_COMPROBATION" ||
+                    currentRequest.status === "APPROVED")
                 }
               />
             )}
@@ -583,6 +683,7 @@ export function ExpenseRequestForm({
               <ExpenseRequestConclusionTab
                 request={currentRequest}
                 onConclude={handleConclude}
+                canReviewAndComplete={!isSameDebtorAsUser}
               />
             )}
           </FormCard>

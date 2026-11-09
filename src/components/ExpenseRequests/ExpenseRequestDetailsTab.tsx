@@ -20,7 +20,6 @@ export interface ExpenseRequestDetailsFormState {
   classification: ExpenseRequestClassification;
   internalPayableCategoryId: string;
   diverseDebtorId: string;
-  responsibleUserId: string;
   branchId: string;
   startDate: string;
   endDate: string;
@@ -33,7 +32,6 @@ export interface ExpenseRequestDetailsTabProps {
   values: ExpenseRequestDetailsFormState;
   categoryOptions: SelectOption[];
   debtorOptions: SelectOption[];
-  responsibleOptions: SelectOption[];
   branchOptions: SelectOption[];
   errors: Partial<Record<keyof ExpenseRequestDetailsFormState, string>>;
   onChange: <K extends keyof ExpenseRequestDetailsFormState>(
@@ -47,14 +45,12 @@ export function ExpenseRequestDetailsTab({
   values,
   categoryOptions,
   debtorOptions,
-  responsibleOptions,
   branchOptions,
   errors,
   onChange,
   disabled = false,
 }: ExpenseRequestDetailsTabProps) {
   const isViaticos = values.classification === "VIATICOS";
-  const isCajaChica = values.classification === "CAJA_CHICA";
 
   return (
     <Stack spacing={2.5}>
@@ -82,19 +78,12 @@ export function ExpenseRequestDetailsTab({
             control={<Radio size="small" />}
             label="Solicitud de gastos"
           />
-          <FormControlLabel
-            value="CAJA_CHICA"
-            control={<Radio size="small" />}
-            label="Caja chica (Revolvente)"
-          />
         </RadioGroup>
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25 }}>
           {isViaticos &&
             "Aplica para viajes laborales. Incluye registro de destino, comprobación con facturas/recibos y balance final."}
           {values.classification === "SOLICITUD_GASTOS" &&
             "Para compras y gastos operativos puntuales con fecha inicio, fecha fin y posterior comprobación."}
-          {isCajaChica &&
-            "Fondo revolvente. Al concluir, las comprobaciones autorizadas devolverán el dinero al fondo de caja chica."}
         </Typography>
       </FormControl>
 
@@ -125,38 +114,19 @@ export function ExpenseRequestDetailsTab({
         </Grid>
       </Grid>
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormAutocomplete
-            label="Empleado / Deudor Diverso"
-            options={debtorOptions}
-            value={values.diverseDebtorId}
-            onChange={(val) => onChange("diverseDebtorId", val)}
-            error={Boolean(errors.diverseDebtorId)}
-            helperText={
-              errors.diverseDebtorId ??
-              "Colaborador a nombre de quien se expide el recurso"
-            }
-            disabled={disabled}
-            placeholder="Buscar colaborador o número de empleado"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormAutocomplete
-            label="Responsable de Autorización"
-            options={responsibleOptions}
-            value={values.responsibleUserId}
-            onChange={(val) => onChange("responsibleUserId", val)}
-            error={Boolean(errors.responsibleUserId)}
-            helperText={
-              errors.responsibleUserId ??
-              "Usuario responsable que revisará y autorizará esta solicitud"
-            }
-            disabled={disabled}
-            placeholder="Selecciona el responsable"
-          />
-        </Grid>
-      </Grid>
+      <FormAutocomplete
+        label="Empleado / Deudor Diverso"
+        options={debtorOptions}
+        value={values.diverseDebtorId}
+        onChange={(val) => onChange("diverseDebtorId", val)}
+        error={Boolean(errors.diverseDebtorId)}
+        helperText={
+          errors.diverseDebtorId ??
+          "Deudor diverso vinculado automáticamente a tu usuario"
+        }
+        disabled
+        placeholder="Sin deudor diverso asignado al usuario"
+      />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -167,6 +137,7 @@ export function ExpenseRequestDetailsTab({
             error={Boolean(errors.startDate)}
             helperText={errors.startDate}
             disabled={disabled}
+            placeholder="DD/MM/YYYY"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -177,6 +148,7 @@ export function ExpenseRequestDetailsTab({
             error={Boolean(errors.endDate)}
             helperText={errors.endDate}
             disabled={disabled}
+            placeholder="DD/MM/YYYY"
           />
         </Grid>
       </Grid>
@@ -194,11 +166,7 @@ export function ExpenseRequestDetailsTab({
       )}
 
       <FormTextField
-        label={
-          isCajaChica
-            ? "Monto a Reingresar / Fondo Solicitado"
-            : "Monto Solicitado"
-        }
+        label="Monto Solicitado"
         value={values.requestedAmount}
         onChange={(e) => onChange("requestedAmount", e.target.value)}
         error={Boolean(errors.requestedAmount)}

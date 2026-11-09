@@ -8,15 +8,21 @@ import {
 } from "@/lib/axios";
 import { buildListUrl } from "@/lib/apiHelpers";
 import type {
+  CompleteExpenseVerificationPayload,
   CreateExpenseRequestPayload,
   CreateExpenseVoucherPayload,
+  DisperseExpenseRequestsPayload,
   ExpenseRequestClassification,
   ExpenseRequestDetail,
   ExpenseRequestListItem,
+  ExpenseRequestStatus,
   ExpenseRequestsSummary,
   ListExpenseRequestsParams,
+  PaymentScheduleResponse,
   RejectExpenseRequestPayload,
   ReviewExpenseVoucherPayload,
+  ScheduledPaymentCategory,
+  ScheduledPaymentStatus,
   UpdateExpenseRequestPayload,
 } from "@/types/expense-requests.types";
 
@@ -54,8 +60,32 @@ export async function getExpenseRequests(
   return result;
 }
 
+import type { DiverseDebtorListItem } from "@/types/diverse-debtors.types";
+
+export interface MyExpenseRequestContext {
+  userId: number | null;
+  diverseDebtorId: number | null;
+  debtor: DiverseDebtorListItem | null;
+  branches?: Array<{ id: number; name: string }>;
+  categories?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    configuration: "VIATICOS" | "SOLICITUD_GASTOS";
+    status: "ACTIVE" | "INACTIVE";
+  }>;
+}
+
+export async function getMyExpenseRequestContext(): Promise<
+  ApiResult<MyExpenseRequestContext>
+> {
+  return get<MyExpenseRequestContext>(`${BASE}/my-context`);
+}
+
 export async function getExpenseRequestsSummary(params?: {
   classification?: ExpenseRequestClassification;
+  status?: ExpenseRequestStatus;
 }): Promise<ApiResult<ExpenseRequestsSummary>> {
   const url = params ? buildListUrl(`${BASE}/summary`, params) : `${BASE}/summary`;
   return get<ExpenseRequestsSummary>(url);
@@ -140,7 +170,93 @@ export async function deleteExpenseVoucher(
 
 export async function concludeExpenseRequest(
   id: number | string,
+  payload?: CompleteExpenseVerificationPayload,
 ): Promise<ApiResult<ExpenseRequestDetail>> {
-  return post<ExpenseRequestDetail>(`${BASE}/${id}/conclude`);
+  return post<ExpenseRequestDetail>(`${BASE}/${id}/conclude`, payload ?? {});
 }
+
+export async function getPaymentSchedule(params?: {
+  scheduledDate?: string;
+  category?: ScheduledPaymentCategory;
+  status?: ScheduledPaymentStatus;
+  dispersionStatus?: "PENDING" | "DISPERSED" | "ALL";
+  search?: string;
+}): Promise<ApiResult<PaymentScheduleResponse>> {
+  const url = params
+    ? buildListUrl(`${BASE}/payment-schedule`, params)
+    : `${BASE}/payment-schedule`;
+  return get<PaymentScheduleResponse>(url);
+}
+
+export async function updateScheduledPaymentSelection(
+  id: number | string,
+  payload: {
+    selectedForDispersion?: boolean;
+    scheduledDate?: string;
+  },
+): Promise<
+  ApiResult<{
+    id: number;
+    selectedForDispersion: boolean;
+    scheduledDate: string;
+  }>
+> {
+  return patch(`${BASE}/payment-schedule/${id}`, payload);
+}
+
+export async function updateExpenseRequestDispersionDate(
+  id: number | string,
+  dispersionDate: string,
+): Promise<ApiResult<ExpenseRequestDetail>> {
+  return patch<ExpenseRequestDetail>(`${BASE}/${id}/dispersion-date`, {
+    dispersionDate,
+  });
+}
+
+export async function disperseExpenseRequests(
+  payload: DisperseExpenseRequestsPayload,
+): Promise<
+  ApiResult<{
+    batchId: number;
+    batchCode: string;
+    dispersedCount: number;
+    totalAmount: number;
+    ids: number[];
+    dispersedAt: string;
+  }>
+> {
+  return post(`${BASE}/disperse`, payload);
+}
+
+export async function rescheduleScheduledPayments(payload: {
+  ids: number[];
+  scheduledDate: string;
+}): Promise<
+  ApiResult<{
+    rescheduledCount: number;
+    scheduledDate: string;
+    ids: number[];
+  }>
+> {
+  return post(`${BASE}/payment-schedule/reschedule`, payload);
+}
+
+export async function instantDisperseScheduledPayment(
+  id: number | string,
+): Promise<
+  ApiResult<{
+    id: number;
+    folio: string;
+    beneficiary: string;
+    amount: number;
+    status: ScheduledPaymentStatus;
+    dispersionMethod: string;
+    paymentReference: string;
+    dispersedAt: string;
+  }>
+> {
+  return post(`${BASE}/payment-schedule/${id}/instant-stp`);
+}
+
+
 

@@ -263,6 +263,7 @@ export const theme = createTheme({
           minHeight: 36,
           height: 36,
           maxHeight: 36,
+          whiteSpace: "nowrap",
           boxShadow: "none",
           "&:hover": {
             boxShadow: "none",

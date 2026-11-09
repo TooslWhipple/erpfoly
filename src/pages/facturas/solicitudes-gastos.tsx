@@ -8,7 +8,7 @@ import {
   TabFilters,
   TableCrud,
 } from "@/components";
-import type { TabOption } from "@/components/TabFilters";
+import type { TabOption, SelectFilterOption } from "@/components/TabFilters";
 import type { Column, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -38,19 +38,32 @@ import numeral from "numeral";
 const SEARCH_DEBOUNCE_MS = 300;
 
 type FilterTab = "all" | ExpenseRequestClassification;
+type StatusFilter = "all" | ExpenseRequestStatus;
 
 const CLASSIFICATION_TABS: TabOption[] = [
   { label: "Todas", value: "all" },
   { label: "Viáticos", value: "VIATICOS" },
   { label: "Solicitud de gastos", value: "SOLICITUD_GASTOS" },
-  { label: "Caja chica", value: "CAJA_CHICA" },
+];
+
+const STATUS_FILTER_OPTIONS: SelectFilterOption[] = [
+  { label: "Todos los estatus", value: "all" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.PENDING_APPROVAL, value: "PENDING_APPROVAL" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.APPROVED, value: "APPROVED" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.IN_COMPROBATION, value: "IN_COMPROBATION" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.IN_VERIFICATION, value: "IN_VERIFICATION" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.COMPLETED, value: "COMPLETED" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.REJECTED, value: "REJECTED" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.CANCELLED, value: "CANCELLED" },
+  { label: EXPENSE_REQUEST_STATUS_LABELS.DRAFT, value: "DRAFT" },
 ];
 
 const STATUS_CHIP_VARIANTS: Record<ExpenseRequestStatus, StatusChipVariant> = {
   DRAFT: "default",
   PENDING_APPROVAL: "warning",
   APPROVED: "info",
-  IN_VERIFICATION: "pending",
+  IN_COMPROBATION: "pending",
+  IN_VERIFICATION: "warning",
   COMPLETED: "success",
   REJECTED: "error",
   CANCELLED: "error",
@@ -75,14 +88,18 @@ export default function SolicitudesGastosPage() {
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const listExtraParams = useMemo(
     () => ({
       ...(activeTab === "all"
         ? {}
         : { classification: activeTab as ExpenseRequestClassification }),
+      ...(statusFilter === "all"
+        ? {}
+        : { status: statusFilter as ExpenseRequestStatus }),
     }),
-    [activeTab],
+    [activeTab, statusFilter],
   );
 
   const {
@@ -99,7 +116,7 @@ export default function SolicitudesGastosPage() {
     error,
     refetch,
   } = usePaginatedList<ExpenseRequestListItem>({
-    queryKey: ["expense-requests", activeTab],
+    queryKey: ["expense-requests", activeTab, statusFilter],
     queryFn: getExpenseRequests,
     initialPage: 0,
     initialRowsPerPage: 10,
@@ -117,12 +134,18 @@ export default function SolicitudesGastosPage() {
     isError: summaryError,
     error: summaryErrorObj,
   } = useQuery({
-    queryKey: ["expense-requests-summary", activeTab],
+    queryKey: ["expense-requests-summary", activeTab, statusFilter],
     queryFn: async () => {
+      const summaryParams = {
+        ...(activeTab === "all"
+          ? {}
+          : { classification: activeTab as ExpenseRequestClassification }),
+        ...(statusFilter === "all"
+          ? {}
+          : { status: statusFilter as ExpenseRequestStatus }),
+      };
       const result = await getExpenseRequestsSummary(
-        activeTab === "all"
-          ? undefined
-          : { classification: activeTab as ExpenseRequestClassification },
+        Object.keys(summaryParams).length > 0 ? summaryParams : undefined,
       );
       if (result.error) throw new Error(result.error.message);
       return (
@@ -155,6 +178,11 @@ export default function SolicitudesGastosPage() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value as FilterTab);
+    setPage(0);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value as StatusFilter);
     setPage(0);
   };
 
@@ -206,8 +234,8 @@ export default function SolicitudesGastosPage() {
       label: "Vigencia",
       size: "md",
       format: (_, row) => {
-        const start = formatDate(row.startDate, "dateMedium");
-        const end = formatDate(row.endDate, "dateMedium");
+        const start = formatDate(row.startDate, "DD/MM/YYYY");
+        const end = formatDate(row.endDate, "DD/MM/YYYY");
         return start === end ? start : `${start} - ${end}`;
       },
     },
@@ -281,6 +309,14 @@ export default function SolicitudesGastosPage() {
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        selectFilters={[
+          {
+            options: STATUS_FILTER_OPTIONS,
+            value: statusFilter,
+            onChange: handleStatusFilterChange,
+            minWidth: 190,
+          },
+        ]}
         showSearch
         searchValue={searchInput}
         onSearchChange={setSearchInput}

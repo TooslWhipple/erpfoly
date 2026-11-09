@@ -176,6 +176,7 @@ export async function createUser(
         roleId: payload.roleId,
         branchIds: payload.branchIds,
         ...(payload.requiresOtp !== undefined ? { requiresOtp: payload.requiresOtp } : {}),
+        ...(payload.diverseDebtorId !== undefined ? { diverseDebtorId: payload.diverseDebtorId } : {}),
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
     };
     return post<ApiSuccessPayload>(BASE, body);
@@ -190,6 +191,7 @@ export async function updateUser(
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
     if (payload.username !== undefined) body.username = payload.username;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
+    if (payload.diverseDebtorId !== undefined) body.diverseDebtorId = payload.diverseDebtorId;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
 }

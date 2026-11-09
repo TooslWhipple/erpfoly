@@ -35,7 +35,8 @@ const STATUS_COLOR_MAP: Record<
   DRAFT: "default",
   PENDING_APPROVAL: "warning",
   APPROVED: "info",
-  IN_VERIFICATION: "secondary",
+  IN_COMPROBATION: "secondary",
+  IN_VERIFICATION: "warning",
   COMPLETED: "success",
   REJECTED: "error",
   CANCELLED: "error",
@@ -51,7 +52,7 @@ export function ExpenseRequestSummaryPanel({
     request?.requestedAmount ?? temporaryValues?.requestedAmount ?? 0;
   const verifiedAmount = request?.verifiedAmount ?? 0;
   const balance = Math.max(0, requestedAmount - verifiedAmount);
-  const status = request?.status ?? "DRAFT";
+  const status = request?.status ?? "PENDING_APPROVAL";
 
   const startDate = request?.startDate ?? temporaryValues?.startDate;
   const endDate = request?.endDate ?? temporaryValues?.endDate;
@@ -149,10 +150,67 @@ export function ExpenseRequestSummaryPanel({
                 Vigencia:
               </Typography>
               <Typography variant="caption" fontWeight={500}>
-                {formatDate(startDate, "dateMedium")}
+                {formatDate(startDate, "DD/MM/YYYY")}
                 {endDate && endDate !== startDate
-                  ? ` al ${formatDate(endDate, "dateMedium")}`
+                  ? ` al ${formatDate(endDate, "DD/MM/YYYY")}`
                   : ""}
+              </Typography>
+            </Stack>
+          )}
+
+          {request?.dispersionDate && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" color="text.secondary">
+                Fecha de dispersión:
+              </Typography>
+              <Typography variant="caption" fontWeight={600} color="primary.main">
+                {formatDate(request.dispersionDate, "DD/MM/YYYY")}
+              </Typography>
+            </Stack>
+          )}
+
+          {(status === "APPROVED" ||
+            status === "IN_COMPROBATION" ||
+            status === "IN_VERIFICATION" ||
+            status === "COMPLETED") && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                Dispersión / Pago:
+              </Typography>
+              <Chip
+                size="small"
+                label={request?.dispersedAt ? "Pagado / Dispersado" : "Pendiente de dispersión"}
+                color={request?.dispersedAt ? "success" : "warning"}
+                variant="outlined"
+                sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600 }}
+              />
+            </Stack>
+          )}
+
+          {request?.reimbursementSchedule && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                Devolución programada:
+              </Typography>
+              <Typography variant="caption" fontWeight={700} color="info.main">
+                {formatDate(request.reimbursementSchedule.scheduledDate, "DD/MM/YYYY")} (
+                {numeral(request.reimbursementSchedule.amount).format("$0,0.00")})
+              </Typography>
+            </Stack>
+          )}
+
+          {request?.paymentReference && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" color="text.secondary">
+                Referencia de pago:
+              </Typography>
+              <Typography
+                variant="caption"
+                fontWeight={600}
+                color="success.main"
+                sx={{ fontFamily: "monospace" }}
+              >
+                {request.paymentReference}
               </Typography>
             </Stack>
           )}

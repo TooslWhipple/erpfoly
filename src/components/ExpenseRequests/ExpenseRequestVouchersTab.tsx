@@ -218,7 +218,7 @@ export function ExpenseRequestVouchersTab({
                       {voucher.concept}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {formatDate(voucher.date, "dateMedium")}
+                      {formatDate(voucher.date, "DD/MM/YYYY")}
                       {voucher.supplierName ? ` • ${voucher.supplierName}` : ""}
                     </Typography>
                     {voucher.fiscalUuid && (
@@ -373,6 +373,7 @@ export function ExpenseRequestVouchersTab({
                   label="Fecha del gasto"
                   value={date}
                   onChange={(val) => setDate(val)}
+                  placeholder="DD/MM/YYYY"
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>

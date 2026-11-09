@@ -9,7 +9,7 @@ export default function NewExpenseRequestPage() {
 
   const classification =
     typeof router.query.classification === "string" &&
-    ["VIATICOS", "SOLICITUD_GASTOS", "CAJA_CHICA"].includes(
+    ["VIATICOS", "SOLICITUD_GASTOS"].includes(
       router.query.classification,
     )
       ? (router.query.classification as ExpenseRequestClassification)

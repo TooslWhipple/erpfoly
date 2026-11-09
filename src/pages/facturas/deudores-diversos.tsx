@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Stack } from "@mui/material";
 import { z } from "zod";
 import {
@@ -10,15 +10,17 @@ import {
 } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
+import type { SelectOption } from "@/components/Form";
 import { defineFormFields, messages } from "@/forms";
 import type { AutocompleteItem } from "@/forms";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import { useUsersSelect, userSelectLabel } from "@/hooks/users/useUsersSelect";
+import { getBranches, type BranchItem } from "@/services/users.service";
 import {
   createDiverseDebtor,
   getDiverseDebtors,
+  getDiverseDebtorsCatalog,
   updateDiverseDebtor,
 } from "@/services/diverse-debtors.service";
 import type { DiverseDebtorListItem } from "@/types/diverse-debtors.types";
@@ -52,10 +54,16 @@ type DebtorFormValues = {
   firstName: string;
   paternalSurname: string;
   maternalSurname: string;
-  responsibleUserIds: (string | number)[];
+  rfc: string;
+  clabe: string;
+  branchId: string | number;
+  responsibleDebtorIds: (string | number)[];
 };
 
-function buildDebtorFormFields(userItems: AutocompleteItem[]) {
+function buildDebtorFormFields(
+  debtorItems: AutocompleteItem[],
+  branchOptions: SelectOption[],
+) {
   return defineFormFields<DebtorFormValues>()([
     {
       name: "employeeNumber",
@@ -99,14 +107,44 @@ function buildDebtorFormFields(userItems: AutocompleteItem[]) {
       placeholder: "Ej. López (opcional)",
     },
     {
-      name: "responsibleUserIds",
+      name: "rfc",
+      schema: z
+        .string()
+        .min(12, "El RFC debe tener al menos 12 caracteres")
+        .max(13, "El RFC no puede exceder 13 caracteres"),
+      label: "RFC",
+      type: "text",
+      placeholder: "Ej. XAXX010101000",
+    },
+    {
+      name: "clabe",
+      schema: z
+        .string()
+        .regex(/^\d{18}$/, "La CLABE interbancaria debe tener 18 dígitos numéricos"),
+      label: "CLABE interbancaria (Transferencias)",
+      type: "text",
+      placeholder: "18 dígitos numéricos",
+    },
+    {
+      name: "branchId",
+      schema: z
+        .union([z.string(), z.number()])
+        .refine((val) => String(val).trim() !== "", "La sucursal es requerida"),
+      label: "Sucursal",
+      type: "select",
+      placeholder: "Selecciona una sucursal",
+      options: branchOptions,
+    },
+    {
+      name: "responsibleDebtorIds",
       schema: z
         .array(z.union([z.string(), z.number()]))
-        .min(1, "Debes seleccionar al menos un responsable"),
-      label: "Responsables del colaborador",
+        .optional()
+        .default([]),
+      label: "Responsables del colaborador (opcional)",
       type: "autocomplete",
-      placeholder: "Buscar responsables...",
-      items: userItems,
+      placeholder: "Buscar otras personas del catálogo (opcional)...",
+      items: debtorItems,
     },
   ] as const);
 }
@@ -116,20 +154,56 @@ export default function DeudoresDiversosPage() {
   const showError = useSnackbarStore((s) => s.showError);
 
   const [activeTab, setActiveTab] = useState<DebtorStatusTab>("all");
+  const [catalogDebtors, setCatalogDebtors] = useState<DiverseDebtorListItem[]>([]);
+  const [branches, setBranches] = useState<BranchItem[]>([]);
 
-  const { data: users = [] } = useUsersSelect({ limit: 500 });
-  const userItems: AutocompleteItem[] = useMemo(
+  const loadCatalog = useCallback(() => {
+    getDiverseDebtorsCatalog()
+      .then((items) => {
+        if (Array.isArray(items)) setCatalogDebtors(items);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadCatalog();
+    getBranches()
+      .then((res) => {
+        if (res.data) setBranches(res.data);
+      })
+      .catch(() => {});
+  }, [loadCatalog]);
+
+  const [modalState, setModalState] = useState<
+    { open: false } | { open: true; debtor?: DiverseDebtorListItem }
+  >({ open: false });
+  const [saving, setSaving] = useState(false);
+
+  const editingDebtorId = modalState.open ? modalState.debtor?.id : undefined;
+
+  const debtorItems: AutocompleteItem[] = useMemo(
     () =>
-      users.map((u) => ({
-        id: u.id,
-        label: userSelectLabel(u),
+      catalogDebtors
+        .filter((d) => d.id !== editingDebtorId)
+        .map((d) => ({
+          id: d.id,
+          label: `${d.employeeNumber} - ${d.fullName}`,
+        })),
+    [catalogDebtors, editingDebtorId],
+  );
+
+  const branchOptions: SelectOption[] = useMemo(
+    () =>
+      branches.map((b) => ({
+        value: String(b.id),
+        label: b.name,
       })),
-    [users],
+    [branches],
   );
 
   const debtorFormFields = useMemo(
-    () => buildDebtorFormFields(userItems),
-    [userItems],
+    () => buildDebtorFormFields(debtorItems, branchOptions),
+    [debtorItems, branchOptions],
   );
 
   const listExtraParams = useMemo(() => {
@@ -171,11 +245,6 @@ export default function DeudoresDiversosPage() {
     handlePageChange(0);
   }, [activeTab, handlePageChange]);
 
-  const [modalState, setModalState] = useState<
-    { open: false } | { open: true; debtor?: DiverseDebtorListItem }
-  >({ open: false });
-  const [saving, setSaving] = useState(false);
-
   const [confirmState, setConfirmState] = useState<
     | { open: false }
     | {
@@ -206,7 +275,12 @@ export default function DeudoresDiversosPage() {
         firstName: modalState.debtor.firstName,
         paternalSurname: modalState.debtor.paternalSurname,
         maternalSurname: modalState.debtor.maternalSurname ?? "",
-        responsibleUserIds: modalState.debtor.responsibles.map((r) => r.userId),
+        rfc: modalState.debtor.rfc ?? "",
+        clabe: modalState.debtor.clabe ?? "",
+        branchId: modalState.debtor.branchId ? String(modalState.debtor.branchId) : "",
+        responsibleDebtorIds: modalState.debtor.responsibles.map(
+          (r) => r.responsibleDebtorId,
+        ),
       };
     }
     return {
@@ -214,7 +288,10 @@ export default function DeudoresDiversosPage() {
       firstName: "",
       paternalSurname: "",
       maternalSurname: "",
-      responsibleUserIds: [],
+      rfc: "",
+      clabe: "",
+      branchId: "",
+      responsibleDebtorIds: [],
     };
   }, [modalState]);
 
@@ -226,7 +303,12 @@ export default function DeudoresDiversosPage() {
       firstName: value.firstName.trim(),
       paternalSurname: value.paternalSurname.trim(),
       maternalSurname: value.maternalSurname?.trim() || undefined,
-      responsibleUserIds: value.responsibleUserIds.map((id) => Number(id)),
+      rfc: value.rfc.trim().toUpperCase(),
+      clabe: value.clabe.replace(/\s+/g, "").trim(),
+      branchId: value.branchId ? Number(value.branchId) : null,
+      responsibleDebtorIds: (value.responsibleDebtorIds ?? []).map((id) =>
+        Number(id),
+      ),
     };
 
     const result = editing
@@ -247,6 +329,7 @@ export default function DeudoresDiversosPage() {
         : "Colaborador registrado correctamente",
     );
     refetch();
+    loadCatalog();
   };
 
   const openConfirm = (debtor: DiverseDebtorListItem) => {
@@ -284,6 +367,7 @@ export default function DeudoresDiversosPage() {
         : "Colaborador activado correctamente",
     );
     refetch();
+    loadCatalog();
   };
 
   const columns: Column<DiverseDebtorListItem>[] = [
@@ -295,7 +379,25 @@ export default function DeudoresDiversosPage() {
     {
       id: "fullName",
       label: "Nombre completo",
-      width: 250,
+      width: 220,
+    },
+    {
+      id: "rfc",
+      label: "RFC",
+      width: 140,
+      format: (_, row) => row.rfc || "-",
+    },
+    {
+      id: "clabe",
+      label: "CLABE",
+      width: 190,
+      format: (_, row) => row.clabe || "-",
+    },
+    {
+      id: "branch",
+      label: "Sucursal",
+      width: 160,
+      format: (_, row) => row.branch?.name || "-",
     },
     {
       id: "responsibles",

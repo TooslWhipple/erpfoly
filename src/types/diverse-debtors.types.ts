@@ -1,10 +1,13 @@
 export interface DiverseDebtorResponsible {
   id: number;
-  userId: number;
+  responsibleDebtorId: number;
+  employeeNumber: string;
   fullName: string;
   firstName: string;
-  lastName: string;
-  username: string;
+  paternalSurname: string;
+  maternalSurname: string | null;
+  userId: number | null;
+  username: string | null;
 }
 
 export interface DiverseDebtorListItem {
@@ -14,6 +17,10 @@ export interface DiverseDebtorListItem {
   paternalSurname: string;
   maternalSurname: string | null;
   fullName: string;
+  rfc?: string | null;
+  clabe?: string | null;
+  branchId?: number | null;
+  branch?: { id: number; name: string } | null;
   status: "ACTIVE" | "INACTIVE";
   responsibles: DiverseDebtorResponsible[];
   createdAt: string;
@@ -25,7 +32,10 @@ export interface CreateDiverseDebtorPayload {
   firstName: string;
   paternalSurname: string;
   maternalSurname?: string;
-  responsibleUserIds: number[];
+  rfc?: string | null;
+  clabe?: string | null;
+  branchId?: number | null;
+  responsibleDebtorIds?: number[];
   status?: "ACTIVE" | "INACTIVE";
 }
 
@@ -37,4 +47,3 @@ export interface ListDiverseDebtorsParams {
   search?: string;
   status?: "ACTIVE" | "INACTIVE";
 }
-

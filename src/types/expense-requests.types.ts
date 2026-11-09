@@ -7,6 +7,7 @@ export type ExpenseRequestStatus =
   | "DRAFT"
   | "PENDING_APPROVAL"
   | "APPROVED"
+  | "IN_COMPROBATION"
   | "IN_VERIFICATION"
   | "COMPLETED"
   | "REJECTED"
@@ -48,6 +49,10 @@ export interface ExpenseRequestListItem {
   verifiedAmount: number;
   reimbursedAmount: number;
   status: ExpenseRequestStatus;
+  dispersionDate?: string | null;
+  dispersedAt?: string | null;
+  paymentReference?: string | null;
+  authorizedAt?: string | null;
   category: {
     id: number;
     code: string;
@@ -91,14 +96,26 @@ export interface ExpenseRequestDetail extends ExpenseRequestListItem {
     username: string;
   } | null;
   concludedAt?: string | null;
+  reimbursementSchedule?: {
+    id: number;
+    folio: string;
+    amount: number;
+    scheduledDate: string;
+    status: ScheduledPaymentStatus;
+    paymentReference?: string | null;
+    dispersedAt?: string | null;
+  } | null;
   debtor?: {
     id: number;
     employeeNumber: string;
     fullName: string;
     responsibles?: Array<{
-      userId: number;
+      id: number;
+      responsibleDebtorId: number;
+      employeeNumber: string;
       fullName: string;
-      username: string;
+      userId: number | null;
+      username: string | null;
     }>;
   } | null;
   vouchers: ExpenseVoucher[];
@@ -168,7 +185,8 @@ export const EXPENSE_REQUEST_STATUS_LABELS: Record<
   DRAFT: "Borrador",
   PENDING_APPROVAL: "Por autorizar",
   APPROVED: "Autorizada",
-  IN_VERIFICATION: "En comprobación",
+  IN_COMPROBATION: "En comprobación",
+  IN_VERIFICATION: "En verificación",
   COMPLETED: "Concluida",
   REJECTED: "Rechazada",
   CANCELLED: "Cancelada",
@@ -184,5 +202,98 @@ export interface ExpenseRequestsSummary {
   completedCount: number;
   totalCount: number;
 }
+
+export type ScheduledPaymentCategory =
+  | "PROVEEDOR"
+  | "GASTO_GENERAL"
+  | "VIATICOS"
+  | "SOLICITUD_GASTOS"
+  | "CAJA_CHICA"
+  | "REEMBOLSO_VIATICOS";
+
+export type ScheduledPaymentStatus = "PENDIENTE" | "PAGADO" | "CANCELADO";
+
+export interface ScheduledPaymentItem {
+  id: number;
+  expenseRequestId?: number | null;
+  folio: string;
+  category: ScheduledPaymentCategory;
+  classification?: ExpenseRequestClassification;
+  beneficiary: string;
+  beneficiaryRfc: string;
+  concept: string;
+  bankName: string;
+  clabe: string;
+  scheduledDate: string;
+  dispersionDate: string;
+  dueDate: string;
+  startDate?: string;
+  endDate?: string;
+  destination?: string | null;
+  description?: string | null;
+  amount: number;
+  requestedAmount: number;
+  status: ScheduledPaymentStatus;
+  selectedForDispersion: boolean;
+  dispersionMethod?: string | null;
+  paymentReference?: string | null;
+  dispersedAt?: string | null;
+  authorizedAt?: string | null;
+  branch?: { id: number; name: string } | null;
+  debtor?: {
+    id: number;
+    employeeNumber: string;
+    fullName: string;
+    rfc?: string | null;
+    clabe?: string | null;
+  } | null;
+  authorizedBy?: {
+    id: number;
+    username: string;
+    fullName: string;
+  } | null;
+  dispersedBy?: {
+    id: number;
+    username: string;
+    fullName: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface PaymentScheduleSummary {
+  pendingCount: number;
+  pendingAmount: number;
+  dispersedCount: number;
+  dispersedAmount: number;
+  totalCount: number;
+  totalAmount: number;
+}
+
+export interface AvailableScheduleDate {
+  date: string;
+  count: number;
+  totalAmount: number;
+}
+
+export interface PaymentScheduleResponse {
+  rows: ScheduledPaymentItem[];
+  availableDates: AvailableScheduleDate[];
+  summary: PaymentScheduleSummary;
+}
+
+export interface DisperseExpenseRequestsPayload {
+  items: Array<{
+    id: number;
+    dispersionDate?: string;
+  }>;
+  scheduledDate?: string;
+}
+
+export interface CompleteExpenseVerificationPayload {
+  scheduledDate?: string;
+  scheduleReimbursement?: boolean;
+}
+
+
 
 

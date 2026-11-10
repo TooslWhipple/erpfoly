@@ -4,6 +4,7 @@ import type {
   LiquidationRule,
   LiquidationRuleActivityResponse,
   LowRotationStrategyResponse,
+  PaginatedLiquidatedProducts,
   PaginatedPriceSuggestions,
 } from "@/types/liquidaciones.types";
 
@@ -48,6 +49,24 @@ export async function getDepartmentDetail(
   } catch {
     return null;
   }
+}
+
+export async function getLiquidatedProducts(
+  departmentId: string,
+  params: { page: number; limit?: number; search?: string },
+): Promise<PaginatedLiquidatedProducts> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    limit: String(params.limit ?? 10),
+  });
+  if (params.search) {
+    query.set("search", params.search);
+  }
+  return unwrapOrThrow(
+    await get<PaginatedLiquidatedProducts>(
+      `${BASE}/departments/${departmentId}/liquidated?${query.toString()}`,
+    ),
+  );
 }
 
 export async function saveDepartmentRules(

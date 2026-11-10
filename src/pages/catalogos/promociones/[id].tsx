@@ -79,15 +79,11 @@ function mapDetailToForm(
   const lineIds = detail.line_ids?.length
     ? [...detail.line_ids]
     : [...new Set(snapshots.map((p) => p.line_id))];
-  const purchaseType = configuration.purchaseTypes.find(
-    (p) => p.id === detail.purchase_type_id,
-  );
-  const isApartado = purchaseType?.code === "APARTADO";
   const selection = detail.product_selection;
   return {
     name: detail.name,
     percentage: String(detail.discount_rate),
-    advancePercentage: isApartado ? String(detail.advance_rate) : "",
+    advancePercentage: "",
     purchaseTypeId: detail.purchase_type_id,
     creditTermIds: [...detail.credit_term_ids],
     layawayTermIds: [...detail.layaway_term_ids],

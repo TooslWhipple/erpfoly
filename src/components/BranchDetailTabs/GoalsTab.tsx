@@ -193,7 +193,7 @@ export function GoalsTab({ branchId }: GoalsTabProps) {
       <Card>
         <Typography variant="h6">Configura la meta para esta sucursal</Typography>
         <Typography variant="body2" color="text.secondary">
-          El monto total de la meta mensual para esta sucursal está conformado por la meta individual de cada vendedor asignado.
+          La meta mensual de la sucursal se reparte equitativamente entre los vendedores activos asignados.
         </Typography>
       </Card>
 

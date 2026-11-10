@@ -400,7 +400,15 @@ export default function MercanciaDanada() {
             <Typography variant="body2" component="span" noWrap>
               {String(value ?? "")}
             </Typography>
-            {row.isClientProperty && row.serviceOrderFolio ? (
+            {row.sourceLabel ? (
+              <Chip
+                label={row.sourceLabel}
+                size="small"
+                color={row.isClientProperty ? "info" : "warning"}
+                variant="outlined"
+                sx={{ flexShrink: 0 }}
+              />
+            ) : row.isClientProperty && row.serviceOrderFolio ? (
               <Chip
                 label="A Reparación (Cliente)"
                 size="small"

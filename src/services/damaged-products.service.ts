@@ -46,6 +46,7 @@ export interface DamagedProductListApiRow {
     productName: string;
     registeredByUser: string;
     damageType: string;
+    damageDescription?: string;
     status: string;
     /** Disposition code of the folio (e.g. "RETURN_TO_SUPPLIER"). */
     dispositionCode: string;
@@ -66,6 +67,10 @@ export interface DamagedProductListApiRow {
     referenceLabel: string;
     /** ISO 8601 when the repair cycle was closed with an end date; otherwise null. */
     repairEndDate: string | null;
+    /** True cuando el artículo es propiedad del cliente (OS). */
+    isClientProperty?: boolean;
+    /** Proveedor de reparación o técnico asignado. */
+    repairAssigneeLabel?: string;
 }
 
 /** Ver `discountStatus` en `DamagedProductListApiRow`. */
@@ -84,11 +89,25 @@ export type DamagedProductListItem = DamagedProductListApiRow & {
     statusDisplay: string;
 };
 
+export const DAMAGED_PRODUCT_SORT_FIELDS = [
+    "productName",
+    "registrationDate",
+    "elapsedSinceRegistration",
+    "branch",
+] as const;
+
+export type DamagedProductSortField =
+    (typeof DAMAGED_PRODUCT_SORT_FIELDS)[number];
+
+export type DamagedProductSortOrder = "asc" | "desc";
+
 export interface GetDamagedProductsQueryParams {
     page: number;
     limit: number;
     search?: string;
     status?: string;
+    sortField?: DamagedProductSortField;
+    sortOrder?: DamagedProductSortOrder;
     [key: string]: unknown;
 }
 

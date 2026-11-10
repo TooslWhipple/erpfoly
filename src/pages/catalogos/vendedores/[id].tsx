@@ -23,6 +23,8 @@ import {
   StatusChip,
   OptionFilterButton,
   InlineBranchSelect,
+  ConfirmModal,
+  ItemNameHighlight,
 } from "@/components";
 import {
   SalesMonthGoalCard,
@@ -128,6 +130,8 @@ export default function VendedorDetailPage() {
   const [typeFilterIds, setTypeFilterIds] = useState<(string | number)[]>([]);
   const [branches, setBranches] = useState<BranchCatalogItem[]>([]);
   const [branchSaving, setBranchSaving] = useState(false);
+  const [branchConfirmOpen, setBranchConfirmOpen] = useState(false);
+  const [pendingBranchId, setPendingBranchId] = useState<number | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   const reloadDetail = useCallback(() => {
@@ -180,15 +184,32 @@ export default function VendedorDetailPage() {
     [],
   );
 
-  const handleBranchChange = async (branchId: number) => {
+  const handleBranchSelection = (branchId: number) => {
     if (validId === null || branchSaving) return;
+    if (detail != null && branchId === detail.branchId) return;
+    setPendingBranchId(branchId);
+    setBranchConfirmOpen(true);
+  };
+
+  const handleCancelBranchChange = () => {
+    if (branchSaving) return;
+    setBranchConfirmOpen(false);
+  };
+
+  const handleBranchConfirmExited = () => {
+    setPendingBranchId(null);
+  };
+
+  const handleConfirmBranchChange = async () => {
+    if (validId === null || pendingBranchId == null || branchSaving) return;
     setBranchSaving(true);
-    const result = await updateSellerBranch(validId, branchId);
+    const result = await updateSellerBranch(validId, pendingBranchId);
     setBranchSaving(false);
     if (result.error) {
       showError(result.error.message || "No se pudo actualizar la sucursal");
       return;
     }
+    setBranchConfirmOpen(false);
     showSuccess("Sucursal del vendedor actualizada correctamente.");
     reloadDetail();
   };
@@ -307,7 +328,7 @@ export default function VendedorDetailPage() {
             <InlineBranchSelect
               value={detail.branchId}
               options={branchOptions}
-              onChange={handleBranchChange}
+              onChange={handleBranchSelection}
               loading={branchSaving}
               disabled={branchOptions.length === 0}
             />
@@ -456,6 +477,29 @@ export default function VendedorDetailPage() {
           />
         </Stack>
       )}
+
+      <ConfirmModal
+        open={branchConfirmOpen && pendingBranchId != null}
+        onClose={handleCancelBranchChange}
+        onConfirm={handleConfirmBranchChange}
+        onExited={handleBranchConfirmExited}
+        loading={branchSaving}
+        type="warning"
+        title="Confirmar cambio de sucursal"
+        description={
+          <>
+            ¿Estás seguro que deseas cambiar la asignación de sucursal para este
+            vendedor a{" "}
+            <ItemNameHighlight>
+              {branchOptions.find((b) => b.id === pendingBranchId)?.name ??
+                "la sucursal seleccionada"}
+            </ItemNameHighlight>
+            ?
+          </>
+        }
+        cancelLabel="Cancelar"
+        confirmLabel="Confirmar"
+      />
     </Stack>
   );
 }

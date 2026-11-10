@@ -236,16 +236,19 @@ async function loadOrdersForSale(saleId: number): Promise<ServiceOrderListItem[]
 
 export async function getInvoiceDetail(
   invoiceId: string,
-): Promise<InvoiceDetail> {
+): Promise<InvoiceDetail | null> {
   const saleId = Number(invoiceId);
-  if (!Number.isFinite(saleId)) {
-    throw new Error("Factura no encontrada");
+  if (!Number.isFinite(saleId) || saleId <= 0) {
+    return null;
   }
-  const sale = await unwrapOrThrow(await getSaleDetail(saleId));
-  if (!isSaleDetailEligible(sale)) {
-    throw new Error("Factura no encontrada");
+  const result = await getSaleDetail(saleId, { skipGlobalErrorToast: true });
+  if (result.error || result.data == null) {
+    return null;
   }
-  return mapSaleToInvoice(sale);
+  if (!isSaleDetailEligible(result.data)) {
+    return null;
+  }
+  return mapSaleToInvoice(result.data);
 }
 
 export async function mapSaleToInvoice(

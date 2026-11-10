@@ -257,6 +257,7 @@ export function useRutasPage() {
         zoneCoverage: row.zone_coverage ?? "UNCONFIGURED",
         scheduledDate: row.scheduled_date,
         destinationBranch: row.destination_branch,
+        recoverySheetId: row.recovery_sheet_id ?? null,
       });
       return {
         suggested: data.suggested.map(mapRow),

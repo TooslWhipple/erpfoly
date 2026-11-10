@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Alert,
@@ -129,6 +129,12 @@ export default function OrderForm({
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [articlesSortField, setArticlesSortField] = useState<string | null>(
+    null,
+  );
+  const [articlesSortOrder, setArticlesSortOrder] = useState<"asc" | "desc">(
+    "desc",
+  );
   const [addArticleModalOpen, setAddArticleModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<ArticleRow | null>(
     null,
@@ -342,11 +348,17 @@ export default function OrderForm({
   );
   const filteredArticles = useMemo<ArticleRow[]>(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) return articles;
-    return articles.filter((article) =>
-      articleMatchesQuery(article, normalizedQuery),
+    const filtered = !normalizedQuery
+      ? articles
+      : articles.filter((article) =>
+          articleMatchesQuery(article, normalizedQuery),
+        );
+    if (articlesSortField !== "stock") return filtered;
+    const direction = articlesSortOrder === "asc" ? 1 : -1;
+    return [...filtered].sort(
+      (a, b) => (Number(a.stock) - Number(b.stock)) * direction,
     );
-  }, [articles, searchQuery]);
+  }, [articles, searchQuery, articlesSortField, articlesSortOrder]);
   const isSearchActive = searchQuery.trim().length > 0;
   const articlesLoading = sourceEntityId > 0 && articlesFetching;
   const emptyArticlesMessage = isSearchActive
@@ -357,6 +369,13 @@ export default function OrderForm({
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
+  const handleArticlesSortChange = useCallback(
+    (field: string, order: "asc" | "desc") => {
+      setArticlesSortField(field);
+      setArticlesSortOrder(order);
+    },
+    [],
+  );
   const handleAddArticle = async (article: ArticleRow) => {
     if (isInternalOrder) {
       handleAddToOrder({
@@ -746,6 +765,7 @@ export default function OrderForm({
       headerWrap: true,
       resizable: true,
       align: "center",
+      sortable: true,
       format: (value) => {
         const stock = Number(value);
         const isLowStock = stock <= 2;
@@ -889,6 +909,9 @@ export default function OrderForm({
               rowKey="id"
               hidePagination
               resizable
+              sortField={articlesSortField ?? undefined}
+              sortOrder={articlesSortOrder}
+              onSortChange={handleArticlesSortChange}
             />
           </Stack>
         </Grid>

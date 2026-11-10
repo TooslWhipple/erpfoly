@@ -34,6 +34,8 @@ import {
   updateDamagedProductStatus,
   discountDamagedProduct,
   type DamagedProductListItem,
+  type DamagedProductSortField,
+  type DamagedProductSortOrder,
   type DamagedProductStats,
   type DamagedProductTransitionStatus,
 } from "@/services/damaged-products.service";
@@ -102,6 +104,10 @@ export default function MercanciaDanada() {
   const showError = useSnackbarStore((s) => s.showError);
   const [stats, setStats] = useState<DamagedProductStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [sortField, setSortField] = useState<DamagedProductSortField | null>(
+    null,
+  );
+  const [sortOrder, setSortOrder] = useState<DamagedProductSortOrder>("desc");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const canCreate = hasPermission(DAMAGED_INVENTORY_CREATE);
@@ -123,13 +129,20 @@ export default function MercanciaDanada() {
   );
   const [discountSaving, setDiscountSaving] = useState(false);
   const listExtraParams = useMemo(() => {
-    if (activeTab === "all") {
-      return {};
+    const params: {
+      status?: string;
+      sortField?: DamagedProductSortField;
+      sortOrder?: DamagedProductSortOrder;
+    } = {};
+    if (activeTab !== "all") {
+      params.status = activeTab;
     }
-    return {
-      status: activeTab,
-    };
-  }, [activeTab]);
+    if (sortField) {
+      params.sortField = sortField;
+      params.sortOrder = sortOrder;
+    }
+    return params;
+  }, [activeTab, sortField, sortOrder]);
   const {
     data: items,
     total: totalRows,
@@ -151,7 +164,7 @@ export default function MercanciaDanada() {
   });
   useEffect(() => {
     setPage(0);
-  }, [activeTab, setPage]);
+  }, [activeTab, sortField, sortOrder, setPage]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -169,6 +182,10 @@ export default function MercanciaDanada() {
       {
         label: "Por realizar",
         value: "pending",
+      },
+      {
+        label: "En reparación",
+        value: "in_repair",
       },
       {
         label: "Finalizadas",
@@ -210,6 +227,13 @@ export default function MercanciaDanada() {
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
   }, []);
+  const handleSortChange = useCallback(
+    (field: string, order: DamagedProductSortOrder) => {
+      setSortField(field as DamagedProductSortField);
+      setSortOrder(order);
+    },
+    [],
+  );
   const handleCreate = useCallback(() => {
     setAddModalOpen(true);
   }, []);
@@ -348,6 +372,7 @@ export default function MercanciaDanada() {
         label: "Sucursal",
         size: "xl",
         truncate: true,
+        sortable: true,
         format: (value) => {
           if (value && typeof value === "object" && "name" in value) {
             return String(
@@ -362,12 +387,14 @@ export default function MercanciaDanada() {
         label: "Registro",
         type: "date",
         size: "md",
+        sortable: true,
       },
       {
         id: "productName",
         label: "Producto",
         size: "xl",
         truncate: true,
+        sortable: true,
         format: (value, row) => (
           <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
             <Typography variant="body2" component="span" noWrap>
@@ -437,6 +464,7 @@ export default function MercanciaDanada() {
         id: "elapsedSinceRegistration",
         label: "Tiempo transcurrido",
         size: "md",
+        sortable: true,
         format: (_value, row) => {
           const compact = formatElapsedCompact(row.registrationDate);
           const detail = formatElapsedDetailEs(row.registrationDate);
@@ -542,6 +570,9 @@ export default function MercanciaDanada() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
+        sortField={sortField ?? undefined}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
         emptyMessage="No hay mercancía dañada registrada"
       />
 

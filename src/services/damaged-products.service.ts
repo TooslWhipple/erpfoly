@@ -89,11 +89,25 @@ export type DamagedProductListItem = DamagedProductListApiRow & {
     statusDisplay: string;
 };
 
+export const DAMAGED_PRODUCT_SORT_FIELDS = [
+    "productName",
+    "registrationDate",
+    "elapsedSinceRegistration",
+    "branch",
+] as const;
+
+export type DamagedProductSortField =
+    (typeof DAMAGED_PRODUCT_SORT_FIELDS)[number];
+
+export type DamagedProductSortOrder = "asc" | "desc";
+
 export interface GetDamagedProductsQueryParams {
     page: number;
     limit: number;
     search?: string;
     status?: string;
+    sortField?: DamagedProductSortField;
+    sortOrder?: DamagedProductSortOrder;
     [key: string]: unknown;
 }
 

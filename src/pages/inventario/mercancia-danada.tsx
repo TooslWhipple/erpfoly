@@ -17,7 +17,7 @@ import {
 } from "@/components";
 import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
 import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
-import { Grid, Skeleton, Stack, Typography } from "@mui/material";
+import { Chip, Grid, Skeleton, Stack, Typography } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -368,6 +368,22 @@ export default function MercanciaDanada() {
         label: "Producto",
         size: "xl",
         truncate: true,
+        format: (value, row) => (
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <Typography variant="body2" component="span" noWrap>
+              {String(value ?? "")}
+            </Typography>
+            {row.isClientProperty && row.serviceOrderFolio ? (
+              <Chip
+                label="A Reparación (Cliente)"
+                size="small"
+                color="info"
+                variant="outlined"
+                sx={{ flexShrink: 0 }}
+              />
+            ) : null}
+          </Stack>
+        ),
       },
       {
         id: "referenceLabel",
@@ -389,6 +405,17 @@ export default function MercanciaDanada() {
         id: "damageType",
         label: "Tipo de daño",
         size: "lg",
+        truncate: true,
+      },
+      {
+        id: "repairAssigneeLabel",
+        label: "Proveedor / Técnico",
+        size: "lg",
+        truncate: true,
+        format: (value) => {
+          const text = typeof value === "string" ? value.trim() : "";
+          return text || "—";
+        },
       },
       {
         id: "statusDisplay",

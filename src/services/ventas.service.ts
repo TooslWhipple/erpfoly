@@ -552,8 +552,11 @@ export async function cancelSale(saleId: number): Promise<ApiResult<unknown>> {
 
 export async function getSaleDetail(
   saleId: number,
+  options?: { skipGlobalErrorToast?: boolean },
 ): Promise<ApiResult<SaleDetail>> {
-  return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+  return get<SaleDetail>(`${BASE}/sales/${saleId}`, {
+    skipGlobalErrorToast: options?.skipGlobalErrorToast,
+  });
 }
 
 /** Guarda quién recoge la venta (titular o tercero). No cambia economic_revision. */

@@ -1,4 +1,11 @@
-import { api, get, patch, post, unwrapOrThrow } from "@/lib/axios";
+import {
+  api,
+  get,
+  patch,
+  post,
+  unwrapOrThrow,
+  type ApiResult,
+} from "@/lib/axios";
 import type {
   CreateServiceOrderPayload,
   ServiceOrder,
@@ -47,9 +54,11 @@ function flattenUpdate(payload: UpdateServiceOrderPayload) {
     cost: payload.indicaciones?.cost,
     costAssignedTo: payload.indicaciones?.costAssignedTo,
     repairPlace: payload.indicaciones?.repairPlace,
+    warehouseIntake: payload.indicaciones?.warehouseIntake || null,
     address: payload.indicaciones?.address,
     scheduledDate: payload.indicaciones?.scheduledDate,
     damageTypeId: payload.indicaciones?.damageTypeId,
+    damageDescription: payload.indicaciones?.damageDescription,
     authorizedById: payload.indicaciones?.authorizedById,
     instructionsObservations: payload.indicaciones?.observations,
     replacementBy: payload.indicaciones?.replacementBy,
@@ -57,6 +66,7 @@ function flattenUpdate(payload: UpdateServiceOrderPayload) {
     recoveryReceiver: payload.indicaciones?.recoveryReceiver,
     assignedDriverId: payload.indicaciones?.assignedDriverId,
     assignedEmployeeId: payload.indicaciones?.assignedEmployeeId,
+    repairTechnicianId: payload.indicaciones?.repairTechnicianId,
     isSolved: payload.solucion?.isSolved,
     solvedDate: payload.solucion?.solvedDate,
     approvalMethod: payload.solucion?.approvalMethod,
@@ -107,7 +117,7 @@ export async function getServiceOrderByArticleId(
 export async function updateServiceOrder(
   serviceOrderId: string,
   payload: UpdateServiceOrderPayload,
-): Promise<ServiceOrder> {
+): Promise<ApiResult<ServiceOrder>> {
   const body = flattenUpdate(payload);
   const letter = payload.solucion?.acceptanceLetterFile;
   if (letter) {
@@ -121,30 +131,50 @@ export async function updateServiceOrder(
         fileId;
     }
   }
-  const updated = unwrapOrThrow(
-    await patch<ServiceOrder>(`${BASE}/${serviceOrderId}`, body),
-  );
 
-  if (payload.indicaciones?.action === "cancelar_venta" || payload.indicaciones?.action === "reemplazar") {
-    unwrapOrThrow(
-      await post<ServiceOrder>(`${BASE}/${serviceOrderId}/apply-instructions`),
+  const updated = await patch<ServiceOrder>(`${BASE}/${serviceOrderId}`, body, {
+    skipGlobalErrorToast: true,
+  });
+  if (updated.error || !updated.data) {
+    return { data: null, error: updated.error };
+  }
+
+  if (
+    payload.indicaciones?.action === "cancelar_venta" ||
+    payload.indicaciones?.action === "reemplazar"
+  ) {
+    const applied = await post<ServiceOrder>(
+      `${BASE}/${serviceOrderId}/apply-instructions`,
+      undefined,
+      { skipGlobalErrorToast: true },
     );
+    if (applied.error) {
+      return { data: null, error: applied.error };
+    }
   }
 
   if (payload.solucion?.isSolved || payload.status === "finalizada") {
-    unwrapOrThrow(await post<ServiceOrder>(`${BASE}/${serviceOrderId}/close`));
+    const closed = await post<ServiceOrder>(
+      `${BASE}/${serviceOrderId}/close`,
+      undefined,
+      { skipGlobalErrorToast: true },
+    );
+    if (closed.error) {
+      return { data: null, error: closed.error };
+    }
   }
 
-  return (await getServiceOrderById(updated.id)) ?? updated;
+  const refreshed = await getServiceOrderById(updated.data.id);
+  return { data: refreshed ?? updated.data, error: null };
 }
 
 export async function updateServiceOrderStatus(
   serviceOrderId: string,
   status: ServiceOrderStatus,
-): Promise<ServiceOrder> {
-  return unwrapOrThrow(
-    await patch<ServiceOrder>(`${BASE}/${serviceOrderId}/status`, { status }),
-  );
+): Promise<ApiResult<ServiceOrder>> {
+  return patch<ServiceOrder>(`${BASE}/${serviceOrderId}/status`, { status }, {
+    skipGlobalErrorToast: true,
+  });
 }
 
 export async function downloadServiceOrderPdf(

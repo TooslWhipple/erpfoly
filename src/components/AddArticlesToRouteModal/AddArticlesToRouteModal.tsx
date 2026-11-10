@@ -115,7 +115,11 @@ function buildPointsFromSelected(
   const pointsMap = new Map<string, AddRoutePointPayload>();
   for (const item of items) {
     if (!selectedIds.has(item.id)) continue;
-    const key = `${item.sourceType}-${item.originId}`;
+    const recoverySheetId = item.recoverySheetId ?? null;
+    const key =
+      recoverySheetId != null
+        ? `recovery-sheet-${recoverySheetId}`
+        : `${item.sourceType}-${item.originId}`;
     const existing = pointsMap.get(key);
     if (existing) {
       existing.item_ids.push(item.itemId);
@@ -124,6 +128,9 @@ function buildPointsFromSelected(
         origin: item.sourceType,
         origin_id: item.originId,
         item_ids: [item.itemId],
+        ...(recoverySheetId != null
+          ? { recovery_sheet_id: recoverySheetId }
+          : {}),
       });
     }
   }

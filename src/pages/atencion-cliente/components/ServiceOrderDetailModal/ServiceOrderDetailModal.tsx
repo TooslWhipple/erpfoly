@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import { ChevronDown, CircleDotDashed } from "lucide-react";
 import { SideModal, TabFilters } from "@/components";
-import { getApiErrorMessage } from "@/lib/axios";
 import {
   getServiceOrderById,
   updateServiceOrder,
@@ -151,13 +150,15 @@ export function ServiceOrderDetailModal({
 
   const handleStatusChange = async (status: ServiceOrderStatus) => {
     if (!draft) return;
+    const previousStatus = draft.status;
     setStatusMenuAnchor(null);
     setDraft((prev) => (prev ? { ...prev, status } : prev));
-    try {
-      await updateServiceOrderStatus(draft.id, status);
-    } catch (error) {
-      console.error("[ServiceOrderDetailModal] Error updating status:", error);
-      showError("No se pudo actualizar el estado.");
+    const result = await updateServiceOrderStatus(draft.id, status);
+    if (result.error || !result.data) {
+      setDraft((prev) =>
+        prev ? { ...prev, status: previousStatus } : prev,
+      );
+      showError(result.error?.message || "No se pudo actualizar el estado.");
     }
   };
 
@@ -169,15 +170,56 @@ export function ServiceOrderDetailModal({
       return;
     }
 
+    const ind = draft.indicaciones;
+    if (ind.action === "reparacion") {
+      if (!ind.damageDescription.trim()) {
+        showError("Indica el tipo de daño.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (ind.repairBy === "interna" && ind.repairTechnicianId == null) {
+        showError("Indica el técnico u operador responsable.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (
+        ind.repairBy === "interna" &&
+        ind.repairPlace === "bodega" &&
+        !ind.warehouseIntake
+      ) {
+        showError("Indica cómo ingresará el artículo a la bodega.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (
+        ind.repairPlace === "bodega" &&
+        ind.warehouseIntake === "logistica_foly" &&
+        !(ind.address || draft.customerAddress).trim()
+      ) {
+        showError("Indica el domicilio de recolección.");
+        setActiveTab("indicaciones");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const updated = await updateServiceOrder(draft.id, {
+      const result = await updateServiceOrder(draft.id, {
         title: draft.title,
         status: draft.status,
         queja: draft.queja,
         indicaciones: draft.indicaciones,
         solucion: draft.solucion,
       });
+      if (result.error || !result.data) {
+        showError(
+          result.error?.message ||
+            "No se pudieron guardar los cambios. Intenta de nuevo.",
+        );
+        return;
+      }
+
+      const updated = result.data;
       setDraft(updated);
 
       if (updated.solucion.isSolved || updated.status === "finalizada") {
@@ -186,12 +228,6 @@ export function ServiceOrderDetailModal({
         showSuccess("Orden de servicio actualizada");
       }
       onSuccess?.();
-    } catch (error) {
-      console.error("[ServiceOrderDetailModal] Error saving order:", error);
-      showError(
-        getApiErrorMessage(error) ||
-          "No se pudieron guardar los cambios. Intenta de nuevo.",
-      );
     } finally {
       setSaving(false);
     }

@@ -65,6 +65,10 @@ export const StepperInput = styled('input')(({ theme }) => ({
   fontWeight: 400,
   outline: 'none',
   backgroundColor: theme.palette.background.paper,
+  '&[aria-invalid="true"]': {
+    color: theme.palette.error.main,
+    outline: `1px solid ${theme.palette.error.main}`,
+  },
   '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
     WebkitAppearance: 'none',
   },

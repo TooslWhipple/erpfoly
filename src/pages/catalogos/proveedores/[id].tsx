@@ -183,8 +183,9 @@ export default function SupplierDashboardPage() {
                 <SupplierChargesTab
                   supplierId={validId}
                   supplierName={dashboard?.supplierName ?? ""}
-                  accountStatements={dashboard?.accountStatements ?? []}
+                  chargePeriods={dashboard?.chargePeriods ?? []}
                   contentLoading={showContentSkeleton}
+                  onBalanceChanged={refetchDashboard}
                 />
               )}
 
@@ -202,8 +203,9 @@ export default function SupplierDashboardPage() {
                 <SupplierDamagedGoodsTab
                   supplierId={validId}
                   supplierName={dashboard?.supplierName ?? ""}
-                  accountStatements={dashboard?.accountStatements ?? []}
+                  chargePeriods={dashboard?.chargePeriods ?? []}
                   contentLoading={showContentSkeleton}
+                  onBalanceChanged={refetchDashboard}
                 />
               )}
             </Stack>

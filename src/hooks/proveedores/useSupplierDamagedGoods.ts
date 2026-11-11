@@ -4,20 +4,13 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { getSupplierChargeCategories } from "@/services/supplierCharges.service";
 import { registerDamagedGoodsExit, fetchSupplierDamagedGoods } from "@/services/supplierDamagedGoods.service";
 import type {
-  RegisterSupplierChargePayload,
-  SupplierAccountStatementRow,
+  RegisterDamagedGoodsExitPayload,
   SupplierDamagedGoodsRow,
 } from "@/types/supplierDashboard.types";
-import dayjs from "@/lib/dayjs";
-
-function formatAccountStatementLabel(month: number, year: number, isNext: boolean): string {
-  const formatted = dayjs(`${year}-${String(month).padStart(2, "0")}-01`).format("MMMM YYYY");
-  return isNext ? `${formatted} (Siguiente)` : formatted;
-}
 
 export function useSupplierDamagedGoods(
   supplierId: number | null,
-  accountStatements: SupplierAccountStatementRow[]
+  onBalanceChanged?: () => void
 ) {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
@@ -30,15 +23,6 @@ export function useSupplierDamagedGoods(
   const [exitModalOpen, setExitModalOpen] = useState(false);
 
   const categories = useMemo(() => getSupplierChargeCategories(), []);
-
-  const accountStatementOptions = useMemo(
-    () =>
-      accountStatements.map((statement, index) => ({
-        value: statement.id,
-        label: formatAccountStatementLabel(statement.periodMonth, statement.periodYear, index === 0),
-      })),
-    [accountStatements]
-  );
 
   const loadItems = useCallback(async (isCancelled?: () => boolean) => {
     if (supplierId == null) {
@@ -79,7 +63,8 @@ export function useSupplierDamagedGoods(
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    setSelectedIds((prev) => (prev.length === items.length ? [] : items.map((item) => item.id)));
+    const selectableIds = items.filter((item) => item.status === "pending").map((item) => item.id);
+    setSelectedIds((prev) => (prev.length === selectableIds.length ? [] : selectableIds));
   }, [items]);
 
   const openExitModal = useCallback(() => {
@@ -96,26 +81,18 @@ export function useSupplierDamagedGoods(
   }, [saving]);
 
   const handleRegisterExit = useCallback(
-    async (payload: Omit<RegisterSupplierChargePayload, "supplierId" | "chargedInLabel" | "categoryId">) => {
+    async (payload: Omit<RegisterDamagedGoodsExitPayload, "supplierId" | "damagedGoodsIds">) => {
       if (supplierId == null) {
         showError("Proveedor no válido.");
         return false;
       }
 
-      const selectedStatement = accountStatementOptions.find(
-        (option) => option.value === payload.accountStatementId
-      );
-      const chargedInLabel =
-        selectedStatement?.label.replace(" (Siguiente)", "") ?? "—";
-
       setSaving(true);
       const result = await registerDamagedGoodsExit({
         ...payload,
         supplierId,
-        chargedInLabel,
-        categoryId: "damaged_goods",
         damagedGoodsIds: selectedIds,
-      } as RegisterSupplierChargePayload & { damagedGoodsIds: number[] });
+      });
       setSaving(false);
 
       if (result.error) {
@@ -133,9 +110,10 @@ export function useSupplierDamagedGoods(
       setSelectedIds([]);
       showSuccess("Salida registrada correctamente.");
       setExitModalOpen(false);
+      onBalanceChanged?.();
       return true;
     },
-    [supplierId, accountStatementOptions, selectedIds, showError, showSuccess]
+    [supplierId, selectedIds, showError, showSuccess, onBalanceChanged]
   );
 
   return {
@@ -146,7 +124,6 @@ export function useSupplierDamagedGoods(
     selectedIds,
     exitModalOpen,
     categories,
-    accountStatementOptions,
     toggleSelection,
     toggleSelectAll,
     openExitModal,

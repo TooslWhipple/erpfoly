@@ -8,19 +8,12 @@ import {
 } from "@/services/supplierCharges.service";
 import type {
   RegisterSupplierChargePayload,
-  SupplierAccountStatementRow,
   SupplierChargeRow,
 } from "@/types/supplierDashboard.types";
-import dayjs from "@/lib/dayjs";
-
-function formatAccountStatementLabel(month: number, year: number, isNext: boolean): string {
-  const formatted = dayjs(`${year}-${String(month).padStart(2, "0")}-01`).format("MMMM YYYY");
-  return isNext ? `${formatted} (Siguiente)` : formatted;
-}
 
 export function useSupplierCharges(
   supplierId: number | null,
-  accountStatements: SupplierAccountStatementRow[]
+  onBalanceChanged?: () => void
 ) {
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
@@ -32,15 +25,6 @@ export function useSupplierCharges(
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const categories = useMemo(() => getSupplierChargeCategories(), []);
-
-  const accountStatementOptions = useMemo(
-    () =>
-      accountStatements.map((statement, index) => ({
-        value: statement.id,
-        label: formatAccountStatementLabel(statement.periodMonth, statement.periodYear, index === 0),
-      })),
-    [accountStatements]
-  );
 
   const loadCharges = useCallback(async (isCancelled?: () => boolean) => {
     if (supplierId == null) {
@@ -84,23 +68,16 @@ export function useSupplierCharges(
   }, [saving]);
 
   const handleRegisterCharge = useCallback(
-    async (payload: Omit<RegisterSupplierChargePayload, "supplierId" | "chargedInLabel">) => {
+    async (payload: Omit<RegisterSupplierChargePayload, "supplierId">) => {
       if (supplierId == null) {
         showError("Proveedor no válido.");
         return false;
       }
 
-      const selectedStatement = accountStatementOptions.find(
-        (option) => option.value === payload.accountStatementId
-      );
-      const chargedInLabel =
-        selectedStatement?.label.replace(" (Siguiente)", "") ?? "—";
-
       setSaving(true);
       const result = await registerSupplierCharge({
         ...payload,
         supplierId,
-        chargedInLabel,
       });
       setSaving(false);
 
@@ -112,9 +89,10 @@ export function useSupplierCharges(
       setCharges((prev) => [result.data, ...prev]);
       showSuccess("Cargo registrado correctamente.");
       setModalOpen(false);
+      onBalanceChanged?.();
       return true;
     },
-    [supplierId, accountStatementOptions, showError, showSuccess]
+    [supplierId, showError, showSuccess, onBalanceChanged]
   );
 
   return {
@@ -124,7 +102,6 @@ export function useSupplierCharges(
     modalOpen,
     fetchError,
     categories,
-    accountStatementOptions,
     openRegisterModal,
     closeRegisterModal,
     handleRegisterCharge,

@@ -8,7 +8,7 @@ import { useSupplierDamagedGoods } from "@/hooks/proveedores/useSupplierDamagedG
 import { CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import type {
-  SupplierAccountStatementRow,
+  SupplierChargePeriod,
   SupplierDamagedGoodsRow,
 } from "@/types/supplierDashboard.types";
 import { TabActionsRow, TabSelectionToolbar } from "@/styles/catalogos/proveedores-charges.styles";
@@ -66,15 +66,17 @@ function renderElapsedLabel(value: unknown, row: SupplierDamagedGoodsRow) {
 interface SupplierDamagedGoodsTabProps {
   supplierId: number;
   supplierName: string;
-  accountStatements: SupplierAccountStatementRow[];
+  chargePeriods: SupplierChargePeriod[];
   contentLoading?: boolean;
+  onBalanceChanged?: () => void;
 }
 
 export function SupplierDamagedGoodsTab({
   supplierId,
   supplierName,
-  accountStatements,
+  chargePeriods,
   contentLoading = false,
+  onBalanceChanged,
 }: SupplierDamagedGoodsTabProps) {
   const { hasPermission } = usePermissions();
   const canRegisterExit = hasPermission(CATALOG_SUPPLIERS_UPDATE);
@@ -87,25 +89,25 @@ export function SupplierDamagedGoodsTab({
     selectedIds,
     exitModalOpen,
     categories,
-    accountStatementOptions,
     toggleSelection,
     toggleSelectAll,
     openExitModal,
     closeExitModal,
     handleRegisterExit,
-  } = useSupplierDamagedGoods(supplierId, accountStatements);
+  } = useSupplierDamagedGoods(supplierId, onBalanceChanged);
 
   const tableLoading = contentLoading || loading;
-  const allSelected = items.length > 0 && selectedIds.length === items.length;
+  // Solo las filas pendientes admiten salida; las programadas ya se cobraron.
+  const selectableCount = useMemo(
+    () => items.filter((item) => item.status === "pending").length,
+    [items]
+  );
+  const allSelected = selectableCount > 0 && selectedIds.length === selectableCount;
   const someSelected = selectedIds.length > 0 && !allSelected;
 
-  const selectOptions = useMemo(
-    () =>
-      accountStatementOptions.map((option) => ({
-        value: option.value,
-        label: option.label,
-      })),
-    [accountStatementOptions]
+  const periodOptions = useMemo(
+    () => chargePeriods.map((period) => ({ value: period.value, label: period.label })),
+    [chargePeriods]
   );
 
   const columns: DataTableColumn<SupplierDamagedGoodsRow>[] = useMemo(
@@ -119,7 +121,7 @@ export function SupplierDamagedGoodsTab({
             checked={allSelected}
             indeterminate={someSelected}
             onChange={toggleSelectAll}
-            disabled={tableLoading || items.length === 0}
+            disabled={tableLoading || selectableCount === 0}
           />
         ),
         format: (_value, row) => (
@@ -127,6 +129,7 @@ export function SupplierDamagedGoodsTab({
             size="small"
             checked={selectedIds.includes(row.id)}
             onChange={() => toggleSelection(row.id)}
+            disabled={row.status !== "pending"}
           />
         ),
       },
@@ -164,7 +167,7 @@ export function SupplierDamagedGoodsTab({
     [
       allSelected,
       someSelected,
-      items.length,
+      selectableCount,
       selectedIds,
       tableLoading,
       toggleSelectAll,
@@ -174,8 +177,11 @@ export function SupplierDamagedGoodsTab({
 
   const handleSubmitExit = async (values: RegisterSupplierChargeFormValues) => {
     const amount = Number.parseFloat(values.amount.replace(/[^0-9.]/g, ""));
+    const period = chargePeriods.find((item) => item.value === values.periodValue);
+    if (!period) return false;
     return handleRegisterExit({
-      accountStatementId: values.accountStatementId,
+      periodMonth: period.periodMonth,
+      periodYear: period.periodYear,
       description: values.description,
       amount,
       includesVat: values.includesVat,
@@ -232,7 +238,7 @@ export function SupplierDamagedGoodsTab({
         open={exitModalOpen}
         onClose={closeExitModal}
         supplierName={supplierName}
-        accountStatementOptions={selectOptions}
+        periodOptions={periodOptions}
         categories={categories}
         saving={saving}
         onSubmit={handleSubmitExit}

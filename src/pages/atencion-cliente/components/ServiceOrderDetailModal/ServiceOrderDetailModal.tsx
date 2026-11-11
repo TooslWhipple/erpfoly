@@ -9,12 +9,13 @@ import {
   Typography,
 } from "@mui/material";
 import { ChevronDown, CircleDotDashed } from "lucide-react";
-import { SideModal, TabFilters } from "@/components";
+import { ConfirmModal, SideModal, TabFilters } from "@/components";
 import {
   getServiceOrderById,
   updateServiceOrder,
   updateServiceOrderStatus,
 } from "@/services/service-orders.service";
+import { isHighPrivilegeRoleCode } from "@/constants/role-codes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { canUpdateCustomerSupportRepair } from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -44,6 +45,36 @@ import { theme } from "@/styles/theme";
 
 export type ServiceOrderDetailTab = "queja" | "indicaciones" | "solucion";
 
+type CancelFieldErrors = {
+  damage: string;
+  intake: string;
+  address: string;
+};
+
+const EMPTY_CANCEL_ERRORS: CancelFieldErrors = {
+  damage: "",
+  intake: "",
+  address: "",
+};
+
+function cancellationFieldErrors(
+  indicaciones: ServiceOrderIndicaciones,
+): CancelFieldErrors {
+  return {
+    damage: indicaciones.damageDescription.trim()
+      ? ""
+      : "Indica el daño del artículo a devolver.",
+    intake: indicaciones.warehouseIntake
+      ? ""
+      : "Indica si el cliente entrega el artículo o lo recolecta logística Foly.",
+    address:
+      indicaciones.warehouseIntake === "logistica_foly" &&
+      !indicaciones.address.trim()
+        ? "Indica el domicilio de recolección."
+        : "",
+  };
+}
+
 export interface ServiceOrderDetailModalProps {
   open: boolean;
   serviceOrderId: string | null;
@@ -69,8 +100,9 @@ export function ServiceOrderDetailModal({
 }: ServiceOrderDetailModalProps) {
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
-  const { hasPermission } = usePermissions();
+  const { hasPermission, user } = usePermissions();
   const canUpdate = canUpdateCustomerSupportRepair(hasPermission);
+  const canCancelSale = isHighPrivilegeRoleCode(user?.role);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -78,6 +110,9 @@ export function ServiceOrderDetailModal({
   const [draft, setDraft] = useState<ServiceOrder | null>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] =
     useState<null | HTMLElement>(null);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [cancelErrors, setCancelErrors] =
+    useState<CancelFieldErrors>(EMPTY_CANCEL_ERRORS);
 
   const loadOrder = useCallback(async (id: string) => {
     setLoading(true);
@@ -120,6 +155,8 @@ export function ServiceOrderDetailModal({
     if (!open) {
       setDraft(null);
       setStatusMenuAnchor(null);
+      setConfirmCancelOpen(false);
+      setCancelErrors(EMPTY_CANCEL_ERRORS);
     }
   }, [open, serviceOrderId, loadOrder]);
 
@@ -140,6 +177,14 @@ export function ServiceOrderDetailModal({
         ? { ...prev, indicaciones: { ...prev.indicaciones, ...patch } }
         : prev,
     );
+    setCancelErrors((prev) => ({
+      damage: patch.damageDescription !== undefined ? "" : prev.damage,
+      intake: patch.warehouseIntake !== undefined ? "" : prev.intake,
+      address:
+        patch.address !== undefined || patch.warehouseIntake !== undefined
+          ? ""
+          : prev.address,
+    }));
   };
 
   const patchSolucion = (patch: Partial<ServiceOrderSolucion>) => {
@@ -202,15 +247,40 @@ export function ServiceOrderDetailModal({
       }
     }
 
+    const requestingCancel =
+      canCancelSale &&
+      ind.action === "cancelar_venta" &&
+      !draft.recoverySheetId;
+    if (requestingCancel) {
+      const errors = cancellationFieldErrors(ind);
+      setCancelErrors(errors);
+      if (errors.damage || errors.intake || errors.address) {
+        setActiveTab("indicaciones");
+        return;
+      }
+      setConfirmCancelOpen(true);
+      return;
+    }
+
+    setCancelErrors(EMPTY_CANCEL_ERRORS);
+    await persistOrder(false);
+  };
+
+  const persistOrder = async (requestingCancel: boolean) => {
+    if (!draft) return;
     setSaving(true);
     try {
-      const result = await updateServiceOrder(draft.id, {
-        title: draft.title,
-        status: draft.status,
-        queja: draft.queja,
-        indicaciones: draft.indicaciones,
-        solucion: draft.solucion,
-      });
+      const result = await updateServiceOrder(
+        draft.id,
+        {
+          title: draft.title,
+          status: draft.status,
+          queja: draft.queja,
+          indicaciones: draft.indicaciones,
+          solucion: draft.solucion,
+        },
+        { requestCancellation: requestingCancel },
+      );
       if (result.error || !result.data) {
         showError(
           result.error?.message ||
@@ -221,9 +291,15 @@ export function ServiceOrderDetailModal({
 
       const updated = result.data;
       setDraft(updated);
+      setConfirmCancelOpen(false);
+      setCancelErrors(EMPTY_CANCEL_ERRORS);
 
       if (updated.solucion.isSolved || updated.status === "finalizada") {
         showSuccess("Orden de servicio cerrada");
+      } else if (requestingCancel) {
+        showSuccess(
+          "Cancelación solicitada. El saldo se abona al recibir el artículo.",
+        );
       } else {
         showSuccess("Orden de servicio actualizada");
       }
@@ -334,7 +410,15 @@ export function ServiceOrderDetailModal({
                   color="primary"
                   onClick={handleSave}
                   disabled={saving || loading || !canUpdate}>
-                  {(saving) ? <CircularProgress size={16} color="inherit" /> : "Guardar cambios"}
+                  {saving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : canCancelSale &&
+                    draft.indicaciones.action === "cancelar_venta" &&
+                    !draft.recoverySheetId ? (
+                    "Solicitar cancelación"
+                  ) : (
+                    "Guardar cambios"
+                  )}
                 </Button>
               </Stack>
             )}
@@ -371,6 +455,8 @@ export function ServiceOrderDetailModal({
                   indicaciones={draft.indicaciones}
                   customerAddress={draft.customerAddress}
                   disabled={saving}
+                  canRequestCancellation={canCancelSale}
+                  cancelErrors={cancelErrors}
                   onChange={patchIndicaciones}
                 />
               }
@@ -411,6 +497,18 @@ export function ServiceOrderDetailModal({
             </MenuItem>
           ))}
       </Menu>
+
+      <ConfirmModal
+        open={confirmCancelOpen}
+        type="warning"
+        title="Solicitar cancelación"
+        description="Se creará la hoja de recuperación. El saldo a favor se abona hasta que almacén reciba el artículo."
+        confirmLabel="Solicitar cancelación"
+        cancelLabel="Volver"
+        loading={saving}
+        onClose={() => setConfirmCancelOpen(false)}
+        onConfirm={() => persistOrder(true)}
+      />
     </>
   );
 }

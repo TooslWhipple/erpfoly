@@ -24,6 +24,7 @@ import type {
   SalePaymentType,
   SaleStatus,
 } from "@/types/ventas.types";
+import { recoveryTimelineEvents } from "@/utils/invoice-activity";
 import { SALE_STATUS_CHIP_LABELS } from "@/utils/saleStatus";
 
 export type CustomerSupportSearchResult = SearchResult & {
@@ -222,8 +223,15 @@ type ServiceOrderListItem = {
   instructionsAppliedAt?: string | null;
   solvedAt?: string | null;
   queja: { articleId: string };
+  cancellationRequestedAt?: string | null;
   recoverySheetId?: string | null;
+  recoverySheetFolio?: string | null;
   recoverySheetStatus?: string | null;
+  recoverySheetCreatedAt?: string | null;
+  recoverySheetReceivedAt?: string | null;
+  recoverySheetUpdatedAt?: string | null;
+  recoverySettledAt?: string | null;
+  recoveryCreditAmount?: number | null;
 };
 
 async function loadOrdersForSale(saleId: number): Promise<ServiceOrderListItem[]> {
@@ -378,6 +386,7 @@ export async function mapSaleToInvoice(
           description: folio,
         });
       }
+      events.push(...recoveryTimelineEvents(order));
       return events;
     }),
   ].sort((a, b) => Date.parse(b.date) - Date.parse(a.date));

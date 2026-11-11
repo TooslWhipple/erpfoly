@@ -57,10 +57,20 @@ export interface SupplierAccountStatementOption {
   label: string;
 }
 
+export type SupplierChargePeriodKind = "current" | "next" | "upcoming" | "open";
+
+export interface SupplierChargePeriod {
+  value: string;
+  periodMonth: number;
+  periodYear: number;
+  kind: SupplierChargePeriodKind;
+  label: string;
+}
+
 export interface RegisterSupplierChargePayload {
   supplierId: number;
-  accountStatementId: number;
-  chargedInLabel: string;
+  periodMonth: number;
+  periodYear: number;
   categoryId: string;
   description: string;
   amount: number;
@@ -116,7 +126,8 @@ export interface SupplierDamagedGoodsRow {
   urgency: SupplierDamagedGoodsUrgency;
 }
 
-export interface RegisterDamagedGoodsExitPayload extends RegisterSupplierChargePayload {
+export interface RegisterDamagedGoodsExitPayload
+  extends Omit<RegisterSupplierChargePayload, "categoryId"> {
   damagedGoodsIds: number[];
 }
 
@@ -125,6 +136,7 @@ export interface SupplierDashboard {
   supplierName: string;
   summary: SupplierDashboardSummary;
   accountStatements: SupplierAccountStatementRow[];
+  chargePeriods: SupplierChargePeriod[];
   upcomingDeliveries: SupplierDeliveryGroup[];
   recentDeliveries: SupplierDeliveryGroup[];
 }

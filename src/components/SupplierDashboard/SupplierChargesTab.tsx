@@ -7,7 +7,7 @@ import { useSupplierCharges } from "@/hooks/proveedores/useSupplierCharges";
 import { CATALOG_SUPPLIERS_UPDATE } from "@/lib/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import type {
-  SupplierAccountStatementRow,
+  SupplierChargePeriod,
   SupplierChargeRow,
 } from "@/types/supplierDashboard.types";
 import { TabActionsRow } from "@/styles/catalogos/proveedores-charges.styles";
@@ -64,15 +64,17 @@ const chargeColumns: DataTableColumn<SupplierChargeRow>[] = [
 interface SupplierChargesTabProps {
   supplierId: number;
   supplierName: string;
-  accountStatements: SupplierAccountStatementRow[];
+  chargePeriods: SupplierChargePeriod[];
   contentLoading?: boolean;
+  onBalanceChanged?: () => void;
 }
 
 export function SupplierChargesTab({
   supplierId,
   supplierName,
-  accountStatements,
+  chargePeriods,
   contentLoading = false,
+  onBalanceChanged,
 }: SupplierChargesTabProps) {
   const { hasPermission } = usePermissions();
   const canCreateCharge = hasPermission(CATALOG_SUPPLIERS_UPDATE);
@@ -84,27 +86,25 @@ export function SupplierChargesTab({
     modalOpen,
     fetchError,
     categories,
-    accountStatementOptions,
     openRegisterModal,
     closeRegisterModal,
     handleRegisterCharge,
-  } = useSupplierCharges(supplierId, accountStatements);
+  } = useSupplierCharges(supplierId, onBalanceChanged);
 
   const tableLoading = contentLoading || chargesLoading;
 
-  const selectOptions = useMemo(
-    () =>
-      accountStatementOptions.map((option) => ({
-        value: option.value,
-        label: option.label,
-      })),
-    [accountStatementOptions]
+  const periodOptions = useMemo(
+    () => chargePeriods.map((period) => ({ value: period.value, label: period.label })),
+    [chargePeriods]
   );
 
   const handleSubmit = async (values: RegisterSupplierChargeFormValues) => {
     const amount = Number.parseFloat(values.amount.replace(/[^0-9.]/g, ""));
+    const period = chargePeriods.find((item) => item.value === values.periodValue);
+    if (!period) return false;
     return handleRegisterCharge({
-      accountStatementId: values.accountStatementId,
+      periodMonth: period.periodMonth,
+      periodYear: period.periodYear,
       categoryId: values.categoryId,
       description: values.description,
       amount,
@@ -145,7 +145,7 @@ export function SupplierChargesTab({
         open={modalOpen}
         onClose={closeRegisterModal}
         supplierName={supplierName}
-        accountStatementOptions={selectOptions}
+        periodOptions={periodOptions}
         categories={categories}
         saving={saving}
         onSubmit={handleSubmit}

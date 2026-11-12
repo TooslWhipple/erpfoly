@@ -22,6 +22,7 @@ import { ROLE_CODES } from "@/constants/role-codes";
 import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
 import { useRepairSuppliersSelect } from "@/hooks/repair-suppliers/useRepairSuppliersSelect";
 import { useUsersSelect } from "@/hooks/users/useUsersSelect";
+import dayjs from "@/lib/dayjs";
 import { getDamagedProductsCatalog } from "@/services/damaged-products.service";
 import type { ServiceOrderIndicaciones } from "@/types/atencion-cliente.types";
 import { indicacionesPatchForAction } from "@/types/atencion-cliente.types";
@@ -32,6 +33,8 @@ import {
   SectionLabel,
   SwitchRow,
 } from "@/styles/atencion-cliente.styles";
+
+const TODAY_YMD = () => dayjs().format("YYYY-MM-DD");
 
 export interface ServiceOrderIndicacionesTabProps {
   indicaciones: ServiceOrderIndicaciones;
@@ -412,6 +415,7 @@ export function ServiceOrderIndicacionesTab({
             onChange={(value) => onChange({ scheduledDate: value })}
             disabled={disabled}
             placeholder="Selecciona una fecha"
+            minDate={TODAY_YMD()}
           />
 
           <FormTextField
@@ -514,6 +518,7 @@ export function ServiceOrderIndicacionesTab({
             onChange={(value) => onChange({ scheduledDate: value })}
             disabled={disabled}
             placeholder="Selecciona una fecha"
+            minDate={TODAY_YMD()}
           />
 
           <FormSelect

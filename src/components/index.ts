@@ -82,14 +82,17 @@ export type {
 } from "./MerchandiseReceptionDiscrepancies";
 export {
   RecoverySheetDetailHeader,
+  RecoverySheetSummaryBar,
+  RecoverySheetClientCard,
   RecoverySheetRouteCard,
   RecoverySheetServiceOrderCard,
-  RecoverySheetWarehouseCard,
   RecoverySheetDocumentPanel,
   ReceiveRecoveryItemModal,
 } from "./RecoverySheets";
 export type {
   RecoverySheetDetailHeaderProps,
+  RecoverySheetSummaryBarProps,
+  RecoverySheetClientCardProps,
   RecoverySheetDocumentPanelProps,
   ReceiveRecoveryItemModalProps,
 } from "./RecoverySheets";

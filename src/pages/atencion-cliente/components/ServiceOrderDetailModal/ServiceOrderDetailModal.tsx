@@ -32,6 +32,7 @@ import {
   indicacionesPatchForAction,
   paymentTypeLabel,
 } from "@/types/atencion-cliente.types";
+import dayjs from "@/lib/dayjs";
 import { formatDateOnly } from "@/utils/date";
 import {
   SERVICE_ORDER_STATUS_LABELS,
@@ -216,6 +217,17 @@ export function ServiceOrderDetailModal({
     }
 
     const ind = draft.indicaciones;
+    if (
+      (ind.action === "reparacion" || ind.action === "reemplazar") &&
+      ind.scheduledDate.trim()
+    ) {
+      const today = dayjs().format("YYYY-MM-DD");
+      if (ind.scheduledDate < today) {
+        showError("La fecha a realizar no puede ser anterior a hoy.");
+        setActiveTab("indicaciones");
+        return;
+      }
+    }
     if (ind.action === "reparacion") {
       if (!ind.damageDescription.trim()) {
         showError("Indica el tipo de daño.");

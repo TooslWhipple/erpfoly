@@ -259,6 +259,44 @@ export function ServiceOrderDetailModal({
       }
     }
 
+    if (ind.action === "reemplazar") {
+      if (!ind.damageDescription.trim()) {
+        showError("Indica el tipo de daño.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (ind.replacementBy === "foly") {
+        if (!ind.warehouseIntake) {
+          showError("Indica cómo ingresará el artículo dañado a sucursal.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (ind.branchId == null) {
+          showError("Indica la sucursal donde se recuperará el artículo.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (
+          ind.warehouseIntake === "logistica_foly" &&
+          !(ind.address || draft.customerAddress).trim()
+        ) {
+          showError("Indica el domicilio de recolección.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (
+          !ind.supplierAuthorizationUrl &&
+          !ind.supplierAuthorizationFile
+        ) {
+          showError(
+            "Carga la carta de autorización del proveedor para liberar el artículo de reemplazo.",
+          );
+          setActiveTab("indicaciones");
+          return;
+        }
+      }
+    }
+
     const requestingCancel =
       canCancelSale &&
       ind.action === "cancelar_venta" &&

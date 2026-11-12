@@ -17,6 +17,8 @@ import {
   RadioButton,
   RadioButtonGroup,
 } from "@/components";
+import { FileUpload } from "@/components/FileUpload";
+import type { UploadedFileItem } from "@/components/FileUpload";
 import type { SelectOption } from "@/components/Form";
 import { ROLE_CODES } from "@/constants/role-codes";
 import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
@@ -93,15 +95,6 @@ export function ServiceOrderIndicacionesTab({
   const authorizerOptions = authorizersQuery.selectOptions;
   const branchOptions = branchesQuery.selectOptions;
 
-  const damageTypeOptions: SelectOption[] = useMemo(
-    () =>
-      (catalogQuery.data?.damageTypes ?? []).map((item) => ({
-        value: catalogItemIdString(item),
-        label: item.label,
-      })),
-    [catalogQuery.data?.damageTypes],
-  );
-
   const technicianOptions: SelectOption[] = useMemo(
     () =>
       (catalogQuery.data?.repairResponsibles ?? []).map((item) => ({
@@ -134,6 +127,21 @@ export function ServiceOrderIndicacionesTab({
     indicaciones.repairPlace,
     indicaciones.warehouseIntake,
   ]);
+
+  const showReplaceAddressField =
+    indicaciones.replacementBy === "foly" &&
+    indicaciones.warehouseIntake === "logistica_foly";
+
+  const supplierAuthFiles: UploadedFileItem[] =
+    indicaciones.supplierAuthorizationUrl
+      ? [
+          {
+            id: "supplier-authorization",
+            name: "Carta de autorización",
+            url: indicaciones.supplierAuthorizationUrl,
+          },
+        ]
+      : [];
 
   const handleActionChange = (nextAction: ServiceOrderIndicaciones["action"]) => {
     onChange(indicacionesPatchForAction(nextAction, indicaciones));
@@ -464,7 +472,14 @@ export function ServiceOrderIndicacionesTab({
                 label="Proveedor"
                 checked={indicaciones.replacementBy === "proveedor"}
                 onChange={() =>
-                  onChange({ replacementBy: "proveedor", branchId: null })
+                  onChange({
+                    replacementBy: "proveedor",
+                    branchId: null,
+                    warehouseIntake: "",
+                    address: "",
+                    supplierAuthorizationUrl: "",
+                    supplierAuthorizationFile: undefined,
+                  })
                 }
                 disabled={disabled}
                 fullWidth={isMobile}
@@ -473,43 +488,109 @@ export function ServiceOrderIndicacionesTab({
                 value="foly"
                 label="Foly"
                 checked={indicaciones.replacementBy === "foly"}
-                onChange={() => onChange({ replacementBy: "foly" })}
+                onChange={() =>
+                  onChange({
+                    replacementBy: "foly",
+                    warehouseIntake: "",
+                    address: "",
+                  })
+                }
                 disabled={disabled}
                 fullWidth={isMobile}
               />
             </RadioGroupResponsive>
           </Stack>
 
-          <FormSelect
-            label="Domicilio en donde se recolectará el artículo"
-            options={addressOptions}
-            value={indicaciones.address || customerAddress}
-            onChange={(event) =>
-              onChange({ address: String(event.target.value) })
-            }
-            disabled={disabled}
-          />
-
           {indicaciones.replacementBy === "foly" && (
-            <FormAutocomplete
-              label="Sucursal donde se recuperará el artículo"
-              options={branchOptions}
-              value={
-                indicaciones.branchId != null
-                  ? String(indicaciones.branchId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({ branchId: value ? Number(value) : null });
-              }}
-              disabled={disabled || branchesQuery.isPending}
-              placeholder="Buscar sucursal"
-              noOptionsText={
-                branchesQuery.isError
-                  ? "No se pudieron cargar sucursales"
-                  : "Sin sucursales"
-              }
-            />
+            <>
+              <Stack spacing={1}>
+                <SectionLabel>
+                  ¿Cómo ingresará el artículo dañado a sucursal?
+                </SectionLabel>
+                <RadioGroupResponsive>
+                  <RadioButton
+                    value="cliente_entrega"
+                    label="El cliente lo entregará por sus medios"
+                    checked={indicaciones.warehouseIntake === "cliente_entrega"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "cliente_entrega",
+                        address: "",
+                      })
+                    }
+                    disabled={disabled}
+                    fullWidth={isMobile}
+                  />
+                  <RadioButton
+                    value="logistica_foly"
+                    label="Logística Foly realizará la recolección"
+                    checked={indicaciones.warehouseIntake === "logistica_foly"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "logistica_foly",
+                        address: indicaciones.address || customerAddress,
+                      })
+                    }
+                    disabled={disabled}
+                    fullWidth={isMobile}
+                  />
+                </RadioGroupResponsive>
+              </Stack>
+
+              {showReplaceAddressField && (
+                <FormSelect
+                  label="Domicilio en donde se recolectará el artículo"
+                  options={addressOptions}
+                  value={indicaciones.address || customerAddress}
+                  onChange={(event) =>
+                    onChange({ address: String(event.target.value) })
+                  }
+                  disabled={disabled}
+                />
+              )}
+
+              <FormAutocomplete
+                label="Sucursal donde se recuperará el artículo"
+                options={branchOptions}
+                value={
+                  indicaciones.branchId != null
+                    ? String(indicaciones.branchId)
+                    : ""
+                }
+                onChange={(value) => {
+                  onChange({ branchId: value ? Number(value) : null });
+                }}
+                disabled={disabled || branchesQuery.isPending}
+                placeholder="Buscar sucursal"
+                noOptionsText={
+                  branchesQuery.isError
+                    ? "No se pudieron cargar sucursales"
+                    : "Sin sucursales"
+                }
+              />
+
+              <Stack spacing={1}>
+                <Typography variant="body2" color="text.secondary">
+                  Cargar carta de autorización
+                </Typography>
+                <FileUpload
+                  value={supplierAuthFiles}
+                  onChange={(files) => {
+                    const first = files[0];
+                    const url =
+                      first?.url ??
+                      (first?.file ? URL.createObjectURL(first.file) : "");
+                    onChange({
+                      supplierAuthorizationUrl: url,
+                      supplierAuthorizationFile: first?.file,
+                    });
+                  }}
+                  accept={["application/pdf", "image/*"]}
+                  placeholder="Cargar carta de autorización del proveedor"
+                  disabled={disabled}
+                />
+              </Stack>
+            </>
           )}
 
           <FormDatePicker
@@ -521,15 +602,14 @@ export function ServiceOrderIndicacionesTab({
             minDate={TODAY_YMD()}
           />
 
-          <FormSelect
+          <FormTextField
             label="Tipo de daño"
-            options={damageTypeOptions}
-            value={indicaciones.damageTypeId}
+            value={indicaciones.damageDescription}
             onChange={(event) =>
-              onChange({ damageTypeId: String(event.target.value) })
+              onChange({ damageDescription: event.target.value })
             }
-            disabled={disabled || catalogQuery.isPending}
-            placeholder="Selecciona"
+            disabled={disabled}
+            placeholder="Describe el desperfecto del artículo"
           />
 
           <FormAutocomplete

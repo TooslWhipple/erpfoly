@@ -138,3 +138,45 @@ export function getTimelineActionLabel(action: string): string {
 export function requiresAccountingAccount(resolution: AuditorIncidentResolution): boolean {
   return resolution === "LOSS_IN_TRANSIT";
 }
+
+export interface TransferQuantityCapacity {
+  /** Calculado por el back; `null` = sin límite. */
+  remaining: number | null;
+  minStock: number;
+  stock: number;
+  inTransit: number;
+}
+
+export interface TransferQuantityFeedback {
+  level: "error" | "warning";
+  message: string;
+}
+
+/**
+ * Aviso para la cantidad capturada de un artículo de traspaso. `quantity` debe ser
+ * la suma de los renglones del mismo producto. El error (excede el Máx) usa el
+ * `remaining` del back sin recalcularlo; el aviso de Mín no bloquea.
+ */
+export function getTransferQuantityFeedback(
+  quantity: number,
+  capacity: TransferQuantityCapacity,
+  destinationName?: string,
+): TransferQuantityFeedback | null {
+  if (capacity.remaining !== null && quantity > capacity.remaining) {
+    const where = destinationName ? ` en ${destinationName}` : "";
+    return {
+      level: "error",
+      message: `Excede el máximo permitido. Capacidad restante${where}: ${capacity.remaining} unidades`,
+    };
+  }
+  if (
+    capacity.minStock > 0 &&
+    capacity.stock + capacity.inTransit + quantity < capacity.minStock
+  ) {
+    return {
+      level: "warning",
+      message: `Quedará por debajo del mínimo (${capacity.minStock})`,
+    };
+  }
+  return null;
+}

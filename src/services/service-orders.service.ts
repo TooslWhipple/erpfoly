@@ -117,6 +117,7 @@ export async function getServiceOrderByArticleId(
 export async function updateServiceOrder(
   serviceOrderId: string,
   payload: UpdateServiceOrderPayload,
+  options?: { requestCancellation?: boolean },
 ): Promise<ApiResult<ServiceOrder>> {
   const body = flattenUpdate(payload);
   const letter = payload.solucion?.acceptanceLetterFile;
@@ -153,7 +154,16 @@ export async function updateServiceOrder(
     return { data: null, error: updated.error };
   }
 
-  if (payload.indicaciones?.action === "cancelar_venta") {
+  if (options?.requestCancellation) {
+    const requested = await post<ServiceOrder>(
+      `${BASE}/${serviceOrderId}/request-cancellation`,
+      undefined,
+      { skipGlobalErrorToast: true },
+    );
+    if (requested.error) {
+      return { data: null, error: requested.error };
+    }
+  } else if (payload.indicaciones?.action === "reemplazar") {
     const applied = await post<ServiceOrder>(
       `${BASE}/${serviceOrderId}/apply-instructions`,
       undefined,

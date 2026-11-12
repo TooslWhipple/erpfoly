@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  FormHelperText,
   Grid,
   Stack,
   Switch,
@@ -38,6 +39,13 @@ export interface ServiceOrderIndicacionesTabProps {
   indicaciones: ServiceOrderIndicaciones;
   customerAddress: string;
   disabled?: boolean;
+  /** Gerente o administrador. Quien no lo sea no puede elegir cancelar. */
+  canRequestCancellation?: boolean;
+  cancelErrors?: {
+    damage: string;
+    intake: string;
+    address: string;
+  };
   onChange: (patch: Partial<ServiceOrderIndicaciones>) => void;
 }
 
@@ -51,6 +59,8 @@ export function ServiceOrderIndicacionesTab({
   indicaciones,
   customerAddress,
   disabled = false,
+  canRequestCancellation = false,
+  cancelErrors,
   onChange,
 }: ServiceOrderIndicacionesTabProps) {
   const theme = useTheme();
@@ -71,11 +81,6 @@ export function ServiceOrderIndicacionesTab({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Always cached (like repair suppliers) so detail/options are ready immediately.
-  const driversQuery = useUsersSelect({
-    roleCode: ROLE_CODES.CHOFER,
-  });
-
   const employeesQuery = useUsersSelect({
     excludeRoleCodes: DRIVER_ROLE_CODES_EXCLUDED,
   });
@@ -84,8 +89,6 @@ export function ServiceOrderIndicacionesTab({
   const authorizersQuery = employeesQuery;
 
   const repairSupplierOptions = repairSuppliersQuery.selectOptions;
-  const driverOptions = driversQuery.selectOptions;
-  const employeeOptions = employeesQuery.selectOptions;
   const authorizerOptions = authorizersQuery.selectOptions;
   const branchOptions = branchesQuery.selectOptions;
 
@@ -162,14 +165,16 @@ export function ServiceOrderIndicacionesTab({
             disabled={disabled}
             fullWidth={isMobile}
           />
-          <RadioButton
-            value="cancelar_venta"
-            label="Cancelar venta"
-            checked={action === "cancelar_venta"}
-            onChange={() => handleActionChange("cancelar_venta")}
-            disabled={disabled}
-            fullWidth={isMobile}
-          />
+          {(canRequestCancellation || action === "cancelar_venta") && (
+            <RadioButton
+              value="cancelar_venta"
+              label="Cancelar venta"
+              checked={action === "cancelar_venta"}
+              onChange={() => handleActionChange("cancelar_venta")}
+              disabled={disabled || !canRequestCancellation}
+              fullWidth={isMobile}
+            />
+          )}
         </RadioGroupResponsive>
       </Stack>
 
@@ -360,7 +365,7 @@ export function ServiceOrderIndicacionesTab({
                 <SectionLabel>
                   ¿Cómo ingresará el artículo a la bodega?
                 </SectionLabel>
-                <RadioGroupResponsive>
+                <Stack spacing={1}>
                   <RadioButton
                     value="cliente_entrega"
                     label="El cliente lo llevará por su cuenta"
@@ -372,7 +377,7 @@ export function ServiceOrderIndicacionesTab({
                       })
                     }
                     disabled={disabled}
-                    fullWidth={isMobile}
+                    block
                   />
                   <RadioButton
                     value="logistica_foly"
@@ -385,9 +390,9 @@ export function ServiceOrderIndicacionesTab({
                       })
                     }
                     disabled={disabled}
-                    fullWidth={isMobile}
+                    block
                   />
-                </RadioGroupResponsive>
+                </Stack>
               </Stack>
             )
           }
@@ -631,17 +636,15 @@ export function ServiceOrderIndicacionesTab({
       {action === "cancelar_venta" && (
         <>
           <AlertBox tone="warning">
-            Esta acción primero generará una orden de recuperación antes de su
-            cancelación.
+            Solicitar la cancelación crea la hoja de recuperación. El saldo a
+            favor se abona cuando almacén confirma que recibió el artículo.
           </AlertBox>
-          <AlertBox tone="info">
-            Al cancelar la venta, el monto total pagado de este artículo pasará
-            a saldo a favor del cliente.
-          </AlertBox>
-
-          <Typography variant="subtitle2" fontWeight={600}>
-            Ingresa los datos para la orden de recuperación del artículo
-          </Typography>
+          {indicaciones.recoveryReceiver && !indicaciones.warehouseIntake ? (
+            <AlertBox tone="info">
+              Registro anterior de recolección. Queda solo como consulta y no
+              vuelve a abonar saldo.
+            </AlertBox>
+          ) : null}
 
           <FormTextField
             label="Tipo de daño"
@@ -649,100 +652,57 @@ export function ServiceOrderIndicacionesTab({
             onChange={(event) =>
               onChange({ damageDescription: event.target.value })
             }
-            disabled={disabled}
+            disabled={disabled || !canRequestCancellation}
             placeholder="Describe el desperfecto del artículo"
+            error={Boolean(cancelErrors?.damage)}
+            helperText={cancelErrors?.damage || undefined}
           />
 
           <Stack spacing={1}>
-            <RadioGroupResponsive>
+            <SectionLabel>¿Cómo regresa el artículo?</SectionLabel>
+            <Stack spacing={1}>
               <RadioButton
-                value="chofer"
-                label="Recibe chofer"
-                checked={indicaciones.recoveryReceiver === "chofer"}
+                value="cliente_entrega"
+                label="El cliente lo entregará por sus medios"
+                checked={indicaciones.warehouseIntake === "cliente_entrega"}
                 onChange={() =>
-                  onChange({
-                    recoveryReceiver: "chofer",
-                    assignedEmployeeId: null,
-                  })
+                  onChange({ warehouseIntake: "cliente_entrega", address: "" })
                 }
-                disabled={disabled}
-                fullWidth={isMobile}
+                disabled={disabled || !canRequestCancellation}
+                error={Boolean(cancelErrors?.intake)}
+                block
               />
               <RadioButton
-                value="empleado"
-                label="Recibe empleado"
-                checked={indicaciones.recoveryReceiver === "empleado"}
+                value="logistica_foly"
+                label="Logística Foly realizará la recolección"
+                checked={indicaciones.warehouseIntake === "logistica_foly"}
                 onChange={() =>
                   onChange({
-                    recoveryReceiver: "empleado",
-                    assignedDriverId: null,
+                    warehouseIntake: "logistica_foly",
+                    address: indicaciones.address || customerAddress,
                   })
                 }
-                disabled={disabled}
-                fullWidth={isMobile}
+                disabled={disabled || !canRequestCancellation}
+                error={Boolean(cancelErrors?.intake)}
+                block
               />
-              <RadioButton
-                value="no_se_recoge"
-                label="No se recoge artículo"
-                checked={indicaciones.recoveryReceiver === "no_se_recoge"}
-                onChange={() =>
-                  onChange({
-                    recoveryReceiver: "no_se_recoge",
-                    assignedDriverId: null,
-                    assignedEmployeeId: null,
-                  })
-                }
-                disabled={disabled}
-                fullWidth={isMobile}
-              />
-            </RadioGroupResponsive>
+            </Stack>
+            {cancelErrors?.intake ? (
+              <FormHelperText error sx={{ mx: 0 }}>
+                {cancelErrors.intake}
+              </FormHelperText>
+            ) : null}
           </Stack>
 
-          {indicaciones.recoveryReceiver === "chofer" && (
-            <FormAutocomplete
-              label="Chofer que realizará la recolección"
-              options={driverOptions}
-              value={
-                indicaciones.assignedDriverId != null
-                  ? String(indicaciones.assignedDriverId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({
-                  assignedDriverId: value ? Number(value) : null,
-                });
-              }}
-              disabled={disabled || driversQuery.isPending}
-              placeholder="Buscar chofer"
-              noOptionsText={
-                driversQuery.isError
-                  ? "No se pudieron cargar choferes"
-                  : "Sin choferes"
-              }
-            />
-          )}
-
-          {indicaciones.recoveryReceiver === "empleado" && (
-            <FormAutocomplete
-              label="Empleado que recibe el artículo"
-              options={employeeOptions}
-              value={
-                indicaciones.assignedEmployeeId != null
-                  ? String(indicaciones.assignedEmployeeId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({
-                  assignedEmployeeId: value ? Number(value) : null,
-                });
-              }}
-              disabled={disabled || employeesQuery.isPending}
-              placeholder="Buscar empleado"
-              noOptionsText={
-                employeesQuery.isError
-                  ? "No se pudieron cargar empleados"
-                  : "Sin empleados"
-              }
+          {indicaciones.warehouseIntake === "logistica_foly" && (
+            <FormTextField
+              label="Domicilio de recolección"
+              value={indicaciones.address}
+              onChange={(event) => onChange({ address: event.target.value })}
+              disabled={disabled || !canRequestCancellation}
+              placeholder="Calle, número y colonia"
+              error={Boolean(cancelErrors?.address)}
+              helperText={cancelErrors?.address || undefined}
             />
           )}
 
@@ -750,7 +710,7 @@ export function ServiceOrderIndicacionesTab({
             label="Observaciones"
             value={indicaciones.observations}
             onChange={(event) => onChange({ observations: event.target.value })}
-            disabled={disabled}
+            disabled={disabled || !canRequestCancellation}
             multiline
             minRows={3}
             placeholder="Ingrese"

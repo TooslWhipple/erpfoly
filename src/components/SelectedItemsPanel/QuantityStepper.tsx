@@ -1,12 +1,15 @@
 import { Minus, Plus } from 'lucide-react';
 import { StepperButton, StepperInput } from './styles';
-import { Stack } from '@mui/material';
+import { FormHelperText, Stack } from '@mui/material';
 
 interface QuantityStepperProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  error?: boolean;
+  helperText?: string;
+  warningText?: string;
 }
 
 export default function QuantityStepper({
@@ -14,6 +17,9 @@ export default function QuantityStepper({
   onChange,
   min = 1,
   max = 9999,
+  error = false,
+  helperText,
+  warningText,
 }: QuantityStepperProps) {
   const handleDecrement = () => {
     if (value > min) {
@@ -40,6 +46,7 @@ export default function QuantityStepper({
   };
 
   return (
+    <Stack>
     <Stack direction="row" alignItems="center" spacing={1}>
       <StepperButton
         onClick={handleDecrement}
@@ -53,6 +60,7 @@ export default function QuantityStepper({
         onChange={handleInputChange}
         min={min}
         max={max}
+        aria-invalid={error || undefined}
       />
       <StepperButton
         size="small"
@@ -61,6 +69,11 @@ export default function QuantityStepper({
       >
         <Plus size={14} />
       </StepperButton>
+    </Stack>
+    {helperText && <FormHelperText error={error}>{helperText}</FormHelperText>}
+    {!helperText && warningText && (
+      <FormHelperText sx={{ color: 'warning.main' }}>{warningText}</FormHelperText>
+    )}
     </Stack>
   );
 }

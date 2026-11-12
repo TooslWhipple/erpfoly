@@ -14,10 +14,11 @@ import {
   AddDamagedGoodsModal,
   ConfirmModal,
   MarkDamagedGoodsDiscountedModal,
+  StatusChip,
 } from "@/components";
 import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
 import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
-import { Chip, Grid, Skeleton, Stack, Typography } from "@mui/material";
+import { Grid, Skeleton, Stack, Typography } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -395,22 +396,23 @@ export default function MercanciaDanada() {
         size: "xl",
         truncate: true,
         sortable: true,
-        format: (value, row) => (
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-            <Typography variant="body2" component="span" noWrap>
-              {String(value ?? "")}
-            </Typography>
-            {row.isClientProperty && row.serviceOrderFolio ? (
-              <Chip
-                label="A Reparación (Cliente)"
-                size="small"
-                color="info"
-                variant="outlined"
-                sx={{ flexShrink: 0 }}
-              />
-            ) : null}
-          </Stack>
-        ),
+      },
+      {
+        id: "sourceLabel",
+        label: "Origen",
+        width: 300,
+        format: (_value, row) => {
+          const label =
+            row.sourceLabel ??
+            (row.isClientProperty && row.serviceOrderFolio
+              ? "A Reparación (Cliente)"
+              : null);
+          if (!label) return "—";
+          const variant: StatusChipVariant = row.isClientProperty
+            ? "info"
+            : "warning";
+          return <StatusChip label={label} variant={variant} size="small" />;
+        },
       },
       {
         id: "referenceLabel",

@@ -46,6 +46,10 @@ import {
 } from "@/services/orders.service";
 import { getMainWarehouse } from "@/services/branches.service";
 import { getTransfer, updateTransfer } from "@/services/transfers.service";
+import {
+  getTransferQuantityFeedback,
+  type TransferQuantityFeedback,
+} from "@/utils/transfers";
 import type { UpdateTransferPayload } from "@/types/transfers.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
@@ -325,6 +329,7 @@ export default function OrderForm({
         : "products-by-branch",
       sourceEntityId,
       effectiveOrderType === "internal" ? destinationBranchId : null,
+      effectiveOrderType === "internal" && mode === "edit" ? orderId : null,
     ],
     queryFn: async () => {
       if (effectiveOrderType === "external") {
@@ -334,6 +339,7 @@ export default function OrderForm({
         await getProductsByBranch(
           sourceEntityId,
           Number.isFinite(destinationBranchId) ? destinationBranchId : undefined,
+          mode === "edit" && orderId && orderId > 0 ? orderId : undefined,
         ),
       );
     },
@@ -345,6 +351,42 @@ export default function OrderForm({
   const articles = useMemo<ArticleRow[]>(
     () => (productRows ?? []).map(mapProductBySupplierToArticleRow),
     [productRows],
+  );
+  const transferFeedbackByProduct = useMemo(() => {
+    const feedback = new Map<number, TransferQuantityFeedback>();
+    if (!isInternalOrder) return feedback;
+    const quantityByProduct = new Map<number, number>();
+    for (const item of selectedItems) {
+      quantityByProduct.set(
+        item.productId,
+        (quantityByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
+    for (const row of productRows ?? []) {
+      const quantity = quantityByProduct.get(row.id);
+      if (quantity === undefined || row.destinationRemaining === undefined) {
+        continue;
+      }
+      const result = getTransferQuantityFeedback(
+        quantity,
+        {
+          remaining: row.destinationRemaining,
+          minStock: row.destinationMinStock ?? 0,
+          stock: row.destinationStock ?? 0,
+          inTransit: row.destinationInTransit ?? 0,
+        },
+        branch?.name,
+      );
+      if (result) feedback.set(row.id, result);
+    }
+    return feedback;
+  }, [isInternalOrder, selectedItems, productRows, branch?.name]);
+  const hasCapacityErrors = useMemo(
+    () =>
+      Array.from(transferFeedbackByProduct.values()).some(
+        (f) => f.level === "error",
+      ),
+    [transferFeedbackByProduct],
   );
   const filteredArticles = useMemo<ArticleRow[]>(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -505,7 +547,7 @@ export default function OrderForm({
     }
   };
   const handleContinue = async () => {
-    if (selectedItems.length === 0) return;
+    if (selectedItems.length === 0 || hasCapacityErrors) return;
     if (mode === "create") {
       if (effectiveOrderType === "external") {
         const orderData = {
@@ -929,7 +971,10 @@ export default function OrderForm({
             onContinue={canSubmitOrder ? handleContinue : undefined}
             continueLabel={mode === "edit" ? "Guardar cambios" : "Continuar"}
             hidePrices={isInternalOrder}
-            disabled={isEditLocked}
+            disabled={isEditLocked || hasCapacityErrors}
+            getItemFeedback={(item) =>
+              transferFeedbackByProduct.get(item.productId) ?? null
+            }
           />
         </StickySidebarGrid>
       </Grid>

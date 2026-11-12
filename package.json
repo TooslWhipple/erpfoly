@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/lib/promotionDownPayment.test.ts src/lib/promotionFormValidation.test.ts src/components/HandoverCounter/handover.test.ts src/components/HandoverCounter/handoverErrors.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts src/utils/route-publish-readiness.test.ts src/utils/layaway.test.ts src/utils/clientPaymentAccess.test.ts src/utils/number.test.ts",
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node --require ts-node/register/transpile-only --test src/utils/cascadePayment.test.ts src/components/AddDamagedGoodsModal/returnSupplierSelection.test.ts src/lib/promotionDownPayment.test.ts src/lib/promotionFormValidation.test.ts src/components/HandoverCounter/handover.test.ts src/components/HandoverCounter/handoverErrors.test.ts src/components/DeliveryHolds/holds.test.ts src/utils/branchRequest.test.ts src/utils/transfers.test.ts src/utils/route-publish-readiness.test.ts src/utils/layaway.test.ts src/utils/clientPaymentAccess.test.ts src/utils/number.test.ts src/utils/invoice-activity.test.ts",
     "prepare": "husky"
   },
   "dependencies": {

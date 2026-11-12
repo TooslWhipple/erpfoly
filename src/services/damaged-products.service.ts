@@ -69,6 +69,8 @@ export interface DamagedProductListApiRow {
     repairEndDate: string | null;
     /** True cuando el artículo es propiedad del cliente (OS). */
     isClientProperty?: boolean;
+    /** Reparación de cliente o devolución por cancelación. */
+    sourceLabel?: string | null;
     /** Proveedor de reparación o técnico asignado. */
     repairAssigneeLabel?: string;
 }

@@ -304,6 +304,7 @@ export const ArticlesList = styled('div')(({ theme }) => ({
 
 export const ArticleCard = styled('div')(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "flex-start",
   justifyContent: "space-between",
   gap: theme.spacing(2),
@@ -313,8 +314,11 @@ export const ArticleCard = styled('div')(({ theme }) => ({
   padding: theme.spacing(2.5),
   width: "100%",
   minWidth: 0,
-  [theme.breakpoints.down("md")]: {
+  containerType: "inline-size",
+  containerName: "article-card",
+  "@container article-card (max-width: 840px)": {
     flexDirection: "column",
+    alignItems: "stretch",
     padding: theme.spacing(2),
   },
 }));
@@ -322,9 +326,11 @@ export const ArticleCard = styled('div')(({ theme }) => ({
 export const ArticleLeft = styled('div')(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
+  alignItems: "flex-start",
   gap: theme.spacing(1),
   minWidth: 0,
-  flex: 1,
+  flex: "1 1 auto",
+  maxWidth: "100%",
 }));
 
 export const ArticleMetaRow = styled('div')(({ theme }) => ({
@@ -343,8 +349,15 @@ export const ArticleDescription = styled(Typography)(({ theme }) => ({
   fontSize: 15,
   fontWeight: 600,
   color: theme.palette.text.primary,
-  wordBreak: "break-word",
+  width: "100%",
+  overflowWrap: "break-word",
 }));
+
+export const ArticleStatusWrap = styled("span")({
+  display: "inline-block",
+  flexShrink: 0,
+  maxWidth: "100%",
+});
 
 export const ServiceOrderButton = styled(Button)(({ theme }) => ({
   alignSelf: "flex-start",
@@ -359,18 +372,34 @@ export const ServiceOrderButton = styled(Button)(({ theme }) => ({
   },
 }));
 
+export const ArticleAside = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: theme.spacing(1),
+  flexShrink: 0,
+  marginLeft: "auto",
+  maxWidth: "100%",
+  "@container article-card (max-width: 840px)": {
+    marginLeft: 0,
+    width: "100%",
+    justifyContent: "space-between",
+  },
+}));
+
 export const ArticleDetails = styled('div')(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing(3),
   flexShrink: 0,
-  [theme.breakpoints.down("md")]: {
+  "@container article-card (max-width: 840px)": {
+    flex: 1,
     width: "100%",
     justifyContent: "space-between",
     flexWrap: "wrap",
     gap: theme.spacing(2),
   },
-  [theme.breakpoints.down("sm")]: {
+  "@container article-card (max-width: 420px)": {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: theme.spacing(1.5),
@@ -722,5 +751,18 @@ export const ArticleActionsRow = styled('div')(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
+  justifyContent: "flex-start",
   gap: theme.spacing(1),
+  width: "fit-content",
+  maxWidth: "100%",
 }));
+
+export const ArticleActionButton = styled(Button)({
+  flex: "0 0 auto",
+  width: "fit-content",
+  maxWidth: "100%",
+  whiteSpace: "nowrap",
+  "& .MuiButton-startIcon": {
+    flexShrink: 0,
+  },
+});

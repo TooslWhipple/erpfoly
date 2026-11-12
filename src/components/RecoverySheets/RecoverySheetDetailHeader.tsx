@@ -1,40 +1,17 @@
-import { Button, Typography } from "@mui/material";
-import { ClipboardList, ExternalLink } from "lucide-react";
-import { useTheme } from "@mui/material/styles";
-import { RECOVERY_SHEET_ORIGIN_LABELS } from "@/types/recovery-sheets.types";
+import { Typography } from "@mui/material";
+import { ClipboardList } from "lucide-react";
 import type { RecoverySheetDetail } from "@/types/recovery-sheets.types";
-import {
-  DetailBadgeRow,
-  DetailHeroSection,
-  DetailMetaGrid,
-  DetailMetaItem,
-  invoiceLinkButtonSx,
-} from "./styles";
+import { articleBadgeSx, DetailHeroSection } from "./styles";
 
 export interface RecoverySheetDetailHeaderProps {
   detail: RecoverySheetDetail;
-  onInvoiceClick?: () => void;
 }
 
 export function RecoverySheetDetailHeader({
   detail,
-  onInvoiceClick,
 }: RecoverySheetDetailHeaderProps) {
-  const theme = useTheme();
-
   return (
     <DetailHeroSection>
-      <DetailBadgeRow>
-        <ClipboardList size={16} color={theme.palette.primary.main} />
-        <Typography variant="body2" fontWeight={600} color="primary.main">
-          Hoja de recuperación
-        </Typography>
-      </DetailBadgeRow>
-
-      <Typography variant="body2" color="text.secondary">
-        {detail.articleCode}
-      </Typography>
-
       <Typography
         variant="h4"
         fontWeight={700}
@@ -47,30 +24,19 @@ export function RecoverySheetDetailHeader({
         {detail.articleDescription}
       </Typography>
 
-      <DetailMetaGrid>
-        <DetailMetaItem>
-          <Typography variant="body2" color="text.secondary">
-            Origen
-          </Typography>
-          <Typography variant="body2" fontWeight={600}>
-            {RECOVERY_SHEET_ORIGIN_LABELS[detail.origin]}
-          </Typography>
-        </DetailMetaItem>
-
-        <DetailMetaItem>
-          <Typography variant="body2" color="text.secondary">
-            Factura
-          </Typography>
-          <Button
-            variant="text"
-            onClick={onInvoiceClick}
-            endIcon={<ExternalLink size={14} />}
-            sx={invoiceLinkButtonSx}
-          >
-            {detail.invoiceNumber}
-          </Button>
-        </DetailMetaItem>
-      </DetailMetaGrid>
+      <Typography component="div" variant="body2" fontWeight={600} sx={articleBadgeSx}>
+        <ClipboardList size={15} />
+        Hoja de recuperación
+        <Typography
+          component="span"
+          variant="body2"
+          color="text.secondary"
+          fontWeight={500}
+          sx={{ ml: 0.25 }}
+        >
+          {detail.articleCode}
+        </Typography>
+      </Typography>
     </DetailHeroSection>
   );
 }

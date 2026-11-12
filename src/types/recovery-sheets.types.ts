@@ -67,6 +67,8 @@ export interface RecoverySheetDetail {
   invoiceNumber: string;
   createdAt: string;
   status: RecoverySheetStatus;
+  quantity: number;
+  storageBranchName: string;
   scheduledRoute?: RecoverySheetScheduledRoute;
   serviceOrder?: RecoverySheetServiceOrderLink;
   warehouse?: RecoverySheetWarehouseEntry;

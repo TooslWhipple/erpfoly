@@ -155,6 +155,10 @@ export interface ServiceOrderIndicaciones {
   assignedDriverId: number | null;
   assignedEmployeeId: number | null;
   repairTechnicianId: number | null;
+  /** Lectura: URL de la carta de autorización del proveedor. */
+  supplierAuthorizationUrl: string;
+  /** Escritura: archivo a subir como carta de autorización del proveedor. */
+  supplierAuthorizationFile?: File;
 }
 
 export interface ServiceOrderSolucion {
@@ -229,6 +233,7 @@ export function createDefaultIndicaciones(
     assignedDriverId: null,
     assignedEmployeeId: null,
     repairTechnicianId: null,
+    supplierAuthorizationUrl: "",
   };
 }
 
@@ -281,15 +286,19 @@ export function indicacionesPatchForAction(
     return {
       ...base,
       replacementBy: "proveedor",
+      warehouseIntake: "",
       address: current.address,
       scheduledDate: current.scheduledDate,
+      damageDescription: current.damageDescription,
+      supplierAuthorizationUrl: "",
+      supplierAuthorizationFile: undefined,
     };
   }
 
   return {
     ...base,
     recoveryReceiver: "chofer",
-    damageTypeId: current.damageTypeId,
+    damageDescription: current.damageDescription,
   };
 }
 

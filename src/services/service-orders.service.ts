@@ -132,6 +132,20 @@ export async function updateServiceOrder(
     }
   }
 
+  const supplierAuth = payload.indicaciones?.supplierAuthorizationFile;
+  if (supplierAuth) {
+    const fileId = await uploadRelatedFile(
+      Number(serviceOrderId),
+      supplierAuth,
+      supplierAuth.type === "application/pdf" ? "DOCUMENT" : "PHOTO",
+    );
+    if (fileId != null) {
+      (
+        body as { supplierAuthorizationFileId?: number }
+      ).supplierAuthorizationFileId = fileId;
+    }
+  }
+
   const updated = await patch<ServiceOrder>(`${BASE}/${serviceOrderId}`, body, {
     skipGlobalErrorToast: true,
   });
@@ -139,10 +153,7 @@ export async function updateServiceOrder(
     return { data: null, error: updated.error };
   }
 
-  if (
-    payload.indicaciones?.action === "cancelar_venta" ||
-    payload.indicaciones?.action === "reemplazar"
-  ) {
+  if (payload.indicaciones?.action === "cancelar_venta") {
     const applied = await post<ServiceOrder>(
       `${BASE}/${serviceOrderId}/apply-instructions`,
       undefined,

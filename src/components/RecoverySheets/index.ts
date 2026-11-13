@@ -1,9 +1,12 @@
 export { RecoverySheetDetailHeader } from "./RecoverySheetDetailHeader";
 export type { RecoverySheetDetailHeaderProps } from "./RecoverySheetDetailHeader";
+export { RecoverySheetSummaryBar } from "./RecoverySheetSummaryBar";
+export type { RecoverySheetSummaryBarProps } from "./RecoverySheetSummaryBar";
+export { RecoverySheetClientCard } from "./RecoverySheetClientCard";
+export type { RecoverySheetClientCardProps } from "./RecoverySheetClientCard";
 export {
   RecoverySheetRouteCard,
   RecoverySheetServiceOrderCard,
-  RecoverySheetWarehouseCard,
 } from "./RecoverySheetLinkedCards";
 export { RecoverySheetDocumentPanel } from "./RecoverySheetDocumentPanel";
 export type { RecoverySheetDocumentPanelProps } from "./RecoverySheetDocumentPanel";

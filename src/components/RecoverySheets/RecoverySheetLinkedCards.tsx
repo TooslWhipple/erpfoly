@@ -1,44 +1,34 @@
-import { IconButton, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import {
-  Building2,
-  Check,
-  Clock,
-  ExternalLink,
-  Map,
-  Sofa,
-} from "lucide-react";
+import { Check, Clock, ExternalLink, Map, Sofa } from "lucide-react";
 import { StatusChip } from "@/components";
 import type { StatusChipVariant } from "@/components/StatusChip";
 import { formatDateOnly } from "@/utils/date";
-import {
-  RECOVERY_SHEET_ITEM_CONDITION_LABELS,
-  RECOVERY_SHEET_ROUTE_STATUS_LABELS,
-} from "@/types/recovery-sheets.types";
+import { RECOVERY_SHEET_ROUTE_STATUS_LABELS } from "@/types/recovery-sheets.types";
 import type {
   RecoverySheetScheduledRoute,
   RecoverySheetServiceOrderLink,
-  RecoverySheetWarehouseEntry,
 } from "@/types/recovery-sheets.types";
 import {
   SERVICE_ORDER_STATUS_LABELS,
   SERVICE_ORDER_STATUS_VARIANTS,
 } from "@/pages/atencion-cliente/components/ServiceOrderDetailModal/constants";
 import {
-  externalLinkIconButtonSx,
+  FactItem,
   LinkedCard,
   LinkedCardBodyMain,
   LinkedCardBodyRow,
   LinkedCardContent,
-  LinkedCardDateColumn,
+  LinkedCardHeaderRow,
   LinkedCardMetaRow,
   LinkedCardThumb,
   LinkedCardThumbMuted,
   MapRouteLine,
   MapThumbBackdrop,
   ServiceOrderCommentBox,
+  ServiceOrderFactsGrid,
   SofaThumbBackdrop,
-  WarehouseIconBox,
+  textLinkButtonSx,
 } from "./styles";
 
 interface RecoverySheetRouteCardProps {
@@ -67,9 +57,21 @@ export function RecoverySheetRouteCard({
 
   return (
     <LinkedCard>
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>
-        Ruta programada
-      </Typography>
+      <LinkedCardHeaderRow>
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          Ruta programada
+        </Typography>
+        {onOpen ? (
+          <Button
+            variant="text"
+            onClick={onOpen}
+            endIcon={<ExternalLink size={14} />}
+            sx={textLinkButtonSx}
+          >
+            Ver ruta
+          </Button>
+        ) : null}
+      </LinkedCardHeaderRow>
 
       <LinkedCardBodyRow>
         <LinkedCardBodyMain>
@@ -82,7 +84,7 @@ export function RecoverySheetRouteCard({
 
           <LinkedCardContent>
             <LinkedCardMetaRow>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" fontWeight={600}>
                 {route.id}
               </Typography>
               <StatusChip
@@ -92,31 +94,14 @@ export function RecoverySheetRouteCard({
                 startIcon={routeStatusIcon(route.status)}
               />
             </LinkedCardMetaRow>
-            <Typography variant="body1" fontWeight={600}>
+            <Typography variant="body2" color="text.secondary">
               {route.branchName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Recuperación: {formatDateOnly(route.recoveryDate, "dateLong")}
             </Typography>
           </LinkedCardContent>
         </LinkedCardBodyMain>
-
-        <LinkedCardDateColumn>
-          <Typography variant="body2" color="text.secondary">
-            Fecha de recuperación
-          </Typography>
-          <Typography variant="body2" fontWeight={600} color="text.primary">
-            {formatDateOnly(route.recoveryDate, "dateLong")}
-          </Typography>
-        </LinkedCardDateColumn>
-
-        {onOpen ? (
-          <IconButton
-            size="small"
-            onClick={onOpen}
-            aria-label="Ver ruta"
-            sx={externalLinkIconButtonSx}
-          >
-            <ExternalLink size={16} />
-          </IconButton>
-        ) : null}
       </LinkedCardBodyRow>
     </LinkedCard>
   );
@@ -124,32 +109,61 @@ export function RecoverySheetRouteCard({
 
 interface RecoverySheetServiceOrderCardProps {
   serviceOrder: RecoverySheetServiceOrderLink;
+  quantity: number;
   onOpen?: () => void;
+}
+
+function pieceLabel(quantity: number) {
+  const qty = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+  return `${qty} ${qty === 1 ? "pieza" : "piezas"}`;
 }
 
 export function RecoverySheetServiceOrderCard({
   serviceOrder,
+  quantity,
   onOpen,
 }: RecoverySheetServiceOrderCardProps) {
   const theme = useTheme();
+  const reason = serviceOrder.comment?.trim() || "—";
+  const observations =
+    serviceOrder.title?.trim() &&
+    serviceOrder.title.trim().toLowerCase() !== reason.toLowerCase()
+      ? serviceOrder.title.trim()
+      : serviceOrder.comment?.trim() || "";
 
   return (
     <LinkedCard>
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>
-        Orden de servicio
-      </Typography>
+      <LinkedCardHeaderRow>
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          Orden de servicio
+        </Typography>
+        {onOpen ? (
+          <Button
+            variant="text"
+            onClick={onOpen}
+            endIcon={<ExternalLink size={14} />}
+            sx={textLinkButtonSx}
+          >
+            Ver orden
+          </Button>
+        ) : null}
+      </LinkedCardHeaderRow>
 
       <LinkedCardBodyRow>
         <LinkedCardBodyMain>
           <LinkedCardThumbMuted>
             <SofaThumbBackdrop>
-              <Sofa size={30} color={theme.palette.text.secondary} strokeWidth={1.5} />
+              <Sofa
+                size={30}
+                color={theme.palette.text.secondary}
+                strokeWidth={1.5}
+              />
             </SofaThumbBackdrop>
           </LinkedCardThumbMuted>
 
           <LinkedCardContent>
             <LinkedCardMetaRow>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" fontWeight={600}>
                 {serviceOrder.id}
               </Typography>
               <StatusChip
@@ -159,98 +173,44 @@ export function RecoverySheetServiceOrderCard({
                 startIcon={<Clock size={12} />}
               />
             </LinkedCardMetaRow>
-            <Typography variant="body1" fontWeight={600}>
-              {serviceOrder.title}
-            </Typography>
+
+            <ServiceOrderFactsGrid>
+              <FactItem>
+                <Typography variant="body2" color="text.secondary">
+                  Motivo
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {reason}
+                </Typography>
+              </FactItem>
+              <FactItem>
+                <Typography variant="body2" color="text.secondary">
+                  Cantidad
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {pieceLabel(quantity)}
+                </Typography>
+              </FactItem>
+              <FactItem>
+                <Typography variant="body2" color="text.secondary">
+                  Generada
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {formatDateOnly(serviceOrder.generatedAt, "dateLong")}
+                </Typography>
+              </FactItem>
+            </ServiceOrderFactsGrid>
           </LinkedCardContent>
         </LinkedCardBodyMain>
-
-        <LinkedCardDateColumn>
-          <Typography variant="body2" color="text.secondary">
-            Fecha de generación
-          </Typography>
-          <Typography variant="body2" fontWeight={600} color="text.primary">
-            {formatDateOnly(serviceOrder.generatedAt, "dateLong")}
-          </Typography>
-        </LinkedCardDateColumn>
-
-        {onOpen ? (
-          <IconButton
-            size="small"
-            onClick={onOpen}
-            aria-label="Ver orden de servicio"
-            sx={externalLinkIconButtonSx}
-          >
-            <ExternalLink size={16} />
-          </IconButton>
-        ) : null}
       </LinkedCardBodyRow>
 
-      {serviceOrder.comment ? (
+      {observations ? (
         <ServiceOrderCommentBox>
           <Typography variant="body2" color="text.secondary">
-            {serviceOrder.comment}
+            {observations}
           </Typography>
         </ServiceOrderCommentBox>
       ) : null}
-    </LinkedCard>
-  );
-}
-
-interface RecoverySheetWarehouseCardProps {
-  warehouse: RecoverySheetWarehouseEntry;
-  onOpen?: () => void;
-}
-
-export function RecoverySheetWarehouseCard({
-  warehouse,
-  onOpen,
-}: RecoverySheetWarehouseCardProps) {
-  return (
-    <LinkedCard>
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>
-        Almacén
-      </Typography>
-
-      <LinkedCardBodyRow>
-        <LinkedCardBodyMain>
-          <LinkedCardThumbMuted>
-            <WarehouseIconBox>
-              <Building2 size={28} strokeWidth={1.5} />
-            </WarehouseIconBox>
-          </LinkedCardThumbMuted>
-
-          <LinkedCardContent>
-            <Typography variant="body1" fontWeight={600}>
-              {warehouse.branchName}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Estado del artículo:{" "}
-              {RECOVERY_SHEET_ITEM_CONDITION_LABELS[warehouse.itemCondition]}
-            </Typography>
-          </LinkedCardContent>
-        </LinkedCardBodyMain>
-
-        <LinkedCardDateColumn>
-          <Typography variant="body2" color="text.secondary">
-            Fecha de entrada
-          </Typography>
-          <Typography variant="body2" fontWeight={600} color="text.primary">
-            {formatDateOnly(warehouse.entryDate, "dateLong")}
-          </Typography>
-        </LinkedCardDateColumn>
-
-        {onOpen ? (
-          <IconButton
-            size="small"
-            onClick={onOpen}
-            aria-label="Ver almacén"
-            sx={externalLinkIconButtonSx}
-          >
-            <ExternalLink size={16} />
-          </IconButton>
-        ) : null}
-      </LinkedCardBodyRow>
     </LinkedCard>
   );
 }

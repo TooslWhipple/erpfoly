@@ -4,11 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInvoiceDetail } from "@/services/customer-support.service";
 import {
   downloadRecoverySheetPdf,
+  fetchRecoverySheetPdf,
   getRecoverySheetDetail,
   receiveRecoveryItem,
   updateRecoverySheetStatus,
 } from "@/services/recovery-sheets.service";
-import type { InvoiceDetail } from "@/types/atencion-cliente.types";
+import { printPdfBlob } from "@/lib/printing";
 import type {
   ReceiveRecoveryItemPayload,
   RecoverySheetStatus,
@@ -33,7 +34,7 @@ export function useRecoverySheetDetail() {
     useState<null | HTMLElement>(null);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [serviceOrderModalOpen, setServiceOrderModalOpen] = useState(false);
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const {
     data: detail,
@@ -51,21 +52,17 @@ export function useRecoverySheetDetail() {
     enabled: Boolean(sheetId),
   });
 
-  const loadInvoice = useCallback(async (invoiceId: string) => {
-    try {
-      const data = await getInvoiceDetail(invoiceId);
-      setInvoice(data);
-    } catch (loadError) {
-      console.error("[RecoverySheetDetail] Error loading invoice:", loadError);
-      setInvoice(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (detail?.invoiceId) {
-      void loadInvoice(detail.invoiceId);
-    }
-  }, [detail?.invoiceId, loadInvoice]);
+  const invoiceQuery = useQuery({
+    queryKey: ["recovery-sheet-invoice", detail?.invoiceId],
+    queryFn: async () => {
+      if (!detail?.invoiceId) {
+        throw new Error("Factura no disponible");
+      }
+      return getInvoiceDetail(detail.invoiceId);
+    },
+    enabled: Boolean(detail?.invoiceId),
+    retry: false,
+  });
 
   useEffect(() => {
     if (isError) {
@@ -81,13 +78,18 @@ export function useRecoverySheetDetail() {
     mutationFn: async (status: RecoverySheetStatus) => {
       const result = await updateRecoverySheetStatus(sheetId, status);
       if (result.error || !result.data) {
-        throw new Error(result.error?.message ?? "No se pudo actualizar el estatus");
+        throw new Error(
+          result.error?.message ?? "No se pudo actualizar el estatus",
+        );
       }
       return result.data;
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(["recovery-sheet", sheetId], updated);
       void queryClient.invalidateQueries({ queryKey: ["recovery-sheets"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["recovery-sheet-pdf", sheetId],
+      });
       showSuccess("Estatus actualizado correctamente.");
     },
     onError: (mutationError) => {
@@ -104,7 +106,8 @@ export function useRecoverySheetDetail() {
       const result = await receiveRecoveryItem(sheetId, payload);
       if (result.error || !result.data) {
         throw new Error(
-          result.error?.message ?? "No se pudo registrar la recepción del artículo",
+          result.error?.message ??
+            "No se pudo registrar la recepción del artículo",
         );
       }
       return result.data;
@@ -112,6 +115,9 @@ export function useRecoverySheetDetail() {
     onSuccess: (updated) => {
       queryClient.setQueryData(["recovery-sheet", sheetId], updated);
       void queryClient.invalidateQueries({ queryKey: ["recovery-sheets"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["recovery-sheet-pdf", sheetId],
+      });
       setReceiveModalOpen(false);
       showSuccess("Artículo recibido correctamente.");
     },
@@ -172,9 +178,35 @@ export function useRecoverySheetDetail() {
       await downloadRecoverySheetPdf(sheetId);
     } catch (downloadError) {
       console.error("[RecoverySheetDetail] Download error:", downloadError);
-      showError("No se pudo descargar la hoja de recuperación.");
+      showError(
+        downloadError instanceof Error && downloadError.message.trim()
+          ? downloadError.message
+          : "No se pudo descargar la hoja de recuperación.",
+      );
     }
   }, [sheetId, showError]);
+
+  const handlePrint = useCallback(async () => {
+    if (!sheetId) return;
+    setIsPrinting(true);
+    try {
+      const { blob } = await queryClient.fetchQuery({
+        queryKey: ["recovery-sheet-pdf", sheetId],
+        queryFn: () => fetchRecoverySheetPdf(sheetId),
+        staleTime: 5 * 60_000,
+      });
+      await printPdfBlob(blob);
+    } catch (printError) {
+      console.error("[RecoverySheetDetail] Print error:", printError);
+      showError(
+        printError instanceof Error && printError.message.trim()
+          ? printError.message
+          : "No se pudo imprimir la hoja de recuperación.",
+      );
+    } finally {
+      setIsPrinting(false);
+    }
+  }, [queryClient, sheetId, showError]);
 
   const closeReceiveModal = useCallback(() => {
     if (receiveMutation.isPending) return;
@@ -195,9 +227,11 @@ export function useRecoverySheetDetail() {
 
   return {
     detail,
-    invoice,
+    invoice: invoiceQuery.data ?? null,
+    isInvoiceLoading: invoiceQuery.isLoading,
     isLoading,
     isSaving: statusMutation.isPending || receiveMutation.isPending,
+    isPrinting,
     breadcrumbs,
     statusMenuAnchor,
     statusMenuOptions: STATUS_MENU_OPTIONS,
@@ -209,6 +243,7 @@ export function useRecoverySheetDetail() {
     handleStatusSelect,
     handleReceiveConfirm,
     handleDownload,
+    handlePrint,
     closeReceiveModal,
     closeServiceOrderModal,
     openServiceOrderModal,

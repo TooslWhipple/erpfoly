@@ -140,6 +140,8 @@ import type {
   NewSaleView,
   ProductSearchResult,
   SalePaymentType,
+  LayawayOfferView,
+  SaleDetail,
 } from "@/types/ventas.types";
 import type { Client } from "@/services/clients.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -196,7 +198,6 @@ import {
   type EconomicRevisionPreview,
 } from "@/utils/economicRevision";
 import {
-  LAYAWAY_MIN_DEPOSIT_PERCENT,
   layawayDownPaymentError,
   layawayMinimumDeposit,
 } from "@/utils/layaway";
@@ -440,6 +441,47 @@ function formatDownPaymentPercent(rate: number): string {
   return Number.isInteger(percent)
     ? String(percent)
     : percent.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/** The term-change response is the new ticket. Keep every other sale field. */
+function patchResumeSaleQuote(
+  current: SaleDetail,
+  result: UpdateSalePurchaseTypeResult,
+): SaleDetail {
+  const pricedById = new Map(result.items.map((item) => [item.id, item]));
+  const layaway = result.checkout.type === "LAYAWAY" ? result.checkout : null;
+  return {
+    ...current,
+    subtotal: result.totals.subtotal,
+    discountAmount: result.totals.discountAmount,
+    shippingAmount: result.totals.shippingAmount,
+    loyaltyPointsValue: result.totals.loyaltyPointsValue,
+    totalAmount: result.totals.totalAmount,
+    economicRevision: result.economicRevision,
+    ...(layaway
+      ? {
+          layawayTermId: layaway.selectedTermId,
+          layawayOffer: {
+            downPaymentRate: layaway.downPaymentRate,
+            minimumDeposit: layaway.minimumDeposit,
+            promotionName: layaway.promotionName,
+            terms: layaway.terms,
+            selectedTermId: layaway.selectedTermId,
+          },
+        }
+      : {}),
+    items: current.items.map((item) => {
+      const priced = pricedById.get(item.id);
+      if (!priced) return item;
+      return {
+        ...item,
+        listPrice: priced.listPrice,
+        unitPrice: priced.listPrice,
+        discountAmount: priced.discountAmount,
+        totalAmount: priced.totalAmount,
+      };
+    }),
+  };
 }
 
 function SaleBuilderResumeSkeleton({ onExit }: { onExit: () => void }) {
@@ -847,10 +889,38 @@ export function SaleBuilder({
   const [selectedLayawayTermId, setSelectedLayawayTermId] = useState<
     number | null
   >(null);
+  const [layawayOfferTerms, setLayawayOfferTerms] = useState<
+    LayawayOfferView["terms"]
+  >([]);
+  const visibleLayawayTerms =
+    layawayOfferTerms.length > 0 ? layawayOfferTerms : layawayTerms;
   const activeLayawayTerm =
-    layawayTerms.find((t) => t.id === selectedLayawayTermId) ??
-    layawayTerms[0] ??
+    visibleLayawayTerms.find((t) => t.id === selectedLayawayTermId) ??
+    visibleLayawayTerms[0] ??
     null;
+  if (
+    paymentType === "LAYAWAY" &&
+    selectedLayawayTermId == null &&
+    visibleLayawayTerms.length > 0
+  ) {
+    const shortest = visibleLayawayTerms.reduce((best, term) =>
+      term.days < best.days ? term : best,
+    );
+    setSelectedLayawayTermId(shortest.id);
+  }
+  const selectedOfferTerm =
+    layawayOfferTerms.find((term) => term.id === selectedLayawayTermId) ??
+    null;
+  const layawayDownPaymentRate = selectedOfferTerm?.downPaymentRate ?? 0.1;
+  const layawayPromotionName = selectedOfferTerm?.promotionName ?? null;
+  const rememberLayawayOffer = (offer: LayawayOfferView) => {
+    setLayawayOfferTerms(offer.terms);
+    setSelectedLayawayTermId((current) =>
+      current != null && offer.terms.some((term) => term.id === current)
+        ? current
+        : offer.selectedTermId,
+    );
+  };
 
   const { data: resumeSaleData, isError: resumeSaleError } = useQuery({
     queryKey: ["resume-sale-draft", resumeSaleId],
@@ -944,7 +1014,9 @@ export function SaleBuilder({
       }
     }
 
-    if (resumeSaleData.layawayTermId != null) {
+    if (resumeSaleData.layawayOffer) {
+      rememberLayawayOffer(resumeSaleData.layawayOffer);
+    } else if (resumeSaleData.layawayTermId != null) {
       setSelectedLayawayTermId(resumeSaleData.layawayTermId);
     }
     if (resumeSaleData.creditDownPaymentAmount != null) {
@@ -1069,6 +1141,9 @@ export function SaleBuilder({
     if (resumeSaleData.creditOffer) {
       setAllowedTermMonths(resumeSaleData.creditOffer.termMonths);
       setDownPaymentRate(resumeSaleData.creditOffer.minimumDownPaymentRate);
+    }
+    if (resumeSaleData.layawayOffer) {
+      rememberLayawayOffer(resumeSaleData.layawayOffer);
     }
     setCart((prev) =>
       patchCartLinePrices(
@@ -1204,6 +1279,9 @@ export function SaleBuilder({
     setCheckoutRule(result.checkout);
     if (result.checkout.type === "CREDIT") {
       setAllowedTermMonths(result.checkout.allowedTermMonths);
+    }
+    if (result.checkout.type === "LAYAWAY") {
+      rememberLayawayOffer(result.checkout);
     }
     setCart((prev) =>
       patchCartLinePrices(
@@ -1835,7 +1913,8 @@ export function SaleBuilder({
         setCashAmount(charge.tenderDue.toFixed(2));
       }
       if (paymentType === "LAYAWAY") {
-        const newMinimum = layawayMinimumDeposit(charge.total);
+        const layawayPercent = Math.round(layawayDownPaymentRate * 10000) / 100;
+        const newMinimum = layawayMinimumDeposit(charge.total, layawayPercent);
         const newEnganche = Math.max(layawayEnganche, newMinimum);
         if (newEnganche > layawayEnganche) {
           setLayawayDownPaymentText(newEnganche.toFixed(2));
@@ -1884,10 +1963,11 @@ export function SaleBuilder({
     if (nextPaymentType === "CREDIT") {
       setSelectedTermMonths(12);
     }
-    if (nextPaymentType === "LAYAWAY") {
-      setSelectedLayawayTermId((current) => current ?? layawayTerms[0]?.id ?? null);
-    } else {
+    if (nextPaymentType === "LAYAWAY" && result.checkout.type === "LAYAWAY") {
+      rememberLayawayOffer(result.checkout);
+    } else if (nextPaymentType !== "LAYAWAY") {
       setSelectedLayawayTermId(null);
+      setLayawayOfferTerms([]);
     }
     resetCheckoutCapture();
   };
@@ -1929,12 +2009,59 @@ export function SaleBuilder({
     },
   });
 
+  const layawayTermMutation = useMutation({
+    mutationFn: async (termId: number) => {
+      if (activeSaleId == null) {
+        throw new Error("La venta no está lista");
+      }
+      const revision =
+        saleEconomicRevision ??
+        shippingQuote?.economicRevision ??
+        resumeSaleData?.economicRevision ??
+        0;
+      const res = await updateSaleLayawayTerm(activeSaleId, termId, revision);
+      if (res.error) throw new Error(res.error.message);
+      if (!res.data) {
+        throw new Error("No se pudo actualizar el plazo");
+      }
+      return res.data;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: ["resume-sale-draft", resumeSaleId ?? activeSaleId],
+      });
+    },
+    onSuccess: (result) => {
+      applyQuotedPrices(result);
+      if (
+        result.checkout.type === "LAYAWAY" &&
+        result.checkout.selectedTermId != null
+      ) {
+        setSelectedLayawayTermId(result.checkout.selectedTermId);
+      }
+      setCashAmount("");
+      setCardAmount("");
+      setExtraCards([]);
+      setSelectedTerminal(null);
+      checkoutIdempotencyKeyRef.current = null;
+      const queryKey = ["resume-sale-draft", resumeSaleId ?? activeSaleId];
+      queryClient.setQueryData<SaleDetail>(queryKey, (current) =>
+        current ? patchResumeSaleQuote(current, result) : current,
+      );
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err: Error) => {
+      snackbar.showError(err.message);
+    },
+  });
+
   const saleOperationPending =
     guardarCotizacionMutation.isPending ||
     cobrarMutation.isPending ||
     registerSaleMutation.isPending ||
     acceptRevisionMutation.isPending ||
-    purchaseTypeMutation.isPending;
+    purchaseTypeMutation.isPending ||
+    layawayTermMutation.isPending;
 
   const executeSaleOperation = async (operation: () => Promise<unknown>) => {
     if (saleOperationLockRef.current) return;
@@ -2452,6 +2579,21 @@ export function SaleBuilder({
     }
     setPaymentType(value);
   };
+
+  const handleLayawayTermChange = (termId: number) => {
+    if (
+      termId === selectedLayawayTermId ||
+      layawayTermMutation.isPending ||
+      purchaseTypeMutation.isPending
+    ) {
+      return;
+    }
+    if (isCajeroMode) {
+      layawayTermMutation.mutate(termId);
+      return;
+    }
+    setSelectedLayawayTermId(termId);
+  };
   const isClientWithoutActiveCredit =
     paymentType === "CREDIT" && selectedClient?.creditStatus !== "ACTIVE";
 
@@ -2562,6 +2704,12 @@ export function SaleBuilder({
         const preview = await previewCartPrices({
           branch_id: coverageBranchId,
           purchase_type_id: purchaseTypeId,
+          ...(selectedClient?.id != null || resumeClientId != null
+            ? { client_id: selectedClient?.id ?? resumeClientId ?? undefined }
+            : {}),
+          ...(paymentType === "LAYAWAY" && selectedLayawayTermId != null
+            ? { layaway_term_id: selectedLayawayTermId }
+            : {}),
           items: cart.map((item) => ({
             product_id: item.productId,
             quantity: item.quantity,
@@ -2571,6 +2719,9 @@ export function SaleBuilder({
         setCart((prev) => patchCartLinePrices(prev, preview.lines));
         setAllowedTermMonths(preview.termMonths);
         setDownPaymentRate(preview.minimumDownPaymentRate);
+        if (paymentType === "LAYAWAY") {
+          rememberLayawayOffer(preview.layawayOffer);
+        }
       } catch (error) {
         if (!isCancelled()) {
           snackbar.showError(
@@ -2587,6 +2738,10 @@ export function SaleBuilder({
       purchaseTypeId,
       coverageBranchId,
       activeSaleId,
+      paymentType,
+      selectedClient?.id,
+      resumeClientId,
+      selectedLayawayTermId,
     ],
   );
 
@@ -2648,7 +2803,8 @@ export function SaleBuilder({
       ? Math.max(0, quotedServerTotal - loyaltyPointsUsed)
       : payableMerchandise + shippingAmount,
   );
-  const layawayMinimum = layawayMinimumDeposit(totalFinal);
+  const layawayPercent = Math.round(layawayDownPaymentRate * 10000) / 100;
+  const layawayMinimum = layawayMinimumDeposit(totalFinal, layawayPercent);
   const typedLayawayEnganche =
     layawayDownPaymentText == null
       ? null
@@ -2656,7 +2812,7 @@ export function SaleBuilder({
   const layawayDownPaymentInvalid =
     paymentType === "LAYAWAY" &&
     layawayDownPaymentText != null &&
-    layawayDownPaymentError(totalFinal, typedLayawayEnganche) != null;
+    layawayDownPaymentError(totalFinal, typedLayawayEnganche, layawayPercent) != null;
   const layawayEnganche =
     typedLayawayEnganche != null && !layawayDownPaymentInvalid
       ? typedLayawayEnganche
@@ -2736,19 +2892,35 @@ export function SaleBuilder({
     }
   }, [paymentType, creditDownPaymentText, minimumEnganche]);
 
-  // Ajuste durante el render (patrón de React): si el mínimo sube por encima
-  // del enganche tecleado, este sube al nuevo mínimo.
-  const [previousLayawayMinimum, setPreviousLayawayMinimum] =
-    useState(layawayMinimum);
-  if (previousLayawayMinimum !== layawayMinimum) {
-    setPreviousLayawayMinimum(layawayMinimum);
-    if (
-      paymentType === "LAYAWAY" &&
-      layawayDownPaymentText != null &&
-      layawayMinimum > previousLayawayMinimum
-    ) {
-      const parsed = parseCreditDownPayment(layawayDownPaymentText);
-      if (parsed != null && parsed < layawayMinimum) {
+  // Al cambiar de plazo, o si el mínimo se mueve y el monto era ese mínimo,
+  // el campo pasa al nuevo mínimo. Un anticipo mayor se conserva.
+  const [previousLayawayQuote, setPreviousLayawayQuote] = useState({
+    termId: selectedLayawayTermId,
+    minimum: layawayMinimum,
+  });
+  if (
+    previousLayawayQuote.termId !== selectedLayawayTermId ||
+    previousLayawayQuote.minimum !== layawayMinimum
+  ) {
+    const previousMinimum = previousLayawayQuote.minimum;
+    const termChanged =
+      previousLayawayQuote.termId !== selectedLayawayTermId;
+    setPreviousLayawayQuote({
+      termId: selectedLayawayTermId,
+      minimum: layawayMinimum,
+    });
+    if (paymentType === "LAYAWAY") {
+      const parsed =
+        layawayDownPaymentText == null
+          ? null
+          : parseCreditDownPayment(layawayDownPaymentText);
+      const followsMinimum =
+        parsed == null || Math.abs(parsed - previousMinimum) < 0.01;
+      if (
+        (termChanged && followsMinimum) ||
+        (parsed != null &&
+          (followsMinimum || parsed < layawayMinimum))
+      ) {
         setLayawayDownPaymentText(layawayMinimum.toFixed(2));
       }
     }
@@ -3576,12 +3748,8 @@ export function SaleBuilder({
       </Stack>
     ) : null;
 
-  // El cajero no edita el enganche: ve el efectivo (el tecleado válido o el
-  // mínimo vigente), nunca un texto rehidratado que quedó obsoleto tras una
-  // revisión económica y taparía el apoyo "Mínimo" con un error.
-  const layawayDownPaymentShown = isCajeroMode
-    ? layawayEnganche.toFixed(2)
-    : (layawayDownPaymentText ?? layawayMinimum.toFixed(2));
+  const layawayDownPaymentShown =
+    layawayDownPaymentText ?? layawayMinimum.toFixed(2);
   const layawayDownPaymentParsed = parseCreditDownPayment(
     layawayDownPaymentShown,
   );
@@ -3612,16 +3780,22 @@ export function SaleBuilder({
             setLayawayDownPaymentText(layawayMinimum.toFixed(2))
           }
           minimum={layawayMinimum}
-          minimumPercentLabel={`${formatDownPaymentPercent(LAYAWAY_MIN_DEPOSIT_PERCENT / 100)}%`}
+          minimumPercentLabel={`${formatDownPaymentPercent(layawayDownPaymentRate)}%`}
+          detail={
+            layawayPromotionName ? `Promoción ${layawayPromotionName}` : null
+          }
           sharePercentLabel={layawayDownPaymentShare}
           errorText={
-            layawayDownPaymentInvalid && !isCajeroMode
-              ? layawayDownPaymentError(totalFinal, typedLayawayEnganche)
+            layawayDownPaymentInvalid
+              ? layawayDownPaymentError(
+                  totalFinal,
+                  typedLayawayEnganche,
+                  layawayPercent,
+                )
               : null
           }
           atMinimum={layawayDownPaymentAtMinimum}
           ariaLabel="Enganche del apartado"
-          readOnly={isCajeroMode}
         />
       </Stack>
     ) : null;
@@ -3633,9 +3807,7 @@ export function SaleBuilder({
       !exceedsCashLimit &&
       (paymentType !== "CREDIT" ||
         (identityOk && !creditDownPaymentInvalid && !creditLineExceeded)) &&
-      (paymentType !== "LAYAWAY" ||
-        (totalPaid >= layawayEnganche &&
-          totalPaid <= roundToCents(totalFinal))) &&
+      (paymentType !== "LAYAWAY" || !layawayDownPaymentInvalid) &&
       (!isCardPayment ||
         (hasPaymentTerminals && selectedTerminal != null));
 
@@ -4202,27 +4374,17 @@ export function SaleBuilder({
                           .format("D [de] MMMM")}
                       </Typography>
                     </Stack>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        Enganche
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {formatCurrency(layawayEnganche)}
-                      </Typography>
-                    </Stack>
+                    {layawayDownPaymentField}
                     <Select
                       size="small"
                       value={activeLayawayTerm.id}
+                      disabled={layawayTermMutation.isPending}
                       onChange={(e) =>
-                        setSelectedLayawayTermId(Number(e.target.value))
+                        handleLayawayTermChange(Number(e.target.value))
                       }
                       sx={{ minWidth: 140, ...saleInputSx }}
                     >
-                      {layawayTerms.map((term) => (
+                      {visibleLayawayTerms.map((term) => (
                         <MenuItem key={term.id} value={term.id}>
                           {term.name}
                         </MenuItem>
@@ -4253,7 +4415,7 @@ export function SaleBuilder({
               showNoTerminalsWarning={
                 !paymentTerminalsLoading && !hasPaymentTerminals
               }
-              showChange={paymentType !== "LAYAWAY"}
+              showChange
               change={change}
               canRegister={canRegister}
               isPending={saleOperationPending}
@@ -4701,11 +4863,12 @@ export function SaleBuilder({
                         </Typography>
 
                         <TermPillsRow>
-                          {layawayTerms.map((term) => (
+                          {visibleLayawayTerms.map((term) => (
                             <TermPill
                               key={term.id}
                               active={selectedLayawayTermId === term.id}
-                              onClick={() => setSelectedLayawayTermId(term.id)}
+                              disabled={layawayTermMutation.isPending}
+                              onClick={() => handleLayawayTermChange(term.id)}
                             >
                               {term.name}
                             </TermPill>
@@ -4735,6 +4898,7 @@ export function SaleBuilder({
                     active={paymentType === opt.value}
                     disabled={
                       purchaseTypeMutation.isPending ||
+                      layawayTermMutation.isPending ||
                       (isMorosoClient && opt.value !== "CASH")
                     }
                     onClick={() => handlePaymentTypeChange(opt.value)}

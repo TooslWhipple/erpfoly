@@ -47,6 +47,15 @@ test("enganche válido: del mínimo al total", () => {
   assert.equal(layawayDownPaymentError(7200, 7200.0), null);
 });
 
+test("el enganche usa el porcentaje que manda el servidor", () => {
+  assert.equal(layawayMinimumDeposit(1000, 20), 200);
+  assert.equal(
+    layawayDownPaymentError(1000, 199.99, 20),
+    "El enganche no puede ser menor al 20% ($200.00)",
+  );
+  assert.equal(layawayDownPaymentError(1000, 250, 20), null);
+});
+
 test("enganche inválido: mayor al total", () => {
   assert.equal(
     layawayDownPaymentError(7200, 7200.01),

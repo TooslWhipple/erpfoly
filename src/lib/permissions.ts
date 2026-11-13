@@ -17,6 +17,7 @@ export type PermissionModule =
   | "cajas"
   | "clientes"
   | "clientes.morosidad"
+  | "clientes.morosidad-listas"
   | "clientes.cobranza"
   | "pedidos"
   | "pedidos.nuevo"
@@ -113,6 +114,10 @@ export const CUSTOMER_DELINQUENCY_CREATE = CUSTOMER_DELINQUENCY_PERMISSIONS.crea
 export const CUSTOMER_DELINQUENCY_READ = CUSTOMER_DELINQUENCY_PERMISSIONS.read;
 export const CUSTOMER_DELINQUENCY_UPDATE = CUSTOMER_DELINQUENCY_PERMISSIONS.update;
 export const CUSTOMER_DELINQUENCY_DELETE = CUSTOMER_DELINQUENCY_PERMISSIONS.delete;
+
+export const CUSTOMER_DELINQUENCY_LISTS_PERMISSIONS = createCrudPermissions("clientes.morosidad-listas");
+export const CUSTOMER_DELINQUENCY_LISTS_READ = CUSTOMER_DELINQUENCY_LISTS_PERMISSIONS.read;
+export const CUSTOMER_DELINQUENCY_LISTS_UPDATE = CUSTOMER_DELINQUENCY_LISTS_PERMISSIONS.update;
 
 export const CUSTOMER_COLLECTION_PERMISSIONS = createCrudPermissions("clientes.cobranza");
 export const CUSTOMER_COLLECTION_CREATE = CUSTOMER_COLLECTION_PERMISSIONS.create;

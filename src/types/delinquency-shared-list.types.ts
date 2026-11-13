@@ -1,15 +1,38 @@
 import type { DelinquencyPeriod } from "./delinquency.types";
 import type { ClientStatus } from "./clientes.types";
 
+export type DelinquencyManagementStatus =
+  | "SIN_GESTION"
+  | "CONTACTADO"
+  | "PROMESA_DE_PAGO"
+  | "CONVENIO_DE_PAGO"
+  | "ILOCALIZABLE"
+  | "SE_NIEGA_A_PAGAR";
+
+export interface SharedListCollector {
+  id: number;
+  fullName: string;
+}
+
+export interface SharedListCollectorOption extends SharedListCollector {
+  username: string;
+}
+
+export interface DelinquencyListClientConflict {
+  clientId: number;
+  fullName: string;
+  listId: number;
+  listName: string;
+}
+
 export interface DelinquencySharedListSummary {
   id: number;
   name: string;
-  contactEmail: string | null;
   clientCount: number;
   totalDebtAmount: number;
-  shareToken: string;
-  shareUrl: string;
-  accessEmails: string[];
+  collector: SharedListCollector | null;
+  collectorAssignedAt: string | null;
+  closedAt: string | null;
   createdAt: string;
 }
 
@@ -21,18 +44,34 @@ export interface DelinquencySharedListClientSnapshot {
   email: string | null;
   lastPaymentDate: string | null;
   dueDate: string;
-  delinquencyPeriod: DelinquencyPeriod;
-  debtAmount: number;
+  delinquencyPeriod: DelinquencyPeriod | null;
   principalAmount: number;
   interestAmount: number;
   totalDebtAmount: number;
   negotiatedInterestAmount: number | null;
   negotiatedDebtAmount: number | null;
   isNegotiated: boolean;
+  currentDebtAmount: number;
+  negotiatedAt: string | null;
+  managementStatus: DelinquencyManagementStatus;
+  managementStatusUpdatedAt: string | null;
 }
 
 export interface DelinquencySharedListDetail extends DelinquencySharedListSummary {
   clients: DelinquencySharedListClientSnapshot[];
+}
+
+export interface DelinquencySharedListDashboard {
+  clientCount: number;
+  assignedAmount: number;
+  recoveredAmount: number;
+  activeNegotiations: number;
+  period: { from: string; to: string };
+  assignmentStartedAt: string;
+}
+
+export interface UpdateDelinquencyManagementStatusPayload {
+  status: DelinquencyManagementStatus;
 }
 
 export interface SharedDelinquencyBasicInformation {
@@ -89,6 +128,8 @@ export interface SharedDelinquencyGuarantor {
 
 export interface SharedDelinquencyClientDetail
   extends DelinquencySharedListClientSnapshot {
+  collectorMaxNegotiationAmount: number | null;
+  collectorMaxNegotiationPercent: number | null;
   curp: string | null;
   clientSince: string | null;
   createdAt: string | null;
@@ -96,7 +137,6 @@ export interface SharedDelinquencyClientDetail
   creditLineAuthorized: number | null;
   creditUsed: number | null;
   creditAvailable: number | null;
-  negotiatedAt: string | null;
   basicInformation: SharedDelinquencyBasicInformation | null;
   address: SharedDelinquencyAddress | null;
   guarantor: SharedDelinquencyGuarantor | null;
@@ -114,11 +154,14 @@ export interface DelinquencyClientSelectionPayload {
 }
 
 export interface CreateDelinquencySharedListPayload {
-  clientName: string;
-  contactEmail: string;
-  emails: string[];
+  collectorUserId: number;
   clientIds?: number[];
   selection?: DelinquencyClientSelectionPayload;
+}
+
+export interface CreateDelinquencySharedListResponse {
+  list: DelinquencySharedListDetail;
+  excludedClients: DelinquencyListClientConflict[];
 }
 
 export type DelinquencySharedListSortField =
@@ -134,21 +177,6 @@ export interface GetDelinquencySharedListsParams {
   search?: string;
   sortField?: DelinquencySharedListSortField;
   sortOrder?: DelinquencySharedListSortOrder;
+  status?: "active" | "closed";
   [key: string]: unknown;
-}
-
-export interface PublicDelinquencySharedListView {
-  name: string;
-  clientCount: number;
-  totalDebtAmount: number;
-  clients: DelinquencySharedListClientSnapshot[];
-}
-
-export interface PublicDelinquencyAccessResponse {
-  accessToken: string;
-  list: {
-    name: string;
-    clientCount: number;
-    totalDebtAmount: number;
-  };
 }

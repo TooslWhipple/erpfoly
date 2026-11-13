@@ -6,13 +6,19 @@ import assert from "node:assert/strict";
 import type { User } from "../store/useAuthStore";
 import {
   CASH_REGISTERS_READ,
+  CUSTOMER_DELINQUENCY_LISTS_READ,
   CUSTOMERS_READ,
   DELIVERY_HOLD_READ,
   NEW_ORDER_READ,
   TRASPASOS_INCIDENTS_READ,
 } from "./permissions";
 import { shouldBypassAccessControl } from "./accessControl";
-import { canAccessPath, getFirstAllowedRoute, resolvePostLoginPath } from "./routeAccess";
+import {
+  canAccessPath,
+  getFirstAllowedRoute,
+  isPublicRoute,
+  resolvePostLoginPath,
+} from "./routeAccess";
 
 function userWith(permissions: string[]): User {
   return {
@@ -25,6 +31,7 @@ function userWith(permissions: string[]): User {
 }
 
 assert.equal(getFirstAllowedRoute(userWith([CUSTOMERS_READ])), "/clientes");
+assert.equal(isPublicRoute("/compartido/morosidad/abc"), false);
 assert.equal(resolvePostLoginPath(userWith([CUSTOMERS_READ])), "/clientes");
 assert.equal(
   resolvePostLoginPath(userWith([CUSTOMERS_READ]), "/login"),
@@ -44,6 +51,10 @@ assert.equal(
 
 if (!shouldBypassAccessControl) {
   assert.equal(
+    canAccessPath("/compartido/morosidad/abc", userWith([CUSTOMERS_READ])),
+    false,
+  );
+  assert.equal(
     resolvePostLoginPath(userWith([CUSTOMERS_READ]), "/cajas"),
     "/clientes",
   );
@@ -58,6 +69,13 @@ if (!shouldBypassAccessControl) {
   // `pedidos-nuevo.view` opens the order form, not the order list.
   assert.equal(canAccessPath("/pedidos/nuevo", userWith([NEW_ORDER_READ])), true);
   assert.equal(canAccessPath("/pedidos", userWith([NEW_ORDER_READ])), false);
+
+  // Cobranza externa: solo `clientes.morosidad-listas.read`.
+  const collector = userWith([CUSTOMER_DELINQUENCY_LISTS_READ]);
+  assert.equal(canAccessPath("/clientes/morosidad", collector), true);
+  assert.equal(canAccessPath("/clientes/morosidad/listas/5", collector), true);
+  assert.equal(canAccessPath("/clientes", collector), false);
+  assert.equal(getFirstAllowedRoute(collector), "/clientes/morosidad");
 }
 
 console.log("routeAccess.test.ts: ok");

@@ -26,11 +26,11 @@ export type DownPaymentFieldProps = {
   minimumPercentLabel: string;
   /** Porcentaje que representa el enganche elegido, ej. "91%", o null. */
   sharePercentLabel: string | null;
+  /** Texto después del mínimo, ej. "Promoción Buen Fin". */
+  detail?: string | null;
   errorText: string | null;
   atMinimum: boolean;
   ariaLabel: string;
-  /** Solo lectura: sin edición ni "Usar mínimo" (cajero ve lo acordado). */
-  readOnly?: boolean;
 };
 
 /** Campo "Enganche" compartido por crédito y apartado. */
@@ -42,10 +42,10 @@ export function DownPaymentField({
   minimum,
   minimumPercentLabel,
   sharePercentLabel,
+  detail = null,
   errorText,
   atMinimum,
   ariaLabel,
-  readOnly = false,
 }: DownPaymentFieldProps) {
   const [focused, setFocused] = useState(false);
 
@@ -62,7 +62,6 @@ export function DownPaymentField({
         </Typography>
         <OutlinedInput
           size="small"
-          readOnly={readOnly}
           value={focused ? valueText : groupAmountText(valueText)}
           onFocus={() => setFocused(true)}
           onChange={(event) => onChange(event.target.value)}
@@ -92,9 +91,9 @@ export function DownPaymentField({
           color={errorText ? "error" : "text.secondary"}
         >
           {errorText ??
-            `Mínimo ${currencyFormatter.format(minimum)} (${minimumPercentLabel})${sharePercentLabel ? ` · ${sharePercentLabel}` : ""}`}
+            `Mínimo ${currencyFormatter.format(minimum)} (${minimumPercentLabel})${detail ? ` - ${detail}` : ""}${sharePercentLabel ? ` · ${sharePercentLabel}` : ""}`}
         </Typography>
-        {!readOnly && !atMinimum && (
+        {!atMinimum && (
           <Button
             size="small"
             onMouseDown={(event) => event.preventDefault()}

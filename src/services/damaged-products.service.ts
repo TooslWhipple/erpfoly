@@ -313,9 +313,12 @@ export async function createDamagedProduct(
     if (payload instanceof FormData) {
         return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload, {
             headers: { "Content-Type": "multipart/form-data" },
+            skipGlobalErrorToast: true,
         });
     }
-    return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload);
+    return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 export interface DamagedProductProductDto {
@@ -386,6 +389,10 @@ export interface DamagedProductDetail {
     solutionText: string | null;
     listCost: null;
     lastCost: null;
+    /** Folio de la OS vinculada, si existe (p. ej. OS-13). */
+    serviceOrderFolio: string | null;
+    /** True cuando el artículo es propiedad del cliente (OS). */
+    isClientProperty: boolean;
 }
 
 /**
@@ -394,7 +401,9 @@ export interface DamagedProductDetail {
 export async function getDamagedProduct(
     id: number
 ): Promise<ApiResult<DamagedProductDetail>> {
-    return get<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`);
+    return get<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 /**
@@ -442,9 +451,12 @@ export async function updateDamagedProduct(
     if (payload instanceof FormData) {
         return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload, {
             headers: { "Content-Type": "multipart/form-data" },
+            skipGlobalErrorToast: true,
         });
     }
-    return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload);
+    return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 /** Statuses the folio can transition to from the ERP list. */

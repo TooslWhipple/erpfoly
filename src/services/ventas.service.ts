@@ -31,6 +31,7 @@ import type {
   ProductSearchResult,
   ProductDetail,
   SaleDetail,
+  LayawayOfferView,
   DeliveryAvailabilityItem,
   SetDeliveryDatePayload,
   DiscountRequestReason,
@@ -271,6 +272,10 @@ export type UpdateSalePurchaseTypeCheckout =
       type: "LAYAWAY";
       minimumDeposit: number;
       maximumDeposit: number;
+      downPaymentRate: number;
+      promotionName: string | null;
+      terms: LayawayOfferView["terms"];
+      selectedTermId: number | null;
     };
 
 export interface UpdateSalePurchaseTypeResult {
@@ -311,10 +316,17 @@ export async function updateSalePurchaseType(
 export async function updateSaleLayawayTerm(
   saleId: number,
   layawayTermId: number,
-): Promise<ApiResult<unknown>> {
-  return patch<unknown>(`${BASE}/sales/${saleId}/layaway-term`, {
-    layaway_term_id: layawayTermId,
-  });
+  economicRevision?: number,
+): Promise<ApiResult<UpdateSalePurchaseTypeResult>> {
+  return patch<UpdateSalePurchaseTypeResult>(
+    `${BASE}/sales/${saleId}/layaway-term`,
+    {
+      layaway_term_id: layawayTermId,
+      ...(economicRevision != null
+        ? { economic_revision: economicRevision }
+        : {}),
+    },
+  );
 }
 
 export async function updateSaleCreditDownPayment(
@@ -708,11 +720,14 @@ export type PricePreview = {
   lines: PricePreviewLine[];
   termMonths: number[];
   minimumDownPaymentRate: number;
+  layawayOffer: LayawayOfferView;
 };
 
 export async function previewCartPrices(payload: {
   branch_id: number;
   purchase_type_id: number;
+  client_id?: number;
+  layaway_term_id?: number;
   items: Array<{ product_id: number; quantity: number }>;
 }): Promise<PricePreview> {
   return unwrapOrThrow(

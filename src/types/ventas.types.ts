@@ -258,6 +258,20 @@ export interface SaleDiscountRequest {
   items?: SaleDiscountRequestItem[];
 }
 
+export interface LayawayOfferView {
+  downPaymentRate: number;
+  minimumDeposit: number;
+  promotionName: string | null;
+  terms: {
+    id: number;
+    name: string;
+    days: number;
+    downPaymentRate: number;
+    promotionName: string | null;
+  }[];
+  selectedTermId: number | null;
+}
+
 export interface SaleDetail {
   id: number;
   folio: string;
@@ -275,6 +289,8 @@ export interface SaleDetail {
     termMonths: number[];
     minimumDownPaymentRate: number;
   } | null;
+  /** Live layaway rate, terms and minimum. Null when the sale is not layaway. */
+  layawayOffer?: LayawayOfferView | null;
   dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   loyaltyPointsEarned?: number;

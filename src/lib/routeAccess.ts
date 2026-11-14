@@ -46,6 +46,7 @@ import {
   CREDIT_APPLICATIONS_UPDATE,
   CUSTOMER_COLLECTION_READ,
   CUSTOMER_DELINQUENCY_READ,
+  CUSTOMER_DELINQUENCY_LISTS_READ,
   CUSTOMER_SUPPORT_READ,
   CUSTOMERS_CREATE,
   CUSTOMERS_READ,
@@ -128,7 +129,10 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/entregas(\/.*)?$/, permission: DELIVERY_HANDOVER_READ },
 
   { pattern: /^\/clientes\/cobranza(\/.*)?$/, permission: CUSTOMER_COLLECTION_READ },
-  { pattern: /^\/clientes\/morosidad(\/.*)?$/, permission: CUSTOMER_DELINQUENCY_READ },
+  {
+    pattern: /^\/clientes\/morosidad(\/.*)?$/,
+    anyPermissions: [CUSTOMER_DELINQUENCY_READ, CUSTOMER_DELINQUENCY_LISTS_READ],
+  },
   { pattern: /^\/clientes\/nuevo$/, permission: CUSTOMERS_CREATE },
   { pattern: /^\/clientes\/[^/]+\/editar$/, permission: CUSTOMERS_UPDATE },
   { pattern: /^\/clientes(\/.*)?$/, permission: CUSTOMERS_READ },
@@ -245,6 +249,10 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/traspasos/incidencias", requirement: { permission: TRASPASOS_INCIDENTS_READ } },
   { path: "/catalogos/productos", requirement: { permission: CATALOG_PRODUCTS_READ } },
   { path: "/catalogos/roles", requirement: { permission: CATALOG_ROLES_READ } },
+  {
+    path: "/clientes/morosidad",
+    requirement: { anyPermissions: [CUSTOMER_DELINQUENCY_READ, CUSTOMER_DELINQUENCY_LISTS_READ] },
+  },
 ];
 
 export function normalizePathname(pathname: string): string {
@@ -255,9 +263,6 @@ export function normalizePathname(pathname: string): string {
 
 export function isPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
-  if (normalizedPath.startsWith("/compartido/morosidad/")) {
-    return true;
-  }
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
 }
 
@@ -265,10 +270,6 @@ export function isPublicRoute(pathname: string): boolean {
 export function isAuthEntryPublicRoute(pathname: string): boolean {
   const normalizedPath = normalizePathname(pathname);
   return PUBLIC_ROUTES.some((route) => normalizedPath === route);
-}
-
-export function isStandalonePublicRoute(pathname: string): boolean {
-  return normalizePathname(pathname).startsWith("/compartido/morosidad/");
 }
 
 /**
@@ -281,10 +282,6 @@ export function shouldUseAppLayout(pathname: string, token: string | null): bool
   }
 
   const normalizedPath = normalizePathname(pathname);
-
-  if (isStandalonePublicRoute(normalizedPath)) {
-    return false;
-  }
 
   if (isPublicRoute(normalizedPath) && !token) {
     return false;

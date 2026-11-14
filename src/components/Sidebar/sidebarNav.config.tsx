@@ -41,6 +41,7 @@ import {
   CREDIT_APPLICATIONS_READ,
   CUSTOMER_COLLECTION_READ,
   CUSTOMER_DELINQUENCY_READ,
+  CUSTOMER_DELINQUENCY_LISTS_READ,
   CUSTOMER_SUPPORT_READ,
   CUSTOMERS_READ,
   DAMAGED_INVENTORY_READ,
@@ -123,7 +124,7 @@ export const NAV_ITEMS: NavItem[] = [
     requirement: { permission: CUSTOMERS_READ },
     subItems: [
       { label: "Clientes", path: "/clientes", requirement: { permission: CUSTOMERS_READ } },
-      { label: "Clientes con morosidad", path: "/clientes/morosidad", requirement: { permission: CUSTOMER_DELINQUENCY_READ } },
+      { label: "Clientes con morosidad", path: "/clientes/morosidad", requirement: { anyPermissions: [CUSTOMER_DELINQUENCY_READ, CUSTOMER_DELINQUENCY_LISTS_READ] } },
       { label: "Cobranza automática", path: "/clientes/cobranza", requirement: { permission: CUSTOMER_COLLECTION_READ } },
     ],
   },

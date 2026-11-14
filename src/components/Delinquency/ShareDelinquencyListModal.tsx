@@ -1,31 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import {
-  Box,
+  Alert,
   Button,
   Dialog,
   IconButton,
   Stack,
   Typography,
 } from "@mui/material";
-import { Link as LinkIcon, Mail as MailIcon } from "@mui/icons-material";
 import { X as CloseIcon } from "lucide-react";
 import numeral from "numeral";
-import { FormTextField } from "@/components/Form";
-import { isValidEmail } from "@/forms/validation/schemas/creditApplication";
-import {
-  addDelinquencySharedListAccess,
-  createDelinquencySharedList,
-  removeDelinquencySharedListAccess,
-} from "@/services/delinquency-shared-list.service";
+import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { createDelinquencySharedList } from "@/services/delinquency-shared-list.service";
 import type {
   CreateDelinquencySharedListPayload,
-  DelinquencySharedListSummary,
+  DelinquencyListClientConflict,
 } from "@/types/delinquency-shared-list.types";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-
-const MAX_FIELD_LENGTH = 64;
+import { SharedListCollectorSelect } from "./SharedListCollectorSelect";
 
 export interface ShareDelinquencyListModalProps {
   open: boolean;
@@ -33,224 +27,72 @@ export interface ShareDelinquencyListModalProps {
   clientCount?: number;
   totalDebt?: number;
   selectionPayload?: Pick<CreateDelinquencySharedListPayload, "clientIds" | "selection">;
-  existingList?: DelinquencySharedListSummary | null;
   onSuccess?: () => void;
-}
-
-function createEmptyEmailField(): string {
-  return "";
 }
 
 export function ShareDelinquencyListModal({
   open,
   onClose,
-  clientCount: selectedClientCount = 0,
-  totalDebt: selectedTotalDebt = 0,
+  clientCount = 0,
+  totalDebt = 0,
   selectionPayload,
-  existingList = null,
   onSuccess,
 }: ShareDelinquencyListModalProps) {
   const showError = useSnackbarStore((s) => s.showError);
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
-  const isExisting = existingList != null;
-  const clientCount = isExisting ? existingList.clientCount : selectedClientCount;
-  const totalDebt = isExisting ? existingList.totalDebtAmount : selectedTotalDebt;
+  const [collectorUserId, setCollectorUserId] = useState<number | "">("");
+  const [excludedClients, setExcludedClients] = useState<
+    DelinquencyListClientConflict[] | null
+  >(null);
 
-  const [clientName, setClientName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [emailFields, setEmailFields] = useState<string[]>([createEmptyEmailField()]);
-  const [savedEmails, setSavedEmails] = useState<string[]>([]);
-  const [shareUrl, setShareUrl] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [listId, setListId] = useState<number | null>(null);
+  const handleClose = useCallback(() => {
+    setCollectorUserId("");
+    setExcludedClients(null);
+    onClose();
+  }, [onClose]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    if (existingList) {
-      setClientName(existingList.name);
-      setContactEmail(existingList.contactEmail ?? "");
-      const contact = existingList.contactEmail?.trim().toLowerCase() ?? "";
-      setSavedEmails(
-        existingList.accessEmails.filter(
-          (email) => email.trim().toLowerCase() !== contact,
-        ),
-      );
-      setEmailFields([createEmptyEmailField()]);
-      setShareUrl(existingList.shareUrl);
-      setListId(existingList.id);
-      return;
-    }
-
-    setClientName("");
-    setContactEmail("");
-    setSavedEmails([]);
-    setEmailFields([createEmptyEmailField()]);
-    setShareUrl("");
-    setListId(null);
-  }, [open, existingList]);
-
-  const normalizedContactEmail = contactEmail.trim().toLowerCase();
-
-  const pendingEmails = useMemo(
-    () =>
-      emailFields
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean)
-        .filter((email) => !savedEmails.includes(email))
-        .filter((email) => email !== normalizedContactEmail),
-    [emailFields, savedEmails, normalizedContactEmail],
-  );
-
-  const canShare = isExisting
-    ? pendingEmails.length > 0
-    : selectedClientCount > 0 &&
-    clientName.trim().length > 0 &&
-    isValidEmail(contactEmail);
-
-  const handleAddEmailField = useCallback(() => {
-    setEmailFields((prev) => [...prev, createEmptyEmailField()]);
-  }, []);
-
-  const handleEmailChange = useCallback((index: number, value: string) => {
-    setEmailFields((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  }, []);
-
-  const handleRemoveSavedEmail = useCallback(
-    async (email: string) => {
-      if (!listId) {
-        setSavedEmails((prev) => prev.filter((item) => item !== email));
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const result = await removeDelinquencySharedListAccess(listId, email);
-        if (result.error) {
-          showError(result.error.message);
-          return;
-        }
-        const contact = contactEmail.trim().toLowerCase();
-        setSavedEmails(
-          (result.data?.accessEmails ?? []).filter(
-            (item) => item.trim().toLowerCase() !== contact,
-          ),
-        );
-        showSuccess("Acceso removido");
-        onSuccess?.();
-      } finally {
-        setLoading(false);
-      }
-    },
-    [contactEmail, listId, onSuccess, showError, showSuccess],
-  );
-
-  const handleShare = useCallback(async () => {
-    if (!isExisting) {
-      if (!clientName.trim()) {
-        showError("Ingresa el nombre del cliente");
-        return;
-      }
-      if (!isValidEmail(contactEmail)) {
-        showError("Ingresa un correo electrónico válido");
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      if (isExisting && listId) {
-        if (pendingEmails.length === 0) {
-          onClose();
-          return;
-        }
-        const result = await addDelinquencySharedListAccess(listId, pendingEmails);
-        if (result.error) {
-          showError(result.error.message);
-          return;
-        }
-        const contact = contactEmail.trim().toLowerCase();
-        setSavedEmails(
-          (result.data?.accessEmails ?? []).filter(
-            (item) => item.trim().toLowerCase() !== contact,
-          ),
-        );
-        setEmailFields([createEmptyEmailField()]);
-        showSuccess("Accesos actualizados");
-        onSuccess?.();
-        return;
-      }
-
-      const result = await createDelinquencySharedList({
-        clientName: clientName.trim(),
-        contactEmail: contactEmail.trim(),
-        emails: pendingEmails,
-        ...selectionPayload,
-      });
-
-      if (result.error) {
-        showError(result.error.message);
-        return;
-      }
-
-      setShareUrl(result.data?.shareUrl ?? "");
-      setListId(result.data?.id ?? null);
-      const contact = (result.data?.contactEmail ?? contactEmail)
-        .trim()
-        .toLowerCase();
-      setSavedEmails(
-        (result.data?.accessEmails ?? []).filter(
-          (item) => item.trim().toLowerCase() !== contact,
-        ),
-      );
-      setEmailFields([createEmptyEmailField()]);
-      showSuccess("Lista compartida correctamente");
+  const createMutation = useMutation({
+    mutationFn: async (variables: { collectorUserId: number }) =>
+      unwrapOrThrow(
+        await createDelinquencySharedList({
+          collectorUserId: variables.collectorUserId,
+          ...selectionPayload,
+        }),
+      ),
+    onSuccess: (response) => {
       onSuccess?.();
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    clientName,
-    contactEmail,
-    isExisting,
-    listId,
-    onClose,
-    onSuccess,
-    pendingEmails,
-    selectionPayload,
-    showError,
-    showSuccess,
-  ]);
+      if (response.excludedClients.length === 0) {
+        showSuccess("Lista compartida correctamente");
+        handleClose();
+        return;
+      }
+      setExcludedClients(response.excludedClients);
+    },
+    onError: (err) => {
+      showError(getApiErrorMessage(err));
+    },
+  });
 
-  const handleCopyLink = useCallback(async () => {
-    if (!shareUrl) {
-      showError("Comparte la lista primero para obtener el enlace");
-      return;
-    }
+  const loading = createMutation.isPending;
+  const created = excludedClients != null;
+  const canShare = !created && clientCount > 0 && collectorUserId !== "";
 
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      showSuccess("Enlace copiado al portapapeles");
-    } catch {
-      showError("No se pudo copiar el enlace");
-    }
-  }, [shareUrl, showError, showSuccess]);
+  const handleShare = useCallback(() => {
+    if (collectorUserId === "") return;
+    createMutation.mutate({ collectorUserId });
+  }, [collectorUserId, createMutation]);
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{ sx: { borderRadius: 2 } }}>
       <Stack spacing={3} sx={{ p: 3 }}>
         <Stack direction="column" alignItems="flex-start">
-          <IconButton onClick={onClose} size="small">
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon size={18} />
           </IconButton>
 
@@ -266,112 +108,44 @@ export function ShareDelinquencyListModal({
           </Stack>
         </Stack>
 
+        <SharedListCollectorSelect
+          open={open}
+          value={collectorUserId}
+          onChange={setCollectorUserId}
+          disabled={loading || created}
+        />
 
-        <Stack spacing={1}>
-          <FormTextField
-            label="Responsable / Gestor"
-            value={clientName}
-            onChange={(event) => setClientName(event.target.value)}
-            placeholder="Nombre del responsable"
-            fullWidth
-            size="small"
-            disabled={isExisting || loading}
-            inputProps={{ maxLength: MAX_FIELD_LENGTH }}
-          />
-          <FormTextField
-            label="Email"
-            value={contactEmail}
-            onChange={(event) => setContactEmail(event.target.value)}
-            placeholder="Email"
-            fullWidth
-            size="small"
-            type="email"
-            disabled={isExisting || loading}
-            inputProps={{ maxLength: MAX_FIELD_LENGTH }}
-            InputProps={{
-              startAdornment: (
-                <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
-              ),
-            }}
-          />
-
-          <Stack spacing={1}>
-            <Typography variant="subtitle2" fontWeight={600}>Acceso</Typography>
-
-            {
-              savedEmails.map((email) => (
-                <Stack key={email} direction="row" spacing={1} alignItems="center">
-                  <FormTextField
-                    value={email}
-                    fullWidth
-                    size="small"
-                    disabled
-                    InputProps={{
-                      startAdornment: (
-                        <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
-                      ),
-                    }}
-                  />
-                  <Button
-                    variant="text"
-                    color="error"
-                    onClick={() => void handleRemoveSavedEmail(email)}
-                    disabled={loading}
-                    sx={{ whiteSpace: "nowrap" }}>
-                    Remover
-                  </Button>
-                </Stack>
-              ))
-            }
-
-            {
-              emailFields.map((email, index) => (
-                <FormTextField
-                  key={`email-field-${index}`}
-                  value={email}
-                  onChange={(event) => handleEmailChange(index, event.target.value)}
-                  placeholder="Email"
-                  fullWidth
-                  size="small"
-                  type="email"
-                  inputProps={{ maxLength: MAX_FIELD_LENGTH }}
-                  InputProps={{
-                    startAdornment: (
-                      <MailIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
-                    ),
-                  }}
-                />
-              ))
-            }
-
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={handleAddEmailField}
-              sx={{ alignSelf: "flex-start", bgcolor: "grey.100", borderColor: "grey.300" }}>
-              Agregar otro
-            </Button>
-          </Stack>
-        </Stack>
-
-
+        {excludedClients != null && (
+          <Alert severity="warning">
+            <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+              La lista se creó, pero estos clientes ya están en otra cartera activa y se excluyeron:
+            </Typography>
+            <Stack component="ul" sx={{ m: 0, pl: 2 }}>
+              {excludedClients.map((client) => (
+                <li key={client.clientId}>
+                  <Typography variant="body2">
+                    {client.fullName} — {client.listName}
+                  </Typography>
+                </li>
+              ))}
+            </Stack>
+          </Alert>
+        )}
 
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Button
-            variant="contained"
-            onClick={() => void handleShare()}
-            disabled={loading || !canShare}
-          >
-            Compartir
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<LinkIcon />}
-            onClick={() => void handleCopyLink()}
-            disabled={!shareUrl}
-          >
-            Copiar link
-          </Button>
+          {created ? (
+            <Button variant="contained" onClick={handleClose}>
+              Cerrar
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleShare}
+              disabled={loading || !canShare}
+            >
+              Compartir
+            </Button>
+          )}
         </Stack>
       </Stack>
     </Dialog>

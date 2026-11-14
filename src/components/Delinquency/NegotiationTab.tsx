@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -8,7 +8,11 @@ import {
   Typography,
 } from "@mui/material";
 import numeral from "numeral";
+import { FormSelect } from "@/components";
 import { TrackSlider } from "@/components/TrackSlider";
+import { DELINQUENCY_MANAGEMENT_STATUS_OPTIONS } from "@/constants/delinquency-management-status";
+import type { DelinquencyManagementStatus } from "@/types/delinquency-shared-list.types";
+import { formatDate } from "@/utils/date";
 import { theme } from "@/styles/theme";
 
 const INTEREST_MARKS = [0, 25, 50, 75, 100] as const;
@@ -23,7 +27,14 @@ function roundMoney(value: number): number {
 
 export interface NegotiationTabProps {
   principalAmount: number;
+  currentDebtAmount: number;
   interestAmount: number;
+  maxDiscountAmount: number | null;
+  maxDiscountPercent: number | null;
+  managementStatus: DelinquencyManagementStatus;
+  managementStatusUpdatedAt: string | null;
+  updatingStatus?: boolean;
+  onManagementStatusChange?: (status: DelinquencyManagementStatus) => void;
   negotiatedInterestAmount: number | null;
   isNegotiated: boolean;
   readOnly?: boolean;
@@ -33,7 +44,14 @@ export interface NegotiationTabProps {
 
 export function NegotiationTab({
   principalAmount,
+  currentDebtAmount,
   interestAmount,
+  maxDiscountAmount,
+  maxDiscountPercent,
+  managementStatus,
+  managementStatusUpdatedAt,
+  updatingStatus = false,
+  onManagementStatusChange,
   negotiatedInterestAmount,
   isNegotiated,
   readOnly = false,
@@ -47,14 +65,13 @@ export function NegotiationTab({
   const [interestToPay, setInterestToPay] = useState(initialInterest);
   const [inputDraft, setInputDraft] = useState(initialInterest.toFixed(2));
 
-  useEffect(() => {
-    const next =
-      negotiatedInterestAmount != null
-        ? negotiatedInterestAmount
-        : interestAmount;
-    setInterestToPay(next);
-    setInputDraft(next.toFixed(2));
-  }, [interestAmount, negotiatedInterestAmount]);
+  const minInterestToPay = useMemo(
+    () =>
+      maxDiscountAmount == null
+        ? 0
+        : roundMoney(Math.max(0, interestAmount - maxDiscountAmount)),
+    [interestAmount, maxDiscountAmount],
+  );
 
   const totalDebt = useMemo(
     () => roundMoney(principalAmount + interestAmount),
@@ -80,11 +97,13 @@ export function NegotiationTab({
   const syncFromPercent = useCallback(
     (percent: number) => {
       const clamped = Math.min(100, Math.max(0, percent));
-      const next = roundMoney((interestAmount * clamped) / 100);
+      const next = roundMoney(
+        Math.max((interestAmount * clamped) / 100, minInterestToPay),
+      );
       setInterestToPay(next);
       setInputDraft(next.toFixed(2));
     },
-    [interestAmount],
+    [interestAmount, minInterestToPay],
   );
 
   const handleSliderChange = useCallback(
@@ -107,10 +126,12 @@ export function NegotiationTab({
       setInputDraft(interestToPay.toFixed(2));
       return;
     }
-    const clamped = roundMoney(Math.min(Math.max(parsed, 0), interestAmount));
+    const clamped = roundMoney(
+      Math.min(Math.max(parsed, minInterestToPay), interestAmount),
+    );
     setInterestToPay(clamped);
     setInputDraft(clamped.toFixed(2));
-  }, [inputDraft, interestAmount, interestToPay]);
+  }, [inputDraft, interestAmount, interestToPay, minInterestToPay]);
 
   const handleApply = async () => {
     if (!onApply || disabled) return;
@@ -118,14 +139,33 @@ export function NegotiationTab({
   };
 
   const summaryCards = [
-    { label: "Deuda actual", value: principalAmount, highlight: false },
-    { label: "Intereses", value: interestAmount, highlight: false },
-    { label: "Total deuda actual", value: totalDebt, highlight: false },
+    { label: "Deuda actual", value: currentDebtAmount, highlight: false },
+    { label: "Mora asignada", value: interestAmount, highlight: false },
+    { label: "Deuda asignada", value: totalDebt, highlight: false },
     { label: "Nueva deuda", value: newDebt, highlight: true },
   ];
 
   return (
     <Stack spacing={3}>
+      <Stack spacing={0.5}>
+        <FormSelect
+          label="Estatus de gestión"
+          options={DELINQUENCY_MANAGEMENT_STATUS_OPTIONS}
+          value={managementStatus}
+          disabled={readOnly || updatingStatus}
+          onChange={(event) =>
+            onManagementStatusChange?.(
+              event.target.value as DelinquencyManagementStatus,
+            )
+          }
+        />
+        {managementStatusUpdatedAt != null ? (
+          <Typography variant="caption" color="text.secondary">
+            Actualizado el {formatDate(managementStatusUpdatedAt, "D [de] MMMM, YYYY")}
+          </Typography>
+        ) : null}
+      </Stack>
+
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
@@ -216,6 +256,13 @@ export function NegotiationTab({
           </Box>{" "}
           de intereses.
         </Typography>
+
+        {!readOnly && maxDiscountAmount != null && maxDiscountPercent != null ? (
+          <Typography variant="body2" color="text.secondary" mt={1}>
+            Tu tope de descuento: {formatCurrency(maxDiscountAmount)} (
+            {maxDiscountPercent}%)
+          </Typography>
+        ) : null}
 
         {!readOnly ? (
           <Button

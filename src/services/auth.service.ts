@@ -104,6 +104,7 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	// `pedidos-nuevo.view` opens the order form, not the order list.
 	"pedidos-nuevo": "pedidos.nuevo",
 	"clientes-morosidad": "clientes.morosidad",
+	"clientes-morosidad-listas": "clientes.morosidad-listas",
 	"clientes-cobranza": "clientes.cobranza",
 	"inventario-mercancia-danada": "inventario.mercancia_danada",
 	"inventario-hojas-recuperacion": "inventario.hojas_recuperacion",

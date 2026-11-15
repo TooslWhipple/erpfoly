@@ -229,6 +229,11 @@ export const NAV_ITEMS: NavItem[] = [
         requirement: { permission: DIVERSE_DEBTORS_READ },
       },
       {
+        label: "Gastos Deudores Diversos",
+        path: "/facturas/gastos-deudores-diversos",
+        requirement: { permission: DIVERSE_DEBTORS_READ },
+      },
+      {
         label: "Solicitud de gastos",
         path: "/facturas/solicitudes-gastos",
         requirement: { permission: EXPENSE_REQUESTS_READ },

@@ -51,6 +51,10 @@ export function ExpenseRequestSummaryPanel({
   const requestedAmount =
     request?.requestedAmount ?? temporaryValues?.requestedAmount ?? 0;
   const verifiedAmount = request?.verifiedAmount ?? 0;
+  const pendingAmount =
+    request?.vouchers
+      ?.filter((v) => v.status === "PENDING")
+      .reduce((sum, v) => sum + (Number(v.amount) || 0), 0) ?? 0;
   const balance = Math.max(0, requestedAmount - verifiedAmount);
   const status = request?.status ?? "PENDING_APPROVAL";
 
@@ -107,9 +111,20 @@ export function ExpenseRequestSummaryPanel({
             </Typography>
           </Stack>
 
+          {pendingAmount > 0 && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="warning.dark">
+                Monto por Revisar:
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="warning.dark">
+                {numeral(pendingAmount).format("$0,0.00")}
+              </Typography>
+            </Stack>
+          )}
+
           <Stack direction="row" justifyContent="space-between">
             <Typography variant="body2" color="text.secondary">
-              Monto Comprobado:
+              Monto Comprobado (Aceptado):
             </Typography>
             <Typography variant="body2" fontWeight={600} color="primary.main">
               {numeral(verifiedAmount).format("$0,0.00")}

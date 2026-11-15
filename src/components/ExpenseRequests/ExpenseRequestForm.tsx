@@ -263,6 +263,15 @@ export function ExpenseRequestForm({
           Number(currentRequest.applicant.id) === Number(currentUser.id))),
   );
 
+  const isAuthorizedRole = Boolean(
+    currentUser?.role?.toLowerCase().includes("admin") ||
+      currentUser?.roleName?.toLowerCase().includes("admin") ||
+      currentUser?.permissions?.includes("expense_requests:authorize") ||
+      currentUser?.permissions?.includes("expense_requests:update"),
+  );
+
+  const canReview = isAuthorizedRole || !isSameDebtorAsUser;
+
   const isEditable =
     !currentRequest ||
     (isSameDebtorAsUser &&
@@ -671,7 +680,7 @@ export function ExpenseRequestForm({
                   currentRequest.status !== "REJECTED"
                 }
                 canReviewVouchers={
-                  !isSameDebtorAsUser &&
+                  canReview &&
                   (currentRequest.status === "IN_VERIFICATION" ||
                     currentRequest.status === "IN_COMPROBATION" ||
                     currentRequest.status === "APPROVED")
@@ -683,7 +692,7 @@ export function ExpenseRequestForm({
               <ExpenseRequestConclusionTab
                 request={currentRequest}
                 onConclude={handleConclude}
-                canReviewAndComplete={!isSameDebtorAsUser}
+                canReviewAndComplete={canReview}
               />
             )}
           </FormCard>

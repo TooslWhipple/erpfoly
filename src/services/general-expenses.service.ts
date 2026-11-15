@@ -170,6 +170,26 @@ export async function createExpensePayment(
   return post<GeneralExpenseListItem>(`${BASE}/${expenseId}/payments`, payload);
 }
 
+export async function uploadExpenseEvidence(
+  expenseId: string,
+  file: File,
+): Promise<ApiResult<GeneralExpenseListItem>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return post<GeneralExpenseListItem>(
+    `${BASE}/${expenseId}/evidence`,
+    formData,
+    {
+      transformRequest: (data, headers) => {
+        if (data instanceof FormData && headers) {
+          delete headers["Content-Type"];
+        }
+        return data;
+      },
+    },
+  );
+}
+
 export async function uploadExpensePaymentReceipt(
   expenseId: string,
   paymentId: string,

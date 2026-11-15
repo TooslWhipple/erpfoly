@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -12,24 +12,39 @@ import {
   DialogTitle,
   Grid,
   Paper,
+  Slider,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
+  alpha,
+  useTheme,
 } from "@mui/material";
 import {
   CheckCircle2,
   Wallet,
   ArrowDownRight,
   ArrowUpRight,
+  Calendar,
   CalendarClock,
+  CalendarRange,
+  ChevronDown,
+  ChevronUp,
+  Coins,
   Send,
 } from "lucide-react";
 import numeral from "numeral";
-import { FormDatePicker } from "@/components/Form";
+import { FormDatePicker, FormTextField } from "@/components/Form";
 import type {
   CompleteExpenseVerificationPayload,
   ExpenseRequestDetail,
 } from "@/types/expense-requests.types";
 import { formatDate } from "@/utils/date";
+import { calculateFortnightSchedulePreview } from "@/utils/fortnightCalculator";
 
 export interface ExpenseRequestConclusionTabProps {
   request: ExpenseRequestDetail;
@@ -53,6 +68,7 @@ export function ExpenseRequestConclusionTab({
   canConclude = true,
   canReviewAndComplete = true,
 }: ExpenseRequestConclusionTabProps) {
+  const muiTheme = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reimbursementDate, setReimbursementDate] = useState<string>(
@@ -64,11 +80,64 @@ export function ExpenseRequestConclusionTab({
     request.status === "IN_COMPROBATION" || request.status === "APPROVED";
   const isInVerification = request.status === "IN_VERIFICATION";
 
-  const requested = request.requestedAmount;
-  const verified = request.verifiedAmount;
+  const requested = request.requestedAmount || 0;
+  const verified = request.verifiedAmount || 0;
   const difference = Number((requested - verified).toFixed(2));
-  const hasLeftoverMoney = difference > 0;
   const isCajaChica = request.classification === "CAJA_CHICA";
+
+  // Excedente que la empresa debe reembolsar al empleado (gastó más de lo que se le anticipó)
+  const employeeExcess =
+    verified > requested ? Number((verified - requested).toFixed(2)) : 0;
+  // Sobrante en poder del empleado que debe devolver a la empresa (gastó menos del anticipo)
+  const leftoverToReturn =
+    requested > verified ? Number((requested - verified).toFixed(2)) : 0;
+  // Cuadrado exacto (monto solicitado/dispersado coincide exactamente con lo comprobado)
+  const isExactMatch = requested > 0 && Math.abs(difference) === 0;
+
+  const defaultReimbursementAmount = useMemo(() => {
+    if (isCajaChica) return verified;
+    // Si la comprobación está cuadrada ($0) o si le sobró dinero al empleado, NO hay reembolso
+    if (isExactMatch || leftoverToReturn > 0) return 0;
+    // Si gastó de más por encima del anticipo, se le reembolsa únicamente el excedente
+    if (employeeExcess > 0) return employeeExcess;
+    // Solicitud directa de reembolso sin anticipo (donde requested === 0 y verified > 0)
+    if (requested === 0 && verified > 0) return verified;
+    return 0;
+  }, [isCajaChica, isExactMatch, leftoverToReturn, employeeExcess, requested, verified]);
+
+  const hasReimbursementToSchedule = defaultReimbursementAmount > 0;
+
+  const [customReimbursementAmount, setCustomReimbursementAmount] =
+    useState<string>(defaultReimbursementAmount > 0 ? String(defaultReimbursementAmount) : "");
+
+  useEffect(() => {
+    setCustomReimbursementAmount(defaultReimbursementAmount > 0 ? String(defaultReimbursementAmount) : "");
+  }, [defaultReimbursementAmount]);
+
+  const employeeName =
+    request.debtor?.fullName ||
+    request.applicant?.fullName ||
+    request.applicant?.username ||
+    "Empleado que comprobó";
+
+  const [leftoverInstallmentsCount, setLeftoverInstallmentsCount] =
+    useState<number>(2);
+  const [leftoverNotes, setLeftoverNotes] = useState<string>("");
+  const [showLeftoverPreview, setShowLeftoverPreview] = useState(false);
+
+  const leftoverSchedulePreview = useMemo(() => {
+    if (leftoverToReturn <= 0) return [];
+    return calculateFortnightSchedulePreview(
+      leftoverToReturn,
+      leftoverInstallmentsCount,
+      new Date(),
+    );
+  }, [leftoverToReturn, leftoverInstallmentsCount]);
+
+  const leftoverPerFortnight = useMemo(() => {
+    if (leftoverToReturn <= 0 || leftoverInstallmentsCount <= 0) return 0;
+    return leftoverToReturn / leftoverInstallmentsCount;
+  }, [leftoverToReturn, leftoverInstallmentsCount]);
 
   const pendingVouchers = request.vouchers.filter(
     (v) => v.status === "PENDING",
@@ -83,7 +152,7 @@ export function ExpenseRequestConclusionTab({
   // En IN_COMPROBATION (o APPROVED): el solicitante concluye su comprobación para pasar a IN_VERIFICATION
   const canConcludeComprobation = isInComprobation && canConclude;
 
-  // En IN_VERIFICATION: el responsable (que no sea el mismo deudor) completa la revisión una vez evaluados todos los comprobantes
+  // En IN_VERIFICATION: el responsable completa la revisión una vez evaluados todos los comprobantes
   const canCompleteVerification =
     isInVerification &&
     canReviewAndComplete &&
@@ -94,9 +163,19 @@ export function ExpenseRequestConclusionTab({
     setSubmitting(true);
     try {
       if (isInVerification) {
+        const parsed = Number(customReimbursementAmount);
+        const amountToReimburse =
+          hasReimbursementToSchedule && Number.isFinite(parsed) && parsed > 0
+            ? parsed
+            : defaultReimbursementAmount;
+
         await onConclude({
           scheduledDate: reimbursementDate || getTomorrowIso(),
-          scheduleReimbursement: hasLeftoverMoney,
+          scheduleReimbursement: amountToReimburse > 0,
+          reimbursementAmount: amountToReimburse,
+          leftoverInstallmentsCount:
+            leftoverToReturn > 0 ? leftoverInstallmentsCount : undefined,
+          leftoverNotes: leftoverToReturn > 0 ? leftoverNotes : undefined,
         });
       } else {
         await onConclude();
@@ -224,26 +303,38 @@ export function ExpenseRequestConclusionTab({
             <Typography variant="caption" color="text.secondary">
               {isCajaChica
                 ? "Monto a Reintegrar a Caja Chica"
-                : difference >= 0
-                  ? "Sobrante a Devolver (Reembolso de Viáticos)"
-                  : "Diferencia a Favor del Empleado"}
+                : isExactMatch
+                  ? "Saldo Cuadrado"
+                  : difference > 0
+                    ? "Sobrante a Devolver a la Empresa"
+                    : "Excedente a Favor del Empleado (Reembolso)"}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
-              {difference >= 0 ? (
-                <ArrowDownRight size={20} color="#16a34a" />
+              {isExactMatch ? (
+                <CheckCircle2 size={20} color="#16a34a" />
+              ) : difference > 0 ? (
+                <ArrowDownRight size={20} color="#ca8a04" />
               ) : (
-                <ArrowUpRight size={20} color="#dc2626" />
+                <ArrowUpRight size={20} color="#2563eb" />
               )}
               <Typography
                 variant="h5"
                 fontWeight={700}
                 color={
-                  isCajaChica || difference >= 0 ? "success.main" : "error.main"
+                  isExactMatch || isCajaChica
+                    ? "success.main"
+                    : difference > 0
+                      ? "warning.main"
+                      : "primary.main"
                 }
               >
-                {numeral(isCajaChica ? verified : Math.abs(difference)).format(
-                  "$0,0.00",
-                )}
+                {numeral(
+                  isCajaChica
+                    ? verified
+                    : isExactMatch
+                      ? 0
+                      : Math.abs(difference),
+                ).format("$0,0.00")}
               </Typography>
             </Stack>
           </Box>
@@ -307,46 +398,237 @@ export function ExpenseRequestConclusionTab({
         </Grid>
       </Box>
 
-      {/* Reimbursement / Devolución Schedule Card when in IN_VERIFICATION and there is leftover money */}
+      {/* Mensaje de Comprobación Cuadrada al 100% */}
       {isInVerification &&
         canReviewAndComplete &&
         pendingVouchers.length === 0 &&
-        hasLeftoverMoney && (
+        isExactMatch && (
+          <Alert severity="success" icon={<CheckCircle2 size={20} />}>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Comprobación Cuadrada al 100%
+            </Typography>
+            <Typography variant="body2">
+              El monto comprobado (<strong>{numeral(verified).format("$0,0.00")}</strong>)
+              coincide exactamente con el monto dispersado (
+              <strong>{numeral(requested).format("$0,0.00")}</strong>). No hay saldos
+              pendientes ni sobrantes a devolver. Al completar la revisión, la solicitud
+              se marcará como concluida sin movimientos de reembolso.
+            </Typography>
+          </Alert>
+        )}
+
+      {/* Programación de Descuento de Nómina a Deudor Diverso por Sobrante a Devolver */}
+      {isInVerification &&
+        canReviewAndComplete &&
+        pendingVouchers.length === 0 &&
+        leftoverToReturn > 0 && (
           <Paper
             variant="outlined"
             sx={{
               p: 2.5,
               borderRadius: 2,
-              borderColor: "info.main",
-              bgcolor: "background.paper",
+              backgroundColor: alpha(muiTheme.palette.warning.main, 0.04),
+              borderColor: alpha(muiTheme.palette.warning.main, 0.4),
+            }}
+          >
+            <Stack spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Coins size={22} color={muiTheme.palette.warning.main} />
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Descuento en Nómina al Colaborador por Sobrante a Devolver
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Al empleado le sobraron{" "}
+                    <strong>{numeral(leftoverToReturn).format("$0,0.00")}</strong> respecto al
+                    monto dispersado ({numeral(requested).format("$0,0.00")}). Este importe se
+                    descontará de nómina mediante un registro automático en{" "}
+                    <strong>Gastos Deudores Diversos</strong>.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              {/* Slider de Quincenas */}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                spacing={1}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <CalendarRange size={18} color={muiTheme.palette.primary.main} />
+                  <Typography variant="body2" fontWeight={700}>
+                    ¿A cuántas quincenas se descontará de nómina? (1 a 24)
+                  </Typography>
+                </Stack>
+                <Chip
+                  color="warning"
+                  label={`${leftoverInstallmentsCount} quincena${
+                    leftoverInstallmentsCount > 1 ? "s" : ""
+                  }`}
+                  sx={{ fontWeight: 700 }}
+                />
+              </Stack>
+
+              <Box sx={{ px: 2 }}>
+                <Slider
+                  value={leftoverInstallmentsCount}
+                  onChange={(_, val) => setLeftoverInstallmentsCount(val as number)}
+                  min={1}
+                  max={24}
+                  step={1}
+                  marks={[
+                    { value: 1, label: "1" },
+                    { value: 2, label: "2" },
+                    { value: 4, label: "4" },
+                    { value: 8, label: "8" },
+                    { value: 12, label: "12 (6m)" },
+                    { value: 24, label: "24" },
+                  ]}
+                  valueLabelDisplay="auto"
+                />
+              </Box>
+
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                justifyContent="space-between"
+                sx={{
+                  pt: 1,
+                  borderTop: `1px dashed ${alpha(muiTheme.palette.divider, 0.6)}`,
+                }}
+                spacing={1}
+              >
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Descuento programado por quincena (días 15 y fin de mes):
+                  </Typography>
+                  <Typography variant="h6" fontWeight={800} color="warning.main">
+                    {numeral(leftoverPerFortnight).format("$0,0.00")}{" "}
+                    <Typography component="span" variant="caption" color="text.secondary">
+                      / quincena a descontar a <strong>{employeeName}</strong>
+                    </Typography>
+                  </Typography>
+                </Box>
+
+                {leftoverSchedulePreview.length > 0 && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setShowLeftoverPreview(!showLeftoverPreview)}
+                    endIcon={
+                      showLeftoverPreview ? <ChevronUp size={16} /> : <ChevronDown size={16} />
+                    }
+                  >
+                    {showLeftoverPreview ? "Ocultar calendario" : "Ver fechas de corte"}
+                  </Button>
+                )}
+              </Stack>
+
+              {/* Desglose colapsable de las quincenas a descontar */}
+              {showLeftoverPreview && leftoverSchedulePreview.length > 0 && (
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{ maxHeight: 200, mt: 1 }}
+                >
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell># Cuota</TableCell>
+                        <TableCell>Fecha de Corte en Nómina</TableCell>
+                        <TableCell align="right">Monto a Descontar</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {leftoverSchedulePreview.map((item) => (
+                        <TableRow key={item.installmentNumber}>
+                          <TableCell>
+                            Quincena {item.installmentNumber} de {item.totalInstallments}
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Calendar size={14} opacity={0.6} />
+                              <Typography variant="body2" fontWeight={600}>
+                                {item.formattedDate}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 700 }}>
+                            {numeral(item.amount).format("$0,0.00")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+
+              {/* Observación adicional opcional */}
+              <FormTextField
+                label="Observaciones o notas del descuento de nómina (opcional)"
+                value={leftoverNotes}
+                onChange={(e) => setLeftoverNotes(e.target.value)}
+                placeholder="Ej. Descuento autorizado por colaborador a partir de la próxima quincena..."
+                multiline
+                rows={1}
+              />
+            </Stack>
+          </Paper>
+        )}
+
+      {/* Programación de Reembolso al Empleado cuando existe excedente a su favor o reposición */}
+      {isInVerification &&
+        canReviewAndComplete &&
+        pendingVouchers.length === 0 &&
+        hasReimbursementToSchedule && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              borderColor: "primary.main",
+              bgcolor: alpha(muiTheme.palette.primary.main, 0.03),
             }}
           >
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <CalendarClock size={20} />
+                <CalendarClock size={20} color={muiTheme.palette.primary.main} />
                 <Typography variant="subtitle1" fontWeight={700}>
-                  Programar Reembolso de Viáticos (Devolución de Sobrante)
+                  Programación de Reembolso al Empleado
                 </Typography>
               </Stack>
 
               <Typography variant="body2" color="text.secondary">
-                Al empleado le sobraron{" "}
-                <strong>{numeral(difference).format("$0,0.00")}</strong> respecto
-                al monto dispersado ({numeral(requested).format("$0,0.00")}). Al
-                completar la revisión se programará automáticamente un{" "}
-                <strong>Reembolso de Viáticos</strong> (folio{" "}
-                <code>REM-{request.folio}</code>) para su devolución en la fecha
-                indicada:
+                {employeeExcess > 0
+                  ? `El empleado comprobó un excedente de ${numeral(employeeExcess).format("$0,0.00")} por encima del monto dispersado. Al completar la revisión se programará la orden de pago de reembolso (folio REM-${request.folio}):`
+                  : `Al completar la revisión, se programará automáticamente una orden de pago por reembolso (folio REM-${request.folio}) a favor del empleado que comprobó los gastos (${employeeName}):`}
               </Typography>
 
-              <Box sx={{ maxWidth: 280 }}>
-                <FormDatePicker
-                  label="Fecha programada de devolución"
-                  value={reimbursementDate}
-                  onChange={(val) => setReimbursementDate(val)}
-                  placeholder="DD/MM/YYYY"
-                />
-              </Box>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormTextField
+                    label="Monto a programar para reembolso ($ MXN)"
+                    value={customReimbursementAmount}
+                    onChange={(e) => setCustomReimbursementAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormDatePicker
+                    label="Fecha programada de pago"
+                    value={reimbursementDate}
+                    onChange={(val) => setReimbursementDate(val)}
+                    placeholder="DD/MM/YYYY"
+                  />
+                </Grid>
+              </Grid>
+
+              {request.debtor?.clabe && (
+                <Typography variant="caption" color="text.secondary">
+                  Cuenta destino para dispersión: <strong>{employeeName}</strong> • {request.debtor.bankName || "SPEI"} (•••• {request.debtor.clabe.slice(-4)})
+                </Typography>
+              )}
             </Stack>
           </Paper>
         )}
@@ -372,15 +654,15 @@ export function ExpenseRequestConclusionTab({
               <Stack direction="row" alignItems="center" spacing={1}>
                 <CalendarClock size={18} />
                 <Typography variant="subtitle2" fontWeight={700}>
-                  Reembolso / Devolución de Viáticos Programado:{" "}
+                  Reembolso al Empleado Programado:{" "}
                   {request.reimbursementSchedule.folio}
                 </Typography>
                 <Chip
                   size="small"
                   label={
                     request.reimbursementSchedule.status === "PAGADO"
-                      ? "Devuelto / Pagado"
-                      : "Pendiente de devolución"
+                      ? "Dispersado / Pagado"
+                      : "Pendiente de pago"
                   }
                   color={
                     request.reimbursementSchedule.status === "PAGADO"
@@ -390,7 +672,7 @@ export function ExpenseRequestConclusionTab({
                 />
               </Stack>
               <Typography variant="caption" color="text.secondary">
-                Fecha programada de devolución:{" "}
+                Fecha programada de dispersión:{" "}
                 <strong>
                   {formatDate(
                     request.reimbursementSchedule.scheduledDate,
@@ -440,8 +722,10 @@ export function ExpenseRequestConclusionTab({
             >
               {submitting ? (
                 <CircularProgress size={22} color="inherit" />
-              ) : hasLeftoverMoney ? (
-                "Completar y Programar Reembolso de Viáticos"
+              ) : hasReimbursementToSchedule ? (
+                "Completar y Programar Reembolso"
+              ) : leftoverToReturn > 0 ? (
+                "Completar y Descontar de Nómina"
               ) : (
                 "Completar y Concluir Comprobación"
               )}
@@ -459,7 +743,11 @@ export function ExpenseRequestConclusionTab({
       >
         <DialogTitle>
           {isInVerification
-            ? "¿Completar revisión de comprobación?"
+            ? hasReimbursementToSchedule
+              ? "¿Completar revisión y programar reembolso?"
+              : leftoverToReturn > 0
+                ? "¿Completar y programar descuento de nómina?"
+                : "¿Completar y concluir comprobación?"
             : "¿Concluir comprobación de gastos?"}
         </DialogTitle>
         <DialogContent dividers>
@@ -471,19 +759,34 @@ export function ExpenseRequestConclusionTab({
                   <strong>{numeral(verified).format("$0,0.00")}</strong> y la
                   solicitud pasará a estatus <strong>Concluida</strong>.
                 </Typography>
-                {hasLeftoverMoney && (
-                  <Alert severity="info">
-                    Sobran{" "}
-                    <strong>{numeral(difference).format("$0,0.00")}</strong> de
-                    los viáticos dispersados. Se programará el{" "}
-                    <strong>Reembolso de Viáticos</strong> (
-                    <code>REM-{request.folio}</code>) para devolución el día{" "}
+                {hasReimbursementToSchedule ? (
+                  <Alert severity="success" icon={<Send size={18} />}>
+                    Se creará la programación de <strong>Reembolso al empleado</strong> (folio{" "}
+                    <code>REM-{request.folio}</code>) por{" "}
                     <strong>
-                      {formatDate(reimbursementDate, "DD/MM/YYYY")}
-                    </strong>
-                    .
+                      {numeral(
+                        Number(customReimbursementAmount) || defaultReimbursementAmount,
+                      ).format("$0,0.00")}
+                    </strong>{" "}
+                    a nombre de <strong>{employeeName}</strong> para dispersarse el{" "}
+                    <strong>{formatDate(reimbursementDate, "DD/MM/YYYY")}</strong>.
                   </Alert>
-                )}
+                ) : isExactMatch ? (
+                  <Alert severity="info" icon={<CheckCircle2 size={18} />}>
+                    La comprobación queda <strong>completada y cuadrada al 100%</strong>. No existen saldos pendientes ni movimientos de reembolso.
+                  </Alert>
+                ) : leftoverToReturn > 0 ? (
+                  <Alert severity="warning" icon={<ArrowDownRight size={18} />}>
+                    <Typography variant="body2" fontWeight={700}>
+                      Se creará un cobro en Gastos Deudores Diversos
+                    </Typography>
+                    <Typography variant="body2">
+                      El sobrante de <strong>{numeral(leftoverToReturn).format("$0,0.00")}</strong> se descontará vía nómina a <strong>{employeeName}</strong> en{" "}
+                      <strong>{leftoverInstallmentsCount} quincena{leftoverInstallmentsCount > 1 ? "s" : ""}</strong> (
+                      {numeral(leftoverPerFortnight).format("$0,0.00")} por quincena en días 15 y fin de mes).
+                    </Typography>
+                  </Alert>
+                ) : null}
               </Stack>
             ) : (
               <Typography variant="body2">

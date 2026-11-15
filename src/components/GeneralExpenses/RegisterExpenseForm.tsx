@@ -13,8 +13,10 @@ import {
   getApportionmentPreview,
   getUnassignedInvoices,
   updateGeneralExpense,
+  uploadExpenseEvidence,
   uploadExpensePaymentReceipt,
 } from "@/services/general-expenses.service";
+import type { ParsedClientXml } from "@/components/ExpenseRequests/ExpenseRequestVouchersTab";
 import type {
   ApportionmentType,
   CreateGeneralExpensePayload,
@@ -28,7 +30,10 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { ExpenseApportionmentTab } from "./ExpenseApportionmentTab";
 import { ExpenseDetailsTab } from "./ExpenseDetailsTab";
 import type { ExpenseDetailsFormState } from "./ExpenseDetailsTab";
-import { ExpenseInvoicesTab } from "./ExpenseInvoicesTab";
+import {
+  ExpenseInvoicesTab,
+  type ExpenseCapturedVoucher,
+} from "./ExpenseInvoicesTab";
 import { ExpensePaymentsTab } from "./ExpensePaymentsTab";
 import { ExpenseSummaryPanel } from "./ExpenseSummaryPanel";
 import {
@@ -161,6 +166,11 @@ export function RegisterExpenseForm({
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const skipPreviewRef = useRef(Boolean(expense?.branchShares.length));
 
+  // Comprobantes de gastos y facturas cargadas
+  const [capturedVouchers, setCapturedVouchers] = useState<
+    ExpenseCapturedVoucher[]
+  >([]);
+
   const isEdit = Boolean(expense);
 
   const { selectOptions: supplierOptions } = useSuppliersSelect();
@@ -168,6 +178,14 @@ export function RegisterExpenseForm({
     useInternalPayableCategoriesSelect();
   const { selectOptions: responsibleOptions } = useUsersSelect();
   const { selectOptions: branchOptions } = useBranchesSelect();
+
+  const selectedSupplier = useMemo(
+    () =>
+      supplierOptions.find(
+        (opt) => String(opt.value) === String(details.supplierId),
+      ) ?? null,
+    [supplierOptions, details.supplierId],
+  );
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -194,6 +212,28 @@ export function RegisterExpenseForm({
       setApportionmentType(expense.apportionmentType);
       setBranchShares(expense.branchShares);
       setSingleBranchId(expense.singleBranchId ?? "");
+
+      const loadedVouchers: ExpenseCapturedVoucher[] = (
+        expense.invoices ?? []
+      ).map((inv) => ({
+        id: inv.id,
+        date: inv.date,
+        concept: `Factura ${inv.externalId}`,
+        amount: inv.amount,
+        isDeductible: true,
+        fiscalUuid: inv.externalId,
+      }));
+      if (expense.evidenceUrl) {
+        loadedVouchers.push({
+          id: `evidence-${expense.id}`,
+          date: expense.dueDate,
+          concept: expense.evidenceFileName || "Comprobante no deducible",
+          amount: expense.amount,
+          isDeductible: false,
+          imageUrl: expense.evidenceUrl,
+        });
+      }
+      setCapturedVouchers(loadedVouchers);
       return;
     }
 
@@ -203,6 +243,18 @@ export function RegisterExpenseForm({
     });
     setRequiresInvoice(Boolean(initialInvoices?.length));
     setInvoices(initialInvoices ?? []);
+    if (initialInvoices?.length) {
+      setCapturedVouchers(
+        initialInvoices.map((inv) => ({
+          id: inv.id,
+          date: inv.date,
+          concept: `Factura ${inv.externalId}`,
+          amount: inv.amount,
+          isDeductible: true,
+          fiscalUuid: inv.externalId,
+        })),
+      );
+    }
     setPayments([]);
     setApportionEnabled(false);
     setApportionmentType("sales_participation");
@@ -226,8 +278,8 @@ export function RegisterExpenseForm({
 
   const amountNumber = parseAmount(details.amount);
   const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const invoicesAmount = invoices.reduce(
-    (sum, invoice) => sum + invoice.amount,
+  const invoicesAmount = capturedVouchers.reduce(
+    (sum, voucher) => sum + (Number(voucher.amount) || 0),
     0,
   );
   const balance = Number((amountNumber - paidAmount).toFixed(2));
@@ -303,6 +355,97 @@ export function RegisterExpenseForm({
     [],
   );
 
+  const handleAddVoucher = useCallback(
+    (newVoucher: ExpenseCapturedVoucher) => {
+      setCapturedVouchers((prev) => {
+        const next = [...prev, newVoucher];
+        const sumTotal = next.reduce(
+          (acc, v) => acc + (Number(v.amount) || 0),
+          0,
+        );
+
+        setDetails((prevDetails) => {
+          const nextDetails = {
+            ...prevDetails,
+            amount: sumTotal > 0 ? sumTotal.toFixed(2) : prevDetails.amount,
+          };
+
+          if (!nextDetails.description.trim() && newVoucher.concept) {
+            nextDetails.description = newVoucher.concept;
+          }
+          if (!nextDetails.dueDate && newVoucher.date) {
+            nextDetails.dueDate = newVoucher.date;
+          }
+          if (newVoucher.supplierRfc && supplierOptions.length > 0) {
+            const matched = supplierOptions.find((opt) => {
+              const optRfc = (opt as any).rfc?.toUpperCase();
+              const voucherRfc = newVoucher.supplierRfc?.toUpperCase();
+              return (
+                (optRfc && voucherRfc && optRfc === voucherRfc) ||
+                opt.label
+                  .toLowerCase()
+                  .includes(newVoucher.supplierName?.toLowerCase() || "")
+              );
+            });
+            if (matched) {
+              nextDetails.assignToSupplier = true;
+              nextDetails.supplierId = String(matched.value);
+              nextDetails.supplierName = matched.label;
+            }
+          }
+          return nextDetails;
+        });
+
+        return next;
+      });
+    },
+    [supplierOptions],
+  );
+
+  const handleRemoveVoucher = useCallback((voucherId: string) => {
+    setCapturedVouchers((prev) => {
+      const next = prev.filter((v) => v.id !== voucherId);
+      const sumTotal = next.reduce(
+        (acc, v) => acc + (Number(v.amount) || 0),
+        0,
+      );
+      setDetails((prevDetails) => ({
+        ...prevDetails,
+        amount:
+          sumTotal > 0
+            ? sumTotal.toFixed(2)
+            : next.length === 0
+              ? ""
+              : prevDetails.amount,
+      }));
+      return next;
+    });
+  }, []);
+
+  const handleToggleVoucherDeductible = useCallback((voucherId: string) => {
+    setCapturedVouchers((prev) =>
+      prev.map((v) =>
+        v.id === voucherId ? { ...v, isDeductible: !v.isDeductible } : v,
+      ),
+    );
+  }, []);
+
+  const handleAddAvailableInvoice = useCallback(
+    (inv: UnassignedInvoice) => {
+      handleAddVoucher({
+        id: String(inv.id),
+        date: inv.date,
+        concept: `Factura ${inv.invoiceNumber ?? inv.id}`,
+        amount: inv.amount,
+        isDeductible: true,
+        supplierName: inv.supplierName,
+        supplierRfc: inv.supplierRfc,
+        fiscalUuid: inv.invoiceNumber ?? inv.id,
+      });
+    },
+    [handleAddVoucher],
+  );
+
   const loadAvailableInvoices = useCallback(
     async (supplierId: string | null) => {
       setSearchingInvoices(true);
@@ -361,28 +504,35 @@ export function RegisterExpenseForm({
     );
   };
 
-  const buildPayload = (): CreateGeneralExpensePayload => ({
-    assignToSupplier: details.assignToSupplier,
-    supplierId: details.assignToSupplier ? details.supplierId || null : null,
-    detail: details.assignToSupplier ? undefined : details.paymentDetails.trim(),
-    dueDate: details.dueDate,
-    categoryId: details.category,
-    isLocalPurchase: details.isLocalPurchase,
-    responsibleId: details.responsibleId || null,
-    description: details.description.trim(),
-    amount: amountNumber,
-    requiresInvoice,
-    payableInvoiceIds: requiresInvoice ? invoices.map((invoice) => invoice.id) : [],
-    apportionEnabled,
-    apportionmentType,
-    branchShares: apportionEnabled
-      ? branchShares.map((share) => ({
-          branchId: share.branchId,
-          percentage: share.percentage,
-        }))
-      : [],
-    singleBranchId: apportionEnabled ? null : singleBranchId || null,
-  });
+  const buildPayload = (): CreateGeneralExpensePayload => {
+    const isAnyDeductible = capturedVouchers.some((v) => v.isDeductible);
+    const payableIds = capturedVouchers
+      .filter((v) => v.isDeductible && /^\d+$/.test(v.id))
+      .map((v) => v.id);
+
+    return {
+      assignToSupplier: details.assignToSupplier,
+      supplierId: details.assignToSupplier ? details.supplierId || null : null,
+      detail: details.assignToSupplier ? undefined : details.paymentDetails.trim(),
+      dueDate: details.dueDate,
+      categoryId: details.category,
+      isLocalPurchase: details.isLocalPurchase,
+      responsibleId: details.responsibleId || null,
+      description: details.description.trim(),
+      amount: amountNumber,
+      requiresInvoice: isAnyDeductible,
+      payableInvoiceIds: payableIds,
+      apportionEnabled,
+      apportionmentType,
+      branchShares: apportionEnabled
+        ? branchShares.map((share) => ({
+            branchId: share.branchId,
+            percentage: share.percentage,
+          }))
+        : [],
+      singleBranchId: apportionEnabled ? null : singleBranchId || null,
+    };
+  };
 
   const handleSubmit = async () => {
     const nextErrors = validateDetails(details);
@@ -425,10 +575,24 @@ export function RegisterExpenseForm({
         return;
       }
 
+      const createdItem = result.data;
+
+      // Subir evidencias de tickets o comprobantes que se hayan cargado
+      const vouchersWithEvidence = capturedVouchers.filter((v) => v.imageFile);
+      for (const v of vouchersWithEvidence) {
+        if (v.imageFile && createdItem?.id) {
+          try {
+            await uploadExpenseEvidence(createdItem.id, v.imageFile);
+          } catch (err: any) {
+            console.error("Error al subir archivo de evidencia:", err);
+          }
+        }
+      }
+
       showSuccess(
         expense ? "Gasto actualizado correctamente" : "Gasto registrado correctamente",
       );
-      onSuccess?.(result.data);
+      onSuccess?.(createdItem);
       void router.push("/facturas/gastos-generales");
     } finally {
       setSaving(false);
@@ -548,33 +712,16 @@ export function RegisterExpenseForm({
 
             {activeTab === "invoices" && (
               <ExpenseInvoicesTab
-                requiresInvoice={requiresInvoice}
-                onRequiresInvoiceChange={(value) => {
-                  setRequiresInvoice(value);
-                  if (!value) setInvoices([]);
-                }}
-                invoices={invoices}
+                vouchers={capturedVouchers}
+                onAddVoucher={handleAddVoucher}
+                onRemoveVoucher={handleRemoveVoucher}
+                onToggleVoucherDeductible={handleToggleVoucherDeductible}
                 availableInvoices={availableInvoices}
                 searching={searchingInvoices}
                 searchMessage={searchMessage}
-                onRemoveInvoice={(invoiceId) =>
-                  setInvoices((prev) =>
-                    prev.filter((item) => item.id !== invoiceId),
-                  )
-                }
-                onAddInvoice={(invoice) => {
-                  setInvoices((prev) => [
-                    ...prev,
-                    {
-                      id: invoice.id,
-                      externalId: invoice.invoiceNumber ?? invoice.id,
-                      date: invoice.date,
-                      paymentType: invoice.paymentType,
-                      amount: invoice.amount,
-                    },
-                  ]);
-                }}
+                onAddAvailableInvoice={handleAddAvailableInvoice}
                 disabled={saving}
+                selectedSupplier={selectedSupplier}
               />
             )}
 

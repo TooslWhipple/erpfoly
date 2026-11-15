@@ -78,6 +78,8 @@ export interface GeneralExpenseListItem {
   branchShares: GeneralExpenseBranchShare[];
   singleBranchId: string | null;
   singleBranchName: string | null;
+  evidenceUrl?: string | null;
+  evidenceFileName?: string | null;
   createdAt: string;
 }
 

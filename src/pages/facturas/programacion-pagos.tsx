@@ -964,7 +964,7 @@ export default function ProgramacionPagosPage() {
               <TableCell align="center" sx={{ width: 160, whiteSpace: "nowrap" }}>
                 Estatus / Referencia
               </TableCell>
-              <TableCell align="center" sx={{ width: 290, whiteSpace: "nowrap" }}>
+              <TableCell align="center" sx={{ width: 310, minWidth: 310, whiteSpace: "nowrap" }}>
                 Acciones de Pago
               </TableCell>
             </TableRow>
@@ -1300,7 +1300,7 @@ export default function ProgramacionPagosPage() {
                     </TableCell>
 
                     {/* Row Actions: Reprogramar & Envío Instantáneo STP */}
-                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                    <TableCell align="center" sx={{ width: 310, minWidth: 310, whiteSpace: "nowrap" }}>
                       {isPaid ? (
                         <Typography variant="caption" color="text.secondary">
                           {payment.dispersionMethod === "INSTANT_STP"

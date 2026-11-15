@@ -134,18 +134,30 @@ export async function addExpenseVoucher(
   payload: CreateExpenseVoucherPayload,
 ): Promise<ApiResult<ExpenseRequestDetail>> {
   const formData = new FormData();
-  formData.append("date", payload.date);
-  formData.append("concept", payload.concept);
-  formData.append("amount", String(payload.amount));
+  if (payload.date) formData.append("date", payload.date);
+  if (payload.concept) formData.append("concept", payload.concept);
+  if (payload.amount !== undefined && payload.amount !== null && !Number.isNaN(payload.amount)) {
+    formData.append("amount", String(payload.amount));
+  }
   if (payload.supplierName) formData.append("supplierName", payload.supplierName);
   if (payload.supplierRfc) formData.append("supplierRfc", payload.supplierRfc);
   if (payload.fiscalUuid) formData.append("fiscalUuid", payload.fiscalUuid);
+  if (payload.paymentForm) formData.append("paymentForm", payload.paymentForm);
+  if (payload.paymentMethod) formData.append("paymentMethod", payload.paymentMethod);
+  if (payload.cfdiUsage) formData.append("cfdiUsage", payload.cfdiUsage);
 
   if (payload.xmlFile) formData.append("xml", payload.xmlFile);
   if (payload.pdfFile) formData.append("pdf", payload.pdfFile);
   if (payload.imageFile) formData.append("image", payload.imageFile);
 
-  return post<ExpenseRequestDetail>(`${BASE}/${id}/vouchers`, formData);
+  return post<ExpenseRequestDetail>(`${BASE}/${id}/vouchers`, formData, {
+    transformRequest: (data, headers) => {
+      if (data instanceof FormData && headers) {
+        delete headers["Content-Type"];
+      }
+      return data;
+    },
+  });
 }
 
 export async function reviewExpenseVoucher(

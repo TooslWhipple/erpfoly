@@ -251,6 +251,7 @@ export interface SupplierCatalogItem {
   id: number;
   name: string;
   businessName: string | null;
+  rfc?: string | null;
 }
 
 export async function getSuppliersCatalog(): Promise<SupplierCatalogItem[]> {

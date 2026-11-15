@@ -15,14 +15,29 @@ export type ExpenseRequestStatus =
 
 export type ExpenseVoucherStatus = "PENDING" | "ACCEPTED" | "REJECTED";
 
+export interface CfdiConceptItem {
+  description: string;
+  issuerSku?: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
 export interface ExpenseVoucher {
   id: number;
   date: string;
   concept: string;
   amount: number;
+  subtotal?: number | null;
+  iva?: number | null;
   supplierName?: string | null;
   supplierRfc?: string | null;
   fiscalUuid?: string | null;
+  cfdiId?: string | null;
+  paymentForm?: string | null;
+  paymentMethod?: string | null;
+  cfdiUsage?: string | null;
+  cfdiConcepts?: CfdiConceptItem[] | null;
   xmlFileUrl?: string | null;
   pdfFileUrl?: string | null;
   imageFileUrl?: string | null;
@@ -109,6 +124,8 @@ export interface ExpenseRequestDetail extends ExpenseRequestListItem {
     id: number;
     employeeNumber: string;
     fullName: string;
+    clabe?: string | null;
+    bankName?: string | null;
     responsibles?: Array<{
       id: number;
       responsibleDebtorId: number;
@@ -149,12 +166,15 @@ export interface ListExpenseRequestsParams {
 }
 
 export interface CreateExpenseVoucherPayload {
-  date: string;
-  concept: string;
-  amount: number;
+  date?: string;
+  concept?: string;
+  amount?: number;
   supplierName?: string;
   supplierRfc?: string;
   fiscalUuid?: string;
+  paymentForm?: string;
+  paymentMethod?: string;
+  cfdiUsage?: string;
   xmlFile?: File;
   pdfFile?: File;
   imageFile?: File;
@@ -292,6 +312,9 @@ export interface DisperseExpenseRequestsPayload {
 export interface CompleteExpenseVerificationPayload {
   scheduledDate?: string;
   scheduleReimbursement?: boolean;
+  reimbursementAmount?: number;
+  leftoverInstallmentsCount?: number;
+  leftoverNotes?: string;
 }
 
 

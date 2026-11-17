@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Title,
   Breadcrumbs,
@@ -12,6 +16,8 @@ import {
   ConfirmModal,
   TabFilters,
   CardListPagination,
+  LiquidatedProductsTab,
+  LIQUIDATED_PRODUCTS_QUERY_KEY,
 } from "@/components";
 import type { ActionButtonConfig } from "@/components/TabFilters";
 import { useLiquidationRuleActivity } from "@/hooks/useLiquidationRuleActivity";
@@ -69,6 +75,7 @@ export default function DepartamentoLiquidacionesPage() {
   const { id } = router.query;
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
+  const queryClient = useQueryClient();
   const [state, setState] = useState<PageState>("loading");
   const [department, setDepartment] = useState<DepartmentDetail | null>(null);
   const [articlePage, setArticlePage] = useState(0);
@@ -188,12 +195,23 @@ export default function DepartamentoLiquidacionesPage() {
       setConfirmModalItem(null);
       setConfirmPrice(null);
       void refetchArticles();
+      void queryClient.invalidateQueries({
+        queryKey: [LIQUIDATED_PRODUCTS_QUERY_KEY, departmentId],
+      });
     } catch {
       showError("No se pudo aplicar el precio");
     } finally {
       setApplyLoading(false);
     }
-  }, [confirmModalItem, confirmPrice, showSuccess, showError, refetchArticles]);
+  }, [
+    confirmModalItem,
+    confirmPrice,
+    showSuccess,
+    showError,
+    refetchArticles,
+    queryClient,
+    departmentId,
+  ]);
   const previousPriceFromItem = confirmModalItem
     ? confirmModalItem.direction === "down"
       ? confirmModalItem.suggestedPrice /
@@ -344,6 +362,10 @@ export default function DepartamentoLiquidacionesPage() {
     {
       value: "articulos",
       label: "Artículos",
+    },
+    {
+      value: "en-liquidacion",
+      label: "En Liquidación",
     },
     {
       value: "ajustes",
@@ -541,6 +563,10 @@ export default function DepartamentoLiquidacionesPage() {
                   />
                 ) : null}
               </Stack>
+            )}
+
+            {activeTab === "en-liquidacion" && (
+              <LiquidatedProductsTab departmentId={departmentId} />
             )}
 
             {activeTab === "ajustes" && (

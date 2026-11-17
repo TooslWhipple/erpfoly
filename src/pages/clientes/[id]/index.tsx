@@ -32,6 +32,7 @@ import {
 } from "@/services/client-movements.service";
 import { getActiveSaleCredits } from "@/services/sale-credit.service";
 import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
+import { getOpenClientLayaways } from "@/services/ventas.service";
 import { isCreditClient as checkIsCreditClient } from "@/utils/client";
 import {
   getClientPaymentAccessDenial,
@@ -353,19 +354,20 @@ export default function ClientDetailPage() {
       return;
     }
 
-    if (!isCreditClient) {
-      const message = getClientPaymentAccessDenialMessage("cash-client");
-      if (message) showWarning(message);
-      return;
-    }
-
     setValidatingPayment(true);
     try {
-      const result = await activeCreditsQuery.refetch();
+      // Un cliente de contado también puede abonar si tiene un apartado abierto.
+      // Los apartados dependen de la caja activa: si no se consultan, se valida
+      // solo contra el crédito como antes.
+      const [creditsResult, layawaysResult] = await Promise.all([
+        isCreditClient ? activeCreditsQuery.refetch() : Promise.resolve(null),
+        getOpenClientLayaways(header.id),
+      ]);
       const denial = getClientPaymentAccessDenial({
         creditApplicationId: header.creditApplicationId,
         status: clientStatus,
-        activeCredits: result.data?.rows ?? [],
+        activeCredits: creditsResult?.data?.rows ?? [],
+        openLayaways: layawaysResult.error ? [] : (layawaysResult.data?.rows ?? []),
       });
 
       if (denial) {

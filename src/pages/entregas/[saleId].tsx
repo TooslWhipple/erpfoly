@@ -10,15 +10,21 @@ import {
 } from "@mui/material";
 import { Title } from "@/components";
 import {
+  ChangeDeliveryBranchDialog,
   EvidenceStep,
   HandoverResult,
   HandoverSaleView,
   IdentityStep,
+  ReceiverSection,
 } from "@/components/HandoverCounter";
 import {
   activeAuthorizationFor,
   buildConfirmRequest,
+  canChangeDeliveryBranch,
   canConfirm,
+  canProcess,
+  identityOtpTimerId,
+  receiverStepKey,
   type CapturedLines,
 } from "@/components/HandoverCounter/handover";
 import {
@@ -27,11 +33,15 @@ import {
 } from "@/components/HandoverCounter/handoverErrors";
 import { StatusChip } from "@/components/StatusChip/StatusChip";
 import { SectionCard } from "@/components/HandoverCounter/styles";
+import { usePermissions } from "@/hooks/usePermissions";
+import { DELIVERY_HANDOVER_UPDATE } from "@/lib/permissions";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { useOtpCooldownStore } from "@/store/useOtpCooldownStore";
 import { useHandoverSaleDetail } from "@/hooks/sale-handover/useHandoverSaleDetail";
 import { confirmHandover } from "@/services/sale-handover.service";
 import type {
+  ChangeDeliveryBranchResponse,
   HandoverResult as HandoverResultData,
-  HandoverSaleDetail,
 } from "@/types/saleHandover.types";
 
 function parsePositiveInt(value: string | string[] | undefined): number | null {
@@ -40,17 +50,15 @@ function parsePositiveInt(value: string | string[] | undefined): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-function defaultReceiverName(detail: HandoverSaleDetail): string {
-  return detail.receiver.type === "THIRD_PARTY"
-    ? detail.receiver.thirdPartyName
-    : detail.client.name;
-}
-
 export default function EntregaDetallePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const saleId = parsePositiveInt(router.query.saleId);
-  const branchId = parsePositiveInt(router.query.branchId);
+  // Opcional: sin `branchId` el detalle se arma contra la sucursal de entrega.
+  const requestedBranchId = parsePositiveInt(router.query.branchId);
+  const { hasPermission } = usePermissions();
+  const showSuccess = useSnackbarStore((state) => state.showSuccess);
+  const [changingBranch, setChangingBranch] = useState(false);
 
   const {
     data: detail,
@@ -58,10 +66,10 @@ export default function EntregaDetallePage() {
     isError,
     error,
     refetch,
-  } = useHandoverSaleDetail(router.isReady ? saleId : null, branchId);
+  } = useHandoverSaleDetail(router.isReady ? saleId : null, requestedBranchId);
 
   const [captured, setCaptured] = useState<CapturedLines>({});
-  const [receiverNameInput, setReceiverNameInput] = useState<string | null>(null);
+  const [receiverDirty, setReceiverDirty] = useState(false);
   const [signatureFileId, setSignatureFileId] = useState<number | null>(null);
   const [ineFrontFileId, setIneFrontFileId] = useState<number | null>(null);
   const [ineBackFileId, setIneBackFileId] = useState<number | null>(null);
@@ -86,8 +94,7 @@ export default function EntregaDetallePage() {
   const [result, setResult] = useState<HandoverResultData | null>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
 
-  const receiverName =
-    receiverNameInput ?? (detail ? defaultReceiverName(detail) : "");
+  const receiverKey = detail ? receiverStepKey(detail.receiver) : "";
 
   // La clave de idempotencia se renueva al cambiar cualquier dato de la entrega;
   // un reintento sin cambios reutiliza la misma.
@@ -95,7 +102,7 @@ export default function EntregaDetallePage() {
     idempotencyKeyRef.current = null;
   }, [
     captured,
-    receiverName,
+    receiverKey,
     identityAuthId,
     expiredAuthId,
     signatureFileId,
@@ -105,7 +112,6 @@ export default function EntregaDetallePage() {
 
   const resetForm = () => {
     setCaptured({});
-    setReceiverNameInput(null);
     setSignatureFileId(null);
     setIneFrontFileId(null);
     setIneBackFileId(null);
@@ -123,12 +129,12 @@ export default function EntregaDetallePage() {
     );
   }
 
-  if (saleId === null || branchId === null) {
+  if (saleId === null) {
     return (
       <Stack spacing={2}>
         <Title title="Entrega" />
         <Alert severity="error">
-          Falta la venta o la sucursal. Vuelve a la cola de entregas.
+          Falta la venta. Vuelve a la cola de entregas.
         </Alert>
         <Button onClick={() => void router.push("/entregas")}>
           Volver a entregas
@@ -163,6 +169,28 @@ export default function EntregaDetallePage() {
     );
   }
 
+  // Las escrituras van siempre a la sucursal de entrega.
+  const branchId = detail.deliveryBranch.id;
+  const processable = canProcess(detail, hasPermission(DELIVERY_HANDOVER_UPDATE));
+
+  const canChangeBranch = canChangeDeliveryBranch(
+    detail,
+    hasPermission(DELIVERY_HANDOVER_UPDATE),
+  );
+
+  const handleBranchChanged = (changed: ChangeDeliveryBranchResponse) => {
+    setChangingBranch(false);
+    setCaptured({});
+    setSubmitError(null);
+    idempotencyKeyRef.current = null;
+    showSuccess(`La entrega ahora es en ${changed.deliveryBranch.name}.`);
+    void queryClient.invalidateQueries({ queryKey: ["sale-handover"] });
+    // Un `branchId` fijado en la URL apuntaría a la sucursal anterior.
+    if (requestedBranchId !== null) {
+      void router.replace({ pathname: router.pathname, query: { saleId: String(detail.saleId) } });
+    }
+  };
+
   const goToQueue = () => {
     void queryClient.invalidateQueries({ queryKey: ["sale-handover"] });
     void router.push("/entregas");
@@ -188,7 +216,7 @@ export default function EntregaDetallePage() {
   const confirmInput = {
     detail,
     captured,
-    receiverName,
+    receiverDirty,
     signatureFileId,
     identityAuthorizationId: identityAuthId,
     expiredHoldAuthorizationId: expiredAuthId,
@@ -200,7 +228,7 @@ export default function EntregaDetallePage() {
     if (Object.keys(captured).length === 0) missing.push("marcar al menos una pieza");
     if (detail.requiresIdentityAuthorization && !identityAuthId) missing.push("validar la identidad");
     if (detail.requiresExpiredHoldAuthorization && !expiredAuthId) missing.push("autorizar el resguardo vencido");
-    if (receiverName.trim().length < 2) missing.push("capturar el nombre de quien recibe");
+    if (receiverDirty) missing.push("guardar quién recibe");
     if (signatureFileId === null) missing.push("guardar la firma");
   }
 
@@ -243,6 +271,15 @@ export default function EntregaDetallePage() {
 
   const receiver = detail.receiver;
 
+  // Cambiar de receptor revoca la identidad validada: se descarta el respaldo
+  // local y el enfriamiento del reenvío para que el nuevo OTP salga sin espera.
+  const handleReceiverSaved = () => {
+    setIdentityAuthId(null);
+    useOtpCooldownStore.getState().clearTimer(identityOtpTimerId(detail.saleId));
+    setSubmitError(null);
+    void refetch();
+  };
+
   return (
     <Stack spacing={3}>
       <Title title={`Entrega · ${detail.folio}`} />
@@ -253,7 +290,7 @@ export default function EntregaDetallePage() {
             {detail.client.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Venta {detail.folio} · Entrega en {detail.branch.name}
+            Venta {detail.folio} · Entrega en {detail.deliveryBranch.name} · Responsable: {detail.branch.name}
             {detail.client.phoneMasked ? ` · ${detail.client.phoneMasked}` : ""}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -269,19 +306,54 @@ export default function EntregaDetallePage() {
               <StatusChip size="small" variant="warning" label="Resguardo vencido" />
             ) : null}
           </Stack>
+          {canChangeBranch ? (
+            <Button
+              size="small"
+              variant="outlined"
+              sx={{ alignSelf: "flex-start" }}
+              onClick={() => setChangingBranch(true)}
+              disabled={submitting}
+            >
+              Cambiar ubicación
+            </Button>
+          ) : null}
         </Stack>
       </SectionCard>
 
+      {changingBranch ? (
+        <ChangeDeliveryBranchDialog
+          detail={detail}
+          onClose={() => setChangingBranch(false)}
+          onChanged={handleBranchChanged}
+        />
+      ) : null}
+
+      {!processable ? (
+        <Alert severity="info">
+          Solo lectura: la entrega la procesa {detail.deliveryBranch.name}.
+        </Alert>
+      ) : null}
+
       <HandoverSaleView
+        readOnly={!processable}
         detail={detail}
         captured={captured}
         onCapturedChange={setCaptured}
         disabled={submitting}
       />
 
-      {!detail.blockReason ? (
+      {!detail.blockReason && processable ? (
         <>
+          <ReceiverSection
+            detail={detail}
+            branchId={branchId}
+            onDirtyChange={setReceiverDirty}
+            onSaved={handleReceiverSaved}
+            disabled={submitting}
+          />
+
           <IdentityStep
+            key={receiverKey}
             detail={detail}
             branchId={branchId}
             identityAuthorized={identityAuthId !== null}
@@ -292,8 +364,6 @@ export default function EntregaDetallePage() {
           />
 
           <EvidenceStep
-            receiverName={receiverName}
-            onReceiverNameChange={setReceiverNameInput}
             signatureFileId={signatureFileId}
             onSignatureFileIdChange={setSignatureFileId}
             ineFrontFileId={ineFrontFileId}

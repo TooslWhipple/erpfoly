@@ -13,6 +13,7 @@ import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { useClientPayment } from "@/hooks/clientes/useClientPayment";
 import {
   CreditAccountCard,
+  LayawayAccountCard,
   PaymentCapturePanel,
   PaymentSummaryPanel,
 } from "../../abonos/components";
@@ -37,8 +38,12 @@ export default function ClientPaymentPage() {
     isCashDeposit,
     paymentAmount,
     isSubmitting,
-    totalOutstanding,
-    totalCollectable,
+    layaways,
+    layawayAmounts,
+    summaryOutstanding,
+    summaryCollectable,
+    summaryAmount,
+    hasCredits,
     change,
     hasPartialInstallmentRemainder,
     partialRemainderDecision,
@@ -53,6 +58,7 @@ export default function ClientPaymentPage() {
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setLayawayAmount,
     setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
     setPartialRemainderDecision,
@@ -183,9 +189,11 @@ export default function ClientPaymentPage() {
           }}
         >
           <Card>
-            <Typography variant="h6" fontWeight={600}>
-              Selecciona las letras que deseas cobrar:
-            </Typography>
+            {hasCredits && (
+              <Typography variant="h6" fontWeight={600}>
+                Selecciona las letras que deseas cobrar:
+              </Typography>
+            )}
 
             {orderedCreditAccounts.map((account, index) => (
               <CreditAccountCard
@@ -200,6 +208,23 @@ export default function ClientPaymentPage() {
                 onMoveDown={(purchaseId) => moveCreditOrder(purchaseId, "down")}
               />
             ))}
+
+            {layaways.length > 0 && (
+              <>
+                <Typography variant="h6" fontWeight={600}>
+                  {hasCredits ? "Apartados:" : "Captura el abono de cada apartado:"}
+                </Typography>
+                {layaways.map((layaway) => (
+                  <LayawayAccountCard
+                    key={layaway.layawayId}
+                    layaway={layaway}
+                    amount={layawayAmounts[layaway.layawayId] ?? 0}
+                    disabled={isSubmitting}
+                    onAmountChange={setLayawayAmount}
+                  />
+                ))}
+              </>
+            )}
           </Card>
         </Grid>
         <Grid
@@ -211,9 +236,9 @@ export default function ClientPaymentPage() {
         >
           <Stack width="100%" spacing={2}>
             <PaymentSummaryPanel
-              totalOutstanding={totalOutstanding}
-              collectableAmount={totalCollectable}
-              paymentAmount={paymentAmount}
+              totalOutstanding={summaryOutstanding}
+              collectableAmount={summaryCollectable}
+              paymentAmount={summaryAmount}
             />
             <PaymentCapturePanel
               paymentAmount={paymentAmount}
@@ -228,6 +253,7 @@ export default function ClientPaymentPage() {
               paymentTerminals={paymentTerminals}
               paymentTerminalsLoading={paymentTerminalsLoading}
               totalPendingInstallmentsCount={totalPendingInstallmentsCount}
+              showCreditControls={hasCredits}
               onPaymentAmountChange={setPaymentAmount}
               onPaymentMethodChange={setPaymentMethod}
               onCashDepositChange={setIsCashDeposit}

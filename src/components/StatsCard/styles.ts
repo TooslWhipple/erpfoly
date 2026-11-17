@@ -30,4 +30,5 @@ export const CardContainer = styled("div", {
         },
       }
     : {}),
+    transition: "all 0.3s ease"
 }));

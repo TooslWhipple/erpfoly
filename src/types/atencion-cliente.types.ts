@@ -36,6 +36,11 @@ export type ServiceOrderCostAssignedTo = "proveedor" | "foly";
 
 export type ServiceOrderRepairPlace = "bodega" | "domicilio";
 
+export type ServiceOrderWarehouseIntake =
+  | "cliente_entrega"
+  | "logistica_foly"
+  | "";
+
 export type ServiceOrderRecoveryReceiver =
   | "chofer"
   | "empleado"
@@ -137,9 +142,11 @@ export interface ServiceOrderIndicaciones {
   cost: number;
   costAssignedTo: ServiceOrderCostAssignedTo;
   repairPlace: ServiceOrderRepairPlace;
+  warehouseIntake: ServiceOrderWarehouseIntake;
   address: string;
   scheduledDate: string;
   damageTypeId: string;
+  damageDescription: string;
   authorizedById: string;
   observations: string;
   replacementBy: ServiceOrderReplacementBy;
@@ -147,6 +154,11 @@ export interface ServiceOrderIndicaciones {
   recoveryReceiver: ServiceOrderRecoveryReceiver;
   assignedDriverId: number | null;
   assignedEmployeeId: number | null;
+  repairTechnicianId: number | null;
+  /** Lectura: URL de la carta de autorización del proveedor. */
+  supplierAuthorizationUrl: string;
+  /** Escritura: archivo a subir como carta de autorización del proveedor. */
+  supplierAuthorizationFile?: File;
 }
 
 export interface ServiceOrderSolucion {
@@ -208,9 +220,11 @@ export function createDefaultIndicaciones(
     cost: 0,
     costAssignedTo: "proveedor",
     repairPlace: "bodega",
+    warehouseIntake: "",
     address,
     scheduledDate: "",
     damageTypeId: "",
+    damageDescription: "",
     authorizedById: "",
     observations: "",
     replacementBy: "proveedor",
@@ -218,6 +232,8 @@ export function createDefaultIndicaciones(
     recoveryReceiver: "chofer",
     assignedDriverId: null,
     assignedEmployeeId: null,
+    repairTechnicianId: null,
+    supplierAuthorizationUrl: "",
   };
 }
 
@@ -251,6 +267,7 @@ export function indicacionesPatchForAction(
     recoveryReceiver: "chofer",
     assignedDriverId: null,
     assignedEmployeeId: null,
+    repairTechnicianId: null,
     observations: "",
   };
 
@@ -259,7 +276,9 @@ export function indicacionesPatchForAction(
       ...base,
       repairBy: "interna",
       repairPlace: "bodega",
+      warehouseIntake: "",
       address: current.address,
+      damageDescription: current.damageDescription,
     };
   }
 
@@ -267,15 +286,19 @@ export function indicacionesPatchForAction(
     return {
       ...base,
       replacementBy: "proveedor",
+      warehouseIntake: "",
       address: current.address,
       scheduledDate: current.scheduledDate,
+      damageDescription: current.damageDescription,
+      supplierAuthorizationUrl: "",
+      supplierAuthorizationFile: undefined,
     };
   }
 
   return {
     ...base,
     recoveryReceiver: "chofer",
-    damageTypeId: current.damageTypeId,
+    damageDescription: current.damageDescription,
   };
 }
 

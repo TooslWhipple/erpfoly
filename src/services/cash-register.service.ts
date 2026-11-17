@@ -101,11 +101,21 @@ export interface CashRegisterSummary {
   limit: number;
 }
 
-export async function getSessionSummary(): Promise<CashRegisterSummary> {
-  const result = await get<CashRegisterSummary>("/cash-register-sessions/summary", {
-    skipGlobalErrorToast: true,
-  });
-  return unwrapOrThrow(result);
+type UnassignedCashRegisterSummary = { assigned: false };
+
+function isUnassignedCashRegister(
+  value: CashRegisterSummary | UnassignedCashRegisterSummary,
+): value is UnassignedCashRegisterSummary {
+  return "assigned" in value && value.assigned === false;
+}
+
+export async function getSessionSummary(): Promise<CashRegisterSummary | null> {
+  const result = await get<CashRegisterSummary | UnassignedCashRegisterSummary>(
+    "/cash-register-sessions/summary",
+    { skipGlobalErrorToast: true },
+  );
+  const data = unwrapOrThrow(result);
+  return isUnassignedCashRegister(data) ? null : data;
 }
 
 export async function createWithdrawal(

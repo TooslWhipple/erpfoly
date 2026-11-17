@@ -1,5 +1,7 @@
 export { CreditAccountCardComponent as CreditAccountCard } from "./CreditAccountCard";
 export type { CreditAccountCardProps } from "./CreditAccountCard";
+export { LayawayAccountCard } from "./LayawayAccountCard";
+export type { LayawayAccountCardProps } from "./LayawayAccountCard";
 export { PaymentSummaryPanel } from "./PaymentSummaryPanel";
 export type { PaymentSummaryPanelProps } from "./PaymentSummaryPanel";
 export { PaymentCapturePanel } from "./PaymentCapturePanel";

@@ -34,7 +34,8 @@ export async function registerDamagedGoodsExit(
   try {
     const response = unwrapOrThrow(await post(`/suppliers/${payload.supplierId}/dashboard/damaged-goods/exit`, {
         damagedGoodsIds: payload.damagedGoodsIds,
-        accountStatementId: payload.accountStatementId,
+        periodMonth: payload.periodMonth,
+        periodYear: payload.periodYear,
         description: payload.description,
         amount: payload.amount,
         includesVat: payload.includesVat,

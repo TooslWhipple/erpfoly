@@ -26,6 +26,7 @@ import { getInvoiceDetail } from "@/services/customer-support.service";
 import { SaleCancellationModal } from "@/components/SaleCancellationModal";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CUSTOMER_SUPPORT_INVOICES_DELETE } from "@/lib/permissions";
+import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { InvoiceActivityTab, InvoiceArticlesTab } from "./components";
 import {
   MenuIconButton,
@@ -65,6 +66,7 @@ export default function InvoiceDetailPage() {
   const { id } = router.query;
   const { hasPermission } = usePermissions();
   const canCancelSale = hasPermission(CUSTOMER_SUPPORT_INVOICES_DELETE);
+  const showError = useSnackbarStore((s) => s.showError);
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,12 +85,19 @@ export default function InvoiceDetailPage() {
     setLoading(true);
     try {
       const data = await getInvoiceDetail(invoiceId);
+      if (!data) {
+        setInvoice(null);
+        showError("Factura no encontrada");
+        void router.replace("/atencion-cliente");
+        return;
+      }
       setInvoice(data);
+      setLoading(false);
     } catch (err) {
       console.error("[InvoiceDetail] Error loading invoice:", err);
       setInvoice(null);
-    } finally {
-      setLoading(false);
+      showError("Factura no encontrada");
+      void router.replace("/atencion-cliente");
     }
   };
 
@@ -121,26 +130,13 @@ export default function InvoiceDetailPage() {
     setCancelInvoiceOpen(true);
   };
 
-  if (loading) {
+  if (loading || !invoice) {
     return (
       <Stack spacing={3}>
         <Skeleton variant="text" width="50%" height={32} />
         <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
         <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 2 }} />
         <Skeleton variant="rectangular" height={360} sx={{ borderRadius: 2 }} />
-      </Stack>
-    );
-  }
-
-  if (!invoice) {
-    return (
-      <Stack spacing={3}>
-        <Breadcrumbs
-          items={breadcrumbs}
-          showBackButton
-          onBack={handleBack}
-        />
-        <Typography>Factura no encontrada</Typography>
       </Stack>
     );
   }

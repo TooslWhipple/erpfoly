@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  FormHelperText,
   Grid,
   Stack,
   Switch,
@@ -16,11 +17,14 @@ import {
   RadioButton,
   RadioButtonGroup,
 } from "@/components";
+import { FileUpload } from "@/components/FileUpload";
+import type { UploadedFileItem } from "@/components/FileUpload";
 import type { SelectOption } from "@/components/Form";
 import { ROLE_CODES } from "@/constants/role-codes";
 import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
 import { useRepairSuppliersSelect } from "@/hooks/repair-suppliers/useRepairSuppliersSelect";
 import { useUsersSelect } from "@/hooks/users/useUsersSelect";
+import dayjs from "@/lib/dayjs";
 import { getDamagedProductsCatalog } from "@/services/damaged-products.service";
 import type { ServiceOrderIndicaciones } from "@/types/atencion-cliente.types";
 import { indicacionesPatchForAction } from "@/types/atencion-cliente.types";
@@ -32,10 +36,19 @@ import {
   SwitchRow,
 } from "@/styles/atencion-cliente.styles";
 
+const TODAY_YMD = () => dayjs().format("YYYY-MM-DD");
+
 export interface ServiceOrderIndicacionesTabProps {
   indicaciones: ServiceOrderIndicaciones;
   customerAddress: string;
   disabled?: boolean;
+  /** Gerente o administrador. Quien no lo sea no puede elegir cancelar. */
+  canRequestCancellation?: boolean;
+  cancelErrors?: {
+    damage: string;
+    intake: string;
+    address: string;
+  };
   onChange: (patch: Partial<ServiceOrderIndicaciones>) => void;
 }
 
@@ -49,6 +62,8 @@ export function ServiceOrderIndicacionesTab({
   indicaciones,
   customerAddress,
   disabled = false,
+  canRequestCancellation = false,
+  cancelErrors,
   onChange,
 }: ServiceOrderIndicacionesTabProps) {
   const theme = useTheme();
@@ -69,11 +84,6 @@ export function ServiceOrderIndicacionesTab({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Always cached (like repair suppliers) so detail/options are ready immediately.
-  const driversQuery = useUsersSelect({
-    roleCode: ROLE_CODES.CHOFER,
-  });
-
   const employeesQuery = useUsersSelect({
     excludeRoleCodes: DRIVER_ROLE_CODES_EXCLUDED,
   });
@@ -82,18 +92,16 @@ export function ServiceOrderIndicacionesTab({
   const authorizersQuery = employeesQuery;
 
   const repairSupplierOptions = repairSuppliersQuery.selectOptions;
-  const driverOptions = driversQuery.selectOptions;
-  const employeeOptions = employeesQuery.selectOptions;
   const authorizerOptions = authorizersQuery.selectOptions;
   const branchOptions = branchesQuery.selectOptions;
 
-  const damageTypeOptions: SelectOption[] = useMemo(
+  const technicianOptions: SelectOption[] = useMemo(
     () =>
-      (catalogQuery.data?.damageTypes ?? []).map((item) => ({
+      (catalogQuery.data?.repairResponsibles ?? []).map((item) => ({
         value: catalogItemIdString(item),
         label: item.label,
       })),
-    [catalogQuery.data?.damageTypes],
+    [catalogQuery.data?.repairResponsibles],
   );
 
   const addressOptions: SelectOption[] = useMemo(() => {
@@ -109,12 +117,38 @@ export function ServiceOrderIndicacionesTab({
     return options;
   }, [customerAddress, indicaciones.address]);
 
+  const showRepairAddressField = useMemo(() => {
+    if (indicaciones.repairPlace === "domicilio") return true;
+    if (indicaciones.repairPlace !== "bodega") return false;
+    if (indicaciones.repairBy !== "interna") return true;
+    return indicaciones.warehouseIntake === "logistica_foly";
+  }, [
+    indicaciones.repairBy,
+    indicaciones.repairPlace,
+    indicaciones.warehouseIntake,
+  ]);
+
+  const showReplaceAddressField =
+    indicaciones.replacementBy === "foly" &&
+    indicaciones.warehouseIntake === "logistica_foly";
+
+  const supplierAuthFiles: UploadedFileItem[] =
+    indicaciones.supplierAuthorizationUrl
+      ? [
+          {
+            id: "supplier-authorization",
+            name: "Carta de autorización",
+            url: indicaciones.supplierAuthorizationUrl,
+          },
+        ]
+      : [];
+
   const handleActionChange = (nextAction: ServiceOrderIndicaciones["action"]) => {
     onChange(indicacionesPatchForAction(nextAction, indicaciones));
   };
 
   return (
-    <Stack spacing={2.5}>
+    <Stack spacing={2}>
       <Stack spacing={1}>
         <SectionLabel>¿Qué se hará con el artículo?</SectionLabel>
         <RadioGroupResponsive>
@@ -134,14 +168,16 @@ export function ServiceOrderIndicacionesTab({
             disabled={disabled}
             fullWidth={isMobile}
           />
-          <RadioButton
-            value="cancelar_venta"
-            label="Cancelar venta"
-            checked={action === "cancelar_venta"}
-            onChange={() => handleActionChange("cancelar_venta")}
-            disabled={disabled}
-            fullWidth={isMobile}
-          />
+          {(canRequestCancellation || action === "cancelar_venta") && (
+            <RadioButton
+              value="cancelar_venta"
+              label="Cancelar venta"
+              checked={action === "cancelar_venta"}
+              onChange={() => handleActionChange("cancelar_venta")}
+              disabled={disabled || !canRequestCancellation}
+              fullWidth={isMobile}
+            />
+          )}
         </RadioGroupResponsive>
       </Stack>
 
@@ -164,12 +200,41 @@ export function ServiceOrderIndicacionesTab({
                 value="terceros"
                 label="Reparar con terceros"
                 checked={indicaciones.repairBy === "terceros"}
-                onChange={() => onChange({ repairBy: "terceros" })}
+                onChange={() =>
+                  onChange({
+                    repairBy: "terceros",
+                    repairTechnicianId: null,
+                  })
+                }
                 disabled={disabled}
                 fullWidth={isMobile}
               />
             </RadioGroupResponsive>
           </Stack>
+
+          {indicaciones.repairBy === "interna" && (
+            <FormAutocomplete
+              label="Técnico u operador responsable"
+              options={technicianOptions}
+              value={
+                indicaciones.repairTechnicianId != null
+                  ? String(indicaciones.repairTechnicianId)
+                  : ""
+              }
+              onChange={(value) => {
+                onChange({
+                  repairTechnicianId: value ? Number(value) : null,
+                });
+              }}
+              disabled={disabled || catalogQuery.isPending}
+              placeholder="Buscar técnico"
+              noOptionsText={
+                catalogQuery.isError
+                  ? "No se pudieron cargar técnicos"
+                  : "Sin técnicos responsables de reparación"
+              }
+            />
+          )}
 
           {indicaciones.repairBy === "terceros" && (
             <FormAutocomplete
@@ -208,65 +273,64 @@ export function ServiceOrderIndicacionesTab({
               />
             </SwitchRow>
 
-            {indicaciones.addCost && (
-              <Grid container spacing={2} alignItems="flex-end">
-                <Grid size={{ xs: 12, sm: 3 }}>
-                  <FormTextField
-                    label="Horas"
-                    type="number"
-                    value={String(indicaciones.hours)}
-                    onChange={(event) =>
-                      onChange({
-                        hours: Math.max(0, Number(event.target.value) || 0),
-                      })
-                    }
-                    disabled={disabled}
-                    inputProps={{ min: 0, step: 1 }}
-                  />
+            {
+              indicaciones.addCost && (
+                <Grid container spacing={2} alignItems="flex-end">
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <FormTextField
+                      label="Horas"
+                      type="number"
+                      value={String(indicaciones.hours)}
+                      onChange={(event) =>
+                        onChange({
+                          hours: Math.max(0, Number(event.target.value) || 0),
+                        })
+                      }
+                      disabled={disabled}
+                      inputProps={{ min: 0, step: 1 }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <FormTextField
+                      label="Costo"
+                      type="number"
+                      value={String(indicaciones.cost)}
+                      onChange={(event) =>
+                        onChange({
+                          cost: Math.max(0, Number(event.target.value) || 0),
+                        })
+                      }
+                      disabled={disabled}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Stack spacing={1}>
+                      <Typography variant="body2" color="text.secondary">Asignar costo a</Typography>
+                      <RadioButtonGroup>
+                        <RadioButton
+                          value="proveedor"
+                          label="Proveedor"
+                          checked={indicaciones.costAssignedTo === "proveedor"}
+                          onChange={() =>
+                            onChange({ costAssignedTo: "proveedor" })
+                          }
+                          disabled={disabled}
+                          size="small"
+                        />
+                        <RadioButton
+                          value="foly"
+                          label="Foly"
+                          checked={indicaciones.costAssignedTo === "foly"}
+                          onChange={() => onChange({ costAssignedTo: "foly" })}
+                          disabled={disabled}
+                          size="small"
+                        />
+                      </RadioButtonGroup>
+                    </Stack>
+                  </Grid>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <FormTextField
-                    label="Costo"
-                    type="number"
-                    value={String(indicaciones.cost)}
-                    onChange={(event) =>
-                      onChange({
-                        cost: Math.max(0, Number(event.target.value) || 0),
-                      })
-                    }
-                    disabled={disabled}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 5 }}>
-                  <Stack spacing={1}>
-                    <Typography variant="body2" color="text.secondary">
-                      Asignar costo a
-                    </Typography>
-                    <RadioButtonGroup>
-                      <RadioButton
-                        value="proveedor"
-                        label="Proveedor"
-                        checked={indicaciones.costAssignedTo === "proveedor"}
-                        onChange={() =>
-                          onChange({ costAssignedTo: "proveedor" })
-                        }
-                        disabled={disabled}
-                        size="small"
-                      />
-                      <RadioButton
-                        value="foly"
-                        label="Foly"
-                        checked={indicaciones.costAssignedTo === "foly"}
-                        onChange={() => onChange({ costAssignedTo: "foly" })}
-                        disabled={disabled}
-                        size="small"
-                      />
-                    </RadioButtonGroup>
-                  </Stack>
-                </Grid>
-              </Grid>
-            )}
+              )}
           </CostSection>
 
           <Stack spacing={1}>
@@ -287,6 +351,7 @@ export function ServiceOrderIndicacionesTab({
                 onChange={() =>
                   onChange({
                     repairPlace: "domicilio",
+                    warehouseIntake: "",
                     address: indicaciones.address || customerAddress,
                   })
                 }
@@ -296,15 +361,61 @@ export function ServiceOrderIndicacionesTab({
             </RadioGroupResponsive>
           </Stack>
 
-          <FormSelect
-            label="Domicilio en donde se realizará la reparación"
-            options={addressOptions}
-            value={indicaciones.address || customerAddress}
-            onChange={(event) =>
-              onChange({ address: String(event.target.value) })
-            }
-            disabled={disabled}
-          />
+          {
+            indicaciones.repairBy === "interna" &&
+            indicaciones.repairPlace === "bodega" && (
+              <Stack spacing={1}>
+                <SectionLabel>
+                  ¿Cómo ingresará el artículo a la bodega?
+                </SectionLabel>
+                <Stack spacing={1}>
+                  <RadioButton
+                    value="cliente_entrega"
+                    label="El cliente lo llevará por su cuenta"
+                    checked={indicaciones.warehouseIntake === "cliente_entrega"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "cliente_entrega",
+                        address: "",
+                      })
+                    }
+                    disabled={disabled}
+                    block
+                  />
+                  <RadioButton
+                    value="logistica_foly"
+                    label="Logística Foly realizará la recolección"
+                    checked={indicaciones.warehouseIntake === "logistica_foly"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "logistica_foly",
+                        address: indicaciones.address || customerAddress,
+                      })
+                    }
+                    disabled={disabled}
+                    block
+                  />
+                </Stack>
+              </Stack>
+            )
+          }
+
+          {showRepairAddressField && (
+            <FormSelect
+              label={
+                indicaciones.repairPlace === "bodega" &&
+                  indicaciones.warehouseIntake === "logistica_foly"
+                  ? "Domicilio de recolección"
+                  : "Domicilio en donde se realizará la reparación"
+              }
+              options={addressOptions}
+              value={indicaciones.address || customerAddress}
+              onChange={(event) =>
+                onChange({ address: String(event.target.value) })
+              }
+              disabled={disabled}
+            />
+          )}
 
           <FormDatePicker
             label="Fecha a realizar"
@@ -312,17 +423,17 @@ export function ServiceOrderIndicacionesTab({
             onChange={(value) => onChange({ scheduledDate: value })}
             disabled={disabled}
             placeholder="Selecciona una fecha"
+            minDate={TODAY_YMD()}
           />
 
-          <FormSelect
+          <FormTextField
             label="Tipo de daño"
-            options={damageTypeOptions}
-            value={indicaciones.damageTypeId}
+            value={indicaciones.damageDescription}
             onChange={(event) =>
-              onChange({ damageTypeId: String(event.target.value) })
+              onChange({ damageDescription: event.target.value })
             }
-            disabled={disabled || catalogQuery.isPending}
-            placeholder="Selecciona"
+            disabled={disabled}
+            placeholder="Describe el desperfecto del artículo"
           />
 
           <FormAutocomplete
@@ -361,7 +472,14 @@ export function ServiceOrderIndicacionesTab({
                 label="Proveedor"
                 checked={indicaciones.replacementBy === "proveedor"}
                 onChange={() =>
-                  onChange({ replacementBy: "proveedor", branchId: null })
+                  onChange({
+                    replacementBy: "proveedor",
+                    branchId: null,
+                    warehouseIntake: "",
+                    address: "",
+                    supplierAuthorizationUrl: "",
+                    supplierAuthorizationFile: undefined,
+                  })
                 }
                 disabled={disabled}
                 fullWidth={isMobile}
@@ -370,43 +488,109 @@ export function ServiceOrderIndicacionesTab({
                 value="foly"
                 label="Foly"
                 checked={indicaciones.replacementBy === "foly"}
-                onChange={() => onChange({ replacementBy: "foly" })}
+                onChange={() =>
+                  onChange({
+                    replacementBy: "foly",
+                    warehouseIntake: "",
+                    address: "",
+                  })
+                }
                 disabled={disabled}
                 fullWidth={isMobile}
               />
             </RadioGroupResponsive>
           </Stack>
 
-          <FormSelect
-            label="Domicilio en donde se recolectará el artículo"
-            options={addressOptions}
-            value={indicaciones.address || customerAddress}
-            onChange={(event) =>
-              onChange({ address: String(event.target.value) })
-            }
-            disabled={disabled}
-          />
-
           {indicaciones.replacementBy === "foly" && (
-            <FormAutocomplete
-              label="Sucursal donde se recuperará el artículo"
-              options={branchOptions}
-              value={
-                indicaciones.branchId != null
-                  ? String(indicaciones.branchId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({ branchId: value ? Number(value) : null });
-              }}
-              disabled={disabled || branchesQuery.isPending}
-              placeholder="Buscar sucursal"
-              noOptionsText={
-                branchesQuery.isError
-                  ? "No se pudieron cargar sucursales"
-                  : "Sin sucursales"
-              }
-            />
+            <>
+              <Stack spacing={1}>
+                <SectionLabel>
+                  ¿Cómo ingresará el artículo dañado a sucursal?
+                </SectionLabel>
+                <RadioGroupResponsive>
+                  <RadioButton
+                    value="cliente_entrega"
+                    label="El cliente lo entregará por sus medios"
+                    checked={indicaciones.warehouseIntake === "cliente_entrega"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "cliente_entrega",
+                        address: "",
+                      })
+                    }
+                    disabled={disabled}
+                    fullWidth={isMobile}
+                  />
+                  <RadioButton
+                    value="logistica_foly"
+                    label="Logística Foly realizará la recolección"
+                    checked={indicaciones.warehouseIntake === "logistica_foly"}
+                    onChange={() =>
+                      onChange({
+                        warehouseIntake: "logistica_foly",
+                        address: indicaciones.address || customerAddress,
+                      })
+                    }
+                    disabled={disabled}
+                    fullWidth={isMobile}
+                  />
+                </RadioGroupResponsive>
+              </Stack>
+
+              {showReplaceAddressField && (
+                <FormSelect
+                  label="Domicilio en donde se recolectará el artículo"
+                  options={addressOptions}
+                  value={indicaciones.address || customerAddress}
+                  onChange={(event) =>
+                    onChange({ address: String(event.target.value) })
+                  }
+                  disabled={disabled}
+                />
+              )}
+
+              <FormAutocomplete
+                label="Sucursal donde se recuperará el artículo"
+                options={branchOptions}
+                value={
+                  indicaciones.branchId != null
+                    ? String(indicaciones.branchId)
+                    : ""
+                }
+                onChange={(value) => {
+                  onChange({ branchId: value ? Number(value) : null });
+                }}
+                disabled={disabled || branchesQuery.isPending}
+                placeholder="Buscar sucursal"
+                noOptionsText={
+                  branchesQuery.isError
+                    ? "No se pudieron cargar sucursales"
+                    : "Sin sucursales"
+                }
+              />
+
+              <Stack spacing={1}>
+                <Typography variant="body2" color="text.secondary">
+                  Cargar carta de autorización
+                </Typography>
+                <FileUpload
+                  value={supplierAuthFiles}
+                  onChange={(files) => {
+                    const first = files[0];
+                    const url =
+                      first?.url ??
+                      (first?.file ? URL.createObjectURL(first.file) : "");
+                    onChange({
+                      supplierAuthorizationUrl: url,
+                      supplierAuthorizationFile: first?.file,
+                    });
+                  }}
+                  accept={["application/pdf", "image/*"]}
+                  placeholder="Cargar carta de autorización del proveedor"
+                  disabled={disabled}
+                />
+              </Stack>
+            </>
           )}
 
           <FormDatePicker
@@ -415,17 +599,17 @@ export function ServiceOrderIndicacionesTab({
             onChange={(value) => onChange({ scheduledDate: value })}
             disabled={disabled}
             placeholder="Selecciona una fecha"
+            minDate={TODAY_YMD()}
           />
 
-          <FormSelect
+          <FormTextField
             label="Tipo de daño"
-            options={damageTypeOptions}
-            value={indicaciones.damageTypeId}
+            value={indicaciones.damageDescription}
             onChange={(event) =>
-              onChange({ damageTypeId: String(event.target.value) })
+              onChange({ damageDescription: event.target.value })
             }
-            disabled={disabled || catalogQuery.isPending}
-            placeholder="Selecciona"
+            disabled={disabled}
+            placeholder="Describe el desperfecto del artículo"
           />
 
           <FormAutocomplete
@@ -457,119 +641,73 @@ export function ServiceOrderIndicacionesTab({
       {action === "cancelar_venta" && (
         <>
           <AlertBox tone="warning">
-            Esta acción primero generará una orden de recuperación antes de su
-            cancelación.
+            Solicitar la cancelación crea la hoja de recuperación. El saldo a
+            favor se abona cuando almacén confirma que recibió el artículo.
           </AlertBox>
-          <AlertBox tone="info">
-            Al cancelar la venta, el monto total pagado de este artículo pasará
-            a saldo a favor del cliente.
-          </AlertBox>
+          {indicaciones.recoveryReceiver && !indicaciones.warehouseIntake ? (
+            <AlertBox tone="info">
+              Registro anterior de recolección. Queda solo como consulta y no
+              vuelve a abonar saldo.
+            </AlertBox>
+          ) : null}
 
-          <Typography variant="subtitle2" fontWeight={600}>
-            Ingresa los datos para la orden de recuperación del artículo
-          </Typography>
-
-          <FormSelect
+          <FormTextField
             label="Tipo de daño"
-            options={damageTypeOptions}
-            value={indicaciones.damageTypeId}
+            value={indicaciones.damageDescription}
             onChange={(event) =>
-              onChange({ damageTypeId: String(event.target.value) })
+              onChange({ damageDescription: event.target.value })
             }
-            disabled={disabled || catalogQuery.isPending}
-            placeholder="Selecciona"
+            disabled={disabled || !canRequestCancellation}
+            placeholder="Describe el desperfecto del artículo"
+            error={Boolean(cancelErrors?.damage)}
+            helperText={cancelErrors?.damage || undefined}
           />
 
           <Stack spacing={1}>
-            <RadioGroupResponsive>
+            <SectionLabel>¿Cómo regresa el artículo?</SectionLabel>
+            <Stack spacing={1}>
               <RadioButton
-                value="chofer"
-                label="Recibe chofer"
-                checked={indicaciones.recoveryReceiver === "chofer"}
+                value="cliente_entrega"
+                label="El cliente lo entregará por sus medios"
+                checked={indicaciones.warehouseIntake === "cliente_entrega"}
                 onChange={() =>
-                  onChange({
-                    recoveryReceiver: "chofer",
-                    assignedEmployeeId: null,
-                  })
+                  onChange({ warehouseIntake: "cliente_entrega", address: "" })
                 }
-                disabled={disabled}
-                fullWidth={isMobile}
+                disabled={disabled || !canRequestCancellation}
+                error={Boolean(cancelErrors?.intake)}
+                block
               />
               <RadioButton
-                value="empleado"
-                label="Recibe empleado"
-                checked={indicaciones.recoveryReceiver === "empleado"}
+                value="logistica_foly"
+                label="Logística Foly realizará la recolección"
+                checked={indicaciones.warehouseIntake === "logistica_foly"}
                 onChange={() =>
                   onChange({
-                    recoveryReceiver: "empleado",
-                    assignedDriverId: null,
+                    warehouseIntake: "logistica_foly",
+                    address: indicaciones.address || customerAddress,
                   })
                 }
-                disabled={disabled}
-                fullWidth={isMobile}
+                disabled={disabled || !canRequestCancellation}
+                error={Boolean(cancelErrors?.intake)}
+                block
               />
-              <RadioButton
-                value="no_se_recoge"
-                label="No se recoge artículo"
-                checked={indicaciones.recoveryReceiver === "no_se_recoge"}
-                onChange={() =>
-                  onChange({
-                    recoveryReceiver: "no_se_recoge",
-                    assignedDriverId: null,
-                    assignedEmployeeId: null,
-                  })
-                }
-                disabled={disabled}
-                fullWidth={isMobile}
-              />
-            </RadioGroupResponsive>
+            </Stack>
+            {cancelErrors?.intake ? (
+              <FormHelperText error sx={{ mx: 0 }}>
+                {cancelErrors.intake}
+              </FormHelperText>
+            ) : null}
           </Stack>
 
-          {indicaciones.recoveryReceiver === "chofer" && (
-            <FormAutocomplete
-              label="Chofer que realizará la recolección"
-              options={driverOptions}
-              value={
-                indicaciones.assignedDriverId != null
-                  ? String(indicaciones.assignedDriverId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({
-                  assignedDriverId: value ? Number(value) : null,
-                });
-              }}
-              disabled={disabled || driversQuery.isPending}
-              placeholder="Buscar chofer"
-              noOptionsText={
-                driversQuery.isError
-                  ? "No se pudieron cargar choferes"
-                  : "Sin choferes"
-              }
-            />
-          )}
-
-          {indicaciones.recoveryReceiver === "empleado" && (
-            <FormAutocomplete
-              label="Empleado que recibe el artículo"
-              options={employeeOptions}
-              value={
-                indicaciones.assignedEmployeeId != null
-                  ? String(indicaciones.assignedEmployeeId)
-                  : ""
-              }
-              onChange={(value) => {
-                onChange({
-                  assignedEmployeeId: value ? Number(value) : null,
-                });
-              }}
-              disabled={disabled || employeesQuery.isPending}
-              placeholder="Buscar empleado"
-              noOptionsText={
-                employeesQuery.isError
-                  ? "No se pudieron cargar empleados"
-                  : "Sin empleados"
-              }
+          {indicaciones.warehouseIntake === "logistica_foly" && (
+            <FormTextField
+              label="Domicilio de recolección"
+              value={indicaciones.address}
+              onChange={(event) => onChange({ address: event.target.value })}
+              disabled={disabled || !canRequestCancellation}
+              placeholder="Calle, número y colonia"
+              error={Boolean(cancelErrors?.address)}
+              helperText={cancelErrors?.address || undefined}
             />
           )}
 
@@ -577,7 +715,7 @@ export function ServiceOrderIndicacionesTab({
             label="Observaciones"
             value={indicaciones.observations}
             onChange={(event) => onChange({ observations: event.target.value })}
-            disabled={disabled}
+            disabled={disabled || !canRequestCancellation}
             multiline
             minRows={3}
             placeholder="Ingrese"

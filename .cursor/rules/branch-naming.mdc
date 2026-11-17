@@ -1,0 +1,19 @@
+---
+description: Naming convention for git feature branches
+alwaysApply: true
+---
+
+# Branch naming
+
+When creating or renaming git branches:
+
+- Use `feat/`, `fix/`, or `chore/` plus a short kebab-case slug
+- **No dates** in the branch name (never `2026-11-10` or similar)
+- The slug must be **fewer than 3 words** (1 or 2 kebab segments after the prefix)
+
+```text
+✅ feat/os-bodega
+✅ fix/login-token
+❌ feat/2026-11-10-os-bodega-foly-propiedad-cliente
+❌ feat/os-bodega-foly-propiedad-cliente
+```

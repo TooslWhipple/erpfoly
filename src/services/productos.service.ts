@@ -705,6 +705,14 @@ export interface ProductBySupplierItem {
     inStock: number;
     pendingSupply: number;
     score: number;
+    /** Solo con `destinationBranchId` (traspasos): capacidad de la sucursal destino. */
+    destinationMinStock?: number;
+    /** `null` = sin límite. */
+    destinationMaxStock?: number | null;
+    destinationStock?: number;
+    destinationInTransit?: number;
+    /** `null` = sin límite. Calculado por el back. */
+    destinationRemaining?: number | null;
 }
 
 function normalizeProductsBySupplierResponse(
@@ -753,6 +761,7 @@ export async function getProductsBySupplier(
 export async function getProductsByBranch(
     branchId: number,
     destinationBranchId?: number,
+    excludeOrderId?: number,
 ): Promise<ApiResult<ProductBySupplierItem[]>> {
     if (!Number.isFinite(branchId) || branchId <= 0) {
         return { data: [], error: null };
@@ -763,6 +772,9 @@ export async function getProductsByBranch(
             branchId,
             ...(destinationBranchId != null && destinationBranchId > 0
                 ? { destinationBranchId }
+                : {}),
+            ...(excludeOrderId != null && excludeOrderId > 0
+                ? { excludeOrderId }
                 : {}),
         },
     });

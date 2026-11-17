@@ -54,6 +54,56 @@ const DISPOSITION_CODES = {
     RETURN_TO_SUPPLIER: "RETURN_TO_SUPPLIER",
 } as const;
 
+const REPAIR_DISPOSITION_CODES = new Set<string>([
+    DISPOSITION_CODES.INTERNAL_REPAIR,
+    DISPOSITION_CODES.SUPPLIER_REPAIR,
+]);
+
+function formatDamagedProductApiError(error: {
+    message: string;
+    validationMessages?: string[];
+}): string {
+    if (error.validationMessages?.length) {
+        return error.validationMessages.join(". ");
+    }
+    return error.message;
+}
+
+/**
+ * Toast copy after create/update. Repair close (pending → completed) gets
+ * Ruta A/B wording; other saves stay generic.
+ */
+export function buildDamagedProductSaveFeedback(input: {
+    mode: "create" | "edit";
+    previousStatus?: string | null;
+    detail: Pick<
+        DamagedProductDetail,
+        "folio" | "status" | "dispositionCode" | "serviceOrderFolio"
+    > | { id: number; folio: string };
+}): string {
+    if (input.mode === "create") {
+        return `Folio ${input.detail.folio} registrado correctamente.`;
+    }
+
+    const detail = input.detail as Pick<
+        DamagedProductDetail,
+        "folio" | "status" | "dispositionCode" | "serviceOrderFolio"
+    >;
+    const closedRepair =
+        (input.previousStatus ?? "").toLowerCase() === "pending" &&
+        detail.status.toLowerCase() === "completed" &&
+        REPAIR_DISPOSITION_CODES.has(detail.dispositionCode);
+
+    if (closedRepair) {
+        if (detail.serviceOrderFolio) {
+            return `Reparación finalizada. La orden ${detail.serviceOrderFolio} quedó lista para entregar en Atención al Cliente.`;
+        }
+        return "Reparación finalizada. El folio se cerró y el inventario Foly se actualizó.";
+    }
+
+    return `Cambios guardados en el folio ${detail.folio}.`;
+}
+
 const REPAIR_COST_ASSIGNEE_OPTIONS: { value: RepairCostAssignee; label: string }[] = [
     { value: "supplier", label: "Proveedor" },
     { value: "foly", label: "Foly" },
@@ -726,6 +776,7 @@ export function AddDamagedGoodsModal({
     // gana y ningún refetch del folio puede pisarla.
     const [pickedLetter, setPickedLetter] = useState<UploadedFileItem[] | null>(null);
     const showError = useSnackbarStore((s) => s.showError);
+    const showSuccess = useSnackbarStore((s) => s.showSuccess);
 
     const isEditMode = damagedProductId != null;
 
@@ -839,6 +890,9 @@ export function AddDamagedGoodsModal({
             if (data.endDate && !data.solutionText?.trim()) {
                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["solutionText"] });
             }
+            if (isEditMode && data.solutionText?.trim() && !data.endDate) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["endDate"] });
+            }
             if (data.includeCost && !data.repairCost) {
                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.required, path: ["repairCost"] });
             }
@@ -932,9 +986,14 @@ export function AddDamagedGoodsModal({
             try {
                 if (onSubmit) {
                     await onSubmit(values);
-                } else if (isEditMode) {
+                    onClose();
+                    return;
+                }
+
+                if (isEditMode) {
                     if (damagedProductId == null) {
-                        throw new Error("Folio no encontrado");
+                        showError("Folio no encontrado");
+                        return;
                     }
                     const dispositionItem = catalogRef.current?.dispositions.find(
                         (d) => (d.code ?? catalogItemIdString(d)) === values.damagedProductDisposition,
@@ -1000,121 +1059,158 @@ export function AddDamagedGoodsModal({
                         )
                         : await updateDamagedProduct(damagedProductId, updatePayload);
                     if (result.error != null) {
-                        throw new Error(result.error.message);
+                        showError(formatDamagedProductApiError(result.error));
+                        return;
                     }
-                    onSuccess?.();
-                } else {
-                    const dispositionItem = catalogRef.current?.dispositions.find(
-                        (d) => (d.code ?? catalogItemIdString(d)) === values.damagedProductDisposition,
+                    if (result.data == null) {
+                        showError("No se pudo guardar el registro. Intenta de nuevo.");
+                        return;
+                    }
+                    showSuccess(
+                        buildDamagedProductSaveFeedback({
+                            mode: "edit",
+                            previousStatus: folio?.status,
+                            detail: result.data,
+                        }),
                     );
-                    const dispositionCode = dispositionItem?.code ?? values.damagedProductDisposition;
+                    onSuccess?.();
+                    onClose();
+                    return;
+                }
 
-                    const useFormData = dispositionCode === DISPOSITION_CODES.RETURN_TO_SUPPLIER && acceptanceLetter.length > 0;
+                const dispositionItem = catalogRef.current?.dispositions.find(
+                    (d) => (d.code ?? catalogItemIdString(d)) === values.damagedProductDisposition,
+                );
+                const dispositionCode = dispositionItem?.code ?? values.damagedProductDisposition;
 
-                    if (useFormData) {
-                        const formData = new FormData();
-                        formData.append("productId", String(values.productId));
-                        formData.append("branchId", String(parseInt(values.branchId, 10)));
-                        formData.append("damageOriginId", String(parseInt(values.damageOrigin, 10)));
-                        formData.append("damageTypeId", String(parseInt(values.damageType, 10)));
-                        formData.append("dispositionCode", dispositionCode);
-                        formData.append("damageDescription", values.damageDetected);
-                        if (values.serialNumber) formData.append("serialNumber", values.serialNumber);
-                        if (values.observations) formData.append("observations", values.observations);
-                        const createdReturnSupplierId = returnSupplierIdForDisposition(
-                            dispositionCode,
-                            values.returnSupplierId,
-                        );
-                        if (createdReturnSupplierId != null) {
-                            formData.append("returnSupplierId", String(createdReturnSupplierId));
+                const useFormData = dispositionCode === DISPOSITION_CODES.RETURN_TO_SUPPLIER && acceptanceLetter.length > 0;
+
+                let created: { id: number; folio: string } | null = null;
+
+                if (useFormData) {
+                    const formData = new FormData();
+                    formData.append("productId", String(values.productId));
+                    formData.append("branchId", String(parseInt(values.branchId, 10)));
+                    formData.append("damageOriginId", String(parseInt(values.damageOrigin, 10)));
+                    formData.append("damageTypeId", String(parseInt(values.damageType, 10)));
+                    formData.append("dispositionCode", dispositionCode);
+                    formData.append("damageDescription", values.damageDetected);
+                    if (values.serialNumber) formData.append("serialNumber", values.serialNumber);
+                    if (values.observations) formData.append("observations", values.observations);
+                    const createdReturnSupplierId = returnSupplierIdForDisposition(
+                        dispositionCode,
+                        values.returnSupplierId,
+                    );
+                    if (createdReturnSupplierId != null) {
+                        formData.append("returnSupplierId", String(createdReturnSupplierId));
+                    }
+
+                    const file = acceptanceLetter[0];
+                    if (file.file) {
+                        formData.append("acceptanceLetter", file.file, file.name);
+                    }
+
+                    const result = await createDamagedProduct(formData);
+                    if (result.error != null) {
+                        showError(formatDamagedProductApiError(result.error));
+                        return;
+                    }
+                    created = result.data;
+                } else {
+                    const payload: CreateDamagedProductPayload = {
+                        productId: values.productId,
+                        branchId: parseInt(values.branchId, 10),
+                        damageOriginId: parseInt(values.damageOrigin, 10),
+                        damageTypeId: parseInt(values.damageType, 10),
+                        dispositionCode,
+                        damageDescription: values.damageDetected,
+                        serialNumber: values.serialNumber || undefined,
+                        observations: values.observations || undefined,
+                    };
+
+                    if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR ||
+                        dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
+                        // Interna: técnico Foly (assignedToId → repair_assigned_user_id).
+                        // Externa: taller (repairSupplierId); no enviar assignedToId.
+                        if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR) {
+                            payload.assignedToId = values.assignedToId
+                                ? parseInt(values.assignedToId, 10)
+                                : undefined;
                         }
-
-                        const file = acceptanceLetter[0];
-                        if (file.file) {
-                            formData.append("acceptanceLetter", file.file, file.name);
+                        if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
+                            payload.repairSupplierId = values.assignedToId
+                                ? parseInt(values.assignedToId, 10)
+                                : undefined;
                         }
-
-                        const result = await createDamagedProduct(formData);
-                        if (result.error != null) {
-                            throw new Error(result.error.message);
+                        payload.responsibleId = values.responsibleId ? parseInt(values.responsibleId, 10) : undefined;
+                        if (values.solutionText?.trim()) {
+                            payload.solutionText = values.solutionText.trim();
                         }
-                    } else {
-                        const payload: CreateDamagedProductPayload = {
-                            productId: values.productId,
-                            branchId: parseInt(values.branchId, 10),
-                            damageOriginId: parseInt(values.damageOrigin, 10),
-                            damageTypeId: parseInt(values.damageType, 10),
-                            dispositionCode,
-                            damageDescription: values.damageDetected,
-                            serialNumber: values.serialNumber || undefined,
-                            observations: values.observations || undefined,
-                        };
-
-                        if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR ||
-                            dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
-                            // Interna: técnico Foly (assignedToId → repair_assigned_user_id).
-                            // Externa: taller (repairSupplierId); no enviar assignedToId.
-                            if (dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR) {
-                                payload.assignedToId = values.assignedToId
-                                    ? parseInt(values.assignedToId, 10)
-                                    : undefined;
+                        payload.endDate = values.endDate || undefined;
+                        if (values.includeCost && values.repairCost) {
+                            payload.repairCost = parseFloat(values.repairCost);
+                            if (values.repairCostAssignedTo !== "") {
+                                payload.repairCostAssignedTo = values.repairCostAssignedTo;
                             }
-                            if (dispositionCode === DISPOSITION_CODES.SUPPLIER_REPAIR) {
-                                payload.repairSupplierId = values.assignedToId
-                                    ? parseInt(values.assignedToId, 10)
-                                    : undefined;
+                            if (
+                                dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR &&
+                                values.repairCostAssignedTo === "supplier" &&
+                                values.chargedSupplierId
+                            ) {
+                                payload.chargedSupplierId = parseInt(values.chargedSupplierId, 10);
                             }
-                            payload.responsibleId = values.responsibleId ? parseInt(values.responsibleId, 10) : undefined;
-                            if (values.solutionText?.trim()) {
-                                payload.solutionText = values.solutionText.trim();
-                            }
-                            payload.endDate = values.endDate || undefined;
-                            if (values.includeCost && values.repairCost) {
-                                payload.repairCost = parseFloat(values.repairCost);
-                                if (values.repairCostAssignedTo !== "") {
-                                    payload.repairCostAssignedTo = values.repairCostAssignedTo;
-                                }
-                                if (
-                                    dispositionCode === DISPOSITION_CODES.INTERNAL_REPAIR &&
-                                    values.repairCostAssignedTo === "supplier" &&
-                                    values.chargedSupplierId
-                                ) {
-                                    payload.chargedSupplierId = parseInt(values.chargedSupplierId, 10);
-                                }
-                            }
-                        }
-
-                        const jsonReturnSupplierId = returnSupplierIdForDisposition(
-                            dispositionCode,
-                            values.returnSupplierId,
-                        );
-                        if (jsonReturnSupplierId != null) {
-                            payload.returnSupplierId = jsonReturnSupplierId;
-                        }
-
-                        if (dispositionCode === DISPOSITION_CODES.AUCTION_SALE && values.auctionPrice) {
-                            payload.auctionPrice = parseFloat(values.auctionPrice);
-                        }
-
-                        const result = await createDamagedProduct(payload);
-                        if (result.error != null) {
-                            throw new Error(result.error.message);
                         }
                     }
-                    onSuccess?.();
+
+                    const jsonReturnSupplierId = returnSupplierIdForDisposition(
+                        dispositionCode,
+                        values.returnSupplierId,
+                    );
+                    if (jsonReturnSupplierId != null) {
+                        payload.returnSupplierId = jsonReturnSupplierId;
+                    }
+
+                    if (dispositionCode === DISPOSITION_CODES.AUCTION_SALE && values.auctionPrice) {
+                        payload.auctionPrice = parseFloat(values.auctionPrice);
+                    }
+
+                    const result = await createDamagedProduct(payload);
+                    if (result.error != null) {
+                        showError(formatDamagedProductApiError(result.error));
+                        return;
+                    }
+                    created = result.data;
                 }
+
+                if (created == null) {
+                    showError("No se pudo guardar el registro. Intenta de nuevo.");
+                    return;
+                }
+                showSuccess(
+                    buildDamagedProductSaveFeedback({
+                        mode: "create",
+                        detail: created,
+                    }),
+                );
+                onSuccess?.();
                 onClose();
             } catch (err) {
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : "No se pudo guardar el registro. Intenta de nuevo.";
-                showError(message);
+                showError(getApiErrorMessage(err));
             } finally {
                 setSubmitting(false);
             }
         },
-        [onSubmit, onClose, onSuccess, acceptanceLetter, isEditMode, damagedProductId, showError],
+        [
+            onSubmit,
+            onClose,
+            onSuccess,
+            acceptanceLetter,
+            isEditMode,
+            damagedProductId,
+            folio?.status,
+            showError,
+            showSuccess,
+        ],
     );
 
     const dataReady = catalog != null && (!isEditMode || folio != null);

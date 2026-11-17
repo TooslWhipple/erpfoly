@@ -1,5 +1,6 @@
 import type { ApiError } from "@/lib/axios";
-import type { HandoverErrorCode } from "@/types/saleHandover.types";
+import type { BlockReason, HandoverErrorCode } from "@/types/saleHandover.types";
+import { blockReasonLabel } from "./handover";
 
 function formatTime(iso: unknown): string {
   if (typeof iso !== "string") return "";
@@ -35,6 +36,12 @@ export function handoverErrorMessage(error: ApiError): string {
     }
     case "OTP_SEND_FAILED":
       return "No se pudo enviar el código por WhatsApp. Intenta de nuevo o usa la autorización de respaldo.";
+    case "INVALID_PHONE":
+      return "El celular debe tener 10 dígitos.";
+    case "NOT_BRANCH_PICKUP":
+      return "La venta no es para recoger en sucursal.";
+    case "NOTHING_PENDING":
+      return "La venta no tiene artículos pendientes de entregar.";
     case "RECEIVER_NOT_THIRD_PARTY":
       return "Quien recibe es el titular: no requiere código.";
     case "SUPERVISOR_REJECTED":
@@ -77,6 +84,8 @@ export function handoverErrorMessage(error: ApiError): string {
         ? `La fecha excede el máximo permitido (${max.slice(0, 10)}).`
         : "La fecha de prórroga está fuera del rango permitido.";
     }
+    case "HOLD_NOT_RESPONSIBLE":
+      return "Solo la sucursal que vendió gestiona este resguardo.";
     case "IDEMPOTENCY_KEY_REUSED":
       return "La entrega cambió desde el último intento. Vuelve a confirmar.";
     default:
@@ -90,4 +99,37 @@ export function shouldReloadDetail(error: ApiError): boolean {
     error.errorCode === "QUANTITY_EXCEEDS_READY" ||
     error.errorCode === "HANDOVER_BLOCKED"
   );
+}
+
+const BLOCK_REASONS: readonly BlockReason[] = [
+  "CANCELLED",
+  "NOT_PAID",
+  "LAYAWAY_NOT_SETTLED",
+  "NOT_BRANCH_PICKUP",
+  "NOTHING_PENDING",
+  "HOLD_AUDIT_REVIEW",
+  "NOTHING_READY",
+  "OTHER_BRANCH",
+];
+
+/** Mensaje del cambio de ubicación de entrega a partir del error del back. */
+export function changeDeliveryBranchErrorMessage(error: ApiError): string {
+  const code = error.errorCode as HandoverErrorCode | undefined;
+  switch (code) {
+    case "SUPERVISOR_REJECTED":
+      return "Credenciales no válidas o sin permiso: autoriza un gerente de la sucursal que vendió, o un administrador.";
+    case "HANDOVER_BLOCKED": {
+      const reason = error.data?.blockReason;
+      const known = BLOCK_REASONS.find((item) => item === reason);
+      return known
+        ? `No se puede cambiar la ubicación. ${blockReasonLabel(known)}`
+        : "No se puede cambiar la ubicación de esta venta.";
+    }
+    case "SAME_BRANCH":
+      return "La venta ya se entrega en esa sucursal.";
+    case "INVALID_BRANCH":
+      return "La sucursal elegida no es válida o no está activa.";
+    default:
+      return handoverErrorMessage(error);
+  }
 }

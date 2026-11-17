@@ -7,6 +7,7 @@ import {
   cartLineDiscounts,
   cartListSubtotal,
   approvedSpecialDiscount,
+  extendUnitQuote,
   lineTotal,
   merchandiseTotal,
   patchCartLinePrices,
@@ -20,6 +21,22 @@ assert.equal(merchandiseTotal([line]), 13175);
 
 const two = { originalPrice: 1000, discountAmount: 300, quantity: 2 };
 assert.equal(lineTotal(two), 1700);
+
+const unit = { originalPrice: 999, discountAmount: 0, finalPrice: 999 };
+assert.deepEqual(extendUnitQuote(unit, 0), {
+  originalPrice: 999,
+  discountAmount: 0,
+  total: 999,
+});
+assert.deepEqual(extendUnitQuote(unit, 2), {
+  originalPrice: 999,
+  discountAmount: 0,
+  total: 1998,
+});
+assert.deepEqual(
+  extendUnitQuote({ originalPrice: 1000, discountAmount: 100, finalPrice: 900 }, 2),
+  { originalPrice: 1000, discountAmount: 200, total: 1800 },
+);
 assert.equal(cartLineDiscounts([two]), 300);
 assert.equal(merchandiseTotal([two], 100), 1600);
 

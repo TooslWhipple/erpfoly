@@ -11,11 +11,9 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Menu,
-  MenuItem,
   Grid,
 } from "@mui/material";
-import { ArrowDownFromLine, ListFilter, BadgeDollarSign, CircleArrowDown, CircleArrowUp } from "lucide-react";
+import { BadgeDollarSign, CircleArrowDown, CircleArrowUp } from "lucide-react";
 import numeral from "numeral";
 import { Card } from "@/styles/catalogos/goals.styles";
 import { theme } from "@/styles/theme";
@@ -31,21 +29,6 @@ import type {
 } from "@/types/sucursales.types";
 import { SalesMonthGoalCard, MonthlySalesComposedChartCard } from "@/components/SalesDashboard";
 
-const MONTH_NAMES = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
 interface SalesTabProps {
   branchId: number;
 }
@@ -56,8 +39,6 @@ export function SalesTab({ branchId }: SalesTabProps) {
   const [kpis, setKpis] = useState<SalesDashboardKpis | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlySalesPoint[]>([]);
   const [sellers, setSellers] = useState<SellerSalesRow[]>([]);
-  const [monthAnchor, setMonthAnchor] = useState<null | HTMLElement>(null);
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => new Date().getMonth());
 
   const fetchData = useCallback(async () => {
     if (!branchId) return;
@@ -89,17 +70,6 @@ export function SalesTab({ branchId }: SalesTabProps) {
     fetchData();
   }, [fetchData]);
 
-  const handleMonthOpen = (e: React.MouseEvent<HTMLElement>) => {
-    setMonthAnchor(e.currentTarget);
-  };
-  const handleMonthClose = () => setMonthAnchor(null);
-  const handleMonthSelect = (index: number) => {
-    setSelectedMonthIndex(index);
-    handleMonthClose();
-  };
-
-  const currentMonthLabel = MONTH_NAMES[selectedMonthIndex];
-
   if (loading && !kpis) {
     return (
       <Stack alignItems="center" justifyContent="center" minHeight={320} spacing={2}>
@@ -124,38 +94,7 @@ export function SalesTab({ branchId }: SalesTabProps) {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h6">Dashboard de ventas</Typography>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Menu
-            anchorEl={monthAnchor}
-            open={Boolean(monthAnchor)}
-            onClose={handleMonthClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-          >
-            {MONTH_NAMES.map((name, index) => (
-              <MenuItem
-                key={name}
-                onClick={() => handleMonthSelect(index)}
-                selected={selectedMonthIndex === index}
-              >
-                {name}
-              </MenuItem>
-            ))}
-          </Menu>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleMonthOpen}
-            startIcon={<ListFilter strokeWidth={2} size={16} />}
-          >
-            Mes actual [{currentMonthLabel}]
-          </Button>
-          <Button variant="outlined" size="small" startIcon={<ArrowDownFromLine strokeWidth={2} size={16} />}>
-            Descargar reporte
-          </Button>
-        </Stack>
-      </Stack>
+      <Typography variant="h6">Dashboard de ventas</Typography>
 
       <Grid container spacing={2} alignItems="stretch">
         <Grid size={{ xs: 12, md: 6 }}>

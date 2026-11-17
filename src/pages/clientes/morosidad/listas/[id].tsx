@@ -2,14 +2,20 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
-import { Breadcrumbs, Title, TableCrud } from "@/components";
+import { Breadcrumbs, Title, TableCrud, StatusChip } from "@/components";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
-import { SharedDelinquencyClientModal } from "@/components/Delinquency";
+import { SharedDelinquencyClientModal, SharedListDashboard } from "@/components/Delinquency";
 import { getDelinquencySharedListById } from "@/services/delinquency-shared-list.service";
 import { unwrapOrThrow } from "@/lib/axios";
-import type { DelinquencySharedListClientSnapshot } from "@/types/delinquency-shared-list.types";
+import type {
+  DelinquencyManagementStatus,
+  DelinquencySharedListClientSnapshot,
+} from "@/types/delinquency-shared-list.types";
 import { formatDate } from "@/utils/date";
+import {
+  DELINQUENCY_MANAGEMENT_STATUS_LABELS,
+} from "@/constants/delinquency-management-status";
 
 const DATE_FORMAT = "D [de] MMMM, YYYY";
 
@@ -66,47 +72,70 @@ export default function DelinquencySharedListDetailPage() {
     () => [
       {
         id: "fullName",
-        label: "CLIENTE",
+        label: "Cliente",
         size: "xl",
         truncate: true,
       },
       {
         id: "phone",
-        label: "TELÉFONO",
+        label: "Teléfono",
         size: "md",
         format: (value) => (value ? String(value) : "—"),
       },
       {
         id: "email",
-        label: "EMAIL",
+        label: "Email",
         size: "lg",
         format: (value) => (value ? String(value) : "—"),
       },
       {
         id: "lastPaymentDate",
-        label: "ÚLTIMO PAGO",
+        label: "Último pago",
         size: "lg",
         format: (value) => (value ? formatDate(value, DATE_FORMAT) : "—"),
       },
       {
         id: "delinquencyPeriod",
-        label: "MOROSIDAD",
+        label: "Morosidad",
         size: "sm",
-        type: "chip",
         align: "center",
-        chipLabelMap: DELINQUENCY_CHIP_LABELS,
-        chipVariantMap: DELINQUENCY_CHIP_VARIANTS,
+        format: (value) =>
+          typeof value === "string" ? (
+            <StatusChip
+              label={DELINQUENCY_CHIP_LABELS[value] ?? value}
+              variant={DELINQUENCY_CHIP_VARIANTS[value] ?? "default"}
+              size="small"
+            />
+          ) : (
+            "Al corriente"
+          ),
       },
       {
         id: "totalDebtAmount",
-        label: "DEUDA ACTUAL",
+        label: "Deuda asignada",
         type: "currency",
         size: "md",
         align: "right",
       },
       {
+        id: "currentDebtAmount",
+        label: "Deuda actual",
+        type: "currency",
+        size: "md",
+        align: "right",
+      },
+      {
+        id: "managementStatus",
+        label: "Estatus de gestión",
+        size: "lg",
+        format: (value) =>
+          DELINQUENCY_MANAGEMENT_STATUS_LABELS[
+            value as DelinquencyManagementStatus
+          ] ?? "—",
+      },
+      {
         id: "negotiatedDebtAmount",
-        label: "NEGOCIACIÓN",
+        label: "Negociación",
         size: "md",
         align: "right",
         format: (value) =>
@@ -182,6 +211,8 @@ export default function DelinquencySharedListDetailPage() {
         </Typography>
       </Stack>
 
+      <SharedListDashboard listId={list.id} closedAt={list.closedAt} />
+
       <TableCrud
         columns={columns}
         rows={list.clients}
@@ -198,9 +229,9 @@ export default function DelinquencySharedListDetailPage() {
           setModalOpen(false);
           setSelectedListClientId(null);
         }}
-        mode="internal"
         listId={list.id}
         listClientId={selectedListClientId}
+        listClosed={list.closedAt != null}
         onNegotiationSuccess={() => {
           void queryClient.invalidateQueries({
             queryKey: ["clients", "delinquency", "shared-list", listId],

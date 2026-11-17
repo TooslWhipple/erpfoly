@@ -11,7 +11,22 @@ export const INVENTORY_COLORS = {
     yellowBorder: "#fde047",
     red: "#dc2626",
     redBorder: "#fca5a5",
+    /** Cero / neutro — no usar verde de “disponible”. */
+    zero: "#71717A",
 };
+
+/**
+ * Color de cantidad de inventario según signo.
+ * Negativos siempre en rojo; cero en gris; positivos usan `positiveColor`.
+ */
+export function inventoryQuantityColor(
+    value: number,
+    positiveColor: string,
+): string {
+    if (value < 0) return INVENTORY_COLORS.red;
+    if (value === 0) return INVENTORY_COLORS.zero;
+    return positiveColor;
+}
 
 export const StatusText = styled("span")<{ status: DamageStatus }>(({ status }) => {
     const statusColors: Record<DamageStatus, string> = {

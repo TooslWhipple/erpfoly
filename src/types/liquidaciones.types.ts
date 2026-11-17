@@ -34,6 +34,25 @@ export interface PriceSuggestionItem {
   alternativePrices: PriceSuggestionOption[];
 }
 
+export interface LiquidatedProductItem {
+  id: string;
+  sku: string;
+  productName: string;
+  imageUrl?: string | null;
+  originalPrice: number;
+  liquidationPrice: number;
+  discountPercent: number;
+  stock: number;
+}
+
+export interface PaginatedLiquidatedProducts {
+  data: LiquidatedProductItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface LowRotationStrategyResponse {
   summary: LowRotationSummaryStats;
   departments: DepartmentLowRotation[];

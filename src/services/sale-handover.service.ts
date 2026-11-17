@@ -1,4 +1,4 @@
-import { api, get, patch, post } from "@/lib/axios";
+import { api, get, patch, post, put } from "@/lib/axios";
 import type {
   ApiResult,
   AxiosConfigWithSkipToast,
@@ -7,6 +7,8 @@ import type {
 import { buildListUrl } from "@/lib/apiHelpers";
 import { downloadBlob, printPdfBlob } from "@/lib/printing";
 import type {
+  ChangeDeliveryBranchRequest,
+  ChangeDeliveryBranchResponse,
   ConfirmHandoverRequest,
   DeliveryConfig,
   ExtendHoldRequest,
@@ -17,7 +19,9 @@ import type {
   HoldRow,
   ReleaseHoldRequest,
   ReleaseHoldResponse,
+  PickupReceiver,
   UpdateDeliveryConfigRequest,
+  UpdateHandoverReceiverRequest,
   GetHandoverQueueParams,
   HandoverBranch,
   HandoverFileKind,
@@ -51,11 +55,13 @@ export function getHandoverQueue(
 
 export function getHandoverSaleDetail(
   saleId: number,
-  branchId: number,
+  branchId: number | null,
   config?: AxiosConfigWithSkipToast,
 ): Promise<ApiResult<HandoverSaleDetail>> {
   return get<HandoverSaleDetail>(
-    `${BASE}/sales/${saleId}?branchId=${branchId}`,
+    branchId === null
+      ? `${BASE}/sales/${saleId}`
+      : `${BASE}/sales/${saleId}?branchId=${branchId}`,
     config,
   );
 }
@@ -110,6 +116,26 @@ export function confirmHandover(
   payload: ConfirmHandoverRequest,
 ): Promise<ApiResult<HandoverResult>> {
   return post<HandoverResult>(BASE, payload, { skipGlobalErrorToast: true });
+}
+
+export function updateHandoverReceiver(
+  saleId: number,
+  payload: UpdateHandoverReceiverRequest,
+): Promise<ApiResult<PickupReceiver>> {
+  return put<PickupReceiver>(`${BASE}/sales/${saleId}/receiver`, payload, {
+    skipGlobalErrorToast: true,
+  });
+}
+
+export function changeDeliveryBranch(
+  saleId: number,
+  payload: ChangeDeliveryBranchRequest,
+): Promise<ApiResult<ChangeDeliveryBranchResponse>> {
+  return patch<ChangeDeliveryBranchResponse>(
+    `${BASE}/sales/${saleId}/delivery-branch`,
+    payload,
+    { skipGlobalErrorToast: true },
+  );
 }
 
 export function getSaleHandovers(

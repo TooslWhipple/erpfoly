@@ -206,7 +206,10 @@ export default function RecepcionMercancias() {
     router.push(`/recepcion-mercancias/${reception.id}/editar`);
   };
   const handleRowClick = (reception: MerchandiseReception) => {
-    if (reception.status === "pre_authorized") {
+    if (
+      reception.status === "pre_authorized" ||
+      reception.status === "pre_captured"
+    ) {
       handleEditReception(reception);
       return;
     }

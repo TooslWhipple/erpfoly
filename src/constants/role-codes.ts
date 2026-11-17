@@ -6,12 +6,17 @@ export const ROLE_CODES = {
   GERENTE: "GERENTE",
   AUDITOR: "AUDITOR",
   ANALISTA_DE_CREDITO: "ANALISTA_DE_CREDITO",
+  COBRANZA_EXTERNA: "COBRANZA_EXTERNA",
 } as const;
 
 export type RoleCode = (typeof ROLE_CODES)[keyof typeof ROLE_CODES];
 
 export function isDriverRoleCode(code: string | undefined): boolean {
   return code === ROLE_CODES.CHOFER || code === ROLE_CODES.AYUDANTE_CHOFER;
+}
+
+export function isCollectorRoleCode(code: string | undefined): boolean {
+  return code === ROLE_CODES.COBRANZA_EXTERNA;
 }
 
 // Roles "altos" (gerencia/administración): sugeridos con OTP activado por

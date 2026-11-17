@@ -4,6 +4,7 @@ import type { TransferAction } from "../types/transfers.types";
 import {
   getIncidentButtons,
   getTimelineActionLabel,
+  getTransferQuantityFeedback,
   getTransferButtons,
   isStaleTransferErrorCode,
   requiresAccountingAccount,
@@ -116,5 +117,37 @@ describe("requiresAccountingAccount", () => {
   it("solo la pérdida en tránsito exige cuenta contable", () => {
     assert.equal(requiresAccountingAccount("LOSS_IN_TRANSIT"), true);
     assert.equal(requiresAccountingAccount("FOUND_AT_DESTINATION"), false);
+  });
+});
+
+describe("getTransferQuantityFeedback", () => {
+  const cap = (remaining: number | null, minStock = 0, stock = 0, inTransit = 0) => ({
+    remaining,
+    minStock,
+    stock,
+    inTransit,
+  });
+  it("sin límite no marca error", () => {
+    assert.equal(getTransferQuantityFeedback(9999, cap(null)), null);
+  });
+  it("igual al límite pasa", () => {
+    assert.equal(getTransferQuantityFeedback(5, cap(5)), null);
+  });
+  it("sobre el límite da error con el texto exacto", () => {
+    assert.deepEqual(getTransferQuantityFeedback(6, cap(5), "FOLY ALTAMIRA"), {
+      level: "error",
+      message: "Excede el máximo permitido. Capacidad restante en FOLY ALTAMIRA: 5 unidades",
+    });
+  });
+  it("restante 0 bloquea cualquier cantidad", () => {
+    assert.equal(getTransferQuantityFeedback(1, cap(0))?.level, "error");
+    assert.match(getTransferQuantityFeedback(1, cap(0))?.message ?? "", /: 0 unidades$/);
+  });
+  it("avisa cuando queda bajo el mínimo", () => {
+    assert.equal(getTransferQuantityFeedback(1, cap(5, 4, 1, 1))?.level, "warning");
+    assert.equal(getTransferQuantityFeedback(2, cap(5, 4, 1, 1)), null);
+  });
+  it("sin aviso cuando el mínimo es 0", () => {
+    assert.equal(getTransferQuantityFeedback(1, cap(null, 0, 0, 0)), null);
   });
 });

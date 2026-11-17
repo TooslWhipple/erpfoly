@@ -32,10 +32,7 @@ export function SharedDelinquencyClientHeader({
   client,
 }: SharedDelinquencyClientHeaderProps) {
   const theme = useTheme();
-  const requiredPayment =
-    client.isNegotiated && client.negotiatedDebtAmount != null
-      ? client.negotiatedDebtAmount
-      : client.totalDebtAmount;
+  const requiredPayment = client.currentDebtAmount;
   const relative = relativeDueLabel(client.dueDate);
   const creditAuthorized = client.creditLineAuthorized ?? 0;
   const creditUsed = client.creditUsed ?? 0;
@@ -74,7 +71,10 @@ export function SharedDelinquencyClientHeader({
           Pago requerido{" "}
           <Box component="span" sx={{ color: "text.primary", fontWeight: 700 }}>
             {numeral(requiredPayment).format("$0,0.00")}
-          </Box>{" "}
+          </Box>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Vencimiento al asignar:{" "}
           <Box component="span" sx={{ color: "error.main", fontWeight: 500 }}>
             {formatDate(client.dueDate, "D [de] MMMM, YYYY")}
             {relative ? ` (${relative})` : ""}

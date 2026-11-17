@@ -25,9 +25,19 @@ import {
   type DriverFormState,
   type DriverFormErrors,
 } from "@/components/UserDriverFields";
-import type { UserDriverDetailsPayload } from "@/services/users.service";
+import {
+  UserCollectorFields,
+  initialCollectorForm,
+  type CollectorFormState,
+  type CollectorFormErrors,
+} from "@/components/UserCollectorFields";
+import type {
+  UserCollectorDetailsPayload,
+  UserDriverDetailsPayload,
+} from "@/services/users.service";
 import {
   ROLE_CODES,
+  isCollectorRoleCode,
   isDriverRoleCode,
   isHighPrivilegeRoleCode,
 } from "@/constants/role-codes";
@@ -142,6 +152,9 @@ export default function UserFormPage() {
   const [driverForm, setDriverForm] =
     useState<DriverFormState>(initialDriverForm);
   const [driverErrors, setDriverErrors] = useState<DriverFormErrors>({});
+  const [collectorForm, setCollectorForm] =
+    useState<CollectorFormState>(initialCollectorForm);
+  const [collectorErrors, setCollectorErrors] = useState<CollectorFormErrors>({});
   /** The user as the back last returned it; edits are diffed against it. */
   const [savedUser, setSavedUser] = useState<UserFormState | null>(null);
   const selectedRole = roles.find((role) => role.id === user.roleId);
@@ -185,6 +198,16 @@ export default function UserFormPage() {
     setSavedUser(loaded);
     setUser(loaded);
     setErrors({});
+    setCollectorErrors({});
+    setCollectorForm(
+      data.collectorDetails
+        ? {
+            maxNegotiationPercent: String(
+              data.collectorDetails.maxNegotiationPercent,
+            ),
+          }
+        : initialCollectorForm,
+    );
     setDriverErrors({});
     setDriverForm(
       data.driverDetails
@@ -242,6 +265,22 @@ export default function UserFormPage() {
     },
     [],
   );
+  const setCollectorField = useCallback(
+    <K extends keyof CollectorFormState>(
+      key: K,
+      value: CollectorFormState[K],
+    ) => {
+      setCollectorForm((prev) => ({
+        ...prev,
+        [key]: value,
+      }));
+      setCollectorErrors((prev) => ({
+        ...prev,
+        [key]: "",
+      }));
+    },
+    [],
+  );
   const mergeDriverPatch = useCallback((patch: Partial<DriverFormState>) => {
     setDriverForm((prev) => ({
       ...prev,
@@ -273,6 +312,31 @@ export default function UserFormPage() {
       };
     }
     return payload;
+  };
+  const buildCollectorDetailsPayload = ():
+    UserCollectorDetailsPayload | undefined => {
+    if (!isCollectorRoleCode(selectedRoleCode)) return undefined;
+    return {
+      maxNegotiationPercent: Number(collectorForm.maxNegotiationPercent),
+    };
+  };
+  const validateCollectorForm = (): boolean => {
+    if (!isCollectorRoleCode(selectedRoleCode)) {
+      setCollectorErrors({});
+      return true;
+    }
+    const next: CollectorFormErrors = {};
+    const raw = collectorForm.maxNegotiationPercent.trim();
+    if (!raw) {
+      next.maxNegotiationPercent = "El tope de negociación es obligatorio";
+    } else {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0 || value > 100) {
+        next.maxNegotiationPercent = "El tope debe estar entre 0 y 100";
+      }
+    }
+    setCollectorErrors(next);
+    return Object.keys(next).length === 0;
   };
   const validateDriverForm = (): boolean => {
     if (!isDriverRoleCode(selectedRoleCode)) {
@@ -347,14 +411,17 @@ export default function UserFormPage() {
     }
     setErrors(next);
     const driverValid = validateDriverForm();
+    const collectorValid = validateCollectorForm();
     return (
       Object.keys(next).length === 0 &&
       driverValid &&
+      collectorValid &&
       !(usernameChanged && usernameExists)
     );
   };
   const handleCreate = async (
     driverDetails: UserDriverDetailsPayload | undefined,
+    collectorDetails: UserCollectorDetailsPayload | undefined,
   ) => {
     const result = await createUser({
       firstName: user.firstName.trim(),
@@ -366,6 +433,7 @@ export default function UserFormPage() {
       requiresOtp: user.requiresOtp,
       diverseDebtorId: user.diverseDebtorId || undefined,
       driverDetails,
+      collectorDetails,
     });
     if (result.error) {
       showError(result.error.message);
@@ -386,6 +454,7 @@ export default function UserFormPage() {
     id: number,
     saved: UserFormState,
     driverDetails: UserDriverDetailsPayload | undefined,
+    collectorDetails: UserCollectorDetailsPayload | undefined,
   ) => {
     const roleId = user.roleId as number;
     const roleChanged = roleId !== saved.roleId;
@@ -401,14 +470,14 @@ export default function UserFormPage() {
             branchIds: user.branchIds,
             diverseDebtorId: user.diverseDebtorId ?? null,
             // Driver details belong to the role they are sent with.
-            ...(roleChanged ? {} : { driverDetails }),
+            ...(roleChanged ? {} : { driverDetails, collectorDetails }),
           }),
       },
     ];
     if (roleChanged) {
       steps.push({
         label: "el rol",
-        run: () => updateUserRole(id, { roleId, driverDetails }),
+        run: () => updateUserRole(id, { roleId, driverDetails, collectorDetails }),
       });
     }
     if (cellphone !== saved.cellphone) {
@@ -451,11 +520,12 @@ export default function UserFormPage() {
   const handleConfirm = async () => {
     if (!validateForm()) return;
     const driverDetails = buildDriverDetailsPayload();
+    const collectorDetails = buildCollectorDetailsPayload();
     setSendingInvite(true);
     if (isNew) {
-      await handleCreate(driverDetails);
+      await handleCreate(driverDetails, collectorDetails);
     } else if (userId != null && savedUser) {
-      await handleUpdate(userId, savedUser, driverDetails);
+      await handleUpdate(userId, savedUser, driverDetails, collectorDetails);
     }
     setSendingInvite(false);
   };
@@ -761,6 +831,18 @@ export default function UserFormPage() {
               errors={driverErrors}
               onFieldChange={setDriverField}
               onMergePatch={mergeDriverPatch}
+              disabled={sendingInvite}
+            />
+          </>
+        )}
+        {isCollectorRoleCode(selectedRoleCode) && (
+          <>
+            <Divider />
+            <UserCollectorFields
+              roleCode={selectedRoleCode}
+              values={collectorForm}
+              errors={collectorErrors}
+              onFieldChange={setCollectorField}
               disabled={sendingInvite}
             />
           </>

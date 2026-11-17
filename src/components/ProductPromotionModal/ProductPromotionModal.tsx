@@ -69,15 +69,11 @@ function mapPayloadToFormState(
       : [...(payload.productIds ?? [])];
 
   const normalized = normalizeSavePromotionPayload(payload);
-  const purchaseType = configuration.purchaseTypes.find(
-    (p) => p.id === (normalized.purchaseTypeId ?? null)
-  );
-  const isApartado = purchaseType?.code === "APARTADO";
 
   return {
     name: normalized.name,
     percentage: String(normalized.discountRate),
-    advancePercentage: isApartado ? String(normalized.advanceRate) : "",
+    advancePercentage: "",
     purchaseTypeId: normalized.purchaseTypeId ?? null,
     creditTermIds: [...(normalized.creditTermIds ?? [])],
     layawayTermIds: [...(normalized.layawayTermIds ?? [])],

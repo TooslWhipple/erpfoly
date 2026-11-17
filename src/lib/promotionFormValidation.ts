@@ -24,28 +24,24 @@ export function validatePromotionEndDate(
   return undefined;
 }
 
+/**
+ * Top-level "Anticipo" is no longer used for sale promotions (Apartado uses
+ * Enganche / customerLevelDownPayments). Kept for call-site compatibility.
+ */
 export function validatePromotionAdvancePercentage(
-  purchaseTypeCode: string | undefined,
-  advancePercentage: string
+  _purchaseTypeCode: string | undefined,
+  _advancePercentage: string
 ): string | undefined {
-  if (purchaseTypeCode !== "APARTADO") {
-    return undefined;
-  }
-  const advanceNum =
-    advancePercentage === "" ? NaN : Number(advancePercentage);
-  if (isNaN(advanceNum) || advanceNum < 0 || advanceNum > 100) {
-    return "El anticipo debe estar entre 0 y 100";
-  }
   return undefined;
 }
 
+/**
+ * Sale promotions persist the commercial down payment only via
+ * customerLevelDownPayments; advance_rate is always 0.
+ */
 export function resolvePromotionAdvanceRate(
-  purchaseTypeCode: string | undefined,
-  advancePercentage: string
+  _purchaseTypeCode: string | undefined,
+  _advancePercentage: string
 ): number {
-  if (purchaseTypeCode !== "APARTADO") {
-    return 0;
-  }
-  const advanceNum = Number(advancePercentage);
-  return Number.isFinite(advanceNum) ? advanceNum : 0;
+  return 0;
 }

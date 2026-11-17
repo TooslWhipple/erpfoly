@@ -46,10 +46,14 @@ export interface DamagedProductListApiRow {
     productName: string;
     registeredByUser: string;
     damageType: string;
+    damageDescription?: string;
     status: string;
     /** Disposition code of the folio (e.g. "RETURN_TO_SUPPLIER"). */
     dispositionCode: string;
-    /** Human-readable elapsed time in Spanish (e.g. "menos de un minuto", "2 días"). */
+    /**
+     * Human-readable elapsed time in Spanish from the API (e.g. "menos de un minuto", "2 días").
+     * The list UI formats from `registrationDate` instead (compact cell + detail tooltip).
+     */
     elapsedSinceRegistration: string;
     /**
      * Derivado: "collected" si el folio ya está `completed`; si no,
@@ -63,6 +67,12 @@ export interface DamagedProductListApiRow {
     referenceLabel: string;
     /** ISO 8601 when the repair cycle was closed with an end date; otherwise null. */
     repairEndDate: string | null;
+    /** True cuando el artículo es propiedad del cliente (OS). */
+    isClientProperty?: boolean;
+    /** Reparación de cliente o devolución por cancelación. */
+    sourceLabel?: string | null;
+    /** Proveedor de reparación o técnico asignado. */
+    repairAssigneeLabel?: string;
 }
 
 /** Ver `discountStatus` en `DamagedProductListApiRow`. */
@@ -81,11 +91,25 @@ export type DamagedProductListItem = DamagedProductListApiRow & {
     statusDisplay: string;
 };
 
+export const DAMAGED_PRODUCT_SORT_FIELDS = [
+    "productName",
+    "registrationDate",
+    "elapsedSinceRegistration",
+    "branch",
+] as const;
+
+export type DamagedProductSortField =
+    (typeof DAMAGED_PRODUCT_SORT_FIELDS)[number];
+
+export type DamagedProductSortOrder = "asc" | "desc";
+
 export interface GetDamagedProductsQueryParams {
     page: number;
     limit: number;
     search?: string;
     status?: string;
+    sortField?: DamagedProductSortField;
+    sortOrder?: DamagedProductSortOrder;
     [key: string]: unknown;
 }
 
@@ -289,9 +313,12 @@ export async function createDamagedProduct(
     if (payload instanceof FormData) {
         return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload, {
             headers: { "Content-Type": "multipart/form-data" },
+            skipGlobalErrorToast: true,
         });
     }
-    return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload);
+    return post<{ id: number; folio: string }>(DAMAGED_PRODUCTS_BASE, payload, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 export interface DamagedProductProductDto {
@@ -362,6 +389,10 @@ export interface DamagedProductDetail {
     solutionText: string | null;
     listCost: null;
     lastCost: null;
+    /** Folio de la OS vinculada, si existe (p. ej. OS-13). */
+    serviceOrderFolio: string | null;
+    /** True cuando el artículo es propiedad del cliente (OS). */
+    isClientProperty: boolean;
 }
 
 /**
@@ -370,7 +401,9 @@ export interface DamagedProductDetail {
 export async function getDamagedProduct(
     id: number
 ): Promise<ApiResult<DamagedProductDetail>> {
-    return get<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`);
+    return get<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 /**
@@ -418,9 +451,12 @@ export async function updateDamagedProduct(
     if (payload instanceof FormData) {
         return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload, {
             headers: { "Content-Type": "multipart/form-data" },
+            skipGlobalErrorToast: true,
         });
     }
-    return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload);
+    return patch<DamagedProductDetail>(`${DAMAGED_PRODUCTS_BASE}/${id}`, payload, {
+        skipGlobalErrorToast: true,
+    });
 }
 
 /** Statuses the folio can transition to from the ERP list. */

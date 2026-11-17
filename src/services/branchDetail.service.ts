@@ -130,9 +130,16 @@ interface PaginatedPromotionsResponse {
 
 export async function getPromotions(
   branchId: number,
+  options?: { activeOnly?: boolean },
 ): Promise<ApiResult<BranchPromotion[]>> {
+  const params = new URLSearchParams({
+    branchIds: String(branchId),
+    limit: "100",
+    page: "1",
+  });
+  if (options?.activeOnly) params.set("activeOnly", "true");
   const result = await get<PaginatedPromotionsResponse>(
-    `/promotions?branchIds=${branchId}&limit=100&page=1`,
+    `/promotions?${params.toString()}`,
   );
   if (result.error || !result.data) {
     return { data: null, error: result.error };

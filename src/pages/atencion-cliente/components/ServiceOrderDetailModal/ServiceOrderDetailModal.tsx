@@ -9,13 +9,13 @@ import {
   Typography,
 } from "@mui/material";
 import { ChevronDown, CircleDotDashed } from "lucide-react";
-import { SideModal, TabFilters } from "@/components";
-import { getApiErrorMessage } from "@/lib/axios";
+import { ConfirmModal, SideModal, TabFilters } from "@/components";
 import {
   getServiceOrderById,
   updateServiceOrder,
   updateServiceOrderStatus,
 } from "@/services/service-orders.service";
+import { isHighPrivilegeRoleCode } from "@/constants/role-codes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { canUpdateCustomerSupportRepair } from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -32,6 +32,7 @@ import {
   indicacionesPatchForAction,
   paymentTypeLabel,
 } from "@/types/atencion-cliente.types";
+import dayjs from "@/lib/dayjs";
 import { formatDateOnly } from "@/utils/date";
 import {
   SERVICE_ORDER_STATUS_LABELS,
@@ -44,6 +45,36 @@ import { ServiceOrderSolucionTab } from "./ServiceOrderSolucionTab";
 import { theme } from "@/styles/theme";
 
 export type ServiceOrderDetailTab = "queja" | "indicaciones" | "solucion";
+
+type CancelFieldErrors = {
+  damage: string;
+  intake: string;
+  address: string;
+};
+
+const EMPTY_CANCEL_ERRORS: CancelFieldErrors = {
+  damage: "",
+  intake: "",
+  address: "",
+};
+
+function cancellationFieldErrors(
+  indicaciones: ServiceOrderIndicaciones,
+): CancelFieldErrors {
+  return {
+    damage: indicaciones.damageDescription.trim()
+      ? ""
+      : "Indica el daño del artículo a devolver.",
+    intake: indicaciones.warehouseIntake
+      ? ""
+      : "Indica si el cliente entrega el artículo o lo recolecta logística Foly.",
+    address:
+      indicaciones.warehouseIntake === "logistica_foly" &&
+      !indicaciones.address.trim()
+        ? "Indica el domicilio de recolección."
+        : "",
+  };
+}
 
 export interface ServiceOrderDetailModalProps {
   open: boolean;
@@ -70,8 +101,9 @@ export function ServiceOrderDetailModal({
 }: ServiceOrderDetailModalProps) {
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const showError = useSnackbarStore((state) => state.showError);
-  const { hasPermission } = usePermissions();
+  const { hasPermission, user } = usePermissions();
   const canUpdate = canUpdateCustomerSupportRepair(hasPermission);
+  const canCancelSale = isHighPrivilegeRoleCode(user?.role);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -79,6 +111,9 @@ export function ServiceOrderDetailModal({
   const [draft, setDraft] = useState<ServiceOrder | null>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] =
     useState<null | HTMLElement>(null);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [cancelErrors, setCancelErrors] =
+    useState<CancelFieldErrors>(EMPTY_CANCEL_ERRORS);
 
   const loadOrder = useCallback(async (id: string) => {
     setLoading(true);
@@ -121,6 +156,8 @@ export function ServiceOrderDetailModal({
     if (!open) {
       setDraft(null);
       setStatusMenuAnchor(null);
+      setConfirmCancelOpen(false);
+      setCancelErrors(EMPTY_CANCEL_ERRORS);
     }
   }, [open, serviceOrderId, loadOrder]);
 
@@ -141,6 +178,14 @@ export function ServiceOrderDetailModal({
         ? { ...prev, indicaciones: { ...prev.indicaciones, ...patch } }
         : prev,
     );
+    setCancelErrors((prev) => ({
+      damage: patch.damageDescription !== undefined ? "" : prev.damage,
+      intake: patch.warehouseIntake !== undefined ? "" : prev.intake,
+      address:
+        patch.address !== undefined || patch.warehouseIntake !== undefined
+          ? ""
+          : prev.address,
+    }));
   };
 
   const patchSolucion = (patch: Partial<ServiceOrderSolucion>) => {
@@ -151,13 +196,15 @@ export function ServiceOrderDetailModal({
 
   const handleStatusChange = async (status: ServiceOrderStatus) => {
     if (!draft) return;
+    const previousStatus = draft.status;
     setStatusMenuAnchor(null);
     setDraft((prev) => (prev ? { ...prev, status } : prev));
-    try {
-      await updateServiceOrderStatus(draft.id, status);
-    } catch (error) {
-      console.error("[ServiceOrderDetailModal] Error updating status:", error);
-      showError("No se pudo actualizar el estado.");
+    const result = await updateServiceOrderStatus(draft.id, status);
+    if (result.error || !result.data) {
+      setDraft((prev) =>
+        prev ? { ...prev, status: previousStatus } : prev,
+      );
+      showError(result.error?.message || "No se pudo actualizar el estado.");
     }
   };
 
@@ -169,29 +216,144 @@ export function ServiceOrderDetailModal({
       return;
     }
 
+    const ind = draft.indicaciones;
+    if (
+      (ind.action === "reparacion" || ind.action === "reemplazar") &&
+      ind.scheduledDate.trim()
+    ) {
+      const today = dayjs().format("YYYY-MM-DD");
+      if (ind.scheduledDate < today) {
+        showError("La fecha a realizar no puede ser anterior a hoy.");
+        setActiveTab("indicaciones");
+        return;
+      }
+    }
+    if (ind.action === "reparacion") {
+      if (!ind.damageDescription.trim()) {
+        showError("Indica el tipo de daño.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (ind.repairBy === "interna" && ind.repairTechnicianId == null) {
+        showError("Indica el técnico u operador responsable.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (
+        ind.repairBy === "interna" &&
+        ind.repairPlace === "bodega" &&
+        !ind.warehouseIntake
+      ) {
+        showError("Indica cómo ingresará el artículo a la bodega.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (
+        ind.repairPlace === "bodega" &&
+        ind.warehouseIntake === "logistica_foly" &&
+        !(ind.address || draft.customerAddress).trim()
+      ) {
+        showError("Indica el domicilio de recolección.");
+        setActiveTab("indicaciones");
+        return;
+      }
+    }
+
+    if (ind.action === "reemplazar") {
+      if (!ind.damageDescription.trim()) {
+        showError("Indica el tipo de daño.");
+        setActiveTab("indicaciones");
+        return;
+      }
+      if (ind.replacementBy === "foly") {
+        if (!ind.warehouseIntake) {
+          showError("Indica cómo ingresará el artículo dañado a sucursal.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (ind.branchId == null) {
+          showError("Indica la sucursal donde se recuperará el artículo.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (
+          ind.warehouseIntake === "logistica_foly" &&
+          !(ind.address || draft.customerAddress).trim()
+        ) {
+          showError("Indica el domicilio de recolección.");
+          setActiveTab("indicaciones");
+          return;
+        }
+        if (
+          !ind.supplierAuthorizationUrl &&
+          !ind.supplierAuthorizationFile
+        ) {
+          showError(
+            "Carga la carta de autorización del proveedor para liberar el artículo de reemplazo.",
+          );
+          setActiveTab("indicaciones");
+          return;
+        }
+      }
+    }
+
+    const requestingCancel =
+      canCancelSale &&
+      ind.action === "cancelar_venta" &&
+      !draft.recoverySheetId;
+    if (requestingCancel) {
+      const errors = cancellationFieldErrors(ind);
+      setCancelErrors(errors);
+      if (errors.damage || errors.intake || errors.address) {
+        setActiveTab("indicaciones");
+        return;
+      }
+      setConfirmCancelOpen(true);
+      return;
+    }
+
+    setCancelErrors(EMPTY_CANCEL_ERRORS);
+    await persistOrder(false);
+  };
+
+  const persistOrder = async (requestingCancel: boolean) => {
+    if (!draft) return;
     setSaving(true);
     try {
-      const updated = await updateServiceOrder(draft.id, {
-        title: draft.title,
-        status: draft.status,
-        queja: draft.queja,
-        indicaciones: draft.indicaciones,
-        solucion: draft.solucion,
-      });
+      const result = await updateServiceOrder(
+        draft.id,
+        {
+          title: draft.title,
+          status: draft.status,
+          queja: draft.queja,
+          indicaciones: draft.indicaciones,
+          solucion: draft.solucion,
+        },
+        { requestCancellation: requestingCancel },
+      );
+      if (result.error || !result.data) {
+        showError(
+          result.error?.message ||
+            "No se pudieron guardar los cambios. Intenta de nuevo.",
+        );
+        return;
+      }
+
+      const updated = result.data;
       setDraft(updated);
+      setConfirmCancelOpen(false);
+      setCancelErrors(EMPTY_CANCEL_ERRORS);
 
       if (updated.solucion.isSolved || updated.status === "finalizada") {
         showSuccess("Orden de servicio cerrada");
+      } else if (requestingCancel) {
+        showSuccess(
+          "Cancelación solicitada. El saldo se abona al recibir el artículo.",
+        );
       } else {
         showSuccess("Orden de servicio actualizada");
       }
       onSuccess?.();
-    } catch (error) {
-      console.error("[ServiceOrderDetailModal] Error saving order:", error);
-      showError(
-        getApiErrorMessage(error) ||
-          "No se pudieron guardar los cambios. Intenta de nuevo.",
-      );
     } finally {
       setSaving(false);
     }
@@ -298,7 +460,15 @@ export function ServiceOrderDetailModal({
                   color="primary"
                   onClick={handleSave}
                   disabled={saving || loading || !canUpdate}>
-                  {(saving) ? <CircularProgress size={16} color="inherit" /> : "Guardar cambios"}
+                  {saving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : canCancelSale &&
+                    draft.indicaciones.action === "cancelar_venta" &&
+                    !draft.recoverySheetId ? (
+                    "Solicitar cancelación"
+                  ) : (
+                    "Guardar cambios"
+                  )}
                 </Button>
               </Stack>
             )}
@@ -335,6 +505,8 @@ export function ServiceOrderDetailModal({
                   indicaciones={draft.indicaciones}
                   customerAddress={draft.customerAddress}
                   disabled={saving}
+                  canRequestCancellation={canCancelSale}
+                  cancelErrors={cancelErrors}
                   onChange={patchIndicaciones}
                 />
               }
@@ -375,6 +547,18 @@ export function ServiceOrderDetailModal({
             </MenuItem>
           ))}
       </Menu>
+
+      <ConfirmModal
+        open={confirmCancelOpen}
+        type="warning"
+        title="Solicitar cancelación"
+        description="Se creará la hoja de recuperación. El saldo a favor se abona hasta que almacén reciba el artículo."
+        confirmLabel="Solicitar cancelación"
+        cancelLabel="Volver"
+        loading={saving}
+        onClose={() => setConfirmCancelOpen(false)}
+        onConfirm={() => persistOrder(true)}
+      />
     </>
   );
 }

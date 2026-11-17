@@ -206,6 +206,26 @@ export interface SaleDetailLayaway {
   payments: SaleDetailLayawayPayment[];
 }
 
+/** GET /pos/layaways/:id/balance — adeudo con mora (motor de Crédito). */
+export interface LayawayBalance {
+  layawayId: number;
+  status: SaleDetailLayaway["status"];
+  expiresAt: string;
+  totalAmount: number;
+  principalPaid: number;
+  principalOutstanding: number;
+  lateFee: {
+    annualRatePercent: number;
+    graceDays: number;
+    daysAccrued: number;
+    accrued: number;
+    paid: number;
+    outstanding: number;
+  };
+  totalDue: number;
+  isSettled: boolean;
+}
+
 export type DiscountRequestReason =
   "LAST_UNIT" | "DAMAGED_ITEM" | "CLOSING_SALE" | "OTHER";
 
@@ -252,6 +272,20 @@ export interface SaleInvoiceItem {
   retryTimes?: number;
 }
 
+export interface LayawayOfferView {
+  downPaymentRate: number;
+  minimumDeposit: number;
+  promotionName: string | null;
+  terms: {
+    id: number;
+    name: string;
+    days: number;
+    downPaymentRate: number;
+    promotionName: string | null;
+  }[];
+  selectedTermId: number | null;
+}
+
 export interface SaleDetail {
   id: number;
   folio: string;
@@ -263,11 +297,14 @@ export interface SaleDetail {
   totalAmount: number;
   economicRevision?: number;
   creditDownPaymentAmount?: number | null;
+  layawayDownPaymentAmount?: number | null;
   /** Live credit terms for the saved lines. Null when the sale is not credit. */
   creditOffer?: {
     termMonths: number[];
     minimumDownPaymentRate: number;
   } | null;
+  /** Live layaway rate, terms and minimum. Null when the sale is not layaway. */
+  layawayOffer?: LayawayOfferView | null;
   dispatchBranchId?: number | null;
   loyaltyPointsValue: number;
   loyaltyPointsEarned?: number;

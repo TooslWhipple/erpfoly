@@ -15,6 +15,10 @@ interface SelectedItemsPanelProps {
   continueLabel?: string;
   hidePrices?: boolean;
   disabled?: boolean;
+  /** Error por renglón (p. ej. capacidad del destino); el nivel warning no se pinta aquí. */
+  getItemFeedback?: (
+    item: SelectedOrderItemType,
+  ) => { level: 'error' | 'warning'; message: string } | null;
 }
 
 function formatCurrency(value: number): string {
@@ -33,6 +37,7 @@ export default function SelectedItemsPanel({
   continueLabel = "Continuar",
   hidePrices = false,
   disabled = false,
+  getItemFeedback,
 }: SelectedItemsPanelProps) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -59,6 +64,7 @@ export default function SelectedItemsPanel({
               onQuantityChange={onQuantityChange}
               onRemove={onRemove}
               hidePrices={hidePrices}
+              feedback={getItemFeedback?.(item)}
             />
           ))
         }

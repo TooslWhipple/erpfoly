@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SideModal, StatusChip, TabFilters } from "@/components";
@@ -12,11 +12,20 @@ import {
 import {
   applySharedListNegotiation,
   getSharedListClientDetail,
+  updateSharedListClientManagementStatus,
 } from "@/services/delinquency-shared-list.service";
-import { getPublicSharedListClientDetail } from "@/services/public-delinquency-shared-list.service";
 import { unwrapOrThrow } from "@/lib/axios";
+import { usePermissions } from "@/hooks/usePermissions";
+import {
+  CUSTOMERS_READ,
+  CUSTOMER_DELINQUENCY_LISTS_UPDATE,
+  CUSTOMER_DELINQUENCY_UPDATE,
+} from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
-import type { SharedDelinquencyClientDetail } from "@/types/delinquency-shared-list.types";
+import type {
+  DelinquencyManagementStatus,
+  SharedDelinquencyClientDetail,
+} from "@/types/delinquency-shared-list.types";
 import type { ClientStatus } from "@/types/clientes.types";
 import { SharedDelinquencyClientHeader, formatClientSinceLabel } from "./SharedDelinquencyClientHeader";
 import { NegotiationTab } from "./NegotiationTab";
@@ -36,16 +45,12 @@ const STATUS_VARIANTS: Record<ClientStatus, StatusChipVariant> = {
   blocked: "error",
 };
 
-export type SharedDelinquencyClientModalMode = "internal" | "public";
-
 export interface SharedDelinquencyClientModalProps {
   open: boolean;
   onClose: () => void;
   listClientId: number | null;
-  mode: SharedDelinquencyClientModalMode;
-  listId?: number;
-  shareToken?: string;
-  accessToken?: string;
+  listId: number;
+  listClosed?: boolean;
   onNegotiationSuccess?: () => void;
 }
 
@@ -53,58 +58,36 @@ export function SharedDelinquencyClientModal({
   open,
   onClose,
   listClientId,
-  mode,
   listId,
-  shareToken,
-  accessToken,
+  listClosed = false,
   onNegotiationSuccess,
 }: SharedDelinquencyClientModalProps) {
   const queryClient = useQueryClient();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
-  const [activeTab, setActiveTab] = useState(
-    mode === "public" ? "negociacion" : "actividad",
-  );
+  const { hasPermission, hasAnyPermission } = usePermissions();
+  const canEdit = hasAnyPermission([
+    CUSTOMER_DELINQUENCY_UPDATE,
+    CUSTOMER_DELINQUENCY_LISTS_UPDATE,
+  ]);
+  const canReadActivity = hasPermission(CUSTOMERS_READ);
+  const initialTab = canReadActivity ? "actividad" : "negociacion";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
-  useEffect(() => {
-    if (open) {
-      setActiveTab(mode === "public" ? "negociacion" : "actividad");
-    }
-  }, [open, mode, listClientId]);
+  const handleClose = useCallback(() => {
+    setActiveTab(initialTab);
+    onClose();
+  }, [onClose, initialTab]);
 
   const detailQuery = useQuery({
-    queryKey: [
-      "delinquency-shared-list-client",
-      mode,
-      listId,
-      shareToken,
-      listClientId,
-    ],
-    enabled:
-      open &&
-      listClientId != null &&
-      (mode === "internal"
-        ? listId != null
-        : Boolean(shareToken && accessToken)),
+    queryKey: ["delinquency-shared-list-client", listId, listClientId],
+    enabled: open && listClientId != null,
     queryFn: async (): Promise<SharedDelinquencyClientDetail> => {
       if (listClientId == null) {
         throw new Error("Cliente no seleccionado");
       }
-      if (mode === "internal") {
-        if (listId == null) {
-          throw new Error("Lista no especificada");
-        }
-        const result = await getSharedListClientDetail(listId, listClientId);
-        return unwrapOrThrow(result);
-      }
-      if (!shareToken || !accessToken) {
-        throw new Error("Sesión pública inválida");
-      }
-      return getPublicSharedListClientDetail(
-        shareToken,
-        listClientId,
-        accessToken,
-      );
+      const result = await getSharedListClientDetail(listId, listClientId);
+      return unwrapOrThrow(result);
     },
   });
 
@@ -114,7 +97,7 @@ export function SharedDelinquencyClientModal({
 
   const activitiesQuery = useQuery({
     queryKey: ["clients", "collection-activities", clientId],
-    enabled: open && mode === "internal" && clientId != null,
+    enabled: open && canReadActivity && clientId != null,
     queryFn: async () => {
       const result = await getClientCollectionActivities(clientId as number);
       return unwrapOrThrow(result);
@@ -123,7 +106,7 @@ export function SharedDelinquencyClientModal({
 
   const activityTypesQuery = useQuery({
     queryKey: ["clients", "collection-activity-types"],
-    enabled: open && mode === "internal",
+    enabled: open && canReadActivity,
     queryFn: async () => {
       const result = await getClientCollectionActivityTypes();
       return unwrapOrThrow(result);
@@ -151,7 +134,7 @@ export function SharedDelinquencyClientModal({
 
   const negotiationMutation = useMutation({
     mutationFn: async (negotiatedInterestAmount: number) => {
-      if (listId == null || listClientId == null) {
+      if (listClientId == null) {
         throw new Error("Datos de negociación incompletos");
       }
       const result = await applySharedListNegotiation(listId, listClientId, {
@@ -163,22 +146,14 @@ export function SharedDelinquencyClientModal({
       showSuccess("Negociación aplicada");
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: [
-            "delinquency-shared-list-client",
-            mode,
-            listId,
-            shareToken,
-            listClientId,
-          ],
+          queryKey: ["delinquency-shared-list-client", listId, listClientId],
         }),
         queryClient.invalidateQueries({
           queryKey: ["clients", "delinquency", "shared-lists"],
         }),
-        listId != null
-          ? queryClient.invalidateQueries({
-            queryKey: ["clients", "delinquency", "shared-list", listId],
-          })
-          : Promise.resolve(),
+        queryClient.invalidateQueries({
+          queryKey: ["clients", "delinquency", "shared-list", listId],
+        }),
       ]);
       onNegotiationSuccess?.();
     },
@@ -191,23 +166,37 @@ export function SharedDelinquencyClientModal({
     },
   });
 
-  const tabs = useMemo(() => {
-    const infoTabs = [
-      { value: "informacion-general", label: "Información general" },
-      { value: "direccion", label: "Dirección" },
-      { value: "aval", label: "Aval" },
-    ];
+  const statusMutation = useMutation({
+    mutationFn: async (status: DelinquencyManagementStatus) => {
+      if (listClientId == null) {
+        throw new Error("Cliente no seleccionado");
+      }
+      const result = await updateSharedListClientManagementStatus(
+        listId,
+        listClientId,
+        { status },
+      );
+      return unwrapOrThrow(result);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["clients", "delinquency", "shared-list", listId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["delinquency-shared-list-client", listId, listClientId],
+        }),
+      ]);
+    },
+  });
 
-    if (mode === "public") {
-      return [{ value: "negociacion", label: "Negociación" }, ...infoTabs];
-    }
-
-    return [
-      { value: "actividad", label: "Actividad" },
-      { value: "negociacion", label: "Negociación" },
-      ...infoTabs,
-    ];
-  }, [mode]);
+  const tabs = [
+    ...(canReadActivity ? [{ value: "actividad", label: "Actividad" }] : []),
+    { value: "negociacion", label: "Negociación" },
+    { value: "informacion-general", label: "Información general" },
+    { value: "direccion", label: "Dirección" },
+    { value: "aval", label: "Aval" },
+  ];
 
   const handleCreateActivity = useCallback(
     async (payload: { activityTypeId: number; comment: string }) => {
@@ -226,7 +215,7 @@ export function SharedDelinquencyClientModal({
   return (
     <SideModal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="lg"
       headerActionsPosition="top"
       headerActions={
@@ -255,7 +244,7 @@ export function SharedDelinquencyClientModal({
               />
 
               {
-                activeTab === "actividad" && mode === "internal" &&
+                activeTab === "actividad" && canReadActivity &&
                 <ActivityTab
                   activities={activitiesQuery.data ?? []}
                   activityTypes={activityTypesQuery.data ?? []}
@@ -267,15 +256,23 @@ export function SharedDelinquencyClientModal({
               {
                 activeTab === "negociacion" &&
                 <NegotiationTab
+                  key={`${client.id}-${client.interestAmount}-${client.negotiatedInterestAmount ?? "none"}`}
+                  currentDebtAmount={client.currentDebtAmount}
+                  maxDiscountAmount={client.collectorMaxNegotiationAmount}
+                  maxDiscountPercent={client.collectorMaxNegotiationPercent}
+                  managementStatus={client.managementStatus}
+                  managementStatusUpdatedAt={client.managementStatusUpdatedAt}
+                  updatingStatus={statusMutation.isPending}
+                  onManagementStatusChange={(status) =>
+                    statusMutation.mutate(status)
+                  }
+                  readOnly={!canEdit || listClosed}
                   principalAmount={client.principalAmount}
                   interestAmount={client.interestAmount}
                   negotiatedInterestAmount={client.negotiatedInterestAmount}
                   isNegotiated={client.isNegotiated}
-                  readOnly={mode === "public"}
                   applying={negotiationMutation.isPending}
-                  onApply={
-                    mode === "internal" ? handleApplyNegotiation : undefined
-                  }
+                  onApply={handleApplyNegotiation}
                 />
               }
 

@@ -3,9 +3,15 @@ export function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** Down payment rounded up to the next cent. Rate defaults to 10%. */
+/**
+ * Down payment rounded up to the next cent, same rule as the back
+ * (`creditMinimumDownPayment`, ROUND_CEIL). Works in integer cents and integer
+ * millionths of rate so float noise (6799.2000000001) never bumps a cent.
+ */
 export function creditMinimumDownPayment(total: number, rate = 0.1): number {
-  return Math.ceil(total * rate * 100) / 100;
+  const cents = Math.round(total * 100);
+  const ratePpm = Math.round(rate * 1_000_000);
+  return Math.ceil((cents * ratePpm) / 1_000_000) / 100;
 }
 
 /**

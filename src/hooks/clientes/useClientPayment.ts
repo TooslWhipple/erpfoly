@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import numeral from "numeral";
 import {
   getActiveSaleCredits,
   registerCascadePayment,
@@ -12,10 +13,15 @@ import type { PaymentTerminalCatalogItem } from "@/types/payment-terminals.types
 import { getSessionSummary } from "@/services/cash-register.service";
 import { getClientDetail } from "@/services/clients.service";
 import {
+  getOpenClientLayaways,
+  registerLayawayPayment,
+  type OpenClientLayaway,
+} from "@/services/ventas.service";
+import {
   CASH_REGISTER_SESSION_SUMMARY_KEY,
   invalidateCashRegisterQueries,
 } from "@/lib/cashRegisterQueries";
-import { unwrapOrThrow } from "@/lib/axios";
+import { getApiErrorMessage, unwrapOrThrow } from "@/lib/axios";
 import type {
   ClientCreditAccount,
   ClientPaymentContext,
@@ -54,6 +60,17 @@ interface UseClientPaymentResult {
   isSubmitting: boolean;
   totalOutstanding: number;
   totalCollectable: number;
+  /** Apartados abiertos del cliente (sucursal activa de la caja). */
+  layaways: OpenClientLayaway[];
+  /** Monto a abonar por apartado (clave: layawayId), ya topado en lo adeudado. */
+  layawayAmounts: Record<number, number>;
+  layawayTotal: number;
+  layawayOutstanding: number;
+  /** Totales del panel de resumen: crédito + apartados. */
+  summaryOutstanding: number;
+  summaryCollectable: number;
+  summaryAmount: number;
+  hasCredits: boolean;
   change: number;
   hasPartialInstallmentRemainder: boolean;
   partialInstallmentRemainderAmount: number;
@@ -70,6 +87,7 @@ interface UseClientPaymentResult {
   setPaymentMethod: (method: ClientPaymentMethod) => void;
   setIsCashDeposit: (value: boolean) => void;
   setPaymentAmount: (value: number) => void;
+  setLayawayAmount: (layawayId: number, value: number) => void;
   setPaymentAmountByInstallmentCount: (count: number) => void;
   setPaymentTerminalId: (value: number | null) => void;
   setPartialRemainderDecision: (choice: PartialRemainderDecision) => void;
@@ -164,6 +182,8 @@ export function useClientPayment(): UseClientPaymentResult {
   // créditos después de haber usado el stepper, en vez de dejar el monto
   // desincronizado sobre créditos que ya no aplican.
   const [stepperInstallmentCount, setStepperInstallmentCount] = useState<number | null>(null);
+  const [layaways, setLayaways] = useState<OpenClientLayaway[]>([]);
+  const [rawLayawayAmounts, setRawLayawayAmounts] = useState<Record<number, number>>({});
 
   // Guards del default de monto al entrar: `hasAppliedDefaultRef` asegura que
   // el default (parcialidad 1) se evalúe una sola vez por vida del hook, y
@@ -200,18 +220,25 @@ export function useClientPayment(): UseClientPaymentResult {
 
     try {
       const numericClientId = parseInt(clientId, 10);
-      const [clientDetailResult, creditsResult] = await Promise.all([
+      const [clientDetailResult, creditsResult, layawaysResult] = await Promise.all([
         getClientDetail(numericClientId),
         getActiveSaleCredits(numericClientId, 1, 50),
+        getOpenClientLayaways(numericClientId),
       ]);
       const clientDetail = unwrapOrThrow(clientDetailResult);
       const data = unwrapOrThrow(creditsResult);
       const activeCredits = data.rows ?? [];
+      // Los apartados dependen de la caja activa del usuario: si no se pueden
+      // consultar (p. ej. sin sesión de caja) el cobro de crédito sigue igual.
+      const openLayaways = layawaysResult.error ? [] : (layawaysResult.data?.rows ?? []);
+      setLayaways(openLayaways);
+      setRawLayawayAmounts({});
 
       const denial = getClientPaymentAccessDenial({
         creditApplicationId: clientDetail.creditApplicationId,
         status: clientDetail.status,
         activeCredits,
+        openLayaways,
       });
 
       if (denial) {
@@ -274,6 +301,7 @@ export function useClientPayment(): UseClientPaymentResult {
     } catch (err) {
       console.error("[useClientPayment] Error loading payment context:", err);
       setContext(null);
+      setLayaways([]);
       setAccessDeniedReason(null);
       setError("Error al cargar la información del cliente");
     } finally {
@@ -352,6 +380,35 @@ export function useClientPayment(): UseClientPaymentResult {
     () => getTotalCollectableAmount(orderedCreditAccounts, excludedCreditIds),
     [orderedCreditAccounts, excludedCreditIds],
   );
+
+  const layawayAmounts = useMemo(() => {
+    const capped: Record<number, number> = {};
+    for (const layaway of layaways) {
+      const raw = rawLayawayAmounts[layaway.layawayId] ?? 0;
+      capped[layaway.layawayId] = Math.min(Math.max(raw, 0), layaway.totalDue);
+    }
+    return capped;
+  }, [layaways, rawLayawayAmounts]);
+
+  const layawayTotal = useMemo(
+    () =>
+      parseFloat(
+        Object.values(layawayAmounts)
+          .reduce((sum, amount) => sum + amount, 0)
+          .toFixed(2),
+      ),
+    [layawayAmounts],
+  );
+
+  const layawayOutstanding = useMemo(
+    () =>
+      parseFloat(layaways.reduce((sum, layaway) => sum + layaway.totalDue, 0).toFixed(2)),
+    [layaways],
+  );
+
+  const setLayawayAmount = useCallback((layawayId: number, value: number) => {
+    setRawLayawayAmounts((prev) => ({ ...prev, [layawayId]: value }));
+  }, []);
 
   const canExceedOutstandingForChange = paymentMethod === "cash" && !isCashDeposit;
 
@@ -441,13 +498,24 @@ export function useClientPayment(): UseClientPaymentResult {
   });
   const paymentTerminals = paymentTerminalsQuery.data ?? [];
 
-  const canRegister =
+  const hasCredits = orderedCreditAccounts.length > 0;
+  // Se cobra crédito solo si el cajero dejó un monto en la cascada; si únicamente
+  // captura apartados, la parte de crédito no interviene en la validación.
+  const isCollectingCredit = hasCredits && paymentAmount > 0;
+  const isCreditPaymentValid =
     totalOutstanding > 0 &&
     paymentAmount > 0 &&
     (paymentAmount <= totalCollectable || canExceedOutstandingForChange) &&
+    !(hasPartialInstallmentRemainder && !partialRemainderDecision);
+
+  const canRegister =
+    (isCollectingCredit ? isCreditPaymentValid : layawayTotal > 0) &&
     !(isCardPayment && !paymentTerminalId) &&
-    !(hasPartialInstallmentRemainder && !partialRemainderDecision) &&
     !isSubmitting;
+
+  const summaryOutstanding = totalOutstanding + layawayOutstanding;
+  const summaryCollectable = totalCollectable + layawayOutstanding;
+  const summaryAmount = Math.min(Math.max(paymentAmount, 0), totalCollectable) + layawayTotal;
 
   const toggleCreditExcluded = useCallback((purchaseId: string) => {
     setExcludedCreditIds((prev) =>
@@ -476,54 +544,120 @@ export function useClientPayment(): UseClientPaymentResult {
     setIsSubmitting(true);
     setError(null);
 
+    const snackbar = useSnackbarStore.getState();
+    // Qué se cobró y qué no, para decirlo claro si algo falla a medias: cada
+    // cobro es una llamada independiente y nunca se reintenta solo.
+    const collected: string[] = [];
+    let creditReceiptId: number | null = null;
+
     try {
       const numericClientId = parseInt(clientId, 10);
-      const includedCreditOrder = orderedCreditAccounts
-        .filter((account) => !excludedCreditIds.includes(account.id))
-        .map((account) => parseInt(account.id, 10));
 
-      const backendPayload: CascadePaymentPayload = {
-        amount:
-          partialRemainderDecision === "give-change"
-            ? fullyCoveredCascadeAmount
-            : canExceedOutstandingForChange
-              ? Math.min(paymentAmount, totalCollectable)
-              : paymentAmount,
-        payment_method: mapFrontendToBackendMethod(paymentMethod),
-        reference: isCashDeposit ? "Depósito en efectivo" : undefined,
-        notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
-        credit_order: includedCreditOrder,
-        payment_terminal_id: isCardPayment ? (paymentTerminalId ?? undefined) : undefined,
-      };
+      if (isCollectingCredit) {
+        const includedCreditOrder = orderedCreditAccounts
+          .filter((account) => !excludedCreditIds.includes(account.id))
+          .map((account) => parseInt(account.id, 10));
 
-      const result = await registerCascadePayment(numericClientId, backendPayload);
-      const backendResult = unwrapOrThrow(result) as CascadePaymentResult;
-      if (!backendResult.receipt?.id) {
-        useSnackbarStore.getState().showError(
-          backendResult.message ||
-            "El abono se registró, pero no se pudo generar el comprobante. No lo cobres de nuevo.",
-        );
-        await fetchContext();
-        return;
+        const backendPayload: CascadePaymentPayload = {
+          amount:
+            partialRemainderDecision === "give-change"
+              ? fullyCoveredCascadeAmount
+              : canExceedOutstandingForChange
+                ? Math.min(paymentAmount, totalCollectable)
+                : paymentAmount,
+          payment_method: mapFrontendToBackendMethod(paymentMethod),
+          reference: isCashDeposit ? "Depósito en efectivo" : undefined,
+          notes: isCashDeposit ? "Abono realizado como depósito en efectivo" : undefined,
+          credit_order: includedCreditOrder,
+          payment_terminal_id: isCardPayment ? (paymentTerminalId ?? undefined) : undefined,
+        };
+
+        const result = await registerCascadePayment(numericClientId, backendPayload);
+        const backendResult = unwrapOrThrow(result) as CascadePaymentResult;
+        collected.push(`Crédito ${numeral(backendPayload.amount).format("$0,0.00")}`);
+        // El crédito ya quedó cobrado: se limpia el monto para que un refetch
+        // posterior no lo vuelva a ofrecer (ni lo cobre dos veces).
+        setStepperInstallmentCount(null);
+        setManualPaymentAmount(0);
+        hasUserInteractedRef.current = true;
+
+        if (!backendResult.receipt?.id) {
+          snackbar.showError(
+            backendResult.message ||
+              "El abono se registró, pero no se pudo generar el comprobante. No lo cobres de nuevo.",
+          );
+          if (layawayTotal === 0) {
+            await fetchContext();
+            return;
+          }
+        } else {
+          creditReceiptId = backendResult.receipt.id;
+        }
+      }
+
+      const layawaysToCharge = layaways.filter(
+        (layaway) => (layawayAmounts[layaway.layawayId] ?? 0) > 0,
+      );
+      for (const layaway of layawaysToCharge) {
+        const amount = layawayAmounts[layaway.layawayId];
+        const label = `${layaway.productName ?? `Apartado ${layaway.folio}`} ${numeral(amount).format("$0,0.00")}`;
+        try {
+          const layawayResult = await registerLayawayPayment(layaway.layawayId, {
+            payment_method: mapFrontendToBackendMethod(paymentMethod),
+            amount,
+            payment_terminal_id: isCardPayment ? (paymentTerminalId ?? undefined) : undefined,
+          });
+          unwrapOrThrow(layawayResult);
+          collected.push(`Apartado ${label}`);
+        } catch (err) {
+          const pending = layawaysToCharge
+            .slice(layawaysToCharge.indexOf(layaway))
+            .map((item) => item.productName ?? item.folio)
+            .join(", ");
+          const done = collected.length > 0 ? collected.join("; ") : "nada";
+          snackbar.showError(
+            `No se pudo cobrar ${label}: ${getApiErrorMessage(err)}. Ya cobrado: ${done}. Sin cobrar: ${pending}. Revisa los saldos antes de volver a cobrar.`,
+          );
+          if (collected.length > 0 || fromCashRegister) {
+            invalidateCashRegisterQueries(queryClient);
+          }
+          await fetchContext();
+          return;
+        }
       }
 
       if (fromCashRegister) {
         invalidateCashRegisterQueries(queryClient);
       }
 
-      const params = new URLSearchParams();
-      if (fromCashRegister) {
-        params.set("from", "cajas");
-        if (typeof caja === "string") params.set("caja", caja);
+      if (creditReceiptId != null) {
+        if (layawaysToCharge.length > 0) {
+          snackbar.showSuccess(`Cobro registrado: ${collected.join("; ")}`);
+        }
+        const params = new URLSearchParams();
+        if (fromCashRegister) {
+          params.set("from", "cajas");
+          if (typeof caja === "string") params.set("caja", caja);
+        }
+        const query = params.toString();
+        await router.replace(
+          `/clientes/${clientId}/abonos/comprobantes/${creditReceiptId}${query ? `?${query}` : ""}`,
+        );
+        return;
       }
-      const query = params.toString();
-      await router.replace(
-        `/clientes/${clientId}/abonos/comprobantes/${backendResult.receipt.id}${query ? `?${query}` : ""}`,
-      );
+
+      // Solo apartados: no hay comprobante de crédito al que navegar, así que
+      // se confirma aquí y se recargan los saldos.
+      snackbar.showSuccess(`Cobro registrado: ${collected.join("; ")}`);
+      await fetchContext();
     } catch (err) {
       console.error("[useClientPayment] Error submitting payment:", err);
       const message = err instanceof Error ? err.message : "No se pudo registrar el cobro. Intenta de nuevo.";
       setError(message);
+      if (collected.length > 0) {
+        snackbar.showError(`${message}. Ya cobrado: ${collected.join("; ")}.`);
+        await fetchContext();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -538,6 +672,10 @@ export function useClientPayment(): UseClientPaymentResult {
     fullyCoveredCascadeAmount,
     isCardPayment,
     isCashDeposit,
+    isCollectingCredit,
+    layawayAmounts,
+    layawayTotal,
+    layaways,
     orderedCreditAccounts,
     partialRemainderDecision,
     paymentAmount,
@@ -564,6 +702,14 @@ export function useClientPayment(): UseClientPaymentResult {
     isSubmitting,
     totalOutstanding,
     totalCollectable,
+    layaways,
+    layawayAmounts,
+    layawayTotal,
+    layawayOutstanding,
+    summaryOutstanding,
+    summaryCollectable,
+    summaryAmount,
+    hasCredits,
     change,
     hasPartialInstallmentRemainder,
     partialInstallmentRemainderAmount,
@@ -580,6 +726,7 @@ export function useClientPayment(): UseClientPaymentResult {
     setPaymentMethod,
     setIsCashDeposit,
     setPaymentAmount,
+    setLayawayAmount,
     setPaymentAmountByInstallmentCount,
     setPaymentTerminalId,
     setPartialRemainderDecision,

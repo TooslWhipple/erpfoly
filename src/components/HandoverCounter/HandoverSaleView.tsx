@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -18,11 +17,8 @@ import type {
   HandoverSaleDetail,
 } from "@/types/saleHandover.types";
 import { playScanTone } from "@/utils/playScanTone";
-import {
-  applyCode,
-  blockReasonLabel,
-  type CapturedLines,
-} from "./handover";
+import { HandoverNotice } from "./HandoverNotice";
+import { applyCode, type CapturedLines } from "./handover";
 import {
   FeedbackBanner,
   LineCard,
@@ -41,6 +37,8 @@ export interface HandoverSaleViewProps {
   captured: CapturedLines;
   onCapturedChange: (next: CapturedLines) => void;
   disabled?: boolean;
+  /** Solo lectura: sin escaneo ni captura de cantidades. */
+  readOnly?: boolean;
 }
 
 function lineBreakdown(line: HandoverLine): string[] {
@@ -56,6 +54,7 @@ export function HandoverSaleView({
   captured,
   onCapturedChange,
   disabled = false,
+  readOnly = false,
 }: HandoverSaleViewProps) {
   const [manualCode, setManualCode] = useState("");
   const [feedback, setFeedback] = useState<ScanFeedback>(null);
@@ -112,16 +111,24 @@ export function HandoverSaleView({
 
   if (detail.blockReason) {
     return (
-      <Alert severity="warning">{blockReasonLabel(detail.blockReason)}</Alert>
+      <HandoverNotice
+        blockReason={detail.blockReason}
+        incomingTransfers={detail.incomingTransfers}
+      />
     );
   }
 
   return (
     <Stack spacing={2}>
+      <HandoverNotice
+        blockReason={null}
+        incomingTransfers={detail.incomingTransfers}
+      />
       {feedback?.kind === "error" ? (
         <FeedbackBanner role="alert">{feedback.message}</FeedbackBanner>
       ) : null}
 
+      {readOnly ? null : (
       <SectionCard>
         <Stack spacing={1.5}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -178,6 +185,7 @@ export function HandoverSaleView({
           />
         </Stack>
       </SectionCard>
+      )}
 
       <Stack spacing={1.25}>
         {detail.lines.map((line) => {
@@ -212,7 +220,7 @@ export function HandoverSaleView({
                     ) : null}
                   </Stack>
                 </Box>
-                {line.ready > 0 ? (
+                {line.ready > 0 && !readOnly ? (
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <NumberSpinner
                       value={quantity}

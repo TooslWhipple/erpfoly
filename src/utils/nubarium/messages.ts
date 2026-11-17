@@ -9,33 +9,6 @@ function isCameraAccessErrorMessage(message: string): boolean {
   );
 }
 
-/** Map API framing reasons to SDK on-screen message keys (not lighting). */
-export function mapFramingFailMessageKey(
-  lastReason: string | undefined,
-): "FAIL_NOFACE" | "FAIL_FACEOUTSIDE" | null {
-  if (!lastReason?.trim()) return null;
-  const normalized = lastReason.trim().toLowerCase().replace(/-/g, "_");
-
-  if (
-    normalized === "no_face"
-    || normalized === "noface"
-    || normalized === "fail_noface"
-  ) {
-    return "FAIL_NOFACE";
-  }
-
-  if (
-    normalized === "face_outside"
-    || normalized === "outside"
-    || normalized === "fail_outside"
-    || normalized === "fail_faceoutside"
-  ) {
-    return "FAIL_FACEOUTSIDE";
-  }
-
-  return null;
-}
-
 export function translateNubariumFailReason(reason: string | undefined): string {
   const normalized = reason?.trim().toLowerCase().replace(/-/g, "_") ?? "";
 

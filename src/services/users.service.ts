@@ -50,6 +50,7 @@ export interface UserDetail {
         fullName: string;
     } | null;
     driverDetails?: UserDriverDetails;
+    collectorDetails?: UserCollectorDetails | null;
 }
 
 export interface UserAddressDetails {
@@ -58,6 +59,10 @@ export interface UserAddressDetails {
     street: string;
     externalNumber: string | null;
     internalNumber: string | null;
+}
+
+export interface UserCollectorDetails {
+    maxNegotiationPercent: number;
 }
 
 export interface UserDriverDetails {
@@ -106,6 +111,10 @@ export interface UserDriverDetailsPayload {
     };
 }
 
+export interface UserCollectorDetailsPayload {
+    maxNegotiationPercent: number;
+}
+
 export interface CreateUserPayload {
     firstName: string;
     lastName: string;
@@ -117,6 +126,7 @@ export interface CreateUserPayload {
     requiresOtp?: boolean;
     diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
+    collectorDetails?: UserCollectorDetailsPayload;
 }
 
 /**
@@ -131,12 +141,15 @@ export interface UpdateUserPayload {
     branchIds?: number[];
     diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
+    collectorDetails?: UserCollectorDetailsPayload;
 }
 
 export interface UpdateUserRolePayload {
     roleId: number;
     /** Required when the target role is a driver role. */
     driverDetails?: UserDriverDetailsPayload;
+    /** Required when the target role is Cobranza externa. */
+    collectorDetails?: UserCollectorDetailsPayload;
 }
 
 // ============================================================================
@@ -178,6 +191,7 @@ export async function createUser(
         ...(payload.requiresOtp !== undefined ? { requiresOtp: payload.requiresOtp } : {}),
         ...(payload.diverseDebtorId !== undefined ? { diverseDebtorId: payload.diverseDebtorId } : {}),
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
+        ...(payload.collectorDetails ? { collectorDetails: payload.collectorDetails } : {}),
     };
     return post<ApiSuccessPayload>(BASE, body);
 }
@@ -193,6 +207,7 @@ export async function updateUser(
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
     if (payload.diverseDebtorId !== undefined) body.diverseDebtorId = payload.diverseDebtorId;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
+    if (payload.collectorDetails !== undefined) body.collectorDetails = payload.collectorDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);
 }
 
@@ -204,6 +219,7 @@ export async function updateUserRole(
     return patch<ApiSuccessPayload>(`${BASE}/${id}/role`, {
         roleId: payload.roleId,
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
+        ...(payload.collectorDetails ? { collectorDetails: payload.collectorDetails } : {}),
     });
 }
 

@@ -38,6 +38,8 @@ export interface ClientPurchaseDetailApi {
   initialCost: number;
   totalPaid: number;
   remaining: number;
+  isLayaway: boolean;
+  paidPercent: number;
   paymentDueDate: string | null;
   nextPaymentAmount: number;
   paidInstallments: number;
@@ -74,6 +76,8 @@ export interface ClientPurchaseDetail {
   initialCost: number;
   totalPaid: number;
   remaining: number;
+  isLayaway: boolean;
+  paidPercent: number;
   paymentDueDate: string;
   highlightPaymentDueDate: boolean;
   nextPaymentAmount: number;

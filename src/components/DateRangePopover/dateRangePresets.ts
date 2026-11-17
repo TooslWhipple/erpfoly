@@ -5,6 +5,7 @@ export const PRESET_HOY = "hoy";
 export const PRESET_AYER = "ayer";
 export const PRESET_SEMANA = "semana";
 export const PRESET_MES = "mes";
+export const PRESET_MES_ANTERIOR = "mes_anterior";
 export const PRESET_PERIODO = "periodo";
 
 export type PresetFechaId =
@@ -12,6 +13,7 @@ export type PresetFechaId =
   | typeof PRESET_AYER
   | typeof PRESET_SEMANA
   | typeof PRESET_MES
+  | typeof PRESET_MES_ANTERIOR
   | typeof PRESET_PERIODO;
 
 export const OPCIONES_FECHA_PRESET: DateRangeSelectOption[] = [
@@ -72,6 +74,13 @@ export function computePresetRange(
         startDate: hoy.startOf("month"),
         endDate: hoy,
       };
+    case PRESET_MES_ANTERIOR: {
+      const anterior = hoy.subtract(1, "month");
+      return {
+        startDate: anterior.startOf("month"),
+        endDate: anterior.endOf("month").startOf("day"),
+      };
+    }
   }
 }
 
@@ -97,6 +106,7 @@ export function inferPresetFromDates(
     PRESET_AYER,
     PRESET_SEMANA,
     PRESET_MES,
+    PRESET_MES_ANTERIOR,
   ];
 
   for (const id of fijos) {

@@ -16,7 +16,10 @@ import type {
 } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
 import type { TabOption } from "@/components/TabFilters";
-import { INVENTORY_COLORS } from "@/styles/inventario/styles";
+import {
+  INVENTORY_COLORS,
+  inventoryQuantityColor,
+} from "@/styles/inventario/styles";
 import { INVENTORY_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -30,13 +33,6 @@ import {
 } from "@/services/inventory.service";
 
 const SEARCH_DEBOUNCE_MS = 300;
-
-const QUANTITY_FILTER_OPTIONS = [
-  { label: "Todas", value: "all" },
-  { label: "En existencia > 0", value: "inStock" },
-  { label: "En tránsito > 0", value: "inTransit" },
-  { label: "Dañada > 0", value: "damaged" },
-];
 
 export default function Inventario() {
   const router = useRouter();
@@ -135,12 +131,6 @@ export default function Inventario() {
     }
     setQuantityFilter((current) =>
       current === id ? null : (id as InventoryQuantityFilter),
-    );
-  }, []);
-
-  const handleQuantityFilterChange = useCallback((value: string) => {
-    setQuantityFilter(
-      value === "all" ? null : (value as InventoryQuantityFilter),
     );
   }, []);
 
@@ -244,15 +234,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.green,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.green),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
     {
       id: "inTransit",
@@ -260,15 +253,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.yellow,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.yellow),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
     {
       id: "damaged",
@@ -276,15 +272,18 @@ export default function Inventario() {
       type: "number",
       size: "sm",
       sortable: true,
-      format: (value) => (
-        <span
-          style={{
-            color: INVENTORY_COLORS.red,
-            fontWeight: 500,
-          }}>
-          {String(value)}
-        </span>
-      ),
+      format: (value) => {
+        const n = Number(value);
+        return (
+          <span
+            style={{
+              color: inventoryQuantityColor(n, INVENTORY_COLORS.red),
+              fontWeight: 500,
+            }}>
+            {String(value)}
+          </span>
+        );
+      },
     },
   ];
 
@@ -341,14 +340,6 @@ export default function Inventario() {
         showSearch
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        selectFilters={[
-          {
-            label: "Cantidad",
-            value: quantityFilter ?? "all",
-            options: QUANTITY_FILTER_OPTIONS,
-            onChange: handleQuantityFilterChange,
-          },
-        ]}
       />
 
       <TableCrud

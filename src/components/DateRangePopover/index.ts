@@ -6,6 +6,7 @@ export {
   PRESET_AYER,
   PRESET_SEMANA,
   PRESET_MES,
+  PRESET_MES_ANTERIOR,
   PRESET_PERIODO,
   computePresetRange,
   formatRangeForApi,

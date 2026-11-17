@@ -40,9 +40,22 @@ export const RadioOptionIcon = styled(Box)<{ selected?: boolean }>(({ theme, sel
     }),
 }));
 
-export const RadioOptionButton = styled(Button)<{
+export const RadioOptionButton = styled(Button, {
+    shouldForwardProp: (prop) =>
+        prop !== "ownerState" &&
+        prop !== "theme" &&
+        prop !== "sx" &&
+        prop !== "as" &&
+        prop !== "selected" &&
+        prop !== "block" &&
+        prop !== "error" &&
+        prop !== "backgroundColor" &&
+        prop !== "readOnly",
+})<{
     selected?: boolean;
     fullWidth?: boolean;
+    block?: boolean;
+    error?: boolean;
     size?: "small" | "medium";
     backgroundColor?: string;
     readOnly?: boolean;
@@ -50,6 +63,8 @@ export const RadioOptionButton = styled(Button)<{
     theme,
     selected,
     fullWidth = false,
+    block = false,
+    error = false,
     size = "medium",
     backgroundColor = "transparent",
     readOnly = false,
@@ -59,16 +74,24 @@ export const RadioOptionButton = styled(Button)<{
     return {
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center",
-        flex: fullWidth ? 1 : "none",
-        minWidth: fullWidth ? "auto" : size === "small" ? "96px" : "120px",
+        justifyContent: block ? "flex-start" : "center",
+        flex: block ? "none" : fullWidth ? 1 : "none",
+        width: block ? "100%" : undefined,
+        whiteSpace: block ? "nowrap" : "normal",
+        minWidth: block || fullWidth ? "auto" : size === "small" ? "96px" : "120px",
         minHeight: size === "small" ? "44px" : "56px",
         height: "auto",
         maxHeight: "none",
         lineHeight: 1.2,
         padding: "12px",
         borderRadius: "12px",
-        border: `1px solid ${readOnly ? readOnlySurface : theme.palette.app.border}`,
+        border: `1px solid ${
+            error
+                ? theme.palette.error.main
+                : readOnly
+                    ? readOnlySurface
+                    : theme.palette.app.border
+        }`,
         backgroundColor: readOnly
             ? readOnlySurface
             : selected

@@ -73,13 +73,18 @@ export function isAuditRole(role: string | undefined): boolean {
   return role === ROLE_CODES.AUDITOR || role === ROLE_CODES.ADMINISTRADOR;
 }
 
-/** Prorrogar: el Gerente solo lo vencido; Auditor y Admin también auditoría. */
+/**
+ * Prorrogar: quién gestiona lo decide el back (`canManage`: solo la sucursal
+ * que vendió, más Auditor y Admin). Aquí solo queda el estado: el Gerente
+ * prorroga lo vencido; Auditor y Admin también auditoría.
+ */
 export function canExtendHold(
   status: HoldStatus,
   role: string | undefined,
   hasUpdatePermission: boolean,
+  canManage: boolean,
 ): boolean {
-  if (!hasUpdatePermission) return false;
+  if (!hasUpdatePermission || !canManage) return false;
   if (status === "EXPIRED") return true;
   return status === "AUDIT_REVIEW" && isAuditRole(role);
 }

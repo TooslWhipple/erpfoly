@@ -84,8 +84,7 @@ export function StatsCard({
       tabIndex={clickable ? 0 : undefined}
       aria-pressed={clickable ? active : undefined}
       onClick={clickable ? onClick : undefined}
-      onKeyDown={handleKeyDown}
-    >
+      onKeyDown={handleKeyDown}>
       <Typography variant="subtitle1">{label}</Typography>
       <Stack direction="row" spacing={0.5} alignItems="center">
         <Typography variant="h2" fontWeight={700}>{formatValue(value)}</Typography>

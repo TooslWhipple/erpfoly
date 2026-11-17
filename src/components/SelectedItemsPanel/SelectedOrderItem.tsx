@@ -13,6 +13,7 @@ interface SelectedOrderItemProps {
   onQuantityChange: (productId: number, quantity: number) => void;
   onRemove: (productId: number) => void;
   hidePrices?: boolean;
+  feedback?: { level: 'error' | 'warning'; message: string } | null;
 }
 
 function formatCurrency(value: number): string {
@@ -28,6 +29,7 @@ export default function SelectedOrderItem({
   onQuantityChange,
   onRemove,
   hidePrices = false,
+  feedback = null,
 }: SelectedOrderItemProps) {
   return (
     <ItemContainer>
@@ -54,6 +56,9 @@ export default function SelectedOrderItem({
           <QuantityStepper
             value={item.quantity}
             onChange={(qty) => onQuantityChange(item.productId, qty)}
+            error={feedback?.level === 'error'}
+            helperText={feedback?.level === 'error' ? feedback.message : undefined}
+            warningText={feedback?.level === 'warning' ? feedback.message : undefined}
           />
         </Stack>
       </Stack>

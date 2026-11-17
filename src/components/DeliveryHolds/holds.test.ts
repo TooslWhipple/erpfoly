@@ -10,16 +10,20 @@ import {
 
 describe("canExtendHold", () => {
   it("el gerente solo prorroga vencidos", () => {
-    assert.equal(canExtendHold("EXPIRED", "GERENTE", true), true);
-    assert.equal(canExtendHold("AUDIT_REVIEW", "GERENTE", true), false);
-    assert.equal(canExtendHold("ACTIVE", "GERENTE", true), false);
+    assert.equal(canExtendHold("EXPIRED", "GERENTE", true, true), true);
+    assert.equal(canExtendHold("AUDIT_REVIEW", "GERENTE", true, true), false);
+    assert.equal(canExtendHold("ACTIVE", "GERENTE", true, true), false);
   });
   it("auditor y admin prorrogan vencidos y auditoría", () => {
-    assert.equal(canExtendHold("AUDIT_REVIEW", "AUDITOR", true), true);
-    assert.equal(canExtendHold("AUDIT_REVIEW", "ADMINISTRADOR", true), true);
+    assert.equal(canExtendHold("AUDIT_REVIEW", "AUDITOR", true, true), true);
+    assert.equal(canExtendHold("AUDIT_REVIEW", "ADMINISTRADOR", true, true), true);
   });
   it("sin permiso de edición nunca", () => {
-    assert.equal(canExtendHold("EXPIRED", "AUXILIAR_BODEGA", false), false);
+    assert.equal(canExtendHold("EXPIRED", "AUXILIAR_BODEGA", false, true), false);
+  });
+  it("sin canManage del back nunca, aunque el rol alcance", () => {
+    assert.equal(canExtendHold("EXPIRED", "GERENTE", true, false), false);
+    assert.equal(canExtendHold("AUDIT_REVIEW", "ADMINISTRADOR", true, false), false);
   });
 });
 

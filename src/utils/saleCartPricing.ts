@@ -10,6 +10,29 @@ export function lineTotal(item: PricedCartLine): number {
   return net < 0 ? 0 : net;
 }
 
+export type UnitQuote = {
+  originalPrice: number;
+  discountAmount: number;
+  finalPrice: number;
+};
+
+/**
+ * Product-detail prices are a one-piece quote. List price stays per piece.
+ * Discount and total are the line amounts (percent of list × quantity).
+ * Zero pieces still shows one piece: the card is not $0 before a source is picked.
+ */
+export function extendUnitQuote(
+  quote: UnitQuote,
+  quantity: number,
+): { originalPrice: number; discountAmount: number; total: number } {
+  const pieces = quantity > 0 ? quantity : 1;
+  return {
+    originalPrice: quote.originalPrice,
+    discountAmount: quote.discountAmount * pieces,
+    total: quote.finalPrice * pieces,
+  };
+}
+
 export function cartListSubtotal(items: PricedCartLine[]): number {
   return items.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0);
 }

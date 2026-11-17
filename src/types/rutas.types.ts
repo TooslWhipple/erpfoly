@@ -77,6 +77,7 @@ export interface SuggestedItemToAdd {
   zoneCoverage?: LogisticZoneCoverage;
   scheduledDate: string;
   destinationBranch: string | null;
+  recoverySheetId?: number | null;
 }
 
 /** Item eligible to be added to a route (general list, per-item) */
@@ -94,6 +95,7 @@ export interface OrderToAdd {
   zoneCoverage?: LogisticZoneCoverage;
   scheduledDate: string;
   destinationBranch: string | null;
+  recoverySheetId?: number | null;
 }
 
 export interface AvailableOrdersResponse {
@@ -109,6 +111,7 @@ export interface AddRoutePointPayload {
   origin: "sale" | "order";
   origin_id: number;
   item_ids: number[];
+  recovery_sheet_id?: number;
 }
 
 export interface RoutePerson {

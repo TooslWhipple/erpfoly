@@ -14,10 +14,11 @@ import {
   AddDamagedGoodsModal,
   ConfirmModal,
   MarkDamagedGoodsDiscountedModal,
+  StatusChip,
 } from "@/components";
 import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
 import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
-import { Grid, Skeleton, Stack } from "@mui/material";
+import { Grid, Skeleton, Stack, Typography } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -34,6 +35,8 @@ import {
   updateDamagedProductStatus,
   discountDamagedProduct,
   type DamagedProductListItem,
+  type DamagedProductSortField,
+  type DamagedProductSortOrder,
   type DamagedProductStats,
   type DamagedProductTransitionStatus,
 } from "@/services/damaged-products.service";
@@ -42,6 +45,10 @@ import {
   DAMAGED_INVENTORY_CREATE,
   DAMAGED_INVENTORY_UPDATE,
 } from "@/lib/permissions";
+import {
+  formatElapsedCompact,
+  formatElapsedDetailEs,
+} from "@/utils/damagedGoodsElapsed";
 const SEARCH_DEBOUNCE_MS = 300;
 /** Query params that open the create modal with a branch and product already chosen. */
 const PREFILL_BRANCH_PARAM = "branch_id";
@@ -98,6 +105,10 @@ export default function MercanciaDanada() {
   const showError = useSnackbarStore((s) => s.showError);
   const [stats, setStats] = useState<DamagedProductStats | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [sortField, setSortField] = useState<DamagedProductSortField | null>(
+    null,
+  );
+  const [sortOrder, setSortOrder] = useState<DamagedProductSortOrder>("desc");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const canCreate = hasPermission(DAMAGED_INVENTORY_CREATE);
@@ -119,13 +130,20 @@ export default function MercanciaDanada() {
   );
   const [discountSaving, setDiscountSaving] = useState(false);
   const listExtraParams = useMemo(() => {
-    if (activeTab === "all") {
-      return {};
+    const params: {
+      status?: string;
+      sortField?: DamagedProductSortField;
+      sortOrder?: DamagedProductSortOrder;
+    } = {};
+    if (activeTab !== "all") {
+      params.status = activeTab;
     }
-    return {
-      status: activeTab,
-    };
-  }, [activeTab]);
+    if (sortField) {
+      params.sortField = sortField;
+      params.sortOrder = sortOrder;
+    }
+    return params;
+  }, [activeTab, sortField, sortOrder]);
   const {
     data: items,
     total: totalRows,
@@ -147,7 +165,7 @@ export default function MercanciaDanada() {
   });
   useEffect(() => {
     setPage(0);
-  }, [activeTab, setPage]);
+  }, [activeTab, sortField, sortOrder, setPage]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -165,6 +183,10 @@ export default function MercanciaDanada() {
       {
         label: "Por realizar",
         value: "pending",
+      },
+      {
+        label: "En reparación",
+        value: "in_repair",
       },
       {
         label: "Finalizadas",
@@ -206,6 +228,13 @@ export default function MercanciaDanada() {
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
   }, []);
+  const handleSortChange = useCallback(
+    (field: string, order: DamagedProductSortOrder) => {
+      setSortField(field as DamagedProductSortField);
+      setSortOrder(order);
+    },
+    [],
+  );
   const handleCreate = useCallback(() => {
     setAddModalOpen(true);
   }, []);
@@ -286,6 +315,19 @@ export default function MercanciaDanada() {
     },
     [discountItem, showError, showSuccess, refetch],
   );
+  const toComparison = (
+    change: number,
+  ): StatsCardData["comparison"] | undefined => {
+    if (change === 0) {
+      return undefined;
+    }
+    return {
+      value: Math.abs(change),
+      type: change > 0 ? "increase" : "decrease",
+      period: "el mes anterior",
+    };
+  };
+
   const statsCards: StatsCardData[] = stats
     ? [
         {
@@ -293,11 +335,7 @@ export default function MercanciaDanada() {
           label: "Artículos dañados",
           value: stats.totalItems,
           icon: <TrendingUpIcon />,
-          comparison: {
-            value: stats.itemsChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.itemsChange),
         },
         {
           id: "itemsCost",
@@ -305,11 +343,7 @@ export default function MercanciaDanada() {
           value: stats.itemsCost,
           icon: <TrendingUpIcon />,
           isCurrency: true,
-          comparison: {
-            value: stats.costChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.costChange),
         },
         {
           id: "itemsValue",
@@ -317,11 +351,7 @@ export default function MercanciaDanada() {
           value: stats.itemsValue,
           icon: <TrendingUpIcon />,
           isCurrency: true,
-          comparison: {
-            value: stats.valueChange,
-            type: "increase",
-            period: "el mes anterior",
-          },
+          comparison: toComparison(stats.valueChange),
         },
       ]
     : [];
@@ -331,13 +361,19 @@ export default function MercanciaDanada() {
         id: "productCode",
         label: "Código",
         type: "text",
-        size: "sm",
+        size: "md",
+        format: (value) => (
+          <Typography variant="body2" component="span" noWrap>
+            {String(value ?? "")}
+          </Typography>
+        ),
       },
       {
         id: "branch",
         label: "Sucursal",
         size: "xl",
         truncate: true,
+        sortable: true,
         format: (value) => {
           if (value && typeof value === "object" && "name" in value) {
             return String(
@@ -352,12 +388,31 @@ export default function MercanciaDanada() {
         label: "Registro",
         type: "date",
         size: "md",
+        sortable: true,
       },
       {
         id: "productName",
         label: "Producto",
         size: "xl",
         truncate: true,
+        sortable: true,
+      },
+      {
+        id: "sourceLabel",
+        label: "Origen",
+        width: 300,
+        format: (_value, row) => {
+          const label =
+            row.sourceLabel ??
+            (row.isClientProperty && row.serviceOrderFolio
+              ? "A Reparación (Cliente)"
+              : null);
+          if (!label) return "—";
+          const variant: StatusChipVariant = row.isClientProperty
+            ? "info"
+            : "warning";
+          return <StatusChip label={label} variant={variant} size="small" />;
+        },
       },
       {
         id: "referenceLabel",
@@ -379,11 +434,22 @@ export default function MercanciaDanada() {
         id: "damageType",
         label: "Tipo de daño",
         size: "lg",
+        truncate: true,
+      },
+      {
+        id: "repairAssigneeLabel",
+        label: "Proveedor / Técnico",
+        size: "lg",
+        truncate: true,
+        format: (value) => {
+          const text = typeof value === "string" ? value.trim() : "";
+          return text || "—";
+        },
       },
       {
         id: "statusDisplay",
         label: "Estatus",
-        size: "md",
+        size: "lg",
         type: "chip",
         chipLabelMap: DAMAGE_STATUS_CHIP_LABELS,
         chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
@@ -391,7 +457,7 @@ export default function MercanciaDanada() {
       {
         id: "discountStatus",
         label: "Descuento a proveedor",
-        size: "md",
+        size: "lg",
         type: "chip",
         chipLabelMap: DISCOUNT_STATUS_CHIP_LABELS,
         chipVariantMap: DISCOUNT_STATUS_CHIP_VARIANTS,
@@ -400,7 +466,16 @@ export default function MercanciaDanada() {
         id: "elapsedSinceRegistration",
         label: "Tiempo transcurrido",
         size: "md",
-        type: "text",
+        sortable: true,
+        format: (_value, row) => {
+          const compact = formatElapsedCompact(row.registrationDate);
+          const detail = formatElapsedDetailEs(row.registrationDate);
+          return (
+            <Typography variant="body2" component="span" noWrap title={detail}>
+              {compact}
+            </Typography>
+          );
+        },
       },
     ],
     [],
@@ -450,7 +525,7 @@ export default function MercanciaDanada() {
         onSearchChange={handleSearchChange}
         actions={[
           {
-            label: "Ingresar",
+            label: "Registrar daño",
             onClick: handleCreate,
             variant: "contained",
             color: "primary",
@@ -497,6 +572,9 @@ export default function MercanciaDanada() {
         totalRows={totalRows}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
+        sortField={sortField ?? undefined}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
         emptyMessage="No hay mercancía dañada registrada"
       />
 

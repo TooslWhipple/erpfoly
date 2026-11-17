@@ -21,9 +21,10 @@ import {
 } from "@/styles/catalogos/proveedores-charges.styles";
 
 const VAT_RATE = 0.16;
+const MAX_DESCRIPTION_LENGTH = 512;
 
 export interface RegisterSupplierChargeFormValues {
-  accountStatementId: number;
+  periodValue: string;
   categoryId: string;
   description: string;
   amount: string;
@@ -34,7 +35,7 @@ interface RegisterSupplierChargeModalProps {
   open: boolean;
   onClose: () => void;
   supplierName: string;
-  accountStatementOptions: SelectOption[];
+  periodOptions: SelectOption[];
   categories: SupplierChargeCategoryOption[];
   saving?: boolean;
   onSubmit: (values: RegisterSupplierChargeFormValues) => Promise<boolean>;
@@ -47,7 +48,7 @@ interface RegisterSupplierChargeModalProps {
 }
 
 const DEFAULT_FORM_VALUES: RegisterSupplierChargeFormValues = {
-  accountStatementId: 0,
+  periodValue: "",
   categoryId: "",
   description: "",
   amount: "",
@@ -79,7 +80,7 @@ export function RegisterSupplierChargeModal({
   open,
   onClose,
   supplierName,
-  accountStatementOptions,
+  periodOptions,
   categories,
   saving = false,
   onSubmit,
@@ -97,12 +98,12 @@ export function RegisterSupplierChargeModal({
     if (!open) return;
     setFormValues({
       ...DEFAULT_FORM_VALUES,
-      accountStatementId: Number(accountStatementOptions[0]?.value ?? 0),
+      periodValue: String(periodOptions[0]?.value ?? ""),
       categoryId: fixedCategoryId ?? "",
       amount: initialAmount,
     });
     setFormErrors({});
-  }, [open, accountStatementOptions, fixedCategoryId, initialAmount]);
+  }, [open, periodOptions, fixedCategoryId, initialAmount]);
 
   const amountNumber = useMemo(
     () => parseAmountInput(formValues.amount),
@@ -122,11 +123,17 @@ export function RegisterSupplierChargeModal({
   const validate = (): boolean => {
     const nextErrors: Partial<Record<keyof RegisterSupplierChargeFormValues, string>> = {};
 
-    if (!formValues.accountStatementId) {
-      nextErrors.accountStatementId = "Selecciona un estado de cuenta.";
+    if (!formValues.periodValue) {
+      nextErrors.periodValue = "Selecciona un estado de cuenta.";
     }
     if (!lockCategory && !formValues.categoryId) {
       nextErrors.categoryId = "Selecciona una categoría.";
+    }
+    const trimmedDescription = formValues.description.trim();
+    if (!trimmedDescription) {
+      nextErrors.description = "Ingresa una descripción.";
+    } else if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
+      nextErrors.description = `La descripción no puede exceder ${MAX_DESCRIPTION_LENGTH} caracteres.`;
     }
     if (amountNumber <= 0) {
       nextErrors.amount = "Ingresa un monto válido.";
@@ -145,6 +152,7 @@ export function RegisterSupplierChargeModal({
     if (!validate()) return;
     const payload: RegisterSupplierChargeFormValues = {
       ...formValues,
+      description: formValues.description.trim(),
       categoryId: lockCategory && fixedCategoryId ? fixedCategoryId : formValues.categoryId,
     };
     const success = await onSubmit(payload);
@@ -207,15 +215,15 @@ export function RegisterSupplierChargeModal({
         <FormSelect
           label="Cargar a estado de cuenta"
           required
-          value={formValues.accountStatementId}
+          value={formValues.periodValue}
           onChange={(event) => {
-            const value = Number(event.target.value);
-            setFormValues((prev) => ({ ...prev, accountStatementId: value }));
+            const value = String(event.target.value);
+            setFormValues((prev) => ({ ...prev, periodValue: value }));
           }}
-          options={accountStatementOptions}
+          options={periodOptions}
           placeholder="Seleccione"
-          error={Boolean(formErrors.accountStatementId)}
-          helperText={formErrors.accountStatementId}
+          error={Boolean(formErrors.periodValue)}
+          helperText={formErrors.periodValue}
         />
 
         <FormSelect
@@ -235,11 +243,15 @@ export function RegisterSupplierChargeModal({
 
         <FormTextField
           label="Descripción"
+          required
           placeholder="Detalles adicionales del cobro..."
           value={formValues.description}
           onChange={(event) =>
             setFormValues((prev) => ({ ...prev, description: event.target.value }))
           }
+          error={Boolean(formErrors.description)}
+          helperText={formErrors.description}
+          inputProps={{ maxLength: MAX_DESCRIPTION_LENGTH }}
           multiline
           minRows={3}
         />

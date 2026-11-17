@@ -6,8 +6,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Stack,
-  Button,
 } from "@mui/material";
 import { Download, FileCog, FileSymlink, FileText, MoreVertical } from "lucide-react";
 import numeral from "numeral";
@@ -26,7 +24,9 @@ import type {
   ServiceOrder,
 } from "@/types/atencion-cliente.types";
 import {
+  ArticleActionButton,
   ArticleActionsRow,
+  ArticleAside,
   ArticleCard,
   ArticleCode,
   ArticleDescription,
@@ -36,8 +36,8 @@ import {
   ArticleDetails,
   ArticleLeft,
   ArticleMetaRow,
+  ArticleStatusWrap,
   ArticlesList,
-  ServiceOrderButton,
 } from "@/styles/atencion-cliente.styles";
 import { CreateServiceOrderModal } from "./CreateServiceOrderModal";
 import { ServiceOrderDetailModal } from "./ServiceOrderDetailModal";
@@ -182,53 +182,45 @@ export function InvoiceArticlesTab({
               <ArticleLeft>
                 <ArticleMetaRow>
                   <ArticleCode>{article.code}</ArticleCode>
-                  <StatusChip
-                    label={ARTICLE_STATUS_LABELS[article.status]}
-                    variant={ARTICLE_STATUS_VARIANTS[article.status]}
-                    size="small"
-                  />
+                  <ArticleStatusWrap>
+                    <StatusChip
+                      label={ARTICLE_STATUS_LABELS[article.status]}
+                      variant={ARTICLE_STATUS_VARIANTS[article.status]}
+                      size="small"
+                    />
+                  </ArticleStatusWrap>
                 </ArticleMetaRow>
                 <ArticleDescription>{article.description}</ArticleDescription>
                 {
                   (showServiceOrderButton(article) || showRecoverySheetButton(article)) &&
-                  <Stack direction="row" spacing={2}>
+                  <ArticleActionsRow>
                     {
                       showRecoverySheetButton(article) &&
-                      <Button
+                      <ArticleActionButton
                         variant="option"
                         color="inherit"
                         size="small"
-                        sx={{ whiteSpace: "nowrap" }}
                         startIcon={<FileSymlink size={16} color="#2563EB" />}
                         onClick={() => handleRecoverySheet(article)}>
                         Hoja de recuperación
-                      </Button>
+                      </ArticleActionButton>
                     }
                     {showServiceOrderButton(article) && (
-                      <Button
+                      <ArticleActionButton
                         variant="option"
                         color="inherit"
                         size="small"
-                        sx={{ whiteSpace: "nowrap" }}
                         startIcon={<FileCog size={16} color="#FB923C" />}
                         onClick={() => handleServiceOrderClick(article)}
                       >
                         Órden de servicio
-                      </Button>
+                      </ArticleActionButton>
                     )}
-                  </Stack>
+                  </ArticleActionsRow>
                 }
               </ArticleLeft>
 
-              <Stack
-                direction="row"
-                alignItems="flex-start"
-                spacing={1}
-                sx={{
-                  flexShrink: 0,
-                  width: { xs: "100%", md: "auto" },
-                  justifyContent: { xs: "space-between", md: "flex-end" },
-                }}>
+              <ArticleAside>
                 <ArticleDetails>
                   <ArticleDetailItem>
                     <ArticleDetailLabel>Precio</ArticleDetailLabel>
@@ -262,7 +254,7 @@ export function InvoiceArticlesTab({
                 >
                   <MoreVertical size={18} />
                 </IconButton>
-              </Stack>
+              </ArticleAside>
             </ArticleCard>
           ))}
       </ArticlesList>

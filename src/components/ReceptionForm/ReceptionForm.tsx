@@ -76,12 +76,21 @@ import {
 
 type ActivePanel = "invoices" | "confirm" | null;
 
+/** Intent explícito al abrir el modal de confirmación (Precapturado). */
+type ConfirmIntent = "send_to_costing" | "save_capture" | null;
+
 export interface ReceptionFormProps {
   mode: "create" | "edit";
   supplierId?: number;
   supplierName?: string;
   receptionId?: number;
   onSaved?: (receptionId: number) => void;
+}
+
+function snapshotReceivedQuantities(
+  items: ReceptionArticle[],
+): Map<string, number> {
+  return new Map(items.map((article) => [article.id, article.received]));
 }
 
 function orderItemIdFromPendingId(id: string): number | undefined {
@@ -140,11 +149,24 @@ function detailItemToReceptionArticle(
   };
 }
 
+/** Captura en rampa: preautorizado o precapturado sin inventario posteado. */
+function isRampCaptureReception(
+  status: ReceptionDetailStatus | ReceptionDetail["status"],
+  inventoryPostedAt: string | null | undefined,
+): boolean {
+  return (
+    status === "pre_authorized" ||
+    (status === "pre_captured" && inventoryPostedAt == null)
+  );
+}
+
 async function loadCaptureArticles(
   detail: ReceptionDetail,
 ): Promise<ReceptionArticle[]> {
   const captured = detail.items.map(detailItemToReceptionArticle);
-  if (detail.status !== "pre_authorized") return captured;
+  if (!isRampCaptureReception(detail.status, detail.inventoryPostedAt)) {
+    return captured;
+  }
 
   const pendingResult = await getPendingArticlesBySupplier(detail.supplierId, {
     groupBy: "product",
@@ -224,7 +246,6 @@ function getStatusChip(status: ReceptionDetailStatus): {
 
 function getPrimaryActionLabel(
   status: ReceptionDetailStatus,
-  extraLabels: number,
   originalLabelsIssued: boolean,
 ): string {
   switch (status) {
@@ -233,15 +254,22 @@ function getPrimaryActionLabel(
     case "pre_authorized":
       return "Finalizar recepción / Enviar a costeo";
     case "pre_captured":
-      return extraLabels > 0 || originalLabelsIssued
-        ? "Reimprimir etiquetas"
-        : "Enviar a costeo";
+      return "Enviar a costeos";
     case "in_costing":
     case "costed":
       return originalLabelsIssued ? "Reimprimir etiquetas" : "Guardar cambios";
     default:
       return "Guardar";
   }
+}
+
+function getSecondaryActionLabel(
+  isQuantitiesDirty: boolean,
+  originalLabelsIssued: boolean,
+): string | null {
+  if (isQuantitiesDirty) return "Guardar cambios";
+  if (originalLabelsIssued) return "Reimprimir etiquetas";
+  return null;
 }
 
 function totalLabelsOf(items: ReceptionDetailItem[]): number {
@@ -251,7 +279,14 @@ function totalLabelsOf(items: ReceptionDetailItem[]): number {
 function resolveConfirmVariant(
   status: ReceptionDetailStatus,
   extraLabels: number,
+  confirmIntent: ConfirmIntent,
 ): ReceptionConfirmVariant {
+  if (confirmIntent === "save_capture") {
+    return extraLabels > 0 ? "save_extra_labels" : "save_labels";
+  }
+  if (confirmIntent === "send_to_costing") {
+    return "send_to_costing";
+  }
   if (status === "pre_authorized") {
     return "send_to_costing";
   }
@@ -322,9 +357,20 @@ export function ReceptionForm({
   const [supplierNameFromReception, setSupplierNameFromReception] = useState("");
   const [articleSearch, setArticleSearch] = useState("");
   const [originalLabelsIssued, setOriginalLabelsIssued] = useState(false);
+  const [inventoryPostedAt, setInventoryPostedAt] = useState<string | null>(
+    null,
+  );
   const [reprintAuthOpen, setReprintAuthOpen] = useState(false);
   const [reprintAuthLoading, setReprintAuthLoading] = useState(false);
   const [reprintAuthError, setReprintAuthError] = useState<string | null>(null);
+  const [receivedSnapshot, setReceivedSnapshot] = useState<Map<string, number>>(
+    () => new Map(),
+  );
+  const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent>(null);
+  /** Tras configurar impresora, reanudar el flujo que la solicitó. */
+  const [pendingPrinterResume, setPendingPrinterResume] = useState<
+    "save_capture" | "primary" | "reprint" | null
+  >(null);
 
   const totalArticles = getTotalArticles(articles);
   const totalLabels = getTotalLabels(articles);
@@ -337,7 +383,10 @@ export function ReceptionForm({
     status === "pre_captured" ||
     status === "pre_authorized";
   const canManageInvoices = status === "draft" || status === "pre_captured";
-  const isAggregatedCapture = status === "pre_authorized";
+  const isAggregatedCapture = isRampCaptureReception(
+    status,
+    inventoryPostedAt,
+  );
   const columnCount = isAggregatedCapture ? 5 : 6;
   const visibleArticles = useMemo(() => {
     const query = articleSearch.trim().toLowerCase();
@@ -348,10 +397,31 @@ export function ReceptionForm({
         article.sku.toLowerCase().includes(query),
     );
   }, [articles, articleSearch]);
-  const confirmVariant = resolveConfirmVariant(status, extraLabels);
+  const isQuantitiesDirty = useMemo(() => {
+    if (receivedSnapshot.size !== articles.length) {
+      return articles.some((article) => article.received !== 0) ||
+        receivedSnapshot.size > 0;
+    }
+    for (const article of articles) {
+      if ((receivedSnapshot.get(article.id) ?? 0) !== article.received) {
+        return true;
+      }
+    }
+    return false;
+  }, [articles, receivedSnapshot]);
+  const secondaryActionLabel =
+    status === "pre_captured"
+      ? getSecondaryActionLabel(isQuantitiesDirty, originalLabelsIssued)
+      : null;
+  const confirmVariant = resolveConfirmVariant(
+    status,
+    extraLabels,
+    confirmIntent,
+  );
   const primaryDisabled =
     (status === "draft" && totalArticles === 0) ||
     (status === "pre_authorized" && totalArticles === 0) ||
+    (status === "pre_captured" && totalArticles === 0) ||
     ((status === "in_costing" || status === "costed") &&
       !originalLabelsIssued);
 
@@ -397,6 +467,7 @@ export function ReceptionForm({
               result.error?.message ?? "No se pudo cargar la recepción",
             );
             setArticles([]);
+            setReceivedSnapshot(new Map());
             return;
           }
           const detail = result.data;
@@ -404,6 +475,7 @@ export function ReceptionForm({
             const captureArticles = await loadCaptureArticles(detail);
             if (cancelled) return;
             setArticles(captureArticles);
+            setReceivedSnapshot(snapshotReceivedQuantities(captureArticles));
           } catch (loadErr) {
             if (cancelled) return;
             setArticlesError(
@@ -412,6 +484,7 @@ export function ReceptionForm({
                 : "No se pudo cargar el listado pendiente",
             );
             setArticles([]);
+            setReceivedSnapshot(new Map());
           }
           const loadedInvoices = detail.invoices.map(detailInvoiceToReceptionInvoice);
           setInvoices(loadedInvoices);
@@ -421,6 +494,7 @@ export function ReceptionForm({
           setStatus(mapReceptionDetailStatus(detail.status));
           setBaselineLabels(getBaselineLabelsFromDetail(detail));
           setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
+          setInventoryPostedAt(detail.inventoryPostedAt ?? null);
           setSupplierNameFromReception(detail.supplier);
         })
         .catch((err) => {
@@ -430,6 +504,7 @@ export function ReceptionForm({
             err instanceof Error ? err.message : "Error al cargar la recepción",
           );
           setArticles([]);
+          setReceivedSnapshot(new Map());
         })
         .finally(() => {
           if (!cancelled) setLoadingArticles(false);
@@ -441,9 +516,14 @@ export function ReceptionForm({
           if (result.error) {
             setArticlesError(result.error.message);
             setArticles([]);
+            setReceivedSnapshot(new Map());
             return;
           }
-          setArticles((result.data ?? []).map(pendingArticleToReceptionArticle));
+          const pendingArticles = (result.data ?? []).map(
+            pendingArticleToReceptionArticle,
+          );
+          setArticles(pendingArticles);
+          setReceivedSnapshot(snapshotReceivedQuantities(pendingArticles));
         })
         .catch((err) => {
           if (cancelled) return;
@@ -452,6 +532,7 @@ export function ReceptionForm({
             err instanceof Error ? err.message : "Error al cargar artículos",
           );
           setArticles([]);
+          setReceivedSnapshot(new Map());
         })
         .finally(() => {
           if (!cancelled) setLoadingArticles(false);
@@ -479,12 +560,15 @@ export function ReceptionForm({
     );
   };
 
+  const openConfirmPanel = (intent: ConfirmIntent) => {
+    setConfirmIntent(intent);
+    setActivePanel("confirm");
+  };
+
   const handleOpenPrimaryAction = () => {
     const needsReprintAuth =
       originalLabelsIssued &&
-      (status === "pre_captured" ||
-        status === "in_costing" ||
-        status === "costed");
+      (status === "in_costing" || status === "costed");
     if (needsReprintAuth) {
       setReprintAuthError(null);
       setReprintAuthOpen(true);
@@ -493,36 +577,119 @@ export function ReceptionForm({
 
     if (status === "in_costing" || status === "costed") return;
 
+    if (status === "pre_captured") {
+      openConfirmPanel("send_to_costing");
+      return;
+    }
+
     const willPrintLabels =
-      status === "draft" ||
-      status === "pre_authorized" ||
-      (status === "pre_captured" && extraLabels > 0);
+      status === "draft" || status === "pre_authorized";
     if (willPrintLabels && !isConfigured) {
+      setPendingPrinterResume("primary");
       setPrinterSetupOpen(true);
       return;
     }
-    setActivePanel("confirm");
+    openConfirmPanel(
+      status === "pre_authorized" ? "send_to_costing" : null,
+    );
+  };
+
+  const handleOpenSaveCapture = async () => {
+    if (status !== "pre_captured" || currentReceptionId == null) return;
+
+    if (extraLabels > 0) {
+      if (!isConfigured) {
+        setPendingPrinterResume("save_capture");
+        setPrinterSetupOpen(true);
+        return;
+      }
+      openConfirmPanel("save_capture");
+      return;
+    }
+
+    // Cambios sin piezas nuevas: guardar sin modal de impresión.
+    setConfirmLoading(true);
+    setSubmitError(null);
+    try {
+      const result = await updateReception(
+        currentReceptionId,
+        buildUpdatePayload(),
+      );
+      if (result.error || !result.data) {
+        const message =
+          result.error?.message ?? "Error al guardar captura";
+        setSubmitError(message);
+        showError(message);
+        return;
+      }
+      await applySavedReceptionDetail(result.data);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Error al guardar captura";
+      console.error("[ReceptionForm] Error saving capture:", err);
+      setSubmitError(message);
+      showError(message);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleOpenSecondaryAction = () => {
+    if (status !== "pre_captured") return;
+    if (isQuantitiesDirty) {
+      void handleOpenSaveCapture();
+      return;
+    }
+    if (originalLabelsIssued) {
+      setReprintAuthError(null);
+      setReprintAuthOpen(true);
+    }
   };
 
   const handlePrinterSetupConfirm = () => {
     acknowledgePrinterSetup();
     setPrinterSetupOpen(false);
-    setActivePanel("confirm");
+    const resume = pendingPrinterResume;
+    setPendingPrinterResume(null);
+    if (resume === "save_capture") {
+      openConfirmPanel("save_capture");
+      return;
+    }
+    if (resume === "reprint") {
+      setReprintAuthError(null);
+      setReprintAuthOpen(true);
+      return;
+    }
+    openConfirmPanel(
+      status === "pre_authorized" || status === "pre_captured"
+        ? "send_to_costing"
+        : null,
+    );
   };
 
   const buildLegacySavePayload = () => ({
     printed_labels_count: totalLabels,
-    items: articles.map((article) => ({
-      order_id: article.orderId ?? 0,
-      order_item_id:
-        article.orderItemId ??
-        (article.id.startsWith("order-item-")
-          ? Number(article.id.replace("order-item-", ""))
-          : 0),
-      product_id: article.productId ?? 0,
-      quantity: article.orderedQuantity ?? article.quantity,
-      received: article.received,
-    })),
+    items: articles
+      .map((article) => {
+        const orderItemId =
+          article.orderItemId ??
+          (article.id.startsWith("order-item-")
+            ? Number(article.id.replace("order-item-", ""))
+            : 0);
+        return {
+          order_id: article.orderId ?? 0,
+          order_item_id: orderItemId,
+          product_id: article.productId ?? 0,
+          quantity: article.orderedQuantity ?? article.quantity,
+          received: article.received,
+        };
+      })
+      .filter(
+        (item) =>
+          item.order_id > 0 &&
+          item.order_item_id > 0 &&
+          item.product_id > 0,
+      ),
     payable_invoice_ids: extractPayableIds(invoices),
   });
 
@@ -539,25 +706,108 @@ export function ReceptionForm({
     payable_invoice_ids: extractPayableIds(invoices),
   });
 
-  const handleConfirmAction = async (_reason?: string) => {
-    if (articles.length === 0) {
-      setSubmitError("No hay artículos para guardar");
+  const buildUpdatePayload = () => {
+    const usesRampPayload = isRampCaptureReception(status, inventoryPostedAt);
+    return usesRampPayload
+      ? buildPreAuthorizedPayload()
+      : buildLegacySavePayload();
+  };
+
+  const applySavedReceptionDetail = async (detail: ReceptionDetail) => {
+    setCurrentReceptionId(detail.id);
+    setStatus(mapReceptionDetailStatus(detail.status));
+    setBaselineLabels(getBaselineLabelsFromDetail(detail));
+    syncServerInvoiceState(detail.invoices);
+    setOriginalLabelsIssued(Boolean(detail.originalLabelsIssued));
+    setInventoryPostedAt(detail.inventoryPostedAt ?? null);
+    const captureArticles = await loadCaptureArticles(detail);
+    setArticles(captureArticles);
+    setReceivedSnapshot(snapshotReceivedQuantities(captureArticles));
+  };
+
+  /** Cancelar el modal de costeo = guardado parcial (borrador Precapturado). */
+  const handleDismissConfirmModal = async () => {
+    if (printProgress != null) return;
+
+    const shouldDraftSave =
+      confirmVariant === "send_to_costing" &&
+      totalArticles > 0 &&
+      currentReceptionId != null &&
+      (status === "pre_authorized" || status === "pre_captured");
+
+    if (!shouldDraftSave) {
+      setActivePanel(null);
+      setConfirmIntent(null);
       return;
     }
 
     setConfirmLoading(true);
     setSubmitError(null);
     try {
-      if (status === "draft" || (status === "pre_captured" && extraLabels > 0)) {
+      const result = await updateReception(
+        currentReceptionId,
+        buildUpdatePayload(),
+      );
+      if (result.error || !result.data) {
+        const message =
+          result.error?.message ?? "Error al guardar captura";
+        setSubmitError(message);
+        showError(message);
+        return;
+      }
+      try {
+        await applySavedReceptionDetail(result.data);
+      } catch (loadErr) {
+        const message =
+          loadErr instanceof Error
+            ? loadErr.message
+            : "No se pudo recargar el listado pendiente";
+        setSubmitError(message);
+        showError(message);
+        return;
+      }
+      setActivePanel(null);
+      setConfirmIntent(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Error al guardar captura";
+      console.error("[ReceptionForm] Error saving draft on cancel:", err);
+      setSubmitError(message);
+      showError(message);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleConfirmAction = async (_reason?: string) => {
+    if (articles.length === 0) {
+      setSubmitError("No hay artículos para guardar");
+      return;
+    }
+
+    const intent = confirmIntent;
+    setConfirmLoading(true);
+    setSubmitError(null);
+    try {
+      const isSaveCaptureFlow =
+        intent === "save_capture" ||
+        status === "draft" ||
+        (status === "pre_captured" &&
+          intent !== "send_to_costing" &&
+          extraLabels > 0);
+
+      if (isSaveCaptureFlow) {
         const printMode =
-          status === "pre_captured" && extraLabels > 0 ? "extra" : "all";
+          (status === "pre_captured" || intent === "save_capture") &&
+          extraLabels > 0
+            ? "extra"
+            : "all";
         const skip = printMode === "extra" ? baselineLabels : 0;
-        const payload = buildLegacySavePayload();
         const result =
           currentReceptionId != null
-            ? await updateReception(currentReceptionId, payload)
+            ? await updateReception(currentReceptionId, buildUpdatePayload())
             : await createReception({
-              ...payload,
+              ...buildLegacySavePayload(),
               supplier_id: supplierId ?? 0,
               branch_id: articles[0]?.branchId ?? 0,
               order_date: orderDate,
@@ -567,10 +817,19 @@ export function ReceptionForm({
           return;
         }
         const detail = result.data;
-        setCurrentReceptionId(detail.id);
-        setStatus(mapReceptionDetailStatus(detail.status));
-        setBaselineLabels(getBaselineLabelsFromDetail(detail));
-        syncServerInvoiceState(detail.invoices);
+        try {
+          await applySavedReceptionDetail(detail);
+        } catch (loadErr) {
+          setCurrentReceptionId(detail.id);
+          setStatus(mapReceptionDetailStatus(detail.status));
+          setBaselineLabels(getBaselineLabelsFromDetail(detail));
+          syncServerInvoiceState(detail.invoices);
+          setSubmitError(
+            loadErr instanceof Error
+              ? loadErr.message
+              : "No se pudo recargar el listado pendiente",
+          );
+        }
         try {
           await printReceptionLabels(detail.id, { mode: printMode, skip });
         } catch (printErr) {
@@ -582,7 +841,9 @@ export function ReceptionForm({
           setSubmitError(message);
         }
         setActivePanel(null);
-        if (mode === "edit" && onSaved) {
+        setConfirmIntent(null);
+        // Guardado de precaptura permanece en el formulario; draft/edit navega.
+        if (mode === "edit" && onSaved && intent !== "save_capture") {
           onSaved(detail.id);
         }
         return;
@@ -594,12 +855,14 @@ export function ReceptionForm({
           return;
         }
 
-        if (status === "pre_authorized" || isInvoiceListDirty()) {
+        const shouldPersistCapture =
+          status === "pre_authorized" ||
+          status === "pre_captured" ||
+          isInvoiceListDirty();
+        if (shouldPersistCapture) {
           const updateResult = await updateReception(
             currentReceptionId,
-            status === "pre_authorized"
-              ? buildPreAuthorizedPayload()
-              : buildLegacySavePayload(),
+            buildUpdatePayload(),
           );
           if (updateResult.error || !updateResult.data) {
             setSubmitError(
@@ -607,9 +870,15 @@ export function ReceptionForm({
             );
             return;
           }
+          setStatus(mapReceptionDetailStatus(updateResult.data.status));
+          setInventoryPostedAt(updateResult.data.inventoryPostedAt ?? null);
           syncServerInvoiceState(updateResult.data.invoices);
           try {
-            setArticles(await loadCaptureArticles(updateResult.data));
+            const captureArticles = await loadCaptureArticles(
+              updateResult.data,
+            );
+            setArticles(captureArticles);
+            setReceivedSnapshot(snapshotReceivedQuantities(captureArticles));
           } catch (loadErr) {
             setSubmitError(
               loadErr instanceof Error
@@ -633,7 +902,7 @@ export function ReceptionForm({
           return;
         }
 
-        if (status === "pre_authorized") {
+        if (status === "pre_authorized" || !originalLabelsIssued) {
           try {
             await printReceptionLabels(currentReceptionId, { mode: "all" });
             setOriginalLabelsIssued(true);
@@ -648,6 +917,7 @@ export function ReceptionForm({
 
         setStatus("in_costing");
         setActivePanel(null);
+        setConfirmIntent(null);
         router.push("/recepcion-mercancias");
         return;
       }
@@ -698,6 +968,7 @@ export function ReceptionForm({
     try {
       if (!isConfigured) {
         setReprintAuthOpen(false);
+        setPendingPrinterResume("reprint");
         setPrinterSetupOpen(true);
         return;
       }
@@ -752,13 +1023,23 @@ export function ReceptionForm({
               size="small"
             />
           )}
+          {secondaryActionLabel != null && (
+            <ActionButton
+              variant="outlined"
+              color="inherit"
+              onClick={handleOpenSecondaryAction}
+              disabled={confirmLoading || printProgress != null}
+            >
+              {secondaryActionLabel}
+            </ActionButton>
+          )}
           <ActionButton
             variant="contained"
             color="primary"
             onClick={handleOpenPrimaryAction}
             disabled={primaryDisabled}
           >
-            {getPrimaryActionLabel(status, extraLabels, originalLabelsIssued)}
+            {getPrimaryActionLabel(status, originalLabelsIssued)}
           </ActionButton>
         </HeaderActions>
       </PageHeader>
@@ -990,11 +1271,7 @@ export function ReceptionForm({
 
       <SendToCostingModal
         open={activePanel === "confirm"}
-        onClose={() => {
-          if (printProgress == null) {
-            setActivePanel(null);
-          }
-        }}
+        onClose={handleDismissConfirmModal}
         onConfirm={handleConfirmAction}
         variant={confirmVariant}
         totalArticles={totalArticles}

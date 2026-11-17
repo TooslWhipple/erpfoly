@@ -8,8 +8,6 @@ export const NUBARIUM_ID_CAPTURE_CONFIG = {
     front: { enabled: true },
     back: { enabled: true, until: 10000 },
   },
-  // Visor Foly siempre 4:3 landscape — no rotar el JPEG post-captura.
-  autorotate: false,
   antispoofing: {
     enabled: true,
     level: 1,

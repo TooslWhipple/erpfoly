@@ -31,12 +31,14 @@ import type {
   ProductSearchResult,
   ProductDetail,
   SaleDetail,
+  LayawayOfferView,
   DeliveryAvailabilityItem,
   SetDeliveryDatePayload,
   DiscountRequestReason,
   RedDeliveryListItem,
   GetRedDeliveriesParams,
   CancelRedDeliveryPayload,
+  LayawayBalance,
 } from "@/types/ventas.types";
 
 export type { SaleListItem, GetSalesParams };
@@ -183,27 +185,53 @@ export interface RegisterLayawayPaymentPayload {
   payment_terminal_id?: number;
 }
 
+export interface RegisterLayawayPaymentResult {
+  id: number;
+  amount: number;
+  layaway_status: "ACTIVE" | "EXPIRED" | "COMPLETED";
+  branch_id: number;
+}
+
 export async function registerLayawayPayment(
   layawayId: number,
   payload: RegisterLayawayPaymentPayload,
-): Promise<ApiResult<unknown>> {
-  return post<unknown>(`${BASE}/layaways/${layawayId}/payments`, payload);
-}
-
-export async function completeLayaway(
-  layawayId: number,
-): Promise<ApiResult<{ success: boolean; message: string }>> {
-  return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/complete`,
+): Promise<ApiResult<RegisterLayawayPaymentResult>> {
+  return post<RegisterLayawayPaymentResult>(
+    `${BASE}/layaways/${layawayId}/payments`,
+    payload,
   );
 }
 
-export async function cancelLayaway(
-  layawayId: number,
-): Promise<ApiResult<{ success: boolean; message: string }>> {
-  return post<{ success: boolean; message: string }>(
-    `${BASE}/layaways/${layawayId}/cancel`,
+/** Apartado ACTIVE/EXPIRED de un cliente en la sucursal activa de la caja (C2). */
+export interface OpenClientLayaway {
+  layawayId: number;
+  saleId: number;
+  folio: string;
+  productName: string | null;
+  productSku: string | null;
+  purchaseDate: string;
+  status: "ACTIVE" | "EXPIRED";
+  totalAmount: number;
+  principalPaid: number;
+  principalOutstanding: number;
+  lateFeeOutstanding: number;
+  totalDue: number;
+  expiresAt: string;
+  paidPercent: number;
+}
+
+export async function getOpenClientLayaways(
+  clientId: number,
+): Promise<ApiResult<{ rows: OpenClientLayaway[] }>> {
+  return get<{ rows: OpenClientLayaway[] }>(
+    `${BASE}/clients/${clientId}/layaways/open`,
   );
+}
+
+export async function getLayawayBalance(
+  layawayId: number,
+): Promise<ApiResult<LayawayBalance>> {
+  return get<LayawayBalance>(`${BASE}/layaways/${layawayId}/balance`);
 }
 
 export interface CreateSaleDraftPayload {
@@ -244,6 +272,10 @@ export type UpdateSalePurchaseTypeCheckout =
       type: "LAYAWAY";
       minimumDeposit: number;
       maximumDeposit: number;
+      downPaymentRate: number;
+      promotionName: string | null;
+      terms: LayawayOfferView["terms"];
+      selectedTermId: number | null;
     };
 
 export interface UpdateSalePurchaseTypeResult {
@@ -284,10 +316,17 @@ export async function updateSalePurchaseType(
 export async function updateSaleLayawayTerm(
   saleId: number,
   layawayTermId: number,
-): Promise<ApiResult<unknown>> {
-  return patch<unknown>(`${BASE}/sales/${saleId}/layaway-term`, {
-    layaway_term_id: layawayTermId,
-  });
+  economicRevision?: number,
+): Promise<ApiResult<UpdateSalePurchaseTypeResult>> {
+  return patch<UpdateSalePurchaseTypeResult>(
+    `${BASE}/sales/${saleId}/layaway-term`,
+    {
+      layaway_term_id: layawayTermId,
+      ...(economicRevision != null
+        ? { economic_revision: economicRevision }
+        : {}),
+    },
+  );
 }
 
 export async function updateSaleCreditDownPayment(
@@ -296,6 +335,15 @@ export async function updateSaleCreditDownPayment(
 ): Promise<ApiResult<unknown>> {
   return patch<unknown>(`${BASE}/sales/${saleId}/credit-down-payment`, {
     credit_down_payment_amount: amount,
+  });
+}
+
+export async function updateSaleLayawayDownPayment(
+  saleId: number,
+  amount: number | null,
+): Promise<ApiResult<unknown>> {
+  return patch<unknown>(`${BASE}/sales/${saleId}/layaway-down-payment`, {
+    layaway_down_payment_amount: amount,
   });
 }
 
@@ -501,6 +549,7 @@ export async function registerSale(
     economic_revision?: number;
     accept_revision?: boolean;
     credit_down_payment_amount?: number;
+    layaway_down_payment_amount?: number;
   },
 ): Promise<ApiResult<{ id: number; folio: string; status: string }>> {
   return postPosSaleAction<{ id: number; folio: string; status: string }>(
@@ -515,8 +564,11 @@ export async function cancelSale(saleId: number): Promise<ApiResult<unknown>> {
 
 export async function getSaleDetail(
   saleId: number,
+  options?: { skipGlobalErrorToast?: boolean },
 ): Promise<ApiResult<SaleDetail>> {
-  return get<SaleDetail>(`${BASE}/sales/${saleId}`);
+  return get<SaleDetail>(`${BASE}/sales/${saleId}`, {
+    skipGlobalErrorToast: options?.skipGlobalErrorToast,
+  });
 }
 
 /** Guarda quién recoge la venta (titular o tercero). No cambia economic_revision. */
@@ -668,11 +720,14 @@ export type PricePreview = {
   lines: PricePreviewLine[];
   termMonths: number[];
   minimumDownPaymentRate: number;
+  layawayOffer: LayawayOfferView;
 };
 
 export async function previewCartPrices(payload: {
   branch_id: number;
   purchase_type_id: number;
+  client_id?: number;
+  layaway_term_id?: number;
   items: Array<{ product_id: number; quantity: number }>;
 }): Promise<PricePreview> {
   return unwrapOrThrow(
@@ -816,6 +871,11 @@ export async function printAndDownloadSaleInvoicePdf(
 export async function printSaleInvoicePdfOnly(
   saleId: number,
 ): Promise<void> {
+  // Sin factura (p. ej. apartado recién cobrado) no hay PDF que pedir: el
+  // endpoint respondería 404 y el interceptor mostraría un toast de error.
+  const statusInfo = await getSaleInvoiceStatus(saleId);
+  if (!statusInfo.hasInvoice || !statusInfo.hasPdf) return;
+
   const response = await api.get(`${BASE}/sales/${saleId}/invoice/pdf`, {
     responseType: "blob",
   });

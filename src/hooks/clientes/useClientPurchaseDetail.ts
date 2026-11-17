@@ -40,6 +40,8 @@ function mapPurchaseDetail(data: ClientPurchaseDetailApi): ClientPurchaseDetail 
     initialCost: data.initialCost,
     totalPaid: data.totalPaid,
     remaining: data.remaining,
+    isLayaway: data.isLayaway,
+    paidPercent: data.paidPercent,
     paymentDueDate: isCancelled
       ? "N/A"
       : data.paymentDueDate
@@ -57,7 +59,11 @@ function mapPurchaseDetail(data: ClientPurchaseDetailApi): ClientPurchaseDetail 
       id: String(payment.id),
       status: payment.status,
       installmentLabel: payment.installmentLabel,
-      dueDate: formatDateOnly(payment.dueDate, "D [de] MMM"),
+      // En un apartado la fecha es el instante del cobro (con hora), no un
+      // vencimiento de calendario: se muestra en hora local.
+      dueDate: data.isLayaway
+        ? formatDate(payment.dueDate, "D [de] MMM")
+        : formatDateOnly(payment.dueDate, "D [de] MMM"),
       amount: payment.amount,
     })),
     purchaseInfo: {

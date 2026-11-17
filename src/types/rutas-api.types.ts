@@ -65,6 +65,7 @@ export interface SuggestedItemToAddApi {
   zone_coverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
   scheduled_date: string;
   destination_branch: string | null;
+  recovery_sheet_id?: number | null;
 }
 
 export interface OrderToAddApi {
@@ -81,6 +82,7 @@ export interface OrderToAddApi {
   zone_coverage?: "IN_ZONE" | "OUT_OF_COVERAGE" | "UNCONFIGURED";
   scheduled_date: string;
   destination_branch: string | null;
+  recovery_sheet_id?: number | null;
 }
 
 export interface AvailableOrdersApi {

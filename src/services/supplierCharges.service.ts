@@ -46,7 +46,8 @@ export async function registerSupplierCharge(
 ): Promise<RegisterSupplierChargeResult> {
   try {
     const response = unwrapOrThrow(await post(`/suppliers/${payload.supplierId}/dashboard/charges`, {
-        accountStatementId: payload.accountStatementId,
+        periodMonth: payload.periodMonth,
+        periodYear: payload.periodYear,
         categoryId: payload.categoryId,
         description: payload.description,
         amount: payload.amount,

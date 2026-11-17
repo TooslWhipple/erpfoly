@@ -53,6 +53,12 @@ function toApiPayload(payload: CreateGeneralExpensePayload) {
     apportionmentType: payload.apportionEnabled
       ? APPORTIONMENT_TYPE_TO_API[payload.apportionmentType]
       : undefined,
+    branchGroupingId:
+      payload.apportionEnabled &&
+      payload.apportionmentType !== "free" &&
+      payload.branchGroupingId
+        ? Number(payload.branchGroupingId)
+        : undefined,
     singleBranchId:
       !payload.apportionEnabled && payload.singleBranchId
         ? Number(payload.singleBranchId)
@@ -95,6 +101,18 @@ export async function getUnassignedInvoices(
   return get<UnassignedInvoice[]>(url);
 }
 
+export async function checkGeneralExpenseCfdiUuid(
+  uuid: string,
+  options?: { supplierId?: string | number; rfcEmisor?: string },
+): Promise<ApiResult<{ available: boolean; reason?: string }>> {
+  const url = buildListUrl(`${BASE}/check-cfdi-uuid`, {
+    uuid,
+    supplierId: options?.supplierId ? Number(options.supplierId) : undefined,
+    rfcEmisor: options?.rfcEmisor || undefined,
+  });
+  return get<{ available: boolean; reason?: string }>(url);
+}
+
 export async function getExpenseCategories(params?: {
   configuration?: string;
 }): Promise<ApiResult<GeneralExpenseCatalogOption[]>> {
@@ -114,11 +132,13 @@ export async function getExpenseCategories(params?: {
 export async function getApportionmentPreview(
   type: ApportionmentType,
   amount: number,
+  branchGroupingId?: number | null,
 ): Promise<ApiResult<ApportionmentPreview>> {
   return get<ApportionmentPreview>(
     buildListUrl(`${BASE}/apportionment-preview`, {
       type: APPORTIONMENT_TYPE_TO_API[type],
       amount,
+      branchGroupingId: branchGroupingId ?? undefined,
     }),
   );
 }
@@ -199,6 +219,61 @@ export async function uploadExpensePaymentReceipt(
   formData.append("file", file);
   return post<GeneralExpenseListItem>(
     `${BASE}/${expenseId}/payments/${paymentId}/receipt`,
+    formData,
+    {
+      transformRequest: (data, headers) => {
+        if (data instanceof FormData && headers) {
+          delete headers["Content-Type"];
+        }
+        return data;
+      },
+    },
+  );
+}
+
+export async function uploadExpenseVoucher(
+  expenseId: string,
+  voucher: {
+    date: string;
+    concept: string;
+    amount: number;
+    subtotal?: number;
+    iva?: number;
+    isDeductible: boolean;
+    supplierName?: string;
+    supplierRfc?: string;
+    fiscalUuid?: string;
+    concepts?: Array<{
+      description: string;
+      issuerSku?: string | null;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
+    xmlFile?: File | null;
+    pdfFile?: File | null;
+    imageFile?: File | null;
+  },
+): Promise<ApiResult<GeneralExpenseListItem>> {
+  const formData = new FormData();
+  formData.append("date", voucher.date);
+  formData.append("concept", voucher.concept);
+  formData.append("amount", String(voucher.amount));
+  if (voucher.subtotal != null) formData.append("subtotal", String(voucher.subtotal));
+  if (voucher.iva != null) formData.append("iva", String(voucher.iva));
+  formData.append("isDeductible", String(voucher.isDeductible));
+  if (voucher.supplierName) formData.append("supplierName", voucher.supplierName);
+  if (voucher.supplierRfc) formData.append("supplierRfc", voucher.supplierRfc);
+  if (voucher.fiscalUuid) formData.append("fiscalUuid", voucher.fiscalUuid);
+  if (voucher.concepts?.length) {
+    formData.append("concepts", JSON.stringify(voucher.concepts));
+  }
+  if (voucher.xmlFile) formData.append("xml", voucher.xmlFile);
+  if (voucher.pdfFile) formData.append("pdf", voucher.pdfFile);
+  if (voucher.imageFile) formData.append("image", voucher.imageFile);
+
+  return post<GeneralExpenseListItem>(
+    `${BASE}/${expenseId}/vouchers`,
     formData,
     {
       transformRequest: (data, headers) => {

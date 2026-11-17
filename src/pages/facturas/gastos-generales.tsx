@@ -11,7 +11,7 @@ import {
   UnassignedInvoicesModal,
 } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -27,7 +27,10 @@ import type {
   UnassignedInvoice,
 } from "@/types/general-expenses.types";
 import { formatDate } from "@/utils/date";
-import { GENERAL_EXPENSES_CREATE } from "@/lib/permissions";
+import {
+  GENERAL_EXPENSES_CREATE,
+  GENERAL_EXPENSES_UPDATE,
+} from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   SummaryCard,
@@ -262,6 +265,15 @@ export default function GeneralExpensesPage() {
     },
   ];
 
+  const actions: RowAction<GeneralExpenseListItem>[] = [
+    {
+      id: "edit",
+      label: "Editar",
+      onClick: openEditPage,
+      permission: GENERAL_EXPENSES_UPDATE,
+    },
+  ];
+
   const kpiCards = [
     {
       title: "Total pendiente",
@@ -321,6 +333,7 @@ export default function GeneralExpensesPage() {
       <TableCrud
         columns={columns}
         rows={expenses}
+        actions={actions}
         loading={loading}
         rowKey="id"
         page={page}

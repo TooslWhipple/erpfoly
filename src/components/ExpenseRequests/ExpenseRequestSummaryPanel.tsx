@@ -37,6 +37,7 @@ const STATUS_COLOR_MAP: Record<
   APPROVED: "info",
   IN_COMPROBATION: "secondary",
   IN_VERIFICATION: "warning",
+  IN_VERIFICATION_FINAL: "info",
   COMPLETED: "success",
   REJECTED: "error",
   CANCELLED: "error",

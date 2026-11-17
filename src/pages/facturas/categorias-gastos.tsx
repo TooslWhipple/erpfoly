@@ -55,23 +55,12 @@ const ESTATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
 };
 
 type CategoryFormValues = {
-  code: string;
   name: string;
   description: string;
   configuration: InternalPayableCategoryConfiguration;
 };
 
 const categoryFormFields = defineFormFields<CategoryFormValues>()([
-  {
-    name: "code",
-    schema: z
-      .string()
-      .min(1, "El código es requerido")
-      .max(64, messages.string.max(64)),
-    label: "Código",
-    type: "text",
-    placeholder: "Ej. VIATICOS",
-  },
   {
     name: "name",
     schema: z
@@ -179,14 +168,12 @@ export default function CategoriasGastosPage() {
   const defaultValues = useMemo<CategoryFormValues>(() => {
     if (modalState.open && modalState.category) {
       return {
-        code: modalState.category.code,
         name: modalState.category.name,
         description: modalState.category.description ?? "",
         configuration: modalState.category.configuration ?? "PROVEEDORES",
       };
     }
     return {
-      code: "",
       name: "",
       description: "",
       configuration: "PROVEEDORES",
@@ -197,7 +184,6 @@ export default function CategoriasGastosPage() {
     setSaving(true);
     const editing = modalState.open ? modalState.category : undefined;
     const payload = {
-      code: value.code.trim().toUpperCase(),
       name: value.name.trim(),
       description: value.description.trim() || undefined,
       configuration: value.configuration,
@@ -363,7 +349,7 @@ export default function CategoriasGastosPage() {
             ? "Editar categoría de gasto"
             : "Nueva categoría de gasto"
         }
-        description="Configura el código, nombre y el tipo de aplicación para esta categoría de gastos."
+        description="Configura el nombre y el tipo de aplicación para esta categoría de gastos."
         fields={categoryFormFields}
         defaultValues={defaultValues}
         onSubmit={handleSave}
@@ -376,14 +362,6 @@ export default function CategoriasGastosPage() {
       >
         {({ form }) => (
           <Stack spacing={2.5} sx={{ pt: 1, width: "100%", minWidth: 0 }}>
-            <FormField
-              form={form}
-              name="code"
-              label="Código"
-              type="text"
-              placeholder="Ej. VIATICOS"
-              required
-            />
             <FormField
               form={form}
               name="name"

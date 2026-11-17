@@ -3,12 +3,15 @@ export type ExpenseRequestClassification =
   | "SOLICITUD_GASTOS"
   | "CAJA_CHICA";
 
+export type ExpenseFundingSource = "STP" | "CAJA_CHICA";
+
 export type ExpenseRequestStatus =
   | "DRAFT"
   | "PENDING_APPROVAL"
   | "APPROVED"
   | "IN_COMPROBATION"
   | "IN_VERIFICATION"
+  | "IN_VERIFICATION_FINAL"
   | "COMPLETED"
   | "REJECTED"
   | "CANCELLED";
@@ -64,6 +67,10 @@ export interface ExpenseRequestListItem {
   verifiedAmount: number;
   reimbursedAmount: number;
   status: ExpenseRequestStatus;
+  fundingSource?: ExpenseFundingSource;
+  pettyCashReturnStatus?: "PENDING" | "RETURNED" | null;
+  pettyCashReturnAmount?: number | null;
+  pettyCashReturnedAt?: string | null;
   dispersionDate?: string | null;
   dispersedAt?: string | null;
   paymentReference?: string | null;
@@ -207,6 +214,7 @@ export const EXPENSE_REQUEST_STATUS_LABELS: Record<
   APPROVED: "Autorizada",
   IN_COMPROBATION: "En comprobación",
   IN_VERIFICATION: "En verificación",
+  IN_VERIFICATION_FINAL: "En verificación final",
   COMPLETED: "Concluida",
   REJECTED: "Rechazada",
   CANCELLED: "Cancelada",
@@ -315,6 +323,7 @@ export interface CompleteExpenseVerificationPayload {
   reimbursementAmount?: number;
   leftoverInstallmentsCount?: number;
   leftoverNotes?: string;
+  pettyCashReturnMode?: "IMMEDIATE" | "PAYROLL";
 }
 
 

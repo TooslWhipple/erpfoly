@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -52,6 +52,7 @@ import {
   parseXmlClient,
 } from "@/components/ExpenseRequests/ExpenseRequestVouchersTab";
 import type { SupplierSelectOption } from "@/hooks/suppliers/useSuppliersSelect";
+import { checkGeneralExpenseCfdiUuid } from "@/services/general-expenses.service";
 import type { UnassignedInvoice } from "@/types/general-expenses.types";
 import { InvoiceCard, InvoiceMetaRow } from "./styles";
 
@@ -144,6 +145,8 @@ export function ExpenseInvoicesTab({
   const [xmlParsedData, setXmlParsedData] = useState<ParsedClientXml | null>(
     null,
   );
+  const [checkingUuid, setCheckingUuid] = useState(false);
+  const [remoteUuidError, setRemoteUuidError] = useState<string | null>(null);
 
   const xmlInputRef = useRef<HTMLInputElement | null>(null);
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
@@ -169,20 +172,98 @@ export function ExpenseInvoicesTab({
     [vouchers],
   );
 
-  // Validación de RFC del emisor contra el proveedor seleccionado en el gasto
-  const rfcMismatchWarning = useMemo(() => {
-    if (!supplierRfc || !selectedSupplier?.rfc) return null;
-    const cleanXmlRfc = supplierRfc.trim().toUpperCase();
-    const cleanSupplierRfc = selectedSupplier.rfc.trim().toUpperCase();
+  // Validación bloqueante de RFC del emisor contra el proveedor seleccionado en el gasto
+  const rfcMismatchError = useMemo(() => {
+    if (!selectedSupplier) return null;
+    const cleanXmlRfc = (supplierRfc || xmlParsedData?.rfcEmisor || "")
+      .trim()
+      .toUpperCase();
+    const cleanSupplierRfc = (selectedSupplier.rfc || "").trim().toUpperCase();
+    const hasInvoiceData = Boolean(xmlFile || cleanXmlRfc || fiscalUuid.trim());
+
+    if (hasInvoiceData && !cleanSupplierRfc) {
+      return {
+        xmlRfc: cleanXmlRfc,
+        supplierRfc: "",
+        supplierName: selectedSupplier.label,
+        missingSupplierRfc: true,
+      };
+    }
+
     if (cleanXmlRfc && cleanSupplierRfc && cleanXmlRfc !== cleanSupplierRfc) {
       return {
         xmlRfc: cleanXmlRfc,
         supplierRfc: cleanSupplierRfc,
         supplierName: selectedSupplier.label,
+        missingSupplierRfc: false,
       };
     }
     return null;
-  }, [supplierRfc, selectedSupplier]);
+  }, [supplierRfc, xmlParsedData?.rfcEmisor, selectedSupplier, xmlFile, fiscalUuid]);
+
+  const localUuidError = useMemo(() => {
+    const cleanUuid = (fiscalUuid || xmlParsedData?.uuid || "")
+      .trim()
+      .toUpperCase();
+    if (!cleanUuid) return null;
+    const existsLocally = vouchers.some(
+      (v) => v.fiscalUuid?.trim().toUpperCase() === cleanUuid,
+    );
+    return existsLocally
+      ? `Esta factura (UUID ${cleanUuid}) ya fue agregada en esta pantalla.`
+      : null;
+  }, [fiscalUuid, xmlParsedData?.uuid, vouchers]);
+
+  useEffect(() => {
+    const cleanUuid = (fiscalUuid || xmlParsedData?.uuid || "").trim();
+    const cleanRfc = (supplierRfc || xmlParsedData?.rfcEmisor || "").trim();
+    if (!modalOpen || (!cleanUuid && !cleanRfc) || localUuidError) {
+      setCheckingUuid(false);
+      setRemoteUuidError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingUuid(true);
+    const timer = setTimeout(() => {
+      checkGeneralExpenseCfdiUuid(cleanUuid, {
+        supplierId: selectedSupplier?.value,
+        rfcEmisor: cleanRfc || undefined,
+      })
+        .then((res) => {
+          if (cancelled) return;
+          if (res.data && !res.data.available) {
+            setRemoteUuidError(
+              res.data.reason ??
+                `Esta factura (UUID ${cleanUuid}) ya fue utilizada previamente.`,
+            );
+          } else {
+            setRemoteUuidError(null);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteUuidError(null);
+        })
+        .finally(() => {
+          if (!cancelled) setCheckingUuid(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    modalOpen,
+    fiscalUuid,
+    xmlParsedData?.uuid,
+    supplierRfc,
+    xmlParsedData?.rfcEmisor,
+    selectedSupplier?.value,
+    localUuidError,
+  ]);
+
+  const uuidBlockingError = localUuidError || remoteUuidError;
 
   const resetForm = () => {
     setDate(new Date().toISOString().split("T")[0]);
@@ -202,6 +283,8 @@ export function ExpenseInvoicesTab({
     setPdfFile(null);
     setImageFile(null);
     setXmlParsedData(null);
+    setCheckingUuid(false);
+    setRemoteUuidError(null);
   };
 
   const handleXmlSelected = async (file: File | null) => {
@@ -238,6 +321,9 @@ export function ExpenseInvoicesTab({
   };
 
   const handleCreateVoucher = () => {
+    if (!selectedSupplier || rfcMismatchError || checkingUuid || uuidBlockingError) {
+      return;
+    }
     const numAmount = Number.parseFloat(amount);
     if (!Number.isFinite(numAmount) || numAmount <= 0) {
       return;
@@ -321,12 +407,18 @@ export function ExpenseInvoicesTab({
             resetForm();
             setModalOpen(true);
           }}
-          disabled={disabled}
+          disabled={disabled || !selectedSupplier}
           size="small"
         >
           Agregar comprobante
         </Button>
       </Stack>
+
+      {!selectedSupplier && (
+        <Alert severity="info">
+          Selecciona un proveedor en la pestaña Detalles para poder subir o agregar facturas.
+        </Alert>
+      )}
 
       {/* KPI Cards: Total a Pagar, Deducible, No Deducible */}
       <Grid container spacing={1.5}>
@@ -830,19 +922,50 @@ export function ExpenseInvoicesTab({
             )}
 
             {/* Alerta de validación de RFC Emisor contra Proveedor Seleccionado */}
-            {rfcMismatchWarning && (
-              <Alert severity="warning" icon={<AlertTriangle size={20} />}>
+            {rfcMismatchError && (
+              <Alert severity="error" icon={<AlertTriangle size={20} />}>
                 <Typography variant="subtitle2" fontWeight={700}>
-                  Advertencia de validación de RFC Emisor
+                  {rfcMismatchError.missingSupplierRfc
+                    ? "El proveedor seleccionado no tiene RFC registrado"
+                    : "El RFC emisor no corresponde al proveedor seleccionado"}
                 </Typography>
                 <Typography variant="caption" display="block">
-                  El RFC emisor de la factura (
-                  <strong>{rfcMismatchWarning.xmlRfc}</strong>) no coincide con el
-                  RFC del proveedor seleccionado en el gasto (
-                  <strong>
-                    {rfcMismatchWarning.supplierName} - {rfcMismatchWarning.supplierRfc}
-                  </strong>
-                  ).
+                  {rfcMismatchError.missingSupplierRfc ? (
+                    <>
+                      El proveedor seleccionado (
+                      <strong>{rfcMismatchError.supplierName}</strong>) tiene el
+                      RFC en blanco o nulo. No se puede validar ni agregar esta
+                      factura.
+                    </>
+                  ) : (
+                    <>
+                      El RFC emisor de la factura (
+                      <strong>{rfcMismatchError.xmlRfc}</strong>) no coincide
+                      con el RFC del proveedor seleccionado en el gasto (
+                      <strong>
+                        {rfcMismatchError.supplierName} -{" "}
+                        {rfcMismatchError.supplierRfc}
+                      </strong>
+                      ). No se puede agregar esta factura.
+                    </>
+                  )}
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Alerta de validación de UUID duplicado */}
+            {checkingUuid && (
+              <Alert severity="info">
+                Verificando que el UUID del CFDI no haya sido utilizado previamente...
+              </Alert>
+            )}
+            {uuidBlockingError && (
+              <Alert severity="error" icon={<AlertTriangle size={20} />}>
+                <Typography variant="subtitle2" fontWeight={700}>
+                  UUID ya utilizado
+                </Typography>
+                <Typography variant="caption" display="block">
+                  {uuidBlockingError}
                 </Typography>
               </Alert>
             )}
@@ -962,7 +1085,14 @@ export function ExpenseInvoicesTab({
             variant="contained"
             color="primary"
             onClick={handleCreateVoucher}
-            disabled={!amount || Number.parseFloat(amount) <= 0}
+            disabled={
+              !selectedSupplier ||
+              !amount ||
+              Number.parseFloat(amount) <= 0 ||
+              Boolean(rfcMismatchError) ||
+              checkingUuid ||
+              Boolean(uuidBlockingError)
+            }
           >
             Agregar Comprobante
           </Button>

@@ -12,19 +12,18 @@ export const APPORTIONMENT_TYPE_OPTIONS: Array<{
   value: ApportionmentType;
   label: string;
 }> = [
-  { value: "sales_participation", label: "Por participación de venta" },
-  { value: "credit_card_sales", label: "Ventas de tarjeta de crédito" },
-  { value: "cash_sales", label: "Ventas de contado" },
+  { value: "sales_participation", label: "Por ventas confirmadas" },
+  { value: "cash_sales", label: "Por efectivo" },
   { value: "free", label: "Libre" },
 ];
 
 export const APPORTIONMENT_TYPE_HELP: Record<ApportionmentType, string> = {
   sales_participation:
-    "El porcentaje es proporcional al neto de ventas de cada sucursal en el mes anterior.",
+    "El porcentaje es proporcional a las ventas confirmadas de cada sucursal en el mes anterior.",
   credit_card_sales:
     "El porcentaje es proporcional a las ventas con tarjeta de crédito de cada sucursal en el mes anterior.",
   cash_sales:
-    "El porcentaje es proporcional a las ventas de contado de cada sucursal en el mes anterior.",
+    "El porcentaje es proporcional a las ventas en efectivo de cada sucursal en el mes anterior.",
   free: "Captura el porcentaje de cada sucursal. La suma debe ser 100%.",
 };
 
@@ -48,6 +47,10 @@ export interface GeneralExpensePayment {
   date: string;
   registeredBy: string;
   amount: number;
+  paymentMethod?: "STP" | "BANK";
+  bank?: string | null;
+  bankReference?: string | null;
+  scheduledPaymentId?: number | null;
   notes?: string | null;
   receiptUrl?: string | null;
 }
@@ -127,6 +130,7 @@ export interface CreateGeneralExpensePayload {
   payableInvoiceIds: string[];
   apportionEnabled: boolean;
   apportionmentType: ApportionmentType;
+  branchGroupingId?: number | null;
   branchShares: Array<{ branchId: string; percentage: number }>;
   singleBranchId: string | null;
 }
@@ -139,5 +143,8 @@ export interface UpdateGeneralExpensePayload
 export interface CreateExpensePaymentPayload {
   amount: number;
   paymentDate: string;
+  paymentMethod?: "STP" | "BANK";
+  bank?: string;
+  bankReference?: string;
   notes?: string;
 }

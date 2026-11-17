@@ -71,6 +71,9 @@ import {
   DIVERSE_DEBTORS_READ,
   EXPENSE_REQUESTS_CREATE,
   EXPENSE_REQUESTS_READ,
+  PETTY_CASH_CREATE,
+  PETTY_CASH_READ,
+  EXPENSE_CONFIGS_READ,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   NEW_ORDER_READ,
@@ -180,6 +183,9 @@ export const routeAccessRules: RouteAccessRule[] = [
   { pattern: /^\/facturas\/gastos-deudores-diversos(\/.*)?$/, permission: DIVERSE_DEBTORS_READ },
   { pattern: /^\/facturas\/solicitudes-gastos\/nuevo$/, permission: EXPENSE_REQUESTS_CREATE },
   { pattern: /^\/facturas\/solicitudes-gastos(\/.*)?$/, permission: EXPENSE_REQUESTS_READ },
+  { pattern: /^\/facturas\/cajas-chicas\/nuevo$/, permission: PETTY_CASH_CREATE },
+  { pattern: /^\/facturas\/cajas-chicas(\/.*)?$/, permission: PETTY_CASH_READ },
+  { pattern: /^\/facturas\/configuraciones-gastos(\/.*)?$/, permission: EXPENSE_CONFIGS_READ },
   { pattern: /^\/facturas\/programacion-pagos(\/.*)?$/, permission: GENERAL_EXPENSES_READ },
   { pattern: /^\/facturas\/proveedores(\/.*)?$/, permission: SUPPLIER_PAYABLES_READ },
   {
@@ -249,6 +255,8 @@ export const authorizedHomeOptions: Array<{ path: string; requirement: AccessReq
   { path: "/facturas/deudores-diversos", requirement: { permission: DIVERSE_DEBTORS_READ } },
   { path: "/facturas/gastos-deudores-diversos", requirement: { permission: DIVERSE_DEBTORS_READ } },
   { path: "/facturas/solicitudes-gastos", requirement: { permission: EXPENSE_REQUESTS_READ } },
+  { path: "/facturas/cajas-chicas", requirement: { permission: PETTY_CASH_READ } },
+  { path: "/facturas/configuraciones-gastos", requirement: { permission: EXPENSE_CONFIGS_READ } },
   { path: "/facturas/programacion-pagos", requirement: { permission: GENERAL_EXPENSES_READ } },
   { path: "/facturas/proveedores", requirement: { permission: SUPPLIER_PAYABLES_READ } },
   {

@@ -51,41 +51,44 @@ export function ExpenseRequestDetailsTab({
   disabled = false,
 }: ExpenseRequestDetailsTabProps) {
   const isViaticos = values.classification === "VIATICOS";
+  const isPettyCash = values.classification === "CAJA_CHICA";
 
   return (
     <Stack spacing={2.5}>
-      <FormControl component="fieldset" disabled={disabled}>
-        <FormLabel component="legend">
-          <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-            Clasificación del Gasto
+      {!isPettyCash && (
+        <FormControl component="fieldset" disabled={disabled}>
+          <FormLabel component="legend">
+            <Typography variant="subtitle2" fontWeight={600} color="text.primary">
+              Clasificación del Gasto
+            </Typography>
+          </FormLabel>
+          <RadioGroup
+            row
+            value={values.classification}
+            onChange={(e) =>
+              onChange("classification", e.target.value as ExpenseRequestClassification)
+            }
+            sx={{ mt: 0.5, gap: { xs: 1, sm: 3 } }}
+          >
+            <FormControlLabel
+              value="VIATICOS"
+              control={<Radio size="small" />}
+              label="Viáticos"
+            />
+            <FormControlLabel
+              value="SOLICITUD_GASTOS"
+              control={<Radio size="small" />}
+              label="Solicitud de gastos"
+            />
+          </RadioGroup>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25 }}>
+            {isViaticos &&
+              "Aplica para viajes laborales. Incluye registro de destino, comprobación con facturas/recibos y balance final."}
+            {values.classification === "SOLICITUD_GASTOS" &&
+              "Para compras y gastos operativos puntuales con fecha inicio, fecha fin y posterior comprobación."}
           </Typography>
-        </FormLabel>
-        <RadioGroup
-          row
-          value={values.classification}
-          onChange={(e) =>
-            onChange("classification", e.target.value as ExpenseRequestClassification)
-          }
-          sx={{ mt: 0.5, gap: { xs: 1, sm: 3 } }}
-        >
-          <FormControlLabel
-            value="VIATICOS"
-            control={<Radio size="small" />}
-            label="Viáticos"
-          />
-          <FormControlLabel
-            value="SOLICITUD_GASTOS"
-            control={<Radio size="small" />}
-            label="Solicitud de gastos"
-          />
-        </RadioGroup>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25 }}>
-          {isViaticos &&
-            "Aplica para viajes laborales. Incluye registro de destino, comprobación con facturas/recibos y balance final."}
-          {values.classification === "SOLICITUD_GASTOS" &&
-            "Para compras y gastos operativos puntuales con fecha inicio, fecha fin y posterior comprobación."}
-        </Typography>
-      </FormControl>
+        </FormControl>
+      )}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -114,19 +117,18 @@ export function ExpenseRequestDetailsTab({
         </Grid>
       </Grid>
 
-      <FormAutocomplete
-        label="Empleado / Deudor Diverso"
-        options={debtorOptions}
-        value={values.diverseDebtorId}
-        onChange={(val) => onChange("diverseDebtorId", val)}
-        error={Boolean(errors.diverseDebtorId)}
-        helperText={
-          errors.diverseDebtorId ??
-          "Deudor diverso vinculado automáticamente a tu usuario"
-        }
-        disabled
-        placeholder="Sin deudor diverso asignado al usuario"
-      />
+      {!isPettyCash && (
+        <FormAutocomplete
+          label="Empleado / Deudor Diverso (opcional)"
+          options={debtorOptions}
+          value={values.diverseDebtorId}
+          onChange={(val) => onChange("diverseDebtorId", val)}
+          error={Boolean(errors.diverseDebtorId)}
+          helperText={errors.diverseDebtorId}
+          disabled={disabled}
+          placeholder="Selecciona un empleado / deudor diverso"
+        />
+      )}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>

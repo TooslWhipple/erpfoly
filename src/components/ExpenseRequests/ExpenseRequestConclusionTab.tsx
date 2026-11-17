@@ -10,8 +10,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   Grid,
   Paper,
+  Radio,
+  RadioGroup,
   Slider,
   Stack,
   Table,
@@ -79,11 +82,14 @@ export function ExpenseRequestConclusionTab({
   const isInComprobation =
     request.status === "IN_COMPROBATION" || request.status === "APPROVED";
   const isInVerification = request.status === "IN_VERIFICATION";
+  const isInVerificationFinal = request.status === "IN_VERIFICATION_FINAL";
 
   const requested = request.requestedAmount || 0;
   const verified = request.verifiedAmount || 0;
   const difference = Number((requested - verified).toFixed(2));
   const isCajaChica = request.classification === "CAJA_CHICA";
+  const isFromPettyCash =
+    request.fundingSource === "CAJA_CHICA" || isCajaChica;
 
   // Excedente que la empresa debe reembolsar al empleado (gastó más de lo que se le anticipó)
   const employeeExcess =
@@ -95,7 +101,7 @@ export function ExpenseRequestConclusionTab({
   const isExactMatch = requested > 0 && Math.abs(difference) === 0;
 
   const defaultReimbursementAmount = useMemo(() => {
-    if (isCajaChica) return verified;
+    if (isFromPettyCash) return 0;
     // Si la comprobación está cuadrada ($0) o si le sobró dinero al empleado, NO hay reembolso
     if (isExactMatch || leftoverToReturn > 0) return 0;
     // Si gastó de más por encima del anticipo, se le reembolsa únicamente el excedente
@@ -103,7 +109,7 @@ export function ExpenseRequestConclusionTab({
     // Solicitud directa de reembolso sin anticipo (donde requested === 0 y verified > 0)
     if (requested === 0 && verified > 0) return verified;
     return 0;
-  }, [isCajaChica, isExactMatch, leftoverToReturn, employeeExcess, requested, verified]);
+  }, [isFromPettyCash, isExactMatch, leftoverToReturn, employeeExcess, requested, verified]);
 
   const hasReimbursementToSchedule = defaultReimbursementAmount > 0;
 
@@ -124,6 +130,9 @@ export function ExpenseRequestConclusionTab({
     useState<number>(2);
   const [leftoverNotes, setLeftoverNotes] = useState<string>("");
   const [showLeftoverPreview, setShowLeftoverPreview] = useState(false);
+  const [pettyCashReturnMode, setPettyCashReturnMode] = useState<
+    "IMMEDIATE" | "PAYROLL"
+  >("IMMEDIATE");
 
   const leftoverSchedulePreview = useMemo(() => {
     if (leftoverToReturn <= 0) return [];
@@ -154,7 +163,7 @@ export function ExpenseRequestConclusionTab({
 
   // En IN_VERIFICATION: el responsable completa la revisión una vez evaluados todos los comprobantes
   const canCompleteVerification =
-    isInVerification &&
+    (isInVerification || isInVerificationFinal) &&
     canReviewAndComplete &&
     pendingVouchers.length === 0 &&
     canConclude;
@@ -162,20 +171,32 @@ export function ExpenseRequestConclusionTab({
   const handleAction = async () => {
     setSubmitting(true);
     try {
-      if (isInVerification) {
+      if (isInVerificationFinal) {
         const parsed = Number(customReimbursementAmount);
         const amountToReimburse =
-          hasReimbursementToSchedule && Number.isFinite(parsed) && parsed > 0
+          !isFromPettyCash &&
+          hasReimbursementToSchedule &&
+          Number.isFinite(parsed) &&
+          parsed > 0
             ? parsed
             : defaultReimbursementAmount;
 
+        const sendPayrollDeduction =
+          leftoverToReturn > 0 &&
+          (!isFromPettyCash || pettyCashReturnMode === "PAYROLL");
+
         await onConclude({
           scheduledDate: reimbursementDate || getTomorrowIso(),
-          scheduleReimbursement: amountToReimburse > 0,
+          scheduleReimbursement: !isFromPettyCash && amountToReimburse > 0,
           reimbursementAmount: amountToReimburse,
-          leftoverInstallmentsCount:
-            leftoverToReturn > 0 ? leftoverInstallmentsCount : undefined,
-          leftoverNotes: leftoverToReturn > 0 ? leftoverNotes : undefined,
+          pettyCashReturnMode:
+            isFromPettyCash && leftoverToReturn > 0
+              ? pettyCashReturnMode
+              : undefined,
+          leftoverInstallmentsCount: sendPayrollDeduction
+            ? leftoverInstallmentsCount
+            : undefined,
+          leftoverNotes: sendPayrollDeduction ? leftoverNotes : undefined,
         });
       } else {
         await onConclude();
@@ -204,15 +225,25 @@ export function ExpenseRequestConclusionTab({
               ` por ${request.concludedBy.fullName || request.concludedBy.username}`}
           </Typography>
         </Alert>
+      ) : isInVerificationFinal ? (
+        <Alert severity="info" icon={<Wallet size={20} />}>
+          <Typography variant="body2">
+            <strong>En verificación final:</strong> Todos los comprobantes han
+            sido revisados. Confirma la liquidación final para completar la
+            solicitud.
+            {isFromPettyCash &&
+              leftoverToReturn > 0 &&
+              ` La diferencia de ${numeral(leftoverToReturn).format("$0,0.00")} quedará pendiente de devolución al fondo de caja chica.`}
+          </Typography>
+        </Alert>
       ) : isInVerification ? (
         <Alert severity="warning" icon={<Wallet size={20} />}>
           <Typography variant="body2">
             <strong>En verificación por responsable:</strong> La comprobación de
             gastos fue concluida por el solicitante. Ahora un{" "}
             <strong>responsable</strong> debe revisar (aceptar o rechazar) los
-            comprobantes y completar la solicitud. Si sobra dinero del monto
-            dispersado, se programará un{" "}
-            <strong>Reembolso de Viáticos</strong> para su devolución.
+            comprobantes y pasar la solicitud a{" "}
+            <strong>En verificación final</strong> antes de completarla.
           </Typography>
         </Alert>
       ) : (
@@ -239,15 +270,18 @@ export function ExpenseRequestConclusionTab({
         </Alert>
       )}
 
-      {isInVerification && !canReviewAndComplete && (
+      {(isInVerification || isInVerificationFinal) && !canReviewAndComplete && (
         <Alert severity="info">
-          La solicitud se encuentra en estatus <strong>En verificación</strong>.
-          Un responsable asignado (distinto al deudor diverso solicitante) debe
+          La solicitud se encuentra en estatus{" "}
+          <strong>
+            {isInVerificationFinal ? "En verificación final" : "En verificación"}
+          </strong>
+          . Un responsable asignado (distinto al deudor diverso solicitante) debe
           revisar los comprobantes y completar la solicitud.
         </Alert>
       )}
 
-      {isInVerification && pendingVouchers.length > 0 && (
+      {(isInVerification || isInVerificationFinal) && pendingVouchers.length > 0 && (
         <Alert severity="warning">
           Existen <strong>{pendingVouchers.length}</strong> comprobantes
           pendientes de aceptar o rechazar en la pestaña de{" "}
@@ -417,8 +451,73 @@ export function ExpenseRequestConclusionTab({
           </Alert>
         )}
 
+      {/* Selección de devolución para Caja Chica con sobrante */}
+      {isInVerificationFinal &&
+        isFromPettyCash &&
+        canReviewAndComplete &&
+        pendingVouchers.length === 0 &&
+        leftoverToReturn > 0 && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: alpha(muiTheme.palette.info.main, 0.04),
+              borderColor: alpha(muiTheme.palette.info.main, 0.4),
+            }}
+          >
+            <Stack spacing={1.5}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                ¿Cómo se devolverá el sobrante de{" "}
+                {numeral(leftoverToReturn).format("$0,0.00")} a la caja chica?
+              </Typography>
+              <RadioGroup
+                value={pettyCashReturnMode}
+                onChange={(e) =>
+                  setPettyCashReturnMode(
+                    e.target.value as "IMMEDIATE" | "PAYROLL",
+                  )
+                }
+              >
+                <FormControlLabel
+                  value="IMMEDIATE"
+                  control={<Radio />}
+                  label={
+                    <Stack>
+                      <Typography variant="body2" fontWeight={600}>
+                        Devolver a caja chica de inmediato
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        El sobrante se sumará automáticamente al saldo de la
+                        caja chica de la sucursal sin descuento de nómina.
+                      </Typography>
+                    </Stack>
+                  }
+                />
+                <FormControlLabel
+                  value="PAYROLL"
+                  control={<Radio />}
+                  label={
+                    <Stack>
+                      <Typography variant="body2" fontWeight={600}>
+                        Descontar de nómina
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Se descontará en nómina al colaborador y quedará
+                        pendiente por devolver solicitándolo desde la caja de
+                        ventas.
+                      </Typography>
+                    </Stack>
+                  }
+                />
+              </RadioGroup>
+            </Stack>
+          </Paper>
+        )}
+
       {/* Programación de Descuento de Nómina a Deudor Diverso por Sobrante a Devolver */}
-      {isInVerification &&
+      {isInVerificationFinal &&
+        (!isFromPettyCash || pettyCashReturnMode === "PAYROLL") &&
         canReviewAndComplete &&
         pendingVouchers.length === 0 &&
         leftoverToReturn > 0 && (
@@ -578,7 +677,7 @@ export function ExpenseRequestConclusionTab({
         )}
 
       {/* Programación de Reembolso al Empleado cuando existe excedente a su favor o reposición */}
-      {isInVerification &&
+      {isInVerificationFinal &&
         canReviewAndComplete &&
         pendingVouchers.length === 0 &&
         hasReimbursementToSchedule && (
@@ -714,6 +813,23 @@ export function ExpenseRequestConclusionTab({
           {isInVerification && canReviewAndComplete && (
             <Button
               variant="contained"
+              color="warning"
+              size="large"
+              startIcon={<CheckCircle2 size={18} />}
+              disabled={!canCompleteVerification || submitting}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {submitting ? (
+                <CircularProgress size={22} color="inherit" />
+              ) : (
+                "Pasar a Verificación Final"
+              )}
+            </Button>
+          )}
+
+          {isInVerificationFinal && canReviewAndComplete && (
+            <Button
+              variant="contained"
               color="success"
               size="large"
               startIcon={<CheckCircle2 size={18} />}
@@ -724,7 +840,7 @@ export function ExpenseRequestConclusionTab({
                 <CircularProgress size={22} color="inherit" />
               ) : hasReimbursementToSchedule ? (
                 "Completar y Programar Reembolso"
-              ) : leftoverToReturn > 0 ? (
+              ) : !isFromPettyCash && leftoverToReturn > 0 ? (
                 "Completar y Descontar de Nómina"
               ) : (
                 "Completar y Concluir Comprobación"
@@ -742,24 +858,51 @@ export function ExpenseRequestConclusionTab({
         fullWidth
       >
         <DialogTitle>
-          {isInVerification
+          {isInVerificationFinal
             ? hasReimbursementToSchedule
               ? "¿Completar revisión y programar reembolso?"
-              : leftoverToReturn > 0
+              : !isFromPettyCash && leftoverToReturn > 0
                 ? "¿Completar y programar descuento de nómina?"
                 : "¿Completar y concluir comprobación?"
-            : "¿Concluir comprobación de gastos?"}
+            : isInVerification
+              ? "¿Pasar a verificación final?"
+              : "¿Concluir comprobación de gastos?"}
         </DialogTitle>
         <DialogContent dividers>
           <DialogContentText component="div">
-            {isInVerification ? (
+            {isInVerificationFinal ? (
               <Stack spacing={1.5}>
                 <Typography variant="body2">
                   Se completará la revisión con un monto comprobado aceptado de{" "}
                   <strong>{numeral(verified).format("$0,0.00")}</strong> y la
                   solicitud pasará a estatus <strong>Concluida</strong>.
                 </Typography>
-                {hasReimbursementToSchedule ? (
+                {isFromPettyCash && leftoverToReturn > 0 ? (
+                  pettyCashReturnMode === "IMMEDIATE" ? (
+                    <Alert severity="success" icon={<CheckCircle2 size={18} />}>
+                      Se devolverán de inmediato{" "}
+                      <strong>
+                        {numeral(leftoverToReturn).format("$0,0.00")}
+                      </strong>{" "}
+                      al fondo de <strong>Caja chica</strong> de la sucursal.
+                    </Alert>
+                  ) : (
+                    <Alert severity="warning" icon={<ArrowDownRight size={18} />}>
+                      Se descontarán{" "}
+                      <strong>
+                        {numeral(leftoverToReturn).format("$0,0.00")}
+                      </strong>{" "}
+                      de nómina a <strong>{employeeName}</strong> (en{" "}
+                      <strong>
+                        {leftoverInstallmentsCount} quincena
+                        {leftoverInstallmentsCount > 1 ? "s" : ""}
+                      </strong>
+                      ) y la diferencia quedará{" "}
+                      <strong>pendiente por devolver desde caja de ventas</strong>
+                      .
+                    </Alert>
+                  )
+                ) : hasReimbursementToSchedule ? (
                   <Alert severity="success" icon={<Send size={18} />}>
                     Se creará la programación de <strong>Reembolso al empleado</strong> (folio{" "}
                     <code>REM-{request.folio}</code>) por{" "}
@@ -788,6 +931,13 @@ export function ExpenseRequestConclusionTab({
                   </Alert>
                 ) : null}
               </Stack>
+            ) : isInVerification ? (
+              <Typography variant="body2">
+                Todos los comprobantes están revisados con un total aceptado de{" "}
+                <strong>{numeral(verified).format("$0,0.00")}</strong>. La
+                solicitud pasará a estatus{" "}
+                <strong>En verificación final</strong> antes de completarse.
+              </Typography>
             ) : (
               <Typography variant="body2">
                 Al concluir la comprobación de gastos, la solicitud cambiará a
@@ -803,14 +953,16 @@ export function ExpenseRequestConclusionTab({
           </Button>
           <Button
             variant="contained"
-            color={isInVerification ? "success" : "primary"}
+            color={isInVerificationFinal ? "success" : "primary"}
             onClick={handleAction}
             disabled={submitting}
           >
             {submitting ? (
               <CircularProgress size={20} color="inherit" />
-            ) : isInVerification ? (
+            ) : isInVerificationFinal ? (
               "Sí, completar solicitud"
+            ) : isInVerification ? (
+              "Sí, pasar a verificación final"
             ) : (
               "Sí, enviar a verificación"
             )}

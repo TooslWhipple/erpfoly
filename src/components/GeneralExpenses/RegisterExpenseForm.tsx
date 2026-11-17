@@ -7,6 +7,8 @@ import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
 import { useInternalPayableCategoriesSelect } from "@/hooks/internal-payables/useInternalPayableCategoriesSelect";
 import { useSuppliersSelect } from "@/hooks/suppliers/useSuppliersSelect";
 import { useUsersSelect } from "@/hooks/users/useUsersSelect";
+import { getBranchGroupingsCatalog } from "@/services/branch-groupings.service";
+import type { BranchGroupingCatalogItem } from "@/types/branch-groupings.types";
 import {
   createExpensePayment,
   createGeneralExpense,
@@ -15,6 +17,7 @@ import {
   updateGeneralExpense,
   uploadExpenseEvidence,
   uploadExpensePaymentReceipt,
+  uploadExpenseVoucher,
 } from "@/services/general-expenses.service";
 import type { ParsedClientXml } from "@/components/ExpenseRequests/ExpenseRequestVouchersTab";
 import type {
@@ -108,12 +111,6 @@ function validateDetails(
 ): Partial<Record<keyof ExpenseDetailsFormState, string>> {
   const errors: Partial<Record<keyof ExpenseDetailsFormState, string>> = {};
 
-  if (values.assignToSupplier && !values.supplierId) {
-    errors.supplierId = "Selecciona un proveedor";
-  }
-  if (!values.assignToSupplier && !values.paymentDetails.trim()) {
-    errors.paymentDetails = "Ingresa los detalles del pago";
-  }
   if (!values.dueDate) {
     errors.dueDate = "Selecciona la fecha de pago";
   }
@@ -156,6 +153,10 @@ export function RegisterExpenseForm({
   const [apportionEnabled, setApportionEnabled] = useState(false);
   const [apportionmentType, setApportionmentType] =
     useState<ApportionmentType>("sales_participation");
+  const [branchGroupingId, setBranchGroupingId] = useState<string>("all");
+  const [branchGroupings, setBranchGroupings] = useState<
+    BranchGroupingCatalogItem[]
+  >([]);
   const [branchShares, setBranchShares] = useState<GeneralExpenseBranchShare[]>(
     [],
   );
@@ -178,6 +179,23 @@ export function RegisterExpenseForm({
     useInternalPayableCategoriesSelect();
   const { selectOptions: responsibleOptions } = useUsersSelect();
   const { selectOptions: branchOptions } = useBranchesSelect();
+
+  useEffect(() => {
+    getBranchGroupingsCatalog()
+      .then((items) => {
+        if (Array.isArray(items)) setBranchGroupings(items);
+      })
+      .catch(() => {});
+  }, []);
+
+  const groupingOptions = useMemo(
+    () =>
+      branchGroupings.map((g) => ({
+        value: String(g.id),
+        label: g.name,
+      })),
+    [branchGroupings],
+  );
 
   const selectedSupplier = useMemo(
     () =>
@@ -289,7 +307,13 @@ export function RegisterExpenseForm({
   }, [amountNumber]);
 
   const loadApportionmentPreview = useCallback(
-    async (type: ApportionmentType, amount: number) => {
+    async (
+      type: ApportionmentType,
+      amount: number,
+      groupingId: string = "all",
+    ) => {
+      const parsedGroupingId =
+        type !== "free" && groupingId !== "all" ? Number(groupingId) : null;
       if (type === "free") {
         const result = await getApportionmentPreview(type, amount);
         if (result.error) {
@@ -306,7 +330,11 @@ export function RegisterExpenseForm({
 
       setLoadingPreview(true);
       try {
-        const result = await getApportionmentPreview(type, amount);
+        const result = await getApportionmentPreview(
+          type,
+          amount,
+          parsedGroupingId,
+        );
         if (result.error) {
           showError(result.error.message);
           return;
@@ -325,11 +353,16 @@ export function RegisterExpenseForm({
       skipPreviewRef.current = false;
       return;
     }
-    void loadApportionmentPreview(apportionmentType, amountNumber);
+    void loadApportionmentPreview(
+      apportionmentType,
+      amountNumber,
+      branchGroupingId,
+    );
   }, [
     amountNumber,
     apportionEnabled,
     apportionmentType,
+    branchGroupingId,
     loadApportionmentPreview,
   ]);
 
@@ -509,11 +542,12 @@ export function RegisterExpenseForm({
     const payableIds = capturedVouchers
       .filter((v) => v.isDeductible && /^\d+$/.test(v.id))
       .map((v) => v.id);
+    const hasSupplier = Boolean(details.supplierId);
 
     return {
-      assignToSupplier: details.assignToSupplier,
-      supplierId: details.assignToSupplier ? details.supplierId || null : null,
-      detail: details.assignToSupplier ? undefined : details.paymentDetails.trim(),
+      assignToSupplier: hasSupplier,
+      supplierId: hasSupplier ? details.supplierId : null,
+      detail: hasSupplier ? undefined : details.paymentDetails.trim() || undefined,
       dueDate: details.dueDate,
       categoryId: details.category,
       isLocalPurchase: details.isLocalPurchase,
@@ -524,6 +558,12 @@ export function RegisterExpenseForm({
       payableInvoiceIds: payableIds,
       apportionEnabled,
       apportionmentType,
+      branchGroupingId:
+        apportionEnabled &&
+        apportionmentType !== "free" &&
+        branchGroupingId !== "all"
+          ? Number(branchGroupingId)
+          : null,
       branchShares: apportionEnabled
         ? branchShares.map((share) => ({
             branchId: share.branchId,
@@ -543,7 +583,7 @@ export function RegisterExpenseForm({
       return;
     }
 
-    if (apportionEnabled && apportionmentType === "free") {
+    if (apportionEnabled) {
       const percentageSum = branchShares.reduce(
         (sum, share) => sum + share.percentage,
         0,
@@ -575,16 +615,24 @@ export function RegisterExpenseForm({
         return;
       }
 
-      const createdItem = result.data;
+      let createdItem = result.data;
 
-      // Subir evidencias de tickets o comprobantes que se hayan cargado
-      const vouchersWithEvidence = capturedVouchers.filter((v) => v.imageFile);
-      for (const v of vouchersWithEvidence) {
-        if (v.imageFile && createdItem?.id) {
-          try {
-            await uploadExpenseEvidence(createdItem.id, v.imageFile);
-          } catch (err: any) {
-            console.error("Error al subir archivo de evidencia:", err);
+      // Subir comprobantes nuevos (XML/PDF deducibles o tickets/evidencias)
+      const newVouchers = capturedVouchers.filter(
+        (v) => !/^\d+$/.test(v.id) && !v.id.startsWith("evidence-"),
+      );
+      for (const v of newVouchers) {
+        if (createdItem?.id) {
+          const voucherRes = await uploadExpenseVoucher(createdItem.id, v);
+          if (voucherRes.error) {
+            showError(
+              voucherRes.error.message ??
+                "No se pudo guardar uno de los comprobantes",
+            );
+            return;
+          }
+          if (voucherRes.data) {
+            createdItem = voucherRes.data;
           }
         }
       }
@@ -612,6 +660,9 @@ export function RegisterExpenseForm({
     const result = await createExpensePayment(expense.id, {
       amount: payment.amount,
       paymentDate: payment.date,
+      paymentMethod: payment.paymentMethod,
+      bank: payment.bank,
+      bankReference: payment.bankReference,
       notes: payment.notes,
     });
     if (result.error || !result.data) {
@@ -747,7 +798,15 @@ export function RegisterExpenseForm({
                 apportionEnabled={apportionEnabled}
                 onApportionEnabledChange={setApportionEnabled}
                 apportionmentType={apportionmentType}
-                onApportionmentTypeChange={setApportionmentType}
+                onApportionmentTypeChange={(nextType) => {
+                  setApportionmentType(nextType);
+                  if (nextType === "free") {
+                    setBranchGroupingId("all");
+                  }
+                }}
+                branchGroupingId={branchGroupingId}
+                onBranchGroupingChange={setBranchGroupingId}
+                groupingOptions={groupingOptions}
                 branchShares={branchShares}
                 onBranchPercentageChange={handleBranchPercentageChange}
                 singleBranchId={singleBranchId}

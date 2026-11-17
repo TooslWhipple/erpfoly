@@ -133,6 +133,42 @@ export async function getSessionHistory(): Promise<CashMovement[]> {
   return unwrapOrThrow(result);
 }
 
+export interface PendingPettyCashReturnItem {
+  id: number;
+  folio: string;
+  branchId: number;
+  branchName: string;
+  amount: number;
+  applicantName: string;
+  concludedAt: string | null;
+}
+
+export async function getPendingPettyCashReturns(): Promise<
+  PendingPettyCashReturnItem[]
+> {
+  const result = await get<PendingPettyCashReturnItem[]>(
+    "/cash-movements/petty-cash-pending-returns",
+  );
+  return unwrapOrThrow(result);
+}
+
+export async function returnToPettyCashFromRegister(
+  requestId: number,
+): Promise<{
+  requestId: number;
+  cashMovementId: number;
+  returnedAmount: number;
+  newPettyCashBalance: number;
+}> {
+  const result = await post<{
+    requestId: number;
+    cashMovementId: number;
+    returnedAmount: number;
+    newPettyCashBalance: number;
+  }>(`/cash-movements/petty-cash-return/${requestId}`, {});
+  return unwrapOrThrow(result);
+}
+
 interface CashRegisterClientSearchResponse {
   id: number;
   fullName: string;

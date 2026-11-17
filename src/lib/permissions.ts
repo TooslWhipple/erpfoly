@@ -37,6 +37,8 @@ export type PermissionModule =
   | "facturas.categorias_gastos"
   | "facturas.deudores_diversos"
   | "facturas.solicitudes_gastos"
+  | "facturas.cajas_chicas"
+  | "facturas.configuraciones_gastos"
   | "facturas.proveedores"
   | "facturas.discrepancias"
   | "atencion_cliente"
@@ -243,6 +245,20 @@ export const EXPENSE_REQUESTS_CREATE = EXPENSE_REQUESTS_PERMISSIONS.create;
 export const EXPENSE_REQUESTS_READ = EXPENSE_REQUESTS_PERMISSIONS.read;
 export const EXPENSE_REQUESTS_UPDATE = EXPENSE_REQUESTS_PERMISSIONS.update;
 export const EXPENSE_REQUESTS_DELETE = EXPENSE_REQUESTS_PERMISSIONS.delete;
+
+// Cajas chicas por sucursal
+export const PETTY_CASH_PERMISSIONS = createCrudPermissions("facturas.cajas_chicas");
+export const PETTY_CASH_CREATE = PETTY_CASH_PERMISSIONS.create;
+export const PETTY_CASH_READ = PETTY_CASH_PERMISSIONS.read;
+export const PETTY_CASH_UPDATE = PETTY_CASH_PERMISSIONS.update;
+export const PETTY_CASH_DELETE = PETTY_CASH_PERMISSIONS.delete;
+
+// Configuraciones de gastos (caja chica y solicitudes de gastos)
+export const EXPENSE_CONFIGS_PERMISSIONS = createCrudPermissions("facturas.configuraciones_gastos");
+export const EXPENSE_CONFIGS_CREATE = EXPENSE_CONFIGS_PERMISSIONS.create;
+export const EXPENSE_CONFIGS_READ = EXPENSE_CONFIGS_PERMISSIONS.read;
+export const EXPENSE_CONFIGS_UPDATE = EXPENSE_CONFIGS_PERMISSIONS.update;
+export const EXPENSE_CONFIGS_DELETE = EXPENSE_CONFIGS_PERMISSIONS.delete;
 
 // Supplier payables (Proveedores - Cuentas por pagar)
 export const SUPPLIER_PAYABLES_PERMISSIONS = createCrudPermissions("facturas.proveedores");

@@ -118,8 +118,9 @@ export async function sendToAuthorizeExpenseRequest(
 
 export async function authorizeExpenseRequest(
   id: number | string,
+  payload?: { fundingSource?: "STP" | "CAJA_CHICA" },
 ): Promise<ApiResult<ExpenseRequestDetail>> {
-  return post<ExpenseRequestDetail>(`${BASE}/${id}/authorize`);
+  return post<ExpenseRequestDetail>(`${BASE}/${id}/authorize`, payload ?? {});
 }
 
 export async function rejectExpenseRequest(

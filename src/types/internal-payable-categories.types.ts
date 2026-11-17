@@ -24,7 +24,6 @@ export const INTERNAL_PAYABLE_CATEGORY_CONFIG_OPTIONS: Array<{
   { value: "VIATICOS", label: "Viáticos" },
   { value: "CARGOS_DEUDORES_DIVERSOS", label: "Cargos a deudores diversos" },
   { value: "SOLICITUD_GASTOS", label: "Solicitud de gastos" },
-  { value: "CAJA_CHICA_REVOLVENTE", label: "Caja chica (Revolvente)" },
 ];
 
 export interface InternalPayableCategoryListItem {
@@ -39,7 +38,7 @@ export interface InternalPayableCategoryListItem {
 }
 
 export interface CreateInternalPayableCategoryPayload {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   configuration: InternalPayableCategoryConfiguration;

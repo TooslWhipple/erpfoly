@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Stack } from "@mui/material";
 import { z } from "zod";
 import {
@@ -12,7 +12,6 @@ import type { TabOption } from "@/components/TabFilters";
 import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import type { SelectOption } from "@/components/Form";
 import { defineFormFields, messages } from "@/forms";
-import type { AutocompleteItem } from "@/forms";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -20,7 +19,6 @@ import { getBranches, type BranchItem } from "@/services/users.service";
 import {
   createDiverseDebtor,
   getDiverseDebtors,
-  getDiverseDebtorsCatalog,
   updateDiverseDebtor,
 } from "@/services/diverse-debtors.service";
 import type { DiverseDebtorListItem } from "@/types/diverse-debtors.types";
@@ -57,13 +55,9 @@ type DebtorFormValues = {
   rfc: string;
   clabe: string;
   branchId: string | number;
-  responsibleDebtorIds: (string | number)[];
 };
 
-function buildDebtorFormFields(
-  debtorItems: AutocompleteItem[],
-  branchOptions: SelectOption[],
-) {
+function buildDebtorFormFields(branchOptions: SelectOption[]) {
   return defineFormFields<DebtorFormValues>()([
     {
       name: "employeeNumber",
@@ -135,17 +129,6 @@ function buildDebtorFormFields(
       placeholder: "Selecciona una sucursal",
       options: branchOptions,
     },
-    {
-      name: "responsibleDebtorIds",
-      schema: z
-        .array(z.union([z.string(), z.number()]))
-        .optional()
-        .default([]),
-      label: "Responsables del colaborador (opcional)",
-      type: "autocomplete",
-      placeholder: "Buscar otras personas del catálogo (opcional)...",
-      items: debtorItems,
-    },
   ] as const);
 }
 
@@ -154,43 +137,20 @@ export default function DeudoresDiversosPage() {
   const showError = useSnackbarStore((s) => s.showError);
 
   const [activeTab, setActiveTab] = useState<DebtorStatusTab>("all");
-  const [catalogDebtors, setCatalogDebtors] = useState<DiverseDebtorListItem[]>([]);
   const [branches, setBranches] = useState<BranchItem[]>([]);
 
-  const loadCatalog = useCallback(() => {
-    getDiverseDebtorsCatalog()
-      .then((items) => {
-        if (Array.isArray(items)) setCatalogDebtors(items);
-      })
-      .catch(() => {});
-  }, []);
-
   useEffect(() => {
-    loadCatalog();
     getBranches()
       .then((res) => {
         if (res.data) setBranches(res.data);
       })
       .catch(() => {});
-  }, [loadCatalog]);
+  }, []);
 
   const [modalState, setModalState] = useState<
     { open: false } | { open: true; debtor?: DiverseDebtorListItem }
   >({ open: false });
   const [saving, setSaving] = useState(false);
-
-  const editingDebtorId = modalState.open ? modalState.debtor?.id : undefined;
-
-  const debtorItems: AutocompleteItem[] = useMemo(
-    () =>
-      catalogDebtors
-        .filter((d) => d.id !== editingDebtorId)
-        .map((d) => ({
-          id: d.id,
-          label: `${d.employeeNumber} - ${d.fullName}`,
-        })),
-    [catalogDebtors, editingDebtorId],
-  );
 
   const branchOptions: SelectOption[] = useMemo(
     () =>
@@ -202,8 +162,8 @@ export default function DeudoresDiversosPage() {
   );
 
   const debtorFormFields = useMemo(
-    () => buildDebtorFormFields(debtorItems, branchOptions),
-    [debtorItems, branchOptions],
+    () => buildDebtorFormFields(branchOptions),
+    [branchOptions],
   );
 
   const listExtraParams = useMemo(() => {
@@ -278,9 +238,6 @@ export default function DeudoresDiversosPage() {
         rfc: modalState.debtor.rfc ?? "",
         clabe: modalState.debtor.clabe ?? "",
         branchId: modalState.debtor.branchId ? String(modalState.debtor.branchId) : "",
-        responsibleDebtorIds: modalState.debtor.responsibles.map(
-          (r) => r.responsibleDebtorId,
-        ),
       };
     }
     return {
@@ -291,7 +248,6 @@ export default function DeudoresDiversosPage() {
       rfc: "",
       clabe: "",
       branchId: "",
-      responsibleDebtorIds: [],
     };
   }, [modalState]);
 
@@ -306,9 +262,6 @@ export default function DeudoresDiversosPage() {
       rfc: value.rfc.trim().toUpperCase(),
       clabe: value.clabe.replace(/\s+/g, "").trim(),
       branchId: value.branchId ? Number(value.branchId) : null,
-      responsibleDebtorIds: (value.responsibleDebtorIds ?? []).map((id) =>
-        Number(id),
-      ),
     };
 
     const result = editing
@@ -329,7 +282,6 @@ export default function DeudoresDiversosPage() {
         : "Colaborador registrado correctamente",
     );
     refetch();
-    loadCatalog();
   };
 
   const openConfirm = (debtor: DiverseDebtorListItem) => {
@@ -367,7 +319,6 @@ export default function DeudoresDiversosPage() {
         : "Colaborador activado correctamente",
     );
     refetch();
-    loadCatalog();
   };
 
   const columns: Column<DiverseDebtorListItem>[] = [
@@ -398,14 +349,6 @@ export default function DeudoresDiversosPage() {
       label: "Sucursal",
       width: 160,
       format: (_, row) => row.branch?.name || "-",
-    },
-    {
-      id: "responsibles",
-      label: "Responsables",
-      type: "chipGroup",
-      chipGroupKey: "fullName",
-      chipGroupMaxVisible: 3,
-      width: 300,
     },
     {
       id: "status",

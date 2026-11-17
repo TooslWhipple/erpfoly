@@ -173,21 +173,39 @@ export function parseXmlClient(xmlText: string): ParsedClientXml {
       );
     }
 
-    // Emisor
-    const emisor = doc.querySelector("Emisor");
+    // Emisor (soportar namespaces como cfdi:Emisor)
+    const emisor =
+      doc.getElementsByTagNameNS("*", "Emisor")[0] ||
+      doc.querySelector("Emisor");
     if (emisor) {
-      result.rfcEmisor = emisor.getAttribute("Rfc") || undefined;
-      result.nombreEmisor = emisor.getAttribute("Nombre") || undefined;
+      result.rfcEmisor =
+        emisor.getAttribute("Rfc") || emisor.getAttribute("rfc") || undefined;
+      result.nombreEmisor =
+        emisor.getAttribute("Nombre") ||
+        emisor.getAttribute("nombre") ||
+        undefined;
     }
 
     // Receptor (UsoCFDI)
-    const receptor = doc.querySelector("Receptor");
+    const receptor =
+      doc.getElementsByTagNameNS("*", "Receptor")[0] ||
+      doc.querySelector("Receptor");
     if (receptor) {
-      const usoAttr = receptor.getAttribute("UsoCFDI");
+      const usoAttr =
+        receptor.getAttribute("UsoCFDI") || receptor.getAttribute("usoCFDI");
       if (usoAttr) result.usoCfdi = usoAttr;
     }
 
     // Fallbacks via regex
+    if (!result.rfcEmisor) {
+      const emisorMatch = xmlText.match(/<(?:[a-z0-9_-]+:)?Emisor\b[^>]*>/i);
+      if (emisorMatch) {
+        const rfcM = emisorMatch[0].match(/\bRfc\s*=\s*["']([^"']+)["']/i);
+        if (rfcM) result.rfcEmisor = rfcM[1].trim();
+        const nomM = emisorMatch[0].match(/\bNombre\s*=\s*["']([^"']+)["']/i);
+        if (nomM && !result.nombreEmisor) result.nombreEmisor = nomM[1].trim();
+      }
+    }
     if (!result.formaPago) {
       const m = xmlText.match(/(?:^|\s)FormaPago\s*=\s*["']([^"']+)["']/i);
       if (m) result.formaPago = m[1];
@@ -864,10 +882,9 @@ export function ExpenseRequestVouchersTab({
                       )}
 
                       {/* Review Actions */}
-                      {canReviewVouchers &&
-                        voucher.status === "PENDING" &&
-                        !isCompletedOrCancelled && (
-                          <>
+                      {canReviewVouchers && !isCompletedOrCancelled && (
+                        <>
+                          {voucher.status !== "ACCEPTED" && (
                             <Tooltip title="Aceptar comprobante">
                               <IconButton
                                 size="small"
@@ -880,6 +897,8 @@ export function ExpenseRequestVouchersTab({
                                 <CheckCircle size={18} />
                               </IconButton>
                             </Tooltip>
+                          )}
+                          {voucher.status !== "REJECTED" && (
                             <Tooltip title="Rechazar comprobante">
                               <IconButton
                                 size="small"
@@ -890,8 +909,9 @@ export function ExpenseRequestVouchersTab({
                                 <XCircle size={18} />
                               </IconButton>
                             </Tooltip>
-                          </>
-                        )}
+                          )}
+                        </>
+                      )}
 
                       {/* Delete */}
                       {!isCompletedOrCancelled && (

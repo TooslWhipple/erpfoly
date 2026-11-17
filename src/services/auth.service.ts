@@ -120,6 +120,11 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"facturas": "facturas",
 	"facturas-solicitudes": "facturas.solicitudes",
 	"facturas-gastos-generales": "facturas.gastos_generales",
+	"facturas-categorias-gastos": "facturas.categorias_gastos",
+	"facturas-deudores-diversos": "facturas.deudores_diversos",
+	"facturas-solicitudes-gastos": "facturas.solicitudes_gastos",
+	"facturas-cajas-chicas": "facturas.cajas_chicas",
+	"facturas-configuraciones-gastos": "facturas.configuraciones_gastos",
 	"facturas-proveedores": "facturas.proveedores",
 	"facturas-discrepancias": "facturas.discrepancias",
 	"atencion-cliente": "atencion_cliente",
@@ -131,6 +136,7 @@ const BACKEND_MODULE_TO_FRONTEND_MODULE: Record<string, string> = {
 	"catalogos-productos": "catalogos.productos",
 	"catalogos-departamentos": "catalogos.departamentos",
 	"catalogos-promociones": "catalogos.promociones",
+	"catalogos-agrupamientos-sucursales": "catalogos.agrupamientos-sucursales",
 	"catalogos-zonas": "catalogos.zonas",
 	"catalogos-prorrateos": "catalogos.prorrateos",
 	"apportionments": "catalogos.prorrateos",
@@ -165,6 +171,7 @@ interface BackendUser {
 	roleId?: number;
 	roleName?: string;
 	principalBranchId?: number | null;
+	diverseDebtorId?: number | null;
 	permissions?: BackendPermission[];
 	avatar?: string;
 	temporaryPassword?: boolean;
@@ -261,6 +268,7 @@ function mapBackendUserToFrontend(u: BackendUser): User {
 		avatar: u.avatar,
 		...role,
 		principalBranchId: u.principalBranchId ?? null,
+		diverseDebtorId: u.diverseDebtorId ?? null,
 		permissions: normalizeBackendPermissions(u.permissions),
 		temporaryPassword: u.temporaryPassword ?? u.temporary_password ?? false,
 	};

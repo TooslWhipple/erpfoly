@@ -258,6 +258,20 @@ export interface SaleDiscountRequest {
   items?: SaleDiscountRequestItem[];
 }
 
+export interface SaleInvoiceItem {
+  id: number;
+  uuid: string | null;
+  invoiceType: "VENTA" | "ABONO" | "DESCUENTO";
+  status: "PENDING" | "GENERATED" | "CANCELLED" | "FAILED";
+  documento: string | null;
+  serie: string | null;
+  folioVenta: string | null;
+  amount: number | null;
+  generatedAt: string | null;
+  errorMessage?: string | null;
+  retryTimes?: number;
+}
+
 export interface LayawayOfferView {
   downPaymentRate: number;
   minimumDeposit: number;
@@ -321,6 +335,7 @@ export interface SaleDetail {
   payments: SaleDetailPayment[];
   credit: SaleDetailCredit | null;
   layaway: SaleDetailLayaway | null;
+  invoices?: SaleInvoiceItem[];
   discountRequest: SaleDiscountRequest | null;
   statusHistory?: Array<{
     id: number;

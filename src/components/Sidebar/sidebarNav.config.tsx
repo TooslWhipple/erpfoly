@@ -55,6 +55,11 @@ import {
   PAYABLE_INVOICES_READ,
   INVOICE_REQUESTS_READ,
   GENERAL_EXPENSES_READ,
+  INTERNAL_PAYABLE_CATEGORIES_READ,
+  DIVERSE_DEBTORS_READ,
+  EXPENSE_REQUESTS_READ,
+  PETTY_CASH_READ,
+  EXPENSE_CONFIGS_READ,
   SUPPLIER_PAYABLES_READ,
   MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
   NEW_ORDER_READ,
@@ -62,6 +67,7 @@ import {
   ORDERS_READ,
   ROUTES_READ,
   CATALOG_ZONES_READ,
+  CATALOG_BRANCH_GROUPINGS_READ,
   CATALOG_APPORTIONMENTS_READ,
 } from "@/lib/permissions";
 import type { AccessRequirement } from "@/lib/routeAccess";
@@ -192,6 +198,12 @@ export const NAV_ITEMS: NavItem[] = [
         PAYABLE_INVOICES_READ,
         INVOICE_REQUESTS_READ,
         GENERAL_EXPENSES_READ,
+        INTERNAL_PAYABLE_CATEGORIES_READ,
+        DIVERSE_DEBTORS_READ,
+        EXPENSE_REQUESTS_READ,
+        PETTY_CASH_READ,
+        EXPENSE_CONFIGS_READ,
+  PETTY_CASH_READ,
         SUPPLIER_PAYABLES_READ,
         MERCHANDISE_RECEPTION_DISCREPANCIES_READ,
       ],
@@ -208,8 +220,43 @@ export const NAV_ITEMS: NavItem[] = [
         requirement: { permission: INVOICE_REQUESTS_READ },
       },
       {
-        label: "Interno",
+        label: "Cuentas por pagar",
         path: "/facturas/gastos-generales",
+        requirement: { permission: GENERAL_EXPENSES_READ },
+      },
+      {
+        label: "Categorías de gastos",
+        path: "/facturas/categorias-gastos",
+        requirement: { permission: INTERNAL_PAYABLE_CATEGORIES_READ },
+      },
+      {
+        label: "Deudores diversos",
+        path: "/facturas/deudores-diversos",
+        requirement: { permission: DIVERSE_DEBTORS_READ },
+      },
+      {
+        label: "Gastos Deudores Diversos",
+        path: "/facturas/gastos-deudores-diversos",
+        requirement: { permission: DIVERSE_DEBTORS_READ },
+      },
+      {
+        label: "Solicitud de gastos",
+        path: "/facturas/solicitudes-gastos",
+        requirement: { permission: EXPENSE_REQUESTS_READ },
+      },
+      {
+        label: "Cajas chicas",
+        path: "/facturas/cajas-chicas",
+        requirement: { permission: PETTY_CASH_READ },
+      },
+      {
+        label: "Configuración de gastos",
+        path: "/facturas/configuraciones-gastos",
+        requirement: { permission: EXPENSE_CONFIGS_READ },
+      },
+      {
+        label: "Programación de pagos",
+        path: "/facturas/programacion-pagos",
         requirement: { permission: GENERAL_EXPENSES_READ },
       },
       {
@@ -230,6 +277,7 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/catalogos/opciones-contables",
     icon: <Calculator size={ICON_SIZE} />,
     subItems: [
+      { label: "Agrupamiento de sucursales", path: "/catalogos/agrupamientos-sucursales", requirement: { permission: CATALOG_BRANCH_GROUPINGS_READ } },
       { label: "Prorrateos", path: "/catalogos/prorrateos", requirement: { permission: CATALOG_APPORTIONMENTS_READ } },
       { label: "Tipos de Transacción", path: "/catalogos/tipos-transaccion", requirement: { permission: CATALOG_TRANSACTION_TYPES_READ } },
       { label: "Pólizas Sistema", path: "/catalogos/polizas-sistema", requirement: { permission: CATALOG_SYSTEM_POLICIES_READ } },

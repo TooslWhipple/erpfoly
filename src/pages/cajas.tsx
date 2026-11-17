@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Stack, Typography } from "@mui/material";
+import { Alert, Button, Stack, Typography } from "@mui/material";
+import numeral from "numeral";
 import { StatusChip } from "@/components";
 import { Monitor } from "lucide-react";
 import { InlineMobileMenuButton, useAppNav } from "@/components/Layout";
@@ -38,6 +39,9 @@ import {
 import {
   openCashRegister as openCashRegisterApi,
   createWithdrawal,
+  getPendingPettyCashReturns,
+  returnToPettyCashFromRegister,
+  type PendingPettyCashReturnItem,
   createPartialCut,
   createFinalCut,
 } from "@/services/cash-register.service";
@@ -103,6 +107,45 @@ export default function Cajas() {
   const [cashWithdrawalModalOpen, setCashWithdrawalModalOpen] = useState(false);
   const [initialFund, setInitialFund] = useState("1500");
   const [exchangeRate, setExchangeRate] = useState("17.6");
+  const [pendingPettyReturns, setPendingPettyReturns] = useState<
+    PendingPettyCashReturnItem[]
+  >([]);
+  const [returningPettyId, setReturningPettyId] = useState<number | null>(null);
+
+  const loadPendingPettyReturns = useCallback(async () => {
+    if (!isRegisterOpen) {
+      setPendingPettyReturns([]);
+      return;
+    }
+    try {
+      const items = await getPendingPettyCashReturns();
+      setPendingPettyReturns(items ?? []);
+    } catch {
+      setPendingPettyReturns([]);
+    }
+  }, [isRegisterOpen]);
+
+  useEffect(() => {
+    void loadPendingPettyReturns();
+  }, [loadPendingPettyReturns]);
+
+  const handleDeliverToPettyCash = async (item: PendingPettyCashReturnItem) => {
+    try {
+      setReturningPettyId(item.id);
+      await returnToPettyCashFromRegister(item.id);
+      showSuccess(
+        `Se entregaron ${numeral(item.amount).format("$0,0.00")} a caja chica (${item.folio})`,
+      );
+      await Promise.all([
+        loadAssignedCashRegister(),
+        loadPendingPettyReturns(),
+      ]);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setReturningPettyId(null);
+    }
+  };
 
   useEffect(() => {
     const handleRouteComplete = (url: string) => {
@@ -472,6 +515,47 @@ export default function Cajas() {
             </Stack>
           </PageHeader>
           <CashRegisterPageContent>
+            {pendingPettyReturns.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Devoluciones pendientes a Caja Chica (descuentos de nómina)
+                  </Typography>
+                  {pendingPettyReturns.map((item) => (
+                    <Stack
+                      key={item.id}
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1}
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      justifyContent="space-between"
+                    >
+                      <Typography variant="body2">
+                        <strong>{item.folio}</strong> · {item.applicantName} ·{" "}
+                        <strong>
+                          {numeral(item.amount).format("$0,0.00")}
+                        </strong>
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="warning"
+                        disabled={
+                          returningPettyId === item.id ||
+                          item.amount > cashRegister.currentCash
+                        }
+                        onClick={() => void handleDeliverToPettyCash(item)}
+                      >
+                        {returningPettyId === item.id
+                          ? "Entregando..."
+                          : item.amount > cashRegister.currentCash
+                            ? "Efectivo insuficiente"
+                            : "Entregar a caja chica"}
+                      </Button>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Alert>
+            )}
             <CashRegisterDashboard
               cashRegister={cashRegister}
               searchQuery={searchQuery}

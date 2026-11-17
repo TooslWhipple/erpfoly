@@ -35,6 +35,11 @@ export type PermissionModule =
   | "facturas"
   | "facturas.solicitudes"
   | "facturas.gastos_generales"
+  | "facturas.categorias_gastos"
+  | "facturas.deudores_diversos"
+  | "facturas.solicitudes_gastos"
+  | "facturas.cajas_chicas"
+  | "facturas.configuraciones_gastos"
   | "facturas.proveedores"
   | "facturas.discrepancias"
   | "atencion_cliente"
@@ -62,6 +67,7 @@ export type PermissionModule =
   | "catalogos.tipos-transaccion"
   | "catalogos.polizas-sistema"
   | "catalogos.polizas"
+  | "catalogos.agrupamientos-sucursales"
   | "entregas"
   | "entregas.resguardos"
   | "ventas"
@@ -224,6 +230,41 @@ export const GENERAL_EXPENSES_READ = GENERAL_EXPENSES_PERMISSIONS.read;
 export const GENERAL_EXPENSES_UPDATE = GENERAL_EXPENSES_PERMISSIONS.update;
 export const GENERAL_EXPENSES_DELETE = GENERAL_EXPENSES_PERMISSIONS.delete;
 
+// Categorías de gastos (Cuentas por pagar internas)
+export const INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS = createCrudPermissions("facturas.categorias_gastos");
+export const INTERNAL_PAYABLE_CATEGORIES_CREATE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.create;
+export const INTERNAL_PAYABLE_CATEGORIES_READ = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.read;
+export const INTERNAL_PAYABLE_CATEGORIES_UPDATE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.update;
+export const INTERNAL_PAYABLE_CATEGORIES_DELETE = INTERNAL_PAYABLE_CATEGORIES_PERMISSIONS.delete;
+
+// Deudores diversos (Empleados)
+export const DIVERSE_DEBTORS_PERMISSIONS = createCrudPermissions("facturas.deudores_diversos");
+export const DIVERSE_DEBTORS_CREATE = DIVERSE_DEBTORS_PERMISSIONS.create;
+export const DIVERSE_DEBTORS_READ = DIVERSE_DEBTORS_PERMISSIONS.read;
+export const DIVERSE_DEBTORS_UPDATE = DIVERSE_DEBTORS_PERMISSIONS.update;
+export const DIVERSE_DEBTORS_DELETE = DIVERSE_DEBTORS_PERMISSIONS.delete;
+
+// Solicitudes de gastos (Viáticos, Solicitud de gastos, Caja chica)
+export const EXPENSE_REQUESTS_PERMISSIONS = createCrudPermissions("facturas.solicitudes_gastos");
+export const EXPENSE_REQUESTS_CREATE = EXPENSE_REQUESTS_PERMISSIONS.create;
+export const EXPENSE_REQUESTS_READ = EXPENSE_REQUESTS_PERMISSIONS.read;
+export const EXPENSE_REQUESTS_UPDATE = EXPENSE_REQUESTS_PERMISSIONS.update;
+export const EXPENSE_REQUESTS_DELETE = EXPENSE_REQUESTS_PERMISSIONS.delete;
+
+// Cajas chicas por sucursal
+export const PETTY_CASH_PERMISSIONS = createCrudPermissions("facturas.cajas_chicas");
+export const PETTY_CASH_CREATE = PETTY_CASH_PERMISSIONS.create;
+export const PETTY_CASH_READ = PETTY_CASH_PERMISSIONS.read;
+export const PETTY_CASH_UPDATE = PETTY_CASH_PERMISSIONS.update;
+export const PETTY_CASH_DELETE = PETTY_CASH_PERMISSIONS.delete;
+
+// Configuraciones de gastos (caja chica y solicitudes de gastos)
+export const EXPENSE_CONFIGS_PERMISSIONS = createCrudPermissions("facturas.configuraciones_gastos");
+export const EXPENSE_CONFIGS_CREATE = EXPENSE_CONFIGS_PERMISSIONS.create;
+export const EXPENSE_CONFIGS_READ = EXPENSE_CONFIGS_PERMISSIONS.read;
+export const EXPENSE_CONFIGS_UPDATE = EXPENSE_CONFIGS_PERMISSIONS.update;
+export const EXPENSE_CONFIGS_DELETE = EXPENSE_CONFIGS_PERMISSIONS.delete;
+
 // Supplier payables (Proveedores - Cuentas por pagar)
 export const SUPPLIER_PAYABLES_PERMISSIONS = createCrudPermissions("facturas.proveedores");
 export const SUPPLIER_PAYABLES_CREATE = SUPPLIER_PAYABLES_PERMISSIONS.create;
@@ -320,6 +361,12 @@ export const CATALOG_PROMOTIONS_CREATE = CATALOG_PROMOTIONS_PERMISSIONS.create;
 export const CATALOG_PROMOTIONS_READ = CATALOG_PROMOTIONS_PERMISSIONS.read;
 export const CATALOG_PROMOTIONS_UPDATE = CATALOG_PROMOTIONS_PERMISSIONS.update;
 export const CATALOG_PROMOTIONS_DELETE = CATALOG_PROMOTIONS_PERMISSIONS.delete;
+
+export const CATALOG_BRANCH_GROUPINGS_PERMISSIONS = createCrudPermissions("catalogos.agrupamientos-sucursales");
+export const CATALOG_BRANCH_GROUPINGS_CREATE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.create;
+export const CATALOG_BRANCH_GROUPINGS_READ = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.read;
+export const CATALOG_BRANCH_GROUPINGS_UPDATE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.update;
+export const CATALOG_BRANCH_GROUPINGS_DELETE = CATALOG_BRANCH_GROUPINGS_PERMISSIONS.delete;
 
 export const CATALOG_ZONES_PERMISSIONS = createCrudPermissions("catalogos.zonas");
 export const CATALOG_ZONES_CREATE = CATALOG_ZONES_PERMISSIONS.create;
@@ -500,6 +547,7 @@ export const PERMISSIONS_BY_MODULE = {
     products: Object.values(CATALOG_PRODUCTS_PERMISSIONS),
     departments: Object.values(CATALOG_DEPARTMENTS_PERMISSIONS),
     promotions: Object.values(CATALOG_PROMOTIONS_PERMISSIONS),
+    branchGroupings: Object.values(CATALOG_BRANCH_GROUPINGS_PERMISSIONS),
     zones: Object.values(CATALOG_ZONES_PERMISSIONS),
     branches: Object.values(CATALOG_BRANCHES_PERMISSIONS),
     cashRegisters: Object.values(CATALOG_CASH_REGISTERS_PERMISSIONS),

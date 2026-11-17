@@ -7,14 +7,19 @@ import { useBranchesSelect } from "@/hooks/branches/useBranchesSelect";
 import { useInternalPayableCategoriesSelect } from "@/hooks/internal-payables/useInternalPayableCategoriesSelect";
 import { useSuppliersSelect } from "@/hooks/suppliers/useSuppliersSelect";
 import { useUsersSelect } from "@/hooks/users/useUsersSelect";
+import { getBranchGroupingsCatalog } from "@/services/branch-groupings.service";
+import type { BranchGroupingCatalogItem } from "@/types/branch-groupings.types";
 import {
   createExpensePayment,
   createGeneralExpense,
   getApportionmentPreview,
   getUnassignedInvoices,
   updateGeneralExpense,
+  uploadExpenseEvidence,
   uploadExpensePaymentReceipt,
+  uploadExpenseVoucher,
 } from "@/services/general-expenses.service";
+import type { ParsedClientXml } from "@/components/ExpenseRequests/ExpenseRequestVouchersTab";
 import type {
   ApportionmentType,
   CreateGeneralExpensePayload,
@@ -28,7 +33,10 @@ import { useSnackbarStore } from "@/store/useSnackbarStore";
 import { ExpenseApportionmentTab } from "./ExpenseApportionmentTab";
 import { ExpenseDetailsTab } from "./ExpenseDetailsTab";
 import type { ExpenseDetailsFormState } from "./ExpenseDetailsTab";
-import { ExpenseInvoicesTab } from "./ExpenseInvoicesTab";
+import {
+  ExpenseInvoicesTab,
+  type ExpenseCapturedVoucher,
+} from "./ExpenseInvoicesTab";
 import { ExpensePaymentsTab } from "./ExpensePaymentsTab";
 import { ExpenseSummaryPanel } from "./ExpenseSummaryPanel";
 import {
@@ -103,12 +111,6 @@ function validateDetails(
 ): Partial<Record<keyof ExpenseDetailsFormState, string>> {
   const errors: Partial<Record<keyof ExpenseDetailsFormState, string>> = {};
 
-  if (values.assignToSupplier && !values.supplierId) {
-    errors.supplierId = "Selecciona un proveedor";
-  }
-  if (!values.assignToSupplier && !values.paymentDetails.trim()) {
-    errors.paymentDetails = "Ingresa los detalles del pago";
-  }
   if (!values.dueDate) {
     errors.dueDate = "Selecciona la fecha de pago";
   }
@@ -151,6 +153,10 @@ export function RegisterExpenseForm({
   const [apportionEnabled, setApportionEnabled] = useState(false);
   const [apportionmentType, setApportionmentType] =
     useState<ApportionmentType>("sales_participation");
+  const [branchGroupingId, setBranchGroupingId] = useState<string>("all");
+  const [branchGroupings, setBranchGroupings] = useState<
+    BranchGroupingCatalogItem[]
+  >([]);
   const [branchShares, setBranchShares] = useState<GeneralExpenseBranchShare[]>(
     [],
   );
@@ -161,6 +167,11 @@ export function RegisterExpenseForm({
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const skipPreviewRef = useRef(Boolean(expense?.branchShares.length));
 
+  // Comprobantes de gastos y facturas cargadas
+  const [capturedVouchers, setCapturedVouchers] = useState<
+    ExpenseCapturedVoucher[]
+  >([]);
+
   const isEdit = Boolean(expense);
 
   const { selectOptions: supplierOptions } = useSuppliersSelect();
@@ -168,6 +179,31 @@ export function RegisterExpenseForm({
     useInternalPayableCategoriesSelect();
   const { selectOptions: responsibleOptions } = useUsersSelect();
   const { selectOptions: branchOptions } = useBranchesSelect();
+
+  useEffect(() => {
+    getBranchGroupingsCatalog()
+      .then((items) => {
+        if (Array.isArray(items)) setBranchGroupings(items);
+      })
+      .catch(() => {});
+  }, []);
+
+  const groupingOptions = useMemo(
+    () =>
+      branchGroupings.map((g) => ({
+        value: String(g.id),
+        label: g.name,
+      })),
+    [branchGroupings],
+  );
+
+  const selectedSupplier = useMemo(
+    () =>
+      supplierOptions.find(
+        (opt) => String(opt.value) === String(details.supplierId),
+      ) ?? null,
+    [supplierOptions, details.supplierId],
+  );
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -194,6 +230,28 @@ export function RegisterExpenseForm({
       setApportionmentType(expense.apportionmentType);
       setBranchShares(expense.branchShares);
       setSingleBranchId(expense.singleBranchId ?? "");
+
+      const loadedVouchers: ExpenseCapturedVoucher[] = (
+        expense.invoices ?? []
+      ).map((inv) => ({
+        id: inv.id,
+        date: inv.date,
+        concept: `Factura ${inv.externalId}`,
+        amount: inv.amount,
+        isDeductible: true,
+        fiscalUuid: inv.externalId,
+      }));
+      if (expense.evidenceUrl) {
+        loadedVouchers.push({
+          id: `evidence-${expense.id}`,
+          date: expense.dueDate,
+          concept: expense.evidenceFileName || "Comprobante no deducible",
+          amount: expense.amount,
+          isDeductible: false,
+          imageUrl: expense.evidenceUrl,
+        });
+      }
+      setCapturedVouchers(loadedVouchers);
       return;
     }
 
@@ -203,6 +261,18 @@ export function RegisterExpenseForm({
     });
     setRequiresInvoice(Boolean(initialInvoices?.length));
     setInvoices(initialInvoices ?? []);
+    if (initialInvoices?.length) {
+      setCapturedVouchers(
+        initialInvoices.map((inv) => ({
+          id: inv.id,
+          date: inv.date,
+          concept: `Factura ${inv.externalId}`,
+          amount: inv.amount,
+          isDeductible: true,
+          fiscalUuid: inv.externalId,
+        })),
+      );
+    }
     setPayments([]);
     setApportionEnabled(false);
     setApportionmentType("sales_participation");
@@ -226,8 +296,8 @@ export function RegisterExpenseForm({
 
   const amountNumber = parseAmount(details.amount);
   const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const invoicesAmount = invoices.reduce(
-    (sum, invoice) => sum + invoice.amount,
+  const invoicesAmount = capturedVouchers.reduce(
+    (sum, voucher) => sum + (Number(voucher.amount) || 0),
     0,
   );
   const balance = Number((amountNumber - paidAmount).toFixed(2));
@@ -237,7 +307,13 @@ export function RegisterExpenseForm({
   }, [amountNumber]);
 
   const loadApportionmentPreview = useCallback(
-    async (type: ApportionmentType, amount: number) => {
+    async (
+      type: ApportionmentType,
+      amount: number,
+      groupingId: string = "all",
+    ) => {
+      const parsedGroupingId =
+        type !== "free" && groupingId !== "all" ? Number(groupingId) : null;
       if (type === "free") {
         const result = await getApportionmentPreview(type, amount);
         if (result.error) {
@@ -254,7 +330,11 @@ export function RegisterExpenseForm({
 
       setLoadingPreview(true);
       try {
-        const result = await getApportionmentPreview(type, amount);
+        const result = await getApportionmentPreview(
+          type,
+          amount,
+          parsedGroupingId,
+        );
         if (result.error) {
           showError(result.error.message);
           return;
@@ -273,11 +353,16 @@ export function RegisterExpenseForm({
       skipPreviewRef.current = false;
       return;
     }
-    void loadApportionmentPreview(apportionmentType, amountNumber);
+    void loadApportionmentPreview(
+      apportionmentType,
+      amountNumber,
+      branchGroupingId,
+    );
   }, [
     amountNumber,
     apportionEnabled,
     apportionmentType,
+    branchGroupingId,
     loadApportionmentPreview,
   ]);
 
@@ -301,6 +386,97 @@ export function RegisterExpenseForm({
       });
     },
     [],
+  );
+
+  const handleAddVoucher = useCallback(
+    (newVoucher: ExpenseCapturedVoucher) => {
+      setCapturedVouchers((prev) => {
+        const next = [...prev, newVoucher];
+        const sumTotal = next.reduce(
+          (acc, v) => acc + (Number(v.amount) || 0),
+          0,
+        );
+
+        setDetails((prevDetails) => {
+          const nextDetails = {
+            ...prevDetails,
+            amount: sumTotal > 0 ? sumTotal.toFixed(2) : prevDetails.amount,
+          };
+
+          if (!nextDetails.description.trim() && newVoucher.concept) {
+            nextDetails.description = newVoucher.concept;
+          }
+          if (!nextDetails.dueDate && newVoucher.date) {
+            nextDetails.dueDate = newVoucher.date;
+          }
+          if (newVoucher.supplierRfc && supplierOptions.length > 0) {
+            const matched = supplierOptions.find((opt) => {
+              const optRfc = (opt as any).rfc?.toUpperCase();
+              const voucherRfc = newVoucher.supplierRfc?.toUpperCase();
+              return (
+                (optRfc && voucherRfc && optRfc === voucherRfc) ||
+                opt.label
+                  .toLowerCase()
+                  .includes(newVoucher.supplierName?.toLowerCase() || "")
+              );
+            });
+            if (matched) {
+              nextDetails.assignToSupplier = true;
+              nextDetails.supplierId = String(matched.value);
+              nextDetails.supplierName = matched.label;
+            }
+          }
+          return nextDetails;
+        });
+
+        return next;
+      });
+    },
+    [supplierOptions],
+  );
+
+  const handleRemoveVoucher = useCallback((voucherId: string) => {
+    setCapturedVouchers((prev) => {
+      const next = prev.filter((v) => v.id !== voucherId);
+      const sumTotal = next.reduce(
+        (acc, v) => acc + (Number(v.amount) || 0),
+        0,
+      );
+      setDetails((prevDetails) => ({
+        ...prevDetails,
+        amount:
+          sumTotal > 0
+            ? sumTotal.toFixed(2)
+            : next.length === 0
+              ? ""
+              : prevDetails.amount,
+      }));
+      return next;
+    });
+  }, []);
+
+  const handleToggleVoucherDeductible = useCallback((voucherId: string) => {
+    setCapturedVouchers((prev) =>
+      prev.map((v) =>
+        v.id === voucherId ? { ...v, isDeductible: !v.isDeductible } : v,
+      ),
+    );
+  }, []);
+
+  const handleAddAvailableInvoice = useCallback(
+    (inv: UnassignedInvoice) => {
+      handleAddVoucher({
+        id: String(inv.id),
+        date: inv.date,
+        concept: `Factura ${inv.invoiceNumber ?? inv.id}`,
+        amount: inv.amount,
+        isDeductible: true,
+        supplierName: inv.supplierName,
+        supplierRfc: inv.supplierRfc,
+        fiscalUuid: inv.invoiceNumber ?? inv.id,
+      });
+    },
+    [handleAddVoucher],
   );
 
   const loadAvailableInvoices = useCallback(
@@ -361,28 +537,42 @@ export function RegisterExpenseForm({
     );
   };
 
-  const buildPayload = (): CreateGeneralExpensePayload => ({
-    assignToSupplier: details.assignToSupplier,
-    supplierId: details.assignToSupplier ? details.supplierId || null : null,
-    detail: details.assignToSupplier ? undefined : details.paymentDetails.trim(),
-    dueDate: details.dueDate,
-    categoryId: details.category,
-    isLocalPurchase: details.isLocalPurchase,
-    responsibleId: details.responsibleId || null,
-    description: details.description.trim(),
-    amount: amountNumber,
-    requiresInvoice,
-    payableInvoiceIds: requiresInvoice ? invoices.map((invoice) => invoice.id) : [],
-    apportionEnabled,
-    apportionmentType,
-    branchShares: apportionEnabled
-      ? branchShares.map((share) => ({
-          branchId: share.branchId,
-          percentage: share.percentage,
-        }))
-      : [],
-    singleBranchId: apportionEnabled ? null : singleBranchId || null,
-  });
+  const buildPayload = (): CreateGeneralExpensePayload => {
+    const isAnyDeductible = capturedVouchers.some((v) => v.isDeductible);
+    const payableIds = capturedVouchers
+      .filter((v) => v.isDeductible && /^\d+$/.test(v.id))
+      .map((v) => v.id);
+    const hasSupplier = Boolean(details.supplierId);
+
+    return {
+      assignToSupplier: hasSupplier,
+      supplierId: hasSupplier ? details.supplierId : null,
+      detail: hasSupplier ? undefined : details.paymentDetails.trim() || undefined,
+      dueDate: details.dueDate,
+      categoryId: details.category,
+      isLocalPurchase: details.isLocalPurchase,
+      responsibleId: details.responsibleId || null,
+      description: details.description.trim(),
+      amount: amountNumber,
+      requiresInvoice: isAnyDeductible,
+      payableInvoiceIds: payableIds,
+      apportionEnabled,
+      apportionmentType,
+      branchGroupingId:
+        apportionEnabled &&
+        apportionmentType !== "free" &&
+        branchGroupingId !== "all"
+          ? Number(branchGroupingId)
+          : null,
+      branchShares: apportionEnabled
+        ? branchShares.map((share) => ({
+            branchId: share.branchId,
+            percentage: share.percentage,
+          }))
+        : [],
+      singleBranchId: apportionEnabled ? null : singleBranchId || null,
+    };
+  };
 
   const handleSubmit = async () => {
     const nextErrors = validateDetails(details);
@@ -393,7 +583,7 @@ export function RegisterExpenseForm({
       return;
     }
 
-    if (apportionEnabled && apportionmentType === "free") {
+    if (apportionEnabled) {
       const percentageSum = branchShares.reduce(
         (sum, share) => sum + share.percentage,
         0,
@@ -425,10 +615,32 @@ export function RegisterExpenseForm({
         return;
       }
 
+      let createdItem = result.data;
+
+      // Subir comprobantes nuevos (XML/PDF deducibles o tickets/evidencias)
+      const newVouchers = capturedVouchers.filter(
+        (v) => !/^\d+$/.test(v.id) && !v.id.startsWith("evidence-"),
+      );
+      for (const v of newVouchers) {
+        if (createdItem?.id) {
+          const voucherRes = await uploadExpenseVoucher(createdItem.id, v);
+          if (voucherRes.error) {
+            showError(
+              voucherRes.error.message ??
+                "No se pudo guardar uno de los comprobantes",
+            );
+            return;
+          }
+          if (voucherRes.data) {
+            createdItem = voucherRes.data;
+          }
+        }
+      }
+
       showSuccess(
         expense ? "Gasto actualizado correctamente" : "Gasto registrado correctamente",
       );
-      onSuccess?.(result.data);
+      onSuccess?.(createdItem);
       void router.push("/facturas/gastos-generales");
     } finally {
       setSaving(false);
@@ -448,6 +660,9 @@ export function RegisterExpenseForm({
     const result = await createExpensePayment(expense.id, {
       amount: payment.amount,
       paymentDate: payment.date,
+      paymentMethod: payment.paymentMethod,
+      bank: payment.bank,
+      bankReference: payment.bankReference,
       notes: payment.notes,
     });
     if (result.error || !result.data) {
@@ -548,33 +763,16 @@ export function RegisterExpenseForm({
 
             {activeTab === "invoices" && (
               <ExpenseInvoicesTab
-                requiresInvoice={requiresInvoice}
-                onRequiresInvoiceChange={(value) => {
-                  setRequiresInvoice(value);
-                  if (!value) setInvoices([]);
-                }}
-                invoices={invoices}
+                vouchers={capturedVouchers}
+                onAddVoucher={handleAddVoucher}
+                onRemoveVoucher={handleRemoveVoucher}
+                onToggleVoucherDeductible={handleToggleVoucherDeductible}
                 availableInvoices={availableInvoices}
                 searching={searchingInvoices}
                 searchMessage={searchMessage}
-                onRemoveInvoice={(invoiceId) =>
-                  setInvoices((prev) =>
-                    prev.filter((item) => item.id !== invoiceId),
-                  )
-                }
-                onAddInvoice={(invoice) => {
-                  setInvoices((prev) => [
-                    ...prev,
-                    {
-                      id: invoice.id,
-                      externalId: invoice.invoiceNumber ?? invoice.id,
-                      date: invoice.date,
-                      paymentType: invoice.paymentType,
-                      amount: invoice.amount,
-                    },
-                  ]);
-                }}
+                onAddAvailableInvoice={handleAddAvailableInvoice}
                 disabled={saving}
+                selectedSupplier={selectedSupplier}
               />
             )}
 
@@ -600,7 +798,15 @@ export function RegisterExpenseForm({
                 apportionEnabled={apportionEnabled}
                 onApportionEnabledChange={setApportionEnabled}
                 apportionmentType={apportionmentType}
-                onApportionmentTypeChange={setApportionmentType}
+                onApportionmentTypeChange={(nextType) => {
+                  setApportionmentType(nextType);
+                  if (nextType === "free") {
+                    setBranchGroupingId("all");
+                  }
+                }}
+                branchGroupingId={branchGroupingId}
+                onBranchGroupingChange={setBranchGroupingId}
+                groupingOptions={groupingOptions}
                 branchShares={branchShares}
                 onBranchPercentageChange={handleBranchPercentageChange}
                 singleBranchId={singleBranchId}

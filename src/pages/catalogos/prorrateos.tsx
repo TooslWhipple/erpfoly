@@ -74,7 +74,7 @@ type GroupingViewTab = "branches" | "zones";
 
 const GROUPING_TABS: { value: GroupingViewTab; label: string }[] = [
   { value: "branches", label: "Sucursales" },
-  { value: "zones", label: "Zonas (sus sucursales)" },
+  { value: "zones", label: "Agrupamientos (sus sucursales)" },
 ];
 
 function formatCurrency(amount: number): string {
@@ -585,7 +585,7 @@ export default function ProrrateosPage() {
                 <TableRow>
                   <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Sucursal</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Zona</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Agrupamiento</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
                     Monto Base ($)
                   </TableCell>
@@ -602,13 +602,13 @@ export default function ProrrateosPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  branches.map((b) => (
-                    <TableRow key={b.branchId} hover>
+                  branches.map((b, idx) => (
+                    <TableRow key={`${b.branchId}-${b.zoneId ?? "none"}-${idx}`} hover>
                       <TableCell>{b.branchId}</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{b.branchName}</TableCell>
                       <TableCell>
                         <Chip
-                          label={b.zoneName ?? "Sin zona"}
+                          label={b.zoneName ?? "Sin agrupamiento"}
                           size="small"
                           variant={b.zoneName ? "filled" : "outlined"}
                           color={b.zoneName ? "primary" : "default"}

@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   Button,
   CircularProgress,
+  FormControlLabel,
+  MenuItem,
+  Radio,
+  RadioGroup,
   Stack,
   Typography,
   useTheme,
@@ -15,9 +19,20 @@ import { UploadDashedButton } from "./styles";
 export interface RegisterExpensePaymentInput {
   amount: number;
   date: string;
+  paymentMethod: "STP" | "BANK";
+  bank?: string;
+  bankReference?: string;
   notes?: string;
   receipt?: File;
 }
+
+const BANK_OPTIONS = [
+  { value: "banamex", label: "Banamex" },
+  { value: "banorte", label: "Banorte" },
+  { value: "hsbc", label: "HSBC" },
+  { value: "santander", label: "Santander" },
+  { value: "bbva", label: "BBVA" },
+];
 
 export interface RegisterExpensePaymentModalProps {
   open: boolean;
@@ -40,21 +55,33 @@ export function RegisterExpensePaymentModal({
 }: RegisterExpensePaymentModalProps) {
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"STP" | "BANK">("STP");
   const [amount, setAmount] = useState("");
+  const [bank, setBank] = useState("");
+  const [bankReference, setBankReference] = useState("");
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [bankError, setBankError] = useState<string | undefined>();
+  const [bankReferenceError, setBankReferenceError] = useState<
+    string | undefined
+  >();
   const [dateError, setDateError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setPaymentMethod("STP");
     setAmount("");
+    setBank("");
+    setBankReference("");
     setNotes("");
     setDate(new Date().toISOString().slice(0, 10));
     setReceipt(null);
     setAmountError(undefined);
+    setBankError(undefined);
+    setBankReferenceError(undefined);
     setDateError(undefined);
     setSubmitting(false);
   }, [open]);
@@ -68,16 +95,37 @@ export function RegisterExpensePaymentModal({
       nextAmountError = "El abono no puede ser mayor al saldo pendiente";
     }
     const nextDateError = !date ? "Selecciona la fecha del pago" : undefined;
+    const nextBankError =
+      paymentMethod === "BANK" && !bank.trim()
+        ? "Ingresa el banco"
+        : undefined;
+    const nextBankReferenceError =
+      paymentMethod === "BANK" && !bankReference.trim()
+        ? "Ingresa la referencia bancaria"
+        : undefined;
 
     setAmountError(nextAmountError);
     setDateError(nextDateError);
-    if (nextAmountError || nextDateError) return;
+    setBankError(nextBankError);
+    setBankReferenceError(nextBankReferenceError);
+    if (
+      nextAmountError ||
+      nextDateError ||
+      nextBankError ||
+      nextBankReferenceError
+    ) {
+      return;
+    }
 
     setSubmitting(true);
     try {
       await onSubmit({
         amount: parsedAmount,
         date,
+        paymentMethod,
+        bank: paymentMethod === "BANK" ? bank.trim() : undefined,
+        bankReference:
+          paymentMethod === "BANK" ? bankReference.trim() : undefined,
         notes: notes.trim() || undefined,
         receipt: receipt ?? undefined,
       });
@@ -112,8 +160,36 @@ export function RegisterExpensePaymentModal({
       headerActionsPosition="top"
     >
       <Stack spacing={2.5}>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" fontWeight={600}>
+            Modalidad de pago
+          </Typography>
+          <RadioGroup
+            value={paymentMethod}
+            onChange={(event) => {
+              const next = event.target.value as "STP" | "BANK";
+              setPaymentMethod(next);
+              if (next === "STP") {
+                setBankError(undefined);
+                setBankReferenceError(undefined);
+              }
+            }}
+          >
+            <FormControlLabel
+              value="STP"
+              control={<Radio size="small" />}
+              label="Programar pago por STP"
+            />
+            <FormControlLabel
+              value="BANK"
+              control={<Radio size="small" />}
+              label="Registrar importe, banco y referencia bancaria"
+            />
+          </RadioGroup>
+        </Stack>
+
         <FormTextField
-          label="Monto"
+          label="Importe"
           value={amount}
           onChange={(event) => {
             setAmount(sanitizeDecimal(event.target.value));
@@ -123,6 +199,43 @@ export function RegisterExpensePaymentModal({
           helperText={amountError}
           placeholder="$0.00"
         />
+
+        {paymentMethod === "BANK" && (
+          <>
+            <FormTextField
+              label="Banco"
+              select
+              value={bank}
+              onChange={(event) => {
+                setBank(event.target.value);
+                if (bankError) setBankError(undefined);
+              }}
+              error={Boolean(bankError)}
+              helperText={bankError}
+            >
+              <MenuItem value="" disabled>
+                Selecciona un banco
+              </MenuItem>
+              {BANK_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </FormTextField>
+
+            <FormTextField
+              label="Referencia bancaria"
+              value={bankReference}
+              onChange={(event) => {
+                setBankReference(event.target.value);
+                if (bankReferenceError) setBankReferenceError(undefined);
+              }}
+              error={Boolean(bankReferenceError)}
+              helperText={bankReferenceError}
+              placeholder="Folio o referencia de la transferencia"
+            />
+          </>
+        )}
 
         <FormTextField
           label="Notas [Opcional]"

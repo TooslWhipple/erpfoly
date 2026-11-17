@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { CalendarDays } from "lucide-react";
 import { Grid, Stack, Typography } from "@mui/material";
@@ -11,7 +11,7 @@ import {
   UnassignedInvoicesModal,
 } from "@/components";
 import type { TabOption } from "@/components/TabFilters";
-import type { Column, StatusChipVariant } from "@/components/TableCrud";
+import type { Column, RowAction, StatusChipVariant } from "@/components/TableCrud";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import {
@@ -27,7 +27,10 @@ import type {
   UnassignedInvoice,
 } from "@/types/general-expenses.types";
 import { formatDate } from "@/utils/date";
-import { GENERAL_EXPENSES_CREATE } from "@/lib/permissions";
+import {
+  GENERAL_EXPENSES_CREATE,
+  GENERAL_EXPENSES_UPDATE,
+} from "@/lib/permissions";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
   SummaryCard,
@@ -73,12 +76,15 @@ export default function GeneralExpensesPage() {
     string | null
   >(null);
 
-  const statusTabExtra:
-    | { statusTab?: GeneralExpenseStatusTab }
-    | undefined =
-    activeTab === "all"
-      ? undefined
-      : { statusTab: activeTab as GeneralExpenseStatusTab };
+  const listExtraParams = useMemo(
+    () => ({
+      ...(activeTab === "all"
+        ? {}
+        : { statusTab: activeTab as GeneralExpenseStatusTab }),
+      configuration: "PROVEEDORES",
+    }),
+    [activeTab],
+  );
 
   const {
     data: expenses,
@@ -99,7 +105,7 @@ export default function GeneralExpensesPage() {
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
-    extraParams: statusTabExtra,
+    extraParams: listExtraParams,
   });
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
@@ -114,7 +120,9 @@ export default function GeneralExpensesPage() {
   } = useQuery({
     queryKey: ["general-expenses-summary"],
     queryFn: async () => {
-      const result = await getGeneralExpensesSummary();
+      const result = await getGeneralExpensesSummary({
+        configuration: "PROVEEDORES",
+      });
       if (result.error) throw new Error(result.error.message);
       return (
         result.data ?? {
@@ -257,6 +265,15 @@ export default function GeneralExpensesPage() {
     },
   ];
 
+  const actions: RowAction<GeneralExpenseListItem>[] = [
+    {
+      id: "edit",
+      label: "Editar",
+      onClick: openEditPage,
+      permission: GENERAL_EXPENSES_UPDATE,
+    },
+  ];
+
   const kpiCards = [
     {
       title: "Total pendiente",
@@ -316,6 +333,7 @@ export default function GeneralExpensesPage() {
       <TableCrud
         columns={columns}
         rows={expenses}
+        actions={actions}
         loading={loading}
         rowKey="id"
         page={page}

@@ -10,12 +10,17 @@ const SELECT_STALE_TIME_MS = 5 * 60 * 1000;
 
 export const SUPPLIERS_SELECT_QUERY_KEY = ["suppliers", "select"] as const;
 
+export interface SupplierSelectOption extends SelectOption {
+  rfc?: string | null;
+}
+
 export function toSupplierSelectOptions(
   suppliers: SupplierCatalogItem[],
-): SelectOption[] {
+): SupplierSelectOption[] {
   return suppliers.map((supplier) => ({
     value: String(supplier.id),
     label: supplier.businessName?.trim() || supplier.name,
+    rfc: supplier.rfc ?? null,
   }));
 }
 

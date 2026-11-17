@@ -21,6 +21,12 @@ export interface UserListItem {
     branches: string[];
     cashRegisterId: number | null;
     cashRegisterName: string | null;
+    diverseDebtorId?: number | null;
+    diverseDebtor?: {
+        id: number;
+        employeeNumber: string;
+        fullName: string;
+    } | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -37,6 +43,12 @@ export interface UserDetail {
     branches?: BranchItem[];
     branchIds: number[];
     requiresOtp: boolean;
+    diverseDebtorId?: number | null;
+    diverseDebtor?: {
+        id: number;
+        employeeNumber: string;
+        fullName: string;
+    } | null;
     driverDetails?: UserDriverDetails;
     collectorDetails?: UserCollectorDetails | null;
 }
@@ -112,6 +124,7 @@ export interface CreateUserPayload {
     roleId: number;
     branchIds: number[];
     requiresOtp?: boolean;
+    diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
     collectorDetails?: UserCollectorDetailsPayload;
 }
@@ -126,6 +139,7 @@ export interface UpdateUserPayload {
     lastName?: string;
     username?: string;
     branchIds?: number[];
+    diverseDebtorId?: number | null;
     driverDetails?: UserDriverDetailsPayload;
     collectorDetails?: UserCollectorDetailsPayload;
 }
@@ -175,6 +189,7 @@ export async function createUser(
         roleId: payload.roleId,
         branchIds: payload.branchIds,
         ...(payload.requiresOtp !== undefined ? { requiresOtp: payload.requiresOtp } : {}),
+        ...(payload.diverseDebtorId !== undefined ? { diverseDebtorId: payload.diverseDebtorId } : {}),
         ...(payload.driverDetails ? { driverDetails: payload.driverDetails } : {}),
         ...(payload.collectorDetails ? { collectorDetails: payload.collectorDetails } : {}),
     };
@@ -190,6 +205,7 @@ export async function updateUser(
     if (payload.lastName !== undefined) body.lastName = payload.lastName;
     if (payload.username !== undefined) body.username = payload.username;
     if (payload.branchIds !== undefined) body.branchIds = payload.branchIds;
+    if (payload.diverseDebtorId !== undefined) body.diverseDebtorId = payload.diverseDebtorId;
     if (payload.driverDetails !== undefined) body.driverDetails = payload.driverDetails;
     if (payload.collectorDetails !== undefined) body.collectorDetails = payload.collectorDetails;
     return patch<ApiSuccessPayload>(`${BASE}/${id}`, body);

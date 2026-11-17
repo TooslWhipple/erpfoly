@@ -6,6 +6,14 @@ import type { GeneralExpensePayment } from "@/types/general-expenses.types";
 import { PaymentsTotalRow } from "./styles";
 import { SectionHeader } from "@/styles/facturas/registerExpense.styles";
 
+const BANK_LABELS: Record<string, string> = {
+  banamex: "Banamex",
+  banorte: "Banorte",
+  hsbc: "HSBC",
+  santander: "Santander",
+  bbva: "BBVA",
+};
+
 export interface ExpensePaymentsTabProps {
   payments: GeneralExpensePayment[];
   onAddPayment?: () => void;
@@ -23,6 +31,24 @@ export function ExpensePaymentsTab({
     {
       id: "date",
       label: "Fecha",
+    },
+    {
+      id: "paymentMethod",
+      label: "Modalidad",
+      format: (value) => (value === "STP" ? "Programado STP" : "Banco"),
+    },
+    {
+      id: "bank",
+      label: "Banco / Referencia",
+      format: (_, row) =>
+        row.paymentMethod === "STP"
+          ? "Programación de pagos STP"
+          : [
+              row.bank ? BANK_LABELS[row.bank.toLowerCase()] ?? row.bank : null,
+              row.bankReference,
+            ]
+              .filter(Boolean)
+              .join(" - ") || "—",
     },
     {
       id: "registeredBy",

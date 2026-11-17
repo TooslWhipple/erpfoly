@@ -53,6 +53,12 @@ function toApiPayload(payload: CreateGeneralExpensePayload) {
     apportionmentType: payload.apportionEnabled
       ? APPORTIONMENT_TYPE_TO_API[payload.apportionmentType]
       : undefined,
+    branchGroupingId:
+      payload.apportionEnabled &&
+      payload.apportionmentType !== "free" &&
+      payload.branchGroupingId
+        ? Number(payload.branchGroupingId)
+        : undefined,
     singleBranchId:
       !payload.apportionEnabled && payload.singleBranchId
         ? Number(payload.singleBranchId)
@@ -73,10 +79,11 @@ export async function getGeneralExpenses(
   return get<GetGeneralExpensesResponse>(buildListUrl(BASE, params));
 }
 
-export async function getGeneralExpensesSummary(): Promise<
-  ApiResult<GeneralExpenseSummary>
-> {
-  return get<GeneralExpenseSummary>(`${BASE}/summary`);
+export async function getGeneralExpensesSummary(params?: {
+  configuration?: string;
+}): Promise<ApiResult<GeneralExpenseSummary>> {
+  const url = params ? buildListUrl(`${BASE}/summary`, params) : `${BASE}/summary`;
+  return get<GeneralExpenseSummary>(url);
 }
 
 export async function getGeneralExpenseById(
@@ -94,20 +101,44 @@ export async function getUnassignedInvoices(
   return get<UnassignedInvoice[]>(url);
 }
 
-export async function getExpenseCategories(): Promise<
-  ApiResult<GeneralExpenseCatalogOption[]>
-> {
-  return get<GeneralExpenseCatalogOption[]>("/internal-payable-categories");
+export async function checkGeneralExpenseCfdiUuid(
+  uuid: string,
+  options?: { supplierId?: string | number; rfcEmisor?: string },
+): Promise<ApiResult<{ available: boolean; reason?: string }>> {
+  const url = buildListUrl(`${BASE}/check-cfdi-uuid`, {
+    uuid,
+    supplierId: options?.supplierId ? Number(options.supplierId) : undefined,
+    rfcEmisor: options?.rfcEmisor || undefined,
+  });
+  return get<{ available: boolean; reason?: string }>(url);
+}
+
+export async function getExpenseCategories(params?: {
+  configuration?: string;
+}): Promise<ApiResult<GeneralExpenseCatalogOption[]>> {
+  const url = params
+    ? buildListUrl("/internal-payable-categories", params)
+    : "/internal-payable-categories";
+  const result = await get<any>(url);
+  if (result.data) {
+    const list = Array.isArray(result.data)
+      ? result.data
+      : (result.data.rows ?? result.data.data ?? []);
+    return { ...result, data: list };
+  }
+  return result;
 }
 
 export async function getApportionmentPreview(
   type: ApportionmentType,
   amount: number,
+  branchGroupingId?: number | null,
 ): Promise<ApiResult<ApportionmentPreview>> {
   return get<ApportionmentPreview>(
     buildListUrl(`${BASE}/apportionment-preview`, {
       type: APPORTIONMENT_TYPE_TO_API[type],
       amount,
+      branchGroupingId: branchGroupingId ?? undefined,
     }),
   );
 }
@@ -159,6 +190,26 @@ export async function createExpensePayment(
   return post<GeneralExpenseListItem>(`${BASE}/${expenseId}/payments`, payload);
 }
 
+export async function uploadExpenseEvidence(
+  expenseId: string,
+  file: File,
+): Promise<ApiResult<GeneralExpenseListItem>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return post<GeneralExpenseListItem>(
+    `${BASE}/${expenseId}/evidence`,
+    formData,
+    {
+      transformRequest: (data, headers) => {
+        if (data instanceof FormData && headers) {
+          delete headers["Content-Type"];
+        }
+        return data;
+      },
+    },
+  );
+}
+
 export async function uploadExpensePaymentReceipt(
   expenseId: string,
   paymentId: string,
@@ -168,6 +219,61 @@ export async function uploadExpensePaymentReceipt(
   formData.append("file", file);
   return post<GeneralExpenseListItem>(
     `${BASE}/${expenseId}/payments/${paymentId}/receipt`,
+    formData,
+    {
+      transformRequest: (data, headers) => {
+        if (data instanceof FormData && headers) {
+          delete headers["Content-Type"];
+        }
+        return data;
+      },
+    },
+  );
+}
+
+export async function uploadExpenseVoucher(
+  expenseId: string,
+  voucher: {
+    date: string;
+    concept: string;
+    amount: number;
+    subtotal?: number;
+    iva?: number;
+    isDeductible: boolean;
+    supplierName?: string;
+    supplierRfc?: string;
+    fiscalUuid?: string;
+    concepts?: Array<{
+      description: string;
+      issuerSku?: string | null;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
+    xmlFile?: File | null;
+    pdfFile?: File | null;
+    imageFile?: File | null;
+  },
+): Promise<ApiResult<GeneralExpenseListItem>> {
+  const formData = new FormData();
+  formData.append("date", voucher.date);
+  formData.append("concept", voucher.concept);
+  formData.append("amount", String(voucher.amount));
+  if (voucher.subtotal != null) formData.append("subtotal", String(voucher.subtotal));
+  if (voucher.iva != null) formData.append("iva", String(voucher.iva));
+  formData.append("isDeductible", String(voucher.isDeductible));
+  if (voucher.supplierName) formData.append("supplierName", voucher.supplierName);
+  if (voucher.supplierRfc) formData.append("supplierRfc", voucher.supplierRfc);
+  if (voucher.fiscalUuid) formData.append("fiscalUuid", voucher.fiscalUuid);
+  if (voucher.concepts?.length) {
+    formData.append("concepts", JSON.stringify(voucher.concepts));
+  }
+  if (voucher.xmlFile) formData.append("xml", voucher.xmlFile);
+  if (voucher.pdfFile) formData.append("pdf", voucher.pdfFile);
+  if (voucher.imageFile) formData.append("image", voucher.imageFile);
+
+  return post<GeneralExpenseListItem>(
+    `${BASE}/${expenseId}/vouchers`,
     formData,
     {
       transformRequest: (data, headers) => {

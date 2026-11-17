@@ -1,4 +1,4 @@
-import { MenuItem, Stack, Switch, Typography } from "@mui/material";
+import { Alert, MenuItem, Stack, Switch, Typography } from "@mui/material";
 import numeral from "numeral";
 import { FormAutocomplete, FormTextField } from "@/components/Form";
 import type { SelectOption } from "@/components/Form";
@@ -20,6 +20,9 @@ export interface ExpenseApportionmentTabProps {
   onApportionEnabledChange: (value: boolean) => void;
   apportionmentType: ApportionmentType;
   onApportionmentTypeChange: (value: ApportionmentType) => void;
+  branchGroupingId: string;
+  onBranchGroupingChange: (value: string) => void;
+  groupingOptions: SelectOption[];
   branchShares: GeneralExpenseBranchShare[];
   onBranchPercentageChange: (branchId: string, percentage: number) => void;
   singleBranchId: string;
@@ -35,6 +38,9 @@ export function ExpenseApportionmentTab({
   onApportionEnabledChange,
   apportionmentType,
   onApportionmentTypeChange,
+  branchGroupingId,
+  onBranchGroupingChange,
+  groupingOptions,
   branchShares,
   onBranchPercentageChange,
   singleBranchId,
@@ -45,6 +51,11 @@ export function ExpenseApportionmentTab({
   disabled = false,
 }: ExpenseApportionmentTabProps) {
   const isFree = apportionmentType === "free";
+  const percentageSum = branchShares.reduce(
+    (sum, branch) => sum + (Number(branch.percentage) || 0),
+    0,
+  );
+  const isValidSum = Math.abs(percentageSum - 100) <= 0.05;
 
   return (
     <Stack spacing={2.5}>
@@ -94,14 +105,50 @@ export function ExpenseApportionmentTab({
             ))}
           </FormTextField>
 
+          {!isFree && (
+            <FormTextField
+              label="Agrupamiento"
+              select
+              value={branchGroupingId}
+              onChange={(event) => onBranchGroupingChange(event.target.value)}
+              disabled={disabled}
+            >
+              <MenuItem value="all">Todas</MenuItem>
+              {groupingOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </FormTextField>
+          )}
+
           <Stack spacing={0.75}>
-            <Typography variant="subtitle2">Prorrateo por sucursal</Typography>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="subtitle2">Prorrateo por sucursal</Typography>
+              <Typography
+                variant="subtitle2"
+                color={isValidSum ? "success.main" : "error.main"}
+              >
+                Total: {percentageSum.toFixed(2)}%
+              </Typography>
+            </Stack>
             <Typography variant="body2" color="text.secondary">
               {loadingPreview
                 ? "Calculando prorrateo del mes anterior..."
                 : APPORTIONMENT_TYPE_HELP[apportionmentType]}
             </Typography>
           </Stack>
+
+          {!loadingPreview && !isValidSum && (
+            <Alert severity="error">
+              La suma de porcentajes debe ser 100% (actual:{" "}
+              {percentageSum.toFixed(2)}%) para poder guardar.
+            </Alert>
+          )}
 
           <BranchShareList>
             {branchShares.map((branch) => (

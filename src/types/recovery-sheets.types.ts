@@ -23,6 +23,11 @@ export type RecoverySheetItemCondition =
   | "danado"
   | "no_funciona";
 
+/** Cómo llega el artículo a sucursal (desde la OS vinculada). */
+export type RecoverySheetWarehouseIntake =
+  | "cliente_entrega"
+  | "logistica_foly";
+
 export interface RecoverySheetListItem {
   id: string;
   folio: string;
@@ -31,6 +36,7 @@ export interface RecoverySheetListItem {
   articleDescription: string;
   createdAt: string;
   status: RecoverySheetStatus;
+  warehouseIntake?: RecoverySheetWarehouseIntake | null;
 }
 
 export interface RecoverySheetScheduledRoute {
@@ -69,6 +75,7 @@ export interface RecoverySheetDetail {
   status: RecoverySheetStatus;
   quantity: number;
   storageBranchName: string;
+  warehouseIntake?: RecoverySheetWarehouseIntake | null;
   scheduledRoute?: RecoverySheetScheduledRoute;
   serviceOrder?: RecoverySheetServiceOrderLink;
   warehouse?: RecoverySheetWarehouseEntry;
@@ -110,4 +117,12 @@ export const RECOVERY_SHEET_ROUTE_STATUS_LABELS: Record<
 > = {
   pendiente: "Pendiente",
   finalizada: "Finalizada",
+};
+
+export const RECOVERY_SHEET_INTAKE_LABELS: Record<
+  RecoverySheetWarehouseIntake,
+  string
+> = {
+  cliente_entrega: "Pre-aprobada para recepción en sucursal",
+  logistica_foly: "Recolección logística Foly",
 };

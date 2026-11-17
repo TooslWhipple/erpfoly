@@ -57,7 +57,6 @@ function flattenUpdate(payload: UpdateServiceOrderPayload) {
     warehouseIntake: payload.indicaciones?.warehouseIntake || null,
     address: payload.indicaciones?.address,
     scheduledDate: payload.indicaciones?.scheduledDate,
-    damageTypeId: payload.indicaciones?.damageTypeId,
     damageDescription: payload.indicaciones?.damageDescription,
     authorizedById: payload.indicaciones?.authorizedById,
     instructionsObservations: payload.indicaciones?.observations,
@@ -162,15 +161,6 @@ export async function updateServiceOrder(
     );
     if (requested.error) {
       return { data: null, error: requested.error };
-    }
-  } else if (payload.indicaciones?.action === "reemplazar") {
-    const applied = await post<ServiceOrder>(
-      `${BASE}/${serviceOrderId}/apply-instructions`,
-      undefined,
-      { skipGlobalErrorToast: true },
-    );
-    if (applied.error) {
-      return { data: null, error: applied.error };
     }
   }
 

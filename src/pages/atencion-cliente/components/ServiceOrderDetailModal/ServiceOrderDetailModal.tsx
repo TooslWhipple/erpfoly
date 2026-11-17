@@ -284,16 +284,6 @@ export function ServiceOrderDetailModal({
           setActiveTab("indicaciones");
           return;
         }
-        if (
-          !ind.supplierAuthorizationUrl &&
-          !ind.supplierAuthorizationFile
-        ) {
-          showError(
-            "Carga la carta de autorización del proveedor para liberar el artículo de reemplazo.",
-          );
-          setActiveTab("indicaciones");
-          return;
-        }
       }
     }
 

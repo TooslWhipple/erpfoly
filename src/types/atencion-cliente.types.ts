@@ -145,7 +145,9 @@ export interface ServiceOrderIndicaciones {
   warehouseIntake: ServiceOrderWarehouseIntake;
   address: string;
   scheduledDate: string;
+  /** @deprecated Prefer `damageDescription` (texto libre). Se mantiene por compatibilidad de payload. */
   damageTypeId: string;
+  /** Captura libre del desperfecto (reemplaza el catálogo de tipo de daño en OS). */
   damageDescription: string;
   authorizedById: string;
   observations: string;

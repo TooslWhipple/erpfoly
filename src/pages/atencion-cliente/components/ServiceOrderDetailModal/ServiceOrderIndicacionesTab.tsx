@@ -573,6 +573,10 @@ export function ServiceOrderIndicacionesTab({
                 <Typography variant="body2" color="text.secondary">
                   Cargar carta de autorización
                 </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Obligatoria para pasar a Listo para entregar / liberar
+                  inventario.
+                </Typography>
                 <FileUpload
                   value={supplierAuthFiles}
                   onChange={(files) => {

@@ -14,6 +14,7 @@ import type {
   RecoverySheetStatus,
 } from "@/types/recovery-sheets.types";
 import {
+  RECOVERY_SHEET_INTAKE_LABELS,
   RECOVERY_SHEET_ORIGIN_LABELS,
   RECOVERY_SHEET_STATUS_LABELS,
 } from "@/types/recovery-sheets.types";
@@ -151,6 +152,16 @@ export default function RecoverySheetsPage() {
       type: "chip",
       chipLabelMap: RECOVERY_SHEET_STATUS_LABELS,
       chipVariantMap: STATUS_CHIP_VARIANTS,
+    },
+    {
+      id: "warehouseIntake",
+      label: "Ingreso",
+      size: "md",
+      format: (_value, row) => {
+        const intake = row.warehouseIntake;
+        if (!intake) return "—";
+        return RECOVERY_SHEET_INTAKE_LABELS[intake];
+      },
     },
   ];
 

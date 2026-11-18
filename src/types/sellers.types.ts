@@ -53,6 +53,12 @@ export interface SellerDetail {
   currentMonthSales: number;
   currentMonthGoal: number;
   goalProgressPercent: number;
+  currentMonthApprovedCredits: number;
+  currentMonthCreditGoal: number;
+  creditGoalProgressPercent: number;
+  currentMonthApprovedNewCreditsAmount: number;
+  currentMonthNewCreditsGoal: number;
+  newCreditsGoalProgressPercent: number;
   commissionRatePercent: number;
   commissionAmount: number;
   progressSeries: { label: string; actual: number; goal: number }[];

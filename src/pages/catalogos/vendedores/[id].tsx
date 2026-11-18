@@ -28,6 +28,8 @@ import {
 } from "@/components";
 import {
   SalesMonthGoalCard,
+  CreditsMonthGoalCard,
+  NewCreditsMonthGoalCard,
   MonthlySalesComposedChartCard,
 } from "@/components/SalesDashboard";
 import type { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -427,6 +429,31 @@ export default function VendedorDetailPage() {
                   </Grid>
                 </Grid>
               </ChartCard>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={2} alignItems="stretch">
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <CreditsMonthGoalCard
+                thisMonth={detail.currentMonthApprovedCredits}
+                goal={detail.currentMonthCreditGoal}
+              />
+            </Grid>
+            <Grid
+              size={{
+                xs: 12,
+                md: 6,
+              }}
+            >
+              <NewCreditsMonthGoalCard
+                thisMonth={detail.currentMonthApprovedNewCreditsAmount}
+                goal={detail.currentMonthNewCreditsGoal}
+              />
             </Grid>
           </Grid>
 

@@ -73,7 +73,26 @@ export interface DamagedProductListApiRow {
     sourceLabel?: string | null;
     /** Proveedor de reparación o técnico asignado. */
     repairAssigneeLabel?: string;
+    /** Días de SLA de recolección (audience supplier_return). */
+    slaDays?: number;
+    /** True si el plazo de recolección aún no vence. */
+    isSlaActive?: boolean;
+    /** Fecha límite YYYY-MM-DD del SLA. */
+    slaDueDate?: string | null;
+    returnSupplierName?: string | null;
 }
+
+export type DamagedProductAudience = "foly" | "supplier_return";
+
+export type DamagedProductSupplierLifecycle =
+    | "pending_charge_sla"
+    | "charged_pending_exit"
+    | "history";
+
+export type DamagedPhysicalExitReason =
+    | "supplier_pickup"
+    | "destruction_abandonment"
+    | "transfer_to_liquidation";
 
 /** Ver `discountStatus` en `DamagedProductListApiRow`. */
 export type DamagedProductDiscountStatus =
@@ -108,6 +127,8 @@ export interface GetDamagedProductsQueryParams {
     limit: number;
     search?: string;
     status?: string;
+    audience?: DamagedProductAudience;
+    supplierLifecycle?: DamagedProductSupplierLifecycle;
     sortField?: DamagedProductSortField;
     sortOrder?: DamagedProductSortOrder;
     [key: string]: unknown;
@@ -518,8 +539,42 @@ export interface DamagedProductStats {
     itemsChange: number;
     costChange: number;
     valueChange: number;
+    pendingChargeSlaCount?: number | null;
+    chargedPendingExitCount?: number | null;
+    intakeCostAtRisk?: number | null;
 }
 
-export async function getDamagedProductStats(): Promise<ApiResult<DamagedProductStats>> {
-    return get<DamagedProductStats>(`${DAMAGED_PRODUCTS_BASE}/stats`);
+export async function getDamagedProductStats(
+    audience?: DamagedProductAudience,
+): Promise<ApiResult<DamagedProductStats>> {
+    return get<DamagedProductStats>(`${DAMAGED_PRODUCTS_BASE}/stats`, {
+        params: audience ? { audience } : undefined,
+    });
+}
+
+export interface PhysicalExitDamagedProductPayload {
+    closureReason: DamagedPhysicalExitReason;
+    notes?: string;
+}
+
+export interface PhysicalExitDamagedProductResult {
+    id: number;
+    folio: string;
+    status: string;
+    discountApplied: boolean;
+    supplierReturnId: number;
+}
+
+/**
+ * POST /damaged-products/:id/physical-exit — salida física + cobro condicional.
+ */
+export async function physicalExitDamagedProduct(
+    id: number,
+    payload: PhysicalExitDamagedProductPayload,
+): Promise<ApiResult<PhysicalExitDamagedProductResult>> {
+    return post<PhysicalExitDamagedProductResult>(
+        `${DAMAGED_PRODUCTS_BASE}/${id}/physical-exit`,
+        payload,
+        { skipGlobalErrorToast: true },
+    );
 }

@@ -42,6 +42,11 @@ export type {
   MarkDamagedGoodsDiscountedModalProps,
   MarkDamagedGoodsDiscountedFormValues,
 } from "./MarkDamagedGoodsDiscountedModal";
+export { PhysicalExitDamagedGoodsModal } from "./PhysicalExitDamagedGoodsModal";
+export type {
+  PhysicalExitDamagedGoodsModalProps,
+  PhysicalExitDamagedGoodsFormValues,
+} from "./PhysicalExitDamagedGoodsModal";
 export { CreateInvoiceRequestModal } from "./CreateInvoiceRequestModal";
 export type { CreateInvoiceRequestModalProps } from "./CreateInvoiceRequestModal";
 export { ReviewInvoiceRequestModal } from "./ReviewInvoiceRequestModal";

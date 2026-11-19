@@ -68,7 +68,10 @@ import { StaticLocationMap } from "@/components/StaticLocationMap";
 import { DeliveryDatePicker } from "@/components/DeliveryDatePicker";
 import { SaleBuilder, BackorderChip } from "@/components/SaleBuilder";
 import { SaleHandoverPanel } from "@/components/SaleHandoverPanel";
-import { printSaleTicket } from "@/services/sale-handover.service";
+import {
+  printSaleTicket,
+  sendSaleTicketWhatsApp,
+} from "@/services/sale-handover.service";
 import { formatCreditInstallmentPlan } from "@/utils/creditInstallmentPlan";
 import { isCashRegisterReturnQuery } from "@/lib/cashRegisterRoutes";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -270,10 +273,23 @@ export default function VentaDetalle() {
         // Ticket con QR para recoger en sucursal; en orden con la factura.
         if (sale.status !== "DRAFT" && sale.status !== "CANCELLED") {
           await printTicketOrWarn(saleId);
+          // FOLY-259: comprobante por WhatsApp (contado y crédito).
+          const sent = await sendSaleTicketWhatsApp(saleId);
+          if (sent.status === "SENT") snackbar.showSuccess(sent.message);
+          else showWarning(sent.message);
         }
       })();
     }
-  }, [isNew, saleId, sale, autoPrinted, isFacturacionConfirmacionEncendida, printTicketOrWarn]);
+  }, [
+    isNew,
+    saleId,
+    sale,
+    autoPrinted,
+    isFacturacionConfirmacionEncendida,
+    printTicketOrWarn,
+    showWarning,
+    snackbar,
+  ]);
 
   const setDateMutation = useMutation({
     mutationFn: (payload: {

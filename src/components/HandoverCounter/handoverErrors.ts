@@ -129,6 +129,8 @@ export function changeDeliveryBranchErrorMessage(error: ApiError): string {
       return "La venta ya se entrega en esa sucursal.";
     case "INVALID_BRANCH":
       return "La sucursal elegida no es válida o no está activa.";
+    case "INSUFFICIENT_STOCK_AT_BRANCH":
+      return error.message || "La sucursal elegida no tiene existencia suficiente.";
     default:
       return handoverErrorMessage(error);
   }

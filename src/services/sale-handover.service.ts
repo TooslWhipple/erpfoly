@@ -9,6 +9,8 @@ import { downloadBlob, printPdfBlob } from "@/lib/printing";
 import type {
   ChangeDeliveryBranchRequest,
   ChangeDeliveryBranchResponse,
+  DeliveryBranchAvailability,
+  SaleTicketWhatsAppResult,
   ConfirmHandoverRequest,
   DeliveryConfig,
   ExtendHoldRequest,
@@ -127,6 +129,16 @@ export function updateHandoverReceiver(
   });
 }
 
+export function getDeliveryBranchAvailability(
+  saleId: number,
+  branchId: number,
+): Promise<ApiResult<DeliveryBranchAvailability>> {
+  return get<DeliveryBranchAvailability>(
+    `${BASE}/sales/${saleId}/delivery-branch/availability?branchId=${branchId}`,
+    { skipGlobalErrorToast: true },
+  );
+}
+
 export function changeDeliveryBranch(
   saleId: number,
   payload: ChangeDeliveryBranchRequest,
@@ -190,6 +202,26 @@ export async function printHandoverReceipt(
     `comprobante-entrega-${handoverId}.pdf`,
   );
   await printPdfBlob(blob);
+}
+
+export const SALE_TICKET_WHATSAPP_FAILED =
+  "No se pudo enviar el comprobante por WhatsApp. Entrega el ticket impreso.";
+
+/**
+ * FOLY-259: el back envía el ticket al WhatsApp del cliente. Nunca lanza:
+ * si la petición falla, devuelve el aviso de "entrega el ticket impreso".
+ */
+export async function sendSaleTicketWhatsApp(
+  saleId: number,
+): Promise<SaleTicketWhatsAppResult> {
+  const response = await post<SaleTicketWhatsAppResult>(
+    `/pos/sales/${saleId}/ticket/whatsapp`,
+    undefined,
+    { skipGlobalErrorToast: true },
+  );
+  return (
+    response.data ?? { status: "FAILED", message: SALE_TICKET_WHATSAPP_FAILED }
+  );
 }
 
 export async function printSaleTicket(saleId: number): Promise<void> {

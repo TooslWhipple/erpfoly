@@ -281,21 +281,6 @@ export default function DepartamentoLiquidacionesPage() {
     },
     [],
   );
-  const handleRuleRedLabelChange = useCallback(
-    (ruleId: string, enabled: boolean) => {
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === ruleId
-            ? {
-                ...r,
-                redLabelEnabled: enabled,
-              }
-            : r,
-        ),
-      );
-    },
-    [],
-  );
   const handleRuleDelete = useCallback((ruleId: string) => {
     setRules((prev) => withRuleOrder(prev.filter((r) => r.id !== ruleId)));
   }, []);
@@ -318,7 +303,7 @@ export default function DepartamentoLiquidacionesPage() {
             value: values.value,
             periodDays: values.periodDays,
             promotionPercent: values.promotionPercent,
-            redLabelEnabled: values.redLabelEnabled,
+            redLabelEnabled: false,
           },
         ]),
       );
@@ -592,7 +577,6 @@ export default function DepartamentoLiquidacionesPage() {
                       onValueChange={handleRuleValueChange}
                       onPeriodChange={handleRulePeriodChange}
                       onPromotionChange={handleRulePromotionChange}
-                      onRedLabelChange={handleRuleRedLabelChange}
                       onDelete={handleRuleDelete}
                       onViewActivity={
                         rule.id.startsWith("tmp-")

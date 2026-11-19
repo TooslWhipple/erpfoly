@@ -4,7 +4,6 @@ import {
   TrendingUp as TrendingUpIcon,
   Edit as EditIcon,
   LocalShipping as LocalShippingIcon,
-  AttachMoney as AttachMoneyIcon,
 } from "@mui/icons-material";
 import {
   Title,
@@ -12,11 +11,10 @@ import {
   StatsCardGroup,
   TabFilters,
   AddDamagedGoodsModal,
-  ConfirmModal,
-  MarkDamagedGoodsDiscountedModal,
+  PhysicalExitDamagedGoodsModal,
   StatusChip,
 } from "@/components";
-import type { MarkDamagedGoodsDiscountedFormValues } from "@/components";
+import type { PhysicalExitDamagedGoodsFormValues } from "@/components";
 import type { AddDamagedGoodsPrefill } from "@/components/AddDamagedGoodsModal";
 import { Grid, Skeleton, Stack, Typography } from "@mui/material";
 import type {
@@ -32,13 +30,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 import {
   getDamagedProducts,
   getDamagedProductStats,
-  updateDamagedProductStatus,
-  discountDamagedProduct,
+  physicalExitDamagedProduct,
+  type DamagedProductAudience,
   type DamagedProductListItem,
   type DamagedProductSortField,
   type DamagedProductSortOrder,
   type DamagedProductStats,
-  type DamagedProductTransitionStatus,
+  type DamagedProductSupplierLifecycle,
 } from "@/services/damaged-products.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 import {
@@ -49,8 +47,8 @@ import {
   formatElapsedCompact,
   formatElapsedDetailEs,
 } from "@/utils/damagedGoodsElapsed";
+
 const SEARCH_DEBOUNCE_MS = 300;
-/** Query params that open the create modal with a branch and product already chosen. */
 const PREFILL_BRANCH_PARAM = "branch_id";
 const PREFILL_PRODUCT_PARAM = "product_id";
 
@@ -59,12 +57,14 @@ function parsePrefill(
 ): AddDamagedGoodsPrefill | undefined {
   const branchId = Number(query[PREFILL_BRANCH_PARAM]);
   const productId = Number(query[PREFILL_PRODUCT_PARAM]);
-  return Number.isInteger(branchId) && branchId > 0 && Number.isInteger(productId) && productId > 0
+  return Number.isInteger(branchId) &&
+    branchId > 0 &&
+    Number.isInteger(productId) &&
+    productId > 0
     ? { branchId, productId }
     : undefined;
 }
-/** Only supplier returns are closed from this screen: the folio ends when the supplier collects. */
-const RETURN_TO_SUPPLIER_CODE = "RETURN_TO_SUPPLIER";
+
 const DAMAGE_STATUS_CHIP_LABELS: Record<string, string> = {
   pending: "Por realizar",
   completed: "Finalizada",
@@ -95,16 +95,21 @@ const DISCOUNT_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
   discounted_pending_pickup: "info",
   collected: "success",
 };
+
 function isFolioCompleted(row: DamagedProductListItem): boolean {
   return row.status.toLowerCase() === "completed";
 }
+
 export default function MercanciaDanada() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const showSuccess = useSnackbarStore((s) => s.showSuccess);
   const showError = useSnackbarStore((s) => s.showError);
   const [stats, setStats] = useState<DamagedProductStats | null>(null);
+  const [audience, setAudience] = useState<DamagedProductAudience>("foly");
   const [activeTab, setActiveTab] = useState("all");
+  const [supplierLifecycle, setSupplierLifecycle] =
+    useState<DamagedProductSupplierLifecycle>("pending_charge_sla");
   const [sortField, setSortField] = useState<DamagedProductSortField | null>(
     null,
   );
@@ -116,34 +121,31 @@ export default function MercanciaDanada() {
     () => (canCreate ? parsePrefill(router.query) : undefined),
     [canCreate, router.query],
   );
-  const [confirmState, setConfirmState] = useState<
-    | { open: false }
-    | {
-        open: true;
-        item: DamagedProductListItem;
-        target: DamagedProductTransitionStatus;
-      }
-  >({ open: false });
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [discountItem, setDiscountItem] = useState<DamagedProductListItem | null>(
-    null,
-  );
-  const [discountSaving, setDiscountSaving] = useState(false);
+  const [exitItem, setExitItem] = useState<DamagedProductListItem | null>(null);
+  const [exitSaving, setExitSaving] = useState(false);
+
   const listExtraParams = useMemo(() => {
     const params: {
+      audience: DamagedProductAudience;
       status?: string;
+      supplierLifecycle?: DamagedProductSupplierLifecycle;
       sortField?: DamagedProductSortField;
       sortOrder?: DamagedProductSortOrder;
-    } = {};
-    if (activeTab !== "all") {
-      params.status = activeTab;
+    } = { audience };
+    if (audience === "foly") {
+      if (activeTab !== "all") {
+        params.status = activeTab;
+      }
+    } else {
+      params.supplierLifecycle = supplierLifecycle;
     }
     if (sortField) {
       params.sortField = sortField;
       params.sortOrder = sortOrder;
     }
     return params;
-  }, [activeTab, sortField, sortOrder]);
+  }, [audience, activeTab, supplierLifecycle, sortField, sortOrder]);
+
   const {
     data: items,
     total: totalRows,
@@ -156,16 +158,17 @@ export default function MercanciaDanada() {
     isLoading: loading,
     refetch,
   } = usePaginatedList<DamagedProductListItem>({
-    queryKey: ["damaged-products", "list"],
+    queryKey: ["damaged-products", "list", audience],
     queryFn: getDamagedProducts,
     initialPage: 0,
     initialRowsPerPage: 10,
     initialSearch: "",
     extraParams: listExtraParams,
   });
+
   useEffect(() => {
     setPage(0);
-  }, [activeTab, sortField, sortOrder, setPage]);
+  }, [audience, activeTab, supplierLifecycle, sortField, sortOrder, setPage]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -174,41 +177,48 @@ export default function MercanciaDanada() {
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
-  const tabs: TabOption[] = useMemo(
+
+  const masterTabs: TabOption[] = useMemo(
     () => [
-      {
-        label: "Todos",
-        value: "all",
-      },
-      {
-        label: "Por realizar",
-        value: "pending",
-      },
-      {
-        label: "En reparación",
-        value: "in_repair",
-      },
-      {
-        label: "Finalizadas",
-        value: "completed",
-      },
-      {
-        label: "Canceladas",
-        value: "cancelled",
-      },
+      { label: "Mercancía dañada Foly", value: "foly" },
+      { label: "Devoluciones a proveedor", value: "supplier_return" },
     ],
     [],
   );
+
+  const folyTabs: TabOption[] = useMemo(
+    () => [
+      { label: "Todos", value: "all" },
+      { label: "Por realizar", value: "pending" },
+      { label: "En reparación", value: "in_repair" },
+      { label: "Finalizadas", value: "completed" },
+      { label: "Canceladas", value: "cancelled" },
+    ],
+    [],
+  );
+
+  const supplierTabs: TabOption[] = useMemo(
+    () => [
+      { label: "Pendientes de cobro (SLA activo)", value: "pending_charge_sla" },
+      {
+        label: "Cobrados — pendientes de salida",
+        value: "charged_pending_exit",
+      },
+      { label: "Concluidos / Histórico", value: "history" },
+    ],
+    [],
+  );
+
   const loadStats = useCallback(async () => {
     try {
-      const result = await getDamagedProductStats();
+      const result = await getDamagedProductStats(audience);
       if (result.data != null) {
         setStats(result.data);
       }
     } catch (err) {
       console.error("[MercanciaDanada] Error loading stats:", err);
     }
-  }, []);
+  }, [audience]);
 
   useEffect(() => {
     void loadStats();
@@ -225,9 +235,25 @@ export default function MercanciaDanada() {
     },
     [setSearchInput],
   );
-  const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value);
+
+  const handleAudienceChange = useCallback((value: string) => {
+    setAudience(value as DamagedProductAudience);
+    setActiveTab("all");
+    setSupplierLifecycle("pending_charge_sla");
+    setStats(null);
   }, []);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      if (audience === "foly") {
+        setActiveTab(value);
+      } else {
+        setSupplierLifecycle(value as DamagedProductSupplierLifecycle);
+      }
+    },
+    [audience],
+  );
+
   const handleSortChange = useCallback(
     (field: string, order: DamagedProductSortOrder) => {
       setSortField(field as DamagedProductSortField);
@@ -235,9 +261,11 @@ export default function MercanciaDanada() {
     },
     [],
   );
+
   const handleCreate = useCallback(() => {
     setAddModalOpen(true);
   }, []);
+
   const handleEdit = useCallback((item: DamagedProductListItem) => {
     if (item.id == null) {
       return;
@@ -245,76 +273,46 @@ export default function MercanciaDanada() {
     setEditingId(item.id);
     setAddModalOpen(true);
   }, []);
+
   const handlePageChange = useCallback(
     (newPage: number) => {
       setPage(newPage);
     },
     [setPage],
   );
-  const openStatusConfirm = useCallback((item: DamagedProductListItem) => {
-    setConfirmState({
-      open: true,
-      item,
-      target: isFolioCompleted(item) ? "pending" : "completed",
-    });
+
+  const openExitModal = useCallback((item: DamagedProductListItem) => {
+    setExitItem(item);
   }, []);
-  const closeStatusConfirm = useCallback(() => {
-    if (confirmLoading) {
-      return;
-    }
-    setConfirmState({ open: false });
-  }, [confirmLoading]);
-  const handleConfirmStatusChange = useCallback(async () => {
-    if (!confirmState.open) {
-      return;
-    }
-    const { item, target } = confirmState;
-    setConfirmLoading(true);
-    const result = await updateDamagedProductStatus(item.id, target);
-    setConfirmLoading(false);
-    if (result.error) {
-      showError(result.error.message);
-      return;
-    }
-    setConfirmState({ open: false });
-    showSuccess(
-      target === "completed"
-        ? "Folio marcado como recolectado"
-        : "Folio reabierto correctamente",
-    );
-    void refetch();
-  }, [confirmState, showError, showSuccess, refetch]);
-  const openDiscountModal = useCallback((item: DamagedProductListItem) => {
-    setDiscountItem(item);
-  }, []);
-  const closeDiscountModal = useCallback(() => {
-    if (discountSaving) {
-      return;
-    }
-    setDiscountItem(null);
-  }, [discountSaving]);
-  const handleSubmitDiscount = useCallback(
-    async (values: MarkDamagedGoodsDiscountedFormValues) => {
-      if (!discountItem) {
-        return false;
-      }
-      setDiscountSaving(true);
-      const result = await discountDamagedProduct(discountItem.id, {
-        amount: values.amount,
-        vatIncluded: values.vatIncluded,
-      });
-      setDiscountSaving(false);
+
+  const closeExitModal = useCallback(() => {
+    if (exitSaving) return;
+    setExitItem(null);
+  }, [exitSaving]);
+
+  const handleSubmitExit = useCallback(
+    async (values: PhysicalExitDamagedGoodsFormValues) => {
+      if (!exitItem) return false;
+      setExitSaving(true);
+      const result = await physicalExitDamagedProduct(exitItem.id, values);
+      setExitSaving(false);
       if (result.error) {
         showError(result.error.message);
         return false;
       }
-      setDiscountItem(null);
-      showSuccess("Folio marcado como descontado");
+      setExitItem(null);
+      showSuccess(
+        result.data?.discountApplied
+          ? "Salida física registrada y cargo aplicado al proveedor"
+          : "Salida física registrada",
+      );
       void refetch();
+      void loadStats();
       return true;
     },
-    [discountItem, showError, showSuccess, refetch],
+    [exitItem, showError, showSuccess, refetch, loadStats],
   );
+
   const toComparison = (
     change: number,
   ): StatsCardData["comparison"] | undefined => {
@@ -329,34 +327,63 @@ export default function MercanciaDanada() {
   };
 
   const statsCards: StatsCardData[] = stats
-    ? [
-        {
-          id: "totalItems",
-          label: "Artículos dañados",
-          value: stats.totalItems,
-          icon: <TrendingUpIcon />,
-          comparison: toComparison(stats.itemsChange),
-        },
-        {
-          id: "itemsCost",
-          label: "Costo de los artículos",
-          value: stats.itemsCost,
-          icon: <TrendingUpIcon />,
-          isCurrency: true,
-          comparison: toComparison(stats.costChange),
-        },
-        {
-          id: "itemsValue",
-          label: "Valor de los artículos",
-          value: stats.itemsValue,
-          icon: <TrendingUpIcon />,
-          isCurrency: true,
-          comparison: toComparison(stats.valueChange),
-        },
-      ]
+    ? audience === "foly"
+      ? [
+          {
+            id: "totalItems",
+            label: "Artículos dañados",
+            value: stats.totalItems,
+            icon: <TrendingUpIcon />,
+            comparison: toComparison(stats.itemsChange),
+          },
+          {
+            id: "itemsCost",
+            label: "Costo de los artículos",
+            value: stats.itemsCost,
+            icon: <TrendingUpIcon />,
+            isCurrency: true,
+            comparison: toComparison(stats.costChange),
+          },
+          {
+            id: "itemsValue",
+            label: "Valor de los artículos",
+            value: stats.itemsValue,
+            icon: <TrendingUpIcon />,
+            isCurrency: true,
+            comparison: toComparison(stats.valueChange),
+          },
+        ]
+      : [
+          {
+            id: "totalItems",
+            label: "En bodega (pendientes)",
+            value: stats.totalItems,
+            icon: <TrendingUpIcon />,
+          },
+          {
+            id: "pendingSla",
+            label: "Pendientes de cobro (SLA)",
+            value: stats.pendingChargeSlaCount ?? 0,
+            icon: <TrendingUpIcon />,
+          },
+          {
+            id: "chargedPending",
+            label: "Cobrados sin salida",
+            value: stats.chargedPendingExitCount ?? 0,
+            icon: <TrendingUpIcon />,
+          },
+          {
+            id: "intakeCost",
+            label: "Costo en riesgo",
+            value: stats.intakeCostAtRisk ?? stats.itemsCost,
+            icon: <TrendingUpIcon />,
+            isCurrency: true,
+          },
+        ]
     : [];
-  const columns = useMemo<Column<DamagedProductListItem>[]>(
-    () => [
+
+  const columns = useMemo<Column<DamagedProductListItem>[]>(() => {
+    const base: Column<DamagedProductListItem>[] = [
       {
         id: "productCode",
         label: "Código",
@@ -397,91 +424,140 @@ export default function MercanciaDanada() {
         truncate: true,
         sortable: true,
       },
-      {
-        id: "sourceLabel",
-        label: "Origen",
-        width: 300,
-        format: (_value, row) => {
-          const label =
-            row.sourceLabel ??
-            (row.isClientProperty && row.serviceOrderFolio
-              ? "A Reparación (Cliente)"
-              : null);
-          if (!label) return "—";
-          const variant: StatusChipVariant = row.isClientProperty
-            ? "info"
-            : "warning";
-          return <StatusChip label={label} variant={variant} size="small" />;
+    ];
+
+    if (audience === "foly") {
+      base.push(
+        {
+          id: "sourceLabel",
+          label: "Origen",
+          width: 300,
+          format: (_value, row) => {
+            const label =
+              row.sourceLabel ??
+              (row.isClientProperty && row.serviceOrderFolio
+                ? "A Reparación (Cliente)"
+                : null);
+            if (!label) return "—";
+            const variant: StatusChipVariant = row.isClientProperty
+              ? "info"
+              : "warning";
+            return <StatusChip label={label} variant={variant} size="small" />;
+          },
         },
-      },
-      {
-        id: "referenceLabel",
-        label: "Referencia",
-        size: "lg",
-        truncate: true,
-        format: (value) => {
-          const text = typeof value === "string" ? value.trim() : "";
-          return text || "—";
+        {
+          id: "referenceLabel",
+          label: "Referencia",
+          size: "lg",
+          truncate: true,
+          format: (value) => {
+            const text = typeof value === "string" ? value.trim() : "";
+            return text || "—";
+          },
         },
-      },
-      {
-        id: "registeredByUser",
-        label: "Registrado por",
-        size: "lg",
-        truncate: true,
-      },
-      {
-        id: "damageType",
-        label: "Tipo de daño",
-        size: "lg",
-        truncate: true,
-      },
-      {
-        id: "repairAssigneeLabel",
-        label: "Proveedor / Técnico",
-        size: "lg",
-        truncate: true,
-        format: (value) => {
-          const text = typeof value === "string" ? value.trim() : "";
-          return text || "—";
+        {
+          id: "registeredByUser",
+          label: "Registrado por",
+          size: "lg",
+          truncate: true,
         },
-      },
-      {
-        id: "statusDisplay",
-        label: "Estatus",
-        size: "lg",
-        type: "chip",
-        chipLabelMap: DAMAGE_STATUS_CHIP_LABELS,
-        chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
-      },
-      {
-        id: "discountStatus",
-        label: "Descuento a proveedor",
-        size: "lg",
-        type: "chip",
-        chipLabelMap: DISCOUNT_STATUS_CHIP_LABELS,
-        chipVariantMap: DISCOUNT_STATUS_CHIP_VARIANTS,
-      },
-      {
-        id: "elapsedSinceRegistration",
-        label: "Tiempo transcurrido",
-        size: "md",
-        sortable: true,
-        format: (_value, row) => {
-          const compact = formatElapsedCompact(row.registrationDate);
-          const detail = formatElapsedDetailEs(row.registrationDate);
-          return (
-            <Typography variant="body2" component="span" noWrap title={detail}>
-              {compact}
-            </Typography>
-          );
+        {
+          id: "damageType",
+          label: "Tipo de daño",
+          size: "lg",
+          truncate: true,
         },
+        {
+          id: "repairAssigneeLabel",
+          label: "Proveedor / Técnico",
+          size: "lg",
+          truncate: true,
+          format: (value) => {
+            const text = typeof value === "string" ? value.trim() : "";
+            return text || "—";
+          },
+        },
+        {
+          id: "statusDisplay",
+          label: "Estatus",
+          size: "lg",
+          type: "chip",
+          chipLabelMap: DAMAGE_STATUS_CHIP_LABELS,
+          chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
+        },
+      );
+    } else {
+      base.push(
+        {
+          id: "returnSupplierName",
+          label: "Proveedor destino",
+          size: "lg",
+          truncate: true,
+          format: (value, row) => {
+            const text =
+              (typeof value === "string" && value.trim()) ||
+              row.repairAssigneeLabel?.trim() ||
+              "";
+            return text || "—";
+          },
+        },
+        {
+          id: "damageType",
+          label: "Tipo de daño",
+          size: "lg",
+          truncate: true,
+        },
+        {
+          id: "discountStatus",
+          label: "Descuento a proveedor",
+          size: "lg",
+          type: "chip",
+          chipLabelMap: DISCOUNT_STATUS_CHIP_LABELS,
+          chipVariantMap: DISCOUNT_STATUS_CHIP_VARIANTS,
+        },
+        {
+          id: "slaDueDate",
+          label: "Vence SLA",
+          size: "md",
+          format: (_value, row) => {
+            if (!row.slaDueDate) return "—";
+            return (
+              <Typography
+                variant="body2"
+                component="span"
+                noWrap
+                color={row.isSlaActive ? "text.primary" : "error.main"}
+              >
+                {row.slaDueDate}
+                {!row.isSlaActive ? " (vencido)" : ""}
+              </Typography>
+            );
+          },
+        },
+      );
+    }
+
+    base.push({
+      id: "elapsedSinceRegistration",
+      label: "Tiempo transcurrido",
+      size: "md",
+      sortable: true,
+      format: (_value, row) => {
+        const compact = formatElapsedCompact(row.registrationDate);
+        const detail = formatElapsedDetailEs(row.registrationDate);
+        return (
+          <Typography variant="body2" component="span" noWrap title={detail}>
+            {compact}
+          </Typography>
+        );
       },
-    ],
-    [],
-  );
-  const actions = useMemo<RowAction<DamagedProductListItem>[]>(
-    () => [
+    });
+
+    return base;
+  }, [audience]);
+
+  const actions = useMemo<RowAction<DamagedProductListItem>[]>(() => {
+    const rowActions: RowAction<DamagedProductListItem>[] = [
       {
         id: "edit",
         label: "Editar",
@@ -490,35 +566,39 @@ export default function MercanciaDanada() {
         disabled: (row) => row.id == null || isFolioCompleted(row),
         permission: DAMAGED_INVENTORY_UPDATE,
       },
-      {
-        id: "toggle-collected",
-        label: (row) =>
-          isFolioCompleted(row) ? "Reabrir folio" : "Marcar como recolectado",
+    ];
+
+    if (audience === "supplier_return") {
+      rowActions.push({
+        id: "physical-exit",
+        label: "Dar salida física",
         icon: <LocalShippingIcon fontSize="small" />,
-        onClick: openStatusConfirm,
-        hidden: (row) => row.dispositionCode !== RETURN_TO_SUPPLIER_CODE,
-        permission: DAMAGED_INVENTORY_UPDATE,
-      },
-      {
-        id: "discount",
-        label: "Marcar como descontado",
-        icon: <AttachMoneyIcon fontSize="small" />,
-        onClick: openDiscountModal,
+        onClick: openExitModal,
         hidden: (row) =>
-          row.dispositionCode !== RETURN_TO_SUPPLIER_CODE ||
-          row.discountStatus !== "not_discounted",
+          isFolioCompleted(row) ||
+          supplierLifecycle === "history" ||
+          row.discountStatus === "collected",
         permission: DAMAGED_INVENTORY_UPDATE,
-      },
-    ],
-    [handleEdit, openStatusConfirm, openDiscountModal],
-  );
+      });
+    }
+
+    return rowActions;
+  }, [audience, handleEdit, openExitModal, supplierLifecycle]);
+
   return (
     <Stack direction="column" spacing={3}>
       <Title title="Mercancía dañada" />
 
       <TabFilters
-        tabs={tabs}
-        activeTab={activeTab}
+        tabs={masterTabs}
+        activeTab={audience}
+        onTabChange={handleAudienceChange}
+        showSearch={false}
+      />
+
+      <TabFilters
+        tabs={audience === "foly" ? folyTabs : supplierTabs}
+        activeTab={audience === "foly" ? activeTab : supplierLifecycle}
         onTabChange={handleTabChange}
         showSearch
         searchValue={searchInput}
@@ -575,7 +655,11 @@ export default function MercanciaDanada() {
         sortField={sortField ?? undefined}
         sortOrder={sortOrder}
         onSortChange={handleSortChange}
-        emptyMessage="No hay mercancía dañada registrada"
+        emptyMessage={
+          audience === "foly"
+            ? "No hay mercancía dañada Foly registrada"
+            : "No hay devoluciones a proveedor en este filtro"
+        }
       />
 
       <AddDamagedGoodsModal
@@ -592,54 +676,14 @@ export default function MercanciaDanada() {
         prefill={prefill}
       />
 
-      <ConfirmModal
-        open={confirmState.open}
-        onClose={closeStatusConfirm}
-        onConfirm={handleConfirmStatusChange}
-        title={
-          confirmState.open && confirmState.target === "pending"
-            ? "Reabrir folio"
-            : "Marcar como recolectado"
-        }
-        description={
-          confirmState.open ? (
-            confirmState.target === "completed" ? (
-              <>
-                ¿Confirmas que el proveedor recolectó{" "}
-                <strong>{confirmState.item.productName}</strong> (
-                {confirmState.item.productCode})? El folio pasará a
-                &quot;Finalizadas&quot;.
-              </>
-            ) : (
-              <>
-                ¿Reabrir el folio de{" "}
-                <strong>{confirmState.item.productName}</strong> (
-                {confirmState.item.productCode})? Volverá a &quot;Por
-                realizar&quot;.
-              </>
-            )
-          ) : null
-        }
-        confirmLabel={
-          confirmState.open && confirmState.target === "pending"
-            ? "Reabrir"
-            : "Marcar como recolectado"
-        }
-        confirmColor={
-          confirmState.open && confirmState.target === "pending"
-            ? "primary"
-            : "success"
-        }
-        loading={confirmLoading}
-      />
-
-      <MarkDamagedGoodsDiscountedModal
-        open={discountItem != null}
-        onClose={closeDiscountModal}
-        productName={discountItem?.productName ?? ""}
-        productCode={discountItem?.productCode ?? ""}
-        saving={discountSaving}
-        onSubmit={handleSubmitDiscount}
+      <PhysicalExitDamagedGoodsModal
+        open={exitItem != null}
+        onClose={closeExitModal}
+        productName={exitItem?.productName ?? ""}
+        productCode={exitItem?.productCode ?? ""}
+        willChargeSupplier={exitItem?.discountStatus === "not_discounted"}
+        saving={exitSaving}
+        onSubmit={handleSubmitExit}
       />
     </Stack>
   );

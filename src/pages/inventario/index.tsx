@@ -7,8 +7,14 @@ import {
   Build as BuildIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
-import { Chip, Grid, Skeleton, Stack } from "@mui/material";
+import {
+  Title,
+  TableCrud,
+  StatsCardGroup,
+  TabFilters,
+  DiscontinuedChip,
+} from "@/components";
+import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
   Column,
   RowAction,
@@ -20,7 +26,6 @@ import {
   INVENTORY_COLORS,
   inventoryQuantityColor,
 } from "@/styles/inventario/styles";
-import { DISCONTINUED_CHIP_LABEL } from "@/lib/product-end-of-life";
 import { INVENTORY_READ } from "@/lib/permissions";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
@@ -215,10 +220,7 @@ export default function Inventario() {
       id: "isDiscontinued",
       label: "Etiqueta",
       size: "lg",
-      format: (_value, row) =>
-        row.isDiscontinued ? (
-          <Chip size="small" color="error" label={DISCONTINUED_CHIP_LABEL} />
-        ) : null,
+      format: (_value, row) => (row.isDiscontinued ? <DiscontinuedChip /> : "—"),
     },
     {
       id: "name",

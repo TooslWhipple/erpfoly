@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Alert, Chip, Stack } from "@mui/material";
+import { Alert, Stack } from "@mui/material";
 import {
   Block as BlockIcon,
   Delete as DeleteIcon,
@@ -8,7 +8,7 @@ import {
   Restore as RestoreIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { Title, TableCrud, TabFilters, ConfirmModal } from "@/components";
+import { Title, TableCrud, TabFilters, ConfirmModal, DiscontinuedChip } from "@/components";
 import type {
   Column,
   RowAction,
@@ -24,7 +24,6 @@ import {
   getProducts,
   type ProductListItem,
 } from "@/services/productos.service";
-import { DISCONTINUED_CHIP_LABEL } from "@/lib/product-end-of-life";
 import {
   CATALOG_PRODUCTS_CREATE,
   CATALOG_PRODUCTS_DELETE,
@@ -259,10 +258,7 @@ export default function Productos() {
         id: "isDiscontinued",
         label: "Etiqueta",
         size: "lg",
-        format: (_value, row) =>
-          row.isDiscontinued ? (
-            <Chip size="small" color="error" label={DISCONTINUED_CHIP_LABEL} />
-          ) : null,
+        format: (_value, row) => (row.isDiscontinued ? <DiscontinuedChip /> : "—"),
       },
     ],
     [],

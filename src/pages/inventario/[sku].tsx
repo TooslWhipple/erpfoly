@@ -4,7 +4,7 @@ import {
   Settings as SettingsIcon,
   LocalLaundryService as LaundryIcon,
 } from "@mui/icons-material";
-import { Breadcrumbs, TabFilters } from "@/components";
+import { Breadcrumbs, TabFilters, DiscontinuedChip } from "@/components";
 import { CategoryChip, StatusChip } from "@/styles/inventario/detalle.styles";
 import type {
   ActivityLogEntry,
@@ -19,7 +19,7 @@ import type {
   SalesData,
 } from "@/types/inventario.types";
 import type { TabItem } from "@/components/Tabs";
-import { Button, Chip, Stack, Typography, Skeleton } from "@mui/material";
+import { Button, Stack, Typography, Skeleton } from "@mui/material";
 import { PrintProductLabelsModal } from "@/components/InventoryDetail";
 import {
   InventoryTab,
@@ -34,7 +34,6 @@ import {
   getInventorySales,
 } from "@/services/inventory.service";
 import { updateProductBranchesAvailability } from "@/services/productos.service";
-import { DISCONTINUED_CHIP_LABEL } from "@/lib/product-end-of-life";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
 
 const EMPTY_SUMMARY: InventorySummary = {
@@ -320,7 +319,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
             label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
           />
           {inventoryDetail.isDiscontinued && (
-            <Chip size="small" color="error" label={DISCONTINUED_CHIP_LABEL} />
+            <DiscontinuedChip />
           )}
           <Button
             variant="option"

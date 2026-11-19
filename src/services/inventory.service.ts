@@ -30,6 +30,7 @@ export interface InventoryListApiRow {
   id: number;
   code: string;
   status: "active" | "inactive";
+  isDiscontinued: boolean;
   name: string;
   department: string;
   line: string;
@@ -88,6 +89,7 @@ export interface InventoryDetailApiResponse {
     shortName: string;
     description: string | null;
     status: "active" | "inactive";
+    isDiscontinued: boolean;
     department: { id: number; code: string; name: string };
     line: { id: number; code: string; name: string };
     warranty: string | null;
@@ -166,6 +168,7 @@ export function mapInventoryDetailResponse(
       shortName: p.shortName,
       description: p.description ?? "",
       status: p.status,
+      isDiscontinued: p.isDiscontinued,
       department: {
         id: String(p.department.id),
         code: p.department.code,

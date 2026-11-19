@@ -10,6 +10,7 @@ export interface InventoryDetail {
     shortName: string;
     description: string;
     status: "active" | "inactive";
+    isDiscontinued: boolean;
     department: {
         id: string;
         code: string;

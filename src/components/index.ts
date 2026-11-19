@@ -19,6 +19,7 @@ export { ChipGroup } from "./ChipGroup";
 export type { ChipGroupProps } from "./ChipGroup";
 export { StatusChip } from "./StatusChip";
 export type { StatusChipProps, StatusChipVariant } from "./StatusChip";
+export { DiscontinuedChip } from "./DiscontinuedChip";
 export { PermissionsTable } from "./PermissionsTable";
 export type { PermissionsTableProps, ModulePermission, Permission } from "./PermissionsTable";
 export { Form, FormTextField, FormSelect, FormAutocomplete, FormDatePicker } from "./Form";

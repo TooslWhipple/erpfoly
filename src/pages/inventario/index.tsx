@@ -7,7 +7,13 @@ import {
   Build as BuildIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { Title, TableCrud, StatsCardGroup, TabFilters } from "@/components";
+import {
+  Title,
+  TableCrud,
+  StatsCardGroup,
+  TabFilters,
+  DiscontinuedChip,
+} from "@/components";
 import { Grid, Skeleton, Stack } from "@mui/material";
 import type {
   Column,
@@ -209,6 +215,12 @@ export default function Inventario() {
         active: "success",
         inactive: "default",
       } as Record<string, StatusChipVariant>,
+    },
+    {
+      id: "isDiscontinued",
+      label: "Etiqueta",
+      size: "lg",
+      format: (_value, row) => (row.isDiscontinued ? <DiscontinuedChip /> : "—"),
     },
     {
       id: "name",

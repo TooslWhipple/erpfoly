@@ -4,7 +4,7 @@ import {
   Settings as SettingsIcon,
   LocalLaundryService as LaundryIcon,
 } from "@mui/icons-material";
-import { Breadcrumbs, TabFilters } from "@/components";
+import { Breadcrumbs, TabFilters, DiscontinuedChip } from "@/components";
 import { CategoryChip, StatusChip } from "@/styles/inventario/detalle.styles";
 import type {
   ActivityLogEntry,
@@ -318,6 +318,9 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
             status={inventoryDetail.status}
             label={inventoryDetail.status === "active" ? "Activo" : "Inactivo"}
           />
+          {inventoryDetail.isDiscontinued && (
+            <DiscontinuedChip />
+          )}
           <Button
             variant="option"
             size="small"

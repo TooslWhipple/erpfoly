@@ -78,6 +78,11 @@ export default function DepartamentoLiquidacionesPage() {
   const queryClient = useQueryClient();
   const [state, setState] = useState<PageState>("loading");
   const [department, setDepartment] = useState<DepartmentDetail | null>(null);
+  // The nightly job applies rule discounts by itself, so with a discount rule
+  // an empty tab means "already applied", not "missing configuration".
+  const hasDiscountRule = (department?.rules ?? []).some(
+    (rule) => rule.promotionPercent > 0,
+  );
   const [articlePage, setArticlePage] = useState(0);
   const [articleSearchInput, setArticleSearchInput] = useState("");
   const [articleSearch, setArticleSearch] = useState("");
@@ -539,7 +544,9 @@ export default function DepartamentoLiquidacionesPage() {
                   <Typography color="text.secondary">
                     {articleSearch
                       ? "No hay sugerencias que coincidan con la búsqueda."
-                      : "No hay sugerencias. Configura reglas con un porcentaje mayor a 0 para artículos de lento movimiento."}
+                      : hasDiscountRule
+                        ? "No hay sugerencias pendientes. Los artículos de lento movimiento ya tienen aplicado el descuento de las reglas del departamento."
+                        : "No hay sugerencias. Configura reglas con un porcentaje mayor a 0 para artículos de lento movimiento."}
                   </Typography>
                 ) : (
                   <ArticlesGrid sx={{ mt: 0 }}>

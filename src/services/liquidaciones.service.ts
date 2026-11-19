@@ -85,7 +85,8 @@ export async function saveDepartmentRules(
         value: rule.value,
         periodDays: rule.periodDays,
         promotionPercent: rule.promotionPercent,
-        redLabelEnabled: rule.redLabelEnabled,
+        // Low rotation never prints the red label; the API still requires the field.
+        redLabelEnabled: false,
       })),
     }),
   );

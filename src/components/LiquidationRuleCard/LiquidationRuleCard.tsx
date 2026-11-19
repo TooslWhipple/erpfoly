@@ -1,4 +1,4 @@
-import { Stack, IconButton, Switch, FormControl, MenuItem, Typography } from "@mui/material";
+import { IconButton, FormControl, MenuItem, Typography } from "@mui/material";
 import { DragIndicator as DragIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { History } from "lucide-react";
 import type { LiquidationRule, LiquidationRuleOperator, LiquidationRulePeriod } from "@/types/liquidaciones.types";
@@ -23,7 +23,6 @@ export interface LiquidationRuleCardProps {
   onValueChange: (ruleId: string, value: number) => void;
   onPeriodChange: (ruleId: string, value: LiquidationRulePeriod) => void;
   onPromotionChange: (ruleId: string, value: number) => void;
-  onRedLabelChange: (ruleId: string, enabled: boolean) => void;
   onDelete: (ruleId: string) => void;
   onViewActivity?: (ruleId: string) => void;
   onDrag?: (ruleId: string) => void;
@@ -50,7 +49,6 @@ export function LiquidationRuleCard({
   onValueChange,
   onPeriodChange,
   onPromotionChange,
-  onRedLabelChange,
   onDelete,
   onViewActivity,
   onDrag,
@@ -104,17 +102,6 @@ export function LiquidationRuleCard({
       <Typography component="span" sx={{ fontSize: 14, color: "text.secondary" }}>
         %
       </Typography>
-      <Stack direction="row" alignItems="center" spacing={0.5}>
-        <Typography component="span" sx={{ fontSize: 14, color: "text.secondary", whiteSpace: "nowrap" }}>
-          Etiqueta roja
-        </Typography>
-        <Switch
-          size="small"
-          checked={rule.redLabelEnabled}
-          onChange={(_, checked) => onRedLabelChange(rule.id, checked)}
-          color="primary"
-        />
-      </Stack>
       <RuleActions>
         {onDrag && (
           <IconButton size="small" onClick={() => onDrag(rule.id)} aria-label="Reordenar">

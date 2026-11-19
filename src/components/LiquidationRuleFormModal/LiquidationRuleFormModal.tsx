@@ -15,7 +15,6 @@ export type LiquidationRuleFormValues = {
   value: number;
   periodDays: LiquidationRulePeriod;
   promotionPercent: number;
-  redLabelEnabled: boolean;
 };
 
 export interface LiquidationRuleFormModalProps {
@@ -110,12 +109,6 @@ export function LiquidationRuleFormModal({
           type: "number",
           placeholder: "Ej. 10",
         },
-        {
-          name: "redLabelEnabled",
-          schema: z.boolean(),
-          label: "Imprimir con etiqueta roja",
-          type: "switch",
-        },
       ] as const),
     [],
   );
@@ -126,7 +119,6 @@ export function LiquidationRuleFormModal({
       value: "",
       periodDays: "",
       promotionPercent: "",
-      redLabelEnabled: false,
     }),
     [],
   );
@@ -136,8 +128,8 @@ export function LiquidationRuleFormModal({
       key={open ? "open" : "closed"}
       open={open}
       onClose={onClose}
-      title="Nueva regla de liquidación"
-      description="Define cuándo un producto de lento movimiento entra en promoción y si se imprime con etiqueta roja."
+      title="Nueva regla de baja rotación"
+      description="Define cuándo un producto de lento movimiento entra en promoción y qué descuento se le aplica."
       fields={fields}
       defaultValues={defaultValues}
       onSubmit={onSubmit}
@@ -183,12 +175,6 @@ export function LiquidationRuleFormModal({
             type="number"
             placeholder="Ej. 10"
             required
-          />
-          <FormField
-            form={form}
-            name="redLabelEnabled"
-            label="Imprimir con etiqueta roja"
-            type="switch"
           />
         </Stack>
       )}

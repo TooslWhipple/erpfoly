@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MenuItem, TextField, Typography } from "@mui/material";
+import { Alert, MenuItem, TextField, Typography } from "@mui/material";
 import {
   SupervisorCredentialsDialog,
   type SupervisorCredentials,
 } from "@/components/SupervisorCredentialsDialog";
 import { getBranchesCatalog } from "@/services/branches.service";
-import { changeDeliveryBranch } from "@/services/sale-handover.service";
+import {
+  changeDeliveryBranch,
+  getDeliveryBranchAvailability,
+} from "@/services/sale-handover.service";
 import type {
   ChangeDeliveryBranchResponse,
   HandoverSaleDetail,
@@ -41,6 +44,34 @@ export function ChangeDeliveryBranchDialog({
   });
   const options = branches.filter((branch) => branch.id !== detail.deliveryBranch.id);
 
+  // FOLY-258: la nueva sucursal entrega de su propia existencia (sin traspaso),
+  // así que se revisa antes de pedir la contraseña del gerente.
+  const availabilityQuery = useQuery({
+    queryKey: ["sale-handover", "delivery-branch-availability", detail.saleId, targetId],
+    enabled: targetId !== "",
+    queryFn: async () => {
+      const response = await getDeliveryBranchAvailability(
+        detail.saleId,
+        Number(targetId),
+      );
+      if (response.error || !response.data) {
+        throw new Error(
+          response.error
+            ? changeDeliveryBranchErrorMessage(response.error)
+            : "No se pudo revisar la existencia de la sucursal.",
+        );
+      }
+      return response.data;
+    },
+    staleTime: 0,
+  });
+  const availability = availabilityQuery.data;
+  const stockBlocked =
+    targetId !== "" &&
+    (availabilityQuery.isFetching ||
+      availabilityQuery.isError ||
+      availability?.available === false);
+
   const handleConfirm = async (credentials: SupervisorCredentials) => {
     if (!targetId || !credentials.reason) return;
     setSubmitting(true);
@@ -67,13 +98,13 @@ export function ChangeDeliveryBranchDialog({
     <SupervisorCredentialsDialog
       open
       title="Cambiar ubicación de entrega"
-      description={`Hoy se entrega en ${detail.deliveryBranch.name}. El cambio aplica a lo pendiente de toda la orden.`}
+      description={`Hoy se entrega en ${detail.deliveryBranch.name}. La nueva sucursal entrega de su propio inventario, sin traspaso.`}
       confirmLabel="Cambiar ubicación"
       reasonLabel="Motivo del cambio (obligatorio)"
       reasonRequired
       loading={submitting}
       error={error}
-      confirmDisabled={!targetId}
+      confirmDisabled={!targetId || stockBlocked}
       onClose={onClose}
       onConfirm={(credentials) => void handleConfirm(credentials)}
     >
@@ -91,6 +122,20 @@ export function ChangeDeliveryBranchDialog({
           </MenuItem>
         ))}
       </TextField>
+      {targetId !== "" && availabilityQuery.isFetching && (
+        <Typography variant="body2" color="text.secondary">
+          Revisando existencia en la sucursal…
+        </Typography>
+      )}
+      {availabilityQuery.isError && (
+        <Alert severity="error">{availabilityQuery.error.message}</Alert>
+      )}
+      {availability?.available === false && (
+        <Alert severity="warning">
+          {availability.message ??
+            `${availability.branchName} no tiene existencia suficiente.`}
+        </Alert>
+      )}
       <Typography variant="body2" color="text.secondary">
         Autoriza un gerente de {detail.branch.name}.
       </Typography>

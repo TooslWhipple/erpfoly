@@ -287,7 +287,8 @@ export type HandoverErrorCode =
   | "EXTENSION_OUT_OF_RANGE"
   | "HOLD_NOT_RESPONSIBLE"
   | "SAME_BRANCH"
-  | "INVALID_BRANCH";
+  | "INVALID_BRANCH"
+  | "INSUFFICIENT_STOCK_AT_BRANCH";
 
 /** Resguardos (C4 #16-#19). */
 export type HoldRow = {
@@ -373,6 +374,30 @@ export type ChangeDeliveryBranchRequest = {
   password: string;
   /** 5 a 512 caracteres. */
   reason: string;
+};
+
+/** Resultado del envío del ticket por WhatsApp (FOLY-259). */
+export type SaleTicketWhatsAppResult = {
+  status: "SENT" | "FAILED" | "NO_PHONE";
+  message: string;
+};
+
+/** Producto que la nueva sucursal no alcanza a cubrir (FOLY-258). */
+export type DeliveryBranchShortage = {
+  productId: number;
+  sku: string;
+  name: string;
+  needed: number;
+  available: number;
+};
+
+/** Consulta previa: ¿la nueva sucursal tiene existencia para lo pendiente? */
+export type DeliveryBranchAvailability = {
+  branchId: number;
+  branchName: string;
+  available: boolean;
+  shortages: DeliveryBranchShortage[];
+  message: string | null;
 };
 
 export type ChangeDeliveryBranchResponse = {

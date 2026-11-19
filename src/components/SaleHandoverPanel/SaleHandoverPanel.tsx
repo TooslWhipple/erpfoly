@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Box, Button, Divider, Skeleton, Stack, Typography } from "@mui/material";
-import { Download, Pencil, Printer } from "lucide-react";
+import { Download, MessageCircle, Pencil, Printer } from "lucide-react";
 import { StatusChip } from "@/components/StatusChip";
 import {
   HOLDER_RECEIVER_DRAFT,
@@ -18,6 +18,7 @@ import {
   getSaleHandovers,
   printHandoverReceipt,
   printSaleTicket,
+  sendSaleTicketWhatsApp,
 } from "@/services/sale-handover.service";
 import { updatePickupReceiver } from "@/services/ventas.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -98,6 +99,18 @@ export function SaleHandoverPanel({
     saveReceiver.mutate();
   };
 
+  const [whatsappBusy, setWhatsappBusy] = useState(false);
+  const resendTicketWhatsApp = async () => {
+    setWhatsappBusy(true);
+    try {
+      const sent = await sendSaleTicketWhatsApp(saleId);
+      if (sent.status === "SENT") snackbar.showSuccess(sent.message);
+      else snackbar.showWarning(sent.message);
+    } finally {
+      setWhatsappBusy(false);
+    }
+  };
+
   const reprintTicket = async () => {
     setTicketBusy(true);
     try {
@@ -126,6 +139,15 @@ export function SaleHandoverPanel({
           size="small"
         />
         <Box sx={{ flexGrow: 1 }} />
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<MessageCircle size={14} aria-hidden />}
+          disabled={whatsappBusy}
+          onClick={() => void resendTicketWhatsApp()}
+        >
+          Reenviar por WhatsApp
+        </Button>
         <Button
           size="small"
           variant="outlined"

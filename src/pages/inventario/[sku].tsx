@@ -402,6 +402,7 @@ function InventoryDetailContent({ sku }: { sku: string | undefined }) {
           productName={inventoryDetail.name}
           productSku={inventoryDetail.code || inventoryDetail.sku}
           listPrice={labelListPrice}
+          isDiscontinued={inventoryDetail.isDiscontinued}
           imageUrl={gallery.images[0] ?? null}
         />
       )}

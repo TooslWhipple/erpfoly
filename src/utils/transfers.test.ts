@@ -4,6 +4,7 @@ import type { TransferAction } from "../types/transfers.types";
 import {
   getIncidentButtons,
   getTimelineActionLabel,
+  getMinStockShortfall,
   getTransferQuantityFeedback,
   getTransferButtons,
   isStaleTransferErrorCode,
@@ -143,11 +144,40 @@ describe("getTransferQuantityFeedback", () => {
     assert.equal(getTransferQuantityFeedback(1, cap(0))?.level, "error");
     assert.match(getTransferQuantityFeedback(1, cap(0))?.message ?? "", /: 0 unidades$/);
   });
-  it("avisa cuando queda bajo el mínimo", () => {
-    assert.equal(getTransferQuantityFeedback(1, cap(5, 4, 1, 1))?.level, "warning");
+  it("avisa cuántas unidades faltan para el mínimo, contando existencia y tránsito", () => {
+    assert.deepEqual(getTransferQuantityFeedback(1, cap(5, 4, 1, 1), "FOLY AEROPUERTO"), {
+      level: "warning",
+      message:
+        "Atención: para cumplir con el mínimo en FOLY AEROPUERTO (4), debes enviar al menos 2 unidades",
+    });
     assert.equal(getTransferQuantityFeedback(2, cap(5, 4, 1, 1)), null);
+  });
+  it("usa singular cuando falta una unidad", () => {
+    assert.match(getTransferQuantityFeedback(0, cap(null, 2, 1, 0))?.message ?? "", /al menos 1 unidad$/);
+  });
+  it("caso del reporte: mínimo 2, existencia 1, envía 1 cumple el mínimo", () => {
+    assert.equal(getTransferQuantityFeedback(1, cap(null, 2, 1, 0)), null);
+  });
+  it("el máximo excedido gana sobre el aviso de mínimo", () => {
+    assert.equal(getTransferQuantityFeedback(3, cap(2, 10, 0, 0))?.level, "error");
   });
   it("sin aviso cuando el mínimo es 0", () => {
     assert.equal(getTransferQuantityFeedback(1, cap(null, 0, 0, 0)), null);
+  });
+});
+
+describe("getMinStockShortfall", () => {
+  const cap = (minStock: number, stock: number, inTransit: number) => ({
+    remaining: null,
+    minStock,
+    stock,
+    inTransit,
+  });
+  it("resta existencia y tránsito al mínimo", () => {
+    assert.equal(getMinStockShortfall(cap(5, 1, 2)), 2);
+  });
+  it("nunca es negativo", () => {
+    assert.equal(getMinStockShortfall(cap(2, 3, 1)), 0);
+    assert.equal(getMinStockShortfall(cap(0, 0, 0)), 0);
   });
 });

@@ -2,6 +2,8 @@ export const DISCONTINUED_CHIP_LABEL = "En liquidación / Descontinuado";
 export const LIQUIDATION_CHIP_LABEL = "Liquidación";
 export const DISCONTINUED_SALE_WARNING =
   "Producto en liquidación/descontinuado: No volverá a recibirse";
+export const RED_PAPER_PRINT_WARNING =
+  "Este artículo está en liquidación. Inserta el rollo de papel ROJO en la impresora antes de imprimir.";
 
 export function saleLifecycleChipLabel(item: {
   isDiscontinued?: boolean;

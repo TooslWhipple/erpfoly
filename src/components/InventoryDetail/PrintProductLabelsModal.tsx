@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, CircularProgress, Stack, Typography } from "@mui/material";
 import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, TriangleAlert } from "lucide-react";
 import numeral from "numeral";
 import { SideModal } from "@/components";
 import { PrinterSetupDialog } from "@/components/printing";
@@ -16,6 +16,7 @@ import {
   type ProductDetailPromotionDto,
 } from "@/services/productos.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
+import { RED_PAPER_PRINT_WARNING } from "@/lib/product-end-of-life";
 import {
   ActiveBadge,
   DiscountAmount,
@@ -72,6 +73,8 @@ export interface PrintProductLabelsModalProps {
   productSku: string;
   /** Shelf/list price from inventory (preferred over product cost). */
   listPrice: number;
+  /** Discontinued products print the liquidation tag, which goes on red paper. */
+  isDiscontinued: boolean;
   imageUrl?: string | null;
 }
 
@@ -82,6 +85,7 @@ export function PrintProductLabelsModal({
   productName,
   productSku,
   listPrice,
+  isDiscontinued,
   imageUrl: imageUrlProp,
 }: PrintProductLabelsModalProps) {
   const showError = useSnackbarStore((s) => s.showError);
@@ -261,6 +265,12 @@ export function PrintProductLabelsModal({
             </Typography>
           </Stack>
         </ProductCard>
+
+        {isDiscontinued && (
+          <Alert severity="warning" icon={<TriangleAlert size={20} />}>
+            <strong>Atención:</strong> {RED_PAPER_PRINT_WARNING}
+          </Alert>
+        )}
 
         <QuantityRow>
           <Stack spacing={0.25}>

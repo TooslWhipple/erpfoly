@@ -147,7 +147,10 @@ export function GeneralTab({
                         value={values.returnDamageGraceDays}
                         onChange={(e) => handleChange("returnDamageGraceDays")(e.target.value)}
                         error={Boolean(errors.returnDamageGraceDays)}
-                        helperText={errors.returnDamageGraceDays}
+                        helperText={
+                            errors.returnDamageGraceDays ||
+                            "Días para recolectar mercancía dañada antes del cobro automático."
+                        }
                         required
                         inputProps={{ step: 1, min: 1 }}
                     />

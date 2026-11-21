@@ -23,15 +23,17 @@ import type {
   StatusChipVariant,
 } from "@/components/TableCrud";
 import type { StatsCardData } from "@/components/StatsCard";
-import type { TabOption } from "@/components/TabFilters";
+import type { SelectFilterOption, TabOption } from "@/components/TabFilters";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   getDamagedProducts,
+  getDamagedProductsCatalog,
   getDamagedProductStats,
   physicalExitDamagedProduct,
   type DamagedProductAudience,
+  type DamagedProductCatalogItem,
   type DamagedProductListItem,
   type DamagedProductSortField,
   type DamagedProductSortOrder,
@@ -47,10 +49,20 @@ import {
   formatElapsedCompact,
   formatElapsedDetailEs,
 } from "@/utils/damagedGoodsElapsed";
+import { toTitleCase } from "@/utils/strings";
+
+/** Title Case for list cells; keeps placeholders like "—" untouched. */
+function displayTitleCase(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "—") return trimmed || "";
+  return toTitleCase(trimmed);
+}
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PREFILL_BRANCH_PARAM = "branch_id";
 const PREFILL_PRODUCT_PARAM = "product_id";
+const FILTER_ALL = "all";
 
 function parsePrefill(
   query: Record<string, string | string[] | undefined>,
@@ -72,7 +84,7 @@ const DAMAGE_STATUS_CHIP_LABELS: Record<string, string> = {
   PENDING: "Por realizar",
   COMPLETED: "Finalizada",
   CANCELLED: "Cancelada",
-  external_repair: "En reparación externa",
+  external_repair: "En reparación",
   internal_repair: "En reparación",
 };
 const DAMAGE_STATUS_CHIP_VARIANTS: Record<string, StatusChipVariant> = {
@@ -114,6 +126,19 @@ export default function MercanciaDanada() {
     null,
   );
   const [sortOrder, setSortOrder] = useState<DamagedProductSortOrder>("desc");
+  const [branchFilter, setBranchFilter] = useState(FILTER_ALL);
+  const [repairAssigneeFilter, setRepairAssigneeFilter] = useState(FILTER_ALL);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [catalogBranches, setCatalogBranches] = useState<
+    DamagedProductCatalogItem[]
+  >([]);
+  const [catalogRepairSuppliers, setCatalogRepairSuppliers] = useState<
+    DamagedProductCatalogItem[]
+  >([]);
+  const [catalogRepairResponsibles, setCatalogRepairResponsibles] = useState<
+    DamagedProductCatalogItem[]
+  >([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const canCreate = hasPermission(DAMAGED_INVENTORY_CREATE);
@@ -124,11 +149,67 @@ export default function MercanciaDanada() {
   const [exitItem, setExitItem] = useState<DamagedProductListItem | null>(null);
   const [exitSaving, setExitSaving] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await getDamagedProductsCatalog();
+      if (cancelled || result.error || !result.data) return;
+      setCatalogBranches(result.data.branches ?? []);
+      setCatalogRepairSuppliers(result.data.repairSuppliers ?? []);
+      setCatalogRepairResponsibles(result.data.repairResponsibles ?? []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const branchOptions: SelectFilterOption[] = useMemo(
+    () => [
+      { label: "Todas las sucursales", value: FILTER_ALL },
+      ...catalogBranches.map((branch) => ({
+        label: branch.label,
+        value: String(branch.id),
+      })),
+    ],
+    [catalogBranches],
+  );
+
+  const statusOptions: SelectFilterOption[] = useMemo(
+    () => [
+      { label: "Todos", value: "all" },
+      { label: "Por realizar", value: "pending" },
+      { label: "En reparación", value: "in_repair" },
+      { label: "Finalizadas", value: "completed" },
+      { label: "Canceladas", value: "cancelled" },
+    ],
+    [],
+  );
+
+  const repairAssigneeOptions: SelectFilterOption[] = useMemo(
+    () => [
+      { label: "Todos", value: FILTER_ALL },
+      { label: "Foly (interna)", value: "internal" },
+      ...catalogRepairSuppliers.map((supplier) => ({
+        label: supplier.label,
+        value: `supplier:${supplier.id}`,
+      })),
+      ...catalogRepairResponsibles.map((user) => ({
+        label: user.label,
+        value: `user:${user.id}`,
+      })),
+    ],
+    [catalogRepairSuppliers, catalogRepairResponsibles],
+  );
+
   const listExtraParams = useMemo(() => {
     const params: {
       audience: DamagedProductAudience;
       status?: string;
       supplierLifecycle?: DamagedProductSupplierLifecycle;
+      branchId?: number;
+      dateFrom?: string;
+      dateTo?: string;
+      repairAssigneeKey?: string;
       sortField?: DamagedProductSortField;
       sortOrder?: DamagedProductSortOrder;
     } = { audience };
@@ -136,6 +217,17 @@ export default function MercanciaDanada() {
       if (activeTab !== "all") {
         params.status = activeTab;
       }
+      if (branchFilter !== FILTER_ALL) {
+        const branchId = Number(branchFilter);
+        if (Number.isInteger(branchId) && branchId > 0) {
+          params.branchId = branchId;
+        }
+      }
+      if (repairAssigneeFilter !== FILTER_ALL) {
+        params.repairAssigneeKey = repairAssigneeFilter;
+      }
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
     } else {
       params.supplierLifecycle = supplierLifecycle;
     }
@@ -144,7 +236,17 @@ export default function MercanciaDanada() {
       params.sortOrder = sortOrder;
     }
     return params;
-  }, [audience, activeTab, supplierLifecycle, sortField, sortOrder]);
+  }, [
+    audience,
+    activeTab,
+    supplierLifecycle,
+    branchFilter,
+    repairAssigneeFilter,
+    dateFrom,
+    dateTo,
+    sortField,
+    sortOrder,
+  ]);
 
   const {
     data: items,
@@ -168,7 +270,18 @@ export default function MercanciaDanada() {
 
   useEffect(() => {
     setPage(0);
-  }, [audience, activeTab, supplierLifecycle, sortField, sortOrder, setPage]);
+  }, [
+    audience,
+    activeTab,
+    supplierLifecycle,
+    branchFilter,
+    repairAssigneeFilter,
+    dateFrom,
+    dateTo,
+    sortField,
+    sortOrder,
+    setPage,
+  ]);
 
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     searchValue,
@@ -186,17 +299,6 @@ export default function MercanciaDanada() {
     [],
   );
 
-  const folyTabs: TabOption[] = useMemo(
-    () => [
-      { label: "Todos", value: "all" },
-      { label: "Por realizar", value: "pending" },
-      { label: "En reparación", value: "in_repair" },
-      { label: "Finalizadas", value: "completed" },
-      { label: "Canceladas", value: "cancelled" },
-    ],
-    [],
-  );
-
   const supplierTabs: TabOption[] = useMemo(
     () => [
       { label: "Pendientes de cobro (SLA activo)", value: "pending_charge_sla" },
@@ -209,16 +311,37 @@ export default function MercanciaDanada() {
     [],
   );
 
+  const statsQueryParams = useMemo(() => {
+    const params: {
+      audience: DamagedProductAudience;
+      status?: string;
+      supplierLifecycle?: DamagedProductSupplierLifecycle;
+      search?: string;
+    } = { audience };
+    if (audience === "foly") {
+      if (activeTab !== "all") {
+        params.status = activeTab;
+      }
+    } else {
+      params.supplierLifecycle = supplierLifecycle;
+    }
+    const term = searchValue.trim();
+    if (term) {
+      params.search = term;
+    }
+    return params;
+  }, [audience, activeTab, supplierLifecycle, searchValue]);
+
   const loadStats = useCallback(async () => {
     try {
-      const result = await getDamagedProductStats(audience);
+      const result = await getDamagedProductStats(statsQueryParams);
       if (result.data != null) {
         setStats(result.data);
       }
     } catch (err) {
       console.error("[MercanciaDanada] Error loading stats:", err);
     }
-  }, [audience]);
+  }, [statsQueryParams]);
 
   useEffect(() => {
     void loadStats();
@@ -240,6 +363,10 @@ export default function MercanciaDanada() {
     setAudience(value as DamagedProductAudience);
     setActiveTab("all");
     setSupplierLifecycle("pending_charge_sla");
+    setBranchFilter(FILTER_ALL);
+    setRepairAssigneeFilter(FILTER_ALL);
+    setDateFrom("");
+    setDateTo("");
     setStats(null);
   }, []);
 
@@ -389,6 +516,7 @@ export default function MercanciaDanada() {
         label: "Código",
         type: "text",
         size: "md",
+        sortable: true,
         format: (value) => (
           <Typography variant="body2" component="span" noWrap>
             {String(value ?? "")}
@@ -403,7 +531,7 @@ export default function MercanciaDanada() {
         sortable: true,
         format: (value) => {
           if (value && typeof value === "object" && "name" in value) {
-            return String(
+            return displayTitleCase(
               (value as DamagedProductListItem["branch"]).name ?? "",
             );
           }
@@ -420,35 +548,45 @@ export default function MercanciaDanada() {
       {
         id: "productName",
         label: "Producto",
-        size: "xl",
+        width: 300,
+        minWidth: 280,
         truncate: true,
         sortable: true,
+        format: (value) => displayTitleCase(value),
       },
     ];
 
     if (audience === "foly") {
       base.push(
         {
-          id: "sourceLabel",
+          id: "damageOriginName",
           label: "Origen",
-          width: 300,
-          format: (_value, row) => {
-            const label =
-              row.sourceLabel ??
-              (row.isClientProperty && row.serviceOrderFolio
-                ? "A Reparación (Cliente)"
-                : null);
-            if (!label) return "—";
-            const variant: StatusChipVariant = row.isClientProperty
-              ? "info"
-              : "warning";
-            return <StatusChip label={label} variant={variant} size="small" />;
+          size: "lg",
+          truncate: true,
+          format: (value) => displayTitleCase(value) || "—",
+        },
+        {
+          id: "statusDisplay",
+          label: "Estatus",
+          size: "lg",
+          format: (value) => {
+            const key = String(value ?? "");
+            const label = DAMAGE_STATUS_CHIP_LABELS[key] ?? key;
+            const variant =
+              DAMAGE_STATUS_CHIP_VARIANTS[key] ?? ("default" as StatusChipVariant);
+            const chip = (
+              <StatusChip label={label} variant={variant} size="small" />
+            );
+            if (key === "external_repair") {
+              return <span title="Reparación externa">{chip}</span>;
+            }
+            return chip;
           },
         },
         {
           id: "referenceLabel",
           label: "Referencia",
-          size: "lg",
+          width: 220,
           truncate: true,
           format: (value) => {
             const text = typeof value === "string" ? value.trim() : "";
@@ -460,30 +598,22 @@ export default function MercanciaDanada() {
           label: "Registrado por",
           size: "lg",
           truncate: true,
+          format: (value) => displayTitleCase(value) || "—",
         },
         {
           id: "damageType",
           label: "Tipo de daño",
           size: "lg",
           truncate: true,
+          format: (value) => displayTitleCase(value),
         },
         {
           id: "repairAssigneeLabel",
           label: "Proveedor / Técnico",
           size: "lg",
           truncate: true,
-          format: (value) => {
-            const text = typeof value === "string" ? value.trim() : "";
-            return text || "—";
-          },
-        },
-        {
-          id: "statusDisplay",
-          label: "Estatus",
-          size: "lg",
-          type: "chip",
-          chipLabelMap: DAMAGE_STATUS_CHIP_LABELS,
-          chipVariantMap: DAMAGE_STATUS_CHIP_VARIANTS,
+          sortable: true,
+          format: (value) => displayTitleCase(value) || "—",
         },
       );
     } else {
@@ -498,7 +628,7 @@ export default function MercanciaDanada() {
               (typeof value === "string" && value.trim()) ||
               row.repairAssigneeLabel?.trim() ||
               "";
-            return text || "—";
+            return displayTitleCase(text) || "—";
           },
         },
         {
@@ -506,6 +636,7 @@ export default function MercanciaDanada() {
           label: "Tipo de daño",
           size: "lg",
           truncate: true,
+          format: (value) => displayTitleCase(value),
         },
         {
           id: "discountStatus",
@@ -597,12 +728,52 @@ export default function MercanciaDanada() {
       />
 
       <TabFilters
-        tabs={audience === "foly" ? folyTabs : supplierTabs}
+        tabs={audience === "foly" ? [] : supplierTabs}
         activeTab={audience === "foly" ? activeTab : supplierLifecycle}
         onTabChange={handleTabChange}
         showSearch
         searchValue={searchInput}
         onSearchChange={handleSearchChange}
+        selectFilters={
+          audience === "foly"
+            ? [
+                {
+                  label: "Estatus",
+                  value: activeTab,
+                  options: statusOptions,
+                  onChange: setActiveTab,
+                  minWidth: 180,
+                },
+                {
+                  label: "Sucursal",
+                  value: branchFilter,
+                  options: branchOptions,
+                  onChange: setBranchFilter,
+                  minWidth: 200,
+                },
+                {
+                  label: "Proveedor / Técnico",
+                  value: repairAssigneeFilter,
+                  options: repairAssigneeOptions,
+                  onChange: setRepairAssigneeFilter,
+                  minWidth: 220,
+                },
+              ]
+            : undefined
+        }
+        dateRangeFilter={
+          audience === "foly"
+            ? {
+                label: "Registro",
+                dateFrom,
+                dateTo,
+                onChange: (range) => {
+                  setDateFrom(range.startDate);
+                  setDateTo(range.endDate);
+                },
+              }
+            : undefined
+        }
         actions={[
           {
             label: "Registrar daño",

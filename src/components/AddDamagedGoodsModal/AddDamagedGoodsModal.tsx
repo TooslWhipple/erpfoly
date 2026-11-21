@@ -165,7 +165,14 @@ const addDamagedGoodsFormFields = defineFormFields<AddDamagedGoodsFormShape>()([
     },
     {
         name: "damageDetected",
-        schema: z.string().trim().min(1, messages.required),
+        schema: z
+            .string()
+            .trim()
+            .min(1, messages.required)
+            .min(10, { message: messages.string.min(10) })
+            .refine((value) => !/^(.)\1+$/u.test(value), {
+                message: "Describe el daño con más detalle",
+            }),
         label: "Daño detectado",
         type: "textarea",
         placeholder: "Ingrese",
@@ -287,12 +294,9 @@ function buildDefaultValuesFromCatalog(catalog: DamagedProductsCatalogData): Add
     return {
         productId: 0,
         branchId: "",
-        damageOrigin:
-            catalog.damageOrigins[0] != null
-                ? catalogItemIdString(catalog.damageOrigins[0])
-                : "",
-        damageType:
-            catalog.damageTypes[0] != null ? catalogItemIdString(catalog.damageTypes[0]) : "",
+        // Origen y tipo se eligen explícitamente (sin preselección del primer ítem).
+        damageOrigin: "",
+        damageType: "",
         serialNumber: "",
         damageDetected: "",
         observations: "",
@@ -863,6 +867,21 @@ export function AddDamagedGoodsModal({
         };
         assertIn(c.damageOrigins, data.damageOrigin, "damageOrigin");
         assertIn(c.damageTypes, data.damageType, "damageType");
+
+        const selectedDamageType = c.damageTypes.find(
+            (item) => catalogItemIdString(item) === data.damageType,
+        );
+        if (selectedDamageType?.code === "OTHER") {
+            const description = data.damageDetected?.trim() ?? "";
+            if (description.length < 10) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: messages.string.min(10),
+                    path: ["damageDetected"],
+                });
+            }
+        }
+
         const dispositionInCatalog = c.dispositions.some(
             (item) => (item.code ?? catalogItemIdString(item)) === data.damagedProductDisposition,
         );

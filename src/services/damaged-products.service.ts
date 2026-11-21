@@ -69,7 +69,10 @@ export interface DamagedProductListApiRow {
     repairEndDate: string | null;
     /** True cuando el artículo es propiedad del cliente (OS). */
     isClientProperty?: boolean;
-    /** Reparación de cliente o devolución por cancelación. */
+    /** Procedencia del daño (catálogo DamageOrigin). */
+    damageOriginName?: string;
+    damageOriginCode?: string;
+    /** Reparación de cliente o devolución por cancelación (flujo; no usar en columna Origen). */
     sourceLabel?: string | null;
     /** Proveedor de reparación o técnico asignado. */
     repairAssigneeLabel?: string;
@@ -112,9 +115,11 @@ export type DamagedProductListItem = DamagedProductListApiRow & {
 
 export const DAMAGED_PRODUCT_SORT_FIELDS = [
     "productName",
+    "productCode",
     "registrationDate",
     "elapsedSinceRegistration",
     "branch",
+    "repairAssigneeLabel",
 ] as const;
 
 export type DamagedProductSortField =
@@ -129,6 +134,10 @@ export interface GetDamagedProductsQueryParams {
     status?: string;
     audience?: DamagedProductAudience;
     supplierLifecycle?: DamagedProductSupplierLifecycle;
+    branchId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    repairAssigneeKey?: string;
     sortField?: DamagedProductSortField;
     sortOrder?: DamagedProductSortOrder;
     [key: string]: unknown;
@@ -544,11 +553,25 @@ export interface DamagedProductStats {
     intakeCostAtRisk?: number | null;
 }
 
+export type DamagedProductStatsParams = {
+    audience?: DamagedProductAudience;
+    status?: string;
+    supplierLifecycle?: DamagedProductSupplierLifecycle;
+    search?: string;
+};
+
 export async function getDamagedProductStats(
-    audience?: DamagedProductAudience,
+    params?: DamagedProductStatsParams | DamagedProductAudience,
 ): Promise<ApiResult<DamagedProductStats>> {
+    const query: DamagedProductStatsParams =
+        typeof params === "string" ? { audience: params } : (params ?? {});
+    const cleaned = Object.fromEntries(
+        Object.entries(query).filter(
+            ([, value]) => value != null && value !== "",
+        ),
+    );
     return get<DamagedProductStats>(`${DAMAGED_PRODUCTS_BASE}/stats`, {
-        params: audience ? { audience } : undefined,
+        params: Object.keys(cleaned).length > 0 ? cleaned : undefined,
     });
 }
 

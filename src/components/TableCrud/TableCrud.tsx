@@ -469,8 +469,27 @@ export function TableCrud<T>({
     if (maxWidth !== undefined) {
       cellStyle.maxWidth = maxWidth;
       cellStyle.width = maxWidth;
+    } else if (column.truncate) {
+      // Override TruncatedCell's maxWidth: 0 so size/width apply without resizable.
+      cellStyle.width = width;
+      cellStyle.maxWidth = width;
+      cellStyle.overflow = "hidden";
     }
     return cellStyle;
+  };
+
+  const getTruncateTitle = (
+    value: T[keyof T],
+    column: Column<T>,
+    row: T,
+  ): string => {
+    if (column.format) {
+      const formatted = column.format(value, row);
+      if (typeof formatted === "string") {
+        return formatted;
+      }
+    }
+    return String(value ?? "");
   };
 
   const renderCell = (value: T[keyof T], column: Column<T>, row: T) => {
@@ -491,7 +510,7 @@ export function TableCrud<T>({
     } = {
       align: column.align ?? "left",
       style: getCellStyle(column),
-      title: column.truncate ? String(value ?? "") : undefined,
+      title: column.truncate ? getTruncateTitle(value, column, row) : undefined,
       className: column.sticky ? "sticky-cell" : undefined,
     };
 

@@ -152,30 +152,35 @@ export interface TransferQuantityFeedback {
   message: string;
 }
 
+/** Unidades que faltan en el destino para llegar a su Mín: Mín − (existencia + tránsito). */
+export function getMinStockShortfall(capacity: TransferQuantityCapacity): number {
+  return Math.max(0, capacity.minStock - (capacity.stock + capacity.inTransit));
+}
+
 /**
  * Aviso para la cantidad capturada de un artículo de traspaso. `quantity` debe ser
  * la suma de los renglones del mismo producto. El error (excede el Máx) usa el
- * `remaining` del back sin recalcularlo; el aviso de Mín no bloquea.
+ * `remaining` del back sin recalcularlo y bloquea; el aviso de Mín no bloquea,
+ * para que el traspaso salga aunque el origen no alcance a cubrirlo.
  */
 export function getTransferQuantityFeedback(
   quantity: number,
   capacity: TransferQuantityCapacity,
   destinationName?: string,
 ): TransferQuantityFeedback | null {
+  const where = destinationName ? ` en ${destinationName}` : "";
   if (capacity.remaining !== null && quantity > capacity.remaining) {
-    const where = destinationName ? ` en ${destinationName}` : "";
     return {
       level: "error",
       message: `Excede el máximo permitido. Capacidad restante${where}: ${capacity.remaining} unidades`,
     };
   }
-  if (
-    capacity.minStock > 0 &&
-    capacity.stock + capacity.inTransit + quantity < capacity.minStock
-  ) {
+  const shortfall = getMinStockShortfall(capacity);
+  if (quantity < shortfall) {
+    const units = shortfall === 1 ? "unidad" : "unidades";
     return {
       level: "warning",
-      message: `Quedará por debajo del mínimo (${capacity.minStock})`,
+      message: `Atención: para cumplir con el mínimo${where} (${capacity.minStock}), debes enviar al menos ${shortfall} ${units}`,
     };
   }
   return null;

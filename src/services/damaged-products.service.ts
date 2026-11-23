@@ -558,6 +558,10 @@ export type DamagedProductStatsParams = {
     status?: string;
     supplierLifecycle?: DamagedProductSupplierLifecycle;
     search?: string;
+    branchId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    repairAssigneeKey?: string;
 };
 
 export async function getDamagedProductStats(

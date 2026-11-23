@@ -100,20 +100,14 @@ export function useSupplierDamagedGoods(
         return false;
       }
 
-      setItems((prev) =>
-        prev.map((row) =>
-          result.data.updatedIds.includes(row.id)
-            ? { ...row, status: "scheduled" }
-            : row
-        )
-      );
       setSelectedIds([]);
       showSuccess("Salida registrada correctamente.");
       setExitModalOpen(false);
       onBalanceChanged?.();
+      await loadItems();
       return true;
     },
-    [supplierId, selectedIds, showError, showSuccess, onBalanceChanged]
+    [supplierId, selectedIds, showError, showSuccess, onBalanceChanged, loadItems]
   );
 
   return {

@@ -38,6 +38,7 @@ import {
   type DamagedProductSortField,
   type DamagedProductSortOrder,
   type DamagedProductStats,
+  type DamagedProductStatsParams,
   type DamagedProductSupplierLifecycle,
 } from "@/services/damaged-products.service";
 import { useSnackbarStore } from "@/store/useSnackbarStore";
@@ -312,25 +313,33 @@ export default function MercanciaDanada() {
   );
 
   const statsQueryParams = useMemo(() => {
-    const params: {
-      audience: DamagedProductAudience;
-      status?: string;
-      supplierLifecycle?: DamagedProductSupplierLifecycle;
-      search?: string;
-    } = { audience };
-    if (audience === "foly") {
-      if (activeTab !== "all") {
-        params.status = activeTab;
-      }
-    } else {
-      params.supplierLifecycle = supplierLifecycle;
+    const params: DamagedProductStatsParams = {
+      audience: listExtraParams.audience,
+    };
+    if (listExtraParams.status) {
+      params.status = listExtraParams.status;
+    }
+    if (listExtraParams.supplierLifecycle) {
+      params.supplierLifecycle = listExtraParams.supplierLifecycle;
+    }
+    if (listExtraParams.branchId != null) {
+      params.branchId = listExtraParams.branchId;
+    }
+    if (listExtraParams.dateFrom) {
+      params.dateFrom = listExtraParams.dateFrom;
+    }
+    if (listExtraParams.dateTo) {
+      params.dateTo = listExtraParams.dateTo;
+    }
+    if (listExtraParams.repairAssigneeKey) {
+      params.repairAssigneeKey = listExtraParams.repairAssigneeKey;
     }
     const term = searchValue.trim();
     if (term) {
       params.search = term;
     }
     return params;
-  }, [audience, activeTab, supplierLifecycle, searchValue]);
+  }, [listExtraParams, searchValue]);
 
   const loadStats = useCallback(async () => {
     try {

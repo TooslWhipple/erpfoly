@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Alert, Button, Checkbox, Stack, Typography } from "@mui/material";
 import { AlertTriangle } from "lucide-react";
 import { theme } from "@/styles/theme";
@@ -18,8 +18,8 @@ import { formatDate } from "@/utils/date";
 import dayjs from "@/lib/dayjs";
 
 const DAMAGED_STATUS_LABELS: Record<string, string> = {
-  scheduled: "Programado",
-  pending: "Pendiente",
+  scheduled: "Cobrado",
+  pending: "Pendiente de cobro",
 };
 
 const DAMAGED_STATUS_VARIANTS: Record<string, StatusChipVariant> = {
@@ -94,7 +94,18 @@ export function SupplierDamagedGoodsTab({
     openExitModal,
     closeExitModal,
     handleRegisterExit,
+    refetchItems,
   } = useSupplierDamagedGoods(supplierId, onBalanceChanged);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refetchItems();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [refetchItems]);
 
   const tableLoading = contentLoading || loading;
   // Solo las filas pendientes admiten salida; las programadas ya se cobraron.

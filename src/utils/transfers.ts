@@ -157,30 +157,53 @@ export function getMinStockShortfall(capacity: TransferQuantityCapacity): number
   return Math.max(0, capacity.minStock - (capacity.stock + capacity.inTransit));
 }
 
+export interface TransferQuantityContext {
+  destinationName?: string;
+  originName?: string;
+  /** Existencia del artículo en el origen; sin dato no se valida. */
+  originStock?: number;
+}
+
+function unitsLabel(count: number): string {
+  return count === 1 ? "unidad" : "unidades";
+}
+
 /**
  * Aviso para la cantidad capturada de un artículo de traspaso. `quantity` debe ser
- * la suma de los renglones del mismo producto. El error (excede el Máx) usa el
- * `remaining` del back sin recalcularlo y bloquea; el aviso de Mín no bloquea,
- * para que el traspaso salga aunque el origen no alcance a cubrirlo.
+ * la suma de los renglones del mismo producto. Exceder la existencia del origen o
+ * el Máx del destino bloquea (si pasan los dos, se muestra el límite más bajo); el
+ * aviso de Mín no bloquea, para que el traspaso salga aunque el origen no alcance a
+ * cubrirlo. Los límites vienen del back y no se recalculan.
  */
 export function getTransferQuantityFeedback(
   quantity: number,
   capacity: TransferQuantityCapacity,
-  destinationName?: string,
+  context: TransferQuantityContext = {},
 ): TransferQuantityFeedback | null {
+  const { destinationName, originName, originStock } = context;
   const where = destinationName ? ` en ${destinationName}` : "";
-  if (capacity.remaining !== null && quantity > capacity.remaining) {
+  const { remaining } = capacity;
+  const exceedsOrigin = originStock !== undefined && quantity > originStock;
+  const exceedsMax = remaining !== null && quantity > remaining;
+
+  if (exceedsOrigin && (!exceedsMax || originStock <= remaining)) {
+    const origin = originName ? ` en ${originName}` : " en el origen";
     return {
       level: "error",
-      message: `Excede el máximo permitido. Capacidad restante${where}: ${capacity.remaining} unidades`,
+      message: `No hay existencia suficiente${origin}. Existencia: ${originStock} ${unitsLabel(originStock)}`,
+    };
+  }
+  if (exceedsMax) {
+    return {
+      level: "error",
+      message: `Excede el máximo permitido. Capacidad restante${where}: ${remaining} unidades`,
     };
   }
   const shortfall = getMinStockShortfall(capacity);
   if (quantity < shortfall) {
-    const units = shortfall === 1 ? "unidad" : "unidades";
     return {
       level: "warning",
-      message: `Atención: para cumplir con el mínimo${where} (${capacity.minStock}), debes enviar al menos ${shortfall} ${units}`,
+      message: `Atención: para cumplir con el mínimo${where} (${capacity.minStock}), debes enviar al menos ${shortfall} ${unitsLabel(shortfall)}`,
     };
   }
   return null;

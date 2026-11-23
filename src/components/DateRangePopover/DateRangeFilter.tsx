@@ -89,7 +89,7 @@ export function DateRangeFilter({
         variant={isTitle ? "text" : "outlined"}
         size="small"
         disableRipple={isTitle}
-        startIcon={!isTitle && compact ? <Calendar size={16} /> : undefined}
+        startIcon={!isTitle && !compact ? <Calendar size={16} /> : undefined}
         endIcon={<ChevronDown size={isTitle ? 18 : 16} />}
         onClick={handleOpenMenu}
         aria-label={`Periodo: ${displayLabel}`}
@@ -128,19 +128,43 @@ export function DateRangeFilter({
                   color: "text.secondary",
                 },
               }
-            : {
-                textTransform: "none",
-                color: hasActiveRange ? "text.primary" : "text.secondary",
-                fontWeight: hasActiveRange ? 500 : 400,
-                ...(compact && {
-                  width: "160px",
-                  minWidth: "160px",
-                  maxWidth: "160px",
+            : compact
+              ? {
+                  // Match FormSelect / StyledSelect used in TabFilters toolbars.
+                  textTransform: "none",
+                  width: "100%",
+                  height: 36,
+                  minHeight: 36,
+                  px: 1.5,
                   justifyContent: "flex-start",
+                  bgcolor: "background.paper",
+                  color: hasActiveRange ? "text.primary" : "text.disabled",
+                  fontWeight: 400,
+                  fontSize: "0.875rem",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  boxShadow: "none",
+                  "&:hover": {
+                    bgcolor: "background.paper",
+                    borderColor: "text.disabled",
+                    boxShadow: "none",
+                  },
+                  "&:focus-visible": {
+                    borderColor: "primary.main",
+                  },
+                  "& .MuiButton-endIcon": {
+                    flexShrink: 0,
+                    ml: "auto",
+                    color: "action.active",
+                  },
+                }
+              : {
+                  textTransform: "none",
+                  color: hasActiveRange ? "text.primary" : "text.secondary",
+                  fontWeight: hasActiveRange ? 500 : 400,
                   "& .MuiButton-startIcon": { flexShrink: 0, mr: "8px" },
                   "& .MuiButton-endIcon": { flexShrink: 0, ml: "auto" },
-                }),
-              }
+                }
         }
       >
         <Box

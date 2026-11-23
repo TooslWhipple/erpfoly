@@ -7,13 +7,14 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { InputAdornment, Button, Grid, Stack, Typography } from "@mui/material";
+import { InputAdornment, Button, Stack, Grid } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { theme } from "@/styles/theme";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TabsWrapper, TabsFadeEdge, StyledTabs, StyledTab } from "./styles";
 import { FormTextField } from "../Form";
 import { FormSelect } from "../Form/FormSelect";
+import { FieldLabel, FieldWrapper } from "../Form/FormSelect.styles";
 import { DateRangeFilter } from "../DateRangePopover";
 import type { DateRangeValue } from "../DateRangePopover";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -253,171 +254,171 @@ export function TabFilters({
   ];
   const hasSelectFilters = resolvedSelectFilters.length > 0;
   const hasDateRangeFilter = Boolean(dateRangeFilter);
-  const hasToolbarExtras =
-    showSearch || hasActions || hasDateRangeFilter || hasSelectFilters;
+  const hasFilters = hasSelectFilters || hasDateRangeFilter;
+  const hasTools = showSearch || hasActions;
+  const hasToolbar = hasFilters || hasTools;
 
-  if (tabs.length > 0 && isContainedLayout && !hasToolbarExtras) {
+  if (tabs.length > 0 && !hasToolbar) {
     return (
-      <HorizontalTabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={onTabChange}
-        disabled={disabled}
-        layout={layout}
-      />
+      <Stack sx={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
+        <HorizontalTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          disabled={disabled}
+          layout={isContainedLayout ? "contained" : layout}
+        />
+      </Stack>
     );
   }
 
   return (
-    <Grid
-      container
+    <Stack
       spacing={2}
-      alignItems="flex-end"
-      justifyContent={{ xs: "flex-start", md: "space-between" }}
-      wrap="wrap"
       sx={{
         width: "100%",
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
-        flexWrap: "wrap",
       }}
     >
-      <Grid
-        container
-        size={{ xs: 12, md: "grow" }}
-        spacing={1.5}
-        alignItems="flex-end"
-        sx={{
-          minWidth: 0,
-          maxWidth: "100%",
-          flexShrink: 1,
-        }}>
-        {
-        tabs.length > 0 && (
-          <Grid
-            size={{ xs: 12, md: "auto" }}
-            sx={{
-              minWidth: 0,
-              maxWidth: "100%",
-              flexShrink: 1,
-              overflow: "hidden"
-            }}
-          >
-            <HorizontalTabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onTabChange={onTabChange}
-              disabled={disabled}
-              layout={layout}
-            />
-          </Grid>
-        )}
+      {tabs.length > 0 ? (
+        <Stack sx={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
+          <HorizontalTabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            disabled={disabled}
+            layout={layout}
+          />
+        </Stack>
+      ) : null}
 
-        {resolvedSelectFilters.map((filter, index) => (
-          <Grid
-            key={`${filter.label ?? "filter"}-${index}`}
-            size={{ xs: 12, sm: "auto" }}
-            sx={{ flexShrink: 0, minWidth: { sm: filter.minWidth ?? 160 } }}
-          >
-            <FormSelect
-              label={filter.label}
-              options={filter.options}
-              value={filter.value}
-              onChange={(event) => filter.onChange(String(event.target.value))}
-              size="small"
-              fullWidth
-            />
-          </Grid>
-        ))}
-
-        {dateRangeFilter && (
-          <Grid
-            size={{ xs: 12, sm: "auto" }}
-            sx={{ flexShrink: 0, minWidth: { sm: 160 } }}
-          >
-            <Stack spacing={0.5}>
-              {dateRangeFilter.label ? (
-                <Typography variant="body2" fontWeight={500}>
-                  {dateRangeFilter.label}
-                </Typography>
-              ) : null}
-              <DateRangeFilter
-                compact
-                dateFrom={dateRangeFilter.dateFrom}
-                dateTo={dateRangeFilter.dateTo}
-                onChange={dateRangeFilter.onChange}
-                label={
-                  dateRangeFilter.dateFrom || dateRangeFilter.dateTo
-                    ? (dateRangeFilter.label ?? "Fecha")
-                    : dateRangeFilter.label
-                      ? "Seleccionar"
-                      : "Fecha"
-                }
-              />
-            </Stack>
-          </Grid>
-        )}
-      </Grid>
-
-      {(showSearch || hasActions) && (
+      {hasToolbar ? (
         <Grid
           container
-          size={{ xs: 12, md: "auto" }}
-          spacing={1}
+          spacing={1.5}
           alignItems="flex-end"
-          alignContent={{ xs: "flex-start", md: "flex-end" }}
-          sx={{
-            minWidth: 0,
-            maxWidth: "100%",
-            flexShrink: 0,
-            justifyContent: { xs: "flex-start", md: "flex-end" },
-            ml: { md: "auto" },
-          }}
+          sx={{ width: "100%", minWidth: 0 }}
         >
-          {showSearch && (
+          {resolvedSelectFilters.map((filter, index) => (
             <Grid
-              size={{ xs: 12, sm: 6, md: "auto" }}
-              sx={{ minWidth: 0, maxWidth: "100%", flex: 1 }}
+              key={`${filter.label ?? "filter"}-${index}`}
+              size={{ xs: 6, sm: "auto" }}
+              sx={{
+                minWidth: { sm: filter.minWidth ?? 160 },
+                maxWidth: "100%",
+              }}
             >
-              <FormTextField
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={handleSearchChange}
-                fullWidth={!singleAction}
+              <FormSelect
+                label={filter.label}
+                options={filter.options}
+                value={filter.value}
+                onChange={(event) =>
+                  filter.onChange(String(event.target.value))
+                }
                 size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={18} color={theme.palette.text.secondary} />
-                    </InputAdornment>
-                  ),
-                }}
+                fullWidth
               />
             </Grid>
-          )}
-          {hasActions &&
-            visibleActions!.map((action, index) => (
+          ))}
+
+          {dateRangeFilter ? (
+            <Grid
+              size={{ xs: 6, sm: "auto" }}
+              sx={{ minWidth: { sm: 180 }, maxWidth: "100%" }}
+            >
+              <FieldWrapper>
+                {dateRangeFilter.label ? (
+                  <FieldLabel>{dateRangeFilter.label}</FieldLabel>
+                ) : null}
+                <DateRangeFilter
+                  compact
+                  dateFrom={dateRangeFilter.dateFrom}
+                  dateTo={dateRangeFilter.dateTo}
+                  onChange={dateRangeFilter.onChange}
+                  label={
+                    dateRangeFilter.dateFrom || dateRangeFilter.dateTo
+                      ? undefined
+                      : "Seleccionar"
+                  }
+                />
+              </FieldWrapper>
+            </Grid>
+          ) : null}
+
+          {hasTools ? (
+            <Grid
+              size={{ xs: 12, sm: "auto" }}
+              sx={{
+                ml: { sm: "auto" },
+                minWidth: 0,
+                maxWidth: "100%",
+              }}
+            >
               <Grid
-                key={`${action.label}-${index}`}
-                size={{ xs: 12, sm: 6, md: "auto" }}
-                sx={{ minWidth: 0, maxWidth: "100%", flexShrink: 0 }}
+                container
+                spacing={1}
+                alignItems="flex-end"
+                justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+                sx={{ width: "100%", minWidth: 0 }}
               >
-                <Button
-                  fullWidth
-                  variant={action.variant ?? "contained"}
-                  color={action.color ?? "primary"}
-                  onClick={action.onClick}
-                  disabled={action.disabled}
-                  startIcon={action.showIcon ? <AddIcon /> : undefined}
-                  sx={{ whiteSpace: "nowrap" }}
-                >
-                  {action.label}
-                </Button>
+                {showSearch ? (
+                  <Grid
+                    size={{ xs: 6, sm: "auto" }}
+                    sx={{
+                      minWidth: { sm: singleAction ? 220 : 240 },
+                      maxWidth: { sm: 320 },
+                      flex: { sm: 1 },
+                    }}
+                  >
+                    <FormTextField
+                      placeholder={searchPlaceholder}
+                      value={searchValue}
+                      onChange={handleSearchChange}
+                      fullWidth
+                      size="small"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search
+                              size={18}
+                              color={theme.palette.text.secondary}
+                            />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+                ) : null}
+                {hasActions
+                  ? visibleActions!.map((action, index) => (
+                      <Grid
+                        key={`${action.label}-${index}`}
+                        size={{ xs: 6, sm: "auto" }}
+                        sx={{ minWidth: 0, maxWidth: "100%", flexShrink: 0 }}
+                      >
+                        <Button
+                          fullWidth
+                          variant={action.variant ?? "contained"}
+                          color={action.color ?? "primary"}
+                          onClick={action.onClick}
+                          disabled={action.disabled}
+                          startIcon={
+                            action.showIcon ? <AddIcon /> : undefined
+                          }
+                          sx={{ whiteSpace: "nowrap" }}
+                        >
+                          {action.label}
+                        </Button>
+                      </Grid>
+                    ))
+                  : null}
               </Grid>
-            ))}
+            </Grid>
+          ) : null}
         </Grid>
-      )}
-    </Grid>
+      ) : null}
+    </Stack>
   );
 }

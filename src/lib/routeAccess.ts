@@ -159,6 +159,10 @@ export const routeAccessRules: RouteAccessRule[] = [
 
   { pattern: /^\/inventario\/mercancia-danada(\/.*)?$/, permission: DAMAGED_INVENTORY_READ },
   {
+    pattern: /^\/inventario\/devoluciones-proveedor(\/.*)?$/,
+    permission: DAMAGED_INVENTORY_READ,
+  },
+  {
     pattern: /^\/inventario\/hojas-recuperacion(\/.*)?$/,
     permission: RECOVERY_SHEETS_READ,
   },

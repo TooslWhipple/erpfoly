@@ -75,7 +75,7 @@ import {
 } from "@/styles/supplier-returns/index.styles";
 
 const SEARCH_DEBOUNCE_MS = 300;
-const MERCANCIA_DANADA_PATH = "/inventario/mercancia-danada";
+const DEVOLUCIONES_PROVEEDOR_PATH = "/inventario/devoluciones-proveedor";
 
 const MODE_TABS: TabOption[] = [
   { label: "Con folio", value: "folio" },
@@ -286,7 +286,7 @@ export function SupplierReturnForm({ onSubmitted }: SupplierReturnFormProps = {}
     }
     showSuccess("Salida a proveedor registrada.");
     onSubmitted?.();
-    void router.push(MERCANCIA_DANADA_PATH);
+    void router.push(DEVOLUCIONES_PROVEEDOR_PATH);
   }
 
   async function handleSubmitLibre() {
@@ -313,7 +313,7 @@ export function SupplierReturnForm({ onSubmitted }: SupplierReturnFormProps = {}
     }
     showSuccess("Salida a proveedor registrada.");
     onSubmitted?.();
-    void router.push(MERCANCIA_DANADA_PATH);
+    void router.push(DEVOLUCIONES_PROVEEDOR_PATH);
   }
 
   const isFolioMode = mode === "folio";
@@ -323,7 +323,7 @@ export function SupplierReturnForm({ onSubmitted }: SupplierReturnFormProps = {}
       <PageHeader>
         <Breadcrumbs
           items={[
-            { label: "Mercancía dañada", href: MERCANCIA_DANADA_PATH },
+            { label: "Devoluciones a proveedor", href: DEVOLUCIONES_PROVEEDOR_PATH },
             { label: "Salida a proveedor" },
           ]}
         />

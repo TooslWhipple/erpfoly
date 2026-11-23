@@ -89,6 +89,7 @@ export type DamagedProductAudience = "foly" | "supplier_return";
 
 export type DamagedProductSupplierLifecycle =
     | "pending_charge_sla"
+    | "sla_expired_pending_charge"
     | "charged_pending_exit"
     | "history";
 
@@ -118,6 +119,7 @@ export const DAMAGED_PRODUCT_SORT_FIELDS = [
     "productCode",
     "registrationDate",
     "elapsedSinceRegistration",
+    "slaDueDate",
     "branch",
     "repairAssigneeLabel",
 ] as const;
@@ -549,7 +551,9 @@ export interface DamagedProductStats {
     costChange: number;
     valueChange: number;
     pendingChargeSlaCount?: number | null;
+    slaExpiredPendingChargeCount?: number | null;
     chargedPendingExitCount?: number | null;
+    historyCount?: number | null;
     intakeCostAtRisk?: number | null;
 }
 

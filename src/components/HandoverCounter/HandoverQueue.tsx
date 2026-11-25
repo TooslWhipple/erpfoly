@@ -228,7 +228,7 @@ function HandoverQueueCard({
             {row.clientName}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Entrega en {row.deliveryBranch.name} · Responsable: {row.saleBranchName}
+            Entrega en {row.deliveryBranch.name} · Responsable: {row.deliveryBranch.name}
           </Typography>
         </Stack>
         <Stack

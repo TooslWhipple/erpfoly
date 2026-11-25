@@ -290,7 +290,7 @@ export default function EntregaDetallePage() {
             {detail.client.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Venta {detail.folio} · Entrega en {detail.deliveryBranch.name} · Responsable: {detail.branch.name}
+            Venta {detail.folio} · Entrega en {detail.deliveryBranch.name} · Responsable: {detail.deliveryBranch.name}
             {detail.client.phoneMasked ? ` · ${detail.client.phoneMasked}` : ""}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

@@ -25,8 +25,8 @@ import type {
 } from "../../types/saleHandover.types";
 
 const lines: HandoverLine[] = [
-  { saleItemId: 1, productId: 10, code: "01-ME-371", name: "Mesa", quantity: 3, delivered: 0, released: 0, ready: 2, pendingSupply: 1 },
-  { saleItemId: 2, productId: 11, code: "02-SI-100", name: "Silla", quantity: 1, delivered: 0, released: 0, ready: 1, pendingSupply: 0 },
+  { saleItemId: 1, productId: 10, code: "01-ME-371", name: "Mesa", quantity: 3, delivered: 0, released: 0, ready: 2, pendingSupply: 1, deliveryBranch: null },
+  { saleItemId: 2, productId: 11, code: "02-SI-100", name: "Silla", quantity: 1, delivered: 0, released: 0, ready: 1, pendingSupply: 0, deliveryBranch: null },
 ];
 
 function detail(overrides: Partial<HandoverSaleDetail> = {}): HandoverSaleDetail {

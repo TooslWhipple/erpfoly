@@ -18,9 +18,15 @@ import { buildProgressData } from "./buildProgressData";
 export interface SalesMonthGoalCardProps {
   thisMonth: number;
   goal: number;
+  /** Caption under the sales amount; defaults to the current month. */
+  periodLabel?: string;
 }
 
-export function SalesMonthGoalCard({ thisMonth, goal }: SalesMonthGoalCardProps) {
+export function SalesMonthGoalCard({
+  thisMonth,
+  goal,
+  periodLabel = "Este mes",
+}: SalesMonthGoalCardProps) {
   const reactId = useId();
   const gradientId = `progressFill-${reactId.replace(/:/g, "")}`;
 
@@ -31,7 +37,7 @@ export function SalesMonthGoalCard({ thisMonth, goal }: SalesMonthGoalCardProps)
           <Stack spacing={0.5}>
             <BadgeDollarSign strokeWidth={2} size={16} color={theme.palette.text.secondary} />
             <Typography variant="h4" fontWeight={600}>{numeral(thisMonth).format("$0,0.00")}</Typography>
-            <Typography variant="body2" color="text.secondary">Este mes</Typography>
+            <Typography variant="body2" color="text.secondary">{periodLabel}</Typography>
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>

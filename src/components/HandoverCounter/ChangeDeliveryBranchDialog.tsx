@@ -12,6 +12,7 @@ import {
 } from "@/services/sale-handover.service";
 import type {
   ChangeDeliveryBranchResponse,
+  HandoverLine,
   HandoverSaleDetail,
 } from "@/types/saleHandover.types";
 import { changeDeliveryBranchErrorMessage } from "./handoverErrors";
@@ -20,16 +21,19 @@ const BRANCHES_STALE_TIME_MS = 5 * 60 * 1000;
 
 export interface ChangeDeliveryBranchDialogProps {
   detail: Pick<HandoverSaleDetail, "saleId" | "branch" | "deliveryBranch">;
+  /** FOLY-276: con un artículo, solo cambia la ubicación de ese artículo. */
+  line?: Pick<HandoverLine, "saleItemId" | "name" | "deliveryBranch">;
   onClose: () => void;
   onChanged: (result: ChangeDeliveryBranchResponse) => void;
 }
 
 /**
- * Cambia la sucursal que entrega la orden completa. Lo autoriza un gerente de la
+ * Cambia la sucursal que entrega la orden completa (o solo un artículo, con `line`). Lo autoriza un gerente de la
  * sucursal que vendió (o un administrador); se montan solo mientras está abierto.
  */
 export function ChangeDeliveryBranchDialog({
   detail,
+  line,
   onClose,
   onChanged,
 }: ChangeDeliveryBranchDialogProps) {
@@ -42,17 +46,26 @@ export function ChangeDeliveryBranchDialog({
     queryFn: () => getBranchesCatalog(),
     staleTime: BRANCHES_STALE_TIME_MS,
   });
-  const options = branches.filter((branch) => branch.id !== detail.deliveryBranch.id);
+  const current = line?.deliveryBranch ?? detail.deliveryBranch;
+  const saleItemId = line?.saleItemId;
+  const options = branches.filter((branch) => branch.id !== current.id);
 
   // FOLY-258: la nueva sucursal entrega de su propia existencia (sin traspaso),
   // así que se revisa antes de pedir la contraseña del gerente.
   const availabilityQuery = useQuery({
-    queryKey: ["sale-handover", "delivery-branch-availability", detail.saleId, targetId],
+    queryKey: [
+      "sale-handover",
+      "delivery-branch-availability",
+      detail.saleId,
+      saleItemId ?? "all",
+      targetId,
+    ],
     enabled: targetId !== "",
     queryFn: async () => {
       const response = await getDeliveryBranchAvailability(
         detail.saleId,
         Number(targetId),
+        saleItemId,
       );
       if (response.error || !response.data) {
         throw new Error(
@@ -76,12 +89,16 @@ export function ChangeDeliveryBranchDialog({
     if (!targetId || !credentials.reason) return;
     setSubmitting(true);
     setError(null);
-    const response = await changeDeliveryBranch(detail.saleId, {
-      branchId: Number(targetId),
-      username: credentials.username,
-      password: credentials.password,
-      reason: credentials.reason,
-    });
+    const response = await changeDeliveryBranch(
+      detail.saleId,
+      {
+        branchId: Number(targetId),
+        username: credentials.username,
+        password: credentials.password,
+        reason: credentials.reason,
+      },
+      saleItemId,
+    );
     setSubmitting(false);
     if (response.error || !response.data) {
       setError(
@@ -97,8 +114,8 @@ export function ChangeDeliveryBranchDialog({
   return (
     <SupervisorCredentialsDialog
       open
-      title="Cambiar ubicación de entrega"
-      description={`Hoy se entrega en ${detail.deliveryBranch.name}. La nueva sucursal entrega de su propio inventario, sin traspaso.`}
+      title={line ? `Cambiar ubicación: ${line.name}` : "Cambiar ubicación de entrega"}
+      description={`Hoy ${line ? "este artículo " : ""}se entrega en ${current.name}. La nueva sucursal entrega de su propio inventario, sin traspaso.`}
       confirmLabel="Cambiar ubicación"
       reasonLabel="Motivo del cambio (obligatorio)"
       reasonRequired

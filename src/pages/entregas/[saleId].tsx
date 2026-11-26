@@ -41,6 +41,7 @@ import { useHandoverSaleDetail } from "@/hooks/sale-handover/useHandoverSaleDeta
 import { confirmHandover } from "@/services/sale-handover.service";
 import type {
   ChangeDeliveryBranchResponse,
+  HandoverLine,
   HandoverResult as HandoverResultData,
 } from "@/types/saleHandover.types";
 
@@ -59,6 +60,8 @@ export default function EntregaDetallePage() {
   const { hasPermission } = usePermissions();
   const showSuccess = useSnackbarStore((state) => state.showSuccess);
   const [changingBranch, setChangingBranch] = useState(false);
+  // FOLY-276: artículo cuya ubicación se cambia (null = toda la venta).
+  const [changingLine, setChangingLine] = useState<HandoverLine | null>(null);
 
   const {
     data: detail,
@@ -179,14 +182,20 @@ export default function EntregaDetallePage() {
   );
 
   const handleBranchChanged = (changed: ChangeDeliveryBranchResponse) => {
+    const movedLine = changingLine;
     setChangingBranch(false);
+    setChangingLine(null);
     setCaptured({});
     setSubmitError(null);
     idempotencyKeyRef.current = null;
-    showSuccess(`La entrega ahora es en ${changed.deliveryBranch.name}.`);
+    showSuccess(
+      movedLine
+        ? `${movedLine.name} ahora se entrega en ${changed.deliveryBranch.name}.`
+        : `La entrega ahora es en ${changed.deliveryBranch.name}.`,
+    );
     void queryClient.invalidateQueries({ queryKey: ["sale-handover"] });
     // Un `branchId` fijado en la URL apuntaría a la sucursal anterior.
-    if (requestedBranchId !== null) {
+    if (!movedLine && requestedBranchId !== null) {
       void router.replace({ pathname: router.pathname, query: { saleId: String(detail.saleId) } });
     }
   };
@@ -290,7 +299,7 @@ export default function EntregaDetallePage() {
             {detail.client.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Venta {detail.folio} · Entrega en {detail.deliveryBranch.name} · Responsable: {detail.branch.name}
+            Venta {detail.folio} · Entrega en {detail.deliveryBranch.name} · Responsable: {detail.deliveryBranch.name}
             {detail.client.phoneMasked ? ` · ${detail.client.phoneMasked}` : ""}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -320,10 +329,14 @@ export default function EntregaDetallePage() {
         </Stack>
       </SectionCard>
 
-      {changingBranch ? (
+      {changingBranch || changingLine ? (
         <ChangeDeliveryBranchDialog
           detail={detail}
-          onClose={() => setChangingBranch(false)}
+          line={changingLine ?? undefined}
+          onClose={() => {
+            setChangingBranch(false);
+            setChangingLine(null);
+          }}
           onChanged={handleBranchChanged}
         />
       ) : null}
@@ -336,6 +349,7 @@ export default function EntregaDetallePage() {
 
       <HandoverSaleView
         readOnly={!processable}
+        onChangeLineBranch={canChangeBranch ? setChangingLine : undefined}
         detail={detail}
         captured={captured}
         onCapturedChange={setCaptured}

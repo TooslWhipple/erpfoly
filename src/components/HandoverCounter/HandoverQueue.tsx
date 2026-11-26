@@ -22,7 +22,12 @@ import { TabFilters } from "@/components/TabFilters/TabFilters";
 import { useDebouncedInput } from "@/hooks/useDebouncedValue";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { getHandoverQueue } from "@/services/sale-handover.service";
-import type { QueueReadiness, QueueRow } from "@/types/saleHandover.types";
+import type {
+  QueueReadiness,
+  QueueRow,
+  QueueSort,
+} from "@/types/saleHandover.types";
+import dayjs from "@/lib/dayjs";
 import {
   HANDOVER_STATUS_LABELS,
   HANDOVER_STATUS_VARIANTS,
@@ -35,19 +40,49 @@ import { canProcess, parseSaleQr } from "./handover";
 const SEARCH_DEBOUNCE_MS = 300;
 const QUEUE_PAGE_SIZE = 10;
 
+/** FOLY-277: filtros rápidos de la cola. */
+type QueueTab = "TODAY" | "ALL" | "READY" | "WAITING";
+
+const QUEUE_TABS: Array<{ value: QueueTab; label: string }> = [
+  { value: "TODAY", label: "Hoy" },
+  { value: "ALL", label: "Todas" },
+  { value: "READY", label: "Listas para entregar" },
+  { value: "WAITING", label: "Con piezas pendientes / En traspaso" },
+];
+
+const TAB_READINESS: Record<QueueTab, QueueReadiness> = {
+  TODAY: "ANY",
+  ALL: "ANY",
+  READY: "READY",
+  WAITING: "WAITING",
+};
+
+const SORT_OPTIONS: Array<{ value: QueueSort; label: string }> = [
+  { value: "NEWEST", label: "Más recientes primero" },
+  { value: "OLDEST", label: "Más antiguas primero" },
+  { value: "EXPIRING", label: "Próximas a vencer" },
+];
+
+const isQueueSort = (value: string): value is QueueSort =>
+  SORT_OPTIONS.some((option) => option.value === value);
+
 export interface HandoverQueueProps {
   /** `null` = todas las sucursales del alcance de lectura. */
   branchId: number | null;
-  /** `ANY` incluye órdenes por surtir o en camino. */
-  readiness: QueueReadiness;
   onOpenSale: (saleId: number, deliveryBranchId?: number) => void;
 }
 
-export function HandoverQueue({
-  branchId,
-  readiness,
-  onOpenSale,
-}: HandoverQueueProps) {
+export function HandoverQueue({ branchId, onOpenSale }: HandoverQueueProps) {
+  const [tab, setTab] = useState<QueueTab>("ALL");
+  const [sort, setSort] = useState<QueueSort>("NEWEST");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const today = dayjs().format("YYYY-MM-DD");
+  const readiness = TAB_READINESS[tab];
+  // "Hoy" fija el rango al día actual; las demás pestañas usan el rango elegido.
+  const from = tab === "TODAY" ? today : dateFrom;
+  const to = tab === "TODAY" ? today : dateTo;
+
   const [searchInput, setSearchInput, debouncedSearch] = useDebouncedInput(
     "",
     SEARCH_DEBOUNCE_MS,
@@ -72,12 +107,15 @@ export function HandoverQueue({
       getHandoverQueue({
         ...(branchId !== null ? { branchId } : {}),
         readiness,
+        sort,
+        ...(from ? { dateFrom: from } : {}),
+        ...(to ? { dateTo: to } : {}),
         search: params.search,
         page: params.page,
         limit: params.limit,
       }),
     initialRowsPerPage: QUEUE_PAGE_SIZE,
-    extraParams: { branchId: branchId ?? "all", readiness },
+    extraParams: { branchId: branchId ?? "all", readiness, sort, from, to },
   });
 
   useEffect(() => {
@@ -100,9 +138,31 @@ export function HandoverQueue({
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <TabFilters
-            tabs={[]}
-            activeTab=""
-            onTabChange={() => {}}
+            tabs={QUEUE_TABS}
+            activeTab={tab}
+            onTabChange={(value) => setTab(value as QueueTab)}
+            selectFilters={[
+              {
+                label: "Ordenar",
+                value: sort,
+                options: SORT_OPTIONS,
+                onChange: (value) => {
+                  if (isQueueSort(value)) setSort(value);
+                },
+                minWidth: 200,
+              },
+            ]}
+            dateRangeFilter={{
+              label: "Fecha de venta",
+              dateFrom: from,
+              dateTo: to,
+              onChange: (range) => {
+                setDateFrom(range.startDate);
+                setDateTo(range.endDate);
+                // Un rango propio sustituye a "Hoy".
+                if (tab === "TODAY") setTab("ALL");
+              },
+            }}
             showSearch
             searchValue={searchInput}
             onSearchChange={setSearchInput}
@@ -221,11 +281,16 @@ function HandoverQueueCard({
         spacing={1}
       >
         <Stack spacing={0.25} minWidth={0}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {row.folio}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="subtitle1" fontWeight={700}>
+              {row.folio}
+            </Typography>
+            {dayjs(row.createdAt).isSame(dayjs(), "day") ? (
+              <Chip size="small" color="success" label="Hoy" />
+            ) : null}
+          </Stack>
           <Typography variant="body2" noWrap>
-            {row.clientName}
+            {row.clientName} · {dayjs(row.createdAt).format("DD MMM YYYY, HH:mm")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Entrega en {row.deliveryBranch.name} · Responsable: {row.deliveryBranch.name}

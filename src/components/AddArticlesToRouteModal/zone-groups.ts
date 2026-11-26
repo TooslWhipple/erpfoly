@@ -60,6 +60,7 @@ export function matchesOrderSearch(
     sku?: string;
     articleName?: string;
     zone: string;
+    pickupAddress?: string | null;
   },
   query: string,
 ): boolean {
@@ -69,6 +70,7 @@ export function matchesOrderSearch(
     item.orderNumber.toLowerCase().includes(normalized) ||
     (item.sku?.toLowerCase().includes(normalized) ?? false) ||
     (item.articleName?.toLowerCase().includes(normalized) ?? false) ||
-    item.zone.toLowerCase().includes(normalized)
+    item.zone.toLowerCase().includes(normalized) ||
+    (item.pickupAddress?.toLowerCase().includes(normalized) ?? false)
   );
 }
